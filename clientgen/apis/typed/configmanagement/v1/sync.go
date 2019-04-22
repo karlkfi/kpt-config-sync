@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -38,11 +38,11 @@ type SyncInterface interface {
 	Create(*v1.Sync) (*v1.Sync, error)
 	Update(*v1.Sync) (*v1.Sync, error)
 	UpdateStatus(*v1.Sync) (*v1.Sync, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.Sync, error)
-	List(opts meta_v1.ListOptions) (*v1.SyncList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.Sync, error)
+	List(opts metav1.ListOptions) (*v1.SyncList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Sync, err error)
 	SyncExpansion
 }
@@ -60,7 +60,7 @@ func newSyncs(c *ConfigmanagementV1Client) *syncs {
 }
 
 // Get takes name of the sync, and returns the corresponding sync object, and an error if there is any.
-func (c *syncs) Get(name string, options meta_v1.GetOptions) (result *v1.Sync, err error) {
+func (c *syncs) Get(name string, options metav1.GetOptions) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Get().
 		Resource("syncs").
@@ -72,7 +72,7 @@ func (c *syncs) Get(name string, options meta_v1.GetOptions) (result *v1.Sync, e
 }
 
 // List takes label and field selectors, and returns the list of Syncs that match those selectors.
-func (c *syncs) List(opts meta_v1.ListOptions) (result *v1.SyncList, err error) {
+func (c *syncs) List(opts metav1.ListOptions) (result *v1.SyncList, err error) {
 	result = &v1.SyncList{}
 	err = c.client.Get().
 		Resource("syncs").
@@ -83,7 +83,7 @@ func (c *syncs) List(opts meta_v1.ListOptions) (result *v1.SyncList, err error) 
 }
 
 // Watch returns a watch.Interface that watches the requested syncs.
-func (c *syncs) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *syncs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("syncs").
@@ -130,7 +130,7 @@ func (c *syncs) UpdateStatus(sync *v1.Sync) (result *v1.Sync, err error) {
 }
 
 // Delete takes name of the sync and deletes it. Returns an error if one occurs.
-func (c *syncs) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *syncs) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("syncs").
 		Name(name).
@@ -140,7 +140,7 @@ func (c *syncs) Delete(name string, options *meta_v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *syncs) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *syncs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("syncs").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

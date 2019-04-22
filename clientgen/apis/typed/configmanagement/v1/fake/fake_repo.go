@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	configmanagement_v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,19 +38,19 @@ var reposResource = schema.GroupVersionResource{Group: "configmanagement.gke.io"
 var reposKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "Repo"}
 
 // Get takes name of the repo, and returns the corresponding repo object, and an error if there is any.
-func (c *FakeRepos) Get(name string, options v1.GetOptions) (result *configmanagement_v1.Repo, err error) {
+func (c *FakeRepos) Get(name string, options v1.GetOptions) (result *configmanagementv1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(reposResource, name), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootGetAction(reposResource, name), &configmanagementv1.Repo{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.Repo), err
+	return obj.(*configmanagementv1.Repo), err
 }
 
 // List takes label and field selectors, and returns the list of Repos that match those selectors.
-func (c *FakeRepos) List(opts v1.ListOptions) (result *configmanagement_v1.RepoList, err error) {
+func (c *FakeRepos) List(opts v1.ListOptions) (result *configmanagementv1.RepoList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(reposResource, reposKind, opts), &configmanagement_v1.RepoList{})
+		Invokes(testing.NewRootListAction(reposResource, reposKind, opts), &configmanagementv1.RepoList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeRepos) List(opts v1.ListOptions) (result *configmanagement_v1.RepoL
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configmanagement_v1.RepoList{ListMeta: obj.(*configmanagement_v1.RepoList).ListMeta}
-	for _, item := range obj.(*configmanagement_v1.RepoList).Items {
+	list := &configmanagementv1.RepoList{ListMeta: obj.(*configmanagementv1.RepoList).ListMeta}
+	for _, item := range obj.(*configmanagementv1.RepoList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,40 +75,40 @@ func (c *FakeRepos) Watch(opts v1.ListOptions) (watch.Interface, error) {
 }
 
 // Create takes the representation of a repo and creates it.  Returns the server's representation of the repo, and an error, if there is any.
-func (c *FakeRepos) Create(repo *configmanagement_v1.Repo) (result *configmanagement_v1.Repo, err error) {
+func (c *FakeRepos) Create(repo *configmanagementv1.Repo) (result *configmanagementv1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(reposResource, repo), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootCreateAction(reposResource, repo), &configmanagementv1.Repo{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.Repo), err
+	return obj.(*configmanagementv1.Repo), err
 }
 
 // Update takes the representation of a repo and updates it. Returns the server's representation of the repo, and an error, if there is any.
-func (c *FakeRepos) Update(repo *configmanagement_v1.Repo) (result *configmanagement_v1.Repo, err error) {
+func (c *FakeRepos) Update(repo *configmanagementv1.Repo) (result *configmanagementv1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(reposResource, repo), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootUpdateAction(reposResource, repo), &configmanagementv1.Repo{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.Repo), err
+	return obj.(*configmanagementv1.Repo), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeRepos) UpdateStatus(repo *configmanagement_v1.Repo) (*configmanagement_v1.Repo, error) {
+func (c *FakeRepos) UpdateStatus(repo *configmanagementv1.Repo) (*configmanagementv1.Repo, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(reposResource, "status", repo), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootUpdateSubresourceAction(reposResource, "status", repo), &configmanagementv1.Repo{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.Repo), err
+	return obj.(*configmanagementv1.Repo), err
 }
 
 // Delete takes name of the repo and deletes it. Returns an error if one occurs.
 func (c *FakeRepos) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(reposResource, name), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootDeleteAction(reposResource, name), &configmanagementv1.Repo{})
 	return err
 }
 
@@ -116,16 +116,16 @@ func (c *FakeRepos) Delete(name string, options *v1.DeleteOptions) error {
 func (c *FakeRepos) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(reposResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &configmanagement_v1.RepoList{})
+	_, err := c.Fake.Invokes(action, &configmanagementv1.RepoList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched repo.
-func (c *FakeRepos) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagement_v1.Repo, err error) {
+func (c *FakeRepos) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(reposResource, name, data, subresources...), &configmanagement_v1.Repo{})
+		Invokes(testing.NewRootPatchSubresourceAction(reposResource, name, data, subresources...), &configmanagementv1.Repo{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.Repo), err
+	return obj.(*configmanagementv1.Repo), err
 }

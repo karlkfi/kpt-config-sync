@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -37,11 +37,11 @@ type HierarchyConfigsGetter interface {
 type HierarchyConfigInterface interface {
 	Create(*v1.HierarchyConfig) (*v1.HierarchyConfig, error)
 	Update(*v1.HierarchyConfig) (*v1.HierarchyConfig, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.HierarchyConfig, error)
-	List(opts meta_v1.ListOptions) (*v1.HierarchyConfigList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.HierarchyConfig, error)
+	List(opts metav1.ListOptions) (*v1.HierarchyConfigList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.HierarchyConfig, err error)
 	HierarchyConfigExpansion
 }
@@ -59,7 +59,7 @@ func newHierarchyConfigs(c *ConfigmanagementV1Client) *hierarchyConfigs {
 }
 
 // Get takes name of the hierarchyConfig, and returns the corresponding hierarchyConfig object, and an error if there is any.
-func (c *hierarchyConfigs) Get(name string, options meta_v1.GetOptions) (result *v1.HierarchyConfig, err error) {
+func (c *hierarchyConfigs) Get(name string, options metav1.GetOptions) (result *v1.HierarchyConfig, err error) {
 	result = &v1.HierarchyConfig{}
 	err = c.client.Get().
 		Resource("hierarchyconfigs").
@@ -71,7 +71,7 @@ func (c *hierarchyConfigs) Get(name string, options meta_v1.GetOptions) (result 
 }
 
 // List takes label and field selectors, and returns the list of HierarchyConfigs that match those selectors.
-func (c *hierarchyConfigs) List(opts meta_v1.ListOptions) (result *v1.HierarchyConfigList, err error) {
+func (c *hierarchyConfigs) List(opts metav1.ListOptions) (result *v1.HierarchyConfigList, err error) {
 	result = &v1.HierarchyConfigList{}
 	err = c.client.Get().
 		Resource("hierarchyconfigs").
@@ -82,7 +82,7 @@ func (c *hierarchyConfigs) List(opts meta_v1.ListOptions) (result *v1.HierarchyC
 }
 
 // Watch returns a watch.Interface that watches the requested hierarchyConfigs.
-func (c *hierarchyConfigs) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *hierarchyConfigs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("hierarchyconfigs").
@@ -114,7 +114,7 @@ func (c *hierarchyConfigs) Update(hierarchyConfig *v1.HierarchyConfig) (result *
 }
 
 // Delete takes name of the hierarchyConfig and deletes it. Returns an error if one occurs.
-func (c *hierarchyConfigs) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *hierarchyConfigs) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("hierarchyconfigs").
 		Name(name).
@@ -124,7 +124,7 @@ func (c *hierarchyConfigs) Delete(name string, options *meta_v1.DeleteOptions) e
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *hierarchyConfigs) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *hierarchyConfigs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("hierarchyconfigs").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

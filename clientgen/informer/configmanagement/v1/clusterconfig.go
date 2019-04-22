@@ -24,8 +24,8 @@ import (
 	apis "github.com/google/nomos/clientgen/apis"
 	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
 	v1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	configmanagement_v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
@@ -56,20 +56,20 @@ func NewClusterConfigInformer(client apis.Interface, resyncPeriod time.Duration,
 func NewFilteredClusterConfigInformer(client apis.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigmanagementV1().ClusterConfigs().List(options)
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigmanagementV1().ClusterConfigs().Watch(options)
 			},
 		},
-		&configmanagement_v1.ClusterConfig{},
+		&configmanagementv1.ClusterConfig{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,7 +80,7 @@ func (f *clusterConfigInformer) defaultInformer(client apis.Interface, resyncPer
 }
 
 func (f *clusterConfigInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&configmanagement_v1.ClusterConfig{}, f.defaultInformer)
+	return f.factory.InformerFor(&configmanagementv1.ClusterConfig{}, f.defaultInformer)
 }
 
 func (f *clusterConfigInformer) Lister() v1.ClusterConfigLister {

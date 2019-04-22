@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -38,11 +38,11 @@ type NamespaceConfigInterface interface {
 	Create(*v1.NamespaceConfig) (*v1.NamespaceConfig, error)
 	Update(*v1.NamespaceConfig) (*v1.NamespaceConfig, error)
 	UpdateStatus(*v1.NamespaceConfig) (*v1.NamespaceConfig, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.NamespaceConfig, error)
-	List(opts meta_v1.ListOptions) (*v1.NamespaceConfigList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.NamespaceConfig, error)
+	List(opts metav1.ListOptions) (*v1.NamespaceConfigList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.NamespaceConfig, err error)
 	NamespaceConfigExpansion
 }
@@ -60,7 +60,7 @@ func newNamespaceConfigs(c *ConfigmanagementV1Client) *namespaceConfigs {
 }
 
 // Get takes name of the namespaceConfig, and returns the corresponding namespaceConfig object, and an error if there is any.
-func (c *namespaceConfigs) Get(name string, options meta_v1.GetOptions) (result *v1.NamespaceConfig, err error) {
+func (c *namespaceConfigs) Get(name string, options metav1.GetOptions) (result *v1.NamespaceConfig, err error) {
 	result = &v1.NamespaceConfig{}
 	err = c.client.Get().
 		Resource("namespaceconfigs").
@@ -72,7 +72,7 @@ func (c *namespaceConfigs) Get(name string, options meta_v1.GetOptions) (result 
 }
 
 // List takes label and field selectors, and returns the list of NamespaceConfigs that match those selectors.
-func (c *namespaceConfigs) List(opts meta_v1.ListOptions) (result *v1.NamespaceConfigList, err error) {
+func (c *namespaceConfigs) List(opts metav1.ListOptions) (result *v1.NamespaceConfigList, err error) {
 	result = &v1.NamespaceConfigList{}
 	err = c.client.Get().
 		Resource("namespaceconfigs").
@@ -83,7 +83,7 @@ func (c *namespaceConfigs) List(opts meta_v1.ListOptions) (result *v1.NamespaceC
 }
 
 // Watch returns a watch.Interface that watches the requested namespaceConfigs.
-func (c *namespaceConfigs) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *namespaceConfigs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("namespaceconfigs").
@@ -130,7 +130,7 @@ func (c *namespaceConfigs) UpdateStatus(namespaceConfig *v1.NamespaceConfig) (re
 }
 
 // Delete takes name of the namespaceConfig and deletes it. Returns an error if one occurs.
-func (c *namespaceConfigs) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *namespaceConfigs) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("namespaceconfigs").
 		Name(name).
@@ -140,7 +140,7 @@ func (c *namespaceConfigs) Delete(name string, options *meta_v1.DeleteOptions) e
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *namespaceConfigs) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *namespaceConfigs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("namespaceconfigs").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

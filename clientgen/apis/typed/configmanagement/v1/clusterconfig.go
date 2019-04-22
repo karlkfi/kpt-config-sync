@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -38,11 +38,11 @@ type ClusterConfigInterface interface {
 	Create(*v1.ClusterConfig) (*v1.ClusterConfig, error)
 	Update(*v1.ClusterConfig) (*v1.ClusterConfig, error)
 	UpdateStatus(*v1.ClusterConfig) (*v1.ClusterConfig, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.ClusterConfig, error)
-	List(opts meta_v1.ListOptions) (*v1.ClusterConfigList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.ClusterConfig, error)
+	List(opts metav1.ListOptions) (*v1.ClusterConfigList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.ClusterConfig, err error)
 	ClusterConfigExpansion
 }
@@ -60,7 +60,7 @@ func newClusterConfigs(c *ConfigmanagementV1Client) *clusterConfigs {
 }
 
 // Get takes name of the clusterConfig, and returns the corresponding clusterConfig object, and an error if there is any.
-func (c *clusterConfigs) Get(name string, options meta_v1.GetOptions) (result *v1.ClusterConfig, err error) {
+func (c *clusterConfigs) Get(name string, options metav1.GetOptions) (result *v1.ClusterConfig, err error) {
 	result = &v1.ClusterConfig{}
 	err = c.client.Get().
 		Resource("clusterconfigs").
@@ -72,7 +72,7 @@ func (c *clusterConfigs) Get(name string, options meta_v1.GetOptions) (result *v
 }
 
 // List takes label and field selectors, and returns the list of ClusterConfigs that match those selectors.
-func (c *clusterConfigs) List(opts meta_v1.ListOptions) (result *v1.ClusterConfigList, err error) {
+func (c *clusterConfigs) List(opts metav1.ListOptions) (result *v1.ClusterConfigList, err error) {
 	result = &v1.ClusterConfigList{}
 	err = c.client.Get().
 		Resource("clusterconfigs").
@@ -83,7 +83,7 @@ func (c *clusterConfigs) List(opts meta_v1.ListOptions) (result *v1.ClusterConfi
 }
 
 // Watch returns a watch.Interface that watches the requested clusterConfigs.
-func (c *clusterConfigs) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *clusterConfigs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("clusterconfigs").
@@ -130,7 +130,7 @@ func (c *clusterConfigs) UpdateStatus(clusterConfig *v1.ClusterConfig) (result *
 }
 
 // Delete takes name of the clusterConfig and deletes it. Returns an error if one occurs.
-func (c *clusterConfigs) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *clusterConfigs) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("clusterconfigs").
 		Name(name).
@@ -140,7 +140,7 @@ func (c *clusterConfigs) Delete(name string, options *meta_v1.DeleteOptions) err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *clusterConfigs) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *clusterConfigs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("clusterconfigs").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

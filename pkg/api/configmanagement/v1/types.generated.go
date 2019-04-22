@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	core_v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -337,12 +337,8 @@ func (in *HierarchicalQuotaNode) DeepCopyInto(out *HierarchicalQuotaNode) {
 	*out = *in
 	if in.ResourceQuotaV1 != nil {
 		in, out := &in.ResourceQuotaV1, &out.ResourceQuotaV1
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(core_v1.ResourceQuota)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(corev1.ResourceQuota)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Children != nil {
 		in, out := &in.Children, &out.Children

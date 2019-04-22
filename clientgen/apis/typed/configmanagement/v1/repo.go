@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -38,11 +38,11 @@ type RepoInterface interface {
 	Create(*v1.Repo) (*v1.Repo, error)
 	Update(*v1.Repo) (*v1.Repo, error)
 	UpdateStatus(*v1.Repo) (*v1.Repo, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.Repo, error)
-	List(opts meta_v1.ListOptions) (*v1.RepoList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.Repo, error)
+	List(opts metav1.ListOptions) (*v1.RepoList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Repo, err error)
 	RepoExpansion
 }
@@ -60,7 +60,7 @@ func newRepos(c *ConfigmanagementV1Client) *repos {
 }
 
 // Get takes name of the repo, and returns the corresponding repo object, and an error if there is any.
-func (c *repos) Get(name string, options meta_v1.GetOptions) (result *v1.Repo, err error) {
+func (c *repos) Get(name string, options metav1.GetOptions) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Get().
 		Resource("repos").
@@ -72,7 +72,7 @@ func (c *repos) Get(name string, options meta_v1.GetOptions) (result *v1.Repo, e
 }
 
 // List takes label and field selectors, and returns the list of Repos that match those selectors.
-func (c *repos) List(opts meta_v1.ListOptions) (result *v1.RepoList, err error) {
+func (c *repos) List(opts metav1.ListOptions) (result *v1.RepoList, err error) {
 	result = &v1.RepoList{}
 	err = c.client.Get().
 		Resource("repos").
@@ -83,7 +83,7 @@ func (c *repos) List(opts meta_v1.ListOptions) (result *v1.RepoList, err error) 
 }
 
 // Watch returns a watch.Interface that watches the requested repos.
-func (c *repos) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *repos) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("repos").
@@ -130,7 +130,7 @@ func (c *repos) UpdateStatus(repo *v1.Repo) (result *v1.Repo, err error) {
 }
 
 // Delete takes name of the repo and deletes it. Returns an error if one occurs.
-func (c *repos) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *repos) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("repos").
 		Name(name).
@@ -140,7 +140,7 @@ func (c *repos) Delete(name string, options *meta_v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *repos) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *repos) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("repos").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

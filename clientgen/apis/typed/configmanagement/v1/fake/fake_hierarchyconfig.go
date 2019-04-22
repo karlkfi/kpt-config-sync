@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	configmanagement_v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,19 +38,19 @@ var hierarchyconfigsResource = schema.GroupVersionResource{Group: "configmanagem
 var hierarchyconfigsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "HierarchyConfig"}
 
 // Get takes name of the hierarchyConfig, and returns the corresponding hierarchyConfig object, and an error if there is any.
-func (c *FakeHierarchyConfigs) Get(name string, options v1.GetOptions) (result *configmanagement_v1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Get(name string, options v1.GetOptions) (result *configmanagementv1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(hierarchyconfigsResource, name), &configmanagement_v1.HierarchyConfig{})
+		Invokes(testing.NewRootGetAction(hierarchyconfigsResource, name), &configmanagementv1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchyConfig), err
+	return obj.(*configmanagementv1.HierarchyConfig), err
 }
 
 // List takes label and field selectors, and returns the list of HierarchyConfigs that match those selectors.
-func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *configmanagement_v1.HierarchyConfigList, err error) {
+func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *configmanagementv1.HierarchyConfigList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(hierarchyconfigsResource, hierarchyconfigsKind, opts), &configmanagement_v1.HierarchyConfigList{})
+		Invokes(testing.NewRootListAction(hierarchyconfigsResource, hierarchyconfigsKind, opts), &configmanagementv1.HierarchyConfigList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeHierarchyConfigs) List(opts v1.ListOptions) (result *configmanageme
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configmanagement_v1.HierarchyConfigList{ListMeta: obj.(*configmanagement_v1.HierarchyConfigList).ListMeta}
-	for _, item := range obj.(*configmanagement_v1.HierarchyConfigList).Items {
+	list := &configmanagementv1.HierarchyConfigList{ListMeta: obj.(*configmanagementv1.HierarchyConfigList).ListMeta}
+	for _, item := range obj.(*configmanagementv1.HierarchyConfigList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeHierarchyConfigs) Watch(opts v1.ListOptions) (watch.Interface, erro
 }
 
 // Create takes the representation of a hierarchyConfig and creates it.  Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *FakeHierarchyConfigs) Create(hierarchyConfig *configmanagement_v1.HierarchyConfig) (result *configmanagement_v1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Create(hierarchyConfig *configmanagementv1.HierarchyConfig) (result *configmanagementv1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(hierarchyconfigsResource, hierarchyConfig), &configmanagement_v1.HierarchyConfig{})
+		Invokes(testing.NewRootCreateAction(hierarchyconfigsResource, hierarchyConfig), &configmanagementv1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchyConfig), err
+	return obj.(*configmanagementv1.HierarchyConfig), err
 }
 
 // Update takes the representation of a hierarchyConfig and updates it. Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *FakeHierarchyConfigs) Update(hierarchyConfig *configmanagement_v1.HierarchyConfig) (result *configmanagement_v1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Update(hierarchyConfig *configmanagementv1.HierarchyConfig) (result *configmanagementv1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(hierarchyconfigsResource, hierarchyConfig), &configmanagement_v1.HierarchyConfig{})
+		Invokes(testing.NewRootUpdateAction(hierarchyconfigsResource, hierarchyConfig), &configmanagementv1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchyConfig), err
+	return obj.(*configmanagementv1.HierarchyConfig), err
 }
 
 // Delete takes name of the hierarchyConfig and deletes it. Returns an error if one occurs.
 func (c *FakeHierarchyConfigs) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(hierarchyconfigsResource, name), &configmanagement_v1.HierarchyConfig{})
+		Invokes(testing.NewRootDeleteAction(hierarchyconfigsResource, name), &configmanagementv1.HierarchyConfig{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeHierarchyConfigs) Delete(name string, options *v1.DeleteOptions) er
 func (c *FakeHierarchyConfigs) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(hierarchyconfigsResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &configmanagement_v1.HierarchyConfigList{})
+	_, err := c.Fake.Invokes(action, &configmanagementv1.HierarchyConfigList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched hierarchyConfig.
-func (c *FakeHierarchyConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagement_v1.HierarchyConfig, err error) {
+func (c *FakeHierarchyConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.HierarchyConfig, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(hierarchyconfigsResource, name, data, subresources...), &configmanagement_v1.HierarchyConfig{})
+		Invokes(testing.NewRootPatchSubresourceAction(hierarchyconfigsResource, name, data, subresources...), &configmanagementv1.HierarchyConfig{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchyConfig), err
+	return obj.(*configmanagementv1.HierarchyConfig), err
 }

@@ -24,8 +24,8 @@ import (
 	apis "github.com/google/nomos/clientgen/apis"
 	internalinterfaces "github.com/google/nomos/clientgen/informer/internalinterfaces"
 	v1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	configmanagement_v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
@@ -56,20 +56,20 @@ func NewSyncInformer(client apis.Interface, resyncPeriod time.Duration, indexers
 func NewFilteredSyncInformer(client apis.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigmanagementV1().Syncs().List(options)
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
 				return client.ConfigmanagementV1().Syncs().Watch(options)
 			},
 		},
-		&configmanagement_v1.Sync{},
+		&configmanagementv1.Sync{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,7 +80,7 @@ func (f *syncInformer) defaultInformer(client apis.Interface, resyncPeriod time.
 }
 
 func (f *syncInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&configmanagement_v1.Sync{}, f.defaultInformer)
+	return f.factory.InformerFor(&configmanagementv1.Sync{}, f.defaultInformer)
 }
 
 func (f *syncInformer) Lister() v1.SyncLister {

@@ -21,7 +21,7 @@ package v1
 import (
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -37,11 +37,11 @@ type HierarchicalQuotasGetter interface {
 type HierarchicalQuotaInterface interface {
 	Create(*v1.HierarchicalQuota) (*v1.HierarchicalQuota, error)
 	Update(*v1.HierarchicalQuota) (*v1.HierarchicalQuota, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.HierarchicalQuota, error)
-	List(opts meta_v1.ListOptions) (*v1.HierarchicalQuotaList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.HierarchicalQuota, error)
+	List(opts metav1.ListOptions) (*v1.HierarchicalQuotaList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.HierarchicalQuota, err error)
 	HierarchicalQuotaExpansion
 }
@@ -59,7 +59,7 @@ func newHierarchicalQuotas(c *ConfigmanagementV1Client) *hierarchicalQuotas {
 }
 
 // Get takes name of the hierarchicalQuota, and returns the corresponding hierarchicalQuota object, and an error if there is any.
-func (c *hierarchicalQuotas) Get(name string, options meta_v1.GetOptions) (result *v1.HierarchicalQuota, err error) {
+func (c *hierarchicalQuotas) Get(name string, options metav1.GetOptions) (result *v1.HierarchicalQuota, err error) {
 	result = &v1.HierarchicalQuota{}
 	err = c.client.Get().
 		Resource("hierarchicalquotas").
@@ -71,7 +71,7 @@ func (c *hierarchicalQuotas) Get(name string, options meta_v1.GetOptions) (resul
 }
 
 // List takes label and field selectors, and returns the list of HierarchicalQuotas that match those selectors.
-func (c *hierarchicalQuotas) List(opts meta_v1.ListOptions) (result *v1.HierarchicalQuotaList, err error) {
+func (c *hierarchicalQuotas) List(opts metav1.ListOptions) (result *v1.HierarchicalQuotaList, err error) {
 	result = &v1.HierarchicalQuotaList{}
 	err = c.client.Get().
 		Resource("hierarchicalquotas").
@@ -82,7 +82,7 @@ func (c *hierarchicalQuotas) List(opts meta_v1.ListOptions) (result *v1.Hierarch
 }
 
 // Watch returns a watch.Interface that watches the requested hierarchicalQuotas.
-func (c *hierarchicalQuotas) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *hierarchicalQuotas) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Resource("hierarchicalquotas").
@@ -114,7 +114,7 @@ func (c *hierarchicalQuotas) Update(hierarchicalQuota *v1.HierarchicalQuota) (re
 }
 
 // Delete takes name of the hierarchicalQuota and deletes it. Returns an error if one occurs.
-func (c *hierarchicalQuotas) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *hierarchicalQuotas) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("hierarchicalquotas").
 		Name(name).
@@ -124,7 +124,7 @@ func (c *hierarchicalQuotas) Delete(name string, options *meta_v1.DeleteOptions)
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *hierarchicalQuotas) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *hierarchicalQuotas) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	return c.client.Delete().
 		Resource("hierarchicalquotas").
 		VersionedParams(&listOptions, scheme.ParameterCodec).

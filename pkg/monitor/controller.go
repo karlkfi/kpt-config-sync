@@ -21,12 +21,15 @@ import (
 	"github.com/google/nomos/pkg/monitor/clusterconfig"
 	"github.com/google/nomos/pkg/monitor/namespaceconfig"
 	"github.com/google/nomos/pkg/monitor/state"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // AddToManager adds all Controllers to the Manager
 func AddToManager(mgr manager.Manager) error {
-	scheme.AddToScheme(mgr.GetScheme())
+	if err := scheme.AddToScheme(mgr.GetScheme()); err != nil {
+		return errors.Wrapf(err, "pkg/monitor.AddToManager")
+	}
 	cs := state.NewClusterState()
 
 	if err := clusterconfig.AddController(mgr, cs); err != nil {

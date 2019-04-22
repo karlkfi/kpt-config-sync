@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	configmanagement_v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,19 +38,19 @@ var hierarchicalquotasResource = schema.GroupVersionResource{Group: "configmanag
 var hierarchicalquotasKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "HierarchicalQuota"}
 
 // Get takes name of the hierarchicalQuota, and returns the corresponding hierarchicalQuota object, and an error if there is any.
-func (c *FakeHierarchicalQuotas) Get(name string, options v1.GetOptions) (result *configmanagement_v1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Get(name string, options v1.GetOptions) (result *configmanagementv1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(hierarchicalquotasResource, name), &configmanagement_v1.HierarchicalQuota{})
+		Invokes(testing.NewRootGetAction(hierarchicalquotasResource, name), &configmanagementv1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchicalQuota), err
+	return obj.(*configmanagementv1.HierarchicalQuota), err
 }
 
 // List takes label and field selectors, and returns the list of HierarchicalQuotas that match those selectors.
-func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *configmanagement_v1.HierarchicalQuotaList, err error) {
+func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *configmanagementv1.HierarchicalQuotaList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(hierarchicalquotasResource, hierarchicalquotasKind, opts), &configmanagement_v1.HierarchicalQuotaList{})
+		Invokes(testing.NewRootListAction(hierarchicalquotasResource, hierarchicalquotasKind, opts), &configmanagementv1.HierarchicalQuotaList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (c *FakeHierarchicalQuotas) List(opts v1.ListOptions) (result *configmanage
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configmanagement_v1.HierarchicalQuotaList{ListMeta: obj.(*configmanagement_v1.HierarchicalQuotaList).ListMeta}
-	for _, item := range obj.(*configmanagement_v1.HierarchicalQuotaList).Items {
+	list := &configmanagementv1.HierarchicalQuotaList{ListMeta: obj.(*configmanagementv1.HierarchicalQuotaList).ListMeta}
+	for _, item := range obj.(*configmanagementv1.HierarchicalQuotaList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -75,29 +75,29 @@ func (c *FakeHierarchicalQuotas) Watch(opts v1.ListOptions) (watch.Interface, er
 }
 
 // Create takes the representation of a hierarchicalQuota and creates it.  Returns the server's representation of the hierarchicalQuota, and an error, if there is any.
-func (c *FakeHierarchicalQuotas) Create(hierarchicalQuota *configmanagement_v1.HierarchicalQuota) (result *configmanagement_v1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Create(hierarchicalQuota *configmanagementv1.HierarchicalQuota) (result *configmanagementv1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(hierarchicalquotasResource, hierarchicalQuota), &configmanagement_v1.HierarchicalQuota{})
+		Invokes(testing.NewRootCreateAction(hierarchicalquotasResource, hierarchicalQuota), &configmanagementv1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchicalQuota), err
+	return obj.(*configmanagementv1.HierarchicalQuota), err
 }
 
 // Update takes the representation of a hierarchicalQuota and updates it. Returns the server's representation of the hierarchicalQuota, and an error, if there is any.
-func (c *FakeHierarchicalQuotas) Update(hierarchicalQuota *configmanagement_v1.HierarchicalQuota) (result *configmanagement_v1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Update(hierarchicalQuota *configmanagementv1.HierarchicalQuota) (result *configmanagementv1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(hierarchicalquotasResource, hierarchicalQuota), &configmanagement_v1.HierarchicalQuota{})
+		Invokes(testing.NewRootUpdateAction(hierarchicalquotasResource, hierarchicalQuota), &configmanagementv1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchicalQuota), err
+	return obj.(*configmanagementv1.HierarchicalQuota), err
 }
 
 // Delete takes name of the hierarchicalQuota and deletes it. Returns an error if one occurs.
 func (c *FakeHierarchicalQuotas) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(hierarchicalquotasResource, name), &configmanagement_v1.HierarchicalQuota{})
+		Invokes(testing.NewRootDeleteAction(hierarchicalquotasResource, name), &configmanagementv1.HierarchicalQuota{})
 	return err
 }
 
@@ -105,16 +105,16 @@ func (c *FakeHierarchicalQuotas) Delete(name string, options *v1.DeleteOptions) 
 func (c *FakeHierarchicalQuotas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(hierarchicalquotasResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &configmanagement_v1.HierarchicalQuotaList{})
+	_, err := c.Fake.Invokes(action, &configmanagementv1.HierarchicalQuotaList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched hierarchicalQuota.
-func (c *FakeHierarchicalQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagement_v1.HierarchicalQuota, err error) {
+func (c *FakeHierarchicalQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.HierarchicalQuota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(hierarchicalquotasResource, name, data, subresources...), &configmanagement_v1.HierarchicalQuota{})
+		Invokes(testing.NewRootPatchSubresourceAction(hierarchicalquotasResource, name, data, subresources...), &configmanagementv1.HierarchicalQuota{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configmanagement_v1.HierarchicalQuota), err
+	return obj.(*configmanagementv1.HierarchicalQuota), err
 }

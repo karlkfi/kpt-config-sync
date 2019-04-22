@@ -26,7 +26,7 @@ import (
 	configmanagementscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/importer"
@@ -59,8 +59,18 @@ type Controller struct {
 }
 
 // NewController returns a new Controller.
-func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) *Controller {
-	configmanagementscheme.AddToScheme(scheme.Scheme)
+//
+// policyDir is the path to the filesystem directory that contains a candidate
+// Nomos policy directory, which the user intends to be valid but which the
+// controller will check for errors.  pollPeriod is the time between two
+// successive directory polls. parser is used to convert the contents of
+// policyDir into a set of Nomos policies.  client is the catch-all client used
+// to call configmanagement and other Kubernetes APIs.  stopChan is a channel
+// that the controller will close when it announces that it will stop.
+func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) (*Controller, error) {
+	if err := configmanagementscheme.AddToScheme(scheme.Scheme); err != nil {
+		return nil, errors.Wrapf(err, "filesystem.NewController: can not add to scheme")
+	}
 
 	informerFactory := informer.NewSharedInformerFactory(
 		client.PolicyHierarchy(), resync)
@@ -86,7 +96,7 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 		repoClient:            repoClient,
 		stopChan:              stopChan,
 		client:                client,
-	}
+	}, nil
 }
 
 // Run runs the controller and blocks until an error occurs or stopChan is closed.

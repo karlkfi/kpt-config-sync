@@ -71,7 +71,10 @@ func main() {
 
 	stopChan := make(chan struct{})
 
-	c := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
+	c, err := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
+	if err != nil {
+		glog.Fatalf("Failure creating controller: %v", err)
+	}
 	go service.WaitForShutdownSignalCb(stopChan)
 	if err := c.Run(context.Background()); err != nil {
 		glog.Fatalf("Failure running controller: %+v", err)
