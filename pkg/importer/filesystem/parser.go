@@ -23,7 +23,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
@@ -38,23 +38,24 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
-	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
 func init() {
-	// Add Nomos types to the Scheme used by util.AsDefaultVersionedOrOriginal for
+	// Add Nomos types to the Scheme used by asDefaultVersionedOrOriginal for
 	// converting Unstructured to specific types.
-	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
-	utilruntime.Must(v1.AddToScheme(legacyscheme.Scheme))
-	utilruntime.Must(clusterregistry.AddToScheme(legacyscheme.Scheme))
+	utilruntime.Must(v1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(clusterregistry.AddToScheme(scheme.Scheme))
 }
 
 // Parser reads files on disk and builds Nomos CRDs.
@@ -231,7 +232,7 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 			if err != nil {
 				continue
 			}
-			object := cmdutil.AsDefaultVersionedOrOriginal(info.Object, info.Mapping)
+			object := asDefaultVersionedOrOriginal(info.Object, info.Mapping)
 			fileObject := ast.NewFileObject(object, source.Path())
 			fileObjects = append(fileObjects, fileObject)
 		}
@@ -297,4 +298,19 @@ func validateInstallation(resources discovery.ServerResourcesInterface) status.M
 		return status.From(vet.PolicyManagementNotInstalledError{Err: err})
 	}
 	return nil
+}
+
+// asDefaultVersionedOrOriginal returns the object as a Go object in the external form if possible (matching the
+// group version kind of the mapping if provided, a best guess based on serialization if not provided, or obj if it cannot be converted.
+func asDefaultVersionedOrOriginal(obj runtime.Object, mapping *meta.RESTMapping) runtime.Object {
+	converter := runtime.ObjectConvertor(scheme.Scheme)
+	groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
+	if mapping != nil {
+		groupVersioner = mapping.GroupVersionKind.GroupVersion()
+	}
+
+	if cObj, err := converter.ConvertToVersion(obj, groupVersioner); err == nil {
+		return cObj
+	}
+	return obj
 }
