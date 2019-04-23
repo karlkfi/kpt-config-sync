@@ -484,7 +484,7 @@ type RepoSyncChangeStatus struct {
 // resource.
 type ConfigManagementError struct {
 	// ErrorResource is unused and should be removed when we uprev the API version.
-	ErrorResource `json:"inline"`
+	ErrorResource `json:",inline"`
 
 	// Code is the error code of this particualr error.  Error codes are numeric strings,
 	// like "1012".
