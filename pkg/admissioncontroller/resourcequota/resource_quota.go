@@ -78,20 +78,19 @@ func (r *Admitter) Admit(review admissionv1beta1.AdmissionReview) *admissionv1be
 	start := time.Now()
 	resp := r.internalAdmit(review)
 	elapsed := time.Since(start).Seconds()
-	admissioncontroller.Metrics.AdmitDuration.WithLabelValues("resource_quota", review.Request.Namespace, strconv.FormatBool(resp.Allowed)).Observe(elapsed)
+	admissioncontroller.Metrics.AdmitDuration.WithLabelValues(strconv.FormatBool(resp.Allowed)).Observe(elapsed)
 	return resp
 }
 
 func (r *Admitter) internalAdmit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse {
 	cache, err := resourcequota.NewHierarchicalQuotaCache(r.resourceQuotaInformer, r.hierarchicalQuotaInformer)
-	counter := admissioncontroller.Metrics.ErrorTotal.WithLabelValues("resource_quota", review.Request.Namespace)
 	if err != nil {
-		counter.Inc()
+		admissioncontroller.Metrics.ErrorTotal.Inc()
 		return admissioncontroller.Deny(metav1.StatusReasonInternalError, err)
 	}
 	newUsage, err := r.getNewUsage(*review.Request)
 	if err != nil {
-		counter.Inc()
+		admissioncontroller.Metrics.ErrorTotal.Inc()
 		return admissioncontroller.Deny(metav1.StatusReasonInternalError, err)
 	}
 	admitError := cache.Admit(review.Request.Namespace, newUsage)

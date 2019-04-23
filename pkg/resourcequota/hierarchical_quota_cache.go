@@ -175,13 +175,12 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 				newTotalUsage := current.Copy()
 				newTotalUsage.Add(newUsage)
 				if newTotalUsage.Cmp(limit) > 0 {
-					Metrics.Violations.WithLabelValues("resource_quota", namespace, resourceName.String()).Inc()
+					Metrics.Violations.WithLabelValues(resourceName.String()).Inc()
 					return errors.Errorf("exceeded quota in %s, requested: %s=%d, limit: %s=%d",
 						namespace, resourceName, newTotalUsage.Value(), resourceName, limit.Value())
 				}
 
-				Metrics.Usage.WithLabelValues("resource_quota", namespace, resourceName.String()).
-					Set(float64(newTotalUsage.Value()))
+				Metrics.Usage.WithLabelValues(resourceName.String()).Set(float64(newTotalUsage.Value()))
 			}
 		}
 		namespace = namespaceQuota.parent

@@ -27,22 +27,22 @@ var Metrics = struct {
 }{
 	Usage: prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Help:      "Abstract namespace quota usage per resource type",
+			Help:      "Quota usage per resource type",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "usage",
 		},
-		[]string{"app", "abstractnamespace", "resource"},
+		[]string{"resource"},
 	),
 
 	Violations: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Help:      "Abstract namespace quota violations per resource type",
+			Help:      "Quota violations per resource type",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "violations_total",
 		},
-		[]string{"app", "abstractnamespace", "resource"},
+		[]string{"resource"},
 	),
 }
 

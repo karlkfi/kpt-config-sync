@@ -23,7 +23,7 @@ import (
 // Metrics contains the prometheus metric vectors to which the package should record metrics
 var Metrics = struct {
 	AdmitDuration *prometheus.HistogramVec
-	ErrorTotal    *prometheus.CounterVec
+	ErrorTotal    prometheus.Counter
 }{
 	prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -33,16 +33,15 @@ var Metrics = struct {
 			Name:      "duration_seconds",
 			Buckets:   []float64{.001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5},
 		},
-		[]string{"app", "namespace", "allowed"},
+		[]string{"allowed"},
 	),
-	prometheus.NewCounterVec(
+	prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Help:      "Total internal errors that occurred when reviewing admission requests",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "admission_controller",
 			Name:      "error_total",
 		},
-		[]string{"app", "namespace"},
 	),
 }
 
