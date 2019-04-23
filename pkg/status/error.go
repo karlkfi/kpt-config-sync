@@ -19,26 +19,24 @@ func prefixErr(err Error) string {
 	return fmt.Sprintf("KNV%s", err.Code())
 }
 
-// ToCMEr knows how to serialize itself to a ConfigManagementError.
-type ToCMEr interface {
-	// ToCME converts the implementor into ConfigManagementError, preserving
-	// structured information.
-	ToCME() v1.ConfigManagementError
-}
-
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
 	// error is the standard error interface.
 	error
 	// ToCMEr knows how to convert itself to a ConfigManagementError.
-	ToCMEr
+	// ToCME converts the implementor into ConfigManagementError, preserving
+	// structured information.
+	ToCME() v1.ConfigManagementError
 	// Code is the unique identifier of the error to help users find documentation.
 	Code() string
 }
 
 // errs is a map from error codes to instances of the types they represent.
 // Entries set to nil are reserved and MUST NOT be reused.
+// The map values are sample error values by types only.  They do not need to
+// be properly initialized, but need to be of the same type as the error
+// corresponding to the code.
 var errs = map[string]Error{
 	"1023": nil,
 	"1025": nil,
@@ -86,7 +84,8 @@ func nextCandidate(code string) (int, error) {
 	panic("unreachable code")
 }
 
-// Register marks the passed error code as used.
+// Register marks the passed error code as used. err is a sample value of Error
+// for this code.
 func Register(code string, err Error) {
 	if _, exists := errs[code]; exists {
 		if c, err2 := nextCandidate(code); err2 == nil {
