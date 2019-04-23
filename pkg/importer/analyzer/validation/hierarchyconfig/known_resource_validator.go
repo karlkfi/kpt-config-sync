@@ -1,6 +1,8 @@
 package hierarchyconfig
 
 import (
+	"fmt"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
@@ -29,14 +31,37 @@ func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
 
 // ValidateSystemObject implements Visitor.
 func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) status.MultiError {
+	var errs []error
 	switch h := o.Object.(type) {
 	case *v1.HierarchyConfig:
 		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
-			gk := gkc.GroupKind()
-			if !k.apiInfo.GroupKindExists(gk) {
-				return status.From(vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc})
+			if err := k.validateGroupKind(gkc); err != nil {
+				errs = append(errs, err)
 			}
 		}
+	}
+	return status.From(errs...)
+}
+
+// validateGroupKind validates a group kind for both existing in the API discovery as well as
+// being at namespace scope.
+func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) error {
+	gk := gkc.GroupKind()
+	if !k.apiInfo.GroupKindExists(gk) {
+		return status.From(vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc})
+	}
+
+	scope := k.apiInfo.GetScopeForGroupKind(gk)
+	switch scope {
+	case discovery.NamespaceScope:
+		// noop
+	case discovery.ClusterScope:
+		return status.From(vet.ClusterScopedResourceInHierarchyConfigError{
+			Scope:           scope,
+			HierarchyConfig: gkc,
+		})
+	default:
+		panic(fmt.Sprintf("programmer error: case %s should not occur", scope))
 	}
 	return nil
 }

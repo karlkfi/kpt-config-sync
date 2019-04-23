@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
@@ -1553,7 +1553,9 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/config.yaml": templateData{Group: "extensions", Kind: "CustomResourceDefinition"}.apply(aHierarchyConfig),
 		},
-		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
+		expectedErrorCodes: []string{
+			vet.UnsupportedResourceInHierarchyConfigErrorCode,
+			vet.ClusterScopedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a Namespace",
@@ -1567,14 +1569,18 @@ spec:
 		testFiles: fstesting.FileContentMap{
 			"system/config.yaml": templateData{Group: configmanagement.GroupName, Kind: "NamespaceConfig"}.apply(aHierarchyConfig),
 		},
-		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
+		expectedErrorCodes: []string{
+			vet.UnsupportedResourceInHierarchyConfigErrorCode,
+			vet.ClusterScopedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "HierarchyConfig contains a Sync",
 		testFiles: fstesting.FileContentMap{
 			"system/config.yaml": templateData{Group: configmanagement.GroupName, Kind: "Sync"}.apply(aHierarchyConfig),
 		},
-		expectedErrorCodes: []string{vet.UnsupportedResourceInHierarchyConfigErrorCode},
+		expectedErrorCodes: []string{
+			vet.UnsupportedResourceInHierarchyConfigErrorCode,
+			vet.ClusterScopedResourceInHierarchyConfigErrorCode},
 	},
 	{
 		testName: "Invalid name for HierarchyConfig",

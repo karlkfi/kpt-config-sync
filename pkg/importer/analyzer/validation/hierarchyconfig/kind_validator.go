@@ -2,7 +2,7 @@ package hierarchyconfig
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
@@ -42,7 +42,6 @@ func AllowedInHierarchyConfigs(gk schema.GroupKind, enableCRDs bool) bool {
 	return !unsupportedHierarchyConfigResources(enableCRDs)[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
 }
 
-// TODO(130247902): Don't allow cluster-scoped resources in hierarchyconfigs.
 // unsupportedHierarchyConfigResources returns a map of each type where syncing is explicitly not supported.
 func unsupportedHierarchyConfigResources(enableCRDs bool) map[schema.GroupKind]bool {
 	m := map[schema.GroupKind]bool{

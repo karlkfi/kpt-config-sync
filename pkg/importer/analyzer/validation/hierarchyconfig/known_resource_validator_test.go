@@ -16,16 +16,27 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func toAPIInfo(known ...schema.GroupVersionKind) (*discovery.APIInfo, error) {
-	resources := make([]*metav1.APIResourceList, len(known))
+type apiInfoOption func([]*metav1.APIResourceList) []*metav1.APIResourceList
 
-	for i, gvk := range known {
-		resources[i] = &metav1.APIResourceList{
-			GroupVersion: gvk.GroupVersion().String(),
-			APIResources: []metav1.APIResource{{Kind: gvk.Kind}},
-		}
+func apiResource(known schema.GroupVersionKind, namespaced bool) apiInfoOption {
+	return func(list []*metav1.APIResourceList) []*metav1.APIResourceList {
+		return append(list, &metav1.APIResourceList{
+			GroupVersion: known.GroupVersion().String(),
+			APIResources: []metav1.APIResource{
+				{
+					Kind:       known.Kind,
+					Namespaced: namespaced,
+				},
+			},
+		})
 	}
+}
 
+func toAPIInfo(opts ...apiInfoOption) (*discovery.APIInfo, error) {
+	var resources []*metav1.APIResourceList
+	for _, o := range opts {
+		resources = o(resources)
+	}
 	return discovery.NewAPIInfo(resources)
 }
 
@@ -40,8 +51,11 @@ func APIInfo(apiInfo *discovery.APIInfo) ast.BuildOpt {
 	}
 }
 
-func TestKnownResourceValidator(t *testing.T) {
-	apiInfo, err := toAPIInfo(kinds.RoleBinding())
+func TestKnownResourceValidatorUnknown(t *testing.T) {
+	apiInfo, err := toAPIInfo(
+		apiResource(kinds.RoleBinding(), true),
+		apiResource(kinds.ClusterRoleBinding(), false),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error forming APIInfo: %v", err)
 	}
@@ -56,6 +70,26 @@ func TestKnownResourceValidator(t *testing.T) {
 		asttest.Pass("RoleBinding valid if known",
 			fake.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
+		),
+	).With(APIInfo(apiInfo))
+
+	test.RunAll(t)
+}
+
+func TestKnownResourceValidatorScope(t *testing.T) {
+	apiInfo, err := toAPIInfo(
+		apiResource(kinds.RoleBinding(), true),
+		apiResource(kinds.ClusterRoleBinding(), false),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error forming APIInfo: %v", err)
+	}
+
+	test := asttest.Validator(NewKnownResourceValidator,
+		vet.ClusterScopedResourceInHierarchyConfigErrorCode,
+		asttest.Fail("ClusterRoleBinding is cluster scoped",
+			fake.Build(kinds.HierarchyConfig(),
+				HierarchyConfigResource(kinds.ClusterRoleBinding(), v1.HierarchyModeDefault)),
 		),
 	).With(APIInfo(apiInfo))
 

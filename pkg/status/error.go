@@ -2,6 +2,7 @@ package status
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -70,10 +71,29 @@ type PathError interface {
 	RelativePaths() []id.Path
 }
 
+func nextCandidate(code string) (int, error) {
+	c, err := strconv.Atoi(code)
+	if err != nil {
+		return 0, err
+	}
+
+	for ; true; c++ {
+		if _, found := errs[strconv.Itoa(c)]; found {
+			continue
+		}
+		return c, nil
+	}
+	panic("unreachable code")
+}
+
 // Register marks the passed error code as used.
 func Register(code string, err Error) {
 	if _, exists := errs[code]; exists {
-		panic(fmt.Errorf("duplicate error code %s: %T", code, err))
+		if c, err2 := nextCandidate(code); err2 == nil {
+			panic(fmt.Errorf("duplicate error code %s: %T, next candidate: %d", code, err, c))
+		} else {
+			panic(fmt.Errorf("duplicate error code %s: %T", code, err))
+		}
 	}
 	errs[code] = err
 }

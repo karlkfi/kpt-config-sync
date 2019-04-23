@@ -1,4 +1,4 @@
-Found issues: 13 error(s)
+Found issues: 14 error(s)
 
 
 [1] KNV1004: A Namespace MUST NOT use the annotation configmanagement.gke.io/namespace-selector. Remove metadata.annotations.configmanagement.gke.io/namespace-selector from:
@@ -133,4 +133,15 @@ version: v1
 kind: RoleBinding
 
 For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1031
+
+
+[14] KNV1046: This HierarchyConfig references the APIResource "ClusterRole.rbac.authorization.k8s.io" which has cluster scope. Cluster scoped objects are not permitted in HierarchyConfig.
+
+source: system/rbac.yaml
+metadata.name: rbac
+group: configmanagement.gke.io
+version: v1
+kind: HierarchyConfig
+
+For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv1046
 

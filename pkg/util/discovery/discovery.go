@@ -16,7 +16,7 @@ limitations under the License.
 package discovery
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -134,6 +134,20 @@ func (a *APIInfo) GetScope(gvk schema.GroupVersionKind) ObjectScope {
 		return NamespaceScope
 	}
 	return ClusterScope
+}
+
+// GetScopeForGroupKind returns the scope for the object based on Group and Kind.  If not found,
+// UnknownScope will be returned.
+func (a *APIInfo) GetScopeForGroupKind(gk schema.GroupKind) ObjectScope {
+	for gvk, resource := range a.resources {
+		if gvk.GroupKind() == gk {
+			if resource.Namespaced {
+				return NamespaceScope
+			}
+			return ClusterScope
+		}
+	}
+	return UnknownScope
 }
 
 // Exists returns true if the GroupVersionKind is in the APIResources.

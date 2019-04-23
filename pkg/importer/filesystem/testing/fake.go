@@ -296,6 +296,20 @@ func testK8SResources() []*restmapper.APIGroupResources {
 		},
 		{
 			Group: metav1.APIGroup{
+				Name: "apiextensions.k8s.io",
+				Versions: []metav1.GroupVersionForDiscovery{
+					{Version: "v1beta1"},
+				},
+				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1beta1"},
+			},
+			VersionedResources: map[string][]metav1.APIResource{
+				"v1beta1": {
+					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
+				},
+			},
+		},
+		{
+			Group: metav1.APIGroup{
 				Name: "extensions",
 				Versions: []metav1.GroupVersionForDiscovery{
 					{Version: "v1beta1"},

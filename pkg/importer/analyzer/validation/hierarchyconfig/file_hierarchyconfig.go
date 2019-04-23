@@ -1,7 +1,7 @@
 package hierarchyconfig
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
