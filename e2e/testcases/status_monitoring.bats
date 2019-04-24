@@ -103,7 +103,7 @@ function examine_token() {
 function dummy_repo_update() {
   debug::log "Update something inconsequential in the repo"
   git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/dir/namespace.yaml
-  git commit -a -m "Updating something inconsequential in the repo"
+  git::commit -a -m "Update something inconsequential in the repo"
 }
 
 # token_updated returns true if the status token on the resource changes from
@@ -120,6 +120,7 @@ function token_updated() {
   local new_token
   new_token="$(kubectl get \
     "${resource_type}" "${resource_name}" --output="jsonpath={${token_name}}")"
+  debug::log "last read was: ${new_token}, starting token was: ${token}"
   if [[ "${new_token}" == "${token}" ]]; then
     # Fail, token not updated
     return 0
@@ -146,10 +147,11 @@ function ensure_token_updated() {
   fi
 
   local token="${output}"
+  debug::log "stable token is: ${token}"
   dummy_repo_update
 
   debug::log "Check that the token was updated after repo update from: ${token}"
-  wait::for -t 30 -- \
+  wait::for -t 60 -- \
     token_updated "${resource_type}" "${resource_name}" \
       "${token_name}" "${token}"
 }
@@ -165,3 +167,42 @@ function ensure_token_updated() {
 @test "repo .status.sync.latestToken is updated" {
   ensure_token_updated "repo" "repo" ".status.sync.latestToken"
 }
+
+@test "repo .status.import.errors is populated on error" {
+  ensure_error_free_repo
+  wait::for -t 30 -f -- kubectl get namespace dir
+
+  debug::log "Attempt to add two dirs with the same name"
+  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/foo/dir/namespace.yaml
+  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/bar/dir/namespace.yaml
+  git::commit -a -m "Attempt to add two dirs with the same name"
+
+  debug::log "Check that an error code is set on import status"
+  wait::for -t 30 -o "KNV1002" -- \
+    kubectl get repo repo --output='jsonpath={.status.import.errors[0].code}'
+}
+
+# A sync error happens if the managed objects are well-formed but some specific
+# detail prevents an "apply" operation.  One instance is given below: we have
+# a perfectly legit service in a managed namespace, except that its name is not
+# valid.  Normally, `nomos vet` will notice this before the error gets into a
+# cluster.
+@test "repo .status.sync.errors is populated on error" {
+  skip "Re-enable when b/131250908 is fixed"
+  ensure_error_free_repo
+  wait::for -t 30 -f -- kubectl get namespace dir
+
+  debug::log \
+    "Attempt to add a managed namespace with an invalid service in it"
+  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/dir/namespace.yaml
+  git::add \
+    "${YAML_DIR}/invalid/service-invalid-name.yaml" \
+    acme/namespaces/dir/service.yaml
+  git::commit -a \
+    -m "Attempt to add a managed namespace with an invalid service in it"
+
+  debug::log "Check that an error code is set on sync status"
+  wait::for -t 30 -o "KNV2010" -- \
+    kubectl get repo repo --output='jsonpath={.status.sync.errors[0].code}'
+}
+
