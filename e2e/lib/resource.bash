@@ -374,8 +374,16 @@ function resource::delete() {
     declare -a tmpnames
     for ns in "${names[@]}"; do
       if [[ "${ns}" != "default" && "${ns}" != "kube-system" ]]; then
-        tmpnames+=("${ns}")
+
+        if kubectl get ns "${ns}" | grep -q "Terminating"; then
+          # Technically a race condition if a delete happens between here and
+          # when we attempt to delete.
+          debug::log "Namespace ${ns} is already terminating"
+        else
+          tmpnames+=("${ns}")
+        fi
       fi
+
     done
     if [ -z "${tmpnames+x}" ]; then
       return 0
@@ -390,6 +398,7 @@ function resource::delete() {
   if [[ "$namespace" != "" ]]; then
     deletecmd+=(-n "$namespace")
   fi
+
   deletecmd+=("${names[@]}")
 
   local output
