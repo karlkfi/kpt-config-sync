@@ -84,20 +84,20 @@ function token_exists() {
 }
 
 @test "Version populated in ConfigManagement.status.configManagementVersion" {
-  wait::for -- token_exists \
+  wait::for -t 60 -- token_exists \
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
 
 @test "repo .status.import.token is populated" {
-  wait::for -- token_exists "repo" "repo" ".status.import.token"
+  wait::for -t 60 -- token_exists "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is populated" {
-  wait::for -- token_exists "repo" "repo" ".status.source.token"
+  wait::for -t 60 -- token_exists "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is populated" {
-  wait::for -- token_exists "repo" "repo" ".status.sync.latestToken"
+  wait::for -t 60 -- token_exists "repo" "repo" ".status.sync.latestToken"
 }
 
 function dummy_repo_update() {
@@ -139,7 +139,7 @@ function ensure_token_updated() {
 
   # It may take quite a while from the time repo is error-free to the time
   # that is reflected in the repo status.  Wait for that to happen.
-  wait::for -- \
+  wait::for -t 60 -- \
     token_exists "${resource_type}" "${resource_name}" "${token_name}"
 
   run kubectl get "${resource_type}" "${resource_name}" \
