@@ -123,9 +123,9 @@ function token_updated() {
   if [[ "${new_token}" == "${token}" ]]; then
     # Fail, token not updated
     debug::log "initial token: ${token}; last read token: ${new_token}"
-    return 0
+    return 1
   fi
-  return 1
+  return 0
 }
 
 # Checks whether the value of the token with the passed-in name changes when
