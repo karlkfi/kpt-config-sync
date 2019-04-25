@@ -27,7 +27,6 @@ teardown() {
 }
 
 @test "Invalid policydir gets an error message in status.source.errors" { 
-  skip "Flakiness at b/131233927"
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
   kubectl patch configmanagement config-management \
@@ -67,7 +66,7 @@ function ensure_error_free_repo () {
     --output='jsonpath={.status.healthy}'
 }
 
-function examine_token() {
+function token_exists() {
   local resource_type="${1}"
   local resource_name="${2}"
   local token_name=${3}
@@ -78,31 +77,27 @@ function examine_token() {
     --output="jsonpath={${token_name}}"
   # shellcheck disable=SC2154
   if [[ "${output}" == "" ]]; then
-    debug::error \
-      "${resource_type} ${resource_type} ${resource_name} is not filled in."
+    debug::log \
+      "${resource_type} ${resource_type} ${token_name} is not filled in"
     debug::error "$(kubectl get "${resource_type}" "${resource_name}" -o yaml)"
   fi
 }
 
 @test "Version populated in ConfigManagement.status.configManagementVersion" {
-  skip "Flakiness at b/131233927"
-  examine_token \
+  wait::for -- token_exists \
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
 
 @test "repo .status.import.token is populated" {
-  skip "Flakiness at b/131233927"
-  examine_token "repo" "repo" ".status.import.token"
+  wait::for -- token_exists "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is populated" {
-  skip "Flakiness at b/131233927"
-  examine_token "repo" "repo" ".status.source.token"
+  wait::for -- token_exists "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is populated" {
-  skip "Flakiness at b/131233927"
-  examine_token "repo" "repo" ".status.sync.latestToken"
+  wait::for -- token_exists "repo" "repo" ".status.sync.latestToken"
 }
 
 function dummy_repo_update() {
@@ -112,7 +107,7 @@ function dummy_repo_update() {
 }
 
 # token_updated returns true if the status token on the resource changes from
-# its initial value.
+# its initially provided value.
 #
 # Example:
 #   token_updated "repo" "repo" ".status.import.token" "deadbeef"
@@ -125,9 +120,9 @@ function token_updated() {
   local new_token
   new_token="$(kubectl get \
     "${resource_type}" "${resource_name}" --output="jsonpath={${token_name}}")"
-  debug::log "last read was: ${new_token}, starting token was: ${token}"
   if [[ "${new_token}" == "${token}" ]]; then
     # Fail, token not updated
+    debug::log "initial token: ${token}; last read token: ${new_token}"
     return 0
   fi
   return 1
@@ -142,12 +137,17 @@ function ensure_token_updated() {
 
   ensure_error_free_repo
 
+  # It may take quite a while from the time repo is error-free to the time
+  # that is reflected in the repo status.  Wait for that to happen.
+  wait::for -- \
+    token_exists "${resource_type}" "${resource_name}" "${token_name}"
+
   run kubectl get "${resource_type}" "${resource_name}" \
     --output="jsonpath={${token_name}}"
   # shellcheck disable=SC2154
   if [[ "${output}" == "" ]]; then
-    debug::error \
-      "${resource_type} ${resource_type} ${resource_name} is not filled in."
+    debug::log \
+      "${resource_type} ${resource_name} ${token_name} is not filled in."
     debug::error "$(kubectl get "${resource_type}" "${resource_name}" -o yaml)"
   fi
 
@@ -162,22 +162,18 @@ function ensure_token_updated() {
 }
 
 @test "repo .status.import.token is updated" {
-  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is updated" {
-  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is updated" {
-  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.sync.latestToken"
 }
 
 @test "repo .status.import.errors is populated on error" {
-  skip "Flakiness at b/131233927"
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
 
