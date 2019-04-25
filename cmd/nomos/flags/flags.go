@@ -1,12 +1,16 @@
 package flags
 
-import "github.com/google/nomos/cmd/nomos/repo"
+import (
+	"github.com/google/nomos/cmd/nomos/repo"
+	"github.com/spf13/cobra"
+)
 
 const (
-	// ValidateFlag is the flag to set the Validate value
-	ValidateFlag = "validate"
-	// PathFlag is the flag to set the Path value
-	PathFlag = "path"
+	// pathFlag is the flag to set the Path of the Nomos directory.
+	pathFlag = "path"
+
+	// validateFlag is the flag to set the Validate value
+	validateFlag = "validate"
 
 	// ClustersName is the flag name for the Clusters below.
 	ClustersName = "clusters"
@@ -14,6 +18,19 @@ const (
 	// AllClustersName is the flag name for AllClusters below.
 	AllClustersName = "all-clusters"
 )
+
+// AddPath adds the --path flag
+func AddPath(cmd *cobra.Command) {
+	cmd.Flags().Var(&Path, pathFlag,
+		`Root directory to use as a CSP Configuration Management repository.`)
+}
+
+// AddValidate adds the --validate flag for whether to use schemas for
+// validating
+func AddValidate(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&Validate, validateFlag, true,
+		`If true, use a schema to validate the CSP Configuration Management repository.`)
+}
 
 var (
 	// Validate determines whether to use a schema to validate the input

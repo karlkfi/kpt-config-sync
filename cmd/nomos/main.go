@@ -35,8 +35,8 @@ var (
 
 func init() {
 	rootCmd.AddCommand(initialize.Cmd)
-	rootCmd.AddCommand(vet.VetCmd)
-	rootCmd.AddCommand(view.PrintCmd)
+	rootCmd.AddCommand(vet.Cmd)
+	rootCmd.AddCommand(view.Cmd)
 	rootCmd.AddCommand(importer.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 	rootCmd.AddCommand(status.Cmd)
@@ -44,12 +44,6 @@ func init() {
 
 func init() {
 	pf := rootCmd.PersistentFlags()
-	pf.BoolVar(&flags.Validate, flags.ValidateFlag, true,
-		`If true, use a schema to validate the CSP Configuration Management directory.
-`)
-	pf.Var(&flags.Path, flags.PathFlag,
-		`The path to use as a CSP Configuration Management directory. Defaults to the working directory.
-`)
 	pf.StringSliceVar(&flags.Clusters, flags.ClustersName, nil,
 		`The comma-separated list of clusters to use in multi-cluster commands.
 `)

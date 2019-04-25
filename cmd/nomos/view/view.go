@@ -12,8 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// PrintCmd is the Cobra object representing the nomos view command.
-var PrintCmd = &cobra.Command{
+func init() {
+	flags.AddPath(Cmd)
+	flags.AddValidate(Cmd)
+}
+
+// Cmd is the Cobra object representing the nomos view command.
+var Cmd = &cobra.Command{
 	Use:   "view",
 	Short: "View compiled objects from a CSP Configuration Management directory",
 	Long: `View compiled objects from a CSP Configuration Management directory

@@ -8,8 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// VetCmd is the Cobra object representing the nomos vet command.
-var VetCmd = &cobra.Command{
+func init() {
+	flags.AddPath(Cmd)
+	flags.AddValidate(Cmd)
+}
+
+// Cmd is the Cobra object representing the nomos vet command.
+var Cmd = &cobra.Command{
 	Use:   "vet",
 	Short: "Validate a CSP Configuration Management directory",
 	Long: `Validate a CSP Configuration Management directory

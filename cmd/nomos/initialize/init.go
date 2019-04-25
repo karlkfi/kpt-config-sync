@@ -20,8 +20,9 @@ import (
 var force bool
 
 func init() {
+	flags.AddPath(Cmd)
 	Cmd.Flags().BoolVar(&force, "force", false,
-		"initialize a nonempty directory, overwriting any existing conflicting files")
+		"write to directory even if nonempty, overwriting conflicting files")
 }
 
 // Cmd is the Cobra object representing the nomos init command
@@ -33,7 +34,7 @@ var Cmd = &cobra.Command{
 Set up a working CSP Configuration Management directory with a default Repo object, documentation,
 and directories.
 
-By default, init does not initialize directories containing files. Use the --force option to
+By default, does not initialize directories containing files. Use --force to
 initialize nonempty directories.`,
 	Example: `  nomos init
   nomos init --path=my/directory

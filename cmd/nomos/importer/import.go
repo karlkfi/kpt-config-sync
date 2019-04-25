@@ -29,6 +29,7 @@ var force bool
 var silent bool
 
 func init() {
+	flags.AddPath(Cmd)
 	Cmd.Flags().BoolVar(&silent, "silent", false, "Only print errors")
 	Cmd.Flags().BoolVar(&force, "force", false, "Overwrite existing files")
 }
