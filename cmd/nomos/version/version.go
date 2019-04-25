@@ -39,7 +39,7 @@ var (
 		Run: func(_ *cobra.Command, _ []string) {
 			versionInternal(
 				restconfig.AllKubectlConfigs, os.Stdout,
-				flags.Clusters, flags.AllClusters)
+				flags.Contexts)
 		},
 	}
 
@@ -56,13 +56,8 @@ var (
 // versionInternal allows stubbing out the config for tests.
 func versionInternal(
 	configs func(time.Duration) (map[string]*rest.Config, error),
-	w io.Writer, clusters []string, allClusters bool) {
-	if len(clusters) == 0 && !allClusters {
-		// Old behavior is to print the version of the local command and exit.
-		// nolint:errcheck
-		fmt.Fprintf(w, "%s\n", clientVersion())
-		return
-	}
+	w io.Writer, contexts []string) {
+
 	// See go/nomos-cli-version-design for the output below.
 	allCfgs, err := configs(30 * time.Second)
 	if err != nil {
@@ -71,21 +66,24 @@ func versionInternal(
 		os.Exit(255)
 	}
 	cfgs := allCfgs
-	if !allClusters {
-		cfgs = filterConfigs(clusters, allCfgs)
+
+	if contexts != nil {
+		// filter by specified contexts
+		cfgs = filterConfigs(contexts, allCfgs)
 	}
+
 	vs := versions(cfgs)
 	es := entries(vs)
 	tabulate(es, w)
 }
 
 // filterConfigs retains from all only the configs that have been selected
-// through flag use. clusters is the list of clusters to print information for.
-// If allClusters is true, clusters is ignored and information for all clusters
+// through flag use. contexts is the list of contexts to print information for.
+// If allClusters is true, contexts is ignored and information for all contexts
 // is printed.
-func filterConfigs(clusters []string, all map[string]*rest.Config) map[string]*rest.Config {
+func filterConfigs(contexts []string, all map[string]*rest.Config) map[string]*rest.Config {
 	cfgs := make(map[string]*rest.Config)
-	for _, name := range clusters {
+	for _, name := range contexts {
 		if cfg, ok := all[name]; ok {
 			cfgs[name] = cfg
 		}
@@ -157,7 +155,7 @@ type vErr struct {
 	err     error
 }
 
-// versions obtains the versions of all configmanagements from the clusters
+// versions obtains the versions of all configmanagements from the contexts
 // supplied in the named configs.
 func versions(cfgs map[string]*rest.Config) map[string]vErr {
 	if len(cfgs) == 0 {
@@ -185,7 +183,7 @@ func versions(cfgs map[string]*rest.Config) map[string]vErr {
 
 // entry is one entry of the output
 type entry struct {
-	// name is the cluster context name.
+	// name is the context's name.
 	name string
 	// component is the nomos component name.
 	component string

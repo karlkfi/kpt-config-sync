@@ -13,47 +13,44 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func TestLegacyVersion(t *testing.T) {
+func TestVersion(t *testing.T) {
 	tests := []struct {
 		name     string
 		version  string
-		expected string
+		objects  []runtime.Object
+		expected []string
+		contexts []string
+		configs  map[string]*rest.Config
 	}{
 		{
-			name:     "basic",
-			version:  "v1.2.3-rc.4",
-			expected: "v1.2.3-rc.4\n",
+			name:     "specify zero clusters",
+			version:  "v1.2.3",
+			contexts: []string{},
+			configs:  nil,
+			objects: []runtime.Object{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"kind":       "ConfigManagement",
+						"apiVersion": "addons.sigs.k8s.io/v1alpha1",
+						"metadata": map[string]interface{}{
+							"name":      "config-management",
+							"namespace": "",
+						},
+						"status": map[string]interface{}{
+							"configManagementVersion": "v1.2.3-rc.42",
+						},
+					},
+				},
+			},
+			expected: []string{
+				"NAME   COMPONENT   VERSION",
+				"       <client>    v1.2.3",
+				"",
+			},
 		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			clientVersion = func() string {
-				return test.version
-			}
-			var b strings.Builder
-			versionInternal(nil, &b, nil, false)
-			if b.String() != test.expected {
-				t.Errorf("version()=%q, want: %q", b.String(), test.expected)
-			}
-		})
-	}
-}
-
-func TestVersion(t *testing.T) {
-	tests := []struct {
-		name        string
-		version     string
-		objects     []runtime.Object
-		expected    []string
-		clusters    []string
-		allClusters bool
-		configs     map[string]*rest.Config
-	}{
 		{
-			name:        "not installed",
-			allClusters: true,
-			version:     "v2.3.4-rc.5",
+			name:    "not installed",
+			version: "v2.3.4-rc.5",
 			expected: []string{
 				"NAME     COMPONENT           VERSION",
 				"         <client>            v2.3.4-rc.5",
@@ -63,9 +60,8 @@ func TestVersion(t *testing.T) {
 			configs: map[string]*rest.Config{"config": nil},
 		},
 		{
-			name:        "installed something",
-			allClusters: true,
-			version:     "v3.4.5-rc.6",
+			name:    "installed something",
+			version: "v3.4.5-rc.6",
 			objects: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -103,11 +99,10 @@ func TestVersion(t *testing.T) {
 			c := func(time.Duration) (map[string]*rest.Config, error) {
 				return test.configs, nil
 			}
-			versionInternal(c, &b, test.clusters, test.allClusters)
+			versionInternal(c, &b, test.contexts)
 			actuals := strings.Split(b.String(), "\n")
-			if !cmp.Equal(actuals, test.expected) {
-				t.Errorf("version()=\n%+v\n\nwant:\n%+v\n\ndiff=\n%v",
-					b.String(), test.expected, cmp.Diff(test.expected, actuals))
+			if diff := cmp.Diff(test.expected, actuals); diff != "" {
+				t.Errorf(diff)
 			}
 		})
 	}

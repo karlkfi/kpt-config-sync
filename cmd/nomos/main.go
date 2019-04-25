@@ -44,15 +44,10 @@ func init() {
 
 func init() {
 	pf := rootCmd.PersistentFlags()
-	pf.StringSliceVar(&flags.Clusters, flags.ClustersName, nil,
-		`The comma-separated list of clusters to use in multi-cluster commands.
+	pf.StringSliceVar(&flags.Contexts, flags.ContextsName, nil,
+		`Accepts a comma-separated list of contexts to use in multi-cluster commands. Defaults to all contexts. Use "" for no contexts.
 `)
-	_ = pf.MarkHidden(flags.ClustersName)
-	pf.BoolVar(&flags.AllClusters, flags.AllClustersName, false,
-		`If set, applies a multi-cluster command to every cluster accessible to the user.  --clusters=... flag is disregarded then.
-`)
-	_ = pf.MarkHidden(flags.AllClustersName)
-
+	_ = pf.MarkHidden(flags.ContextsName)
 }
 
 func main() {

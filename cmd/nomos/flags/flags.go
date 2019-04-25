@@ -12,11 +12,8 @@ const (
 	// validateFlag is the flag to set the Validate value
 	validateFlag = "validate"
 
-	// ClustersName is the flag name for the Clusters below.
-	ClustersName = "clusters"
-
-	// AllClustersName is the flag name for AllClusters below.
-	AllClustersName = "all-clusters"
+	// ContextsName is the flag name for the Contexts below.
+	ContextsName = "contexts"
 )
 
 // AddPath adds the --path flag
@@ -39,11 +36,7 @@ var (
 	// Path says where the Nomos directory is
 	Path = repo.WorkingDirectoryPath
 
-	// Clusters contains the list of clusters that are targets of cross-cluster
+	// Contexts contains the list of clusters that are targets of cross-cluster
 	// commands.
-	Clusters []string
-
-	// AllClusters is set if the user wants a multi-cluster command to take
-	// effect on all clusters from the user's Kubernetes configuration.
-	AllClusters bool
+	Contexts []string
 )
