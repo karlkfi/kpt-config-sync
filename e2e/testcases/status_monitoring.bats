@@ -26,7 +26,8 @@ teardown() {
   setup::common_teardown
 }
 
-@test "Invalid policydir gets an error message in status.source.errors" {
+@test "Invalid policydir gets an error message in status.source.errors" { 
+  skip "Flakiness at b/131233927"
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
   kubectl patch configmanagement config-management \
@@ -84,19 +85,23 @@ function examine_token() {
 }
 
 @test "Version populated in ConfigManagement.status.configManagementVersion" {
+  skip "Flakiness at b/131233927"
   examine_token \
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
 
 @test "repo .status.import.token is populated" {
+  skip "Flakiness at b/131233927"
   examine_token "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is populated" {
+  skip "Flakiness at b/131233927"
   examine_token "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is populated" {
+  skip "Flakiness at b/131233927"
   examine_token "repo" "repo" ".status.sync.latestToken"
 }
 
@@ -157,18 +162,22 @@ function ensure_token_updated() {
 }
 
 @test "repo .status.import.token is updated" {
+  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is updated" {
+  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is updated" {
+  skip "Flakiness at b/131233927"
   ensure_token_updated "repo" "repo" ".status.sync.latestToken"
 }
 
 @test "repo .status.import.errors is populated on error" {
+  skip "Flakiness at b/131233927"
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
 
