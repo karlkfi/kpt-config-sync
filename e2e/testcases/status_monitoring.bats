@@ -193,7 +193,6 @@ function ensure_token_updated() {
 # valid.  Normally, `nomos vet` will notice this before the error gets into a
 # cluster.
 @test "repo .status.sync.errors is populated on error" {
-  skip "Re-enable when b/131250908 is fixed"
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
 
@@ -208,6 +207,7 @@ function ensure_token_updated() {
 
   debug::log "Check that an error code is set on sync status"
   wait::for -t 30 -o "KNV2010" -- \
-    kubectl get repo repo --output='jsonpath={.status.sync.errors[0].code}'
+    kubectl get repo repo \
+      --output='jsonpath={.status.sync.inProgress[0].errors[0].code}'
 }
 

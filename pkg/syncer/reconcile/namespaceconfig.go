@@ -347,6 +347,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 		return newPN, nil
 	}
 	_, err := r.client.UpdateStatus(ctx, node, updateFn)
+	// TODO(fmil): Missing error monitoring like util.go/SetClusterConfigStatus.
 	return err
 }
 

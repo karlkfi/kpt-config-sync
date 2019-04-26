@@ -98,11 +98,6 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	if repoObj.Status.Sync.LatestToken == repoObj.Status.Import.Token {
-		glog.V(2).Infof("RepoStatus sync and import tokens are both %q.", repoObj.Status.Import.Token)
-		return reconcile.Result{}, nil
-	}
-
 	state, err := r.buildState(r.ctx, repoObj.Status.Import.Token)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
@@ -111,6 +106,11 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 
 	state.merge(&repoObj.Status, r.now)
 
+	// We used to stop reconciliation here if the sync token is the same as
+	// import token.  We no longer do that, to ensure that even non-monotonic
+	// status updates are reconciled properly.  See b/131250908 why this is
+	// relevant.  Instead, we rely on UpdateSyncStatus to skip updates if the
+	// new sync status is equal to the old one.
 	updatedRepo, err := r.rClient.UpdateSyncStatus(r.ctx, repoObj)
 	if err != nil {
 		glog.Errorf("Failed to update RepoSyncStatus: %v", err)

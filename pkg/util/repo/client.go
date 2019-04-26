@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -118,6 +120,9 @@ func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo,
 	}
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newRepo := obj.(*v1.Repo)
+		if cmp.Equal(repo.Status.Sync, newRepo.Status.Sync) {
+			return nil, action.NoUpdateNeeded()
+		}
 		newRepo.Status.Sync = repo.Status.Sync
 		return newRepo, nil
 	}
