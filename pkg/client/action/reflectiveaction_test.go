@@ -187,12 +187,12 @@ func (t *ReflectiveActionTestCase) CreateOperation() Interface {
 	switch t.Operation {
 	case "create":
 		return NewReflectiveCreateAction(
-			t.Namespace(), t.Name(), t.GetResource(), t.spec)
+			t.Namespace(), t.Name(), t.GetResource(), t.spec, nil)
 	case "upsert":
 		return NewReflectiveUpsertAction(
-			t.Namespace(), t.Name(), t.GetResource(), t.spec)
+			t.Namespace(), t.Name(), t.GetResource(), t.spec, nil)
 	case "delete":
-		return NewReflectiveDeleteAction(t.Namespace(), t.Name(), t.spec)
+		return NewReflectiveDeleteAction(t.Namespace(), t.Name(), t.spec, nil)
 	default:
 		panic(fmt.Sprintf("Invalid operation %s", t.Operation))
 	}

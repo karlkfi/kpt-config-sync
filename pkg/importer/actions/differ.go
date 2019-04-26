@@ -20,9 +20,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 )
 
@@ -83,9 +82,6 @@ func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllPoli
 	}
 
 	glog.Infof("NamespaceConfig operations: create %d, update %d, delete %d", creates, updates, deletes)
-	importer.Metrics.Operations.WithLabelValues("create").Add(float64(creates))
-	importer.Metrics.Operations.WithLabelValues("update").Add(float64(updates))
-	importer.Metrics.Operations.WithLabelValues("delete").Add(float64(deletes))
 	return actions
 }
 

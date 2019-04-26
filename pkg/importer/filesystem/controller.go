@@ -135,11 +135,13 @@ func (c *Controller) pollDir(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			glog.V(4).Infof("pollDir: run")
+			startTime := time.Now()
+
 			// Detect whether symlink has changed.
 			newDir, err := filepath.EvalSymlinks(c.policyDir)
 			if err != nil {
 				glog.Errorf("failed to resolve policydir: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
 				continue
 			}
@@ -151,7 +153,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			currentSyncs, err := namespaceconfig.ListSyncs(c.syncLister)
 			if err != nil {
 				glog.Errorf("failed quick check of current syncs: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("list_syncs_failed").Inc()
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				continue
 			}
 
@@ -171,7 +173,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			token, err := git.CommitHash(newDir)
 			if err != nil {
 				glog.Warningf("Failed to parse commit hash: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
 				continue
 			}
@@ -187,17 +189,16 @@ func (c *Controller) pollDir(ctx context.Context) {
 			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
 			if err != nil {
 				glog.Errorf("failed to list current policies: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				continue
 			}
 
-			loadTime := time.Now()
 			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-			desiredPolicies, mErr := c.parser.Parse(newDir, token, loadTime)
+			desiredPolicies, mErr := c.parser.Parse(newDir, token, startTime)
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
-				c.updateImportStatus(ctx, repoObj, token, loadTime, mErr.ToCME())
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+				c.updateImportStatus(ctx, repoObj, token, startTime, mErr.ToCME())
 				continue
 			}
 
@@ -211,17 +212,17 @@ func (c *Controller) pollDir(ctx context.Context) {
 
 			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
 				glog.Warningf("Failed to apply actions: %v", err)
-				importer.Metrics.PolicyStates.WithLabelValues("failed").Inc()
+				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
 				cme := v1.ConfigManagementError{ErrorMessage: err.Error()}
-				c.updateImportStatus(ctx, repoObj, token, loadTime, []v1.ConfigManagementError{cme})
+				c.updateImportStatus(ctx, repoObj, token, startTime, []v1.ConfigManagementError{cme})
 				continue
 			}
 
 			currentDir = newDir
-			importer.Metrics.PolicyStates.WithLabelValues("succeeded").Inc()
-			importer.Metrics.Nodes.Set(float64(len(desiredPolicies.NamespaceConfigs)))
-			c.updateImportStatus(ctx, repoObj, token, loadTime, nil)
+			importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
+			importer.Metrics.NamespaceConfigs.Set(float64(len(desiredPolicies.NamespaceConfigs)))
+			c.updateImportStatus(ctx, repoObj, token, startTime, nil)
 
 			lastSyncs = desiredPolicies.Syncs
 			glog.V(4).Infof("pollDir: completed")

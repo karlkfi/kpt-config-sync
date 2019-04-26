@@ -20,8 +20,9 @@ import (
 
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/sync"
@@ -55,7 +56,11 @@ func newNamespaceConfigActionFactory(client typedv1.ConfigmanagementV1Interface,
 
 // NewCreate returns an action for creating NamespaceConfigs.
 func (f namespaceConfigActionFactory) NewCreate(namespaceConfig *v1.NamespaceConfig) action.Interface {
-	return action.NewReflectiveCreateAction("", namespaceConfig.Name, namespaceConfig, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("create", "namespace", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("create", "namespace", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveCreateAction("", namespaceConfig.Name, namespaceConfig, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewUpdate returns an action for updating NamespaceConfigs. This action ignores the ResourceVersion of
@@ -73,12 +78,20 @@ func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceCon
 		}
 		return newPN, nil
 	}
-	return action.NewReflectiveUpdateAction("", namespaceConfig.Name, updatePolicy, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("update", "namespace", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("update", "namespace", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveUpdateAction("", namespaceConfig.Name, updatePolicy, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewDelete returns an action for deleting NamespaceConfigs.
 func (f namespaceConfigActionFactory) NewDelete(nodeName string) action.Interface {
-	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("delete", "namespace", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("delete", "namespace", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec, onExecute)
 }
 
 type clusterConfigActionFactory struct {
@@ -93,7 +106,11 @@ func newClusterConfigActionFactory(
 
 // NewCreate returns an action for creating ClusterConfigs.
 func (f clusterConfigActionFactory) NewCreate(clusterConfig *v1.ClusterConfig) action.Interface {
-	return action.NewReflectiveCreateAction("", clusterConfig.Name, clusterConfig, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("create", "cluster", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("create", "cluster", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveCreateAction("", clusterConfig.Name, clusterConfig, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewUpdate returns an action for updating ClusterConfigs. This action ignores the ResourceVersion
@@ -111,13 +128,20 @@ func (f clusterConfigActionFactory) NewUpdate(clusterConfig *v1.ClusterConfig) a
 		}
 		return newCP, nil
 	}
-	return action.NewReflectiveUpdateAction("", clusterConfig.Name, updatePolicy, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("update", "cluster", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("update", "cluster", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveUpdateAction("", clusterConfig.Name, updatePolicy, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewDelete returns an action for deleting ClusterConfigs.
-func (f clusterConfigActionFactory) NewDelete(
-	clusterConfigName string) action.Interface {
-	return action.NewReflectiveDeleteAction("", clusterConfigName, f.ReflectiveActionSpec)
+func (f clusterConfigActionFactory) NewDelete(clusterConfigName string) action.Interface {
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("delete", "cluster", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("delete", "cluster", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveDeleteAction("", clusterConfigName, f.ReflectiveActionSpec, onExecute)
 }
 
 type syncActionFactory struct {
@@ -131,7 +155,11 @@ func newSyncActionFactory(
 }
 
 func (f syncActionFactory) NewCreate(sync v1.Sync) action.Interface {
-	return action.NewReflectiveCreateAction("", sync.Name, &sync, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("create", "sync", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("create", "sync", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveCreateAction("", sync.Name, &sync, f.ReflectiveActionSpec, onExecute)
 }
 
 func (f syncActionFactory) NewUpdate(sync v1.Sync) action.Interface {
@@ -141,9 +169,25 @@ func (f syncActionFactory) NewUpdate(sync v1.Sync) action.Interface {
 		newSync.ResourceVersion = oldSync.ResourceVersion
 		return newSync, nil
 	}
-	return action.NewReflectiveUpdateAction("", sync.Name, updateSync, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("update", "sync", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("update", "sync", statusLabel(err)).Observe(duration)
+	}
+	return action.NewReflectiveUpdateAction("", sync.Name, updateSync, f.ReflectiveActionSpec, onExecute)
 }
 
 func (f syncActionFactory) NewDelete(syncName string, timeout time.Duration) action.Interface {
-	return action.NewBlockingReflectiveDeleteAction("", syncName, timeout, f.ReflectiveActionSpec)
+	onExecute := func(duration float64, err error) {
+		importer.Metrics.Operations.WithLabelValues("delete", "sync", statusLabel(err)).Inc()
+		importer.Metrics.APICallDuration.WithLabelValues("delete", "sync", statusLabel(err)).Observe(duration)
+	}
+	return action.NewBlockingReflectiveDeleteAction("", syncName, timeout, f.ReflectiveActionSpec, onExecute)
+}
+
+func statusLabel(err error) string {
+	if err == nil {
+		return "success"
+	}
+	return "error"
+
 }

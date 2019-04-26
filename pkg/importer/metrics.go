@@ -20,46 +20,63 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// Metrics contains the Prometheus metrics common to all PolicyImporters.
+// Metrics contains the Prometheus metrics for the Importer.
 var Metrics = struct {
-	Operations   *prometheus.CounterVec
-	Nodes        prometheus.Gauge
-	PolicyStates *prometheus.CounterVec
+	APICallDuration  *prometheus.HistogramVec
+	CycleDuration    *prometheus.HistogramVec
+	NamespaceConfigs prometheus.Gauge
+	Operations       *prometheus.CounterVec
 }{
+	APICallDuration: prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Distribution of durations of API server calls",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "importer",
+			Name:      "api_duration_seconds",
+			Buckets:   []float64{.001, .01, .1, 1},
+		},
+		// operation: create, update, delete
+		// type: namespace, cluster, sync
+		// status: success, error
+		[]string{"operation", "type", "status"},
+	),
+	CycleDuration: prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Distribution of durations of cycles that the importer has attempted to complete",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "importer",
+			Name:      "cycle_duration_seconds",
+		},
+		// status: success, error
+		[]string{"status"},
+	),
 	Operations: prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Help:      "Total operations that have been performed to keep policy node hierarchy up-to-date with source of truth",
+			Help:      "Total operations that have been performed to keep configs up-to-date with source of truth",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "policy_importer",
-			Name:      "policy_node_operations_total",
+			Subsystem: "importer",
+			Name:      "operations_total",
 		},
-		// e.g. create, update, delete
-		[]string{"operation"},
+		// operation: create, update, delete
+		// type: namespace, cluster, sync
+		// status: success, error
+		[]string{"operation", "type", "status"},
 	),
-	Nodes: prometheus.NewGauge(
+	NamespaceConfigs: prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Help:      "Number of policy nodes in current state",
+			Help:      "Number of namespace configs present in current state",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "policy_importer",
+			Subsystem: "importer",
 			Name:      "namespace_configs",
 		},
-	),
-	PolicyStates: prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Help:      "Total number of policy state transitions (A state transition can include changes to multiple resources)",
-			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "policy_importer",
-			Name:      "policy_state_transitions_total",
-		},
-		// e.g. succeeded, failed
-		[]string{"status"},
 	),
 }
 
 func init() {
 	prometheus.MustRegister(
+		Metrics.APICallDuration,
+		Metrics.CycleDuration,
+		Metrics.NamespaceConfigs,
 		Metrics.Operations,
-		Metrics.Nodes,
-		Metrics.PolicyStates,
 	)
 }
