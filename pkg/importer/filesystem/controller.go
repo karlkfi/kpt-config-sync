@@ -210,12 +210,11 @@ func (c *Controller) pollDir(ctx context.Context) {
 			}
 			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
 
-			if err := c.updatePolicies(currentPolicies, desiredPolicies); err != nil {
-				glog.Warningf("Failed to apply actions: %v", err)
+			if errs := c.updatePolicies(currentPolicies, desiredPolicies); errs != nil {
+				glog.Warningf("Failed to apply actions: %v", errs)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
-				cme := v1.ConfigManagementError{ErrorMessage: err.Error()}
-				c.updateImportStatus(ctx, repoObj, token, startTime, []v1.ConfigManagementError{cme})
+				c.updateImportStatus(ctx, repoObj, token, startTime, errs.ToCME())
 				continue
 			}
 
@@ -289,17 +288,21 @@ func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in policy before the Syncer starts managing that type.
-func (c *Controller) updatePolicies(current, desired *namespaceconfig.AllPolicies) error {
+func (c *Controller) updatePolicies(current, desired *namespaceconfig.AllPolicies) status.MultiError {
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)
 }
 
-func applyActions(actions []action.Interface) error {
+// applyActions attempts to apply the list of actions provided and returns a slice of all
+// errors resulting from the application of those actions
+func applyActions(actions []action.Interface) status.MultiError {
+	var errs []error
 	for _, a := range actions {
 		if err := a.Execute(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	// if errs is nil, From returns nil
+	return status.From(errs...)
 }
