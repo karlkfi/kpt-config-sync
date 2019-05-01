@@ -22,7 +22,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
@@ -421,7 +421,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		name string
 		// What the namespace resource looks like on the cluster before the
 		// reconcile. Set to nil if the namespace is not present.
-		namespace *corev1.Namespace
+		namespace       *corev1.Namespace
+		namespaceConfig *v1.NamespaceConfig
 		// The objects present in the corresponding namespace on the cluster.
 		actual []runtime.Object
 		// What the namespace should look like after an update.
@@ -458,6 +459,11 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 						"some-user-label":            "some-label-value",
 					},
 				),
+			),
+			namespaceConfig: namespaceConfig("default",
+				v1.StateSynced,
+				syncertesting.ImportToken(syncertesting.Token),
+				syncertesting.MarkForDeletion(),
 			),
 			wantNamespaceUpdate: namespace("default",
 				object.Annotation("some-user-annotation", "some-annotation-value"),
@@ -507,6 +513,11 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 					},
 				),
 			),
+			namespaceConfig: namespaceConfig("kube-system",
+				v1.StateSynced,
+				syncertesting.ImportToken(syncertesting.Token),
+				syncertesting.MarkForDeletion(),
+			),
 			wantNamespaceUpdate: namespace("kube-system",
 				object.Annotation("some-user-annotation", "some-annotation-value"),
 				object.Label(v1.ConfigManagementSystemKey, "not-used"),
@@ -554,12 +565,16 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
-			tm.ExpectNamespaceCacheGet(nil, tc.namespace)
+			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
+
 			tm.ExpectNamespaceClientGet(tc.namespace)
+
+			tm.ExpectNamespaceConfigClientGet(tc.namespaceConfig)
 
 			tm.ExpectNamespaceUpdate(tc.wantNamespaceUpdate)
 
 			tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual...)
+			tm.ExpectNamespaceConfigDelete(tc.namespaceConfig)
 			tm.ExpectDelete(tc.wantDelete)
 
 			tm.ExpectEvent(tc.wantEvent)

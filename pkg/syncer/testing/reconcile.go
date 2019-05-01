@@ -117,6 +117,14 @@ func (tm *TestMocks) ExpectNamespaceUpdate(namespace *corev1.Namespace) {
 		anyContext, EqN(tm.t, "NamespaceUpdate", namespace))
 }
 
+// ExpectNamespaceConfigDelete verifies that the NamespaceConfig is deleted
+func (tm *TestMocks) ExpectNamespaceConfigDelete(config *v1.NamespaceConfig) {
+	if config == nil {
+		return
+	}
+	tm.MockClient.EXPECT().Delete(anyContext, Eq(tm.t, config), gomock.Any())
+}
+
 // ExpectClusterClientGet stubs the ClusterConfig being fetched from the Client and verifies we request it.
 func (tm *TestMocks) ExpectClusterClientGet(config *v1.ClusterConfig) {
 	if config == nil {
@@ -336,6 +344,18 @@ func SyncToken() object.Mutator {
 			obj.Status.Token = Token
 		case *v1.NamespaceConfig:
 			obj.Status.Token = Token
+		default:
+			panic(fmt.Sprintf("Invalid type %T", obj))
+		}
+	}
+}
+
+// MarkForDeletion marks a NamespaceConfig with an intent to be delete
+func MarkForDeletion() object.Mutator {
+	return func(o *ast.FileObject) {
+		switch obj := o.Object.(type) {
+		case *v1.NamespaceConfig:
+			obj.Spec.DeleteSyncedTime = metav1.Now()
 		default:
 			panic(fmt.Sprintf("Invalid type %T", obj))
 		}

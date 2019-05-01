@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
@@ -190,17 +190,12 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 
 	case differ.Delete:
 		if namespaceutil.IsManageableSystem(name) {
-			// Special handling for manageable system namespaces: do not remove the namespace itself as
-			// that is not allowed.  Instead, manage all configs inside as if the namespace has no managed
-			// resources.
-			if err := r.manageConfigs(ctx, name, reservedNamespaceConfig, syncErrs); err != nil {
-				return err
-			}
-			// Remove the metadata from the namespace only after the resources
-			// inside have been processed.
-			return r.unmanageNamespace(ctx, ns)
+			return r.deleteManageableSystem(ctx, ns, config, syncErrs)
 		}
 		return r.deleteNamespace(ctx, ns)
+
+	case differ.DeleteNsConfig:
+		return r.deleteNsConfig(ctx, config)
 
 	case differ.Unmanage:
 		// Remove defunct labels and annotations.
@@ -234,7 +229,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.NoOp:
-		if config != nil {
+		if ns != nil && config != nil {
 			r.warnUnmanaged(ns)
 			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
 		}
@@ -423,13 +418,69 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 }
 
 func (r *NamespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
-	glog.V(1).Infof("Namespace %q not declared in a NamespaceConfig, removing", namespace.GetName())
+	glog.V(1).Infof("Namespace %q marked for deletion in corresponding NamespaceConfig, deleting", namespace.GetName())
 
 	err := r.client.Delete(ctx, namespace)
-	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
+	metrics.Operations.WithLabelValues("delete", namespace.Kind, metrics.StatusLabel(err)).Inc()
 
+	// Synchronous delete failure
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete namespace %q", namespace.GetName())
+		wrapErr := errors.Wrapf(err, "failed to delete namespace %q", namespace.GetName())
+		return wrapErr
+	}
+
+	return nil
+}
+
+func (r *NamespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *v1.NamespaceConfig) error {
+	if config == nil {
+		glog.Warningf("Attempted to delete nonexistent NamespaceConfig")
+		return nil
+	}
+	glog.V(1).Infof("Namespace %q removed, deleting corresponding NamespaceConfig", config.GetName())
+
+	ns := &corev1.Namespace{}
+	err := r.client.Get(ctx, apitypes.NamespacedName{Name: config.Name}, ns)
+	if err == nil {
+		// We were unexpectedly able to retrieve the namespace
+		return errors.Errorf("Namespace %s was found even though it should have been deleted. Namespace: %v", config.GetName(), ns)
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return errors.Wrapf(err, "Unexpected error retrieving Namespace %s after deletion", config.GetName())
+	}
+
+	// NotFound error found as expected, proceed with nsConfig deletion
+	if err := r.client.Delete(ctx, config); err != nil {
+		return errors.Wrapf(err, "Error deleting NamespaceConfig %s after removing namespace", config.GetName())
+	}
+
+	return nil
+}
+
+// deleteManageableSystem handles the special case of "deleting" manageable system namespaces:
+// it does not remove the namespace itself as that is not allowed.
+// Instead, it manage sall configs inside as if the namespace has no managed resources, and then
+// removes the corresponding NamespaceConfig
+func (r *NamespaceConfigReconciler) deleteManageableSystem(ctx context.Context, ns *corev1.Namespace, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+	if err := r.manageConfigs(ctx, ns.GetName(), reservedNamespaceConfig, syncErrs); err != nil {
+		return err
+	}
+
+	// Remove the metadata from the namespace only after the resources
+	// inside have been processed.
+	if err := r.unmanageNamespace(ctx, ns); err != nil {
+		return err
+	}
+
+	if config == nil {
+		glog.Warningf("Attempted to delete nonexistent NamespaceConfig")
+		return nil
+	}
+	glog.V(1).Infof("System Namespace %q unmanaged, deleting corresponding NamespaceConfig", config.GetName())
+
+	if err := r.client.Delete(ctx, config); err != nil {
+		return errors.Wrapf(err, "Error deleting NamespaceConfig %s after unmanaging namespace", config.GetName())
 	}
 	return nil
 }

@@ -41,6 +41,9 @@ const (
 	// Delete indicates the resource should be deleted.
 	Delete = Type("delete")
 
+	// DeleteNsConfig indicates the namespaceconfig should be deleted.
+	DeleteNsConfig = Type("deletensconfig")
+
 	// Error indicates the resource's management annotation in the API server is invalid.
 	Error = Type("error")
 

@@ -61,7 +61,7 @@ func TestDiffer(t *testing.T) {
 				namespaceConfig("r"),
 			},
 			newNodes: []v1.NamespaceConfig{},
-			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/delete"},
+			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/update"},
 		},
 		{
 			testName: "Rename root node",
@@ -73,7 +73,7 @@ func TestDiffer(t *testing.T) {
 			},
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/r2/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/r/delete",
+				"configmanagement.gke.io/v1/NamespaceConfigs/r/update",
 			},
 		},
 		{
@@ -106,8 +106,8 @@ func TestDiffer(t *testing.T) {
 			expected: []string{
 				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
 				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/co2/delete",
-				"configmanagement.gke.io/v1/NamespaceConfigs/co1/delete",
+				"configmanagement.gke.io/v1/NamespaceConfigs/co2/update",
+				"configmanagement.gke.io/v1/NamespaceConfigs/co1/update",
 			},
 		},
 		{

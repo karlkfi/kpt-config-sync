@@ -18,12 +18,23 @@ func (d *NamespaceDiff) Type() Type {
 
 	if d.Declared != nil {
 		// The NamespaceConfig IS in the repository.
+
+		if !d.Declared.Spec.DeleteSyncedTime.IsZero() {
+			// NamespaceConfig is marked for deletion
+			if d.Actual == nil {
+				// Corresponding Namespace has already been deleted, so delete the NsConfig
+				return DeleteNsConfig
+			}
+			return Delete
+		}
+
 		if managementUnset(d.Declared) {
 			// The declared Namespace has no resource management key, so it is managed.
 			if d.Actual != nil {
 				// The Namespace is also in the cluster, so update it.
 				return Update
 			}
+
 			// The Namespace is not in the cluster, so create it.
 			return Create
 		}

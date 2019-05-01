@@ -9,10 +9,16 @@ import (
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func namespaceConfig(opts ...object.Mutator) *v1.NamespaceConfig {
 	return fake.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+}
+
+func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
+	nsConfig.Spec.DeleteSyncedTime = metav1.Now()
+	return nsConfig
 }
 
 func namespace(opts ...object.Mutator) *corev1.Namespace {
@@ -60,9 +66,10 @@ func TestNamespaceDiffType(t *testing.T) {
 			expectType: Update,
 		},
 		{
-			name:       "in both, management disabled unmanage",
-			declared:   namespaceConfig(disableManaged),
-			actual:     namespace(enableManaged),
+			name:     "in both, management disabled unmanage",
+			declared: namespaceConfig(disableManaged),
+			actual:   namespace(enableManaged),
+
 			expectType: Unmanage,
 		},
 		{
@@ -72,7 +79,13 @@ func TestNamespaceDiffType(t *testing.T) {
 			expectType: NoOp,
 		},
 		{
+			name:       "if not in repo but managed in cluster, delete",
+			actual:     namespace(enableManaged),
+			expectType: Delete,
+		},
+		{
 			name:       "delete",
+			declared:   markForDeletion(namespaceConfig()),
 			actual:     namespace(enableManaged),
 			expectType: Delete,
 		},

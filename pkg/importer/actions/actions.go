@@ -20,12 +20,16 @@ import (
 
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/sync"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -70,6 +74,10 @@ func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceCon
 	updateConfig := func(old runtime.Object) (runtime.Object, error) {
 		newPN := namespaceConfig.DeepCopy()
 		oldPN := old.(*v1.NamespaceConfig)
+		if !oldPN.Spec.DeleteSyncedTime.IsZero() {
+			e := status.ResourceWrap(errors.Errorf("namespace %v terminating, cannot update", oldPN.Name), "", ast.ParseFileObject(old))
+			return nil, e
+		}
 		newPN.ResourceVersion = oldPN.ResourceVersion
 		newSyncState := newPN.Status.SyncState
 		oldPN.Status.DeepCopyInto(&newPN.Status)
@@ -91,7 +99,12 @@ func (f namespaceConfigActionFactory) NewDelete(nodeName string) action.Interfac
 		importer.Metrics.Operations.WithLabelValues("delete", "namespace", statusLabel(err)).Inc()
 		importer.Metrics.APICallDuration.WithLabelValues("delete", "namespace", statusLabel(err)).Observe(duration)
 	}
-	return action.NewReflectiveDeleteAction("", nodeName, f.ReflectiveActionSpec, onExecute)
+	updateConfig := func(old runtime.Object) (runtime.Object, error) {
+		newNsConf := old.(*v1.NamespaceConfig).DeepCopy()
+		newNsConf.Spec.DeleteSyncedTime = metav1.Now()
+		return newNsConf, nil
+	}
+	return action.NewReflectiveUpdateAction("", nodeName, updateConfig, f.ReflectiveActionSpec, onExecute)
 }
 
 type clusterConfigActionFactory struct {

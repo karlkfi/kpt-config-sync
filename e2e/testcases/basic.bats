@@ -85,6 +85,8 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::commit
 
+  wait::for kubectl get ns dir
+
   debug::log "check that the deployment and replicaset were created"
   wait::for -t 10 -- kubectl get deployment hello-world -n dir
   wait::for -t 10 -- resource::check -r replicaset -n dir -l "app=hello-world"

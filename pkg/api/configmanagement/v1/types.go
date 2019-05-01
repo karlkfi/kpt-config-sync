@@ -85,7 +85,7 @@ type ClusterConfigStatus struct {
 
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
-	SyncState ConfigSyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
+	SyncState ConfigSyncState `json:"syncState,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -143,6 +143,11 @@ type NamespaceConfigSpec struct {
 	// Resources contains namespace scoped resources that are synced to the API server.
 	// +optional
 	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+
+	// DeleteSyncedTime is the time at which the importer identifed the intent to delete
+	// the corresponding Namespace
+	// +optional
+	DeleteSyncedTime metav1.Time `json:"deleteSyncedTime,omitempty"`
 }
 
 // NamespaceConfigStatus contains fields that define the status of a NamespaceConfig.

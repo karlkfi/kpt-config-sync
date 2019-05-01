@@ -17,7 +17,7 @@ func managementDisabled(obj object.Annotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled
 }
 
-// managementUnset return strue if the resource has no Nomos ResourceManagementKey.
+// managementUnset returns true if the resource has no Nomos ResourceManagementKey.
 func managementUnset(obj object.Annotated) bool {
 	_, found := obj.GetAnnotations()[v1.ResourceManagementKey]
 	return !found
