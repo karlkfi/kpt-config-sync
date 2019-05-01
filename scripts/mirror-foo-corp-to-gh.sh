@@ -79,6 +79,7 @@ fi
 
 EXAMPLE="$(dirname "$0")/../examples/foo-corp-example"
 cp "$EXAMPLE/README.md" "$REPO/README.md"
+rsync -av --delete "$EXAMPLE/docs" "$REPO"
 rsync -av --delete "$EXAMPLE/foo-corp" "$REPO"
 git -C "$REPO" add .
 git -C "$REPO" commit -m "$COMMIT_MESSAGE"
