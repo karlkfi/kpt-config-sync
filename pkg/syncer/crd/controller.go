@@ -5,6 +5,7 @@ import (
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 		return err
 	}
 
-	resourceClient := syncerclient.New(mgr.GetClient())
+	resourceClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := syncerreconcile.NewApplier(mgr.GetConfig(), resourceClient)
 	if err != nil {
 		return err

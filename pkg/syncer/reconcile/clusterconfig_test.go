@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -216,7 +218,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm := syncertesting.NewTestMocks(t, mockCtrl)
 				fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 				testReconciler := NewClusterConfigReconciler(ctx,
-					client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+					client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 				tm.ExpectClusterCacheGet(clusterCfg)
 				tm.ExpectCacheList(kinds.PersistentVolume(), "", tc.actual)
@@ -288,7 +290,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(tm.MockClient), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectClusterCacheGet(tc.clusterConfig)
 

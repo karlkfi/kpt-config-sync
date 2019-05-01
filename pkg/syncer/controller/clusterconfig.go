@@ -18,6 +18,8 @@ package controller
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -40,7 +42,7 @@ const clusterConfigControllerName = "clusterconfig-resources"
 // AddClusterConfig adds ClusterConfig sync controllers to the Manager.
 func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
-	genericClient := client.New(mgr.GetClient())
+	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
 		return err
@@ -49,7 +51,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 	cpc, err := k8scontroller.New(clusterConfigControllerName, mgr, k8scontroller.Options{
 		Reconciler: genericreconcile.NewClusterConfigReconciler(
 			ctx,
-			client.New(mgr.GetClient()),
+			client.New(mgr.GetClient(), metrics.APICallDuration),
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
 			&CancelFilteringRecorder{mgr.GetRecorder(clusterConfigControllerName)},

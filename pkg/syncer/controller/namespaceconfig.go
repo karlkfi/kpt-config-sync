@@ -18,6 +18,8 @@ package controller
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -42,7 +44,7 @@ const namespaceConfigControllerName = "namespaceconfig-resources"
 // AddNamespaceConfig adds NamespaceConfig sync controllers to the Manager.
 func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
-	genericClient := client.New(mgr.GetClient())
+	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
 		return err

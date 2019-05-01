@@ -3,16 +3,15 @@ package reconcile
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -209,10 +208,12 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 	}
 
 	name, resourceDescription := nameDescription(intendedState)
-	action.APICalls.WithLabelValues(name, "patch").Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(name, "patch"))
-	defer timer.ObserveDuration()
-	if _, err := resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{}); err != nil {
+	start := time.Now()
+	_, err := resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
+	duration := time.Since(start).Seconds()
+	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
+
+	if err != nil {
 		return false, errors.Wrap(err, "could not patch")
 	}
 	glog.V(1).Infof("Patched %s", resourceDescription)

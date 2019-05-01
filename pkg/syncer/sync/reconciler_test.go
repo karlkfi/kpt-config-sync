@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -143,7 +145,7 @@ func TestReconcile(t *testing.T) {
 			mockManager := mocks.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
-				client:          syncerclient.New(mockClient),
+				client:          syncerclient.New(mockClient, metrics.APICallDuration),
 				cache:           mockCache,
 				discoveryClient: mockDiscovery,
 				subManager:      mockManager,

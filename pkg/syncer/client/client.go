@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/client/action"
@@ -39,14 +41,16 @@ import (
 // Client extends the controller-runtime client by exporting prometheus metrics and retrying updates.
 type Client struct {
 	client.Client
-	MaxTries int
+	latencyMetric *prometheus.HistogramVec
+	MaxTries      int
 }
 
 // New returns a new Client.
-func New(client client.Client) *Client {
+func New(client client.Client, latencyMetric *prometheus.HistogramVec) *Client {
 	return &Client{
-		Client:   client,
-		MaxTries: 5,
+		Client:        client,
+		MaxTries:      5,
+		latencyMetric: latencyMetric,
 	}
 }
 
@@ -57,12 +61,12 @@ type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 func (c *Client) Create(ctx context.Context, obj runtime.Object) status.ResourceError {
 	description, kind := resourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
-	operation := string(action.CreateOperation)
-	action.Actions.WithLabelValues(kind, operation).Inc()
-	action.APICalls.WithLabelValues(kind, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
-	defer timer.ObserveDuration()
-	if err := c.Client.Create(ctx, obj); err != nil {
+
+	start := time.Now()
+	err := c.Client.Create(ctx, obj)
+	c.latencyMetric.WithLabelValues("create", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+
+	if err != nil {
 		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
 	}
 	glog.V(1).Infof("Create OK for %s", description)
@@ -73,12 +77,8 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Resource
 // This automatically sets the propagation policy to always be "Background".
 func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 	description, kind := resourceInfo(obj)
-	operation := string(action.DeleteOperation)
-	action.Actions.WithLabelValues(kind, operation).Inc()
-	action.APICalls.WithLabelValues(kind, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
-	defer timer.ObserveDuration()
 	_, namespacedName := metaNamespacedName(obj)
+
 	if err := c.Client.Get(ctx, namespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object is already deleted
@@ -90,15 +90,21 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 		}
 		return errors.Wrapf(err, "could not look up object we're deleting %s", description)
 	}
+
+	start := time.Now()
 	opts = append(opts, client.PropagationPolicy(metav1.DeletePropagationBackground))
-	if err := c.Client.Delete(ctx, obj, opts...); err != nil {
-		if apierrors.IsNotFound(err) {
-			glog.V(3).Infof("Not found during attempted delete %s", description)
-			return nil
-		}
-		return errors.Wrapf(err, "delete failed for %s", description)
+	err := c.Client.Delete(ctx, obj, opts...)
+
+	if err == nil {
+		glog.V(1).Infof("Delete OK for %s", description)
+	} else if apierrors.IsNotFound(err) {
+		glog.V(3).Infof("Not found during attempted delete %s", description)
+		err = nil
+	} else {
+		err = errors.Wrapf(err, "delete failed for %s", description)
 	}
-	glog.V(1).Infof("Delete OK for %s", description)
+
+	c.latencyMetric.WithLabelValues("delete", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
 	return nil
 }
 
@@ -121,11 +127,11 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
 	description, kind := resourceInfo(workingObj)
-	operation := string(action.UpdateOperation)
-	action.Actions.WithLabelValues(kind, operation).Inc()
 	_, namespacedName := metaNamespacedName(workingObj)
+
 	var lastErr error
 	var oldObj runtime.Object
+
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
 			return nil, status.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
@@ -139,8 +145,6 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 
-		action.APICalls.WithLabelValues(kind, operation).Inc()
-		timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
 		if glog.V(3) {
 			glog.Warningf("update: %q: try: %v diff old..new:\n%v",
 				namespacedName, tryNum, cmp.Diff(workingObj, newObj))
@@ -149,8 +153,11 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 					namespacedName, cmp.Diff(oldObj, workingObj))
 			}
 		}
+
+		start := time.Now()
 		err = clientUpdateFn(ctx, newObj)
-		timer.ObserveDuration()
+		c.latencyMetric.WithLabelValues("update", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+
 		if err == nil {
 			newV := resourceVersion(newObj)
 			if oldV == newV {
@@ -161,6 +168,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 			return newObj, nil
 		}
 		lastErr = err
+
 		if glog.V(3) {
 			glog.Warningf("error in clientUpdateFn(...) for %q: %v", namespacedName, err)
 			// Skip the expensive copy if we're not going to use it.
@@ -186,12 +194,11 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 		return errors.Wrapf(err, "could not get status of %s while upserting", description)
 	}
 
-	operation := string(action.UpdateOperation)
-	action.Actions.WithLabelValues(kind, operation).Inc()
-	action.APICalls.WithLabelValues(kind, operation).Inc()
-	timer := prometheus.NewTimer(action.APICallDuration.WithLabelValues(kind, operation))
-	defer timer.ObserveDuration()
-	if err := c.Client.Update(ctx, obj); err != nil {
+	start := time.Now()
+	err := c.Client.Update(ctx, obj)
+	c.latencyMetric.WithLabelValues("update", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+
+	if err != nil {
 		return errors.Wrapf(err, "upsert failed for %s", description)
 	}
 	glog.V(1).Infof("Upsert OK for %s", description)

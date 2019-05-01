@@ -22,6 +22,19 @@ import (
 
 // Prometheus metrics
 var (
+	APICallDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Help:      "Distribution of durations of API server calls",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "syncer",
+			Name:      "api_duration_seconds",
+			Buckets:   []float64{.001, .01, .1, 1},
+		},
+		// operation: create, update, delete
+		// type: namespace, cluster, sync
+		// status: success, error
+		[]string{"operation", "type", "status"},
+	)
 	ErrTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total errors that occurred when executing syncer actions",
@@ -82,6 +95,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(
+		APICallDuration,
 		ErrTotal,
 		EventTimes,
 		ClusterReconcileDuration,
@@ -89,4 +103,13 @@ func init() {
 		RepoReconcileDuration,
 		RepoReconcileErrTotal,
 	)
+}
+
+// StatusLabel returns a string representation of the given error appropriate for the status label
+// of a Prometheus metric.
+func StatusLabel(err error) string {
+	if err == nil {
+		return "success"
+	}
+	return "error"
 }

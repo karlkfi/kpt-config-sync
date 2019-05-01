@@ -18,6 +18,8 @@ package controller
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/client"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -35,7 +37,7 @@ const repoStatusControllerName = "repo-status"
 
 // AddRepoStatus adds RepoStatus sync controller to the Manager.
 func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
-	syncClient := client.New(mgr.GetClient())
+	syncClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	rsc, err := k8scontroller.New(repoStatusControllerName, mgr, k8scontroller.Options{
 		Reconciler: genericreconcile.NewRepoStatus(ctx, syncClient, metav1.Now),
 	})

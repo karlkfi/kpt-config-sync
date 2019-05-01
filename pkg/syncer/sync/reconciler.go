@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
@@ -74,7 +76,7 @@ func NewMetaReconciler(
 	}
 
 	return &MetaReconciler{
-		client:          syncerclient.New(mgr.GetClient()),
+		client:          syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
 		cache:           mgr.GetCache(),
 		clientFactory:   clientFactory,
 		subManager:      syncermanager.NewSubManager(sm, syncermanager.NewSyncAwareBuilder(), errCh),
