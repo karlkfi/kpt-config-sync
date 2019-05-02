@@ -20,16 +20,16 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/metrics"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncermanager "github.com/google/nomos/pkg/syncer/manager"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,6 +62,7 @@ type MetaReconciler struct {
 	subManager syncermanager.RestartableManager
 	// clientFactory returns a new dynamic client.
 	clientFactory ClientFactory
+	now           func() metav1.Time
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
@@ -69,6 +70,7 @@ func NewMetaReconciler(
 	mgr manager.Manager,
 	dc discovery.DiscoveryInterface,
 	clientFactory ClientFactory,
+	now func() metav1.Time,
 	errCh chan error) (*MetaReconciler, error) {
 	sm, err := manager.New(rest.CopyConfig(mgr.GetConfig()), manager.Options{})
 	if err != nil {
@@ -81,6 +83,7 @@ func NewMetaReconciler(
 		clientFactory:   clientFactory,
 		subManager:      syncermanager.NewSubManager(sm, syncermanager.NewSyncAwareBuilder(), errCh),
 		discoveryClient: dc,
+		now:             now,
 	}, nil
 }
 
@@ -88,9 +91,22 @@ func NewMetaReconciler(
 // It looks at all Syncs in the cluster and restarts the SubManager if its internal state doesn't match the cluster
 // state.
 func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	start := r.now()
+	metrics.ReconcileEventTimes.WithLabelValues("sync").Set(float64(start.Unix()))
+
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
+	err := r.reconcileSyncs(ctx, request.Name)
+	metrics.ReconcileDuration.WithLabelValues("sync", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
+
+	if err != nil {
+		glog.Errorf("Could not reconcile syncs: %v", err)
+	}
+	return reconcile.Result{}, err
+}
+
+func (r *MetaReconciler) reconcileSyncs(ctx context.Context, name string) error {
 	syncs := &v1.SyncList{}
 	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
 	if err != nil {
@@ -111,23 +127,23 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 	sr, err := r.discoveryClient.ServerResources()
 	if err != nil {
-		return reconcile.Result{}, errors.Wrapf(err, "failed to get api groups")
+		return errors.Wrapf(err, "failed to get api groups")
 	}
 	apirs, err := utildiscovery.NewAPIInfo(sr)
 	if err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
-	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, restartSubManager(request)); err != nil {
+	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, restartSubManager(name)); err != nil {
 		glog.Errorf("Could not start SubManager: %v", err)
-		return reconcile.Result{}, err
+		return err
 	}
 
-	var errBuilder status.MultiError
+	var mErr status.MultiError
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
-		errBuilder = status.Append(errBuilder, r.finalizeSync(ctx, tf, apirs))
+		mErr = status.Append(mErr, r.finalizeSync(ctx, tf, apirs))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
@@ -144,14 +160,11 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 			}
 			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not update sync status"))
+			mErr = status.Append(mErr, status.APIServerWrapf(err, "could not update sync status"))
 		}
 	}
 
-	if errBuilder != nil {
-		glog.Errorf("Could not reconcile syncs: %v", errBuilder)
-	}
-	return reconcile.Result{}, errBuilder
+	return mErr
 }
 
 func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) status.MultiError {
@@ -221,8 +234,8 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo
 	return errBuilder
 }
 
-// restartSubManager returns true if the reconcile request indicates that we need to restart all the controllers that the
-// Sync Controller manages.
-func restartSubManager(request reconcile.Request) bool {
-	return request.Name == ForceRestart
+// restartSubManager returns true if the reconcile request indicates that we need to restart all
+// controllers that the Sync Controller manages.
+func restartSubManager(name string) bool {
+	return name == ForceRestart
 }

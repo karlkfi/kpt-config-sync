@@ -19,11 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/metrics"
-
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
+	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -152,6 +152,7 @@ func TestReconcile(t *testing.T) {
 				clientFactory: func() (client.Client, error) {
 					return mockClient, nil
 				},
+				now: syncertesting.Now,
 			}
 
 			mockCache.EXPECT().

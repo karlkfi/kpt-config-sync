@@ -19,6 +19,7 @@ import (
 	"context"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -26,7 +27,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -78,11 +78,12 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() m
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
 // nolint
 func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
-	metrics.EventTimes.WithLabelValues("repo-reconcile").Set(float64(r.now().Unix()))
-	timer := prometheus.NewTimer(metrics.RepoReconcileDuration.WithLabelValues())
-	defer timer.ObserveDuration()
+	start := r.now()
+	metrics.ReconcileEventTimes.WithLabelValues("repo").Set(float64(start.Unix()))
 
 	result, err := r.reconcile()
+	metrics.ReconcileDuration.WithLabelValues("repo", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
+
 	if err != nil {
 		return result, err
 	}

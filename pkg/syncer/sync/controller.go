@@ -4,6 +4,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -43,7 +44,7 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 			Mapper: mapper,
 		})
 	}
-	reconciler, err := NewMetaReconciler(mgr, dc, clientFactory, startErrCh)
+	reconciler, err := NewMetaReconciler(mgr, dc, clientFactory, metav1.Now, startErrCh)
 	if err != nil {
 		return errors.Wrapf(err, "could not create %q reconciler", syncControllerName)
 	}

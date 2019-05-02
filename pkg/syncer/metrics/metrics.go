@@ -30,78 +30,53 @@ var (
 			Name:      "api_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1},
 		},
-		// operation: create, update, delete
-		// type: namespace, cluster, sync
+		// operation: create, patch, update, delete
+		// type: resource kind
 		// status: success, error
 		[]string{"operation", "type", "status"},
 	)
-	ErrTotal = prometheus.NewCounterVec(
+	Operations = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Help:      "Total errors that occurred when executing syncer actions",
+			Help:      "Total operations that have been performed to sync resources to source of truth",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
-			Name:      "error_total",
+			Name:      "operations_total",
 		},
-		[]string{"namespace", "resource", "operation"},
+		// operation: create, update, delete
+		// type: resource kind
+		// status: success, error
+		[]string{"operation", "type", "status"},
 	)
-	EventTimes = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Help:      "Timestamps when syncer events occurred",
-			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "syncer",
-			Name:      "event_timestamps",
-		},
-		[]string{"type"},
-	)
-	ClusterReconcileDuration = prometheus.NewHistogramVec(
+	ReconcileDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Help:      "Syncer cluster reconciliation duration distributions",
-			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "syncer",
-			Name:      "cluster_reconcile_duration_seconds",
-			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
-		},
-		nil,
-	)
-	NamespaceReconcileDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Syncer namespace reconcile duration distributions",
-			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "syncer",
-			Name:      "namespace_reconcile_duration_seconds",
-			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
-		},
-		[]string{"namespace"},
-	)
-	RepoReconcileDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Help:      "Syncer repo reconciliation duration distributions",
+			Help:      "Distribution of syncer reconciliation durations",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
 			Name:      "repo_reconcile_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
 		},
-		nil,
+		// type: cluster, crd, namespace, repo, sync
+		// status: success, error
+		[]string{"type", "status"},
 	)
-	RepoReconcileErrTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Help:      "Total errors that occurred when updating the repo sync status",
+	ReconcileEventTimes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Help:      "Timestamps when syncer reconcile events occurred",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
-			Name:      "repo_error_total",
+			Name:      "reconcile_event_timestamps",
 		},
+		// type: cluster, crd, namespace, repo, sync
+		[]string{"type"},
 	)
 )
 
 func init() {
 	prometheus.MustRegister(
 		APICallDuration,
-		ErrTotal,
-		EventTimes,
-		ClusterReconcileDuration,
-		NamespaceReconcileDuration,
-		RepoReconcileDuration,
-		RepoReconcileErrTotal,
+		Operations,
+		ReconcileDuration,
+		ReconcileEventTimes,
 	)
 }
 

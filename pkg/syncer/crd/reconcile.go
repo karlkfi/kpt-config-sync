@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/metrics"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
@@ -68,22 +70,16 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
+	start := r.now()
+	metrics.ReconcileEventTimes.WithLabelValues("crd").Set(float64(start.Unix()))
+
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	clusterConfig := &v1.ClusterConfig{}
-	if err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, clusterConfig); err != nil {
-		if apierrors.IsNotFound(err) {
-			// CRDs may be changing on the cluster, but we don't have any CRD ClusterConfig to reconcile with.
-			return reconcile.Result{}, nil
-		}
-		err = errors.Wrapf(err, "could not retrieve ClusterConfig %q", v1.CRDClusterConfigName)
-		glog.Error(err)
-		return reconcile.Result{}, err
-	}
-	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
+	err := r.reconcile(ctx, request.Name)
+	metrics.ReconcileDuration.WithLabelValues("crd", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
-	if err := r.reconcile(ctx, clusterConfig); err != nil {
+	if err != nil {
 		glog.Errorf("Could not reconcile CRD ClusterConfig: %v", err)
 		return reconcile.Result{}, err
 	}
@@ -91,13 +87,26 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, clusterConfig *v1.ClusterConfig) status.MultiError {
-	var errBuilder status.MultiError
+func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiError {
+	var mErr status.MultiError
+
+	clusterConfig := &v1.ClusterConfig{}
+	if err := r.cache.Get(ctx, types.NamespacedName{Name: name}, clusterConfig); err != nil {
+		if apierrors.IsNotFound(err) {
+			// CRDs may be changing on the cluster, but we don't have any CRD ClusterConfig to reconcile with.
+			return nil
+		}
+		err = errors.Wrapf(err, "could not retrieve ClusterConfig %q", v1.CRDClusterConfigName)
+		glog.Error(err)
+		mErr = status.Append(mErr, err)
+		return mErr
+	}
+	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
 
 	grs, err := r.decoder.DecodeResources(clusterConfig.Spec.Resources...)
 	if err != nil {
-		errBuilder = status.Append(errBuilder, errors.Wrap(err, "could not decode ClusterConfig"))
-		return errBuilder
+		mErr = status.Append(mErr, errors.Wrap(err, "could not decode ClusterConfig"))
+		return mErr
 	}
 	gvk := kinds.CustomResourceDefinition()
 	declaredInstances := grs[gvk]
@@ -108,11 +117,11 @@ func (r *Reconciler) reconcile(ctx context.Context, clusterConfig *v1.ClusterCon
 	var syncErrs []v1.ConfigManagementError
 	actualInstances, err := r.cache.UnstructuredList(gvk, "")
 	if err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
+		mErr = status.Append(mErr, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-		errBuilder = status.Append(errBuilder, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig,
+		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig,
 			r.now, syncErrs...))
-		return errBuilder
+		return mErr
 	}
 
 	allDeclaredVersions := syncerreconcile.AllVersionNames(grs, gvk.GroupKind())
@@ -120,7 +129,7 @@ func (r *Reconciler) reconcile(ctx context.Context, clusterConfig *v1.ClusterCon
 	var reconcileCount int
 	for _, diff := range diffs {
 		if updated, err := syncerreconcile.HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
-			errBuilder = status.Append(errBuilder, err)
+			mErr = status.Append(mErr, err)
 			syncErrs = append(syncErrs, status.FromResourceError(err))
 		} else if updated {
 			reconcileCount++
@@ -137,8 +146,8 @@ func (r *Reconciler) reconcile(ctx context.Context, clusterConfig *v1.ClusterCon
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs...); err != nil {
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster policy status: %v", err)
-		errBuilder = status.Append(errBuilder, err)
+		mErr = status.Append(mErr, err)
 	}
 
-	return errBuilder
+	return mErr
 }

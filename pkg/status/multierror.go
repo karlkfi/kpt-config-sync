@@ -28,8 +28,6 @@ import (
 type MultiError interface {
 	error
 	Errors() []Error
-	// ToCME converts a MultiError to ConfigManagementError.
-	ToCME() []v1.ConfigManagementError
 }
 
 // From creates a MultiError from one or more errors.
@@ -64,6 +62,19 @@ func Append(m MultiError, errs ...error) MultiError {
 	return result
 }
 
+// ToCME converts a MultiError to ConfigManagementError.
+func ToCME(m MultiError) []v1.ConfigManagementError {
+	var cmes []v1.ConfigManagementError
+
+	if m != nil {
+		for _, err := range m.Errors() {
+			cmes = append(cmes, err.ToCME())
+		}
+	}
+
+	return cmes
+}
+
 var _ MultiError = (*multiError)(nil)
 
 // MultiError is an error that contains multiple errors.
@@ -93,6 +104,10 @@ func (m *multiError) add(err error) {
 
 // Error implements error
 func (m *multiError) Error() string {
+	if m == nil {
+		return ""
+	}
+
 	// sort errors alphabetically by their message.
 	sort.Slice(m.errs, func(i, j int) bool {
 		return m.errs[i].Error() < m.errs[j].Error()
@@ -118,14 +133,8 @@ func (m *multiError) Error() string {
 
 // Errors returns a list of the contained errors
 func (m *multiError) Errors() []Error {
-	return m.errs
-}
-
-// ToCME implements MultiError.
-func (m *multiError) ToCME() []v1.ConfigManagementError {
-	var cmes []v1.ConfigManagementError
-	for _, err := range m.errs {
-		cmes = append(cmes, err.ToCME())
+	if m == nil {
+		return nil
 	}
-	return cmes
+	return m.errs
 }

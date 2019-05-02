@@ -32,7 +32,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,13 +87,8 @@ func NewNamespaceConfigReconciler(ctx context.Context, client *client.Client, ap
 
 // Reconcile is the Reconcile callback for NamespaceConfigReconciler.
 func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	metrics.EventTimes.WithLabelValues("reconcileNamespaceConfig").Set(float64(r.now().Unix()))
-	reconcileTimer := prometheus.NewTimer(
-		metrics.NamespaceReconcileDuration.WithLabelValues(request.Name))
-	defer reconcileTimer.ObserveDuration()
-
-	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
-	defer cancel()
+	start := r.now()
+	metrics.ReconcileEventTimes.WithLabelValues("namespace").Set(float64(start.Unix()))
 
 	name := request.Name
 	glog.Infof("Reconciling NamespaceConfig: %q", name)
@@ -104,7 +98,12 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, nil
 	}
 
+	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
+	defer cancel()
+
 	err := r.reconcileNamespaceConfig(ctx, name)
+	metrics.ReconcileDuration.WithLabelValues("namespace", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
+
 	if err != nil {
 		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, err)
 	}
@@ -307,7 +306,6 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 	}
 	if err := r.setNamespaceConfigStatus(ctx, node, syncErrs); err != nil {
 		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "failed to set status for %q", name))
-		metrics.ErrTotal.WithLabelValues(node.GetName(), node.GroupVersionKind().Kind, "update").Inc()
 		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update policy node status: %s", err)
 	}
@@ -398,8 +396,10 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 
 func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
 	namespace := asNamespace(namespaceConfig)
-	if err := r.client.Create(ctx, namespace); err != nil {
-		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "create").Inc()
+	err := r.client.Create(ctx, namespace)
+	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
+
+	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceCreateFailed",
 			"failed to create namespace: %q", err)
 		return errors.Wrapf(err, "failed to create namespace %q", namespaceConfig.Name)
@@ -415,8 +415,11 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		return withNamespaceConfigMeta(obj.(*corev1.Namespace), namespaceConfig), nil
 	}
-	if _, err := r.client.Update(ctx, namespace, updateFn); err != nil {
-		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "update").Inc()
+
+	_, err := r.client.Update(ctx, namespace, updateFn)
+	metrics.Operations.WithLabelValues("update", namespace.Kind, metrics.StatusLabel(err)).Inc()
+
+	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceUpdateFailed",
 			"failed to update namespace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", namespaceConfig.Name)
@@ -426,8 +429,11 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 
 func (r *NamespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
 	glog.V(1).Infof("Namespace %q not declared in a policy node, removing", namespace.GetName())
-	if err := r.client.Delete(ctx, namespace); err != nil {
-		metrics.ErrTotal.WithLabelValues(namespace.GetName(), namespace.GroupVersionKind().Kind, "delete").Inc()
+
+	err := r.client.Delete(ctx, namespace)
+	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
+
+	if err != nil {
 		return errors.Wrapf(err, "failed to delete namespace %q", namespace.GetName())
 	}
 	return nil

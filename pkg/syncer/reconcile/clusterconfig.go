@@ -17,6 +17,9 @@ package reconcile
 
 import (
 	"context"
+	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -28,7 +31,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,58 +77,65 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, nil
 	}
 
-	metrics.EventTimes.WithLabelValues("cluster-reconcile").Set(float64(r.now().Unix()))
-	timer := prometheus.NewTimer(metrics.ClusterReconcileDuration.WithLabelValues())
-	defer timer.ObserveDuration()
+	start := r.now()
+	metrics.ReconcileEventTimes.WithLabelValues("cluster").Set(float64(start.Unix()))
 
 	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
 	defer cancel()
 
+	err := r.reconcileConfig(ctx, request.NamespacedName)
+	metrics.ReconcileDuration.WithLabelValues("cluster", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
+
+	return reconcile.Result{}, err
+}
+
+func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name types.NamespacedName) error {
 	clusterConfig := &v1.ClusterConfig{}
-	err := r.cache.Get(ctx, request.NamespacedName, clusterConfig)
+	err := r.cache.Get(ctx, name, clusterConfig)
 	if err != nil {
-		err = errors.Wrapf(err, "could not retrieve clusterconfig %q", request.Name)
+		err = errors.Wrapf(err, "could not retrieve clusterconfig %q", name)
 		glog.Error(err)
-		return reconcile.Result{}, err
+		return err
 	}
 	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
 
-	if request.Name != v1.ClusterConfigName {
-		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", request.Name)
+	if name.Name != v1.ClusterConfigName {
+		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", name.Name)
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig", err.Error())
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
-		_ = SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, NewConfigManagementError(clusterConfig, err))
-		return reconcile.Result{}, nil
+		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, NewConfigManagementError(clusterConfig, err)); err2 != nil {
+			r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
+				"failed to update cluster config status: %v", err2)
+		}
+		return nil
 	}
 
 	rErr := r.managePolicies(ctx, clusterConfig)
 	if rErr != nil {
 		glog.Errorf("Could not reconcile clusterconfig: %v", rErr)
 	}
-	return reconcile.Result{}, rErr
+	return rErr
 }
 
-func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1.ClusterConfig) error {
-	grs, err := r.decoder.DecodeResources(policy.Spec.Resources...)
+func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, config *v1.ClusterConfig) error {
+	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
 	if err != nil {
-		return errors.Wrapf(err, "could not process cluster policy: %q", policy.GetName())
+		return errors.Wrapf(err, "could not process cluster config: %q", config.GetName())
 	}
 
-	var syncErrs []v1.ConfigManagementError
 	var errBuilder status.MultiError
 	reconcileCount := 0
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			SyncedAt(decl, policy.Spec.Token)
+			SyncedAt(decl, config.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
-			syncErrs = append(syncErrs, NewConfigManagementError(policy, err))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from config controller for %q", gvk))
 			continue
 		}
 
@@ -135,20 +144,19 @@ func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, policy *v1
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder = status.Append(errBuilder, err)
-				syncErrs = append(syncErrs, status.FromResourceError(err))
 			} else if updated {
 				reconcileCount++
 			}
 		}
 	}
-	if err := SetClusterConfigStatus(ctx, r.client, policy, r.now, syncErrs...); err != nil {
+	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, status.ToCME(errBuilder)...); err != nil {
 		errBuilder = status.Append(errBuilder, err)
-		r.recorder.Eventf(policy, corev1.EventTypeWarning, "StatusUpdateFailed",
-			"failed to update cluster policy status: %v", err)
+		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
+			"failed to update cluster config status: %v", err)
 	}
 	if errBuilder == nil && reconcileCount > 0 {
-		r.recorder.Eventf(policy, corev1.EventTypeNormal, "ReconcileComplete",
-			"cluster policy was successfully reconciled: %d changes", reconcileCount)
+		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
+			"cluster config was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder
 }

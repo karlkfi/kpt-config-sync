@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,7 +71,10 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 
 // Create implements Applier.
 func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.ResourceError) {
-	if err := c.create(ctx, intendedState); err != nil {
+	err := c.create(ctx, intendedState)
+	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
+
+	if err != nil {
 		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
 	return true, nil
@@ -81,8 +83,9 @@ func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.
 // Update implements Applier.
 func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError) {
 	updated, err := c.update(ctx, intendedState, currentState)
+	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
+
 	if err != nil {
-		metrics.ErrTotal.WithLabelValues(intendedState.GetNamespace(), intendedState.GetKind(), string(differ.Update)).Inc()
 		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
 	}
 	return updated, nil
@@ -90,7 +93,10 @@ func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState 
 
 // Delete implements Applier.
 func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError) {
-	if err := c.client.Delete(ctx, obj); err != nil {
+	err := c.client.Delete(ctx, obj)
+	metrics.Operations.WithLabelValues("delete", obj.GetKind(), metrics.StatusLabel(err)).Inc()
+
+	if err != nil {
 		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
 	}
 	return true, nil

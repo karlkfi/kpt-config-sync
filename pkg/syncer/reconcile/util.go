@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/metrics"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -72,8 +71,5 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *
 		return newPolicy, nil
 	}
 	_, err := client.UpdateStatus(ctx, policy, updateFn)
-	if err != nil {
-		metrics.ErrTotal.WithLabelValues("", policy.GroupVersionKind().Kind, "update").Inc()
-	}
 	return err
 }

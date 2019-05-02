@@ -142,7 +142,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Errorf("failed to resolve policydir: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
+				c.updateSourceStatus(ctx, nil, status.ToCME(status.From(err)))
 				continue
 			}
 
@@ -174,7 +174,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if err != nil {
 				glog.Warningf("Failed to parse commit hash: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateSourceStatus(ctx, nil, status.From(err).ToCME())
+				c.updateSourceStatus(ctx, nil, status.ToCME(status.From(err)))
 				continue
 			}
 
@@ -198,7 +198,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateImportStatus(ctx, repoObj, token, startTime, mErr.ToCME())
+				c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 				continue
 			}
 
@@ -214,7 +214,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 				glog.Warningf("Failed to apply actions: %v", errs)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
-				c.updateImportStatus(ctx, repoObj, token, startTime, errs.ToCME())
+				c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
 				continue
 			}
 
