@@ -132,8 +132,8 @@ func printRepos(clientMap map[string]typedv1.RepoInterface, names []string) {
 	}
 
 	// Print table header.
-	fmt.Fprintln(writer, "Cluster\tStatus\tCurrent Config\t")
-	fmt.Fprintln(writer, "-------\t------\t--------------\t")
+	fmt.Fprintln(writer, "Context\tStatus\tLast Synced Token\t")
+	fmt.Fprintln(writer, "-------\t------\t-----------------\t")
 
 	// Print a summary of all clusters.
 	for _, name := range names {
@@ -180,9 +180,9 @@ func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, 
 			repoList, listErr := repoClient.List(metav1.ListOptions{})
 
 			if listErr != nil {
-				result.status = errorRow(name, "Config Management is not installed")
+				result.status = errorRow(name, "NOT INSTALLED")
 			} else if len(repoList.Items) == 0 {
-				result.status = errorRow(name, "Cluster status is unavailable")
+				result.status = errorRow(name, "UNAVAILABLE")
 			} else {
 				repoStatus := repoList.Items[0].Status
 				result.status = statusRow(name, repoStatus)
@@ -245,27 +245,18 @@ func statusRow(name string, status v1.RepoStatus) string {
 	if token == "" {
 		token = "N/A"
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token)
+	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token[0:8])
 }
 
 // getStatus returns the given RepoStatus formatted as a short summary string.
 func getStatus(status v1.RepoStatus) string {
 	if hasErrors(status) {
-		return "Error (details below)"
+		return "ERROR"
 	}
-	if status.Sync.LatestToken == status.Source.Token {
-		if len(status.Sync.InProgress) == 0 {
-			return "Configs up-to-date"
-		}
-		return "Applying configs"
+	if status.Sync.LatestToken == status.Source.Token && len(status.Sync.InProgress) == 0 {
+		return "SYNCED"
 	}
-	if status.Import.Token == status.Source.Token {
-		if len(status.Import.Errors) == 0 {
-			return "Applying configs"
-		}
-		return "Parsing configs"
-	}
-	return "Parsing configs"
+	return "PENDING"
 }
 
 // hasErrors returns true if there are any config management errors present in the given RepoStatus.
