@@ -7,19 +7,20 @@ import (
 
 // Metrics contains the Prometheus metrics for the monitor state.
 var Metrics = struct {
-	ClusterNodes *prometheus.GaugeVec
-	LastImport   prometheus.Gauge
-	LastSync     prometheus.Gauge
-	SyncLatency  prometheus.Histogram
+	Configs     *prometheus.GaugeVec
+	LastImport  prometheus.Gauge
+	LastSync    prometheus.Gauge
+	SyncLatency prometheus.Histogram
 }{
 	prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Help:      "Total number of policies (cluster and node) grouped by their sync status; should be similar to config_management_policy_importer_namespace_configs metric",
+			Help:      "Total number of configs (cluster and namespace) grouped by their sync status",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
-			Name:      "policies",
+			Name:      "configs",
 		},
-		[]string{"state"},
+		// status: synced, stale, error
+		[]string{"status"},
 	),
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -39,7 +40,7 @@ var Metrics = struct {
 	),
 	prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Help:      "Distribution of the latencies between importing and syncing each node",
+			Help:      "Distribution of the latencies between importing and syncing each config",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "sync_latency_seconds",
@@ -50,7 +51,7 @@ var Metrics = struct {
 
 func init() {
 	prometheus.MustRegister(
-		Metrics.ClusterNodes,
+		Metrics.Configs,
 		Metrics.LastImport,
 		Metrics.LastSync,
 		Metrics.SyncLatency,

@@ -58,7 +58,7 @@ func (c *ClusterState) ProcessClusterConfig(cp *v1.ClusterConfig) error {
 	c.recordLatency(cp.Name, cp.Status.SyncState, cp.Spec.ImportTime, cp.Status.SyncTime)
 
 	if err := c.updateState(cp.Name, cp.Status.SyncState); err != nil {
-		return errors.Wrap(err, "while processing cluster policy state")
+		return errors.Wrap(err, "while processing cluster config state")
 	}
 	return nil
 }
@@ -69,6 +69,11 @@ func (c *ClusterState) ProcessNamespaceConfig(pn *v1.NamespaceConfig) error {
 	defer c.mux.Unlock()
 
 	c.updateTimes(pn.Spec.ImportTime, pn.Status.SyncTime)
+	c.recordLatency(pn.Name, pn.Status.SyncState, pn.Spec.ImportTime, pn.Status.SyncTime)
+
+	if err := c.updateState(pn.Name, pn.Status.SyncState); err != nil {
+		return errors.Wrap(err, "while processing namespace config state")
+	}
 
 	return nil
 }
@@ -86,19 +91,12 @@ func (c *ClusterState) updateState(name string, newState v1.PolicySyncState) err
 	if oldState == newState {
 		return nil
 	}
-	newMetric, err := Metrics.ClusterNodes.GetMetricWithLabelValues(string(newState))
-	if err != nil {
-		return err
-	}
-	newMetric.Inc()
 
+	Metrics.Configs.WithLabelValues(string(newState)).Inc()
 	if oldState != v1.StateUnknown {
-		oldMetric, err := Metrics.ClusterNodes.GetMetricWithLabelValues(string(oldState))
-		if err != nil {
-			return err
-		}
-		oldMetric.Dec()
+		Metrics.Configs.WithLabelValues(string(oldState)).Dec()
 	}
+
 	c.syncStates[name] = newState
 	return nil
 }

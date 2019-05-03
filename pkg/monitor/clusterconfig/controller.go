@@ -48,7 +48,7 @@ type Reconciler struct {
 
 // Reconcile is the callback for Reconciler.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	if request.Name != v1.ClusterConfigName {
+	if request.Name != v1.ClusterConfigName && request.Name != v1.CRDClusterConfigName {
 		glog.Errorf("Cluster policy has invalid name %q", request.Name)
 		// Return nil since we don't want to queue a retry.
 		return reconcile.Result{}, nil

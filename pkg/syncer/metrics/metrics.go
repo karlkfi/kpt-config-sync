@@ -52,7 +52,7 @@ var (
 			Help:      "Distribution of syncer reconciliation durations",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "syncer",
-			Name:      "repo_reconcile_duration_seconds",
+			Name:      "reconcile_duration_seconds",
 			Buckets:   []float64{.001, .01, .1, 1, 10, 100},
 		},
 		// type: cluster, crd, namespace, repo, sync
