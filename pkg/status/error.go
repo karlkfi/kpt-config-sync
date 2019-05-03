@@ -9,14 +9,18 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 )
 
-const urlBase = "https://cloud.google.com/csp-config-management/docs/errors#knv"
+const urlBase = "For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv"
 
-func url(err Error) string {
-	return urlBase + err.Code()
+func url(code string) string {
+	return urlBase + code
 }
 
-func prefixErr(err Error) string {
-	return fmt.Sprintf("KNV%s", err.Code())
+func knv(id string) string {
+	return fmt.Sprintf("KNV%s", id)
+}
+
+func prefix(code string) string {
+	return fmt.Sprintf("%s: ", code)
 }
 
 // Error defines a Kubernetes Nomos Vet error
@@ -43,11 +47,10 @@ var errs = map[string]Error{
 }
 
 // Format formats the start of error messages consistently.
-// nolint:errcheck
 func Format(err Error, format string, a ...interface{}) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "%s: ", prefixErr(err))
-	fmt.Fprintf(&sb, format, a...)
+	sb.WriteString(prefix(knv(err.Code())))
+	sb.WriteString(fmt.Sprintf(format, a...))
 
 	switch e := err.(type) {
 	case ResourceError:
@@ -58,7 +61,8 @@ func Format(err Error, format string, a ...interface{}) string {
 		sb.WriteString(formatPaths(e))
 	}
 
-	fmt.Fprintf(&sb, "\n\nFor more information, see %s", url(err))
+	sb.WriteString("\n\n")
+	sb.WriteString(url(err.Code()))
 	return sb.String()
 }
 
@@ -106,8 +110,8 @@ func Registry() map[string]Error {
 	return result
 }
 
-// ToErrorResource converts a Resource into a v1.ErrorResource.
-func ToErrorResource(r id.Resource) v1.ErrorResource {
+// toErrorResource converts a Resource into a v1.ErrorResource.
+func toErrorResource(r id.Resource) v1.ErrorResource {
 	return v1.ErrorResource{
 		SourcePath:        r.SlashPath(),
 		ResourceName:      r.Name(),
@@ -120,7 +124,7 @@ func ToErrorResource(r id.Resource) v1.ErrorResource {
 func FromError(err Error) v1.ConfigManagementError {
 	return v1.ConfigManagementError{
 		ErrorMessage: err.Error(),
-		Code:         prefixErr(err),
+		Code:         knv(err.Code()),
 	}
 }
 
@@ -139,7 +143,7 @@ func FromPathError(err PathError) v1.ConfigManagementError {
 func FromResourceError(err ResourceError) v1.ConfigManagementError {
 	cme := FromError(err)
 	for _, r := range err.Resources() {
-		cme.ErrorResources = append(cme.ErrorResources, ToErrorResource(r))
+		cme.ErrorResources = append(cme.ErrorResources, toErrorResource(r))
 	}
 	return cme
 }
