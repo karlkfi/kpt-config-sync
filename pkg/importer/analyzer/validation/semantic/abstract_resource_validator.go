@@ -38,7 +38,7 @@ func validate(n *ast.TreeNode, requiresNamespaceDescendant bool) (bool, status.M
 				// We've found another problematic abstract namespace leaf node below the one requiring a namespace descendant.
 				// That descendant node supersedes the ancestor. So, return an error for the descendant and omit any ancestor
 				// error.
-				errs = status.Append(errs, vet.UnsyncableResourcesError{Dir: n})
+				errs = status.Append(errs, vet.UnsyncableResourcesInLeaf(n))
 				return true, errs
 			}
 			// No valid descendant. Propagate this up to the problematic ancestor.
@@ -59,7 +59,7 @@ func validate(n *ast.TreeNode, requiresNamespaceDescendant bool) (bool, status.M
 
 		// We didn't find any descendants with a Namespace. Generate an error and ensure any problematic ancestors don't
 		// also generate an error.
-		errs = status.Append(errs, vet.UnsyncableResourcesError{Dir: n, Ancestor: true})
+		errs = status.Append(errs, vet.UnsyncableResourcesInNonLeaf(n))
 		return true, errs
 	}
 

@@ -95,7 +95,7 @@ func NewBase() *Base {
 // object to set the impl value.
 func (vb *Base) SetImpl(impl ast.Visitor) {
 	if vb == nil {
-		panic(status.InternalError("Base is nil. Allocate Base before using it."))
+		panic(status.InternalError.New("Base is nil. Allocate Base before using it."))
 	}
 	vb.impl = impl
 }

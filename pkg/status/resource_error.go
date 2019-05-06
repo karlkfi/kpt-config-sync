@@ -13,7 +13,7 @@ import (
 const ResourceErrorCode = "2010"
 
 func init() {
-	Register(ResourceErrorCode, resourceError{})
+	Register(ResourceErrorCode, resourceError{err: errors.New("resource error")})
 }
 
 // ResourceError defines a status error related to one or more k8s resources.

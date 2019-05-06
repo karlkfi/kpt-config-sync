@@ -64,7 +64,7 @@ func Add(d *Extension, key, value interface{}) (*Extension, status.Error) {
 		// Ensure key does not already exist.
 		_, found := d.items[key]
 		if found {
-			return nil, status.InternalError("key %#v already present in Extension")
+			return nil, status.InternalErrorf("key %#v already present in Extension", key)
 		}
 
 		// Copy items from d into new Extension.

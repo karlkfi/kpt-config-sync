@@ -35,7 +35,7 @@ func (v *flatNodeValidator) ValidateClusterObject(o *ast.ClusterObject) status.M
 func errIfNotTopLevel(o ast.FileObject) status.MultiError {
 	parts := o.Dir().Split()
 	if !(len(parts) == 1) {
-		return status.From(vet.IllegalSubdirectoryError{BaseDir: parts[0], SubDir: o.Dir()})
+		return status.From(vet.IllegalSubdirectoryError(parts[0], o.Dir()))
 	}
 	return nil
 }

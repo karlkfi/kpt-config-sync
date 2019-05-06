@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/pkg/errors"
 )
 
 const urlBase = "For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv"
@@ -36,34 +37,51 @@ type Error interface {
 	Code() string
 }
 
-// errs is a map from error codes to instances of the types they represent.
-// Entries set to nil are reserved and MUST NOT be reused.
-// The map values are sample error values by types only.  They do not need to
-// be properly initialized, but need to be of the same type as the error
-// corresponding to the code.
-var errs = map[string]Error{
-	"1023": nil,
-	"1025": nil,
+// registered is a map from error codes to instances of the types they represent.
+// Entries set to true are reserved and MUST NOT be reused.
+var registered = map[string]bool{
+	"1023": true,
+	"1025": true,
 }
 
-// Format formats the start of error messages consistently.
-func Format(err Error, format string, a ...interface{}) string {
-	var sb strings.Builder
-	sb.WriteString(prefix(knv(err.Code())))
-	sb.WriteString(fmt.Sprintf(format, a...))
+// examples is a map of examples of each error type. For documentation purposes, i.e. for use
+// in the internal-only nomoserrors command.
+var examples = make(map[string][]Error)
 
-	switch e := err.(type) {
-	case ResourceError:
+// format formats error messages consistently.
+//
+// err is the underlying error.
+// references is an already formatted list of directories or objects. Empty string for no references.
+// code is the error's documentation id.
+func format(err error, references string, code string) string {
+	var sb strings.Builder
+	sb.WriteString(prefix(knv(code)))
+	sb.WriteString(err.Error())
+
+	if references != "" {
 		sb.WriteString("\n\n")
-		sb.WriteString(formatResources(e))
-	case PathError:
-		sb.WriteString("\n\n")
-		sb.WriteString(formatPaths(e))
+		sb.WriteString(references)
 	}
 
 	sb.WriteString("\n\n")
-	sb.WriteString(url(err.Code()))
+	sb.WriteString(url(code))
 	return sb.String()
+}
+
+// Format formats the start of error messages consistently.
+//
+// To be deprecated. Prefer NewErrorBuilder.
+func Format(err Error, fmt string, a ...interface{}) string {
+	references := ""
+
+	switch e := err.(type) {
+	case ResourceError:
+		references = formatResources(e)
+	case PathError:
+		references = formatPaths(e.RelativePaths())
+	}
+
+	return format(errors.Errorf(fmt, a...), references, err.Code())
 }
 
 // PathError defines a status error associated with one or more path-identifiable locations in the
@@ -80,7 +98,7 @@ func nextCandidate(code string) (int, error) {
 	}
 
 	for ; true; c++ {
-		if _, found := errs[strconv.Itoa(c)]; found {
+		if _, found := registered[strconv.Itoa(c)]; found {
 			continue
 		}
 		return c, nil
@@ -88,24 +106,42 @@ func nextCandidate(code string) (int, error) {
 	panic("unreachable code")
 }
 
+// Register registers a unique code for use and examples for it.
+//
+// Soo to be deprecated. Use NewErrorBuilder and AddExamples instead.
+func Register(code string, errs ...Error) {
+	register(code)
+	AddExamples(code, errs...)
+}
+
+// AddExamples adds examples for a specific error code for use in documentation. For example, via
+// the internal-only `nomoserrors` command.
+func AddExamples(code string, errs ...Error) {
+	for _, err := range errs {
+		// Ensures example errors can be displayed.
+		_ = err.Error()
+	}
+	examples[code] = append(examples[code], errs...)
+}
+
 // Register marks the passed error code as used. err is a sample value of Error
 // for this code.
-func Register(code string, err Error) {
-	if _, exists := errs[code]; exists {
+func register(code string) {
+	if _, exists := registered[code]; exists {
 		if c, err2 := nextCandidate(code); err2 == nil {
-			panic(fmt.Errorf("duplicate error code %s: %T, next candidate: %d", code, err, c))
+			panic(fmt.Errorf("duplicate error code %s, next candidate: %d", code, c))
 		} else {
-			panic(fmt.Errorf("duplicate error code %s: %T", code, err))
+			panic(fmt.Errorf("duplicate error code %s", code))
 		}
 	}
-	errs[code] = err
+	registered[code] = true
 }
 
 // Registry returns a copy of the error registry.
-func Registry() map[string]Error {
-	result := make(map[string]Error)
-	for code, err := range errs {
-		result[code] = err
+func Registry() map[string][]Error {
+	result := make(map[string][]Error)
+	for code, errs := range examples {
+		result[code] = append(result[code], errs...)
 	}
 	return result
 }

@@ -24,7 +24,7 @@ func (p Root) Join(rel Path) Relative {
 }
 
 // Rel breaks the passed target path into a Relative
-func (p Root) Rel(targPath Path) (Relative, status.PathError) {
+func (p Root) Rel(targPath Path) (Relative, status.Error) {
 	relPath, err := filepath.Rel(p.path, targPath.OSPath())
 	if err != nil {
 		return Relative{}, status.PathWrapf(err, p.path, targPath.SlashPath())
@@ -56,7 +56,7 @@ func makeCleanAbsolute(path string) (string, status.Error) {
 		// filepath.Abs does not cover this case.
 		usr, err := user.Current()
 		if err != nil {
-			return "", status.OSWrapf(err)
+			return "", status.OSWrap(err)
 		}
 		home := usr.HomeDir
 		if path == "~" {

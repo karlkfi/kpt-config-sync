@@ -28,30 +28,22 @@ func main() {
 	}
 }
 
-type errEntry struct {
-	code string
-	err  status.Error
-}
-
-func sortedErrors() []errEntry {
-	var errs []errEntry
-	for code, err := range status.Registry() {
-		errs = append(errs, errEntry{code: code, err: err})
+func sortedErrors() []status.Error {
+	var allErrs []status.Error
+	for _, errs := range status.Registry() {
+		allErrs = append(allErrs, errs...)
 	}
-	sort.Slice(errs, func(i, j int) bool {
-		return errs[i].code < errs[j].code
+	sort.Slice(allErrs, func(i, j int) bool {
+		return allErrs[i].Error() < allErrs[j].Error()
 	})
-	return errs
+	return allErrs
 }
 
 func printErrorCodes() {
-	fmt.Println("=== ERROR CODES ===")
-	for _, err := range sortedErrors() {
-		if err.err == nil {
-			fmt.Printf("%s: RESERVED\n", err.code)
-		} else {
-			fmt.Printf("%s: %T\n", err.code, err.err)
-		}
+	fmt.Println("=== USED ERROR CODES ===")
+	for code := range status.Registry() {
+		// TODO: Need to rethink how to document error names.
+		fmt.Printf("%s", code)
 	}
 	fmt.Println()
 }
@@ -59,9 +51,7 @@ func printErrorCodes() {
 func printErrors() {
 	fmt.Println("=== SAMPLE ERRORS ===")
 	for _, err := range sortedErrors() {
-		if err.err != nil {
-			fmt.Println(err.err.Error())
-			fmt.Println()
-		}
+		fmt.Println(err.Error())
+		fmt.Println()
 	}
 }

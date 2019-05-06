@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errFoo = UndocumentedError("foo")
-var errBar = APIServerWrapf(errors.New("bar"), "")
-var errBaz = UndocumentedError("baz")
+var errFoo = UndocumentedError.New("foo")
+var errBar = APIServerError.New("bar")
+var errBaz = UndocumentedError.New("baz")
 
 var errFooRaw = errors.New("raw foo")
 var errBarRaw = errors.New("raw bar")
@@ -22,7 +22,7 @@ func TestErrorBuilder(t *testing.T) {
 		{
 			"build golang errors",
 			[]error{errFooRaw, errBarRaw},
-			&multiError{errs: []Error{UndocumentedWrapf(errFooRaw, ""), UndocumentedWrapf(errBarRaw, "")}},
+			&multiError{errs: []Error{UndocumentedError(errFooRaw), UndocumentedError(errBarRaw)}},
 		},
 		{
 			"build status Errors",
@@ -37,7 +37,7 @@ func TestErrorBuilder(t *testing.T) {
 		{
 			"build mixed errors",
 			[]error{errBaz, nil, errFooRaw},
-			&multiError{errs: []Error{errBaz, UndocumentedWrapf(errFooRaw, "")}},
+			&multiError{errs: []Error{errBaz, UndocumentedError(errFooRaw)}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

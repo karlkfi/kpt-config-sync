@@ -1,9 +1,9 @@
 package status
 
 import (
-	"fmt"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/id"
+	"github.com/pkg/errors"
 )
 
 type errorImpl struct {
@@ -11,9 +11,11 @@ type errorImpl struct {
 	code  string
 }
 
+var _ Error = errorImpl{}
+
 // Error implements error.
 func (e errorImpl) Error() string {
-	return e.error.Error()
+	return format(e.error, "", e.code)
 }
 
 // Code implements Error.
@@ -26,36 +28,61 @@ func (e errorImpl) ToCME() v1.ConfigManagementError {
 	return FromError(e)
 }
 
-// ErrorWrapper is a functor that returns an Error if supplied an error and formatting arguments.
-type ErrorWrapper func(err error, a ...interface{}) Error
-
-// ErrorBuilder is a functor that returns an Error if supplied formatting arguments.
-type ErrorBuilder func(a ...interface{}) Error
+// ErrorBuilder is a functor that returns an Error if supplied an error.
+//
+// Libraries should generally not directly expose ErrorBuilders, but keep them package private and
+// provide functions that tell callers the correct number and position of formatting arguments.
+// The main exception is general-purpose errors like InternalError.
+type ErrorBuilder func(err error) Error
 
 // NewErrorBuilder returns a functor that can be used to generate errors. Registers this
-// ErrorBuilder with the passed code.
-//
-// Callers should not directly expose ErrorBuilders, but keep them package private and provide
-// functions that tell callers the correct number and position of formatting arguments.
-func NewErrorBuilder(code string, format string) ErrorBuilder {
-	// TODO: Allow registering examples.
-	Register(code, nil)
-	return func(a ...interface{}) Error {
+// call with the passed unique code. Panics if there is an error code collision.
+func NewErrorBuilder(code string) ErrorBuilder {
+	register(code)
+	return func(err error) Error {
+		if err == nil {
+			return nil
+		}
 		return errorImpl{
-			error: fmt.Errorf(format, a...),
+			error: err,
 			code:  code,
 		}
 	}
 }
 
-// Wrapper returns the an error wrapper form of the ErrorBuilder.
-//
-// Returns nil if supplied a nil error.
-func (eb ErrorBuilder) Wrapper() ErrorWrapper {
-	return func(err error, a ...interface{}) Error {
-		if err == nil {
-			return nil
+// wrap wraps the ErrorBuilder with a static message.
+func wrap(ew ErrorBuilder, message string) ErrorBuilder {
+	return func(err error) Error {
+		return ew(errors.Wrap(err, message))
+	}
+}
+
+// Wrap wraps err with a static message.
+func (eb ErrorBuilder) Wrap(err error, message string) Error {
+	return eb(errors.Wrap(err, message))
+}
+
+// Wrapf wraps err with a formatted message.
+func (eb ErrorBuilder) Wrapf(err error, format string, a ...interface{}) Error {
+	return eb(errors.Wrapf(err, format, a...))
+}
+
+// Errorf instantiates an Error with the formatted message.
+func (eb ErrorBuilder) Errorf(format string, a ...interface{}) Error {
+	return eb(errors.Errorf(format, a...))
+}
+
+// New instantiates an Error with the passed static message.
+func (eb ErrorBuilder) New(message string) Error {
+	return eb(errors.New(message))
+}
+
+// WithPaths adds the passed paths to the error in a structured way.
+func (eb ErrorBuilder) WithPaths(paths ...id.Path) ErrorBuilder {
+	return func(err error) Error {
+		return pathErrorImpl{
+			errorImpl: eb(err).(errorImpl),
+			paths:     paths,
 		}
-		return eb(append([]interface{}{err.Error()}, a...))
 	}
 }

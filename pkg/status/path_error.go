@@ -1,23 +1,17 @@
 package status
 
 import (
-	"errors"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
 // PathErrorCode is the error code for a generic PathError.
 const PathErrorCode = "2001"
 
-func init() {
-	Register(PathErrorCode, pathError{
-		err: errors.New("some error"),
-	})
-}
+var pathError = NewErrorBuilder(PathErrorCode)
 
 type path struct {
 	slashPath string
@@ -35,17 +29,9 @@ func (p path) SlashPath() string {
 	return p.slashPath
 }
 
-// pathError almost always results from an OS-level function involving the file system.
-type pathError struct {
-	err      error
-	relPaths []id.Path
-}
-
-var _ PathError = &pathError{}
-
-func formatPaths(err PathError) string {
-	pathStrs := make([]string, len(err.RelativePaths()))
-	for i, path := range err.RelativePaths() {
+func formatPaths(paths []id.Path) string {
+	pathStrs := make([]string, len(paths))
+	for i, path := range paths {
 		pathStrs[i] = "path: " + path.OSPath()
 		if filepath.Ext(path.OSPath()) == "" {
 			// Assume paths without extensions are directories. We don't support files without extensions,
@@ -58,23 +44,8 @@ func formatPaths(err PathError) string {
 	return strings.Join(pathStrs, "\n")
 }
 
-// Error implements Error.
-func (p pathError) Error() string {
-	return Format(p, "%[1]s\nPotential causes:", p.err.Error())
-}
-
-// Code implements Error.
-func (p pathError) Code() string {
-	return PathErrorCode
-}
-
-// RelativePaths implements PathError.
-func (p pathError) RelativePaths() []id.Path {
-	return p.relPaths
-}
-
 // PathWrapf returns a PathError wrapping an error one or more relative paths.
-func PathWrapf(err error, slashPaths ...string) PathError {
+func PathWrapf(err error, slashPaths ...string) Error {
 	if err == nil {
 		return nil
 	}
@@ -82,10 +53,5 @@ func PathWrapf(err error, slashPaths ...string) PathError {
 	for i, p := range slashPaths {
 		paths[i] = path{slashPath: p}
 	}
-	return pathError{err: err, relPaths: paths}
-}
-
-// ToCME implements Error.
-func (p pathError) ToCME() v1.ConfigManagementError {
-	return FromPathError(p)
+	return pathError.WithPaths(paths...)(err)
 }

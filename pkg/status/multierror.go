@@ -98,7 +98,7 @@ func (m *multiError) add(err error) {
 	case MultiError:
 		m.errs = append(m.errs, e.Errors()...)
 	default:
-		m.errs = append(m.errs, UndocumentedWrapf(err, ""))
+		m.errs = append(m.errs, UndocumentedError(err))
 	}
 }
 

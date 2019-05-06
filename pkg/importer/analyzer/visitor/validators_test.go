@@ -14,7 +14,7 @@ import (
 
 func newFailAll() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		return status.From(status.InternalError("test error"))
+		return status.From(status.InternalError.New("test error"))
 	})
 }
 

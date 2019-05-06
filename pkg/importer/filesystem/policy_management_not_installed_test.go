@@ -21,7 +21,7 @@ type failServerResourcesInterface struct {
 }
 
 func (f failServerResourcesInterface) ServerResourcesForGroupVersion(gv string) (*v1.APIResourceList, error) {
-	return nil, status.InternalError("error")
+	return nil, status.InternalError.New("error")
 }
 
 func TestPolicyManagementNotInstalled(t *testing.T) {
