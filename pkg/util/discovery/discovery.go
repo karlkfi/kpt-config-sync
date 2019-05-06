@@ -16,7 +16,7 @@ limitations under the License.
 package discovery
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -95,7 +95,8 @@ func (a *APIInfo) AddCustomResources(crds ...*v1beta1.CustomResourceDefinition) 
 			Group:        group,
 			Kind:         kind,
 			ShortNames:   crNames.ShortNames,
-			// TODO(sbochins): consider non-empty defaults for Categories and Verbs
+			Categories:   crNames.Categories,
+			// TODO(sbochins): consider populating Verbs
 		}
 
 		gk := schema.GroupKind{Group: group, Kind: kind}

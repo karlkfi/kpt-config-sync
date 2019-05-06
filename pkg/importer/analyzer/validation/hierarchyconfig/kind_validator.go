@@ -13,12 +13,12 @@ import (
 
 // NewHierarchyConfigKindValidator returns a Visitor that ensures only supported Resource Kinds are declared in
 // HierarchyConfigs.
-func NewHierarchyConfigKindValidator() ast.Visitor {
+func NewHierarchyConfigKindValidator(enableCRDs bool) ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
-				if err := ValidateKinds(gkc); err != nil {
+				if err := ValidateKinds(gkc, enableCRDs); err != nil {
 					return err
 				}
 			}
@@ -28,8 +28,8 @@ func NewHierarchyConfigKindValidator() ast.Visitor {
 }
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
-func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
-	if AllowedInHierarchyConfigs(config.GroupKind(), false) {
+func ValidateKinds(config FileGroupKindHierarchyConfig, enableCRDs bool) status.MultiError {
+	if AllowedInHierarchyConfigs(config.GroupKind(), enableCRDs) {
 		return nil
 	}
 	return status.From(vet.UnsupportedResourceInHierarchyConfigError{

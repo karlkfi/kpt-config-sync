@@ -13,6 +13,8 @@ import (
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 type testCase string
@@ -64,8 +66,17 @@ func (tc *testCase) Run(t *testing.T) {
 		}
 	}()
 
-	p, err2 := NewParserWithFactory(
-		f,
+	factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
+		f := fstesting.NewTestFactory(t)
+		defer func() {
+			if err := f.Cleanup(); err != nil {
+				t.Fatal(errors.Wrap(err, "could not clean up"))
+			}
+		}()
+		return f
+	}
+	p, err2 := NewParser(
+		factoryFactory,
 		ParserOpt{
 			Vet:       true,
 			Validate:  false,

@@ -20,18 +20,20 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"path"
 	"time"
-
-	"os"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 var (
@@ -60,9 +62,11 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
+	factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
+		return cmdutil.NewFactory(importer.NewFilesystemCRDAwareClientGetter(&genericclioptions.ConfigFlags{}, crds...))
+	}
 	parser, err := filesystem.NewParser(
-		&genericclioptions.ConfigFlags{},
-		filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}, EnableCRDs: *enableCRDs})
+		factoryFactory, filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}, EnableCRDs: *enableCRDs})
 	if err != nil {
 		glog.Fatalf("Failed to create parser: %+v", err)
 	}

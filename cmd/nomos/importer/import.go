@@ -142,7 +142,7 @@ var ignoredGroupKinds = map[schema.GroupKind]bool{
 	// ComponentStatus is an immutable snapshot of controller data.
 	schema.GroupKind{Kind: "ControllerRevision", Group: "apps"}: true,
 	// CustomResourceDefinitions are not yet supported for syncing.
-	schema.GroupKind{Kind: "CustomResourceDefinition", Group: "apiextensions.k8s.io"}: true,
+	kinds.CustomResourceDefinition().GroupKind(): true,
 	// Events are transient things that happened on the cluster and shouldn't be synced.
 	schema.GroupKind{Kind: "Event"}: true,
 	// Nodes represent literal worker machine.

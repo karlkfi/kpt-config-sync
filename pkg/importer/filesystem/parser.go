@@ -25,22 +25,24 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/decode"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -52,16 +54,18 @@ import (
 func init() {
 	// Add Nomos types to the Scheme used by asDefaultVersionedOrOriginal for
 	// converting Unstructured to specific types.
+	utilruntime.Must(v1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(v1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(clusterregistry.AddToScheme(scheme.Scheme))
 }
 
-// Parser reads files on disk and builds Nomos CRDs.
+type factoryFactory func(...*v1beta1.CustomResourceDefinition) cmdutil.Factory
+
+// Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
-	opts            ParserOpt
-	factory         cmdutil.Factory
-	discoveryClient discovery.CachedDiscoveryInterface
-	errors          status.MultiError
+	opts           ParserOpt
+	factoryFactory factoryFactory
+	errors         status.MultiError
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -76,31 +80,36 @@ type ParserOpt struct {
 	EnableCRDs bool
 }
 
-// NewParser creates a new Parser.
-// clientConfig can be used to configure api server client. It should be set to nil when running in cluster.
-// resources is the list returned by the DisoveryClient ServerResources call which represents resources
-// 		that are returned by the API server during discovery.
-// opts turns on options for the parser.
-func NewParser(clientGetter genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
-	return NewParserWithFactory(cmdutil.NewFactory(clientGetter), opts)
-}
-
-// NewParserWithFactory creates a new Parser using the specified factory.
-// NewParser is the more common constructor, but this is useful for testing.
-func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
-	dc, err := f.ToDiscoveryClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get discovery client")
-	}
+// NewParser creates a new Parser using the specified factoryFactory and parser options.
+func NewParser(f factoryFactory, opts ParserOpt) (*Parser, error) {
 	p := &Parser{
-		opts:            opts,
-		factory:         f,
-		discoveryClient: dc,
+		factoryFactory: f,
+		opts:           opts,
 	}
 	return p, nil
 }
 
-// Parse parses file tree rooted at root and builds config CRDs from supported Kubernetes config resources.
+// crtdsInRepo parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
+func (p *Parser) crdsInRepo(rootPath cmpath.Root) ([]*v1beta1.CustomResourceDefinition, status.Error) {
+	fileObjects := p.readClusterResources(rootPath)
+
+	var crds []*v1beta1.CustomResourceDefinition
+	for _, f := range fileObjects {
+		object := f.Object
+		if object.GetObjectKind().GroupVersionKind() != kinds.CustomResourceDefinition() {
+			continue
+		}
+
+		crd, err := clusterconfig.AsCRD(object)
+		if err != nil {
+			return nil, status.PathWrapf(err, f.SlashPath())
+		}
+		crds = append(crds, crd)
+	}
+	return crds, nil
+}
+
+// Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
 // * system/ (flat, required)
@@ -113,9 +122,23 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 	rootPath, err := cmpath.NewRoot(cmpath.FromOS(root))
 	p.errors = status.Append(p.errors, err)
 
+	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
+	// if we haven't yet added the CRDs to the cluster.
+	crds, cErr := p.crdsInRepo(rootPath)
+	if cErr != nil {
+		p.errors = status.Append(p.errors, cErr)
+		return nil, p.errors
+	}
+
+	discoveryClient, dErr := p.factoryFactory().ToDiscoveryClient()
+	if dErr != nil {
+		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
+		return nil, p.errors
+	}
+
 	// Always make sure we're getting the freshest data.
-	p.discoveryClient.Invalidate()
-	p.errors = status.Append(p.errors, validateInstallation(p.discoveryClient))
+	discoveryClient.Invalidate()
+	p.errors = status.Append(p.errors, validateInstallation(discoveryClient))
 
 	if p.errors != nil {
 		return nil, p.errors
@@ -129,20 +152,25 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 	p.errors = status.Append(p.errors, err)
 
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
+	crdInfo, err := clusterconfig.NewCRDInfo(
+		decode.NewGenericResourceDecoder(scheme.Scheme),
+		currentConfigs.CRDClusterConfig,
+		crds)
+	p.errors = status.Append(p.errors, err)
+
 	if p.errors != nil {
 		return nil, p.errors
 	}
 
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(p.readSystemResources(rootPath)),
-		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath)),
+		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath, crds...)),
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
-		tree.NewAPIInfoBuilderVisitor(p.discoveryClient, transform.EphemeralResources(), p.opts.EnableCRDs),
-		tree.NewCRDClusterConfigInfoVisitor(importer.NewCRDClusterConfigInfo(currentConfigs.CRDClusterConfig, astRoot.ClusterObjects)),
+		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources(), p.opts.EnableCRDs),
+		tree.NewCRDClusterConfigInfoVisitor(crdInfo),
 	}
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet,
-		p.opts.EnableCRDs)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet, p.opts.EnableCRDs)...)
 
 	outputVisitor := backend.NewOutputVisitor(p.opts.EnableCRDs)
 	visitors = append(visitors,
@@ -179,12 +207,12 @@ func (p *Parser) readSystemResources(root cmpath.Root) []ast.FileObject {
 	return p.readResources(root.Join(cmpath.FromSlash(repo.SystemDir)))
 }
 
-func (p *Parser) readNamespaceResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())))
+func (p *Parser) readNamespaceResources(root cmpath.Root, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), crds...)
 }
 
-func (p *Parser) readClusterResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)))
+func (p *Parser) readClusterResources(root cmpath.Root, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)), crds...)
 }
 
 func (p *Parser) readClusterRegistryResources(root cmpath.Root) []ast.FileObject {
@@ -192,7 +220,7 @@ func (p *Parser) readClusterRegistryResources(root cmpath.Root) []ast.FileObject
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
+func (p *Parser) readResources(dir cmpath.Relative, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -212,13 +240,14 @@ func (p *Parser) readResources(dir cmpath.Relative) []ast.FileObject {
 
 	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
-		s, err := p.factory.Validator(p.opts.Validate)
+		s, err := p.factoryFactory().Validator(p.opts.Validate)
 		if err != nil {
 			p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get schema"))
 			return nil
 		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		result := p.factory.NewBuilder().
+		crdFactory := p.factoryFactory(crds...)
+		result := crdFactory.NewBuilder().
 			Unstructured().
 			Schema(s).
 			ContinueOnError().

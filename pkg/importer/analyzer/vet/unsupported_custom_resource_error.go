@@ -23,7 +23,7 @@ var _ status.ResourceError = UnsupportedCRDRemovalError{}
 // Error implements error.
 func (e UnsupportedCRDRemovalError) Error() string {
 	return status.Format(e,
-		"Removing a a CRD and leaving the corresponding Custom Resources in the repo is disallowed. To fix, "+
+		"Removing a CRD and leaving the corresponding Custom Resources in the repo is disallowed. To fix, "+
 			"remove the CRD along with the Custom Resources.")
 }
 

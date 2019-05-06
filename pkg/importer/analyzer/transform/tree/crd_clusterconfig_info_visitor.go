@@ -1,21 +1,21 @@
 package tree
 
 import (
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 )
 
 // CRDClusterConfigInfoVisitor adds ClusterConfigInfo to Extensions.
 type CRDClusterConfigInfoVisitor struct {
 	*visitor.Base
-	crdInfo *importer.CRDClusterConfigInfo
+	crdInfo *clusterconfig.CRDInfo
 	errs    status.MultiError
 }
 
 // NewCRDClusterConfigInfoVisitor instantiates an CRDClusterConfigInfoVisitor with a set of objects to add.
-func NewCRDClusterConfigInfoVisitor(crdInfo *importer.CRDClusterConfigInfo) *CRDClusterConfigInfoVisitor {
+func NewCRDClusterConfigInfoVisitor(crdInfo *clusterconfig.CRDInfo) *CRDClusterConfigInfoVisitor {
 	v := &CRDClusterConfigInfoVisitor{
 		Base:    visitor.NewBase(),
 		crdInfo: crdInfo,
@@ -24,9 +24,9 @@ func NewCRDClusterConfigInfoVisitor(crdInfo *importer.CRDClusterConfigInfo) *CRD
 	return v
 }
 
-// VisitRoot adds CRDClusterConfigInfo to Root Extensions.
+// VisitRoot adds CRDInfo to Root Extensions.
 func (v *CRDClusterConfigInfoVisitor) VisitRoot(r *ast.Root) *ast.Root {
-	v.errs = status.Append(v.errs, importer.AddCRDClusterConfigInfo(r, v.crdInfo))
+	v.errs = status.Append(v.errs, clusterconfig.AddCRDInfo(r, v.crdInfo))
 	return r
 }
 

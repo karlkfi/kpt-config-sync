@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
@@ -43,11 +43,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 const (
@@ -1545,7 +1547,7 @@ spec:
 	{
 		testName: "HierarchyConfig contains a CRD",
 		testFiles: fstesting.FileContentMap{
-			"system/config.yaml": templateData{Group: "extensions", Kind: "CustomResourceDefinition"}.apply(aHierarchyConfig),
+			"system/config.yaml": templateData{Group: kinds.CustomResourceDefinition().Group, Kind: kinds.CustomResourceDefinition().Kind}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{
 			vet.UnsupportedResourceInHierarchyConfigErrorCode,
@@ -1628,14 +1630,18 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		d.createTestFile(k, v)
 	}
 
-	f := fstesting.NewTestFactory(t)
-	defer func() {
-		if err := f.Cleanup(); err != nil {
-			t.Fatal(errors.Wrap(err, "could not clean up"))
-		}
-	}()
-	p, err := NewParserWithFactory(
-		f,
+	factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
+		f := fstesting.NewTestFactory(t)
+		defer func() {
+			if err := f.Cleanup(); err != nil {
+				t.Fatal(errors.Wrap(err, "could not clean up"))
+			}
+		}()
+		return f
+	}
+
+	p, err := NewParser(
+		factoryFactory,
 		ParserOpt{
 			Vet:       tc.vet,
 			Validate:  true,
@@ -2482,15 +2488,19 @@ func TestEmptyDirectories(t *testing.T) {
 			if err := os.MkdirAll(path, 0750); err != nil {
 				d.Fatalf("error creating test dir %s: %v", path, err)
 			}
-			f := fstesting.NewTestFactory(t)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
 
-			p, err := NewParserWithFactory(
-				f,
+			factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
+				f := fstesting.NewTestFactory(t)
+				defer func() {
+					if err := f.Cleanup(); err != nil {
+						t.Fatal(errors.Wrap(err, "could not clean up"))
+					}
+				}()
+				return f
+			}
+
+			p, err := NewParser(
+				factoryFactory,
 				ParserOpt{
 					Vet:       false,
 					Validate:  true,

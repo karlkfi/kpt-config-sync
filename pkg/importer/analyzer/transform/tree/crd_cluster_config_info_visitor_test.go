@@ -3,107 +3,76 @@ package tree_test
 import (
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
+	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestCRDClusterConfigInfoVisitor(t *testing.T) {
-	crd := fake.CustomResourceDefinition("cluster/crd.yaml").Object.(*v1beta1.CustomResourceDefinition)
+func namedCRD(name string) *v1beta1.CustomResourceDefinition {
+	crd := fake.CustomResourceDefinition("").Object.(*v1beta1.CustomResourceDefinition).DeepCopy()
+	crd.Name = name
+	return crd
+}
 
+func TestCRDClusterConfigInfoVisitor(t *testing.T) {
 	testCases := []struct {
-		name          string
-		objects       []*ast.ClusterObject
-		crd           *v1beta1.CustomResourceDefinition
-		clusterConfig *v1.ClusterConfig
+		name        string
+		repoCRDs    []*v1beta1.CustomResourceDefinition
+		wantCRD     *v1beta1.CustomResourceDefinition
+		clusterCRDs []runtime.Object
 	}{
 		{
-			name:          "empty tree, no CRDs already synced",
-			clusterConfig: &v1.ClusterConfig{},
+			name: "empty tree, no CRDs already synced",
 		},
 		{
-			name: "one CRD being added",
-			objects: []*ast.ClusterObject{
-				{FileObject: fake.CustomResourceDefinition("cluster/crd.yaml")},
-			},
-			clusterConfig: &v1.ClusterConfig{},
+			name:     "one CRD being added",
+			repoCRDs: []*v1beta1.CustomResourceDefinition{namedCRD("in-repo")},
 		},
 		{
-			name: "one CRDs being removed",
-			crd:  crd,
-			clusterConfig: &v1.ClusterConfig{
-				Spec: v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "apiextensions.k8s.io",
-							Kind:  crd.Kind,
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1beta1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: crd,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:        "one CRD being removed",
+			wantCRD:     namedCRD("on-cluster"),
+			clusterCRDs: []runtime.Object{namedCRD("on-cluster")},
 		},
 		{
-			name: "no CRDs being removed",
-			objects: []*ast.ClusterObject{
-				{FileObject: fake.CustomResourceDefinition("cluster/crd.yaml")},
-			},
-			clusterConfig: &v1.ClusterConfig{
-				Spec: v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "apiextensions.k8s.io",
-							Kind:  crd.Kind,
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1beta1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: crd,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:        "no CRDs being removed",
+			repoCRDs:    []*v1beta1.CustomResourceDefinition{namedCRD("on-cluster")},
+			clusterCRDs: []runtime.Object{namedCRD("on-cluster")},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := &ast.Root{}
-			root.ClusterObjects = tc.objects
-			crdInfo := importer.NewCRDClusterConfigInfo(tc.clusterConfig, root.ClusterObjects)
+
+			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.clusterCRDs...))
+			crdInfo, cErr := clusterconfig.NewCRDInfo(
+				fakeDecoder,
+				&v1.ClusterConfig{},
+				tc.repoCRDs)
+			if cErr != nil {
+				t.Fatalf("could not generate CRDInfo: %v", cErr)
+			}
+
 			root.Accept(tree.NewCRDClusterConfigInfoVisitor(crdInfo))
-			crdInfo, err := importer.GetCRDClusterConfigInfo(root)
+			crdInfo, err := clusterconfig.GetCRDInfo(root)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			m := make(map[schema.GroupKind]*v1beta1.CustomResourceDefinition)
-			if tc.crd != nil {
-				m[schema.GroupKind{}] = tc.crd
+			if tc.wantCRD != nil {
+				m[schema.GroupKind{}] = tc.wantCRD
 			}
-			want := importer.StubbedCRDClusterConfigInfo(m)
-			if diff := cmp.Diff(want, crdInfo, cmp.AllowUnexported(importer.CRDClusterConfigInfo{})); diff != "" {
+			want := clusterconfig.StubbedCRDInfo(m)
+			if diff := cmp.Diff(want, crdInfo, cmp.AllowUnexported(clusterconfig.CRDInfo{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})

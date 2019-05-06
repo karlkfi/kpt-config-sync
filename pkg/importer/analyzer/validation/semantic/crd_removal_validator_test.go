@@ -3,7 +3,8 @@ package semantic
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/util/clusterconfig"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
@@ -14,13 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// CRDInfo adds an CRDClusterConfigInfo to the AST.
-func CRDInfo(crdInfo *importer.CRDClusterConfigInfo) ast.BuildOpt {
+// CRDInfo adds an CRDInfo to the AST.
+func CRDInfo(crdInfo *clusterconfig.CRDInfo) ast.BuildOpt {
 	return func(root *ast.Root) status.MultiError {
 		if crdInfo == nil {
 			return nil
 		}
-		importer.AddCRDClusterConfigInfo(root, crdInfo)
+		clusterconfig.AddCRDInfo(root, crdInfo)
 		return nil
 	}
 }
@@ -40,7 +41,7 @@ func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
 			fake.CustomResourceDefinition("cluster/crd.yaml"),
 			fake.Anvil("cluster/anvil.yaml"),
 		),
-	).With(CRDInfo(importer.StubbedCRDClusterConfigInfo(nil)))
+	).With(CRDInfo(clusterconfig.StubbedCRDInfo(nil)))
 
 	test.RunAll(t)
 }
@@ -50,7 +51,7 @@ func TestKnownResourceValidatorWithPendingRemovals(t *testing.T) {
 		return NewCRDRemovalValidator(true)
 	}
 	crd := fake.CustomResourceDefinition("cluster/crd.yaml").Object.(*v1beta1.CustomResourceDefinition)
-	anvilCRDInfo := importer.StubbedCRDClusterConfigInfo(map[schema.GroupKind]*v1beta1.CustomResourceDefinition{
+	anvilCRDInfo := clusterconfig.StubbedCRDInfo(map[schema.GroupKind]*v1beta1.CustomResourceDefinition{
 		kinds.Anvil().GroupKind(): crd,
 	})
 

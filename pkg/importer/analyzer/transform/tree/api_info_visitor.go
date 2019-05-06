@@ -5,8 +5,8 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 )
@@ -20,7 +20,7 @@ type APIInfoBuilderVisitor struct {
 	errs               status.MultiError
 }
 
-// NewAPIInfoBuilderVisitor instantiates an CRDClusterConfigInfoVisitor with a set of objects to add.
+// NewAPIInfoBuilderVisitor instantiates a CRDClusterConfigInfoVisitor with a set of objects to add.
 func NewAPIInfoBuilderVisitor(client discovery.ServerResourcesInterface, ephemeralResources []*metav1.APIResourceList,
 	enableCRDs bool) *APIInfoBuilderVisitor {
 	v := &APIInfoBuilderVisitor{
@@ -50,7 +50,13 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 			if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
 				continue
 			}
-			apiInfo.AddCustomResources(cr.Object.(*v1beta1.CustomResourceDefinition))
+
+			crd, err := clusterconfig.AsCRD(cr.Object)
+			if err != nil {
+				v.errs = status.Append(v.errs, status.PathWrapf(err, cr.SlashPath()))
+				continue
+			}
+			apiInfo.AddCustomResources(crd)
 		}
 	}
 	v.errs = status.Append(v.errs, utildiscovery.AddAPIInfo(r, apiInfo))

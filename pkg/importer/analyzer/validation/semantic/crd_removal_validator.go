@@ -1,18 +1,18 @@
 package semantic
 
 import (
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 )
 
 // CRDRemovalValidator validates that a CRD is not being removed from the repo,
 // while its corresponding Custom Resources still exist on the cluster.
 type CRDRemovalValidator struct {
 	*visitor.ValidatorBase
-	crdInfo    *importer.CRDClusterConfigInfo
+	crdInfo    *clusterconfig.CRDInfo
 	enableCRDs bool
 }
 
@@ -23,7 +23,7 @@ func NewCRDRemovalValidator(enableCRDs bool) ast.Visitor {
 
 // ValidateRoot adds CRDClusterConfigInfo to Root Extensions.
 func (v *CRDRemovalValidator) ValidateRoot(r *ast.Root) status.MultiError {
-	crdInfo, err := importer.GetCRDClusterConfigInfo(r)
+	crdInfo, err := clusterconfig.GetCRDInfo(r)
 	v.crdInfo = crdInfo
 	return status.From(err)
 }

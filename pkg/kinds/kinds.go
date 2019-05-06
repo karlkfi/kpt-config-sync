@@ -3,14 +3,14 @@ package kinds
 import (
 	"fmt"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/scale/scheme/extensionsv1beta1"
 )
 
 // Anvil returns the GroupVersionKind for Anvil Custom Resource used in tests.
@@ -74,7 +74,7 @@ func Namespace() schema.GroupVersionKind {
 
 // CustomResourceDefinition returns the canonical CustomResourceDefinition GroupVersionKind
 func CustomResourceDefinition() schema.GroupVersionKind {
-	return extensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
+	return v1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
 }
 
 // ClusterSelector returns the canonical ClusterSelector GroupVersionKind

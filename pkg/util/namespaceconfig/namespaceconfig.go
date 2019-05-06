@@ -40,29 +40,33 @@ func ListConfigs(namespaceConfigLister listersv1.NamespaceConfigLister,
 		configs.NamespaceConfigs[n.Name] = *n.DeepCopy()
 	}
 
-	// ClusterConfig
-	cp, err := clusterConfigLister.List(labels.Everything())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list ClusterConfigs")
-	}
-
-	if len(cp) > 1 {
-		var names []string
-		for _, c := range cp {
-			names = append(names, c.Name)
-		}
-		return nil, errors.Errorf("found more than one ClusterConfig object. The cluster may be in an inconsistent state: %v", names)
-	}
-	if len(cp) == 1 {
-		if cp[0].Name != v1.ClusterConfigName {
-			return nil, errors.Errorf("expected ClusterConfig with name %q instead found %q", v1.ClusterConfigName, cp[0].Name)
-		}
-		configs.ClusterConfig = cp[0].DeepCopy()
+	// ClusterConfigs
+	if cErr := DecorateWithClusterConfigs(clusterConfigLister, &configs); cErr != nil {
+		return nil, errors.Wrap(cErr, "failed to list ClusterConfigs")
 	}
 
 	// Syncs
 	configs.Syncs, err = ListSyncs(syncLister)
 	return &configs, err
+}
+
+// DecorateWithClusterConfigs updates AllPolices with all the ClusterConfigs from APIServer.
+func DecorateWithClusterConfigs(lister listersv1.ClusterConfigLister, policies *AllConfigs) error {
+	cp, err := lister.List(labels.Everything())
+	if err != nil {
+		return errors.Wrap(err, "failed to list ClusterConfigs")
+	}
+	for _, c := range cp {
+		switch n := c.Name; n {
+		case v1.ClusterConfigName:
+			policies.ClusterConfig = c.DeepCopy()
+		case v1.CRDClusterConfigName:
+			policies.CRDClusterConfig = c.DeepCopy()
+		default:
+			return errors.Errorf("found an invalid ClusterConfig: %s", n)
+		}
+	}
+	return nil
 }
 
 // ListSyncs gets a map-by-name of Syncs currently present in the cluster from

@@ -3,6 +3,7 @@ package manager
 import (
 	"reflect"
 
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +62,10 @@ func resourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Schem
 	namespace := make(map[schema.GroupVersionKind]runtime.Object)
 	cluster := make(map[schema.GroupVersionKind]runtime.Object)
 	for gvk, obj := range rts {
+		if gvk == kinds.CustomResourceDefinition() {
+			// CRDs are handled in the CRD controller and shouldn't be handled in any of SubManager's controllers.
+			continue
+		}
 		switch apirs.GetScope(gvk) {
 		case discovery.NamespaceScope:
 			namespace[gvk] = obj

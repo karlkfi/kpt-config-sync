@@ -37,7 +37,7 @@ func (n NomosVisitorProvider) Visitors(
 		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
-		hierarchyconfig.NewHierarchyConfigKindValidator(),
+		hierarchyconfig.NewHierarchyConfigKindValidator(enableCRDs),
 		hierarchyconfig.NewKnownResourceValidator(),
 		hierarchyconfig.NewInheritanceValidator(),
 		visitors.NewSupportedClusterResourcesValidator(enableCRDs),
