@@ -29,9 +29,9 @@ import (
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
-	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError)
-	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError)
-	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError)
+	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
+	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error)
+	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
 }
 
 // ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
@@ -70,7 +70,7 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 }
 
 // Create implements Applier.
-func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.ResourceError) {
+func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.Error) {
 	err := c.create(ctx, intendedState)
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 
@@ -81,7 +81,7 @@ func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.
 }
 
 // Update implements Applier.
-func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError) {
+func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
 	updated, err := c.update(ctx, intendedState, currentState)
 	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 
@@ -92,7 +92,7 @@ func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState 
 }
 
 // Delete implements Applier.
-func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError) {
+func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	err := c.client.Delete(ctx, obj)
 	metrics.Operations.WithLabelValues("delete", obj.GetKind(), metrics.StatusLabel(err)).Inc()
 

@@ -92,7 +92,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == node.Namespace {
-			v.errs = status.Append(v.errs, vet.IllegalNamespaceSubdirectoryError{Child: n, Parent: parent})
+			v.errs = status.Append(v.errs, vet.IllegalNamespaceSubdirectoryError(n, parent))
 		}
 	}
 	for _, s := range n.Selectors {

@@ -58,7 +58,7 @@ func New(client client.Client, latencyMetric *prometheus.HistogramVec) *Client {
 type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj runtime.Object) status.ResourceError {
+func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Error {
 	description, kind := resourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 
@@ -109,12 +109,12 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.ResourceError) {
+func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.ResourceError) {
+func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
@@ -123,7 +123,7 @@ func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn 
 // This operation always involves retrieving the resource from API Server before actually updating it.
 // Refer to action package for expected return values for updateFn.
 func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action.Update,
-	clientUpdateFn clientUpdateFn) (runtime.Object, status.ResourceError) {
+	clientUpdateFn clientUpdateFn) (runtime.Object, status.Error) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
 	description, kind := resourceInfo(workingObj)

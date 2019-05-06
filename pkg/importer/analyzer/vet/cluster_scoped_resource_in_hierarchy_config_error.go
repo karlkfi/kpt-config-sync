@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -12,45 +11,22 @@ import (
 const ClusterScopedResourceInHierarchyConfigErrorCode = "1046"
 
 func init() {
-	status.Register(ClusterScopedResourceInHierarchyConfigErrorCode, ClusterScopedResourceInHierarchyConfigError{
-		HierarchyConfig: fakeHierarchyConfig{
+	status.AddExamples(ClusterScopedResourceInHierarchyConfigErrorCode, ClusterScopedResourceInHierarchyConfigError(
+		fakeHierarchyConfig{
 			Resource: hierarchyConfig(),
-			gk:       kinds.Repo().GroupKind(),
-		},
-	})
+			gk:       kinds.ClusterSelector().GroupKind(),
+		}, discovery.ClusterScope))
 }
+
+var clusterScopedResourceInHierarchyConfigError = status.NewErrorBuilder(ClusterScopedResourceInHierarchyConfigErrorCode)
 
 // ClusterScopedResourceInHierarchyConfigError reports that a Resource defined in a HierarchyConfig
 // has Cluster scope which means it's not feasible to interpret the resource in a hierarchical
 // manner
-type ClusterScopedResourceInHierarchyConfigError struct {
-	id.HierarchyConfig
-	Scope discovery.ObjectScope
-}
-
-var _ status.ResourceError = &ClusterScopedResourceInHierarchyConfigError{}
-
-// Error implements error
-func (e ClusterScopedResourceInHierarchyConfigError) Error() string {
-	gk := e.GroupKind()
-	return status.Format(e,
+func ClusterScopedResourceInHierarchyConfigError(config id.HierarchyConfig, scope discovery.ObjectScope) status.Error {
+	gk := config.GroupKind()
+	return clusterScopedResourceInHierarchyConfigError.WithResources(config).Errorf(
 		"This HierarchyConfig references the APIResource %q which has %s scope. "+
 			"Cluster scoped objects are not permitted in HierarchyConfig.",
-		gk.String(),
-		e.Scope)
-}
-
-// Code implements Error
-func (e ClusterScopedResourceInHierarchyConfigError) Code() string {
-	return ClusterScopedResourceInHierarchyConfigErrorCode
-}
-
-// Resources implements ResourceError
-func (e ClusterScopedResourceInHierarchyConfigError) Resources() []id.Resource {
-	return []id.Resource{e.HierarchyConfig}
-}
-
-// ToCME implements ToCMEr.
-func (e ClusterScopedResourceInHierarchyConfigError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
+		gk.String(), scope)
 }

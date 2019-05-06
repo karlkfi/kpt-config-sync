@@ -130,7 +130,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	for _, diff := range diffs {
 		if updated, err := syncerreconcile.HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 			mErr = status.Append(mErr, err)
-			syncErrs = append(syncErrs, status.FromResourceError(err))
+			syncErrs = append(syncErrs, err.ToCME())
 		} else if updated {
 			reconcileCount++
 		}

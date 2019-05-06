@@ -86,3 +86,13 @@ func (eb ErrorBuilder) WithPaths(paths ...id.Path) ErrorBuilder {
 		}
 	}
 }
+
+// WithResources adds the passed resources to the error in a structured way.
+func (eb ErrorBuilder) WithResources(resources ...id.Resource) ErrorBuilder {
+	return func(err error) Error {
+		return resourceErrorImpl{
+			errorImpl: eb(err).(errorImpl),
+			resources: resources,
+		}
+	}
+}

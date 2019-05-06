@@ -21,7 +21,7 @@ var _ ResourceError = MultipleSingletonsError{}
 
 // Error implements error
 func (e MultipleSingletonsError) Error() string {
-	return Format(e, "Found more than one %[1]s:\n%[2]s", resourceName(e.Duplicates), formatResources(e))
+	return Format(e, "Found more than one %[1]s:\n%[2]s", resourceName(e.Duplicates), formatResources(e.Resources()))
 }
 
 // Code implements Error

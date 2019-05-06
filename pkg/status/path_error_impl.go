@@ -1,6 +1,10 @@
 package status
 
 import (
+	"path/filepath"
+	"sort"
+	"strings"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 )
@@ -30,4 +34,19 @@ func (p pathErrorImpl) RelativePaths() []id.Path {
 // ToCME implements Error.
 func (p pathErrorImpl) ToCME() v1.ConfigManagementError {
 	return FromPathError(p)
+}
+
+func formatPaths(paths []id.Path) string {
+	pathStrs := make([]string, len(paths))
+	for i, path := range paths {
+		pathStrs[i] = "path: " + path.OSPath()
+		if filepath.Ext(path.OSPath()) == "" {
+			// Assume paths without extensions are directories. We don't support files without extensions,
+			// so for now this is a safe assumption.
+			pathStrs[i] += "/"
+		}
+	}
+	// Ensure deterministic path printing order.
+	sort.Strings(pathStrs)
+	return strings.Join(pathStrs, "\n")
 }

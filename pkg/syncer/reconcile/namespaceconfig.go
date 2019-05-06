@@ -295,7 +295,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		for _, diff := range diffs {
 			if updated, err := HandleDiff(ctx, r.applier, diff, r.recorder); err != nil {
 				errBuilder = status.Append(errBuilder, err)
-				syncErrs = append(syncErrs, status.FromResourceError(err))
+				syncErrs = append(syncErrs, err.ToCME())
 			} else if updated {
 				reconcileCount++
 			}
@@ -316,7 +316,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 // setNamespaceConfigStatus updates the status of the given NamespaceConfig. If the config is nil,
 // it does nothing, and successfully so.
 func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
-	ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError) status.ResourceError {
+	ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError) status.Error {
 	if config == reservedNamespaceConfig {
 		return nil
 	}

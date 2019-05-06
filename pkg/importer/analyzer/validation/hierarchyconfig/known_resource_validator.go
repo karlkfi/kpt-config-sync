@@ -56,10 +56,7 @@ func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyCon
 	case discovery.NamespaceScope:
 		// noop
 	case discovery.ClusterScope:
-		return status.From(vet.ClusterScopedResourceInHierarchyConfigError{
-			Scope:           scope,
-			HierarchyConfig: gkc,
-		})
+		return status.From(vet.ClusterScopedResourceInHierarchyConfigError(gkc, scope))
 	default:
 		panic(fmt.Sprintf("programmer error: case %s should not occur", scope))
 	}

@@ -76,9 +76,9 @@ func Format(err Error, fmt string, a ...interface{}) string {
 
 	switch e := err.(type) {
 	case ResourceError:
-		references = formatResources(e)
+		references = formatResources(e.Resources())
 	case PathError:
-		references = formatPaths(e.RelativePaths())
+		panic("deprecated for PathErrors; use NewErrorBuilder instead")
 	}
 
 	return format(errors.Errorf(fmt, a...), references, err.Code())

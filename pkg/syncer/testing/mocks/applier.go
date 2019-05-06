@@ -37,11 +37,11 @@ func (m *MockApplier) EXPECT() *MockApplierMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockApplier) Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError) {
+func (m *MockApplier) Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, obj)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(status.ResourceError)
+	ret1, _ := ret[1].(status.Error)
 	return ret0, ret1
 }
 
@@ -52,11 +52,11 @@ func (mr *MockApplierMockRecorder) Create(ctx, obj interface{}) *gomock.Call {
 }
 
 // Update mocks base method
-func (m *MockApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.ResourceError) {
+func (m *MockApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, intendedState, currentState)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(status.ResourceError)
+	ret1, _ := ret[1].(status.Error)
 	return ret0, ret1
 }
 
@@ -67,11 +67,11 @@ func (mr *MockApplierMockRecorder) Update(ctx, intendedState, currentState inter
 }
 
 // Delete mocks base method
-func (m *MockApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.ResourceError) {
+func (m *MockApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, obj)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(status.ResourceError)
+	ret1, _ := ret[1].(status.Error)
 	return ret0, ret1
 }
 

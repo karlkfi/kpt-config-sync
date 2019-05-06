@@ -51,7 +51,7 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
 func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, now func() metav1.Time,
-	errs ...v1.ConfigManagementError) status.ResourceError {
+	errs ...v1.ConfigManagementError) status.Error {
 	freshSyncToken := config.Status.Token == config.Spec.Token
 	if config.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)

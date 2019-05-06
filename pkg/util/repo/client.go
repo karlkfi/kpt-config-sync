@@ -65,7 +65,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 // CreateRepo creates a new Repo resource for the cluster. Currently we don't do anything with the
 // Repo object if a user has defined it in their source of truth so this is harmless/correct. If we
 // start using it to drive logic then we may not want to be creating one here.
-func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.ResourceError) {
+func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	if c.importerClient != nil {
 		return c.importerClient.createRepo()
 	}
@@ -80,7 +80,7 @@ func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.ResourceError
 // chances of conflict/collision/overwrite.
 
 // UpdateImportStatus updates the portion of the RepoStatus related to the importer.
-func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
+func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -97,7 +97,7 @@ func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 }
 
 // UpdateSourceStatus updates the portion of the RepoStatus related to the source of truth.
-func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
+func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -114,7 +114,7 @@ func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 }
 
 // UpdateSyncStatus updates the portion of the RepoStatus related to the syncer.
-func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.ResourceError) {
+func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
 	if c.importerClient != nil {
 		return c.importerClient.updateRepo(repo)
 	}
@@ -172,7 +172,7 @@ func (c *genClient) getOrCreateRepo() (*v1.Repo, status.Error) {
 	return c.createRepo()
 }
 
-func (c *genClient) createRepo() (*v1.Repo, status.ResourceError) {
+func (c *genClient) createRepo() (*v1.Repo, status.Error) {
 	repoObj := Default()
 	createdObj, err := c.client.Create(repoObj)
 	if err != nil {
@@ -181,8 +181,8 @@ func (c *genClient) createRepo() (*v1.Repo, status.ResourceError) {
 	return setTypeMeta(createdObj), nil
 }
 
-func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, status.ResourceError) {
-	var lastError status.ResourceError
+func (c *genClient) updateRepo(repoObj *v1.Repo) (*v1.Repo, status.Error) {
+	var lastError status.Error
 	retryBackoff := 1 * time.Millisecond
 	maxTries := 5
 
