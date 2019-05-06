@@ -298,11 +298,10 @@ func validateInstallation(resources discovery.ServerResourcesInterface) status.M
 	_, err := resources.ServerResourcesForGroupVersion(gv)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return status.From(vet.ConfigManagementNotInstalledError{
-				Err: errors.Errorf("no resources exist on cluster with apiVersion: %s", gv),
-			})
+			return status.From(vet.ConfigManagementNotInstalledError(
+				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv)))
 		}
-		return status.From(vet.ConfigManagementNotInstalledError{Err: err})
+		return status.From(vet.ConfigManagementNotInstalledError(err))
 	}
 	return nil
 }

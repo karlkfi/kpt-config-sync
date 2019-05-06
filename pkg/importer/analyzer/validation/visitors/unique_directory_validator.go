@@ -31,7 +31,7 @@ func validateUniqueDirectories(nodes []*ast.TreeNode) status.MultiError {
 	var errs status.MultiError
 	for _, dirs := range names {
 		if len(dirs) > 1 {
-			errs = status.Append(errs, vet.DuplicateDirectoryNameError{Duplicates: dirs})
+			errs = status.Append(errs, vet.DuplicateDirectoryNameError(dirs...))
 		}
 	}
 	return errs

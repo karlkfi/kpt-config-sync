@@ -1,9 +1,7 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -11,32 +9,13 @@ import (
 const ReservedDirectoryNameErrorCode = "1001"
 
 func init() {
-	status.Register(ReservedDirectoryNameErrorCode, ReservedDirectoryNameError{Dir: cmpath.FromSlash("namespaces/reserved")})
+	status.AddExamples(ReservedDirectoryNameErrorCode, ReservedDirectoryNameError(cmpath.FromSlash("namespaces/reserved")))
 }
+
+var reservedDirectoryNameError = status.NewErrorBuilder(ReservedDirectoryNameErrorCode)
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
-type ReservedDirectoryNameError struct {
-	Dir cmpath.Path
-}
-
-var _ status.PathError = ReservedDirectoryNameError{}
-
-// Error implements error.
-func (e ReservedDirectoryNameError) Error() string {
-	return status.Format(e,
-		"Directories MUST NOT have reserved namespace names. Rename or remove %q:\n\n"+
-			e.Dir.Base())
-}
-
-// Code implements Error
-func (e ReservedDirectoryNameError) Code() string { return ReservedDirectoryNameErrorCode }
-
-// RelativePaths implements PathError
-func (e ReservedDirectoryNameError) RelativePaths() []id.Path {
-	return []id.Path{e.Dir}
-}
-
-// ToCME implements ToCMEr.
-func (e ReservedDirectoryNameError) ToCME() v1.ConfigManagementError {
-	return status.FromPathError(e)
+func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
+	return reservedDirectoryNameError.Errorf("Directories MUST NOT have reserved namespace names. Rename or remove %q:\n\n" +
+		dir.Base())
 }
