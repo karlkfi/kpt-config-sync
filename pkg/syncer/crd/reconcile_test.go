@@ -36,7 +36,7 @@ var (
 	}
 )
 
-func clusterConfig(state v1.PolicySyncState, opts ...object.Mutator) *v1.ClusterConfig {
+func clusterConfig(state v1.ConfigSyncState, opts ...object.Mutator) *v1.ClusterConfig {
 	opts = append(opts, func(o *ast.FileObject) {
 		o.Object.(*v1.ClusterConfig).Status.SyncState = state
 	})

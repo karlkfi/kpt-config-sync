@@ -31,13 +31,13 @@ type ClusterState struct {
 	mux        sync.Mutex
 	lastImport time.Time
 	lastSync   time.Time
-	syncStates map[string]v1.PolicySyncState
+	syncStates map[string]v1.ConfigSyncState
 }
 
 // NewClusterState returns a new ClusterState.
 func NewClusterState() *ClusterState {
 	return &ClusterState{
-		syncStates: map[string]v1.PolicySyncState{},
+		syncStates: map[string]v1.ConfigSyncState{},
 	}
 }
 
@@ -78,7 +78,7 @@ func (c *ClusterState) ProcessNamespaceConfig(pn *v1.NamespaceConfig) error {
 	return nil
 }
 
-func (c *ClusterState) recordLatency(name string, newState v1.PolicySyncState, importTime, syncTime metav1.Time) {
+func (c *ClusterState) recordLatency(name string, newState v1.ConfigSyncState, importTime, syncTime metav1.Time) {
 	oldState := c.syncStates[name]
 	if oldState.IsSynced() || !newState.IsSynced() {
 		return
@@ -86,7 +86,7 @@ func (c *ClusterState) recordLatency(name string, newState v1.PolicySyncState, i
 	Metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
 }
 
-func (c *ClusterState) updateState(name string, newState v1.PolicySyncState) error {
+func (c *ClusterState) updateState(name string, newState v1.ConfigSyncState) error {
 	oldState := c.syncStates[name]
 	if oldState == newState {
 		return nil

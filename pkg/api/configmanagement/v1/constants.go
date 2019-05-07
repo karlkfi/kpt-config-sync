@@ -24,35 +24,35 @@ const ClusterConfigName = "config-management-cluster-config"
 // CRDClusterConfigName is the name of the ClusterConfig for CRD resources.
 const CRDClusterConfigName = "config-management-crd-cluster-config"
 
-// PolicySyncState represents the states that a namespaceconfig or clusterconfig can be in with regards
+// ConfigSyncState represents the states that a namespaceconfig or clusterconfig can be in with regards
 // to the source of truth.
-type PolicySyncState string
+type ConfigSyncState string
 
-// IsSynced returns true if the state indicates a policy that is synced to the source of truth.
-func (p PolicySyncState) IsSynced() bool {
+// IsSynced returns true if the state indicates a config that is synced to the source of truth.
+func (p ConfigSyncState) IsSynced() bool {
 	return p == StateSynced
 }
 
 // IsUnknown returns true if the state is unknown or undeclared.
-func (p PolicySyncState) IsUnknown() bool {
+func (p ConfigSyncState) IsUnknown() bool {
 	return p == StateUnknown
 }
 
 const (
-	// StateUnknown indicates that the policy's state is undeclared or unknown.
-	StateUnknown = PolicySyncState("")
+	// StateUnknown indicates that the config's state is undeclared or unknown.
+	StateUnknown = ConfigSyncState("")
 
-	// StateSynced indicates that the policy is the same as the last known version from the source of
+	// StateSynced indicates that the config is the same as the last known version from the source of
 	// truth.
-	StateSynced = PolicySyncState("synced")
+	StateSynced = ConfigSyncState("synced")
 
-	// StateStale indicates that the policy is different than the last known version from the source
+	// StateStale indicates that the config is different than the last known version from the source
 	// of truth.
-	StateStale = PolicySyncState("stale")
+	StateStale = ConfigSyncState("stale")
 
-	// StateError indicates that there was an error updating the policy to match the last known
+	// StateError indicates that there was an error updating the config to match the last known
 	// version from the source of truth.
-	StateError = PolicySyncState("error")
+	StateError = ConfigSyncState("error")
 )
 
 // SyncState indicates the state of a sync for resources of a particular group and kind.
@@ -74,7 +74,7 @@ type HierarchyModeType string
 
 const (
 	// HierarchyModeHierarchicalQuota indicates special aggregation behavior for ResourceQuota. With
-	// this option, the policy is copied to namespaces, but it is also left in the abstract namespace.
+	// this option, the config is copied to namespaces, but it is also left in the abstract namespace.
 	// There, the ResourceQuotaAdmissionController uses the value to enforce the ResourceQuota in
 	// aggregate for all descendent namespaces.
 	//

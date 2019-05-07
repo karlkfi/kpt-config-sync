@@ -85,7 +85,7 @@ type ClusterConfigStatus struct {
 
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
-	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
+	SyncState ConfigSyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -163,7 +163,7 @@ type NamespaceConfigStatus struct {
 
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
-	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
+	SyncState ConfigSyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

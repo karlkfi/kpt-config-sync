@@ -45,7 +45,7 @@ func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object
 	return fake.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
 }
 
-func namespaceConfig(name string, state v1.PolicySyncState, opts ...object.Mutator) *v1.NamespaceConfig {
+func namespaceConfig(name string, state v1.ConfigSyncState, opts ...object.Mutator) *v1.NamespaceConfig {
 	opts = append(opts, object.Name(name), func(o *ast.FileObject) {
 		o.Object.(*v1.NamespaceConfig).Status.SyncState = state
 	})
