@@ -26,6 +26,7 @@ done
 
 echo "+++ Building intermediate e2e image"
 docker build --target gcloud-install \
+  --network host \
   -t e2e-tests-gcloud \
   "$(dirname "$0")"
 
@@ -33,6 +34,7 @@ GID="${GID:-$(id -g)}"
 
 echo "+++ Building e2e image"
 exec docker build \
+  --network host \
   --build-arg "UID=${UID}" \
   --build-arg "GID=${GID}" \
   --build-arg "UNAME=${USER}" \
