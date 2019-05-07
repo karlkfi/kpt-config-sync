@@ -78,9 +78,10 @@ func (tc *testCase) Run(t *testing.T) {
 	p, err2 := NewParser(
 		factoryFactory,
 		ParserOpt{
-			Vet:       true,
-			Validate:  false,
-			Extension: &NomosVisitorProvider{},
+			Vet:        true,
+			Validate:   false,
+			EnableCRDs: true,
+			Extension:  &NomosVisitorProvider{},
 		},
 	)
 	if err2 != nil {

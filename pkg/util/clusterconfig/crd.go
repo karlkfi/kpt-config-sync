@@ -171,13 +171,10 @@ func UnstructuredToCRD(u *unstructured.Unstructured) (*v1beta1.CustomResourceDef
 		return nil, versionsErr
 	}
 
-	gvk := kinds.CustomResourceDefinition()
-	gvkr := &gvk
-	apiVersion, crdKind := gvkr.ToAPIVersionAndKind()
 	crd := &v1beta1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       crdKind,
-			APIVersion: apiVersion,
+			Kind:       kinds.CustomResourceDefinition().Kind,
+			APIVersion: v1beta1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

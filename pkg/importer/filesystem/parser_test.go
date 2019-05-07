@@ -294,13 +294,32 @@ spec:
   replicas: 3
 `
 
-	aPhiloTemplate = `
+	anEngineerTemplate = `
 apiVersion: employees/v1alpha1
 kind: Engineer
 metadata:
   name: philo
 spec:
   cafePreference: 3
+`
+
+	anEngineerCRDTemplate = `
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: engineers.employees
+spec:
+  group: employees
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: engineers
+    singular: engineer
+    kind: Engineer
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 `
 
 	aNodeTemplate = `
@@ -383,7 +402,8 @@ var (
 	aReplicaSetWithOwnerRef            = tpl("aReplicaSetWithOwnerRef", aReplicasetWithOwnerRefTemplate)
 	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
 	aHierarchyConfig                   = tpl("aHierarchyConfig", aHierarchyConfigTemplate)
-	aPhilo                             = tpl("aPhilo", aPhiloTemplate)
+	anEngineer                         = tpl("anEngineer", anEngineerTemplate)
+	anEngineerCRD                      = tpl("anEngineerCRD", anEngineerCRDTemplate)
 	aNode                              = tpl("aNode", aNodeTemplate)
 	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
 	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
@@ -597,6 +617,10 @@ func createClusterConfig() *v1.ClusterConfig {
 	return createClusterConfigWithSpec(v1.ClusterConfigName, &v1.ClusterConfigSpec{})
 }
 
+func createCRDClusterConfig() *v1.ClusterConfig {
+	return createClusterConfigWithSpec(v1.CRDClusterConfigName, &v1.ClusterConfigSpec{})
+}
+
 func createResourceQuota(path, name string, labels map[string]string) *corev1.ResourceQuota {
 	rq := &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
@@ -682,6 +706,7 @@ type parserTestCase struct {
 	expectedNamespaceConfigs  map[string]v1.NamespaceConfig
 	expectedNumConfigs        map[string]int
 	expectedClusterConfig     *v1.ClusterConfig
+	expectedCRDClusterConfig  *v1.ClusterConfig
 	expectedNumClusterConfigs *int
 	expectedSyncs             map[string]v1.Sync
 	expectedErrorCodes        []string
@@ -725,7 +750,8 @@ var parserTestCases = []parserTestCase{
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with JSON Namespace",
@@ -735,7 +761,8 @@ var parserTestCases = []parserTestCase{
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with Namespace with labels/annotations",
@@ -746,7 +773,8 @@ var parserTestCases = []parserTestCase{
 			"bar": createPNWithMeta("namespaces/bar", nil,
 				map[string]string{"env": "prod"}, map[string]string{"audit": "true"}),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with ignored files",
@@ -757,7 +785,8 @@ var parserTestCases = []parserTestCase{
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with 2 ignored files",
@@ -769,7 +798,8 @@ var parserTestCases = []parserTestCase{
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Empty namespace dir",
@@ -780,7 +810,8 @@ var parserTestCases = []parserTestCase{
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar", nil),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespace dir with multiple Namespaces with same name",
@@ -834,8 +865,9 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap("", "ResourceQuota"),
 	},
 	{
 		testName: "ResourceQuota without declared HierarchyConfig",
@@ -851,8 +883,9 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap("", "ResourceQuota"),
 	},
 	{
 		testName: "ResourceQuota with scope and no hierarchical quota",
@@ -886,8 +919,9 @@ var parserTestCases = []parserTestCase{
 				},
 			),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap("", "ResourceQuota"),
 	},
 	{
 		testName: "Namespace dir with multiple Roles",
@@ -911,16 +945,65 @@ var parserTestCases = []parserTestCase{
 				},
 				}),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap("apps", "Deployment"),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap("apps", "Deployment"),
 	},
 	{
-		testName: "Namespace dir with CRD",
+		testName: "Namespace dir with Custom Resource",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
-			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(aPhilo),
+			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(anEngineer),
 		},
 		expectedNumConfigs: map[string]int{"bar": 1},
+	},
+	{
+		testName: "Cluster dir with CustomResourceDefinition",
+		testFiles: fstesting.FileContentMap{
+			"cluster/engineer-crd.yaml": templateData{}.apply(anEngineerCRD),
+		},
+		expectedClusterConfig: createClusterConfig(),
+		expectedCRDClusterConfig: createClusterConfigWithSpec(
+			v1.CRDClusterConfigName,
+			&v1.ClusterConfigSpec{
+				Resources: []v1.GenericResources{{
+					Group: kinds.CustomResourceDefinition().Group,
+					Kind:  kinds.CustomResourceDefinition().Kind,
+					Versions: []v1.GenericVersionResources{{
+						Version: "v1beta1",
+						Objects: []runtime.RawExtension{{
+							Object: &v1beta1.CustomResourceDefinition{
+								TypeMeta: metav1.TypeMeta{
+									Kind:       kinds.CustomResourceDefinition().Kind,
+									APIVersion: v1beta1.SchemeGroupVersion.String(),
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "engineers.employees",
+									Annotations: map[string]string{
+										v1.SourcePathAnnotationKey: "cluster/engineer-crd.yaml",
+									},
+								},
+								Spec: v1beta1.CustomResourceDefinitionSpec{
+									Group: "employees",
+									Scope: v1beta1.NamespaceScoped,
+									Names: v1beta1.CustomResourceDefinitionNames{
+										Plural:   "engineers",
+										Singular: "engineer",
+										Kind:     "Engineer",
+									},
+									Version: "v1alpha1",
+									Versions: []v1beta1.CustomResourceDefinitionVersion{{
+										Name:    "v1alpha1",
+										Served:  true,
+										Storage: true,
+									}},
+								},
+							},
+						}},
+					}},
+				}},
+			}),
+		expectedSyncs: singleSyncMap(kinds.CustomResourceDefinition().Group, kinds.CustomResourceDefinition().Kind),
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",
@@ -1013,7 +1096,8 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ignore": "",
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding and no descendants, default inheritance",
@@ -1054,8 +1138,9 @@ var parserTestCases = []parserTestCase{
 					v1.SourcePathAnnotationKey: "namespaces/rb.yaml",
 				}})}),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
 	},
 	{
 		testName: "Namespaces dir with ResourceQuota, default inheritance",
@@ -1067,8 +1152,9 @@ var parserTestCases = []parserTestCase{
 			"bar": createNamespacePN("namespaces/bar",
 				&Configs{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            singleSyncMap("", "ResourceQuota"),
 	},
 	{
 		testName: "Abstract Namespace dir with uninheritable ResourceQuota, inheritance off",
@@ -1086,7 +1172,8 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/rq.yaml":     templateData{}.apply(aQuota),
 			"namespaces/bar/baz/ns.yaml": templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"baz": createNamespacePN("namespaces/bar/baz",
 				&Configs{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", "pod-quota", nil)}),
@@ -1141,17 +1228,19 @@ var parserTestCases = []parserTestCase{
 		},
 	},
 	{
-		testName:              "Minimal repo",
-		testFiles:             fstesting.FileContentMap{},
-		expectedClusterConfig: createClusterConfig(),
+		testName:                 "Minimal repo",
+		testFiles:                fstesting.FileContentMap{},
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Only system dir with valid HierarchyConfig",
 		testFiles: fstesting.FileContentMap{
 			"system/rq.yaml": templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         syncMap(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            syncMap(),
 	},
 	{
 		testName: "Multiple resources with HierarchyConfigs",
@@ -1159,8 +1248,9 @@ var parserTestCases = []parserTestCase{
 			"system/rq.yaml":   templateData{Kind: "ResourceQuota"}.apply(aHierarchyConfig),
 			"system/role.yaml": templateData{Group: "rbac.authorization.k8s.io", Kind: "Role"}.apply(aHierarchyConfig),
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         syncMap(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            syncMap(),
 	},
 	{
 		testName: "HierarchyConfig with multiple Kinds",
@@ -1176,15 +1266,17 @@ spec:
     kinds: [ "Role", "RoleBinding" ]
 `,
 		},
-		expectedClusterConfig: createClusterConfig(),
-		expectedSyncs:         syncMap(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
+		expectedSyncs:            syncMap(),
 	},
 	{
 		testName: "Namespaces dir with ignored file",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/ignore": "",
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "Namespaces dir with Namespace",
@@ -1247,6 +1339,7 @@ spec:
 									},
 								},
 							}}}}}),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 		expectedSyncs: syncMap(
 			makeSync(configmanagement.GroupName, "HierarchicalQuota"),
 			makeSync("", "ResourceQuota"),
@@ -1336,7 +1429,8 @@ spec:
 			"waldo": createNamespacePN("namespaces/qux/baz/waldo",
 				&Configs{}),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "An abstract namespace and a leaf namespace may share a name",
@@ -1350,7 +1444,8 @@ spec:
 			"waldo": createNamespacePN("namespaces/bar/waldo",
 				&Configs{}),
 		},
-		expectedClusterConfig: createClusterConfig(),
+		expectedClusterConfig:    createClusterConfig(),
+		expectedCRDClusterConfig: createCRDClusterConfig(),
 	},
 	{
 		testName: "kube-* is a system dir but is allowed",
@@ -1550,7 +1645,6 @@ spec:
 			"system/config.yaml": templateData{Group: kinds.CustomResourceDefinition().Group, Kind: kinds.CustomResourceDefinition().Kind}.apply(aHierarchyConfig),
 		},
 		expectedErrorCodes: []string{
-			vet.UnsupportedResourceInHierarchyConfigErrorCode,
 			vet.ClusterScopedResourceInHierarchyConfigErrorCode},
 	},
 	{
@@ -1643,9 +1737,10 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	p, err := NewParser(
 		factoryFactory,
 		ParserOpt{
-			Vet:       tc.vet,
-			Validate:  true,
-			Extension: &NomosVisitorProvider{},
+			Vet:        tc.vet,
+			Validate:   true,
+			EnableCRDs: true,
+			Extension:  &NomosVisitorProvider{},
 		},
 	)
 	if err != nil {
@@ -1693,7 +1788,8 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		}
 	}
 
-	if tc.expectedNamespaceConfigs != nil || tc.expectedClusterConfig != nil || tc.expectedSyncs != nil {
+	if tc.expectedNamespaceConfigs != nil || tc.expectedClusterConfig != nil || tc.expectedCRDClusterConfig != nil ||
+		tc.expectedSyncs != nil {
 		if tc.expectedNamespaceConfigs == nil {
 			tc.expectedNamespaceConfigs = map[string]v1.NamespaceConfig{}
 		}
@@ -1704,6 +1800,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		expectedConfigs := &namespaceconfig.AllConfigs{
 			NamespaceConfigs: tc.expectedNamespaceConfigs,
 			ClusterConfig:    tc.expectedClusterConfig,
+			CRDClusterConfig: tc.expectedCRDClusterConfig,
 			Syncs:            tc.expectedSyncs,
 			Repo:             fake.Repo("").Object.(*v1.Repo),
 		}
@@ -1811,6 +1908,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Configs{
@@ -1896,7 +1994,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aConfigMap),
 			},
-			expectedClusterConfig: createClusterConfig(),
+			expectedClusterConfig:    createClusterConfig(),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/foo/bar",
 					&Configs{
@@ -1974,9 +2073,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{}),
+			expectedClusterConfig:    createClusterConfig(),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
 			expectedSyncs:            syncMap(),
 		},
@@ -2047,6 +2145,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Configs{},
@@ -2127,6 +2226,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
 			expectedSyncs: syncMap(
 				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
@@ -2167,10 +2267,8 @@ func TestParserPerClusterAddressing(t *testing.T) {
 					},
 				}.apply(aClusterRoleBinding),
 			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				// The cluster-scoped config with mismatching selector was filtered out.
-				&v1.ClusterConfigSpec{}),
+			expectedClusterConfig:    createClusterConfig(),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Configs{
@@ -2244,6 +2342,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					&Configs{
@@ -2337,6 +2436,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 						},
 					},
 				}),
+			expectedCRDClusterConfig: createCRDClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
 					/* Configs */
@@ -2502,9 +2602,10 @@ func TestEmptyDirectories(t *testing.T) {
 			p, err := NewParser(
 				factoryFactory,
 				ParserOpt{
-					Vet:       false,
-					Validate:  true,
-					Extension: &NomosVisitorProvider{},
+					Vet:        false,
+					Validate:   true,
+					EnableCRDs: true,
+					Extension:  &NomosVisitorProvider{},
 				},
 			)
 			if err != nil {
@@ -2518,6 +2619,7 @@ func TestEmptyDirectories(t *testing.T) {
 			expectedConfigs := &namespaceconfig.AllConfigs{
 				NamespaceConfigs: map[string]v1.NamespaceConfig{},
 				ClusterConfig:    createClusterConfig(),
+				CRDClusterConfig: createCRDClusterConfig(),
 				Syncs:            map[string]v1.Sync{},
 				Repo:             fake.Repo("").Object.(*v1.Repo),
 			}
