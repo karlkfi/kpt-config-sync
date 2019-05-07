@@ -29,8 +29,8 @@ import (
 type ReflectiveActionSpec struct {
 	// The resource type name.
 	Resource string
-	// The plural of a kind, eg, Roles, RoleBindings, Policies as used for getting the client from
-	// the generated code.
+	// The plural of a kind, eg, Roles, RoleBindings, Configs as used for getting the client from the
+	// generated code.
 	KindPlural string
 	// The group name and version of the GroupVersionKind being acted on.
 	GroupVersion schema.GroupVersion

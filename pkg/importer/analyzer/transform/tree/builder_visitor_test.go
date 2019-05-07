@@ -16,7 +16,7 @@ func TestBuilderVisitor(t *testing.T) {
 	testCases := []struct {
 		name    string
 		objects []ast.FileObject
-		// expected is the manual long form version of the entire policy hierarchy that Builder is
+		// expected is the manual long form version of the entire config hierarchy that Builder is
 		// expected to produce.
 		expected *ast.Root
 		// expectedEquivalent is the short form made possible by treetesting.BuildTree

@@ -40,7 +40,7 @@ func EphemeralResources() []*metav1.APIResourceList {
 	return result
 }
 
-// EphemeralResourceRemover removes ephemeral resources from the policy hierarchy.
+// EphemeralResourceRemover removes ephemeral resources from the config hierarchy.
 type EphemeralResourceRemover struct {
 	*visitor.Base
 }

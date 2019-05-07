@@ -51,12 +51,12 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
-			Name:         "preserve cluster policies",
+			Name:         "preserve cluster configs",
 			Input:        vt.Helper.ClusterConfigs(),
 			ExpectOutput: vt.Helper.ClusterConfigs(),
 		},
 		{
-			Name:  "inherit policies",
+			Name:  "inherit configs",
 			Input: vt.Helper.AcmeRoot(),
 			ExpectOutput: &ast.Root{
 				ClusterObjects:         vt.Helper.AcmeCluster(),

@@ -494,15 +494,15 @@ func cfgMapPtr(d templateData) *corev1.ConfigMap {
 	return &o
 }
 
-type Policies struct {
+type Configs struct {
 	RolesV1         []rbacv1.Role
 	RoleBindingsV1  []rbacv1.RoleBinding
 	ResourceQuotaV1 *corev1.ResourceQuota
 	Resources       []v1.GenericResources
 }
 
-// createNamespaceConfig constructs a NamespaceConfig based on a Policies struct.
-func createNamespaceConfig(name string, policies *Policies) v1.NamespaceConfig {
+// createNamespaceConfig constructs a NamespaceConfig based on a Configs struct.
+func createNamespaceConfig(name string, configs *Configs) v1.NamespaceConfig {
 	pn := &v1.NamespaceConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "NamespaceConfig",
@@ -513,30 +513,30 @@ func createNamespaceConfig(name string, policies *Policies) v1.NamespaceConfig {
 		},
 		Spec: v1.NamespaceConfigSpec{},
 	}
-	if policies == nil {
+	if configs == nil {
 		return *pn
 	}
 
-	if len(policies.RolesV1) > 0 {
+	if len(configs.RolesV1) > 0 {
 		var roleObjects []runtime.Object
-		for _, role := range policies.RolesV1 {
+		for _, role := range configs.RolesV1 {
 			roleObjects = append(roleObjects, runtime.Object(&role))
 		}
 		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects(roleObjects, rbacv1.SchemeGroupVersion, "Role")...)
 	}
-	if len(policies.RoleBindingsV1) > 0 {
+	if len(configs.RoleBindingsV1) > 0 {
 		var rbObjects []runtime.Object
-		for _, rb := range policies.RoleBindingsV1 {
+		for _, rb := range configs.RoleBindingsV1 {
 			rbObjects = append(rbObjects, runtime.Object(&rb))
 		}
 		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects(rbObjects, rbacv1.SchemeGroupVersion, "RoleBinding")...)
 	}
-	if policies.ResourceQuotaV1 != nil {
-		o := runtime.Object(policies.ResourceQuotaV1)
+	if configs.ResourceQuotaV1 != nil {
+		o := runtime.Object(configs.ResourceQuotaV1)
 		pn.Spec.Resources = append(pn.Spec.Resources, resourcesFromObjects([]runtime.Object{o}, corev1.SchemeGroupVersion, "ResourceQuota")...)
 	}
-	if policies.Resources != nil {
-		pn.Spec.Resources = append(pn.Spec.Resources, policies.Resources...)
+	if configs.Resources != nil {
+		pn.Spec.Resources = append(pn.Spec.Resources, configs.Resources...)
 	}
 	return *pn
 }
@@ -562,22 +562,16 @@ func resourcesFromObjects(objects []runtime.Object, gv schema.GroupVersion, kind
 	return []v1.GenericResources{}
 }
 
-func createNamespacePN(
-	path string,
-	policies *Policies) v1.NamespaceConfig {
-	return createPNWithMeta(path, policies, nil, nil)
+func createNamespacePN(path string, configs *Configs) v1.NamespaceConfig {
+	return createPNWithMeta(path, configs, nil, nil)
 }
 
-func createPNWithMeta(
-	path string,
-	policies *Policies,
-	labels, annotations map[string]string,
-) v1.NamespaceConfig {
+func createPNWithMeta(path string, configs *Configs, labels, annotations map[string]string) v1.NamespaceConfig {
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
 	annotations["configmanagement.gke.io/source-path"] = path
-	pn := createNamespaceConfig(filepath.Base(path), policies)
+	pn := createNamespaceConfig(filepath.Base(path), configs)
 	pn.Labels = labels
 	pn.Annotations = annotations
 	return pn
@@ -684,7 +678,7 @@ type parserTestCase struct {
 	testFiles                 fstesting.FileContentMap
 	vet                       bool
 	expectedNamespaceConfigs  map[string]v1.NamespaceConfig
-	expectedNumPolicies       map[string]int
+	expectedNumConfigs        map[string]int
 	expectedClusterConfig     *v1.ClusterConfig
 	expectedNumClusterConfigs *int
 	expectedSyncs             map[string]v1.Sync
@@ -832,7 +826,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{
+				&Configs{
 					ResourceQuotaV1: createResourceQuota(
 						"namespaces/bar/rq.yaml", "pod-quota", nil),
 				},
@@ -849,7 +843,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{
+				&Configs{
 					ResourceQuotaV1: createResourceQuota(
 						"namespaces/bar/rq.yaml", "pod-quota", nil),
 				},
@@ -865,7 +859,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/rq.yaml": templateData{ID: "1", Scope: true, ScopeSelector: true}.apply(aQuota),
 		},
-		expectedNumPolicies: map[string]int{
+		expectedNumConfigs: map[string]int{
 			"bar": 1,
 		},
 	},
@@ -885,7 +879,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{ResourceQuotaV1: createResourceQuota(
+				&Configs{ResourceQuotaV1: createResourceQuota(
 					"namespaces/bar/combo.yaml", "pod-quota", nil),
 				},
 			),
@@ -900,7 +894,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/role1.yaml": templateData{ID: "1"}.apply(aRole),
 			"namespaces/bar/role2.yaml": templateData{ID: "2"}.apply(aRole),
 		},
-		expectedNumPolicies: map[string]int{"bar": 2},
+		expectedNumConfigs: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Namespace dir with deployment",
@@ -910,7 +904,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{Resources: []v1.GenericResources{
+				&Configs{Resources: []v1.GenericResources{
 					createDeployment(),
 				},
 				}),
@@ -924,7 +918,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns.yaml":    templateData{Name: "bar"}.apply(aNamespace),
 			"namespaces/bar/philo.yaml": templateData{ID: "1"}.apply(aPhilo),
 		},
-		expectedNumPolicies: map[string]int{"bar": 1},
+		expectedNumConfigs: map[string]int{"bar": 1},
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",
@@ -942,7 +936,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/r1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 			"namespaces/bar/r2.yaml": templateData{ID: "2"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{"bar": 2},
+		expectedNumConfigs: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Namespace dir with duplicate RoleBindings",
@@ -1024,8 +1018,8 @@ var parserTestCases = []parserTestCase{
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/rb1.yaml": templateData{ID: "1"}.apply(aRoleBinding),
 		},
-		expectedNumPolicies: map[string]int{},
-		expectedErrorCodes:  []string{vet.UnsyncableResourcesErrorCode},
+		expectedNumConfigs: map[string]int{},
+		expectedErrorCodes: []string{vet.UnsyncableResourcesErrorCode},
 	},
 	{
 		testName: "Abstract Namespace dir with RoleBinding, hierarchicalQuota mode specified",
@@ -1054,7 +1048,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
+				&Configs{RoleBindingsV1: rbs(templateData{Annotations: map[string]string{
 					v1.SourcePathAnnotationKey: "namespaces/rb.yaml",
 				}})}),
 		},
@@ -1069,7 +1063,7 @@ var parserTestCases = []parserTestCase{
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
+				&Configs{ResourceQuotaV1: createResourceQuota("namespaces/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedClusterConfig: createClusterConfig(),
 		expectedSyncs:         singleSyncMap("", "ResourceQuota"),
@@ -1093,7 +1087,7 @@ var parserTestCases = []parserTestCase{
 		expectedClusterConfig: createClusterConfig(),
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"baz": createNamespacePN("namespaces/bar/baz",
-				&Policies{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", "pod-quota", nil)}),
+				&Configs{ResourceQuotaV1: createResourceQuota("namespaces/bar/rq.yaml", "pod-quota", nil)}),
 		},
 		expectedSyncs: singleSyncMap("", "ResourceQuota"),
 	},
@@ -1112,7 +1106,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/ns-selector.yaml": templateData{}.apply(aNamespaceSelector),
 			"namespaces/bar/baz/ns.yaml":      templateData{Name: "baz"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{},
+		expectedNumConfigs: map[string]int{},
 	},
 	{
 		testName: "Abstract Namespace dir with NamespaceSelector CRD and object",
@@ -1122,7 +1116,7 @@ var parserTestCases = []parserTestCase{
 			"namespaces/bar/prod-ns/ns.yaml":  templateData{Name: "prod-ns", Labels: map[string]string{"environment": "prod"}}.apply(aNamespace),
 			"namespaces/bar/test-ns/ns.yaml":  templateData{Name: "test-ns"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{"prod-ns": 1, "test-ns": 0},
+		expectedNumConfigs: map[string]int{"prod-ns": 1, "test-ns": 0},
 	},
 	{
 		testName: "Abstract Namespace and Namespace dir have duplicate RoleBindings",
@@ -1206,7 +1200,7 @@ spec:
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"bar": createNamespacePN("namespaces/bar",
-				&Policies{ResourceQuotaV1: createResourceQuota(
+				&Configs{ResourceQuotaV1: createResourceQuota(
 					"namespaces/rq.yaml", resourcequota.ResourceQuotaObjectName, resourcequota.NewConfigManagementQuotaLabels()),
 				}),
 		},
@@ -1263,7 +1257,7 @@ spec:
 			"namespaces/rb2.yaml":    templateData{ID: "2"}.apply(aRoleBinding),
 			"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{"bar": 2},
+		expectedNumConfigs: map[string]int{"bar": 2},
 	},
 	{
 		testName: "Cluster dir with multiple ClusterRoles",
@@ -1336,9 +1330,9 @@ spec:
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"corge": createNamespacePN("namespaces/bar/baz/corge",
-				&Policies{}),
+				&Configs{}),
 			"waldo": createNamespacePN("namespaces/qux/baz/waldo",
-				&Policies{}),
+				&Configs{}),
 		},
 		expectedClusterConfig: createClusterConfig(),
 	},
@@ -1350,9 +1344,9 @@ spec:
 		},
 		expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 			"corge": createNamespacePN("namespaces/waldo/corge",
-				&Policies{}),
+				&Configs{}),
 			"waldo": createNamespacePN("namespaces/bar/waldo",
-				&Policies{}),
+				&Configs{}),
 		},
 		expectedClusterConfig: createClusterConfig(),
 	},
@@ -1477,7 +1471,7 @@ spec:
 			"namespaces/foo/rb-2.yaml": templateData{Name: "alice"}.apply(aQuota),
 			"namespaces/foo/ns.yaml":   templateData{Name: "foo"}.apply(aNamespace),
 		},
-		expectedNumPolicies: map[string]int{
+		expectedNumConfigs: map[string]int{
 			"foo": 2,
 		},
 	},
@@ -1652,21 +1646,21 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 
-	actualPolicies, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllPolicies{}, time.Time{})
+	actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
 
 	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 	if mErr != nil {
-		// We expected there to be an error, so no need to do policy validation
+		// We expected there to be an error, so no need to do config validation
 		return
 	}
 
-	if actualPolicies == nil {
-		t.Fatalf("actualPolicies is nil")
+	if actualConfigs == nil {
+		t.Fatalf("actualConfigs is nil")
 	}
 
-	if len(tc.expectedNumPolicies) > 0 {
+	if len(tc.expectedNumConfigs) > 0 {
 		n := make(map[string]int)
-		for k, v := range actualPolicies.NamespaceConfigs {
+		for k, v := range actualConfigs.NamespaceConfigs {
 			n[k] = 0
 			for _, res := range v.Spec.Resources {
 				for _, version := range res.Versions {
@@ -1674,21 +1668,21 @@ func (tc *parserTestCase) Run(t *testing.T) {
 				}
 			}
 		}
-		if !cmp.Equal(n, tc.expectedNumPolicies) {
-			t.Errorf("Actual and expected number of policy nodes didn't match: %v", cmp.Diff(n, tc.expectedNumPolicies))
+		if !cmp.Equal(n, tc.expectedNumConfigs) {
+			t.Errorf("Actual and expected number of configs didn't match: %v", cmp.Diff(n, tc.expectedNumConfigs))
 		}
 	}
 
 	if tc.expectedNumClusterConfigs != nil {
 		actualNumClusterConfigs := 0
-		for _, res := range actualPolicies.ClusterConfig.Spec.Resources {
+		for _, res := range actualConfigs.ClusterConfig.Spec.Resources {
 			for _, version := range res.Versions {
 				actualNumClusterConfigs += len(version.Objects)
 			}
 		}
 
 		if !cmp.Equal(actualNumClusterConfigs, *tc.expectedNumClusterConfigs) {
-			t.Errorf("Actual and expected number of cluster policies didn't match: %v", cmp.Diff(actualNumClusterConfigs,
+			t.Errorf("Actual and expected number of cluster configs didn't match: %v", cmp.Diff(actualNumClusterConfigs,
 				tc.expectedNumClusterConfigs))
 		}
 	}
@@ -1701,14 +1695,14 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			tc.expectedSyncs = map[string]v1.Sync{}
 		}
 
-		expectedPolicies := &namespaceconfig.AllPolicies{
+		expectedConfigs := &namespaceconfig.AllConfigs{
 			NamespaceConfigs: tc.expectedNamespaceConfigs,
 			ClusterConfig:    tc.expectedClusterConfig,
 			Syncs:            tc.expectedSyncs,
 			Repo:             fake.Repo("").Object.(*v1.Repo),
 		}
-		if d := cmp.Diff(expectedPolicies, actualPolicies, resourcequota.ResourceQuantityEqual()); d != "" {
-			t.Errorf("Actual and expected policies didn't match: diff\n%v", d)
+		if d := cmp.Diff(expectedConfigs, actualConfigs, resourcequota.ResourceQuantityEqual()); d != "" {
+			t.Errorf("Actual and expected configs didn't match: diff\n%v", d)
 		}
 	}
 }
@@ -1729,7 +1723,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 		{
 			// Baseline test case: the selector matches the cluster labels, and
 			// all resources are targeted to that selector.  This should yield
-			// a set of policy documents that are all present and all fully
+			// a set of config documents that are all present and all fully
 			// annotated as appropriate.
 			testName:    "Cluster filter, all resources selected",
 			clusterName: "cluster-1",
@@ -1813,7 +1807,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				}),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
-					&Policies{
+					&Configs{
 						RoleBindingsV1: []rbacv1.RoleBinding{
 							{
 								TypeMeta: metav1.TypeMeta{
@@ -1899,7 +1893,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			expectedClusterConfig: createClusterConfig(),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/foo/bar",
-					&Policies{
+					&Configs{
 						Resources: []v1.GenericResources{
 							{
 								Group: "",
@@ -2049,7 +2043,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				}),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
-					&Policies{},
+					&Configs{},
 					/* Labels */
 					nil,
 					/* Annotations */
@@ -2169,11 +2163,11 @@ func TestParserPerClusterAddressing(t *testing.T) {
 			},
 			expectedClusterConfig: createClusterConfigWithSpec(
 				v1.ClusterConfigName,
-				// The cluster-scoped policy with mismatching selector was filtered out.
+				// The cluster-scoped config with mismatching selector was filtered out.
 				&v1.ClusterConfigSpec{}),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
-					&Policies{
+					&Configs{
 						RoleBindingsV1: rbs(
 							templateData{
 								Name: "job-creators",
@@ -2246,7 +2240,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				}),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
-					&Policies{
+					&Configs{
 						RoleBindingsV1: rbs(
 							templateData{Name: "job-creators",
 								Annotations: map[string]string{
@@ -2339,7 +2333,7 @@ func TestParserPerClusterAddressing(t *testing.T) {
 				}),
 			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
 				"bar": createPNWithMeta("namespaces/bar",
-					/* Policies */
+					/* Configs */
 					nil,
 					/* Labels */
 					nil,
@@ -2507,18 +2501,18 @@ func TestEmptyDirectories(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			actualPolicies, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllPolicies{}, time.Time{})
+			actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)
 			}
-			expectedPolicies := &namespaceconfig.AllPolicies{
+			expectedConfigs := &namespaceconfig.AllConfigs{
 				NamespaceConfigs: map[string]v1.NamespaceConfig{},
 				ClusterConfig:    createClusterConfig(),
 				Syncs:            map[string]v1.Sync{},
 				Repo:             fake.Repo("").Object.(*v1.Repo),
 			}
-			if !cmp.Equal(actualPolicies, expectedPolicies) {
-				t.Errorf("actual and expected AllPolicies didn't match: %v", cmp.Diff(actualPolicies, expectedPolicies))
+			if !cmp.Equal(actualConfigs, expectedConfigs) {
+				t.Errorf("actual and expected AllConfigs didn't match: %v", cmp.Diff(actualConfigs, expectedConfigs))
 			}
 		})
 	}

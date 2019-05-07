@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// TreeNode represents a named node in the policy hierarchy.
+// TreeNode represents a named node in the config hierarchy.
 type TreeNode interface {
 	// Path is the embedded interface providing path information to this node.
 	Path

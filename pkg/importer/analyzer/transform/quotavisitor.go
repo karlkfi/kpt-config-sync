@@ -40,7 +40,7 @@ type QuotaVisitor struct {
 
 var _ ast.Visitor = &QuotaVisitor{}
 
-// quotaContext keeps track of the ancestry's quota policies.
+// quotaContext keeps track of the ancestry's quota configs.
 type quotaContext struct {
 	prev  *quotaContext         // previous context
 	quota *corev1.ResourceQuota // ResourceQuota from directory
@@ -48,7 +48,7 @@ type quotaContext struct {
 }
 
 // merge takes two resource quota objects and produces a merged output that represents the union
-// of the two policies with common fields resolved by taking the minimum.
+// of the two configs with common fields resolved by taking the minimum.
 func merge(lhs, rhs *corev1.ResourceQuota) *corev1.ResourceQuota {
 	if rhs == nil {
 		return lhs

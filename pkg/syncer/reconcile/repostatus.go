@@ -56,7 +56,7 @@ type syncState struct {
 	configs map[string]configState
 }
 
-// configState represents the current status of a ClusterConfig or PolicyConfig being reconciled.
+// configState represents the current status of a ClusterConfig or NamespaceConfig being reconciled.
 type configState struct {
 	// commit is the version token of the change to which the config is being reconciled
 	commit string

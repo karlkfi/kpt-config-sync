@@ -30,7 +30,7 @@ import (
 // mutable state that is intended to change over the course of the visit should exist on the visitor
 // itself.
 // This is useful for implementing transforms in multiple passes where a single pass would either be
-// not feasible or overly complicated.  An example is the two-pass label based policy transform
+// not feasible or overly complicated.  An example is the two-pass label based config transform
 // that first builds a map of namespace selectors to objects in one pass, then in another it inlines
 // the objects referencing elements of the map.
 // Example Usage:

@@ -49,7 +49,7 @@ type Reconciler struct {
 // Reconcile is the callback for Reconciler.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.ClusterConfigName && request.Name != v1.CRDClusterConfigName {
-		glog.Errorf("Cluster policy has invalid name %q", request.Name)
+		glog.Errorf("ClusterConfig has invalid name %q", request.Name)
 		// Return nil since we don't want to queue a retry.
 		return reconcile.Result{}, nil
 	}
@@ -62,19 +62,19 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case err == nil:
 		err = r.state.ProcessClusterConfig(cp)
 	case errors.IsNotFound(err):
-		r.state.DeletePolicy(request.Name)
+		r.state.DeleteConfig(request.Name)
 		err = nil
 	default:
-		glog.Errorf("Failed to fetch cluster policy for %q.", request.Name)
+		glog.Errorf("Failed to fetch ClusterConfig for %q.", request.Name)
 	}
 	if err != nil {
-		glog.Errorf("Could not reconcile cluster policy %q: %v", request.Name, err)
+		glog.Errorf("Could not reconcile ClusterConfig %q: %v", request.Name, err)
 	}
 	return reconcile.Result{}, err
 }
 
 // AddController adds a controller to the given manager which reconciles monitoring data for cluster
-// policies.
+// configs.
 func AddController(mgr manager.Manager, cs *state.ClusterState) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{

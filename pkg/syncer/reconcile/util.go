@@ -50,26 +50,26 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 }
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
-func SetClusterConfigStatus(ctx context.Context, client *client.Client, policy *v1.ClusterConfig, now func() metav1.Time,
+func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, now func() metav1.Time,
 	errs ...v1.ConfigManagementError) status.ResourceError {
-	freshSyncToken := policy.Status.Token == policy.Spec.Token
-	if policy.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
-		glog.Infof("Status for ClusterConfig %q is already up-to-date.", policy.Name)
+	freshSyncToken := config.Status.Token == config.Spec.Token
+	if config.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
+		glog.Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
-		newPolicy := obj.(*v1.ClusterConfig)
-		newPolicy.Status.Token = policy.Spec.Token
-		newPolicy.Status.SyncTime = now()
-		newPolicy.Status.SyncErrors = errs
+		newConfig := obj.(*v1.ClusterConfig)
+		newConfig.Status.Token = config.Spec.Token
+		newConfig.Status.SyncTime = now()
+		newConfig.Status.SyncErrors = errs
 		if len(errs) > 0 {
-			newPolicy.Status.SyncState = v1.StateError
+			newConfig.Status.SyncState = v1.StateError
 		} else {
-			newPolicy.Status.SyncState = v1.StateSynced
+			newConfig.Status.SyncState = v1.StateSynced
 		}
-		return newPolicy, nil
+		return newConfig, nil
 	}
-	_, err := client.UpdateStatus(ctx, policy, updateFn)
+	_, err := client.UpdateStatus(ctx, config, updateFn)
 	return err
 }

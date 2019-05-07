@@ -28,11 +28,11 @@ import (
 var syncDeleteMaxWait = flag.Duration("sync_delete_max_wait", 30*time.Second,
 	"Number of seconds to wait for Syncer to acknowledge Sync deletion")
 
-// Differ will generate an ordered list of actions needed to transition policy from the current to
+// Differ will generate an ordered list of actions needed to transition config from the current to
 // desired state.
 //
-// Maintains the invariant that the policy node tree is valid (i.e. no cycles, parents pointing to existing nodes),
-// assuming the current and desired state are valid themselves.
+// Maintains the invariant that the config tree is valid (i.e. no cycles, parents pointing to
+// existing configs), assuming the current and desired state are valid themselves.
 //
 // More details about the algorithm can be found at docs/update-preserving-invariants.md
 type Differ struct {
@@ -51,7 +51,7 @@ func NewDiffer(factories Factories) *Differ {
 //
 // This list does not include Sync delete actions, because those are handled differently. The caller
 // must call SyncDeletes and process those actions before processing these actions.
-func (d *Differ) Diff(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) Diff(current, desired namespaceconfig.AllConfigs) []action.Interface {
 	var actions []action.Interface
 	actions = append(actions, d.namespaceConfigActions(current, desired)...)
 	actions = append(actions, d.clusterConfigActions(current, desired)...)
@@ -59,7 +59,7 @@ func (d *Differ) Diff(current, desired namespaceconfig.AllPolicies) []action.Int
 	return actions
 }
 
-func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllConfigs) []action.Interface {
 	var actions []action.Interface
 	var deletes, creates, updates int
 	for name := range desired.NamespaceConfigs {
@@ -85,7 +85,7 @@ func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllPoli
 	return actions
 }
 
-func (d *Differ) clusterConfigActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) clusterConfigActions(current, desired namespaceconfig.AllConfigs) []action.Interface {
 	var actions []action.Interface
 	actions = append(actions, d.nonCRDClusterConfigActions(current.ClusterConfig, desired.ClusterConfig)...)
 	actions = append(actions, d.nonCRDClusterConfigActions(current.CRDClusterConfig, desired.CRDClusterConfig)...)
@@ -108,7 +108,7 @@ func (d *Differ) nonCRDClusterConfigActions(current, desired *v1.ClusterConfig) 
 	return actions
 }
 
-func (d *Differ) syncActions(current, desired namespaceconfig.AllPolicies) []action.Interface {
+func (d *Differ) syncActions(current, desired namespaceconfig.AllConfigs) []action.Interface {
 	var actions []action.Interface
 	var creates, updates, deletes int
 	for name, newSync := range desired.Syncs {

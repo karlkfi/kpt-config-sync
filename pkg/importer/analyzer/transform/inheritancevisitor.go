@@ -79,7 +79,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	if n.Type == node.Namespace {
 		for _, ctx := range v.treeContext {
 			for _, inherited := range ctx.inherited {
-				isApplicable, err := sel.IsPolicyApplicableToNamespace(n.Labels, inherited.MetaObject())
+				isApplicable, err := sel.IsConfigApplicableToNamespace(n.Labels, inherited.MetaObject())
 				v.errs = status.Append(v.errs, err)
 				if err != nil {
 					continue

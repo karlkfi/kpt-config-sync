@@ -38,7 +38,7 @@ via copy on write.  This means that for any object that needs to be updated, a s
 made then the field should be updated on the shallow copy.  This means changing a value in a subtree
 will require updating all ancestors up to the root node.  The rationale is to preserve a view of the
 tree before and after each visitor pass to facilitate debugging for visitor writers as well as
-anyone who is authoring policies.
+anyone who is authoring configs.
 
 Example usage:
 	// RemoveNamespaceTesting will remove any namespace scoped resource with a "testing=true" annotation.

@@ -25,17 +25,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IsPolicyApplicableToNamespace returns whether the NamespaceSelector
-// annotation on the given policy object matches the given labels on a
-// namespace.  The policy is applicable if it has no such annotation.
-func IsPolicyApplicableToNamespace(namespaceLabels map[string]string, policy metav1.Object) (bool, status.Error) {
-	ls, exists := policy.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+// IsConfigApplicableToNamespace returns whether the NamespaceSelector annotation on the given
+// config object matches the given labels on a namespace.  The config is applicable if it has no
+// such annotation.
+func IsConfigApplicableToNamespace(namespaceLabels map[string]string, config metav1.Object) (bool, status.Error) {
+	ls, exists := config.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
 	if !exists {
 		return true, nil
 	}
 	var ns v1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
-		return false, vet.InvalidSelectorError{Name: policy.GetName(), Cause: err}
+		return false, vet.InvalidSelectorError{Name: config.GetName(), Cause: err}
 	}
 	selector, err := AsPopulatedSelector(&ns.Spec.Selector)
 	if err != nil {

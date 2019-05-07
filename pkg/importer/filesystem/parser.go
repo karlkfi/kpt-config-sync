@@ -100,15 +100,15 @@ func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
 	return p, nil
 }
 
-// Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
+// Parse parses file tree rooted at root and builds config CRDs from supported Kubernetes config resources.
 // Resources are read from the following directories:
 //
 // * system/ (flat, required)
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string, importToken string, currentPolicies *namespaceconfig.AllPolicies,
-	loadTime time.Time) (*namespaceconfig.AllPolicies, status.MultiError) {
+func (p *Parser) Parse(root string, importToken string, currentConfigs *namespaceconfig.AllConfigs,
+	loadTime time.Time) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
 	rootPath, err := cmpath.NewRoot(cmpath.FromOS(root))
 	p.errors = status.Append(p.errors, err)
@@ -139,7 +139,7 @@ func (p *Parser) Parse(root string, importToken string, currentPolicies *namespa
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
 		tree.NewAPIInfoBuilderVisitor(p.discoveryClient, transform.EphemeralResources(), p.opts.EnableCRDs),
-		tree.NewCRDClusterConfigInfoVisitor(importer.NewCRDClusterConfigInfo(currentPolicies.CRDClusterConfig, astRoot.ClusterObjects)),
+		tree.NewCRDClusterConfigInfoVisitor(importer.NewCRDClusterConfigInfo(currentConfigs.CRDClusterConfig, astRoot.ClusterObjects)),
 	}
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet,
 		p.opts.EnableCRDs)...)
@@ -154,12 +154,12 @@ func (p *Parser) Parse(root string, importToken string, currentPolicies *namespa
 		return nil, p.errors
 	}
 
-	policies := outputVisitor.AllPolicies()
+	configs := outputVisitor.AllConfigs()
 	if glog.V(8) {
 		// REALLY useful when debugging.
-		glog.Warningf("allPolicies: %v", spew.Sdump(policies))
+		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
 	}
-	return policies, nil
+	return configs, nil
 }
 
 func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {

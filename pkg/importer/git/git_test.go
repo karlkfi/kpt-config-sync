@@ -11,13 +11,13 @@ func TestCommitHash(t *testing.T) {
 	}{
 		{
 			"Valid path",
-			"/repo/rev-abcdef123/my-policies",
+			"/repo/rev-abcdef123/my-configs",
 			"abcdef123",
 			false,
 		},
 		{
 			"Valid path nested",
-			"/repo/rev-abcdef123/path/to/my/policies",
+			"/repo/rev-abcdef123/path/to/my/configs",
 			"abcdef123",
 			false,
 		},
@@ -35,7 +35,7 @@ func TestCommitHash(t *testing.T) {
 		},
 		{
 			"Missing git-sync prefix",
-			"/repo/abdef123/my-policies",
+			"/repo/abdef123/my-configs",
 			"",
 			true,
 		},

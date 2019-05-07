@@ -194,8 +194,8 @@ func TestDiffer(t *testing.T) {
 			g.SortDiff = true
 
 			gotActions := g.Diff(
-				allPolicies(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
-				allPolicies(test.newNodes, test.newClusterConfig, test.newSyncs))
+				allConfigs(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
+				allConfigs(test.newNodes, test.newClusterConfig, test.newSyncs))
 
 			if len(gotActions) != len(test.expected) {
 				t.Fatalf("Actual number of actions was %d but expected %d",
@@ -276,24 +276,24 @@ func clusterConfig(name string, priviledged bool) *v1.ClusterConfig {
 	}
 }
 
-func allPolicies(nodes []v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllPolicies {
-	policies := namespaceconfig.AllPolicies{
+func allConfigs(nodes []v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllConfigs {
+	configs := namespaceconfig.AllConfigs{
 		ClusterConfig: clusterConfig,
 	}
 
 	for i, n := range nodes {
 		if i == 0 {
-			policies.NamespaceConfigs = make(map[string]v1.NamespaceConfig)
+			configs.NamespaceConfigs = make(map[string]v1.NamespaceConfig)
 		}
-		policies.NamespaceConfigs[n.Name] = n
+		configs.NamespaceConfigs[n.Name] = n
 	}
 
 	if len(syncs) > 0 {
-		policies.Syncs = make(map[string]v1.Sync)
+		configs.Syncs = make(map[string]v1.Sync)
 	}
 	for _, s := range syncs {
-		policies.Syncs[s.Name] = s
+		configs.Syncs[s.Name] = s
 	}
 
-	return policies
+	return configs
 }

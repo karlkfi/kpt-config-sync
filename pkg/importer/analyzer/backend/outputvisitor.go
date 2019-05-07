@@ -33,7 +33,7 @@ type OutputVisitor struct {
 	*visitor.Base
 	importToken     string
 	loadTime        metav1.Time
-	allPolicies     *namespaceconfig.AllPolicies
+	allConfigs      *namespaceconfig.AllConfigs
 	namespaceConfig []*v1.NamespaceConfig
 	syncs           []*v1.Sync
 	enableCRDs      bool
@@ -48,13 +48,13 @@ func NewOutputVisitor(enableCRDs bool) *OutputVisitor {
 	return v
 }
 
-// AllPolicies returns the AllPolicies object created by the visitor.
-func (v *OutputVisitor) AllPolicies() *namespaceconfig.AllPolicies {
+// AllConfigs returns the AllConfigs object created by the visitor.
+func (v *OutputVisitor) AllConfigs() *namespaceconfig.AllConfigs {
 	for _, s := range v.syncs {
 		s.SetFinalizers(append(s.GetFinalizers(), v1.SyncFinalizer))
 	}
-	v.allPolicies.Syncs = mapByName(v.syncs)
-	return v.allPolicies
+	v.allConfigs.Syncs = mapByName(v.syncs)
+	return v.allConfigs
 }
 
 func mapByName(syncs []*v1.Sync) map[string]v1.Sync {
@@ -69,7 +69,7 @@ func mapByName(syncs []*v1.Sync) map[string]v1.Sync {
 func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	v.importToken = g.ImportToken
 	v.loadTime = metav1.NewTime(g.LoadTime)
-	v.allPolicies = &namespaceconfig.AllPolicies{
+	v.allConfigs = &namespaceconfig.AllConfigs{
 		NamespaceConfigs: map[string]v1.NamespaceConfig{},
 		ClusterConfig: &v1.ClusterConfig{
 			TypeMeta: metav1.TypeMeta{
@@ -88,7 +88,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	}
 
 	if v.enableCRDs {
-		v.allPolicies.CRDClusterConfig = &v1.ClusterConfig{
+		v.allConfigs.CRDClusterConfig = &v1.ClusterConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
 				Kind:       kinds.ClusterConfig().Kind,
@@ -149,7 +149,7 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.namespaceConfig = v.namespaceConfig[:origLen]
 	// NamespaceConfigs are emitted only for leaf nodes.
 	if n.Type == node.Namespace {
-		v.allPolicies.NamespaceConfigs[name] = *pn
+		v.allConfigs.NamespaceConfigs[name] = *pn
 	}
 	return nil
 }
@@ -158,9 +158,9 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	var spec *v1.ClusterConfigSpec
 	if o.GroupVersionKind() == kinds.CustomResourceDefinition() {
-		spec = &v.allPolicies.CRDClusterConfig.Spec
+		spec = &v.allConfigs.CRDClusterConfig.Spec
 	} else {
-		spec = &v.allPolicies.ClusterConfig.Spec
+		spec = &v.allConfigs.ClusterConfig.Spec
 	}
 	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
 	return nil
@@ -213,7 +213,7 @@ func (v *OutputVisitor) Error() status.MultiError {
 	return nil
 }
 
-// RequiresValidState returns true because we don't want to output policies if there are problems.
+// RequiresValidState returns true because we don't want to output configs if there are problems.
 func (v *OutputVisitor) RequiresValidState() bool {
 	return true
 }

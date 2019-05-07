@@ -604,7 +604,7 @@ func NamespaceConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {
 }
 
 func ClusterConfigNodeGetter(client *fake.Client, _, name string) (runtime.Object, error) {
-	return client.PolicyHierarchy().ConfigmanagementV1().NamespaceConfigs().Get(name, metav1.GetOptions{})
+	return client.ConfigManagement().ConfigmanagementV1().NamespaceConfigs().Get(name, metav1.GetOptions{})
 }
 
 var clusterNamespaceConfigBaseTestObject = &v1.NamespaceConfig{
@@ -630,12 +630,12 @@ func TestReflectiveActionNamespaceConfig(t *testing.T) {
 
 	test.PrePopulate()
 
-	factory := informer.NewSharedInformerFactory(test.client.PolicyHierarchy(), time.Second*10)
+	factory := informer.NewSharedInformerFactory(test.client.ConfigManagement(), time.Second*10)
 
 	spec := &ReflectiveActionSpec{
 		KindPlural: "NamespaceConfigs",
 		EqualSpec:  NamespaceConfigsEqual,
-		Client:     test.client.PolicyHierarchy().ConfigmanagementV1(),
+		Client:     test.client.ConfigManagement().ConfigmanagementV1(),
 		Lister:     factory.Configmanagement().V1().NamespaceConfigs().Lister(),
 	}
 

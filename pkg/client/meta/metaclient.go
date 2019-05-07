@@ -32,17 +32,17 @@ import (
 // Interface specifies the interface for Client.
 type Interface interface {
 	Kubernetes() kubernetes.Interface
-	PolicyHierarchy() apis.Interface
+	ConfigManagement() apis.Interface
 	APIExtensions() apiextensions.Interface
 	Runtime() client.Client
 }
 
 // Client is a container for the kubernetes Clientset and the configmanagement clientset.
 type Client struct {
-	kubernetesClientset      *kubernetes.Clientset
-	policyHierarchyClientset *apis.Clientset
-	apiExtensionsClientset   *apiextensions.Clientset
-	runtimeClient            client.Client
+	kubernetesClientset       *kubernetes.Clientset
+	configManagementClientset *apis.Clientset
+	apiExtensionsClientset    *apiextensions.Clientset
+	runtimeClient             client.Client
 }
 
 var _ Interface = &Client{}
@@ -52,9 +52,9 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.kubernetesClientset
 }
 
-// PolicyHierarchy returns the configmanagement clientset
-func (c *Client) PolicyHierarchy() apis.Interface {
-	return c.policyHierarchyClientset
+// ConfigManagement returns the configmanagement clientset
+func (c *Client) ConfigManagement() apis.Interface {
+	return c.configManagementClientset
 }
 
 // APIExtensions returns the ApiExtensions clientset
@@ -70,14 +70,14 @@ func (c *Client) Runtime() client.Client {
 // New creates a new Client directly from member client sets.
 func New(
 	kubernetesClientset *kubernetes.Clientset,
-	policyHierarchyClientset *apis.Clientset,
+	configManagementClientset *apis.Clientset,
 	apiExtensionsClientset *apiextensions.Clientset,
 	runtimeClient client.Client) *Client {
 	return &Client{
-		kubernetesClientset:      kubernetesClientset,
-		policyHierarchyClientset: policyHierarchyClientset,
-		apiExtensionsClientset:   apiExtensionsClientset,
-		runtimeClient:            runtimeClient,
+		kubernetesClientset:       kubernetesClientset,
+		configManagementClientset: configManagementClientset,
+		apiExtensionsClientset:    apiExtensionsClientset,
+		runtimeClient:             runtimeClient,
 	}
 }
 
@@ -88,7 +88,7 @@ func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) 
 		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
 	}
 
-	policyHierarchyClientSet, err := apis.NewForConfig(cfg)
+	configManagementClientset, err := apis.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create configmanagement clientset")
 	}
@@ -103,14 +103,14 @@ func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) 
 		return nil, errors.Wrapf(err, "Failed to create manager")
 	}
 
-	return New(kubernetesClientset, policyHierarchyClientSet, apiExtensionsClientset, mgr.GetClient()), nil
+	return New(kubernetesClientset, configManagementClientset, apiExtensionsClientset, mgr.GetClient()), nil
 }
 
 // NewForConfigOrDie creates a new Client from the given config and panics if there is an error.
 func NewForConfigOrDie(cfg *rest.Config) *Client {
 	return &Client{
-		kubernetesClientset:      kubernetes.NewForConfigOrDie(cfg),
-		policyHierarchyClientset: apis.NewForConfigOrDie(cfg),
-		apiExtensionsClientset:   apiextensions.NewForConfigOrDie(cfg),
+		kubernetesClientset:       kubernetes.NewForConfigOrDie(cfg),
+		configManagementClientset: apis.NewForConfigOrDie(cfg),
+		apiExtensionsClientset:    apiextensions.NewForConfigOrDie(cfg),
 	}
 }

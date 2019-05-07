@@ -23,11 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// ListPolicies returns all policies from API server.
-func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
+// ListConfigs returns all configs from API server.
+func ListConfigs(namespaceConfigLister listersv1.NamespaceConfigLister,
 	clusterConfigLister listersv1.ClusterConfigLister,
-	syncLister listersv1.SyncLister) (*AllPolicies, error) {
-	policies := AllPolicies{
+	syncLister listersv1.SyncLister) (*AllConfigs, error) {
+	configs := AllConfigs{
 		NamespaceConfigs: make(map[string]v1.NamespaceConfig),
 	}
 
@@ -37,7 +37,7 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 		return nil, errors.Wrap(err, "failed to list NamespaceConfigs")
 	}
 	for _, n := range pn {
-		policies.NamespaceConfigs[n.Name] = *n.DeepCopy()
+		configs.NamespaceConfigs[n.Name] = *n.DeepCopy()
 	}
 
 	// ClusterConfig
@@ -57,12 +57,12 @@ func ListPolicies(namespaceConfigLister listersv1.NamespaceConfigLister,
 		if cp[0].Name != v1.ClusterConfigName {
 			return nil, errors.Errorf("expected ClusterConfig with name %q instead found %q", v1.ClusterConfigName, cp[0].Name)
 		}
-		policies.ClusterConfig = cp[0].DeepCopy()
+		configs.ClusterConfig = cp[0].DeepCopy()
 	}
 
 	// Syncs
-	policies.Syncs, err = ListSyncs(syncLister)
-	return &policies, err
+	configs.Syncs, err = ListSyncs(syncLister)
+	return &configs, err
 }
 
 // ListSyncs gets a map-by-name of Syncs currently present in the cluster from

@@ -41,8 +41,8 @@ func NewClusterState() *ClusterState {
 	}
 }
 
-// DeletePolicy removes the ClusterConfig or NamespaceConfig with the given name if it is present.
-func (c *ClusterState) DeletePolicy(name string) {
+// DeleteConfig removes the ClusterConfig or NamespaceConfig with the given name if it is present.
+func (c *ClusterState) DeleteConfig(name string) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 

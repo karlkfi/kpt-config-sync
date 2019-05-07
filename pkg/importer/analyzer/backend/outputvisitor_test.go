@@ -32,8 +32,8 @@ import (
 
 var helper = vt.NewTestHelper()
 
-func allPolicies(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.AllPolicies {
-	ap := &namespaceconfig.AllPolicies{
+func allConfigs(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.AllConfigs {
+	ap := &namespaceconfig.AllConfigs{
 		ClusterConfig:    &cp,
 		NamespaceConfigs: map[string]v1.NamespaceConfig{},
 		Syncs:            map[string]v1.Sync{},
@@ -47,13 +47,13 @@ func allPolicies(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig
 type OutputVisitorTestcase struct {
 	name   string
 	input  *ast.Root
-	expect *namespaceconfig.AllPolicies
+	expect *namespaceconfig.AllConfigs
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 	ov := NewOutputVisitor(false)
 	tc.input.Accept(ov)
-	actual := ov.AllPolicies()
+	actual := ov.AllConfigs()
 	if diff := cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()); diff != "" {
 		t.Errorf("mismatch on expected vs actual: %s", diff)
 	}
@@ -63,7 +63,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 	{
 		name:  "empty",
 		input: helper.EmptyRoot(),
-		expect: allPolicies(
+		expect: allConfigs(
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -81,12 +81,12 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		),
 	},
 	{
-		name: "empty cluster policies",
+		name: "empty cluster configs",
 		input: &ast.Root{
 			ImportToken: vt.ImportToken,
 			LoadTime:    vt.ImportTime,
 		},
-		expect: allPolicies(
+		expect: allConfigs(
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -104,9 +104,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		),
 	},
 	{
-		name:  "cluster policies",
+		name:  "cluster configs",
 		input: helper.ClusterConfigs(),
-		expect: allPolicies(
+		expect: allConfigs(
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -156,9 +156,9 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 		),
 	},
 	{
-		name:  "namespace policies",
-		input: helper.NamespacePolicies(),
-		expect: allPolicies(
+		name:  "namespace configs",
+		input: helper.NamespaceConfigs(),
+		expect: allConfigs(
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
@@ -280,7 +280,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 		},
-		expect: &namespaceconfig.AllPolicies{
+		expect: &namespaceconfig.AllConfigs{
 			NamespaceConfigs: map[string]v1.NamespaceConfig{},
 			ClusterConfig: &v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{

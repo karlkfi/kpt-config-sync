@@ -185,7 +185,7 @@ func (t *TestHelper) EmptyRoot() *ast.Root {
 	}
 }
 
-// ClusterConfigs returns a Root with only cluster policies.
+// ClusterConfigs returns a Root with only cluster configs.
 func (t *TestHelper) ClusterConfigs() *ast.Root {
 	return &ast.Root{
 		ClusterObjects: t.AcmeCluster(),
@@ -426,8 +426,8 @@ func (t *TestHelper) System() []*ast.SystemObject {
 	)
 }
 
-// NamespacePolicies returns a Root with an example hierarchy.
-func (t *TestHelper) NamespacePolicies() *ast.Root {
+// NamespaceConfigs returns a Root with an example hierarchy.
+func (t *TestHelper) NamespaceConfigs() *ast.Root {
 	return &ast.Root{
 		Tree:        t.acmeTree(),
 		ImportToken: t.ImportToken,

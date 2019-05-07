@@ -112,14 +112,14 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 		return nil
 	}
 
-	rErr := r.managePolicies(ctx, clusterConfig)
+	rErr := r.manageConfigs(ctx, clusterConfig)
 	if rErr != nil {
 		glog.Errorf("Could not reconcile clusterconfig: %v", rErr)
 	}
 	return rErr
 }
 
-func (r *ClusterConfigReconciler) managePolicies(ctx context.Context, config *v1.ClusterConfig) error {
+func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.ClusterConfig) error {
 	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
 	if err != nil {
 		return errors.Wrapf(err, "could not process cluster config: %q", config.GetName())

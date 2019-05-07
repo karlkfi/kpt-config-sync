@@ -48,28 +48,28 @@ type Reconciler struct {
 
 // Reconcile is the callback for Reconciler.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	node := &v1.NamespaceConfig{}
+	config := &v1.NamespaceConfig{}
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, node)
+	err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, config)
 	switch {
 	case err == nil:
-		err = r.state.ProcessNamespaceConfig(node)
+		err = r.state.ProcessNamespaceConfig(config)
 	case errors.IsNotFound(err):
-		r.state.DeletePolicy(request.Name)
+		r.state.DeleteConfig(request.Name)
 		err = nil
 	default:
-		glog.Errorf("Failed to fetch policy node for %q.", request.Name)
+		glog.Errorf("Failed to fetch NamespaceConfig for %q.", request.Name)
 	}
 	if err != nil {
-		glog.Errorf("Could not reconcile policy node %q: %v", request.Name, err)
+		glog.Errorf("Could not reconcile NamespaceConfig %q: %v", request.Name, err)
 	}
 	return reconcile.Result{}, err
 }
 
-// AddController adds a controller to the given manager which reconciles monitoring data for policy
-// nodes.
+// AddController adds a controller to the given manager which reconciles monitoring data for
+// NamespaceConfigs.
 func AddController(mgr manager.Manager, cs *state.ClusterState) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{

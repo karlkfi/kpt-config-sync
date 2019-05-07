@@ -12,7 +12,7 @@ import (
 const gitSyncPrefix string = "rev-"
 
 // CommitHash parses the Git commit hash from the given directory path. The format for the path
-// should follow the pattern produced by git-sync: /{root}/rev-{hash}[/{policyDir}]
+// should follow the pattern produced by git-sync: /{root}/rev-{hash}[/{configDir}]
 func CommitHash(dirPath string) (string, error) {
 	p := strings.Split(dirPath, "/")
 	if len(p) < 3 {

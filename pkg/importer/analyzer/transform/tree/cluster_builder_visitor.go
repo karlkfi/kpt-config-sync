@@ -5,7 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 )
 
-// ClusterBuilderVisitor adds all cluster objects to the policy root.
+// ClusterBuilderVisitor adds all cluster objects to the config root.
 type ClusterBuilderVisitor struct {
 	objects []ast.FileObject
 	*visitor.Base

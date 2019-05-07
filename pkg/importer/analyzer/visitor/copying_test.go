@@ -41,7 +41,7 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 			ExpectOutput: vt.Helper.EmptyRoot(),
 		},
 		{
-			Name:         "cluster policies",
+			Name:         "cluster configs",
 			Input:        vt.Helper.ClusterConfigs(),
 			ExpectOutput: vt.Helper.ClusterConfigs(),
 		},

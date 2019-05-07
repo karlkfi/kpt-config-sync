@@ -109,7 +109,7 @@ func reconcileRequests(ns string) []reconcile.Request {
 	}
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
-			// The namespace of the generic resource is the name of the policy node potentially managing it.
+			// The namespace of the generic resource is the name of the config potentially managing it.
 			Name: ns,
 		},
 	}}

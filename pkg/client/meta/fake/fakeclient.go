@@ -23,7 +23,7 @@ import (
 
 	"github.com/google/nomos/clientgen/apis"
 	fakeconfigmanagement "github.com/google/nomos/clientgen/apis/fake"
-	phinformers "github.com/google/nomos/clientgen/informer"
+	cminformers "github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/meta"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -37,14 +37,14 @@ import (
 
 // Client implements meta.Interface with fake clientsets.
 type Client struct {
-	KubernetesClientset      *fakekubernetes.Clientset
-	PolicyhierarchyClientset *fakeconfigmanagement.Clientset
-	APIExtensionsClientset   *fakeapiextensions.Clientset
-	RuntimeClient            client.Client
+	KubernetesClientset       *fakekubernetes.Clientset
+	ConfigManagementClientset *fakeconfigmanagement.Clientset
+	APIExtensionsClientset    *fakeapiextensions.Clientset
+	RuntimeClient             client.Client
 
-	PolicyHierarchyInformers phinformers.SharedInformerFactory
-	KubernetesInformers      informers.SharedInformerFactory
-	ResyncPeriod             time.Duration
+	ConfigManagementInformers cminformers.SharedInformerFactory
+	KubernetesInformers       informers.SharedInformerFactory
+	ResyncPeriod              time.Duration
 }
 
 var _ meta.Interface = &Client{}
@@ -56,41 +56,41 @@ func NewClient(runtimeClient client.Client) *Client {
 }
 
 // NewClientWithStorage creates a fake meta-client and injects objects from
-// kubernetesStorage as kubernetes objects, and policyHierarchyStorage as
-// objects from policy hierarchy.
+// kubernetesStorage as kubernetes objects, and configManagementStorage as
+// objects from config hierarchy.
 func NewClientWithStorage(storage []runtime.Object, runtimeClient client.Client) *Client {
 	scheme := runtime.NewScheme()
 	if err := v1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 
-	phTypes := map[reflect.Type]bool{}
+	cmTypes := map[reflect.Type]bool{}
 	for gvk, t := range scheme.AllKnownTypes() {
 		if gvk.Group != v1.SchemeGroupVersion.Group {
 			continue
 		}
-		phTypes[t] = true
+		cmTypes[t] = true
 	}
 
-	var kubernetesStorage, policyHierarchyStorage []runtime.Object
+	var kubernetesStorage, configManagementStorage []runtime.Object
 	for _, obj := range storage {
-		if phTypes[reflect.TypeOf(obj).Elem()] {
-			policyHierarchyStorage = append(policyHierarchyStorage, obj)
+		if cmTypes[reflect.TypeOf(obj).Elem()] {
+			configManagementStorage = append(configManagementStorage, obj)
 		} else {
 			kubernetesStorage = append(kubernetesStorage, obj)
 		}
 	}
 
 	kubernetesClientset := fakekubernetes.NewSimpleClientset(kubernetesStorage...)
-	configmanagementClientset := fakeconfigmanagement.NewSimpleClientset(policyHierarchyStorage...)
+	configmanagementClientset := fakeconfigmanagement.NewSimpleClientset(configManagementStorage...)
 	apiExtensionsClientset := fakeapiextensions.NewSimpleClientset()
 	return &Client{
-		KubernetesClientset:      kubernetesClientset,
-		PolicyhierarchyClientset: configmanagementClientset,
-		APIExtensionsClientset:   apiExtensionsClientset,
-		RuntimeClient:            runtimeClient,
-		KubernetesInformers:      informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
-		PolicyHierarchyInformers: phinformers.NewSharedInformerFactory(configmanagementClientset, time.Second*2),
+		KubernetesClientset:       kubernetesClientset,
+		ConfigManagementClientset: configmanagementClientset,
+		APIExtensionsClientset:    apiExtensionsClientset,
+		RuntimeClient:             runtimeClient,
+		KubernetesInformers:       informers.NewSharedInformerFactory(kubernetesClientset, time.Second*2),
+		ConfigManagementInformers: cminformers.NewSharedInformerFactory(configmanagementClientset, time.Second*2),
 	}
 }
 
@@ -99,9 +99,9 @@ func (c *Client) Kubernetes() kubernetes.Interface {
 	return c.KubernetesClientset
 }
 
-// PolicyHierarchy implements meta.Interface
-func (c *Client) PolicyHierarchy() apis.Interface {
-	return c.PolicyhierarchyClientset
+// ConfigManagement implements meta.Interface
+func (c *Client) ConfigManagement() apis.Interface {
+	return c.ConfigManagementClientset
 }
 
 // APIExtensions implements meta.Interface

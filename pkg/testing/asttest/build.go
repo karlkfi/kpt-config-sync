@@ -11,7 +11,7 @@ import (
 
 // Build creates and populates an ast.Root with the provided objects.
 // Assumes all objects are in the same top-level directory, and that top-level directory is the
-// hierarchical policy directory.
+// hierarchical config directory.
 func Build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
 	t.Helper()
 

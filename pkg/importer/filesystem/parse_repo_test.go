@@ -76,7 +76,7 @@ func (tc *testCase) Run(t *testing.T) {
 		t.Fatalf("unexpected error: %#v", err2)
 	}
 
-	_, actualErrors := p.Parse(tc.Root(), "", &namespaceconfig.AllPolicies{}, time.Time{})
+	_, actualErrors := p.Parse(tc.Root(), "", &namespaceconfig.AllConfigs{}, time.Time{})
 	if actualErrors == nil {
 		t.Fatal("expected error(s), got none")
 	}

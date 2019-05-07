@@ -19,7 +19,7 @@ func init() {
 	})
 }
 
-// UnsupportedResourceInHierarchyConfigError reports that policy management is unsupported for a Resource defined in a HierarchyConfig.
+// UnsupportedResourceInHierarchyConfigError reports that config management is unsupported for a Resource defined in a HierarchyConfig.
 type UnsupportedResourceInHierarchyConfigError struct {
 	id.HierarchyConfig
 }

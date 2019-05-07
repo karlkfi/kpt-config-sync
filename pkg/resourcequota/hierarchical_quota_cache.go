@@ -118,7 +118,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 
 		quotaNode, exists := c.quotas[resourceQuota.Namespace]
 		if !exists {
-			glog.Infof("Resource Quota exists for namespace %s not defined in policy nodes", resourceQuota.Namespace)
+			glog.Infof("Resource Quota exists for namespace %q which is not defined in a NamespaceConfig", resourceQuota.Namespace)
 			continue // This can happen frequently during deletions and while adjusting the tree.
 		}
 		// For leaf
@@ -129,7 +129,7 @@ func (c *HierarchicalQuotaCache) initCache() error {
 		for parent != v1.NoParentNamespace {
 			quotaNode, exists := c.quotas[parent]
 			if !exists {
-				glog.Warningf("Parent namespace %s not defined in policy nodes for child namespace %s",
+				glog.Warningf("Parent namespace %s not defined in NamespaceConfig for child namespace %s",
 					parent, resourceQuota.Namespace)
 				break
 			}
@@ -153,7 +153,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 	// Start with the parent of the given namespace
 	namespaceQuota, exists := c.quotas[namespace]
 	if !exists {
-		// No namespace defined in policy nodes so this is not a namespace controlled by nomos.
+		// No namespace defined in NamespaceConfigs so this is not a namespace controlled by nomos.
 		return nil
 	}
 	namespace = namespaceQuota.parent
@@ -162,7 +162,7 @@ func (c *HierarchicalQuotaCache) Admit(namespace string, newUsageList corev1.Res
 	for namespace != v1.NoParentNamespace {
 		namespaceQuota, exists := c.quotas[namespace]
 		if !exists {
-			// No namespace defined in policy nodes so this is not a namespace controlled by nomos.
+			// No namespace defined in NamespaceConfigs so this is not a namespace controlled by nomos.
 			return nil
 		}
 		for resourceName, newUsage := range newUsageList {

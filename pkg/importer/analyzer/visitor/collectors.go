@@ -4,7 +4,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 )
 
-// nodeCollector collects all nodes in the policy hierarchy into the passed node list.
+// nodeCollector collects all nodes in the config hierarchy into the passed node list.
 type nodeCollector struct {
 	*Base
 	nodes *[]*ast.TreeNode

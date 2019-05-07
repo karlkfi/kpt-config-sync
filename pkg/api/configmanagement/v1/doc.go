@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains the version 1 data definition for the PolicyHierarchy custom
+// Package v1 contains the version 1 data definition for the ConfigManagement custom
 // resources.
 //
 // To regenerate clientset and deepcopy run:

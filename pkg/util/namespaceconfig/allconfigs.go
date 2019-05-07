@@ -4,9 +4,9 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
-// AllPolicies holds things that Importer wants to sync. It is only used in-process, not written
+// AllConfigs holds things that Importer wants to sync. It is only used in-process, not written
 // directly as a Kubernetes resource.
-type AllPolicies struct {
+type AllConfigs struct {
 	// Map of names to NamespaceConfigs.
 	NamespaceConfigs map[string]v1.NamespaceConfig
 	// Singleton config for non-CRD cluster-scoped resources.

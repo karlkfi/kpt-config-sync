@@ -31,53 +31,53 @@ import (
 
 type testCase struct {
 	testName           string
-	policy             metav1.Object
+	config             metav1.Object
 	nsLabels           map[string]string
 	expectedApplicable bool
 	errors             []string
 }
 
-func TestIsPolicyApplicableToNamespace(t *testing.T) {
+func TestIsConfigApplicableToNamespacenfigApplicableToNamespace(t *testing.T) {
 	testCases := []testCase{
 		{
 			testName:           "No annotation",
-			policy:             createPolicy(nil),
+			config:             createConfig(nil),
 			nsLabels:           map[string]string{"env": "prod"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "Simple selector",
-			policy:             createPolicy(&seltest.ProdNamespaceSelector),
+			config:             createConfig(&seltest.ProdNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "Complex selector",
-			policy:             createPolicy(&seltest.SensitiveNamespaceSelector),
+			config:             createConfig(&seltest.SensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "sensitive"},
 			expectedApplicable: true,
 		},
 		{
 			testName:           "No match",
-			policy:             createPolicy(&seltest.SensitiveNamespaceSelector),
+			config:             createConfig(&seltest.SensitiveNamespaceSelector),
 			nsLabels:           map[string]string{"env": "prod", "privacy": "open"},
 			expectedApplicable: false,
 		},
 		{
 			testName:           "No labels",
-			policy:             createPolicy(&seltest.ProdNamespaceSelector),
+			config:             createConfig(&seltest.ProdNamespaceSelector),
 			expectedApplicable: false,
 		},
 		{
 			testName: "Unmarshallable",
-			policy:   createPolicyAnnotation("{"),
+			config:   createConfigAnnotation("{"),
 			errors:   []string{vet.InvalidSelectorErrorCode},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			applicable, err := IsPolicyApplicableToNamespace(tc.nsLabels, tc.policy)
+			applicable, err := IsConfigApplicableToNamespace(tc.nsLabels, tc.config)
 			if tc.expectedApplicable != applicable {
 				t.Fatalf("Result didn't match, expected=%t, actual=%t", tc.expectedApplicable, applicable)
 			}
@@ -86,7 +86,7 @@ func TestIsPolicyApplicableToNamespace(t *testing.T) {
 	}
 }
 
-func createPolicyAnnotation(annotation string) metav1.Object {
+func createConfigAnnotation(annotation string) metav1.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: annotation})
@@ -97,7 +97,7 @@ func createPolicyAnnotation(annotation string) metav1.Object {
 	return o
 }
 
-func createPolicy(s *v1.NamespaceSelector) metav1.Object {
+func createConfig(s *v1.NamespaceSelector) metav1.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	if s != nil {

@@ -42,9 +42,9 @@ import (
 
 const resync = time.Minute * 15
 
-// Controller is controller for managing Nomos CRDs by importing policies from a filesystem tree.
+// Controller is controller for managing Nomos CRDs by importing configs from a filesystem tree.
 type Controller struct {
-	policyDir             string
+	configDir             string
 	pollPeriod            time.Duration
 	parser                *Parser
 	differ                *actions.Differ
@@ -60,31 +60,31 @@ type Controller struct {
 
 // NewController returns a new Controller.
 //
-// policyDir is the path to the filesystem directory that contains a candidate
-// Nomos policy directory, which the user intends to be valid but which the
+// configDir is the path to the filesystem directory that contains a candidate
+// Nomos config directory, which the user intends to be valid but which the
 // controller will check for errors.  pollPeriod is the time between two
 // successive directory polls. parser is used to convert the contents of
-// policyDir into a set of Nomos policies.  client is the catch-all client used
+// configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.  stopChan is a channel
 // that the controller will close when it announces that it will stop.
-func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) (*Controller, error) {
+func NewController(configDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) (*Controller, error) {
 	if err := configmanagementscheme.AddToScheme(scheme.Scheme); err != nil {
 		return nil, errors.Wrapf(err, "filesystem.NewController: can not add to scheme")
 	}
 
 	informerFactory := informer.NewSharedInformerFactory(
-		client.PolicyHierarchy(), resync)
+		client.ConfigManagement(), resync)
 	differ := actions.NewDiffer(
 		actions.NewFactories(
-			client.PolicyHierarchy().ConfigmanagementV1(),
-			client.PolicyHierarchy().ConfigmanagementV1(),
+			client.ConfigManagement().ConfigmanagementV1(),
+			client.ConfigManagement().ConfigmanagementV1(),
 			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
-	repoClient := repo.NewForImporter(client.PolicyHierarchy().ConfigmanagementV1().Repos(), informerFactory.Configmanagement().V1().Repos().Lister())
+	repoClient := repo.NewForImporter(client.ConfigManagement().ConfigmanagementV1().Repos(), informerFactory.Configmanagement().V1().Repos().Lister())
 
 	return &Controller{
-		policyDir:             policyDir,
+		configDir:             configDir,
 		pollPeriod:            pollPeriod,
 		parser:                parser,
 		differ:                differ,
@@ -102,11 +102,11 @@ func NewController(policyDir string, pollPeriod time.Duration, parser *Parser, c
 // Run runs the controller and blocks until an error occurs or stopChan is closed.
 //
 // Each iteration of the loop does the following:
-//   * Checks for updates to the filesystem that stores policy source of truth.
-//   * When there are updates, parses the filesystem into AllPolicies, an in-memory
-//     representation of desired policies.
-//   * Gets the policies currently stored in Kubernetes API server.
-//   * Compares current and desired policies.
+//   * Checks for updates to the filesystem that stores config source of truth.
+//   * When there are updates, parses the filesystem into AllConfigs, an in-memory
+//     representation of desired configs.
+//   * Gets the configs currently stored in Kubernetes API server.
+//   * Compares current and desired configs.
 //   * Writes updates to make current match desired.
 func (c *Controller) Run(ctx context.Context) error {
 	// Start informers
@@ -138,9 +138,9 @@ func (c *Controller) pollDir(ctx context.Context) {
 			startTime := time.Now()
 
 			// Detect whether symlink has changed.
-			newDir, err := filepath.EvalSymlinks(c.policyDir)
+			newDir, err := filepath.EvalSymlinks(c.configDir)
 			if err != nil {
-				glog.Errorf("failed to resolve policydir: %v", err)
+				glog.Errorf("failed to resolve config directory: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				c.updateSourceStatus(ctx, nil, status.ToCME(status.From(err)))
 				continue
@@ -167,7 +167,7 @@ func (c *Controller) pollDir(ctx context.Context) {
 				glog.V(4).Info("pollDir: no new changes, nothing to do.")
 				continue
 			}
-			glog.Infof("Resolved policy dir: %s. Polling policy dir: %s", newDir, c.policyDir)
+			glog.Infof("Resolved config dir: %s. Polling config dir: %s", newDir, c.configDir)
 
 			// Parse the commit hash from the new directory to use as an import token.
 			token, err := git.CommitHash(newDir)
@@ -182,19 +182,20 @@ func (c *Controller) pollDir(ctx context.Context) {
 			// cluster has seen the change even if it runs into issues parsing/importing it.
 			repoObj := c.updateSourceStatus(ctx, &token, nil)
 			if repoObj == nil {
+				glog.Warningf("Repo object is missing. Restarting import of %s.", token)
 				// If we failed to get the Repo, restart the controller loop to try to fetch it again.
 				continue
 			}
 
-			currentPolicies, err := namespaceconfig.ListPolicies(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+			currentConfigs, err := namespaceconfig.ListConfigs(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
 			if err != nil {
-				glog.Errorf("failed to list current policies: %v", err)
+				glog.Errorf("failed to list current configs: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				continue
 			}
 
 			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-			desiredPolicies, mErr := c.parser.Parse(newDir, token, currentPolicies, startTime)
+			desiredConfigs, mErr := c.parser.Parse(newDir, token, currentConfigs, startTime)
 			if mErr != nil {
 				glog.Warningf("Failed to parse: %v", mErr)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -202,15 +203,15 @@ func (c *Controller) pollDir(ctx context.Context) {
 				continue
 			}
 
-			// Update the SyncState for all policy nodes and cluster policy.
-			for n := range desiredPolicies.NamespaceConfigs {
-				pn := desiredPolicies.NamespaceConfigs[n]
+			// Update the SyncState for all NamespaceConfigs and ClusterConfig.
+			for n := range desiredConfigs.NamespaceConfigs {
+				pn := desiredConfigs.NamespaceConfigs[n]
 				pn.Status.SyncState = v1.StateStale
-				desiredPolicies.NamespaceConfigs[n] = pn
+				desiredConfigs.NamespaceConfigs[n] = pn
 			}
-			desiredPolicies.ClusterConfig.Status.SyncState = v1.StateStale
+			desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
-			if errs := c.updatePolicies(currentPolicies, desiredPolicies); errs != nil {
+			if errs := c.updateConfigs(currentConfigs, desiredConfigs); errs != nil {
 				glog.Warningf("Failed to apply actions: %v", errs)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
@@ -220,10 +221,10 @@ func (c *Controller) pollDir(ctx context.Context) {
 
 			currentDir = newDir
 			importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
-			importer.Metrics.NamespaceConfigs.Set(float64(len(desiredPolicies.NamespaceConfigs)))
+			importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 			c.updateImportStatus(ctx, repoObj, token, startTime, nil)
 
-			lastSyncs = desiredPolicies.Syncs
+			lastSyncs = desiredConfigs.Syncs
 			glog.V(4).Infof("pollDir: completed")
 
 		case <-c.stopChan:
@@ -273,7 +274,7 @@ func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs
 	return r
 }
 
-// updatePolicies calculates and applies the actions needed to go from current to desired.
+// updateConfigs calculates and applies the actions needed to go from current to desired.
 // The order of actions is as follows:
 //   1. Delete Syncs. This includes any Syncs that are deleted outright, as well as any Syncs that
 //      are present in both current and desired, but which lose one or more SyncVersions in the
@@ -284,11 +285,11 @@ func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs
 // This careful ordering matters in the case where both a Sync and a Resource of the same type are
 // deleted in the same commit. The desired outcome is that the resource is not deleted, so we delete
 // the Sync first. That way, Syncer stops listening to updates for that type before the resource is
-// deleted from policies.
+// deleted from configs.
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
-// the resource is restored in policy before the Syncer starts managing that type.
-func (c *Controller) updatePolicies(current, desired *namespaceconfig.AllPolicies) status.MultiError {
+// the resource is restored in config before the Syncer starts managing that type.
+func (c *Controller) updateConfigs(current, desired *namespaceconfig.AllConfigs) status.MultiError {
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)

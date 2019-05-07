@@ -184,7 +184,7 @@ func SetupHierarchicalQuotaInformer(config *rest.Config, syncPeriod *time.Durati
 		return nil, err
 	}
 	namespaceConfigFactory := namespaceconfigversions.NewSharedInformerFactory(
-		hierarchicalQuotaClient.PolicyHierarchy(), time.Minute,
+		hierarchicalQuotaClient.ConfigManagement(), time.Minute,
 	)
 
 	hierarchicalQuotaInformer := namespaceConfigFactory.Configmanagement().V1().HierarchicalQuotas()

@@ -47,12 +47,10 @@ const reconcileTimeout = time.Minute * 5
 var (
 	_ reconcile.Reconciler = &NamespaceConfigReconciler{}
 
-	// reservedNamespaceConfig is a dummy namespace config used to represent
-	// the policy content of non-removable namespaces (like "default") when the
-	// corresponding NamespaceConfig is deleted from the repo.  Instead of
-	// deleting the namespace and its resources, we apply a change that removes
-	// all managed resources from the namespace, but does not attempt to delete
-	// the namespace.
+	// reservedNamespaceConfig is a dummy namespace config used to represent the config content of
+	// non-removable namespaces (like "default") when the corresponding NamespaceConfig is deleted
+	// from the repo. Instead of deleting the namespace and its resources, we apply a change that
+	// removes all managed resources from the namespace, but does not attempt to delete the namespace.
 	// TODO(filmil): See if there is an easy way to hide this nil object.
 	reservedNamespaceConfig = &v1.NamespaceConfig{}
 )
@@ -110,22 +108,22 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, err
 }
 
-// getNamespaceConfig normalizes the state of the policy node and returns the node.
+// getNamespaceConfig normalizes the state of the NamespaceConfig and returns the config.
 func (r *NamespaceConfigReconciler) getNamespaceConfig(
 	ctx context.Context,
 	name string,
 ) *v1.NamespaceConfig {
-	node := &v1.NamespaceConfig{}
-	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, node)
+	config := &v1.NamespaceConfig{}
+	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, config)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		panic(errors.Wrap(err, "cache returned error other than not found, this should not happen"))
 	}
-	node.SetGroupVersionKind(kinds.NamespaceConfig())
+	config.SetGroupVersionKind(kinds.NamespaceConfig())
 
-	return node
+	return config
 }
 
 // getNamespace normalizes the state of the namespace and retrieves the current value.
@@ -156,7 +154,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	name string,
 ) error {
 	var syncErrs []v1.ConfigManagementError
-	node := r.getNamespaceConfig(ctx, name)
+	config := r.getNamespaceConfig(ctx, name)
 
 	ns, nsErr := r.getNamespace(ctx, name, &syncErrs)
 	if nsErr != nil {
@@ -165,7 +163,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 
 	diff := differ.NamespaceDiff{
 		Name:     name,
-		Declared: node,
+		Declared: config,
 		Actual:   ns,
 	}
 
@@ -174,29 +172,28 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	}
 	switch diff.Type() {
 	case differ.Create:
-		if err := r.createNamespace(ctx, node); err != nil {
-			syncErrs = append(syncErrs, NewSyncError(node, err))
+		if err := r.createNamespace(ctx, config); err != nil {
+			syncErrs = append(syncErrs, NewSyncError(config, err))
 
-			if err2 := r.setNamespaceConfigStatus(ctx, node, syncErrs); err2 != nil {
-				glog.Warningf("failed to set status on policy node after ns creation error: %s", err2)
+			if err2 := r.setNamespaceConfigStatus(ctx, config, syncErrs); err2 != nil {
+				glog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
 			}
 			return err
 		}
-		return r.managePolicies(ctx, name, node, syncErrs)
+		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Update:
-		if err := r.updateNamespace(ctx, node); err != nil {
-			syncErrs = append(syncErrs, NewSyncError(node, err))
+		if err := r.updateNamespace(ctx, config); err != nil {
+			syncErrs = append(syncErrs, NewSyncError(config, err))
 		}
-		return r.managePolicies(ctx, name, node, syncErrs)
+		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Delete:
 		if namespaceutil.IsManageableSystem(name) {
-			// Special handling for manageable system namespaces: do not remove
-			// the namespace itself as that is not allowed.  Instead, manage
-			// all policies inside as if the namespace has no managed
+			// Special handling for manageable system namespaces: do not remove the namespace itself as
+			// that is not allowed.  Instead, manage all configs inside as if the namespace has no managed
 			// resources.
-			if err := r.managePolicies(ctx, name, reservedNamespaceConfig, syncErrs); err != nil {
+			if err := r.manageConfigs(ctx, name, reservedNamespaceConfig, syncErrs); err != nil {
 				return err
 			}
 			// Remove the metadata from the namespace only after the resources
@@ -212,36 +209,36 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 			glog.Warningf("Failed to remove quota label and management annotations from namespace: %s", unmanageErr.Error())
 			return unmanageErr
 		}
-		if node != nil {
+		if config != nil {
 			r.warnUnmanaged(ns)
 			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
 		}
 
 		// Return an error if any encountered.
-		if reconcileErr := r.managePolicies(ctx, name, node, syncErrs); reconcileErr != nil {
+		if reconcileErr := r.manageConfigs(ctx, name, config, syncErrs); reconcileErr != nil {
 			return reconcileErr
 		}
 		return unmanageErr
 
 	case differ.Error:
-		value := node.GetAnnotations()[v1.ResourceManagementKey]
+		value := config.GetAnnotations()[v1.ResourceManagementKey]
 		glog.Warningf("Namespace %q has invalid management annotation %q", name, value)
 		r.recorder.Eventf(
-			node,
+			config,
 			corev1.EventTypeWarning,
 			"InvalidManagementLabel",
 			"Namespace %q has invalid management annotation %q",
 			name, value,
 		)
 		syncErrs = append(syncErrs, cmeForNamespace(ns, invalidManagementLabel(value)))
-		return r.managePolicies(ctx, name, node, syncErrs)
+		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.NoOp:
-		if node != nil {
+		if config != nil {
 			r.warnUnmanaged(ns)
 			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
 		}
-		return r.managePolicies(ctx, name, node, syncErrs)
+		return r.manageConfigs(ctx, name, config, syncErrs)
 	}
 	panic(fmt.Sprintf("unhandled diff type: %v", diff.Type()))
 }
@@ -269,27 +266,27 @@ func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, ns *c
 	return err
 }
 
-func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name string, node *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
-	if node == nil {
+func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name string, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+	if config == nil {
 		return nil
 	}
 	var errBuilder status.MultiError
 	reconcileCount := 0
-	grs, err := r.decoder.DecodeResources(node.Spec.Resources...)
+	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
 	if err != nil {
-		return errors.Wrapf(err, "could not process namespaceconfig: %q", node.GetName())
+		return errors.Wrapf(err, "could not process namespaceconfig: %q", config.GetName())
 	}
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			decl.SetNamespace(node.GetName())
-			object.SetAnnotation(decl, v1.SyncTokenAnnotationKey, node.Spec.Token)
+			decl.SetNamespace(config.GetName())
+			object.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
-			syncErrs = append(syncErrs, NewSyncError(node, err))
+			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from NamespaceConfig controller for %q", gvk))
+			syncErrs = append(syncErrs, NewSyncError(config, err))
 			continue
 		}
 
@@ -304,36 +301,34 @@ func (r *NamespaceConfigReconciler) managePolicies(ctx context.Context, name str
 			}
 		}
 	}
-	if err := r.setNamespaceConfigStatus(ctx, node, syncErrs); err != nil {
-		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "failed to set status for %q", name))
-		r.recorder.Eventf(node, corev1.EventTypeWarning, "StatusUpdateFailed",
-			"failed to update policy node status: %s", err)
+	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs); err != nil {
+		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "failed to set status for NamespaceConfig %q", name))
+		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
+			"failed to update NamespaceConfig status: %s", err)
 	}
 	if errBuilder == nil && reconcileCount > 0 && len(syncErrs) == 0 {
-		r.recorder.Eventf(node, corev1.EventTypeNormal, "ReconcileComplete",
-			"policy node %q was successfully reconciled: %d changes", name, reconcileCount)
+		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
+			"NamespaceConfig %q was successfully reconciled: %d changes", name, reconcileCount)
 	}
 	return errBuilder
 }
 
-// setNamespaceConfigStatus updates the status of the given node.  If the node
-// is nil, it does nothing, and successfully so.
+// setNamespaceConfigStatus updates the status of the given NamespaceConfig. If the config is nil,
+// it does nothing, and successfully so.
 func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
-	ctx context.Context,
-	node *v1.NamespaceConfig,
-	errs []v1.ConfigManagementError) status.ResourceError {
-	if node == reservedNamespaceConfig {
+	ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError) status.ResourceError {
+	if config == reservedNamespaceConfig {
 		return nil
 	}
-	freshSyncToken := node.Status.Token == node.Spec.Token
-	if node.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
-		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", node.Name)
+	freshSyncToken := config.Status.Token == config.Spec.Token
+	if config.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
+		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
 
 	updateFn := func(obj runtime.Object) (runtime.Object, error) {
 		newPN := obj.(*v1.NamespaceConfig)
-		newPN.Status.Token = node.Spec.Token
+		newPN.Status.Token = config.Spec.Token
 		newPN.Status.SyncTime = r.now()
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
@@ -344,7 +339,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 		newPN.SetGroupVersionKind(kinds.NamespaceConfig())
 		return newPN, nil
 	}
-	_, err := r.client.UpdateStatus(ctx, node, updateFn)
+	_, err := r.client.UpdateStatus(ctx, config, updateFn)
 	// TODO(fmil): Missing error monitoring like util.go/SetClusterConfigStatus.
 	return err
 }
@@ -408,7 +403,7 @@ func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 }
 
 func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
-	glog.V(1).Infof("Namespace %q declared in a policy node, updating", namespaceConfig.Name)
+	glog.V(1).Infof("Namespace %q declared in a NamespaceConfig, updating", namespaceConfig.Name)
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceConfig.Name}}
 	namespace.SetGroupVersionKind(kinds.Namespace())
@@ -428,7 +423,7 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 }
 
 func (r *NamespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
-	glog.V(1).Infof("Namespace %q not declared in a policy node, removing", namespace.GetName())
+	glog.V(1).Infof("Namespace %q not declared in a NamespaceConfig, removing", namespace.GetName())
 
 	err := r.client.Delete(ctx, namespace)
 	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()

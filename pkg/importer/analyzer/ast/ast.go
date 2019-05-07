@@ -71,8 +71,8 @@ func (o *FileObject) Namespace() string {
 	return o.MetaObject().GetNamespace()
 }
 
-// Root represents a set of declared policies, configuration for how those policies will be
-// interpreted, and information regarding where those policies came from.
+// Root represents a set of declared configs, settings for how those configs will be interpreted,
+// and information regarding where those configs came from.
 type Root struct {
 	// ImportToken is the token for context
 	ImportToken string
@@ -161,7 +161,7 @@ func (o *ClusterObject) DeepCopy() *ClusterObject {
 	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }
 
-// TreeNode is analogous to a directory in the policy hierarchy.
+// TreeNode is analogous to a directory in the config hierarchy.
 type TreeNode struct {
 	// Path is the path this node has relative to a nomos Root.
 	cmpath.Path
@@ -234,8 +234,7 @@ func (n *TreeNode) SetAnnotations(a map[string]string) {
 
 // NamespaceObject extends FileObject to implement Visitable for namespace scoped objects.
 //
-// An NamespaceObject represents a resource found in a directory in the policy
-// hierarchy.
+// An NamespaceObject represents a resource found in a directory in the config hierarchy.
 type NamespaceObject struct {
 	FileObject
 }

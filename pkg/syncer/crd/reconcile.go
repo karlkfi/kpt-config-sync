@@ -30,8 +30,8 @@ const reconcileTimeout = time.Minute * 5
 var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler reconciles CRD resources on the cluster.
-// It restarts ClusterPolicy and NamespaceConfig controllers if changes have been made to CustomResourceDefinitions on the
-// cluster.
+// It restarts ClusterConfig and NamespaceConfig controllers if changes have been made to
+// CustomResourceDefinitions on the cluster.
 type Reconciler struct {
 	// client is used to update the ClusterConfig.Status
 	client *syncerclient.Client
@@ -117,7 +117,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	var syncErrs []v1.ConfigManagementError
 	actualInstances, err := r.cache.UnstructuredList(gvk, "")
 	if err != nil {
-		mErr = status.Append(mErr, status.APIServerWrapf(err, "failed to list from policy controller for %q", gvk))
+		mErr = status.Append(mErr, status.APIServerWrapf(err, "failed to list from config controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
 		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig,
 			r.now, syncErrs...))
@@ -145,7 +145,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs...); err != nil {
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
-			"failed to update cluster policy status: %v", err)
+			"failed to update ClusterConfig status: %v", err)
 		mErr = status.Append(mErr, err)
 	}
 

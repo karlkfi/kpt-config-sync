@@ -45,7 +45,7 @@ func newNode(p cmpath.Path) *ast.TreeNode {
 
 // addDir adds a node at the the given path.
 // p is the cmpath.Relative of the new ast.TreeNode.
-// Recursively adds parent nodes as necessary until it reaches the policy hierarchy root.
+// Recursively adds parent nodes as necessary until it reaches the config hierarchy root.
 func (t *builder) addDir(dir cmpath.Path) {
 	if t.nodes[dir] != nil {
 		return
@@ -57,7 +57,7 @@ func (t *builder) addDir(dir cmpath.Path) {
 		parentDir := curDir.Dir()
 		if parentDir.IsRoot() {
 			t.root = curNode
-			// Stop because `curNode` is the top-level policy hierarchy directory.
+			// Stop because `curNode` is the top-level config hierarchy directory.
 			break
 		}
 		parent := t.nodes[parentDir]

@@ -140,7 +140,7 @@ const (
 )
 
 // normalizeResources converts all resources in all policies into a slice of Resource
-func normalizeResources(ap *namespaceconfig.AllPolicies) []Resource {
+func normalizeResources(ap *namespaceconfig.AllConfigs) []Resource {
 	var objs []Resource
 	objs = append(objs, normalizeGenRes(clusterDir, "", ap.ClusterConfig.Spec.Resources)...)
 	for namespace, pn := range ap.NamespaceConfigs {

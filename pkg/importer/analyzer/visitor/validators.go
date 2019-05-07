@@ -199,7 +199,7 @@ type allNodesValidator struct {
 }
 
 // NewAllNodesValidator returns a validator which applies the same validation to every node,
-// including the non-hierarchical policies. For now this is just the objects in each nodes, as
+// including the non-hierarchical configs. For now this is just the objects in each nodes, as
 // that is the single unifying similarity.
 func NewAllNodesValidator(validate func(os []ast.FileObject) status.MultiError) *ValidatorVisitor {
 	return NewValidator(&allNodesValidator{validate: validate})

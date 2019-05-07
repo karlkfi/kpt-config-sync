@@ -31,9 +31,9 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterConfig is the top-level object for the policy node data definition.
+// ClusterConfig is the top-level object for the config data definition.
 //
-// It holds a policy defined for a single org unit (namespace).
+// It holds a config defined for a single org unit (namespace).
 // +protobuf=true
 type ClusterConfig struct {
 	metav1.TypeMeta `json:",inline"`
@@ -51,7 +51,7 @@ type ClusterConfig struct {
 	Status ClusterConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
-// ClusterConfigSpec defines the policies that will exist at the cluster level.
+// ClusterConfigSpec defines the configs that will exist at the cluster level.
 // +protobuf=true
 type ClusterConfigSpec struct {
 	// Token indicates the version of the ClusterConfig last imported from the source of truth.
@@ -70,7 +70,7 @@ type ClusterConfigSpec struct {
 // ClusterConfigStatus contains fields that define the status of a ClusterConfig.
 // +protobuf=true
 type ClusterConfigStatus struct {
-	// Token indicates the version of that policy that the Syncer last attempted to update from.
+	// Token indicates the version of the config that the Syncer last attempted to update from.
 	// +optional
 	Token string `json:"token,omitempty"`
 
@@ -79,19 +79,19 @@ type ClusterConfigStatus struct {
 	// +optional
 	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
-	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
+	// SyncTime is the timestamp of when the config resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
 
-	// SyncState is the current state of the policy resources (eg synced, stale, error).
+	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ClusterConfigList holds a list of cluster level policies, returned as response to a List
-// call on the cluster policy hierarchy.
+// ClusterConfigList holds a list of cluster level configs, returned as response to a List call on
+// the cluster config hierarchy.
 // +protobuf=true
 type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -99,7 +99,7 @@ type ClusterConfigList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Items is a list of policy nodes that apply.
+	// Items is a list of configs that apply.
 	Items []ClusterConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -108,14 +108,14 @@ type ClusterConfigList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// NamespaceConfig is the top-level object for the policy node data definition.
+// NamespaceConfig is the top-level object for the config data definition.
 //
-// It holds a policy defined for a single org unit (namespace).
+// It holds a config defined for a single org unit (namespace).
 // +protobuf=true
 type NamespaceConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -128,7 +128,7 @@ type NamespaceConfig struct {
 	Status NamespaceConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
-// NamespaceConfigSpec contains all the information about a policy linkage.
+// NamespaceConfigSpec contains all the information about a config linkage.
 // +protobuf=true
 type NamespaceConfigSpec struct {
 
@@ -148,7 +148,7 @@ type NamespaceConfigSpec struct {
 // NamespaceConfigStatus contains fields that define the status of a NamespaceConfig.
 // +protobuf=true
 type NamespaceConfigStatus struct {
-	// Token indicates the version of that policy that the Syncer last attempted to update from.
+	// Token indicates the version of the config that the Syncer last attempted to update from.
 	// +optional
 	Token string `json:"token,omitempty"`
 
@@ -157,19 +157,19 @@ type NamespaceConfigStatus struct {
 	// +optional
 	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
 
-	// SyncTime is the timestamp of when the policy resources were last updated by the Syncer.
+	// SyncTime is the timestamp of when the config resources were last updated by the Syncer.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
 
-	// SyncState is the current state of the policy resources (eg synced, stale, error).
+	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
 	SyncState PolicySyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// NamespaceConfigList holds a list of namespace policies, as response to a List
-// call on the policy hierarchy API.
+// NamespaceConfigList holds a list of NamespaceConfigs, as response to a List call on the config
+// hierarchy API.
 // +protobuf=true
 type NamespaceConfigList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -178,7 +178,7 @@ type NamespaceConfigList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Items is a list of policy nodes that apply.
+	// Items is a list of configs that apply.
 	Items []NamespaceConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -260,7 +260,7 @@ type ClusterSelectorList struct {
 type NamespaceSelector struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -300,7 +300,7 @@ type NamespaceSelectorList struct {
 type Sync struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -397,8 +397,8 @@ type Repo struct {
 // RepoSpec contains spec fields for Repo.
 // +protobuf=true
 type RepoSpec struct {
-	// Repo version string, corresponds to how policy importer should handle the
-	// directory structure (implicit assumptions).
+	// Repo version string, corresponds to how the config importer should handle the directory
+	// structure (implicit assumptions).
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
 }
 
@@ -419,7 +419,7 @@ type RepoStatus struct {
 // +protobuf=true
 type RepoSourceStatus struct {
 	// Most recent version token seen in the source of truth (eg the repo). This token is updated as
-	// soon as the policy importer sees a new change in the repo.
+	// soon as the config importer sees a new change in the repo.
 	// +optional
 	Token string `json:"token,omitempty"`
 
@@ -547,7 +547,7 @@ type RepoList struct {
 type HierarchicalQuota struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -599,7 +599,7 @@ type HierarchicalQuotaNode struct {
 type HierarchyConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Standard object's metadata. The Name field of the policy node must match the namespace name.
+	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 

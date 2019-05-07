@@ -20,7 +20,7 @@ type BuilderVisitor struct {
 }
 
 // NewBuilderVisitor initializes an BuilderVisitor with the set of objects to use to
-// populate the policy hierarchy tree.
+// populate the config hierarchy tree.
 func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
 	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Path][]ast.FileObject)}
 	v.SetImpl(v)
@@ -38,7 +38,7 @@ func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
 	return v
 }
 
-// VisitRoot creates nodes for the policy hierarchy.
+// VisitRoot creates nodes for the config hierarchy.
 func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	treeBuilder := newDirectoryTree()
 	for dir := range v.objects {
@@ -48,7 +48,7 @@ func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	return v.Base.VisitRoot(r)
 }
 
-// VisitTreeNode adds all objects which correspond to the TreeNode in the policy hierarchy.
+// VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
 func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	for _, object := range v.objects[n.Path] {
 		switch o := object.Object.(type) {
@@ -69,7 +69,7 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 }
 
 // RequiresValidState marks that the repository should otherwise be in a valid state before
-// attempting to construct the policy hierarchy tree.
+// attempting to construct the config hierarchy tree.
 func (v *BuilderVisitor) RequiresValidState() bool {
 	return true
 }

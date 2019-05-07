@@ -14,7 +14,7 @@ import (
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllPolicies, error) {
+func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
 	clientConfig, err := restconfig.NewClientConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get kubectl config")
@@ -32,7 +32,7 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllPoli
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}
 
-	resources, mErr := p.Parse(dir, "", &namespaceconfig.AllPolicies{}, time.Time{})
+	resources, mErr := p.Parse(dir, "", &namespaceconfig.AllConfigs{}, time.Time{})
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

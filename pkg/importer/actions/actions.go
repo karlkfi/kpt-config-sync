@@ -67,7 +67,7 @@ func (f namespaceConfigActionFactory) NewCreate(namespaceConfig *v1.NamespaceCon
 // the new NamespaceConfig as well as most of the Status. If Status.SyncState has been set then that will
 // be copied over.
 func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceConfig) action.Interface {
-	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
+	updateConfig := func(old runtime.Object) (runtime.Object, error) {
 		newPN := namespaceConfig.DeepCopy()
 		oldPN := old.(*v1.NamespaceConfig)
 		newPN.ResourceVersion = oldPN.ResourceVersion
@@ -82,7 +82,7 @@ func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceCon
 		importer.Metrics.Operations.WithLabelValues("update", "namespace", statusLabel(err)).Inc()
 		importer.Metrics.APICallDuration.WithLabelValues("update", "namespace", statusLabel(err)).Observe(duration)
 	}
-	return action.NewReflectiveUpdateAction("", namespaceConfig.Name, updatePolicy, f.ReflectiveActionSpec, onExecute)
+	return action.NewReflectiveUpdateAction("", namespaceConfig.Name, updateConfig, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewDelete returns an action for deleting NamespaceConfigs.
@@ -117,7 +117,7 @@ func (f clusterConfigActionFactory) NewCreate(clusterConfig *v1.ClusterConfig) a
 // of the new ClusterConfig as well as most of the Status. If Status.SyncState has been set then
 // that will be copied over.
 func (f clusterConfigActionFactory) NewUpdate(clusterConfig *v1.ClusterConfig) action.Interface {
-	updatePolicy := func(old runtime.Object) (runtime.Object, error) {
+	updateConfig := func(old runtime.Object) (runtime.Object, error) {
 		newCP := clusterConfig.DeepCopy()
 		oldCP := old.(*v1.ClusterConfig)
 		newCP.ResourceVersion = oldCP.ResourceVersion
@@ -132,7 +132,7 @@ func (f clusterConfigActionFactory) NewUpdate(clusterConfig *v1.ClusterConfig) a
 		importer.Metrics.Operations.WithLabelValues("update", "cluster", statusLabel(err)).Inc()
 		importer.Metrics.APICallDuration.WithLabelValues("update", "cluster", statusLabel(err)).Observe(duration)
 	}
-	return action.NewReflectiveUpdateAction("", clusterConfig.Name, updatePolicy, f.ReflectiveActionSpec, onExecute)
+	return action.NewReflectiveUpdateAction("", clusterConfig.Name, updateConfig, f.ReflectiveActionSpec, onExecute)
 }
 
 // NewDelete returns an action for deleting ClusterConfigs.

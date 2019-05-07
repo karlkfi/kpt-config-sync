@@ -19,8 +19,8 @@ type duplicateNameValidator struct {
 	visitor.ValidatorBase
 }
 
-// NewDuplicateNameValidator ensures the flattened policy output contains no resources in the same
-// policy node which share the same group, kind, and name.
+// NewDuplicateNameValidator ensures the flattened config output contains no resources in the same
+// config which share the same group, kind, and name.
 func NewDuplicateNameValidator() ast.Visitor {
 	return visitor.NewValidator(&duplicateNameValidator{})
 }
@@ -46,7 +46,7 @@ func checkDuplicates(objects []id.Resource) status.MultiError {
 	return errs
 }
 
-// ValidateTreeNode ensures Namespace policy nodes contain no duplicates.
+// ValidateTreeNode ensures Namespace configs contain no duplicates.
 func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiError {
 	if n.Type != node.Namespace {
 		return nil
@@ -59,7 +59,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiE
 	return checkDuplicates(resources)
 }
 
-// ValidateCluster ensures the Cluster policy node contains no duplicates.
+// ValidateCluster ensures the Cluster config contains no duplicates.
 func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) status.MultiError {
 	resources := make([]id.Resource, len(c))
 	for i, object := range c {
