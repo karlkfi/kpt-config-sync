@@ -12,9 +12,15 @@ const (
 	// validateFlag is the flag to set the Validate value
 	validateFlag = "validate"
 
-	// ContextsName is the flag name for the Contexts below.
-	ContextsName = "contexts"
+	// contextsFlag is the flag name for the Contexts below.
+	contextsFlag = "contexts"
 )
+
+// AddContexts adds the --contexts flag
+func AddContexts(cmd *cobra.Command) {
+	cmd.Flags().StringSliceVar(&Contexts, contextsFlag, nil,
+		`Accepts a comma-separated list of contexts to use in multi-cluster commands. Defaults to all contexts. Use "" for no contexts.`)
+}
 
 // AddPath adds the --path flag
 func AddPath(cmd *cobra.Command) {

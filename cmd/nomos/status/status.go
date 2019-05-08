@@ -13,11 +13,13 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
+	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/util/slice"
 )
 
@@ -32,6 +34,7 @@ var (
 )
 
 func init() {
+	flags.AddContexts(Cmd)
 	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
 }
@@ -46,7 +49,7 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Connecting to clusters...")
 
-		clientMap, err := repoClients()
+		clientMap, err := repoClients(flags.Contexts)
 		if err != nil {
 			glog.Fatalf("Failed to get clients: %v", err)
 		}
@@ -66,11 +69,12 @@ var Cmd = &cobra.Command{
 
 // repoClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
-func repoClients() (map[string]typedv1.RepoInterface, error) {
+func repoClients(contexts []string) (map[string]typedv1.RepoInterface, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
 	}
+	configs = filterConfigs(contexts, configs)
 
 	clientMap := make(map[string]typedv1.RepoInterface)
 	unreachableClusters := false
@@ -95,6 +99,22 @@ func repoClients() (map[string]typedv1.RepoInterface, error) {
 		fmt.Println()
 	}
 	return clientMap, nil
+}
+
+// filterConfigs returns the intersection of the given slice and map. If contexts is nil then the
+// full map is returned unfiltered.
+// TODO: dedup this with the function in version/version.go
+func filterConfigs(contexts []string, all map[string]*rest.Config) map[string]*rest.Config {
+	if contexts == nil {
+		return all
+	}
+	cfgs := make(map[string]*rest.Config)
+	for _, name := range contexts {
+		if cfg, ok := all[name]; ok {
+			cfgs[name] = cfg
+		}
+	}
+	return cfgs
 }
 
 // isReachable returns true if the given ClientSet points to a reachable cluster.

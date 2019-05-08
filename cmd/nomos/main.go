@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/importer"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/status"
@@ -43,11 +42,12 @@ func init() {
 }
 
 func init() {
-	pf := rootCmd.PersistentFlags()
-	pf.StringSliceVar(&flags.Contexts, flags.ContextsName, nil,
-		`Accepts a comma-separated list of contexts to use in multi-cluster commands. Defaults to all contexts. Use "" for no contexts.
-`)
-	_ = pf.MarkHidden(flags.ContextsName)
+	// TODO: Re-enable --contexts as a global flag once all subcommands handle it.
+	//	pf := rootCmd.PersistentFlags()
+	//	pf.StringSliceVar(&flags.Contexts, flags.ContextsName, nil,
+	//		`Accepts a comma-separated list of contexts to use in multi-cluster commands. Defaults to all contexts. Use "" for no contexts.
+	//`)
+	//	_ = pf.MarkHidden(flags.ContextsName)
 }
 
 func main() {

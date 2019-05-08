@@ -28,6 +28,10 @@ const (
 	configManagementVersionName = "configManagementVersion"
 )
 
+func init() {
+	flags.AddContexts(Cmd)
+}
+
 var (
 	// Cmd is the Cobra object representing the nomos version command.
 	Cmd = &cobra.Command{
