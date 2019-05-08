@@ -57,6 +57,7 @@ func (n NomosVisitorProvider) Visitors(
 		metadata.NewLabelValidator(),
 		validation.NewInputValidator(specs, vetEnabled),
 		semantic.NewAbstractResourceValidator(),
+		syntax.NewDisallowedCRDsValidator(),
 		semantic.NewCRDRemovalValidator(enableCRDs),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),

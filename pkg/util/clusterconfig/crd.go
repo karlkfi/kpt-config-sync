@@ -174,7 +174,7 @@ func UnstructuredToCRD(u *unstructured.Unstructured) (*v1beta1.CustomResourceDef
 	crd := &v1beta1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds.CustomResourceDefinition().Kind,
-			APIVersion: v1beta1.SchemeGroupVersion.String(),
+			APIVersion: kinds.CustomResourceDefinition().GroupVersion().String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
