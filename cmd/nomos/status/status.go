@@ -28,7 +28,7 @@ const (
 var (
 	clientTimeout   time.Duration
 	pollingInterval time.Duration
-	writer          = tabwriter.NewWriter(os.Stdout, 0, 0, 5, ' ', 0)
+	writer          = tabwriter.NewWriter(os.Stdout, 12, 0, 5, ' ', 0)
 )
 
 func init() {
@@ -73,6 +73,7 @@ func repoClients() (map[string]typedv1.RepoInterface, error) {
 	}
 
 	clientMap := make(map[string]typedv1.RepoInterface)
+	unreachableClusters := false
 	for name, cfg := range configs {
 		policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 		if err != nil {
@@ -81,10 +82,13 @@ func repoClients() (map[string]typedv1.RepoInterface, error) {
 		// Do a quick ping to see if the cluster is healthy/reachable and filter it out if it is not.
 		if isReachable(policyHierarchyClientSet, name) {
 			clientMap[name] = policyHierarchyClientSet.ConfigmanagementV1().Repos()
+		} else {
+			clientMap[name] = nil
+			unreachableClusters = true
 		}
 	}
 
-	if len(clientMap) < len(configs) {
+	if unreachableClusters {
 		// We can't stop the underlying libraries from spamming to glog when a cluster is unreachable,
 		// so just flush it out and print a blank line to at least make a clean separation.
 		glog.Flush()
@@ -110,10 +114,15 @@ func isReachable(clientset *apis.Clientset, cluster string) bool {
 // clusterNames returns a sorted list of names from the given clientMap.
 func clusterNames(clientMap map[string]typedv1.RepoInterface) []string {
 	var names []string
-	for name := range clientMap {
-		names = append(names, name)
+	var unreachableNames []string
+	for name, cl := range clientMap {
+		if cl == nil {
+			unreachableNames = append(unreachableNames, name)
+		} else {
+			names = append(names, name)
+		}
 	}
-	return slice.SortStrings(names)
+	return append(slice.SortStrings(names), slice.SortStrings(unreachableNames)...)
 }
 
 // printRepos fetches RepoStatus from each cluster in the given map and then prints a formatted
@@ -173,6 +182,10 @@ func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, 
 	// We fetch the repo objects in parallel to avoid long delays if multiple clusters are unreachable
 	// or slow to respond.
 	for name, repoClient := range clientMap {
+		if repoClient == nil {
+			writeMap[name] = naStatusRow(name)
+			continue
+		}
 		wg.Add(1)
 
 		go func(name string, repoClient typedv1.RepoInterface) {
@@ -246,6 +259,11 @@ func statusRow(name string, status v1.RepoStatus) string {
 		token = "N/A"
 	}
 	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token[0:8])
+}
+
+// naStatusRow returns a printable row for a cluster that is N/A.
+func naStatusRow(name string) string {
+	return fmt.Sprintf("%s\t%s\n", shortName(name), "N/A")
 }
 
 // getStatus returns the given RepoStatus formatted as a short summary string.
