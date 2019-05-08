@@ -4,20 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/nomos/pkg/service"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
@@ -30,15 +29,14 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 
 	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: config.Host}
-	factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
-		return cmdutil.NewFactory(importer.NewFilesystemCRDAwareClientGetter(&genericclioptions.ConfigFlags{}, crds...))
-	}
-	p, err := filesystem.NewParser(factoryFactory, parserOpt)
+	p, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create parser")
 	}
 
 	stopCh := make(chan struct{})
+	go service.WaitForShutdownSignalCb(stopCh)
+
 	policies, cErr := clusterConfigs(config, stopCh)
 	if cErr != nil {
 		return nil, cErr

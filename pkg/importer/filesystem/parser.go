@@ -25,6 +25,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -59,13 +61,12 @@ func init() {
 	utilruntime.Must(clusterregistry.AddToScheme(scheme.Scheme))
 }
 
-type factoryFactory func(...*v1beta1.CustomResourceDefinition) cmdutil.Factory
-
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
-	opts           ParserOpt
-	factoryFactory factoryFactory
-	errors         status.MultiError
+	opts         ParserOpt
+	factory      cmdutil.Factory
+	clientGetter genericclioptions.RESTClientGetter
+	errors       status.MultiError
 }
 
 // ParserOpt has often customized parser options. Use for example in NewParser.
@@ -80,18 +81,34 @@ type ParserOpt struct {
 	EnableCRDs bool
 }
 
-// NewParser creates a new Parser using the specified factoryFactory and parser options.
-func NewParser(f factoryFactory, opts ParserOpt) (*Parser, error) {
+// NewParser creates a new Parser using the specified RESTClientGetter and parser options.
+func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
 	p := &Parser{
-		factoryFactory: f,
-		opts:           opts,
+		clientGetter: c,
+		opts:         opts,
 	}
 	return p, nil
 }
 
+// NewParserWithFactory creates a new Parser using the specified Factory and parser options.
+func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
+	p := &Parser{
+		factory: f,
+		opts:    opts,
+	}
+	return p, nil
+}
+
+func (p *Parser) getFactory(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
+	if p.factory != nil {
+		return p.factory
+	}
+	return cmdutil.NewFactory(importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, stubMissing, crds...))
+}
+
 // crtdsInRepo parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
 func (p *Parser) crdsInRepo(rootPath cmpath.Root) ([]*v1beta1.CustomResourceDefinition, status.Error) {
-	fileObjects := p.readClusterResources(rootPath)
+	fileObjects := p.readClusterResources(rootPath, true)
 
 	var crds []*v1beta1.CustomResourceDefinition
 	for _, f := range fileObjects {
@@ -130,7 +147,7 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		return nil, p.errors
 	}
 
-	discoveryClient, dErr := p.factoryFactory().ToDiscoveryClient()
+	discoveryClient, dErr := p.getFactory(false).ToDiscoveryClient()
 	if dErr != nil {
 		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
 		return nil, p.errors
@@ -164,9 +181,9 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(p.readSystemResources(rootPath)),
-		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath, crds...)),
+		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath, false, crds...)),
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
-		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath)),
+		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath, crds...)),
 		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources(), p.opts.EnableCRDs),
 		tree.NewCRDClusterConfigInfoVisitor(crdInfo),
 	}
@@ -204,23 +221,24 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 }
 
 func (p *Parser) readSystemResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.SystemDir)))
+	return p.readResources(root.Join(cmpath.FromSlash(repo.SystemDir)), false)
 }
 
 func (p *Parser) readNamespaceResources(root cmpath.Root, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), crds...)
+	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
 }
 
-func (p *Parser) readClusterResources(root cmpath.Root, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)), crds...)
+func (p *Parser) readClusterResources(root cmpath.Root, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.
+	FileObject {
+	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
 }
 
 func (p *Parser) readClusterRegistryResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)))
+	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir cmpath.Relative, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
 	// If there aren't any resources, skip builder, because builder treats that as an error.
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		// Return empty list if unable to read directory
@@ -240,13 +258,13 @@ func (p *Parser) readResources(dir cmpath.Relative, crds ...*v1beta1.CustomResou
 
 	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
-		s, err := p.factoryFactory().Validator(p.opts.Validate)
+		s, err := p.getFactory(stubMissing).Validator(p.opts.Validate)
 		if err != nil {
 			p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get schema"))
 			return nil
 		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		crdFactory := p.factoryFactory(crds...)
+		crdFactory := p.getFactory(stubMissing, crds...)
 		result := crdFactory.NewBuilder().
 			Unstructured().
 			Schema(s).

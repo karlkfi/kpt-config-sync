@@ -49,7 +49,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 const (
@@ -1724,18 +1723,15 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		d.createTestFile(k, v)
 	}
 
-	factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
-		f := fstesting.NewTestFactory(t)
-		defer func() {
-			if err := f.Cleanup(); err != nil {
-				t.Fatal(errors.Wrap(err, "could not clean up"))
-			}
-		}()
-		return f
-	}
+	f := fstesting.NewTestFactory(t)
+	defer func() {
+		if err := f.Cleanup(); err != nil {
+			t.Fatal(errors.Wrap(err, "could not clean up"))
+		}
+	}()
 
-	p, err := NewParser(
-		factoryFactory,
+	p, err := NewParserWithFactory(
+		f,
 		ParserOpt{
 			Vet:        tc.vet,
 			Validate:   true,
@@ -2589,18 +2585,15 @@ func TestEmptyDirectories(t *testing.T) {
 				d.Fatalf("error creating test dir %s: %v", path, err)
 			}
 
-			factoryFactory := func(crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
-				f := fstesting.NewTestFactory(t)
-				defer func() {
-					if err := f.Cleanup(); err != nil {
-						t.Fatal(errors.Wrap(err, "could not clean up"))
-					}
-				}()
-				return f
-			}
+			f := fstesting.NewTestFactory(t)
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
 
-			p, err := NewParser(
-				factoryFactory,
+			p, err := NewParserWithFactory(
+				f,
 				ParserOpt{
 					Vet:        false,
 					Validate:   true,

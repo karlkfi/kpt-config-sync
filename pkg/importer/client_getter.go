@@ -3,6 +3,7 @@ package importer
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/client/action"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,14 +15,17 @@ var _ apimeta.RESTMapper = CRDAwareRestMapper{}
 // CRDAwareRestMapper generates rest mappings based on the discovery API and a set of CRDs.
 type CRDAwareRestMapper struct {
 	apimeta.RESTMapper
-	mappings map[schema.GroupVersionKind]*apimeta.RESTMapping
+	mappings    map[schema.GroupVersionKind]*apimeta.RESTMapping
+	stubMissing bool
 }
 
 // NewCRDAwareRestMapper returns a new CRDAwareRestMapper.
-func NewCRDAwareRestMapper(delegate apimeta.RESTMapper, crds ...*v1beta1.CustomResourceDefinition) apimeta.RESTMapper {
+func NewCRDAwareRestMapper(delegate apimeta.RESTMapper, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) apimeta.
+	RESTMapper {
 	return CRDAwareRestMapper{
-		RESTMapper: delegate,
-		mappings:   crdRestMappings(crds),
+		RESTMapper:  delegate,
+		stubMissing: stubMissing,
+		mappings:    crdRestMappings(crds),
 	}
 }
 
@@ -75,7 +79,23 @@ func (e CRDAwareRestMapper) RESTMapping(gk schema.GroupKind, versions ...string)
 		return m, nil
 	}
 
-	return nil, fmt.Errorf("no mapping found for %#v, versions=%v", gk, versions)
+	if !e.stubMissing {
+		return nil, fmt.Errorf("no mapping found for %#v, versions=%v", gk, versions)
+	}
+
+	// Return an API mapping based on what is requested, on a best-effort basis.
+	var version string
+	if len(versions) > 0 {
+		version = versions[0]
+	}
+	gvk := gk.WithVersion(version)
+	return &apimeta.RESTMapping{
+		Resource:         gvk.GroupVersion().WithResource(action.LowerPlural(gvk.Kind)),
+		GroupVersionKind: gvk,
+		// we're should only be looking at a cluster-scoped resource,
+		// since this fallback only comes up for custom resources that do not have a CRD already added to the cluster.
+		Scope: apimeta.RESTScopeRoot,
+	}, nil
 }
 
 var _ genericclioptions.RESTClientGetter = CRDAwareClientGetter{}
@@ -84,13 +104,16 @@ var _ genericclioptions.RESTClientGetter = CRDAwareClientGetter{}
 // All other functionality is based on the delegate RESTClientGetter this struct contains.
 type CRDAwareClientGetter struct {
 	genericclioptions.RESTClientGetter
-	crds []*v1beta1.CustomResourceDefinition
+	crds        []*v1beta1.CustomResourceDefinition
+	stubMissing bool
 }
 
 // NewFilesystemCRDAwareClientGetter returns a new CRDAwareClientGetter.
-func NewFilesystemCRDAwareClientGetter(g genericclioptions.RESTClientGetter, crds ...*v1beta1.CustomResourceDefinition) CRDAwareClientGetter {
+func NewFilesystemCRDAwareClientGetter(g genericclioptions.RESTClientGetter, stubMissing bool,
+	crds ...*v1beta1.CustomResourceDefinition) CRDAwareClientGetter {
 	return CRDAwareClientGetter{
 		RESTClientGetter: g,
+		stubMissing:      stubMissing,
 		crds:             crds,
 	}
 }
@@ -101,5 +124,5 @@ func (cg CRDAwareClientGetter) ToRESTMapper() (apimeta.RESTMapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewCRDAwareRestMapper(rm, cg.crds...), nil
+	return NewCRDAwareRestMapper(rm, cg.stubMissing, cg.crds...), nil
 }

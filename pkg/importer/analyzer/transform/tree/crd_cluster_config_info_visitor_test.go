@@ -18,6 +18,11 @@ import (
 
 func namedCRD(name string) *v1beta1.CustomResourceDefinition {
 	crd := fake.CustomResourceDefinition("").Object.(*v1beta1.CustomResourceDefinition).DeepCopy()
+	crd.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{
+		Name:    "v1",
+		Served:  true,
+		Storage: true,
+	}}
 	crd.Name = name
 	return crd
 }

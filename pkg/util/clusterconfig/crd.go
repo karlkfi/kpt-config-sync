@@ -42,8 +42,7 @@ type CRDInfo struct {
 
 // NewCRDInfo returns a new CRDInfo.
 func NewCRDInfo(decoder decode.Decoder, clusterConfig *v1.ClusterConfig,
-	repoCRDs []*v1beta1.CustomResourceDefinition) (*CRDInfo,
-	status.Error) {
+	repoCRDs []*v1beta1.CustomResourceDefinition) (*CRDInfo, status.Error) {
 	crds, err := crds(decoder, clusterConfig)
 	if err != nil {
 		return nil, err
@@ -180,9 +179,8 @@ func UnstructuredToCRD(u *unstructured.Unstructured) (*v1beta1.CustomResourceDef
 			Name: name,
 		},
 		Spec: v1beta1.CustomResourceDefinitionSpec{
-			Group:   group,
-			Scope:   v1beta1.ResourceScope(scope),
-			Version: version,
+			Group: group,
+			Scope: v1beta1.ResourceScope(scope),
 			Names: v1beta1.CustomResourceDefinitionNames{
 				Kind:       kind,
 				Plural:     plural,
@@ -192,6 +190,15 @@ func UnstructuredToCRD(u *unstructured.Unstructured) (*v1beta1.CustomResourceDef
 			},
 		},
 	}
+
+	if len(versions) == 0 {
+		crd.Spec.Versions = append(crd.Spec.Versions, v1beta1.CustomResourceDefinitionVersion{
+			Name:    version,
+			Served:  true,
+			Storage: true,
+		})
+	}
+
 	for _, v := range versions {
 		crdVersion, _ := v.(map[string]interface{})
 		name, _, nameErr := unstructured.NestedString(crdVersion, "name")
