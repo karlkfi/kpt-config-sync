@@ -58,11 +58,12 @@ func (c *GenericResourceCache) UnstructuredList(gvk schema.GroupVersionKind,
 		return nil, errors.Wrapf(err, "no informer for %s in the cache", gvk)
 	}
 
+	indexer := informer.GetIndexer()
 	var objs []interface{}
 	if namespace == "" {
-		objs = informer.GetIndexer().List()
+		objs = indexer.List()
 	} else {
-		objs, err = informer.GetIndexer().ByIndex(toolscache.NamespaceIndex, namespace)
+		objs, err = indexer.ByIndex(toolscache.NamespaceIndex, namespace)
 		if err != nil {
 			return nil, errors.Wrapf(err, "No namespace index for %s in in the cache", gvk)
 		}

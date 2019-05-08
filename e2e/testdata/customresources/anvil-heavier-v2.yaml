@@ -1,0 +1,6 @@
+kind: Anvil
+apiVersion: acme.com/v2
+metadata:
+  name: e2e-test-anvil
+spec:
+  lbs: 100

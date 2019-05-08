@@ -39,7 +39,7 @@ var (
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
 	resyncPeriod      = flag.Duration("resync-period", time.Minute, "The resync period for the importer system")
 	// TODO(129774660): Clean up after launching CRD syncing.
-	enableCRDs = flag.Bool("enable_crds", false, "When true, enable syncing CRDs")
+	enableCRDs = flag.Bool("enable_crds", true, "When true, enable syncing CRDs")
 )
 
 func main() {

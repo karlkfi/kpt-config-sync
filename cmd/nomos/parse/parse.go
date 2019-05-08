@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/nomos/pkg/service"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/cli-runtime/pkg/genericclioptions"

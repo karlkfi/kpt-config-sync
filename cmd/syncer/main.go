@@ -36,7 +36,7 @@ var (
 		"resync_period", time.Minute, "The resync period for the syncer system")
 	// TODO(129774660): Clean up after launching CRD syncing.
 	enableCRDs = flag.Bool(
-		"enable_crds", false, "When true, enable syncing CRDs")
+		"enable_crds", true, "When true, enable syncing CRDs")
 )
 
 func main() {

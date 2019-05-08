@@ -65,7 +65,7 @@ function namespace::declare() {
 
   local name
   name="$(basename "${path}")"
-  local dst="acme/namespaces/acme/${path}/namespace.yaml"
+  local dst="acme/namespaces/${path}/namespace.yaml"
   local abs_dst="${TEST_REPO}/${dst}"
   genyaml_args+=("${name}" "${abs_dst}")
   namespace::__genyaml "${genyaml_args[@]}"
