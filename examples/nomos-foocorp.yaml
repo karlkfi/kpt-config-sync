@@ -6,7 +6,7 @@ metadata:
 spec:
   git:
     syncRepo: git@github.com:frankfarzan/foo-corp-example.git
-    syncBranch: "0.1.0"
+    syncBranch: "1.0.0"
     syncWait: 1
     secretType: ssh
     policyDir: foo-corp

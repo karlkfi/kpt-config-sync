@@ -1,7 +1,7 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -31,8 +31,8 @@ var _ status.ResourceError = UnsupportedRepoSpecVersion{}
 // Error implements error
 func (e UnsupportedRepoSpecVersion) Error() string {
 	return status.Format(e,
-		"Unsupported Repo spec.version: %q. Must use version \"0.1.0\"",
-		e.Version)
+		"Unsupported Repo spec.version: %q. Must use version %q",
+		e.Version, repo.CurrentVersion)
 }
 
 // Code implements Error

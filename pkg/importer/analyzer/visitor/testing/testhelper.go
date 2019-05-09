@@ -19,7 +19,8 @@ package testing
 import (
 	"time"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/util/repo"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -420,7 +421,7 @@ func (t *TestHelper) System() []*ast.SystemObject {
 				Name: "repo",
 			},
 			Spec: v1.RepoSpec{
-				Version: "0.1.0",
+				Version: repo.CurrentVersion,
 			},
 		},
 	)

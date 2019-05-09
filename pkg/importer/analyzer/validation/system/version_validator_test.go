@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/repo"
 )
 
 const notAllowedRepoVersion = "0.0.0"
@@ -31,8 +32,12 @@ func TestRepoVersionValidator(t *testing.T) {
 				Object: fake.HierarchyConfig("system/hc.yaml"),
 			},
 			{
-				Name:   "Repo with valid version is fine",
-				Object: fake.Build(kinds.Repo(), version(system.AllowedRepoVersion)),
+				Name:   "Repo with current version is fine",
+				Object: fake.Build(kinds.Repo(), version(repo.CurrentVersion)),
+			},
+			{
+				Name:   "Repo with old version is fine",
+				Object: fake.Build(kinds.Repo(), version(system.OldAllowedRepoVersion)),
 			},
 			{
 				Name:       "Repo with invalid version is error",
