@@ -40,5 +40,5 @@ func ResourceWrap(err error, msg string, resources ...id.Resource) Error {
 	if err == nil {
 		return nil
 	}
-	return resourceError.WithResources(resources...).New(msg)
+	return resourceError.WithResources(resources...).Wrap(err, msg)
 }
