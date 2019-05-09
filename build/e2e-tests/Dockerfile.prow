@@ -15,7 +15,7 @@ ENV CGO_ENABLED=0
 # v0.2.1
 ARG KIND_RELEASE="5e292845d6d7e736515a8ca4da032acd85e153d1"
 ARG KIND_REPO="sigs.k8s.io/kind"
-RUN go get -u ${KIND_REPO}
+RUN go get -d -u ${KIND_REPO}
 WORKDIR /go/src/${KIND_REPO}
 RUN git checkout ${KIND_RELEASE} && go install ${KIND_REPO}
 
