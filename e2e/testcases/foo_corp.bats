@@ -61,6 +61,7 @@ FOOCORP_NAMESPACES=(
   resource::check clusterrole pod-creator -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrolebinding -c 1
   resource::check clusterrolebinding namespace-readers -a "configmanagement.gke.io/managed=enabled"
+  resource::check_count -a "configmanagement.gke.io/managed=enabled" -r customresourcedefinition -c 1
 
   # Namespace-scoped resources
   # audit
@@ -86,6 +87,7 @@ FOOCORP_NAMESPACES=(
   resource::check -n shipping-staging rolebinding pod-creators -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-staging -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-staging resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check_count -n shipping-staging -r fulfillmentcenter -c 1 -a "configmanagement.gke.io/managed=enabled"
 
   # shipping-prod
   resource::check_count -n shipping-prod -r role -c 0
@@ -95,5 +97,6 @@ FOOCORP_NAMESPACES=(
   resource::check -n shipping-prod rolebinding sre-admin -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-prod -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-prod resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check_count -n shipping-prod -r fulfillmentcenter -c 1 -a "configmanagement.gke.io/managed=enabled"
 }
 
