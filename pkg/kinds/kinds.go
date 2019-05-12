@@ -16,7 +16,7 @@ import (
 // Anvil returns the GroupVersionKind for Anvil Custom Resource used in tests.
 func Anvil() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
-		Group:   "com.acme",
+		Group:   "acme.com",
 		Version: "v1",
 		Kind:    "Anvil",
 	}

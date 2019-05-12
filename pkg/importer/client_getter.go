@@ -2,8 +2,8 @@ package importer
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/google/nomos/pkg/client/action"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -90,7 +90,7 @@ func (e CRDAwareRestMapper) RESTMapping(gk schema.GroupKind, versions ...string)
 	}
 	gvk := gk.WithVersion(version)
 	return &apimeta.RESTMapping{
-		Resource:         gvk.GroupVersion().WithResource(action.LowerPlural(gvk.Kind)),
+		Resource:         gvk.GroupVersion().WithResource(strings.ToLower(gvk.Kind) + "s"),
 		GroupVersionKind: gvk,
 		// we're should only be looking at a cluster-scoped resource,
 		// since this fallback only comes up for custom resources that do not have a CRD already added to the cluster.

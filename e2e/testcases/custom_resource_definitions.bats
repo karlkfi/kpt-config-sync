@@ -198,3 +198,29 @@ function teardown() {
   debug::log "Check that nomos vet fails"
   wait::for -f -t 5 -- /opt/testing/go/bin/linux_amd64/nomos vet --path="${BATS_TMPDIR}/repo"
 }
+
+@test "invalid CRD added and replaced with valid one" {
+  debug::log "Adding Invalid CRD and Custom Resource"
+  git::add "${YAML_DIR}/customresources/anvil-crd-invalid.yaml" acme/cluster/anvil-crd.yaml
+  git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
+  namespace::declare prod
+  git::commit
+
+  wait::for -f -t 5 -- /opt/testing/go/bin/linux_amd64/nomos vet --path="${BATS_TMPDIR}/repo"
+
+  debug::log "CRD doesn't exist on cluster"
+  wait::for -f -t 5 -- kubectl get crd anvils.acme.com
+
+  debug::log "CR doesn't exist on cluster"
+  wait::for -f -t 5 -- kubectl get anvils e2e-test-anvil -n prod
+
+  debug::log "Update CRD with valid version"
+  git::update "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
+  git::commit
+
+  debug::log "CRD exists on cluster"
+  wait::for -t 30 -- kubectl get crd anvils.acme.com
+
+  debug::log "CR exists on cluster"
+  wait::for -t 30 -- kubectl get anvils e2e-test-anvil -n prod
+}

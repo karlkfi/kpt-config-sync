@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/nomos/pkg/testing/fake"
@@ -15,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func crd(path string, gvk schema.GroupVersionKind) ast.FileObject {
+func crd(path, name string, gvk schema.GroupVersionKind) ast.FileObject {
 	return ast.FileObject{
 		Path: cmpath.FromSlash(path),
 		Object: &v1beta1.CustomResourceDefinition{
@@ -24,12 +25,13 @@ func crd(path string, gvk schema.GroupVersionKind) ast.FileObject {
 				Kind:       kinds.CustomResourceDefinition().Kind,
 			},
 			ObjectMeta: v1.ObjectMeta{
-				Name: "crd",
+				Name: name,
 			},
 			Spec: v1beta1.CustomResourceDefinitionSpec{
 				Group: gvk.Group,
 				Names: v1beta1.CustomResourceDefinitionNames{
-					Kind: gvk.Kind,
+					Kind:   gvk.Kind,
+					Plural: strings.ToLower(gvk.Kind) + "s",
 				},
 			},
 		},
@@ -43,22 +45,22 @@ func TestDisallowedCRDsValidator(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:       "clusterconfig CRD",
-				Object:     crd("cluster/clusterconfig-crd.yaml", kinds.ClusterConfig()),
+				Object:     crd("cluster/clusterconfig-crd.yaml", "crd", kinds.ClusterConfig()),
 				ShouldFail: true,
 			},
 			{
 				Name:       "namespaceconfig CRD",
-				Object:     crd("cluster/namespaceconfig-crd.yaml", kinds.NamespaceConfig()),
+				Object:     crd("cluster/namespaceconfig-crd.yaml", "crd", kinds.NamespaceConfig()),
 				ShouldFail: true,
 			},
 			{
 				Name:       "sync CRD",
-				Object:     crd("cluster/sync-crd.yaml", kinds.Sync()),
+				Object:     crd("cluster/sync-crd.yaml", "crd", kinds.Sync()),
 				ShouldFail: true,
 			},
 			{
 				Name:   "non-anthos config management CRD",
-				Object: crd("cluster/anvil-crd.yaml", kinds.Anvil()),
+				Object: crd("cluster/anvil-crd.yaml", "crd", kinds.Anvil()),
 			},
 			{
 				Name:   "non-CRD config",
