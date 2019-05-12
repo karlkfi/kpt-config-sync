@@ -42,8 +42,8 @@ Or by file name: `console make test-e2e-git E2E_FLAGS="--file_filter acme"`
 
 ## E2E Tests with a custom Operator
 
-The e2e tests install Nomos using the Nomos operator, the code for which lives
-in the
+The e2e tests install Nomos using the Anthos Config Management Operator,
+a.k.a. the nomos-operator, the code for which lives in the
 [nomos-operator repo](https://team.git.corp.google.com/nomos-team/nomos-operator).
 By default, e2e tests run against the latest release of the operator. However,
 you can run e2e tests against your own build of the operator by doing the
@@ -58,7 +58,7 @@ Once you have made the changes you wish to test in that repository, run
 make release-user PROJECT_NAME=stolos-dev
 ```
 
-This pushes your repo's version of the nomos-operator to a user-private location
+This pushes your repo's version of the config-management-operator to a user-private location
 in GCR.
 
 Then, return to the main nomos repo and run tests with the `-user` target:
