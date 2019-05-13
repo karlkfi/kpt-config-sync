@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"sync"
 	"text/tabwriter"
 	"time"
@@ -20,7 +21,6 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/util/slice"
 )
 
 const (
@@ -142,7 +142,9 @@ func clusterNames(clientMap map[string]typedv1.RepoInterface) []string {
 			names = append(names, name)
 		}
 	}
-	return append(slice.SortStrings(names), slice.SortStrings(unreachableNames)...)
+	sort.Strings(names)
+	sort.Strings(unreachableNames)
+	return append(names, unreachableNames...)
 }
 
 // printRepos fetches RepoStatus from each cluster in the given map and then prints a formatted
