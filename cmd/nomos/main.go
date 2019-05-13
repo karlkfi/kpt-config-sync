@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/nomos/cmd/nomos/importer"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/version"
@@ -36,7 +35,6 @@ func init() {
 	rootCmd.AddCommand(initialize.Cmd)
 	rootCmd.AddCommand(vet.Cmd)
 	rootCmd.AddCommand(view.Cmd)
-	rootCmd.AddCommand(importer.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 	rootCmd.AddCommand(status.Cmd)
 }
