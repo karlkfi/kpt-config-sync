@@ -41,7 +41,6 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/kubernetes/pkg/kubectl"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	openapitesting "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/testing"
@@ -120,8 +119,8 @@ func (d *FakeCachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion 
 type TestFactory struct {
 	cmdutil.Factory
 
-	Client             kubectl.RESTClient
-	UnstructuredClient kubectl.RESTClient
+	Client             restclient.Interface
+	UnstructuredClient restclient.Interface
 	DescriberVal       printers.Describer
 	Namespace          string
 	ClientConfigVal    *restclient.Config
