@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/printers"
 )
 
 const (
@@ -216,7 +216,7 @@ func entries(vs map[string]vErr) []entry {
 // form.  It's the sixties, go for it!
 func tabulate(es []entry, out io.Writer) {
 	const format = "%s\t%s\t%s\n"
-	w := printers.GetNewTabWriter(out)
+	w := util.NewWriter(out)
 	defer func() {
 		if err := w.Flush(); err != nil {
 			// nolint:errcheck

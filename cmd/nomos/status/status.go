@@ -2,6 +2,7 @@ package status
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
@@ -30,7 +32,6 @@ const (
 var (
 	clientTimeout   time.Duration
 	pollingInterval time.Duration
-	writer          = tabwriter.NewWriter(os.Stdout, 12, 0, 5, ' ', 0)
 )
 
 func init() {
@@ -56,13 +57,14 @@ var Cmd = &cobra.Command{
 		// Use a sorted order of names to avoid shuffling in the output.
 		names := clusterNames(clientMap)
 
+		writer := util.NewWriter(os.Stdout)
 		if pollingInterval > 0 {
 			for {
-				printRepos(clientMap, names)
+				printRepos(writer, clientMap, names)
 				time.Sleep(pollingInterval)
 			}
 		} else {
-			printRepos(clientMap, names)
+			printRepos(writer, clientMap, names)
 		}
 	},
 }
@@ -151,14 +153,14 @@ func clusterNames(clientMap map[string]typedv1.RepoInterface) []string {
 // status row for each one. If there are any errors reported by the RepoStatus, those are printed in
 // a second table under the status table.
 // nolint:errcheck
-func printRepos(clientMap map[string]typedv1.RepoInterface, names []string) {
+func printRepos(writer *tabwriter.Writer, clientMap map[string]typedv1.RepoInterface, names []string) {
 	// First build up maps of all the things we want to display.
 	writeMap, errorMap := fetchRepos(clientMap)
 	// Now we write everything at once. Processing and then printing helps avoid screen strobe.
 
 	if pollingInterval > 0 {
 		// Clear previous output and flush it to avoid messing up column widths.
-		clearTerminal()
+		clearTerminal(writer)
 		writer.Flush()
 	}
 
@@ -245,7 +247,7 @@ func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, 
 }
 
 // clearTerminal executes an OS-specific command to clear all output on the terminal.
-func clearTerminal() {
+func clearTerminal(out io.Writer) {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
@@ -255,7 +257,7 @@ func clearTerminal() {
 		cmd = exec.Command("clear")
 	}
 
-	cmd.Stdout = writer
+	cmd.Stdout = out
 	if err := cmd.Run(); err != nil {
 		glog.Warningf("Failed to execute command: %v", err)
 	}
@@ -280,7 +282,11 @@ func statusRow(name string, status v1.RepoStatus) string {
 	if token == "" {
 		token = "N/A"
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token[0:8])
+	max := 8
+	if len(token) < max {
+		max = len(token)
+	}
+	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token[:max])
 }
 
 // naStatusRow returns a printable row for a cluster that is N/A.
