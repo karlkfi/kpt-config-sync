@@ -1,7 +1,7 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
