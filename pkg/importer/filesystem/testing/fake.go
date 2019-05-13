@@ -42,8 +42,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
-	openapitesting "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/testing"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
@@ -127,7 +125,6 @@ type TestFactory struct {
 	tempConfigFile *os.File
 
 	UnstructuredClientForMappingFunc func(mapping *meta.RESTMapping) (resource.RESTClient, error)
-	OpenAPISchemaFunc                func() (openapi.Resources, error)
 }
 
 // NewTestFactory returns a new test factory.
@@ -199,14 +196,6 @@ func (f *TestFactory) UnstructuredClientForMapping(mapping *meta.RESTMapping) (r
 // Validator returns a null validation schema.
 func (f *TestFactory) Validator(validate bool) (validation.Schema, error) {
 	return validation.NullSchema{}, nil
-}
-
-// OpenAPISchema returns the OpenAPI Schema.
-func (f *TestFactory) OpenAPISchema() (openapi.Resources, error) {
-	if f.OpenAPISchemaFunc != nil {
-		return f.OpenAPISchemaFunc()
-	}
-	return openapitesting.EmptyResources{}, nil
 }
 
 // NewBuilder returns a new resource builder.
