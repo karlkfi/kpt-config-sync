@@ -45,7 +45,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	openapitesting "k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/testing"
 	"k8s.io/kubernetes/pkg/kubectl/validation"
-	"k8s.io/kubernetes/pkg/printers"
 )
 
 // FakeRESTClientGetter implements RESTClientGetter.
@@ -121,7 +120,6 @@ type TestFactory struct {
 
 	Client             restclient.Interface
 	UnstructuredClient restclient.Interface
-	DescriberVal       printers.Describer
 	Namespace          string
 	ClientConfigVal    *restclient.Config
 	CommandVal         string
