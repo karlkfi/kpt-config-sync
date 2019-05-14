@@ -40,12 +40,12 @@ e2e-staging: \
 download-cli: GO_BIN_DIR:=$(OUTPUT_DIR)/go/bin/linux_amd64
 download-cli: $(OUTPUT_DIR)
 	@mkdir -p $(GO_BIN_DIR)
-	@curl -o $(GO_BIN_DIR)/nomos https://storage.googleapis.com/nomos-release/latest/linux_amd64/nomos
+	@curl -o $(GO_BIN_DIR)/nomos https://storage.googleapis.com/config-management-release/latest/linux_amd64/nomos
 	@chmod +x $(GO_BIN_DIR)/nomos
 
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
-# or need a nomos-release version of the e2e-tests image.
+# or need a config-management-release version of the e2e-tests image.
 image-e2e-tests: \
 		e2e-staging \
 		build/e2e-tests/Dockerfile \
