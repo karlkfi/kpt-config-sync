@@ -1,5 +1,5 @@
 kind: PodSecurityPolicy
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 metadata:
   name: e2e-test-podsecuritypolicy
 spec:
