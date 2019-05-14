@@ -7,7 +7,6 @@ import (
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -113,11 +112,6 @@ func Deployment() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("Deployment")
 }
 
-// DaemonSet returns the canonical DaemonSet GroupVersionKind
-func DaemonSet() schema.GroupVersionKind {
-	return appsv1.SchemeGroupVersion.WithKind("DaemonSet")
-}
-
 // ReplicaSet returns the canonical ReplicaSet GroupVersionKind
 func ReplicaSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("ReplicaSet")
@@ -131,11 +125,6 @@ func HierarchyConfig() schema.GroupVersionKind {
 // HierarchicalQuota returns the canonical HierarchyConfig GroupVersionKind
 func HierarchicalQuota() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind("HierarchicalQuota")
-}
-
-// NetworkPolicy returns the canonical NetworkPolicy GroupVersionKind
-func NetworkPolicy() schema.GroupVersionKind {
-	return networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy")
 }
 
 // ConfigManagement returns the GroupVersionKind for ConfigManagement, an object

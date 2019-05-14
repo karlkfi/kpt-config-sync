@@ -45,7 +45,6 @@ func (n NomosVisitorProvider) Visitors(
 		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewDisallowSystemObjectsValidator(),
-		syntax.NewDeprecatedGroupKindValidator(),
 		metadata.NewNameValidator(),
 		metadata.NewNamespaceAnnotationValidator(),
 		metadata.NewNamespaceValidator(),
