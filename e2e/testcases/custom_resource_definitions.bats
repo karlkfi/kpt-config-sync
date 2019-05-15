@@ -175,7 +175,7 @@ function teardown() {
   wait::for -f -t 30 -- kubectl get anvils e2e-test-anvil -n default
 }
 
-@test "CRD added, CR added, CR removed, which causes vet failure" {
+@test "CRD added, CR added, CRD removed, which causes vet failure" {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit

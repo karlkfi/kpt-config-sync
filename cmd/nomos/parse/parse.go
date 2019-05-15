@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/informer"
 	"github.com/google/nomos/pkg/client/meta"
@@ -58,6 +60,10 @@ func clusterConfigs(config *rest.Config, stopCh <-chan struct{}) (*namespaceconf
 
 	informerFactory := informer.NewSharedInformerFactory(
 		client.ConfigManagement(), minute)
+	_, iErr := informerFactory.ForResource(v1.SchemeGroupVersion.WithResource("clusterconfigs"))
+	if iErr != nil {
+		return nil, errors.Wrap(iErr, "failed get clusterconfig informater")
+	}
 	informerFactory.Start(stopCh)
 	synced := informerFactory.WaitForCacheSync(stopCh)
 	for syncType, ok := range synced {
