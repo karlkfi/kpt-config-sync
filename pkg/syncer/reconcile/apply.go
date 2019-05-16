@@ -24,7 +24,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
-	"k8s.io/kubernetes/pkg/kubectl/scheme"
 )
 
 // Applier updates a resource from its current state to its intended state using apply operations.
@@ -155,8 +154,9 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 	var patchType types.PatchType
 
 	gvk := intendedState.GetObjectKind().GroupVersionKind()
-	versionedObject, sErr := scheme.Scheme.New(gvk)
-	_, unversioned := scheme.Scheme.IsUnversioned(intendedState)
+	scheme := runtime.NewScheme()
+	versionedObject, sErr := scheme.New(gvk)
+	_, unversioned := scheme.IsUnversioned(intendedState)
 	switch {
 	case runtime.IsNotRegisteredError(sErr) || unversioned:
 		preconditions := []mergepatch.PreconditionFunc{
