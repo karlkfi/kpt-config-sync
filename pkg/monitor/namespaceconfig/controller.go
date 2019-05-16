@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/nomos/pkg/util/repo"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/monitor/state"
@@ -42,16 +44,17 @@ var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler responds to changes to NamespaceConfigs by updating its ClusterState.
 type Reconciler struct {
-	cache cache.Cache
-	state *state.ClusterState
+	cache  cache.Cache
+	state  *state.ClusterState
+	repoCl *repo.Client
 }
 
 // Reconcile is the callback for Reconciler.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	config := &v1.NamespaceConfig{}
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
+	config := &v1.NamespaceConfig{}
 	err := r.cache.Get(ctx, types.NamespacedName{Name: request.Name}, config)
 	switch {
 	case err == nil:
@@ -65,17 +68,24 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		glog.Errorf("Could not reconcile NamespaceConfig %q: %v", request.Name, err)
 	}
+
+	if repoObj, err := r.repoCl.GetOrCreateRepo(ctx); err != nil {
+		glog.Errorf("Failed to fetch Repo: %v", err)
+	} else {
+		r.state.ProcessRepo(repoObj)
+	}
 	return reconcile.Result{}, err
 }
 
 // AddController adds a controller to the given manager which reconciles monitoring data for
 // NamespaceConfigs.
-func AddController(mgr manager.Manager, cs *state.ClusterState) error {
+func AddController(mgr manager.Manager, repoCl *repo.Client, cs *state.ClusterState) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{
 		Reconciler: &Reconciler{
-			cache: mgr.GetCache(),
-			state: cs,
+			cache:  mgr.GetCache(),
+			state:  cs,
+			repoCl: repoCl,
 		},
 	})
 	if err != nil {

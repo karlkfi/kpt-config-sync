@@ -32,12 +32,14 @@ type ClusterState struct {
 	lastImport time.Time
 	lastSync   time.Time
 	syncStates map[string]v1.ConfigSyncState
+	errors     map[string]int
 }
 
 // NewClusterState returns a new ClusterState.
 func NewClusterState() *ClusterState {
 	return &ClusterState{
 		syncStates: map[string]v1.ConfigSyncState{},
+		errors:     map[string]int{},
 	}
 }
 
@@ -78,12 +80,35 @@ func (c *ClusterState) ProcessNamespaceConfig(pn *v1.NamespaceConfig) error {
 	return nil
 }
 
+// ProcessRepo updates the ClusterState with the current number of errors in the Repo.
+func (c *ClusterState) ProcessRepo(repo *v1.Repo) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
+	c.errors["source"] = len(repo.Status.Source.Errors)
+	c.errors["importer"] = len(repo.Status.Import.Errors)
+
+	syncErrs := 0
+	for _, change := range repo.Status.Sync.InProgress {
+		syncErrs += len(change.Errors)
+	}
+	c.errors["syncer"] = syncErrs
+
+	c.updateErrors()
+}
+
 func (c *ClusterState) recordLatency(name string, newState v1.ConfigSyncState, importTime, syncTime metav1.Time) {
 	oldState := c.syncStates[name]
 	if oldState.IsSynced() || !newState.IsSynced() {
 		return
 	}
 	Metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
+}
+
+func (c *ClusterState) updateErrors() {
+	for component, count := range c.errors {
+		Metrics.Errors.WithLabelValues(component).Set(float64(count))
+	}
 }
 
 func (c *ClusterState) updateState(name string, newState v1.ConfigSyncState) error {

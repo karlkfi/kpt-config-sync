@@ -64,7 +64,7 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Error {
 
 	start := time.Now()
 	err := c.Client.Create(ctx, obj)
-	c.latencyMetric.WithLabelValues("create", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+	c.recordLatency(start, "create", kind, metrics.StatusLabel(err))
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
@@ -104,7 +104,7 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 		err = errors.Wrapf(err, "delete failed for %s", description)
 	}
 
-	c.latencyMetric.WithLabelValues("delete", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+	c.recordLatency(start, "delete", kind, metrics.StatusLabel(err))
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 
 		start := time.Now()
 		err = clientUpdateFn(ctx, newObj)
-		c.latencyMetric.WithLabelValues("update", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+		c.recordLatency(start, "update", kind, metrics.StatusLabel(err))
 
 		if err == nil {
 			newV := resourceVersion(newObj)
@@ -196,13 +196,20 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 
 	start := time.Now()
 	err := c.Client.Update(ctx, obj)
-	c.latencyMetric.WithLabelValues("update", kind, metrics.StatusLabel(err)).Observe(time.Since(start).Seconds())
+	c.recordLatency(start, "update", kind, metrics.StatusLabel(err))
 
 	if err != nil {
 		return errors.Wrapf(err, "upsert failed for %s", description)
 	}
 	glog.V(1).Infof("Upsert OK for %s", description)
 	return nil
+}
+
+func (c *Client) recordLatency(start time.Time, lvs ...string) {
+	if c.latencyMetric == nil {
+		return
+	}
+	c.latencyMetric.WithLabelValues(lvs...).Observe(time.Since(start).Seconds())
 }
 
 // resourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its Kind.

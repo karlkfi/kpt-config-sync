@@ -8,19 +8,30 @@ import (
 // Metrics contains the Prometheus metrics for the monitor state.
 var Metrics = struct {
 	Configs     *prometheus.GaugeVec
+	Errors      *prometheus.GaugeVec
 	LastImport  prometheus.Gauge
 	LastSync    prometheus.Gauge
 	SyncLatency prometheus.Histogram
 }{
 	prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Help:      "Total number of configs (cluster and namespace) grouped by their sync status",
+			Help:      "Current number of configs (cluster and namespace) grouped by their sync status",
 			Namespace: configmanagement.MetricsNamespace,
 			Subsystem: "monitor",
 			Name:      "configs",
 		},
 		// status: synced, stale, error
 		[]string{"status"},
+	),
+	prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Help:      "Current number of errors in the config repo, grouped by the component where they occurred",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "monitor",
+			Name:      "errors",
+		},
+		// component: source, importer, syncer
+		[]string{"component"},
 	),
 	prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -52,6 +63,7 @@ var Metrics = struct {
 func init() {
 	prometheus.MustRegister(
 		Metrics.Configs,
+		Metrics.Errors,
 		Metrics.LastImport,
 		Metrics.LastSync,
 		Metrics.SyncLatency,
