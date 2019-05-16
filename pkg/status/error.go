@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const urlBase = "For more information, see https://cloud.google.com/csp-config-management/docs/errors#knv"
+const urlBase = "For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv"
 
 func url(code string) string {
 	return urlBase + code

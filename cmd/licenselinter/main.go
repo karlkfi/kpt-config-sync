@@ -216,7 +216,7 @@ func classifyLicense(f string) (licenseType, []byte, error) {
 
 func aggregateLicenses(metas []*metadata) string {
 	var out strings.Builder
-	out.WriteString("THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED IN PORTIONS OF THE CSP CONFIG MANAGEMENT PRODUCT.\n")
+	out.WriteString("THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED IN PORTIONS OF THE ANTHOS CONFIG MANAGEMENT PRODUCT.\n")
 	for _, m := range metas {
 		for _, t := range m.LicenseText {
 			out.WriteString("\n-----\n\n")

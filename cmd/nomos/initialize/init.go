@@ -28,10 +28,10 @@ func init() {
 // Cmd is the Cobra object representing the nomos init command
 var Cmd = &cobra.Command{
 	Use:   "init DIRECTORY",
-	Short: "Initialize a CSP Configuration Management directory",
-	Long: `Initialize a CSP Configuration Management directory
+	Short: "Initialize a Anthos Configuration Management directory",
+	Long: `Initialize a Anthos Configuration Management directory
 
-Set up a working CSP Configuration Management directory with a default Repo object, documentation,
+Set up a working Anthos Configuration Management directory with a default Repo object, documentation,
 and directories.
 
 By default, does not initialize directories containing files. Use --force to

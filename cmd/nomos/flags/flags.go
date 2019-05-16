@@ -25,14 +25,14 @@ func AddContexts(cmd *cobra.Command) {
 // AddPath adds the --path flag
 func AddPath(cmd *cobra.Command) {
 	cmd.Flags().Var(&Path, pathFlag,
-		`Root directory to use as a CSP Configuration Management repository.`)
+		`Root directory to use as a Anthos Configuration Management repository.`)
 }
 
 // AddValidate adds the --validate flag for whether to use schemas for
 // validating
 func AddValidate(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&Validate, validateFlag, true,
-		`If true, use a schema to validate the CSP Configuration Management repository.`)
+		`If true, use a schema to validate the Anthos Configuration Management repository.`)
 }
 
 var (

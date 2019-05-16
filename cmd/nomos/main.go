@@ -27,7 +27,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use: configmanagement.CLIName,
 		Short: fmt.Sprintf(
-			"Set up and manage a CSP Configuration Management directory (version %v)", pkgversion.VERSION),
+			"Set up and manage a Anthos Configuration Management directory (version %v)", pkgversion.VERSION),
 	}
 )
 
