@@ -18,6 +18,7 @@ package backend
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -37,6 +38,7 @@ func allConfigs(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.
 		ClusterConfig:    &cp,
 		NamespaceConfigs: map[string]v1.NamespaceConfig{},
 		Syncs:            map[string]v1.Sync{},
+		ImportToken:      vt.ImportToken,
 	}
 	for _, pn := range pns {
 		ap.NamespaceConfigs[pn.Name] = pn
@@ -54,6 +56,8 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 	ov := NewOutputVisitor(false)
 	tc.input.Accept(ov)
 	actual := ov.AllConfigs()
+	// LoadTime is hard to get right, so just set it to zero
+	actual.LoadTime = time.Time{}
 	if diff := cmp.Diff(tc.expect, actual, resourcequota.ResourceQuantityEqual()); diff != "" {
 		t.Errorf("mismatch on expected vs actual: %s", diff)
 	}

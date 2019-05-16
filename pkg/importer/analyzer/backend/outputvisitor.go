@@ -17,7 +17,7 @@ limitations under the License.
 package backend
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
@@ -84,7 +84,9 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 				ImportTime: v.loadTime,
 			},
 		},
-		Repo: g.Repo,
+		Repo:        g.Repo,
+		LoadTime:    g.LoadTime,
+		ImportToken: g.ImportToken,
 	}
 
 	if v.enableCRDs {

@@ -76,7 +76,7 @@ func (d *Differ) namespaceConfigActions(current, desired namespaceconfig.AllConf
 	}
 	for name := range current.NamespaceConfigs {
 		if _, found := desired.NamespaceConfigs[name]; !found {
-			actions = append(actions, d.factories.NamespaceConfigAction.NewDelete(name))
+			actions = append(actions, d.factories.NamespaceConfigAction.NewDelete(name, desired))
 			deletes++
 		}
 	}

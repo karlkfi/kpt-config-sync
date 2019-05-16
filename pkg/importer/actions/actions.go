@@ -20,7 +20,7 @@ import (
 
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -94,7 +94,7 @@ func (f namespaceConfigActionFactory) NewUpdate(namespaceConfig *v1.NamespaceCon
 }
 
 // NewDelete returns an action for deleting NamespaceConfigs.
-func (f namespaceConfigActionFactory) NewDelete(nodeName string) action.Interface {
+func (f namespaceConfigActionFactory) NewDelete(nodeName string, configs namespaceconfig.AllConfigs) action.Interface {
 	onExecute := func(duration float64, err error) {
 		importer.Metrics.Operations.WithLabelValues("delete", "namespace", statusLabel(err)).Inc()
 		importer.Metrics.APICallDuration.WithLabelValues("delete", "namespace", statusLabel(err)).Observe(duration)
@@ -102,6 +102,10 @@ func (f namespaceConfigActionFactory) NewDelete(nodeName string) action.Interfac
 	updateConfig := func(old runtime.Object) (runtime.Object, error) {
 		newNsConf := old.(*v1.NamespaceConfig).DeepCopy()
 		newNsConf.Spec.DeleteSyncedTime = metav1.Now()
+		// During a delete, the nsconfig is not present in the repo, so the outputvisitor can't update
+		// sync info during traversal; so, update here instead
+		newNsConf.Spec.Token = configs.ImportToken
+		newNsConf.Spec.ImportTime = metav1.NewTime(configs.LoadTime)
 		return newNsConf, nil
 	}
 	return action.NewReflectiveUpdateAction("", nodeName, updateConfig, f.ReflectiveActionSpec, onExecute)
