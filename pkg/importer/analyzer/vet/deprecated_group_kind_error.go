@@ -3,6 +3,7 @@ package vet
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -11,8 +12,9 @@ import (
 const DeprecatedGroupKindErrorCode = "1050"
 
 func init() {
-	status.Register(DeprecatedGroupKindErrorCode, UnsupportedObjectError{
-		Resource: customResourceDefinition(),
+	status.Register(DeprecatedGroupKindErrorCode, DeprecatedGroupKindError{
+		Resource: deprecatedDeployment(),
+		Expected: kinds.Deployment().GroupKind(),
 	})
 }
 

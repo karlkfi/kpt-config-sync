@@ -10,7 +10,7 @@ import (
 const InvalidCRDNameErrorCode = "1048"
 
 func init() {
-	status.Register(InvalidCRDNameErrorCode, UnsupportedObjectError{
+	status.Register(InvalidCRDNameErrorCode, InvalidCRDNameError{
 		Resource: customResourceDefinition(),
 	})
 }

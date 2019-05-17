@@ -10,6 +10,21 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func deprecatedDeployment() *ast.FileObject {
+	return &ast.FileObject{
+		Path: cmpath.FromSlash("namespaces/foo/deployment.yaml"),
+		Object: &v1alpha1.ClusterRole{
+			TypeMeta: v1.TypeMeta{
+				APIVersion: "extensions/v1beta1",
+				Kind:       kinds.Deployment().Kind,
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name: "deployment",
+			},
+		},
+	}
+}
+
 func customResourceDefinition() *ast.FileObject {
 	return &ast.FileObject{
 		Path: cmpath.FromSlash("cluster/crd.yaml"),

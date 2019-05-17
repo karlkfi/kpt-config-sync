@@ -41,9 +41,14 @@ func sortedErrors() []status.Error {
 
 func printErrorCodes() {
 	fmt.Println("=== USED ERROR CODES ===")
+	var codes []string
 	for code := range status.Registry() {
-		// TODO: Need to rethink how to document error names.
-		fmt.Printf("%s", code)
+		codes = append(codes, code)
+	}
+
+	sort.Strings(codes)
+	for _, code := range codes {
+		fmt.Println(code)
 	}
 	fmt.Println()
 }
