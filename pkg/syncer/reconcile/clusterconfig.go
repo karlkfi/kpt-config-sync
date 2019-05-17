@@ -113,8 +113,9 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	}
 
 	rErr := r.manageConfigs(ctx, clusterConfig)
-	if rErr != nil {
-		glog.Errorf("Could not reconcile clusterconfig: %v", rErr)
+	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
+	if filtered := filterWithCause(rErr, context.Canceled); filtered != nil {
+		glog.Errorf("Could not reconcile clusterconfig: %v", filtered)
 	}
 	return rErr
 }

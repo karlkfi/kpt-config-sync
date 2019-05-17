@@ -11,10 +11,16 @@ type resourceErrorImpl struct {
 }
 
 var _ ResourceError = resourceErrorImpl{}
+var _ Causer = resourceErrorImpl{}
 
 // Error implements error.
 func (p resourceErrorImpl) Error() string {
 	return format(p.errorImpl.error, formatResources(p.resources), p.Code())
+}
+
+// Cause returns the the error that caused this error
+func (p resourceErrorImpl) Cause() error {
+	return p.errorImpl.Cause()
 }
 
 // Code implements Error.

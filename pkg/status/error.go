@@ -37,6 +37,11 @@ type Error interface {
 	Code() string
 }
 
+// Causer defines an error with an underlying cause.
+type Causer interface {
+	Cause() error
+}
+
 // registered is a map from error codes to instances of the types they represent.
 // Entries set to true are reserved and MUST NOT be reused.
 var registered = map[string]bool{

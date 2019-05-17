@@ -12,10 +12,16 @@ type errorImpl struct {
 }
 
 var _ Error = errorImpl{}
+var _ Causer = errorImpl{}
 
 // Error implements error.
 func (e errorImpl) Error() string {
 	return format(e.error, "", e.code)
+}
+
+// Cause returns the the error that caused this error
+func (e errorImpl) Cause() error {
+	return errors.Cause(e.error)
 }
 
 // Code implements Error.

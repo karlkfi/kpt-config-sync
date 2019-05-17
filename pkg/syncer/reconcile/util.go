@@ -3,6 +3,10 @@ package reconcile
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"reflect"
+
+	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -72,4 +76,29 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 	}
 	_, err := client.UpdateStatus(ctx, config, updateFn)
 	return err
+}
+
+func filterWithCause(err error, cause error) error {
+	if errs, ok := err.(status.MultiError); ok {
+		return filterMultiErrorWithCause(errs, cause)
+	}
+	c := errors.Cause(err)
+	if reflect.DeepEqual(c, cause) {
+		return nil
+	}
+	// http client errors don't implement causer. The underlying error is in one of the struct's fields.
+	if ue, ok := c.(*url.Error); ok && reflect.DeepEqual(ue.Err, cause) {
+		return nil
+	}
+	return err
+}
+
+func filterMultiErrorWithCause(errs status.MultiError, cause error) status.MultiError {
+	var filtered status.MultiError
+	for _, e := range errs.Errors() {
+		if fe := filterWithCause(e, cause); fe != nil {
+			filtered = status.Append(filtered, fe)
+		}
+	}
+	return filtered
 }

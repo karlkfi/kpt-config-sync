@@ -102,8 +102,9 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	err := r.reconcileNamespaceConfig(ctx, name)
 	metrics.ReconcileDuration.WithLabelValues("namespace", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
-	if err != nil {
-		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, err)
+	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
+	if filtered := filterWithCause(err, context.Canceled); filtered != nil {
+		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, filtered)
 	}
 	return reconcile.Result{}, err
 }
@@ -297,7 +298,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		}
 	}
 	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs); err != nil {
-		errBuilder = status.Append(errBuilder, errors.Wrapf(err, "failed to set status for NamespaceConfig %q", name))
+		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to set status for NamespaceConfig %q", name))
 		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update NamespaceConfig status: %s", err)
 	}

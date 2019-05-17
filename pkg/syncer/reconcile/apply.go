@@ -208,9 +208,9 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 		return false, nil
 	}
 
-	if ctx.Err() != nil {
+	if err := ctx.Err(); err != nil {
 		// We've already encountered an error, so do not attempt update.
-		return false, status.ResourceWrap(ctx.Err(), "unable to continue updating resources")
+		return false, status.ResourceWrap(err, "unable to continue updating resources")
 	}
 
 	name, resourceDescription := nameDescription(intendedState)
