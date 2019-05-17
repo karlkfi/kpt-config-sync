@@ -1723,14 +1723,14 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		d.createTestFile(k, v)
 	}
 
-	f := fstesting.NewTestFactory(t)
+	f := fstesting.NewTestClientGetter(t)
 	defer func() {
 		if err := f.Cleanup(); err != nil {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
 
-	p, err := NewParserWithFactory(
+	p, err := NewParserWithClientGetter(
 		f,
 		ParserOpt{
 			Vet:        tc.vet,
@@ -2585,14 +2585,14 @@ func TestEmptyDirectories(t *testing.T) {
 				d.Fatalf("error creating test dir %s: %v", path, err)
 			}
 
-			f := fstesting.NewTestFactory(t)
+			f := fstesting.NewTestClientGetter(t)
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))
 				}
 			}()
 
-			p, err := NewParserWithFactory(
+			p, err := NewParserWithClientGetter(
 				f,
 				ParserOpt{
 					Vet:        false,

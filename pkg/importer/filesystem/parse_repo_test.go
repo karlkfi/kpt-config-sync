@@ -57,14 +57,14 @@ func (tc *testCase) Run(t *testing.T) {
 		}
 	}
 
-	f := fstesting.NewTestFactory(t)
+	f := fstesting.NewTestClientGetter(t)
 	defer func() {
 		if err := f.Cleanup(); err != nil {
 			t.Fatal(errors.Wrap(err, "could not clean up"))
 		}
 	}()
 
-	p, err2 := NewParserWithFactory(
+	p, err2 := NewParserWithClientGetter(
 		f,
 		ParserOpt{
 			Vet:        true,

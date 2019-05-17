@@ -49,8 +49,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
-	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	kubevalidation "k8s.io/kubernetes/pkg/kubectl/validation"
 )
 
 func init() {
@@ -64,7 +62,6 @@ func init() {
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
 	opts         ParserOpt
-	factory      cmdutil.Factory
 	clientGetter genericclioptions.RESTClientGetter
 	errors       status.MultiError
 }
@@ -90,20 +87,17 @@ func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, e
 	return p, nil
 }
 
-// NewParserWithFactory creates a new Parser using the specified Factory and parser options.
-func NewParserWithFactory(f cmdutil.Factory, opts ParserOpt) (*Parser, error) {
+// NewParserWithClientGetter creates a new Parser using the specified Factory and parser options.
+func NewParserWithClientGetter(cg genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
 	p := &Parser{
-		factory: f,
-		opts:    opts,
+		clientGetter: cg,
+		opts:         opts,
 	}
 	return p, nil
 }
 
-func (p *Parser) getFactory(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) cmdutil.Factory {
-	if p.factory != nil {
-		return p.factory
-	}
-	return cmdutil.NewFactory(importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, stubMissing, crds...))
+func (p *Parser) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
+	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, stubMissing, crds...))
 }
 
 // crtdsInRepo parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
@@ -147,7 +141,7 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		return nil, p.errors
 	}
 
-	discoveryClient, dErr := p.getFactory(false).ToDiscoveryClient()
+	discoveryClient, dErr := importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, false, crds...).ToDiscoveryClient()
 	if dErr != nil {
 		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
 		return nil, p.errors
@@ -250,7 +244,7 @@ func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v
 	}
 
 	visitors, err := resource.ExpandPathsToFileVisitors(
-		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, kubevalidation.NullSchema{})
+		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, nil)
 	if err != nil {
 		p.errors = status.Append(p.errors, status.PathWrapf(err, dir.AbsoluteOSPath()))
 		return nil
@@ -258,16 +252,10 @@ func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v
 
 	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
-		s, err := p.getFactory(stubMissing).Validator(p.opts.Validate)
-		if err != nil {
-			p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get schema"))
-			return nil
-		}
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		crdFactory := p.getFactory(stubMissing, crds...)
-		result := crdFactory.NewBuilder().
+		crdBuilder := p.getBuilder(stubMissing, crds...)
+		result := crdBuilder.
 			Unstructured().
-			Schema(s).
 			ContinueOnError().
 			FilenameParam(false, options).
 			Do()
