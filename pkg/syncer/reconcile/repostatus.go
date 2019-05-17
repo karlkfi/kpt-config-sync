@@ -184,8 +184,12 @@ func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs 
 // merge updates the given RepoStatus with current configs and commits in the syncState.
 func (s syncState) merge(repoStatus *v1.RepoStatus, now func() metav1.Time) {
 	if len(s.unreconciledCommits) == 0 {
-		glog.Infof("All commits are reconciled, updating RepoStatus sync token to %q.", repoStatus.Import.Token)
-		repoStatus.Sync.LatestToken = repoStatus.Import.Token
+		if len(repoStatus.Source.Errors) > 0 || len(repoStatus.Import.Errors) > 0 {
+			glog.Infof("No unreconciled commits but there are source/import errors. RepoStatus sync token will remain at %q.", repoStatus.Sync.LatestToken)
+		} else {
+			glog.Infof("All commits are reconciled, updating RepoStatus sync token to %q.", repoStatus.Import.Token)
+			repoStatus.Sync.LatestToken = repoStatus.Import.Token
+		}
 	} else {
 		glog.Infof("RepoStatus import token at %q, but %d commits are unreconciled. RepoStatus sync token will remain at %q.",
 			repoStatus.Import.Token, len(s.unreconciledCommits), repoStatus.Sync.LatestToken)

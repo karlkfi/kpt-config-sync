@@ -161,6 +161,33 @@ function ensure_token_updated() {
       "${token_name}" "${token}"
 }
 
+function get_last_update() {
+  local resource_type="${1}"
+  local resource_name="${2}"
+  local component_name="${3}"
+
+  run kubectl get "${resource_type}" "${resource_name}" \
+      --output="jsonpath={.status.${component_name}.lastUpdate}"
+}
+
+function timestamp_updated() {
+  local resource_type="${1}"
+  local resource_name="${2}"
+  local component_name="${3}"
+  local last_update="${4}"
+
+  local new_update
+  new_update="$(kubectl get "${resource_type}" "${resource_name}" \
+      --output="jsonpath={.status.${component_name}.lastUpdate}")"
+
+  if [[ "${new_update}" == "${last_update}" ]]; then
+    # Fail, timestamp not updated
+    debug::log "initial timestamp: ${last_update}; last read timestamp: ${new_update}"
+    return 1
+  fi
+  return 0
+}
+
 @test "repo .status.import.token is updated" {
   ensure_token_updated "repo" "repo" ".status.import.token"
 }
@@ -211,3 +238,28 @@ function ensure_token_updated() {
       --output='jsonpath={.status.sync.inProgress[0].errors[0].code}'
 }
 
+@test "repo .status.sync.token is not populated on initial invalid repo" {
+  get_last_update "repo" "repo" "sync"
+  local last_update="${output}"
+
+  debug::log "Ensure errorful repo by adding two dirs with the same name"
+  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/foo/dir/namespace.yaml
+  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/bar/dir/namespace.yaml
+  git::commit -a -m "Attempt to add two dirs with the same name"
+
+  debug::log "Check that an error code is set on import status"
+  wait::for -t 30 -o "KNV1002" -- \
+    kubectl get repo repo --output='jsonpath={.status.import.errors[0].code}'
+
+  debug::log "Check that sync timestamp is updated"
+  wait::for -t 60 -- \
+      timestamp_updated "repo" "repo" "sync" "${last_update}"
+
+  debug::log "Check that sync token is not updated"
+  run kubectl get repo repo --output="jsonpath={.status.sync.latestToken}"
+  # shellcheck disable=SC2154
+  if [[ "${output}" != "" ]]; then
+    debug::log "repo repo .status.sync.latestToken is filled in and should not be."
+    debug::error "$(kubectl get repo repo -o yaml)"
+  fi
+}
