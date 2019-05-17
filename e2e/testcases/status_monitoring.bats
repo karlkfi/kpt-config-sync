@@ -23,6 +23,7 @@ setup() {
 }
 
 teardown() {
+  kubectl delete repo repo --ignore-not-found
   setup::common_teardown
 }
 
