@@ -16,9 +16,11 @@ limitations under the License.
 package restconfig
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -91,26 +93,36 @@ func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "while getting config path")
 	}
+
 	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}
 	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	apiCfg, err := clientCfg.RawConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "while building client config")
 	}
+
+	var badConfigs []string
 	configs := map[string]*rest.Config{}
 	for ctxName := range apiCfg.Contexts {
 		cfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			rules, &clientcmd.ConfigOverrides{CurrentContext: ctxName})
 		restCfg, err := cfg.ClientConfig()
 		if err != nil {
-			return nil, errors.Wrapf(err, "while building config for %q context", ctxName)
+			badConfigs = append(badConfigs, fmt.Sprintf("%q: %v", ctxName, err))
+			continue
 		}
+
 		if timeout > 0 {
 			restCfg.Timeout = timeout
 		}
 		configs[ctxName] = restCfg
 	}
-	return configs, nil
+
+	var cfgErrs error
+	if len(badConfigs) > 0 {
+		cfgErrs = fmt.Errorf("failed to build configs:\n%s", strings.Join(badConfigs, "\n"))
+	}
+	return configs, cfgErrs
 }
 
 // NewKubectlConfig creates a config for whichever context is active in kubectl.

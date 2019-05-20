@@ -41,9 +41,16 @@ var (
 `,
 		Example: `  nomos version`,
 		Run: func(_ *cobra.Command, _ []string) {
-			versionInternal(
-				restconfig.AllKubectlConfigs, os.Stdout,
-				flags.Contexts)
+			allCfgs, err := restconfig.AllKubectlConfigs(30 * time.Second)
+			if err != nil {
+				// nolint:errcheck
+				fmt.Printf("failed to create client configs: %v\n", err)
+			}
+			if allCfgs == nil {
+				os.Exit(255)
+			}
+
+			versionInternal(allCfgs, os.Stdout, flags.Contexts)
 		},
 	}
 
@@ -58,25 +65,14 @@ var (
 )
 
 // versionInternal allows stubbing out the config for tests.
-func versionInternal(
-	configs func(time.Duration) (map[string]*rest.Config, error),
-	w io.Writer, contexts []string) {
-
+func versionInternal(configs map[string]*rest.Config, w io.Writer, contexts []string) {
 	// See go/nomos-cli-version-design for the output below.
-	allCfgs, err := configs(30 * time.Second)
-	if err != nil {
-		// nolint:errcheck
-		fmt.Fprintf(w, "could not get kubernetes config file: %v", err)
-		os.Exit(255)
-	}
-	cfgs := allCfgs
-
 	if contexts != nil {
 		// filter by specified contexts
-		cfgs = filterConfigs(contexts, allCfgs)
+		configs = filterConfigs(contexts, configs)
 	}
 
-	vs := versions(cfgs)
+	vs := versions(configs)
 	es := entries(vs)
 	tabulate(es, w)
 }

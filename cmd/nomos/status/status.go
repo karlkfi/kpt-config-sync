@@ -74,8 +74,11 @@ var Cmd = &cobra.Command{
 // are initialized from.
 func repoClients(contexts []string) (map[string]typedv1.RepoInterface, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
-	if err != nil {
+	if configs == nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
+	}
+	if err != nil {
+		fmt.Println(err)
 	}
 	configs = filterConfigs(contexts, configs)
 
@@ -84,10 +87,8 @@ func repoClients(contexts []string) (map[string]typedv1.RepoInterface, error) {
 	for name, cfg := range configs {
 		policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create configmanagement clientset")
-		}
-		// Do a quick ping to see if the cluster is healthy/reachable and filter it out if it is not.
-		if isReachable(policyHierarchyClientSet, name) {
+			fmt.Printf("Failed to generate clientset for %q: %v\n", name, err)
+		} else if isReachable(policyHierarchyClientSet, name) {
 			clientMap[name] = policyHierarchyClientSet.ConfigmanagementV1().Repos()
 		} else {
 			clientMap[name] = nil

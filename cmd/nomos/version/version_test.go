@@ -3,7 +3,6 @@ package version
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,10 +95,7 @@ func TestVersion(t *testing.T) {
 				return fake.NewSimpleDynamicClient(runtime.NewScheme(), test.objects...), nil
 			}
 			var b strings.Builder
-			c := func(time.Duration) (map[string]*rest.Config, error) {
-				return test.configs, nil
-			}
-			versionInternal(c, &b, test.contexts)
+			versionInternal(test.configs, &b, test.contexts)
 			actuals := strings.Split(b.String(), "\n")
 			if diff := cmp.Diff(test.expected, actuals); diff != "" {
 				t.Errorf(diff)
