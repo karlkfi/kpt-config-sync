@@ -35,6 +35,16 @@ var (
 		// status: success, error
 		[]string{"operation", "type", "status"},
 	)
+	ControllerRestarts = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Help:      "Total restart count for the NamespaceConfig and ClusterConfig controllers",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "syncer",
+			Name:      "controller_restarts_total",
+		},
+		// source: sync, crd
+		[]string{"source"},
+	)
 	Operations = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Help:      "Total operations that have been performed to sync resources to source of truth",
@@ -74,6 +84,7 @@ var (
 func init() {
 	prometheus.MustRegister(
 		APICallDuration,
+		ControllerRestarts,
 		Operations,
 		ReconcileDuration,
 		ReconcileEventTimes,

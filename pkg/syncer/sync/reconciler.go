@@ -134,7 +134,15 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, name string) error 
 		return err
 	}
 
-	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, restartSubManager(name)); err != nil {
+	eventTriggeredRestart := restartSubManager(name)
+	source := "sync"
+	if eventTriggeredRestart {
+		// The only other controller that restarts SubManager is the crd controller. Otherwise,
+		// we know the source is this controller.
+		source = "crd"
+	}
+	metrics.ControllerRestarts.WithLabelValues(source).Inc()
+	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, eventTriggeredRestart); err != nil {
 		glog.Errorf("Could not start SubManager: %v", err)
 		return err
 	}
