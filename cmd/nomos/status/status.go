@@ -27,6 +27,7 @@ import (
 
 const (
 	maxNameLength = 50
+	maxTokenLength = 8
 )
 
 var (
@@ -279,14 +280,12 @@ func errorRow(name string, err string) string {
 // statusRow returns the given RepoStatus formated as a printable row.
 func statusRow(name string, status v1.RepoStatus) string {
 	token := status.Sync.LatestToken
-	if token == "" {
+	if len(token) == 0 {
 		token = "N/A"
+	} else if len(token) > maxTokenLength {
+		token = token[:maxTokenLength]
 	}
-	max := 8
-	if len(token) < max {
-		max = len(token)
-	}
-	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token[:max])
+	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token)
 }
 
 // naStatusRow returns a printable row for a cluster that is N/A.
