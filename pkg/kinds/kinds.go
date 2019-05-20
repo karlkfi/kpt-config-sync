@@ -142,9 +142,9 @@ func ConfigMap() schema.GroupVersionKind {
 // that does not have other representation than a CRD in the operator library.
 func ConfigManagement() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
-		Group:   "addons.sigs.k8s.io",
-		Version: "v1alpha1",
-		Kind:    configmanagement.OperatorKind,
+		Group:   "configmanagement.gke.io",
+		Version: "v1",
+		Kind:    "ConfigManagement",
 	}
 }
 

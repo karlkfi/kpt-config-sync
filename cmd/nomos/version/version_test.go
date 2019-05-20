@@ -35,7 +35,7 @@ func TestVersion(t *testing.T) {
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"kind":       configmanagement.OperatorKind,
-						"apiVersion": "addons.sigs.k8s.io/v1alpha1",
+						"apiVersion": "configmanagement.gke.io/v1",
 						"metadata": map[string]interface{}{
 							"name":      "config-management",
 							"namespace": "",
@@ -71,7 +71,7 @@ func TestVersion(t *testing.T) {
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"kind":       configmanagement.OperatorKind,
-						"apiVersion": "addons.sigs.k8s.io/v1alpha1",
+						"apiVersion": "configmanagement.gke.io/v1",
 						"metadata": map[string]interface{}{
 							"name":      "config-management",
 							"namespace": "",

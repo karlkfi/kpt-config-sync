@@ -13,7 +13,7 @@ This example command will configure your cluster to use the `foo-corp` example
 contained in this repository:
 
 ```yaml
-apiVersion: addons.sigs.k8s.io/v1alpha1
+apiVersion: configmanagement.gke.io/v1
 kind: ConfigManagement
 metadata:
   name: config-management

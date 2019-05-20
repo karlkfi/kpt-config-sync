@@ -27,8 +27,8 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 		return nil, err
 	}
 	gvr := schema.GroupVersionResource{
-		Group:   "addons.sigs.k8s.io",
-		Version: "v1alpha1",
+		Group:   "configmanagement.gke.io",
+		Version: "v1",
 		// The dynamic client needs the plural resource form to be able to
 		// construct a correct resource URL.
 		Resource: "configmanagements",
