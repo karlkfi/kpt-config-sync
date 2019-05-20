@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	maxNameLength = 50
+	maxNameLength  = 50
 	maxTokenLength = 8
 )
 
