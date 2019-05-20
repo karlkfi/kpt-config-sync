@@ -77,11 +77,6 @@ teardown() {
   kubectl patch configmanagement config-management --type=merge \
     -p "{\"spec\":{\"clusterName\": \"e2e-test-cluster\"}}"
 
-  wait::for -t 60 -- kubectl get configmap cluster-name -n config-management-system
-  wait::for -t 60 -o 1 -- \
-    kubectl get deployment -n config-management-system git-importer \
-      --output='jsonpath={.status.availableReplicas}'
-
   local resname="aggregate"
   local expectRulesCount=2
 
@@ -173,11 +168,6 @@ function validate_configmap_labels() {
   debug::log "Ensure ConfigManagement has cluster name, so we can assume all expected annotations are present"
   kubectl patch configmanagement config-management --type=merge \
     -p "{\"spec\":{\"clusterName\": \"e2e-test-cluster\"}}"
-
-  wait::for -t 60 -- kubectl get configmap cluster-name -n config-management-system
-  wait::for -t 60 -o 1 -- \
-    kubectl get deployment -n config-management-system git-importer \
-      --output='jsonpath={.status.availableReplicas}'
 
   local resname="e2e-test-configmap"
   local ns="backend"
