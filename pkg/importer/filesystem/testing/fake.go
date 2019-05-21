@@ -132,15 +132,20 @@ type TestClientGetter struct {
 	UnstructuredClientForMappingFunc func(mapping *meta.RESTMapping) (resource.RESTClient, error)
 }
 
-// NewTestClientGetter returns a new test factory.
+// NewTestClientGetter returns a new test RESTClientGetter that has mappings for test and provided resources.
 func NewTestClientGetter(t *testing.T, extraResources ...*restmapper.APIGroupResources) *TestClientGetter {
+	return NewStubbedClientGetter(t, NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))))
+}
+
+// NewStubbedClientGetter returns a new test RESTClientGetter which uses the provided DiscoveryClient.
+func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscoveryInterface) *TestClientGetter {
 	// specify an optionalClientConfig to explicitly use in testing
 	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig(t)
 	rConfig, _ := config.ClientConfig()
 	cg := &FakeRESTClientGetter{
 		Config:          config,
-		DiscoveryClient: NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
+		DiscoveryClient: discoveryClient,
 		RestMapper:      RestMapper(),
 	}
 	return &TestClientGetter{

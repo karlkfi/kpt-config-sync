@@ -1730,7 +1730,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		}
 	}()
 
-	p, err := NewParserWithClientGetter(
+	p := NewParser(
 		f,
 		ParserOpt{
 			Vet:        tc.vet,
@@ -1739,10 +1739,6 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			Extension:  &NomosVisitorProvider{},
 		},
 	)
-	if err != nil {
-		t.Fatalf("unexpected error: %#v", err)
-	}
-
 	actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
 
 	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
@@ -2592,7 +2588,7 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
-			p, err := NewParserWithClientGetter(
+			p := NewParser(
 				f,
 				ParserOpt{
 					Vet:        false,
@@ -2601,10 +2597,6 @@ func TestEmptyDirectories(t *testing.T) {
 					Extension:  &NomosVisitorProvider{},
 				},
 			)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
 			actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)

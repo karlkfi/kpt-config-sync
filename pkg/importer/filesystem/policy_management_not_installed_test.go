@@ -3,47 +3,47 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/status"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/discovery"
 )
-
-type successServerResourcesInterface struct {
-	discovery.ServerResourcesInterface
-}
-
-func (f successServerResourcesInterface) ServerResourcesForGroupVersion(gv string) (*v1.APIResourceList, error) {
-	return nil, nil
-}
-
-type failServerResourcesInterface struct {
-	discovery.ServerResourcesInterface
-}
-
-func (f failServerResourcesInterface) ServerResourcesForGroupVersion(gv string) (*v1.APIResourceList, error) {
-	return nil, status.InternalError.New("error")
-}
 
 func TestPolicyManagementNotInstalled(t *testing.T) {
 	testCases := []struct {
 		name       string
-		resources  discovery.ServerResourcesInterface
+		resources  discovery.CachedDiscoveryInterface
 		shouldFail bool
 	}{
 		{
 			name:      "success adds no error",
-			resources: successServerResourcesInterface{},
+			resources: fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
 		},
 		{
 			name:       "fail adds error",
-			resources:  failServerResourcesInterface{},
+			resources:  fstesting.NewFakeCachedDiscoveryClient(nil),
 			shouldFail: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			eb := validateInstallation(tc.resources)
+			f := fstesting.NewStubbedClientGetter(t, tc.resources)
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
+
+			p := NewParser(
+				f,
+				ParserOpt{
+					Vet:        false,
+					Validate:   true,
+					EnableCRDs: true,
+					Extension:  &NomosVisitorProvider{},
+				},
+			)
+			eb := p.ValidateInstallation()
 
 			if tc.shouldFail {
 				if eb == nil {

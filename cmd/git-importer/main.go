@@ -59,10 +59,10 @@ func main() {
 	policyDir := path.Join(*gitDir, *policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
 
-	parser, err := filesystem.NewParser(
+	parser := filesystem.NewParser(
 		&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}, EnableCRDs: *enableCRDs})
-	if err != nil {
-		glog.Fatalf("Failed to create parser: %+v", err)
+	if err := parser.ValidateInstallation(); err != nil {
+		glog.Fatalf("Found issues: %v", err)
 	}
 
 	go service.ServeMetrics()

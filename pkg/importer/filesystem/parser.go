@@ -79,21 +79,12 @@ type ParserOpt struct {
 }
 
 // NewParser creates a new Parser using the specified RESTClientGetter and parser options.
-func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
+func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) *Parser {
 	p := &Parser{
 		clientGetter: c,
 		opts:         opts,
 	}
-	return p, nil
-}
-
-// NewParserWithClientGetter creates a new Parser using the specified Factory and parser options.
-func NewParserWithClientGetter(cg genericclioptions.RESTClientGetter, opts ParserOpt) (*Parser, error) {
-	p := &Parser{
-		clientGetter: cg,
-		opts:         opts,
-	}
-	return p, nil
+	return p
 }
 
 func (p *Parser) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
@@ -141,16 +132,6 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		return nil, p.errors
 	}
 
-	discoveryClient, dErr := importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, false, crds...).ToDiscoveryClient()
-	if dErr != nil {
-		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
-		return nil, p.errors
-	}
-
-	// Always make sure we're getting the freshest data.
-	discoveryClient.Invalidate()
-	p.errors = status.Append(p.errors, validateInstallation(discoveryClient))
-
 	if p.errors != nil {
 		return nil, p.errors
 	}
@@ -168,6 +149,9 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		currentConfigs.CRDClusterConfig,
 		crds)
 	p.errors = status.Append(p.errors, err)
+
+	discoveryClient, dErr := p.discoveryClient(crds...)
+	p.errors = status.Append(p.errors, dErr)
 
 	if p.errors != nil {
 		return nil, p.errors
@@ -297,19 +281,36 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 	return specs
 }
 
-// validateInstallation checks to see if Nomos is installed properly.
+// ValidateInstallation checks to see if Nomos is installed properly.
 // TODO(b/123598820): Server-side validation for this check.
-func validateInstallation(resources discovery.ServerResourcesInterface) status.MultiError {
-	gv := v1.SchemeGroupVersion.String()
-	_, err := resources.ServerResourcesForGroupVersion(gv)
+func (p *Parser) ValidateInstallation() status.MultiError {
+	resources, err := p.discoveryClient()
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		return status.From(err)
+	}
+
+	gv := v1.SchemeGroupVersion.String()
+	_, rErr := resources.ServerResourcesForGroupVersion(gv)
+	if rErr != nil {
+		if apierrors.IsNotFound(rErr) {
 			return status.From(vet.ConfigManagementNotInstalledError(
 				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv)))
 		}
-		return status.From(vet.ConfigManagementNotInstalledError(err))
+		return status.From(vet.ConfigManagementNotInstalledError(rErr))
 	}
 	return nil
+}
+
+func (p *Parser) discoveryClient(crds ...*v1beta1.CustomResourceDefinition) (discovery.ServerResourcesInterface, error) {
+	discoveryClient, dErr := importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, true, crds...).ToDiscoveryClient()
+	if dErr != nil {
+		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
+		return nil, p.errors
+	}
+
+	// Always make sure we're getting the freshest data.
+	discoveryClient.Invalidate()
+	return discoveryClient, nil
 }
 
 // asDefaultVersionedOrOriginal returns the object as a Go object in the external form if possible (matching the

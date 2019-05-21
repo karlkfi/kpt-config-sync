@@ -30,9 +30,9 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 
 	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
 	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: config.Host}
-	p, err := filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create parser")
+	p := filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt)
+	if err := p.ValidateInstallation(); err != nil {
+		return nil, errors.Wrap(err, "Found issues")
 	}
 
 	stopCh := make(chan struct{})
