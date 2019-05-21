@@ -35,6 +35,13 @@ function install() {
 }
 
 function cleanup() {
+  echo "printing diagonstics"
+  echo "+ operator logs"
+  (kubectl -n kube-system logs -l k8s-app=config-management-operator --tail=100) || true
+  echo "+ importer pod"
+  (kubectl -n config-management-system describe pod git-importer --tail=100) || true
+  echo "+ importer logs"
+  (kubectl -n config-management-system logs -l app=git-importer -c importer --tail=100) || true
   echo "cleaning up"
   kubectl delete configmanagement config-management --ignore-not-found
   wait::for -s -t 180 -- install::nomos_uninstalled
