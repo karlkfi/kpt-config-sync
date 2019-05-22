@@ -21,9 +21,6 @@ import (
 )
 
 const (
-	unknown                     = "<unknown>"
-	errMsg                      = "<error>"
-	notInstalled                = "<not installed>"
 	configManagementName        = "config-management"
 	configManagementVersionName = "configManagementVersion"
 )
@@ -114,9 +111,9 @@ func lookupVersion(name string, cfg *rest.Config) (string, error) {
 	u, err := i.Get(configManagementName, metav1.GetOptions{}, "")
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return notInstalled, nil
+			return util.NotInstalledMsg, nil
 		}
-		return errMsg, err
+		return util.ErrorMsg, err
 	}
 	c := u.UnstructuredContent()
 	// {
@@ -129,22 +126,22 @@ func lookupVersion(name string, cfg *rest.Config) (string, error) {
 	// }
 	s, ok := c["status"]
 	if !ok {
-		return errMsg, fmt.Errorf("internal error: can not parse status")
+		return util.ErrorMsg, fmt.Errorf("internal error: can not parse status")
 	}
 	sp, ok := s.(map[string]interface{})
 	if !ok {
-		return errMsg, fmt.Errorf("internal error: status is not a map")
+		return util.ErrorMsg, fmt.Errorf("internal error: status is not a map")
 	}
 	d, ok := sp[configManagementVersionName]
 	if !ok {
-		return unknown, nil
+		return util.UnknownMsg, nil
 	}
 	v, ok := d.(string)
 	if !ok {
-		return errMsg, fmt.Errorf("internal error: configManagementVersion is not a string")
+		return util.ErrorMsg, fmt.Errorf("internal error: configManagementVersion is not a string")
 	}
 	if v == "" {
-		v = unknown
+		v = util.UnknownMsg
 	}
 	return v, nil
 }

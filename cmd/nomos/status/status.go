@@ -28,6 +28,8 @@ import (
 const (
 	maxNameLength  = 50
 	maxTokenLength = 8
+	pendingMsg     = "PENDING"
+	syncedMsg      = "SYNCED"
 )
 
 var (
@@ -219,9 +221,9 @@ func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, 
 			repoList, listErr := repoClient.List(metav1.ListOptions{})
 
 			if listErr != nil {
-				result.status = errorRow(name, "NOT INSTALLED")
+				result.status = errorRow(name, util.NotInstalledMsg)
 			} else if len(repoList.Items) == 0 {
-				result.status = errorRow(name, "UNAVAILABLE")
+				result.status = errorRow(name, util.UnknownMsg)
 			} else {
 				repoStatus := repoList.Items[0].Status
 				result.status = statusRow(name, repoStatus)
@@ -297,12 +299,12 @@ func naStatusRow(name string) string {
 // getStatus returns the given RepoStatus formatted as a short summary string.
 func getStatus(status v1.RepoStatus) string {
 	if hasErrors(status) {
-		return "ERROR"
+		return util.ErrorMsg
 	}
 	if status.Sync.LatestToken == status.Source.Token && len(status.Sync.InProgress) == 0 {
-		return "SYNCED"
+		return syncedMsg
 	}
-	return "PENDING"
+	return pendingMsg
 }
 
 // hasErrors returns true if there are any config management errors present in the given RepoStatus.
