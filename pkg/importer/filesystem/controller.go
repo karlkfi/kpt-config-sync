@@ -140,9 +140,12 @@ func (c *Controller) pollDir(ctx context.Context) {
 			// Detect whether symlink has changed.
 			newDir, err := filepath.EvalSymlinks(c.configDir)
 			if err != nil {
-				glog.Errorf("failed to resolve config directory: %v", err)
+				glog.Errorf("Failed to resolve config directory: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateSourceStatus(ctx, nil, status.ToCME(status.From(err)))
+				sErr := status.SourceError.Errorf("unable to sync repo: %v\n"+
+					"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
+					err)
+				c.updateSourceStatus(ctx, nil, sErr.ToCME())
 				continue
 			}
 
@@ -172,15 +175,15 @@ func (c *Controller) pollDir(ctx context.Context) {
 			// Parse the commit hash from the new directory to use as an import token.
 			token, err := git.CommitHash(newDir)
 			if err != nil {
-				glog.Warningf("Failed to parse commit hash: %v", err)
+				glog.Warningf("Invalid format for config directory format: %v", err)
 				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateSourceStatus(ctx, nil, status.ToCME(status.From(err)))
+				c.updateSourceStatus(ctx, nil, status.SourceError.Errorf("unable to parse commit hash: %v", err).ToCME())
 				continue
 			}
 
 			// Before we start parsing the new directory, update the source token to reflect that this
 			// cluster has seen the change even if it runs into issues parsing/importing it.
-			repoObj := c.updateSourceStatus(ctx, &token, nil)
+			repoObj := c.updateSourceStatus(ctx, &token)
 			if repoObj == nil {
 				glog.Warningf("Repo object is missing. Restarting import of %s.", token)
 				// If we failed to get the Repo, restart the controller loop to try to fetch it again.
@@ -257,7 +260,7 @@ func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 // is loaded every time before updating.  If errs is nil,
 // Repo.Source.Status.Errors will be cleared.  if token is nil, it will not be
 // updated so as to preserve any prior content.
-func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs []v1.ConfigManagementError) *v1.Repo {
+func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
 	r, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
 		glog.Errorf("failed to get fresh Repo: %v", err)
