@@ -123,7 +123,7 @@ func Diffs(declared []*unstructured.Unstructured, actuals []*unstructured.Unstru
 		actualsMap[obj.GetName()] = obj
 	}
 
-	decls := asMap(declared)
+	decls := asComparableMap(declared)
 	var diffs []*Diff
 	for name, decl := range decls {
 		diffs = append(diffs, &Diff{
@@ -145,9 +145,13 @@ func Diffs(declared []*unstructured.Unstructured, actuals []*unstructured.Unstru
 	return diffs
 }
 
-func asMap(us []*unstructured.Unstructured) map[string]*unstructured.Unstructured {
+func asComparableMap(us []*unstructured.Unstructured) map[string]*unstructured.Unstructured {
 	m := map[string]*unstructured.Unstructured{}
 	for _, u := range us {
+		// Sometimes the status field is an empty struct. We disallow specifying the status field for configs,
+		// so we should just remove anything set. This keeps us from making changes that will immediately get reverted by
+		// other controllers.
+		unstructured.RemoveNestedField(u.UnstructuredContent(), "status")
 		name := u.GetName()
 		if _, found := m[name]; found {
 			panic(invalidInput{desc: fmt.Sprintf("Got duplicate decl for %q", name)})

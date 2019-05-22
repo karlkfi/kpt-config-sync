@@ -235,12 +235,15 @@ func (tm *TestMocks) ExpectNamespaceStatusUpdate(statusUpdate *v1.NamespaceConfi
 	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, statusUpdate))
 }
 
-// ToUnstructured converts the object to an unstructured.Unstructed.
+// ToUnstructured converts the object to an unstructured.Unstructured.
 func ToUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
 	if obj == nil {
 		return &unstructured.Unstructured{}
 	}
 	u, err := converter.ToUnstructured(obj)
+	// We explicitly remove the status field from objects during reconcile. So,
+	// we need to do the same for test objects we convert to unstructured.Unstructured.
+	unstructured.RemoveNestedField(u, "status")
 	if err != nil {
 		t.Fatalf("could not convert to unstructured type: %#v", obj)
 	}
