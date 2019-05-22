@@ -42,7 +42,7 @@ var (
 			Subsystem: "syncer",
 			Name:      "controller_restarts_total",
 		},
-		// source: sync, crd
+		// source: sync, crd, retry
 		[]string{"source"},
 	)
 	Operations = prometheus.NewCounterVec(

@@ -34,11 +34,11 @@ func (m *MockRestartSignal) EXPECT() *MockRestartSignalMockRecorder {
 }
 
 // Restart mocks base method
-func (m *MockRestartSignal) Restart() {
-	m.ctrl.Call(m, "Restart")
+func (m *MockRestartSignal) Restart(arg0 string) {
+	m.ctrl.Call(m, "Restart", arg0)
 }
 
 // Restart indicates an expected call of Restart
-func (mr *MockRestartSignalMockRecorder) Restart() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartSignal)(nil).Restart))
+func (mr *MockRestartSignalMockRecorder) Restart(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartSignal)(nil).Restart), arg0)
 }

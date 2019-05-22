@@ -82,7 +82,7 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 				// subManager could not successfully start, so we must force it to restart next reconcile.
 				glog.Errorf("Error starting NamespaceConfig / ClusterConfig controllers, restarting: %v", startErr)
 				// Signal the SubManager to restart.
-				rc.Restart()
+				rc.Restart("retry")
 			}
 		}
 	}()

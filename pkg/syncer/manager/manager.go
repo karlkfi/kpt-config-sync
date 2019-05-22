@@ -31,7 +31,8 @@ import (
 type RestartableManager interface {
 	// Restart restarts the Manager and all the controllers it manages. The given schema.
 	// GroupVersionKinds will be added to the scheme.
-	Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) error
+	// Returns if a restart actually happened and if there were any errors while doing it.
+	Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) (bool, error)
 }
 
 var _ RestartableManager = &SubManager{}
@@ -72,23 +73,23 @@ func (m *SubManager) context() context.Context {
 }
 
 // Restart implements RestartableManager.
-func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) error {
+func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) (bool, error) {
 	if !force && !m.controllerBuilder.NeedsRestart(gvks) {
-		return nil
+		return false, nil
 	}
 	ctx := m.context()
 
 	var err error
 	m.Manager, err = manager.New(rest.CopyConfig(m.baseCfg), manager.Options{})
 	if err != nil {
-		return errors.Wrap(err, "could not create the Manager for SubManager")
+		return true, errors.Wrap(err, "could not create the Manager for SubManager")
 	}
 
 	if err := m.controllerBuilder.UpdateScheme(m.GetScheme(), gvks); err != nil {
-		return errors.Wrap(err, "could not update the scheme")
+		return true, errors.Wrap(err, "could not update the scheme")
 	}
 	if err := m.controllerBuilder.StartControllers(ctx, m, gvks, apirs); err != nil {
-		return errors.Wrap(err, "could not start controllers")
+		return true, errors.Wrap(err, "could not start controllers")
 	}
 
 	go func() {
@@ -97,5 +98,5 @@ func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *disco
 	}()
 
 	glog.Info("Starting SubManager")
-	return nil
+	return true, nil
 }

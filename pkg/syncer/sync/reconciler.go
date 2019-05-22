@@ -97,7 +97,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
-	err := r.reconcileSyncs(ctx, request.Name)
+	err := r.reconcileSyncs(ctx, request)
 	metrics.ReconcileDuration.WithLabelValues("sync", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	if err != nil {
@@ -106,7 +106,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	return reconcile.Result{}, err
 }
 
-func (r *MetaReconciler) reconcileSyncs(ctx context.Context, name string) error {
+func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
 	syncs := &v1.SyncList{}
 	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
 	if err != nil {
@@ -134,15 +134,18 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, name string) error 
 		return err
 	}
 
-	eventTriggeredRestart := restartSubManager(name)
+	eventTriggeredRestart := restartSubManager(request.Name)
 	source := "sync"
 	if eventTriggeredRestart {
-		// The only other controller that restarts SubManager is the crd controller. Otherwise,
-		// we know the source is this controller.
-		source = "crd"
+		// For event triggered forced restarts, we store the source of the restart in the Namespace field.
+		source = request.Namespace
 	}
-	metrics.ControllerRestarts.WithLabelValues(source).Inc()
-	if err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, eventTriggeredRestart); err != nil {
+
+	attemptedRestart, err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, eventTriggeredRestart)
+	if attemptedRestart {
+		metrics.ControllerRestarts.WithLabelValues(source).Inc()
+	}
+	if err != nil {
 		glog.Errorf("Could not start SubManager: %v", err)
 		return err
 	}

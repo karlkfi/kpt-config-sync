@@ -207,12 +207,12 @@ func (tm *TestMocks) ExpectEvent(event *Event) {
 }
 
 // ExpectRestart verifies we trigger the Sync controller to restart the SubManager.
-func (tm *TestMocks) ExpectRestart(expectRestart bool) {
+func (tm *TestMocks) ExpectRestart(expectRestart bool, source string) {
 	if !expectRestart {
 		return
 	}
 
-	tm.MockSignal.EXPECT().Restart()
+	tm.MockSignal.EXPECT().Restart(Eq(tm.t, source))
 }
 
 // ExpectClusterStatusUpdate verifies we update the ClusterConfig's status.

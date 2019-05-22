@@ -216,7 +216,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm.ExpectClusterClientGet(clusterCfg)
 				tm.ExpectClusterStatusUpdate(tc.expectStatusUpdate)
 				tm.ExpectEvent(tc.expectEvent)
-				tm.ExpectRestart(tc.expectRestart)
+				tm.ExpectRestart(tc.expectRestart, "crd")
 
 				_, err := testReconciler.Reconcile(
 					runtimereconcile.Request{

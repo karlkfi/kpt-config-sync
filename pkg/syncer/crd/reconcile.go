@@ -138,7 +138,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 
 	if reconcileCount > 0 {
 		// We've updated CRDs on the cluster; restart the NamespaceConfig and ClusterConfig controllers.
-		r.signal.Restart()
+		r.signal.Restart("crd")
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, "ReconcileComplete",
 			"crd cluster config was successfully reconciled: %d changes", reconcileCount)
 	}

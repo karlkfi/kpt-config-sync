@@ -14,8 +14,10 @@ const ForceRestart = "@restart"
 // RestartSignal is a handle that causes the Sync controller to reconcile Syncs and
 // forcefully restart the SubManager.
 type RestartSignal interface {
-	Restart()
+	Restart(string)
 }
+
+var _ RestartSignal = &RestartChannel{}
 
 // RestartChannel implements RestartSignal using a Channel.
 type RestartChannel struct {
@@ -30,9 +32,12 @@ func NewRestartChannel(channel chan event.GenericEvent) *RestartChannel {
 }
 
 // Restart implements RestartSignal
-func (r *RestartChannel) Restart() {
+func (r *RestartChannel) Restart(source string) {
 	// Send an event that forces the subManager to restart.
-	r.channel <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: ForceRestart}}
+	// We have to shoehorn the source causing the restart into an event that the controller-runtime library understands. So,
+	// we put the source in the Namespace field as a convention and know to only look at the namespace when it's an event that
+	// was triggered by this method.
+	r.channel <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: ForceRestart, Namespace: source}}
 }
 
 // Channel returns the internal channel.
