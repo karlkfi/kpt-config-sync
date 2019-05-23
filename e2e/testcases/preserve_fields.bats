@@ -169,9 +169,8 @@ function validate_configmap_labels() {
   git::commit
 
   debug::log "Checking that the configmap with no annotations appears on cluster"
-  wait::for -t 30 -- kubectl get configmap ${resname} -n ${ns}
-  resource::check_count -n ${ns} -r configmap -c 1
-  resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
+  wait::for -t 30 -- resource::check_count -n ${ns} -r configmap -c 1
+  wait::for -t 30 -- resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no annotations specified"
   wait::for -t 30 -- validate_configmap_annotations ${resname} ${ns}

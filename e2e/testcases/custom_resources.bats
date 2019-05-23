@@ -88,8 +88,9 @@ function teardown() {
 
   debug::log "Checking that custom resource was updated on cluster"
   resource::wait_for_update -n backend -t 20 anvil "${resname}" "${oldresver}"
-  selection=$(kubectl get anvil ${resname} -n backend -ojson | jq -c ".spec.lbs")
-  [[ "${selection}" == "100" ]] || debug::error "custom resource weight should be updated to 100, not ${selection}"
+  wait::for -o "100" -t 30 -- \
+    kubectl get anvil ${resname} -n backend \
+      --output='jsonpath={.spec.lbs}'
 
   debug::log "Moving custom resource to another namespace"
   git::rm acme/namespaces/eng/backend/anvil.yaml
@@ -110,8 +111,9 @@ function teardown() {
   debug::log "Verify that anvil (lbs: 10) is still on cluster, and not heavier anvil (lbs: 100)"
   wait::for -t 30 -- namespaceconfig::sync_token_eq new-prj "$(git::hash)"
   debug::log "Anvil events: $(kubectl get events | grep "Anvil")"
-  selection=$(kubectl get anvil ${resname} -n new-prj -ojson | jq -c ".spec.lbs")
-  [[ "${selection}" == "10" ]] || debug::error "unmanaged custom resource weight should be 10, not ${selection}"
+  wait::for -o "10" -t 30 -- \
+    kubectl get anvil ${resname} -n new-prj \
+      --output='jsonpath={.spec.lbs}'
 
   debug::log "Ensure we removed the Nomos-specific labels and annotations"
   annotationValue=$(kubectl get -n new-prj anvil ${resname} -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
@@ -126,7 +128,6 @@ function teardown() {
   debug::log "Remove all custom resources from cluster"
   git::rm acme/namespaces/rnd/new-prj/anvil.yaml
   git::commit
-  #kubectl delete anvil ${resname} -n new-prj
 
   debug::log "Checking that no custom resources exist on cluster"
   wait::for -t 30 -f -- kubectl get anvil ${resname} --all-namespaces
@@ -152,8 +153,9 @@ function teardown() {
   wait::for -t 30 -- kubectl get clusteranvil ${resname}
   resource::check_count -r clusteranvil -c 1
   resource::check clusteranvil ${resname} -a "configmanagement.gke.io/managed=enabled"
-  selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
-  [[ "${selection}" == "10" ]] || debug::error "custom resource weight should be 10, not ${selection}"
+  wait::for -o "10" -t 30 -- \
+    kubectl get clusteranvil ${resname} \
+      --output='jsonpath={.spec.lbs}'
 
   debug::log "Modify custom resource in repo"
   oldresver=$(resource::resource_version clusteranvil ${resname})
@@ -187,14 +189,15 @@ function teardown() {
   debug::log "Verify that clusteranvil (lbs: 10) is still on cluster, and not clusteranvil-heavier (lbs: 100)"
   wait::for -t 30 -- namespaceconfig::sync_token_eq newer-prj "$(git::hash)"
   debug::log "ClusterAnvil events: $(kubectl get events | grep "ClusterAnvil")"
-  selection=$(kubectl get clusteranvil ${resname} -ojson | jq -c ".spec.lbs")
-  [[ "${selection}" == "10" ]] || debug::error "unmanaged custom resource weight should be 100, not ${selection}"
+  wait::for -o "10" -t 30 -- \
+    kubectl get clusteranvil ${resname} \
+      --output='jsonpath={.spec.lbs}'
+
   debug::log "Ensure we didn't add a management label"
   wait::for -f -t 5 -- resource::check -n new-prj anvil ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   git::rm acme/cluster/clusteranvil.yaml
   git::commit
-  #kubectl delete clusteranvil ${resname}
 
   debug::log "Checking that no custom resources exist on cluster"
   wait::for -t 30 -f -- kubectl get anvil ${resname} --all-namespaces
