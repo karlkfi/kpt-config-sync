@@ -27,9 +27,22 @@ const (
 
 func init() {
 	flags.AddContexts(Cmd)
+	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 }
 
 var (
+	// clientTimeout is a flag value to specify how long to wait before timeout of client connection.
+	clientTimeout time.Duration
+
+	// clientVersion is a function that obtains the local client version.
+	clientVersion = func() string {
+		return version.VERSION
+	}
+
+	// dynamicCLient obtains a client based on the supplied REST config.  Can
+	// be overridden in tests.
+	dynamicClient = dynamic.NewForConfig
+
 	// Cmd is the Cobra object representing the nomos version command.
 	Cmd = &cobra.Command{
 		Use:   "version",
@@ -38,7 +51,7 @@ var (
 `,
 		Example: `  nomos version`,
 		Run: func(_ *cobra.Command, _ []string) {
-			allCfgs, err := restconfig.AllKubectlConfigs(30 * time.Second)
+			allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)
 			if err != nil {
 				// nolint:errcheck
 				fmt.Printf("failed to create client configs: %v\n", err)
@@ -50,15 +63,6 @@ var (
 			versionInternal(allCfgs, os.Stdout, flags.Contexts)
 		},
 	}
-
-	// clientVersion is a function that obtains the local client version.
-	clientVersion = func() string {
-		return version.VERSION
-	}
-
-	// dynamicCLient obtains a client based on the supplied REST config.  Can
-	// be overridden in tests.
-	dynamicClient = dynamic.NewForConfig
 )
 
 // versionInternal allows stubbing out the config for tests.

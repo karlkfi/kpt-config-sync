@@ -192,61 +192,53 @@ func printRepos(writer *tabwriter.Writer, clientMap map[string]typedv1.RepoInter
 	writer.Flush()
 }
 
-// clusterStatus specifies the name, status, and any config management errors for a cluster.
-type clusterStatus struct {
-	name   string
-	status string
-	errs   []string
-}
-
 // fetchRepos returns two maps which are both keyed by cluster name. The first is a map of printable
 // cluster status rows and the second is a map of printable cluster error rows.
 func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, map[string][]string) {
+	var mapMutex sync.Mutex
+	var wg sync.WaitGroup
 	writeMap := make(map[string]string)
 	errorMap := make(map[string][]string)
-	statusCh := make(chan clusterStatus)
-	wg := sync.WaitGroup{}
 
 	// We fetch the repo objects in parallel to avoid long delays if multiple clusters are unreachable
 	// or slow to respond.
 	for name, repoClient := range clientMap {
 		if repoClient == nil {
+			mapMutex.Lock()
 			writeMap[name] = naStatusRow(name)
+			mapMutex.Unlock()
 			continue
 		}
 		wg.Add(1)
 
 		go func(name string, repoClient typedv1.RepoInterface) {
-			result := clusterStatus{name: name}
+			var status string
+			var errs []string
+
 			repoList, listErr := repoClient.List(metav1.ListOptions{})
 
 			if listErr != nil {
-				result.status = errorRow(name, util.NotInstalledMsg)
+				status = errorRow(name, util.NotInstalledMsg)
 			} else if len(repoList.Items) == 0 {
-				result.status = errorRow(name, util.UnknownMsg)
+				status = errorRow(name, util.UnknownMsg)
 			} else {
 				repoStatus := repoList.Items[0].Status
-				result.status = statusRow(name, repoStatus)
-				result.errs = statusErrors(repoStatus)
+				status = statusRow(name, repoStatus)
+				errs = statusErrors(repoStatus)
 			}
 
-			statusCh <- result
+			mapMutex.Lock()
+			writeMap[name] = status
+			if len(errs) > 0 {
+				errorMap[name] = errs
+			}
+			mapMutex.Unlock()
+
 			wg.Done()
 		}(name, repoClient)
 	}
 
-	go func() {
-		wg.Wait()
-		close(statusCh)
-	}()
-
-	for result := range statusCh {
-		writeMap[result.name] = result.status
-		if len(result.errs) > 0 {
-			errorMap[result.name] = result.errs
-		}
-	}
-
+	wg.Wait()
 	return writeMap, errorMap
 }
 
