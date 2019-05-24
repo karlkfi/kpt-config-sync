@@ -3,6 +3,8 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors/seltest"
@@ -32,6 +34,9 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				},
 			},
 		)
+	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{cmp.AllowUnexported(ast.FileObject{})}
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{

@@ -78,7 +78,7 @@ func TestObjects(t *testing.T) {
 			actual := []ast.FileObject{tc.object}
 			object.Mutate(tc.mutators...).Apply(actual)
 
-			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual[0], cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})

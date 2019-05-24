@@ -180,11 +180,11 @@ func TestBuilderVisitor(t *testing.T) {
 			actual := &ast.Root{}
 			actual.Accept(v)
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatalf("unexpected difference in trees\n\n%s", diff)
 			}
 
-			if diff := cmp.Diff(tc.expectedEquivalent, actual); diff != "" {
+			if diff := cmp.Diff(tc.expectedEquivalent, actual, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatalf("unexpected non-equivalent trees\n\n%s", diff)
 			}
 		})

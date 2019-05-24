@@ -117,7 +117,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 
 			root.Accept(NewEphemeralResourceRemover())
 
-			if diff := cmp.Diff(tc.expected, root); diff != "" {
+			if diff := cmp.Diff(tc.expected, root, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatalf("unexpected difference in trees\n\n%s", diff)
 			}
 		})

@@ -3,6 +3,8 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
@@ -28,6 +30,11 @@ func adminRoleBindingWithAnnotation() *rbacv1.RoleBinding {
 var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return NewPathAnnotationVisitor()
+	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{
+			cmp.AllowUnexported(ast.FileObject{}),
+		}
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{

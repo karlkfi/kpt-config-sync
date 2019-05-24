@@ -18,6 +18,9 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return visitor.NewCopying()
 	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{cmp.AllowUnexported(ast.FileObject{})}
+	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "empty",

@@ -238,7 +238,7 @@ func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v
 				continue
 			}
 			object := asDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObject(object, source.Path())
+			fileObject := ast.NewFileObjectUnstructured(object, info.Object.(runtime.Unstructured), source.Path())
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}

@@ -3,6 +3,8 @@ package validation_test
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
@@ -33,6 +35,11 @@ func TestScope(t *testing.T) {
 	var scopeTestcases = vt.MutatingVisitorTestcases{
 		VisitorCtor: func() ast.Visitor {
 			return validation.NewScope()
+		},
+		Options: func() []cmp.Option {
+			return []cmp.Option{
+				cmp.AllowUnexported(ast.FileObject{}),
+			}
 		},
 		Testcases: []vt.MutatingVisitorTestcase{
 			{

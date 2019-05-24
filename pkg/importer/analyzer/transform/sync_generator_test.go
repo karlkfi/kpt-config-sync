@@ -3,6 +3,8 @@ package transform
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 
@@ -12,6 +14,11 @@ import (
 var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return NewSyncGenerator()
+	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{
+			cmp.AllowUnexported(ast.FileObject{}),
+		}
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{

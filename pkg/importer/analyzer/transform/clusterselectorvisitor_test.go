@@ -52,6 +52,7 @@ func TestClusterSelectorVisitor(t *testing.T) {
 		Options: func() []cmp.Option {
 			return []cmp.Option{
 				cmpopts.IgnoreFields(ast.Root{}, "Data"),
+				cmp.AllowUnexported(ast.FileObject{}),
 			}
 		},
 		Testcases: []vt.MutatingVisitorTestcase{

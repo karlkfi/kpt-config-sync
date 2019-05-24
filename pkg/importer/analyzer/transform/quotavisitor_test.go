@@ -3,7 +3,9 @@ package transform
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/go-cmp/cmp"
+
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
@@ -47,6 +49,11 @@ func makeHierarchicalQuota(h *v1.HierarchicalQuotaNode) *v1.HierarchicalQuota {
 var quotaVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
 		return NewQuotaVisitor()
+	},
+	Options: func() []cmp.Option {
+		return []cmp.Option{
+			cmp.AllowUnexported(ast.FileObject{}),
+		}
 	},
 	Testcases: []vt.MutatingVisitorTestcase{
 		{

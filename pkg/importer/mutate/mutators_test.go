@@ -37,7 +37,7 @@ func TestRemoveAnnotation(t *testing.T) {
 
 			RemoveAnnotation(tc.annotation).Apply(actual)
 
-			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual[0], cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -71,7 +71,7 @@ func TestRemoveAnnotationGroup(t *testing.T) {
 
 			RemoveAnnotationGroup(tc.group).Apply(actual)
 
-			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual[0], cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -105,7 +105,7 @@ func TestRemoveLabel(t *testing.T) {
 
 			RemoveLabel(tc.label).Apply(actual)
 
-			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual[0], cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -139,7 +139,7 @@ func TestRemoveLabelGroup(t *testing.T) {
 
 			RemoveLabelGroup(tc.group).Apply(actual)
 
-			if diff := cmp.Diff(tc.expected, actual[0]); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual[0], cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})

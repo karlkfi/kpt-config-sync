@@ -143,7 +143,7 @@ func TestPredicateObjects(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := object.Filter(objects, tc.predicate)
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
 				t.Fatal(diff)
 			}
 		})
