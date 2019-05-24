@@ -53,14 +53,14 @@ func TestLessObjects(t *testing.T) {
 		},
 		{
 			name:             "i Name less than j",
-			i:                ast.FileObject{Object: asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("A")},
-			j:                ast.FileObject{Object: asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("B")},
+			i:                *ast.ParseFileObject(asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("A")),
+			j:                *ast.ParseFileObject(asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("B")),
 			expectedLessThan: true,
 		},
 		{
 			name:             "j Name less than i",
-			i:                ast.FileObject{Object: asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("B")},
-			j:                ast.FileObject{Object: asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("A")},
+			i:                *ast.ParseFileObject(asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("B")),
+			j:                *ast.ParseFileObject(asttesting.NewFakeObject(schema.GroupVersionKind{}).WithName("A")),
 			expectedLessThan: false,
 		},
 	}

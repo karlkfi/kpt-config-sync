@@ -15,10 +15,10 @@ import (
 func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
 	object := asttesting.NewFakeObject(gvk)
 	object.SetName(name)
-	return ast.FileObject{
-		Path:   cmpath.FromSlash("namespaces/role.yaml"),
-		Object: object,
-	}
+	return ast.NewFileObject(
+		object,
+		cmpath.FromSlash("namespaces/role.yaml"),
+	)
 }
 
 func TestNameExistenceValidation(t *testing.T) {

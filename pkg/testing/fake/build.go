@@ -77,10 +77,8 @@ func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
 
 // Unstructured returns an Unstructured with the specified gvk.
 func Unstructured(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
-	o := ast.FileObject{
-		Object: &unstructured.Unstructured{},
-	}
+	o := ast.ParseFileObject(&unstructured.Unstructured{})
 	o.GetObjectKind().SetGroupVersionKind(gvk)
-	object.Mutate(opts...)(&o)
-	return o
+	object.Mutate(opts...)(o)
+	return *o
 }

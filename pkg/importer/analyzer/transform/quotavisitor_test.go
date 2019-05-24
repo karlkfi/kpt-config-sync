@@ -26,7 +26,7 @@ func modQuota(q *corev1.ResourceQuota, name string, labels map[string]string, li
 
 func modCluster(h *v1.HierarchicalQuota, c []*ast.ClusterObject) []*ast.ClusterObject {
 	c = append(c, &ast.ClusterObject{
-		FileObject: ast.FileObject{Object: h},
+		FileObject: *ast.ParseFileObject(h),
 	})
 	return c
 }

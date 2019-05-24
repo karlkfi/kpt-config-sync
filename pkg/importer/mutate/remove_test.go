@@ -18,98 +18,98 @@ func TestRemove(t *testing.T) {
 		{
 			name: "spec removes spec",
 			key:  Key("spec"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"spec": nil,
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{},
 				},
-			},
+			),
 		},
 		{
 			name: "spec does not remove metadata",
 			key:  Key("spec"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": nil,
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": nil,
 					},
 				},
-			},
+			),
 		},
 		{
 			name: "metadata namespace removes metadata namespace",
 			key:  Key("metadata", "namespace"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": map[string]interface{}{
 							"namespace": nil,
 						},
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": map[string]interface{}{},
 					},
 				},
-			},
+			),
 		},
 		{
 			name: "metadata namespace removes metadata: namespace",
 			key:  Key("metadata").Value("namespace"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": "namespace",
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{},
 				},
-			},
+			),
 		},
 		{
 			name: "metadata namespace does not removes metadata name",
 			key:  Key("metadata", "namespace"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": map[string]interface{}{
 							"namespace": nil,
 						},
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"metadata": map[string]interface{}{},
 					},
 				},
-			},
+			),
 		},
 		{
 			name: "spec finalizers kubernetes removes spec finalizers [kubernetes]",
 			key:  Key("spec", "finalizers").Value("kubernetes"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							"finalizers": []interface{}{
@@ -118,9 +118,9 @@ func TestRemove(t *testing.T) {
 						},
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"spec": map[string]interface{}{
 							// Removes entry from array inside map, but otherwise leaves array intact.
@@ -128,13 +128,13 @@ func TestRemove(t *testing.T) {
 						},
 					},
 				},
-			},
+			),
 		},
 		{
 			name: "spec finalizers kubernetes removes spec [finalizers] kubernetes",
 			key:  Key("spec", "finalizers").Value("kubernetes"),
-			obj: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			obj: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"spec": []interface{}{
 							map[string]interface{}{
@@ -143,9 +143,9 @@ func TestRemove(t *testing.T) {
 						},
 					},
 				},
-			},
-			expected: ast.FileObject{
-				Object: &unstructured.Unstructured{
+			),
+			expected: *ast.ParseFileObject(
+				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"spec": []interface{}{
 							// Remove entry from map inside array, but otherwise leaves map intact.
@@ -153,7 +153,7 @@ func TestRemove(t *testing.T) {
 						},
 					},
 				},
-			},
+			),
 		},
 	}
 

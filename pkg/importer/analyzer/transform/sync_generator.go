@@ -40,9 +40,7 @@ func (v *SyncGenerator) VisitRoot(r *ast.Root) *ast.Root {
 	})
 	for _, gk := range gkList {
 		nr.SystemObjects = append(nr.SystemObjects, &ast.SystemObject{
-			FileObject: ast.FileObject{
-				Object: v.genSync(gk),
-			},
+			FileObject: *ast.ParseFileObject(v.genSync(gk)),
 		})
 	}
 	return nr

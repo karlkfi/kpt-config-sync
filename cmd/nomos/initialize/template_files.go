@@ -20,7 +20,4 @@ This directory contains system configs such as the repo version and how resource
 `
 )
 
-var defaultRepo = ast.FileObject{
-	Path:   cmpath.FromSlash("system/repo.yaml"),
-	Object: repo.Default(),
-}
+var defaultRepo = ast.NewFileObject(repo.Default(), cmpath.FromSlash("system/repo.yaml"))

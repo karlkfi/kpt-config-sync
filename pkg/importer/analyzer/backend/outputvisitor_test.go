@@ -4,12 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/kinds"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

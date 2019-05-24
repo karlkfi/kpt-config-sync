@@ -60,8 +60,8 @@ func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, 
 
 	var result []ast.FileObject
 	for _, r := range items {
-		o := ast.FileObject{Object: r.DeepCopyObject()}
-		result = append(result, o)
+		o := ast.ParseFileObject(r.DeepCopyObject())
+		result = append(result, *o)
 	}
 	return result, nil
 }

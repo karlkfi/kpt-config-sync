@@ -20,138 +20,137 @@ import (
 // Initializes with metadata.name set to the correct name.
 func Namespace(path string) ast.FileObject {
 	relative := cmpath.FromSlash(path)
-	return ast.FileObject{
-		Path: relative,
-		Object: &corev1.Namespace{
+	return ast.NewFileObject(
+		&corev1.Namespace{
 			TypeMeta: toTypeMeta(kinds.Namespace()),
 			ObjectMeta: v1.ObjectMeta{
 				Name: relative.Dir().Base(),
 			},
-		}}
+		},
+		relative,
+	)
 }
 
 // NamespaceSelector returns a Nomos NamespaceSelector at the specified path.
 func NamespaceSelector(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &nomosv1.NamespaceSelector{
+	return ast.NewFileObject(
+		&nomosv1.NamespaceSelector{
 			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // Role returns an RBAC Role at the specified path.
 func Role(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &rbacv1alpha1.Role{
+	return ast.NewFileObject(
+		&rbacv1alpha1.Role{
 			TypeMeta: toTypeMeta(kinds.Role()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // RoleBinding returns an RBAC RoleBinding at the specified path.
 func RoleBinding(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &rbacv1alpha1.RoleBinding{
+	return ast.NewFileObject(
+		&rbacv1alpha1.RoleBinding{
 			TypeMeta: toTypeMeta(kinds.RoleBinding()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // ClusterRole returns an RBAC ClusterRole at the specified path.
 func ClusterRole(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &rbacv1alpha1.ClusterRole{
+	return ast.NewFileObject(
+		&rbacv1alpha1.ClusterRole{
 			TypeMeta: toTypeMeta(kinds.ClusterRole()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // ClusterSelector returns a Nomos ClusterSelector at the specified path.
 func ClusterSelector(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &nomosv1.ClusterSelector{
+	return ast.NewFileObject(
+		&nomosv1.ClusterSelector{
 			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // Cluster returns a K8S Cluster resource at the specified path.
 func Cluster(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &clusterregistry.Cluster{
+	return ast.NewFileObject(
+		&clusterregistry.Cluster{
 			TypeMeta: toTypeMeta(kinds.Cluster()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // ClusterConfig returns a ClusterConfig.
 func ClusterConfig() ast.FileObject {
-	return ast.FileObject{
-		Object: &nomosv1.ClusterConfig{
+	return ast.NewFileObject(
+		&nomosv1.ClusterConfig{
 			TypeMeta: toTypeMeta(kinds.ClusterConfig()),
 			ObjectMeta: v1.ObjectMeta{
 				Name: nomosv1.ClusterConfigName,
 			},
 		},
-	}
+		cmpath.FromSlash(""),
+	)
 }
 
 // ConfigManagement returns a fake ConfigManagement.
 func ConfigManagement(path string) ast.FileObject {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(kinds.ConfigManagement())
-	return ast.FileObject{
-		Path:   cmpath.FromSlash(path),
-		Object: u,
-	}
+	return ast.NewFileObject(u, cmpath.FromSlash(path))
 }
 
 // CustomResourceDefinition returns a K8S CustomResourceDefinition resource at the specified path.
 func CustomResourceDefinition(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &v1beta1.CustomResourceDefinition{
+	return ast.NewFileObject(
+		&v1beta1.CustomResourceDefinition{
 			TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
 			ObjectMeta: v1.ObjectMeta{
 				Name: "crd",
 			},
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // Anvil returns an Anvil Custom Resource.
 func Anvil(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &v1beta1.CustomResourceDefinition{
+	return ast.NewFileObject(
+		&v1beta1.CustomResourceDefinition{
 			TypeMeta: toTypeMeta(kinds.Anvil()),
 			ObjectMeta: v1.ObjectMeta{
 				Name: "anvil",
 			},
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // NamespaceConfig returns a default NamespaceConfig.
 func NamespaceConfig() ast.FileObject {
-	return ast.FileObject{
-		Object: &nomosv1.NamespaceConfig{
+	return ast.NewFileObject(
+		&nomosv1.NamespaceConfig{
 			TypeMeta: toTypeMeta(kinds.NamespaceConfig()),
 		},
-	}
+		cmpath.FromSlash(""),
+	)
 }
 
 // Repo returns a nomos Repo at the specified path.
 func Repo(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &nomosv1.Repo{
+	return ast.NewFileObject(
+		&nomosv1.Repo{
 			TypeMeta: toTypeMeta(kinds.Repo()),
 			ObjectMeta: v1.ObjectMeta{
 				Name: "repo",
@@ -160,56 +159,58 @@ func Repo(path string) ast.FileObject {
 				Version: repo.CurrentVersion,
 			},
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // HierarchyConfig returns an empty HierarchyConfig at the specified path.
 func HierarchyConfig(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &nomosv1.HierarchyConfig{
+	return ast.NewFileObject(
+		&nomosv1.HierarchyConfig{
 			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // Sync returns a nomos Sync at the specified path.
 func Sync(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &nomosv1.Sync{
+	return ast.NewFileObject(
+		&nomosv1.Sync{
 			TypeMeta: toTypeMeta(kinds.Sync()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // PersistentVolume returns a PersistentVolume Object.
 func PersistentVolume() ast.FileObject {
-	return ast.FileObject{
-		Object: &corev1.PersistentVolume{
+	return ast.NewFileObject(
+		&corev1.PersistentVolume{
 			TypeMeta: toTypeMeta(kinds.PersistentVolume()),
 		},
-	}
+		cmpath.FromSlash(""),
+	)
 }
 
 // Deployment returns a default Deployment object.
 func Deployment(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &appsv1.Deployment{
+	return ast.NewFileObject(
+		&appsv1.Deployment{
 			TypeMeta: toTypeMeta(kinds.Deployment()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 // ReplicaSet returns a default ReplicaSet object.
 func ReplicaSet(path string) ast.FileObject {
-	return ast.FileObject{
-		Path: cmpath.FromSlash(path),
-		Object: &appsv1.ReplicaSet{
+	return ast.NewFileObject(
+		&appsv1.ReplicaSet{
 			TypeMeta: toTypeMeta(kinds.ReplicaSet()),
 		},
-	}
+		cmpath.FromSlash(path),
+	)
 }
 
 func toTypeMeta(gvk schema.GroupVersionKind) v1.TypeMeta {

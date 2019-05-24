@@ -94,7 +94,7 @@ func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
 
 	// Add completed hierarchical quota tree to cluster objects.
 	newRoot.ClusterObjects = append(newRoot.ClusterObjects, &ast.ClusterObject{
-		FileObject: ast.FileObject{Object: h},
+		FileObject: *ast.ParseFileObject(h),
 	})
 	return newRoot
 }
@@ -125,7 +125,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 				quota.Labels = resourcequota.NewConfigManagementQuotaLabels()
 			}
 			context.hNode.ResourceQuotaV1 = quota
-			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: ast.FileObject{Object: quota}})
+			newNode.Objects = append(newNode.Objects, &ast.NamespaceObject{FileObject: *ast.ParseFileObject(quota)})
 		}
 	}
 	if context.prev != nil {

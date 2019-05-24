@@ -16,10 +16,7 @@ import (
 )
 
 func withPath(o runtime.Object, path string) ast.FileObject {
-	return ast.FileObject{
-		Object: o,
-		Path:   cmpath.FromSlash(path),
-	}
+	return ast.NewFileObject(o, cmpath.FromSlash(path))
 }
 
 func withScope(r *ast.Root) *ast.Root {

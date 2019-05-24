@@ -18,7 +18,7 @@ func fakeAnnotatedRole(annotations ...string) ast.FileObject {
 	for _, annotation := range annotations {
 		object.Annotations[annotation] = ""
 	}
-	return ast.FileObject{Object: object, Path: cmpath.FromSlash("namespaces/role.yaml")}
+	return ast.NewFileObject(object, cmpath.FromSlash("namespaces/role.yaml"))
 }
 
 func fakeAnnotatedNamespace(annotations ...string) ast.FileObject {
@@ -27,7 +27,7 @@ func fakeAnnotatedNamespace(annotations ...string) ast.FileObject {
 	for _, annotation := range annotations {
 		object.Annotations[annotation] = ""
 	}
-	return ast.FileObject{Object: object, Path: cmpath.FromSlash("namespaces/namespace.yaml")}
+	return ast.NewFileObject(object, cmpath.FromSlash("namespaces/namespace.yaml"))
 }
 
 func TestNamespaceAnnotationValidator(t *testing.T) {

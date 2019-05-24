@@ -116,7 +116,11 @@ var _ id.Path = Path{}
 
 // FromSlash returns a Path from a slash-delimited path.
 func FromSlash(p string) Path {
-	return Path{path: path.Clean(p)}
+	var fp string
+	if p != "" {
+		fp = path.Clean(p)
+	}
+	return Path{path: fp}
 }
 
 // FromOS constructs a Path from an OS-dependent path.
