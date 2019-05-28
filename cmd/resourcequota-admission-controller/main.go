@@ -146,7 +146,7 @@ func main() {
 			glog.Fatalf("Failed to get client cert: %+v", err)
 		}
 	}
-	hierarchicalQuotaInformer, err := admissioncontroller.SetupHierarchicalQuotaInformer(config, resyncPeriod)
+	hierarchicalQuotaInformer, err := admissioncontroller.SetupHierarchicalQuotaInformer(config, *resyncPeriod)
 	if err != nil {
 		glog.Fatalf("Failed setting up hierarchicalQuota informer: %+v", err)
 	}

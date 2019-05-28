@@ -2,63 +2,126 @@ package filesystem
 
 import (
 	"context"
+	"path"
 	"path/filepath"
 	"time"
 
-	"github.com/google/nomos/pkg/status"
-
-	"github.com/golang/glog"
-	configmanagementscheme "github.com/google/nomos/clientgen/apis/scheme"
 	"github.com/google/nomos/clientgen/informer"
-	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/actions"
 	"github.com/google/nomos/pkg/importer/git"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/golang/glog"
+	configmanagementscheme "github.com/google/nomos/clientgen/apis/scheme"
+	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
+	"github.com/google/nomos/pkg/client/meta"
+	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/discovery"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const resync = time.Minute * 15
+const (
+	controllerName = "git-importer"
+	pollFilesystem = "poll-filesystem"
+)
 
-// Controller is controller for managing Nomos CRDs by importing configs from a filesystem tree.
-type Controller struct {
+// AddController adds the git-importer controller to the manager.
+func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod, resyncPeriod time.Duration, stopCh <-chan struct{}) error {
+	config, err := restconfig.NewRestConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to create rest config")
+	}
+
+	client, err := meta.NewForConfig(config, resyncPeriod)
+	if err != nil {
+		return errors.Wrap(err, "failed to create client")
+	}
+
+	policyDir := path.Join(gitDir, policyDirRelative)
+	glog.Infof("Policy dir: %s", policyDir)
+
+	parser := NewParser(
+		&genericclioptions.ConfigFlags{}, ParserOpt{Validate: true, Extension: &NomosVisitorProvider{}})
+	if err := parser.ValidateInstallation(); err != nil {
+		return err
+	}
+
+	r, err := NewReconciler(policyDir, parser, client, stopCh)
+	if err != nil {
+		return errors.Wrap(err, "failure creating reconciler")
+	}
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failure creating controller")
+	}
+
+	return watchFileSystem(c, pollPeriod)
+}
+
+func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
+	pollCh := make(chan event.GenericEvent)
+	go func() {
+		ticker := time.NewTicker(pollPeriod)
+		for range ticker.C {
+			pollCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: pollFilesystem}}
+		}
+	}()
+
+	pollSource := &source.Channel{Source: pollCh}
+	if err := c.Watch(pollSource, &handler.EnqueueRequestForObject{}); err != nil {
+		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", controllerName)
+	}
+
+	return nil
+}
+
+const resync = time.Minute * 15
+const reconcileTimeout = time.Minute * 5
+
+var _ reconcile.Reconciler = &Reconciler{}
+
+// Reconciler manages Nomos CRs by importing configs from a filesystem tree.
+type Reconciler struct {
 	configDir             string
-	pollPeriod            time.Duration
 	parser                *Parser
 	differ                *actions.Differ
-	discoveryClient       discovery.ServerResourcesInterface
-	informerFactory       informer.SharedInformerFactory
 	namespaceConfigLister listersv1.NamespaceConfigLister
 	clusterConfigLister   listersv1.ClusterConfigLister
 	syncLister            listersv1.SyncLister
 	repoClient            *repo.Client
-	stopChan              chan struct{}
-	client                meta.Interface
+	currentDir            string
+	lastSyncs             map[string]v1.Sync
 }
 
-// NewController returns a new Controller.
+// NewReconciler returns a new Reconciler.
 //
 // configDir is the path to the filesystem directory that contains a candidate
 // Nomos config directory, which the user intends to be valid but which the
 // controller will check for errors.  pollPeriod is the time between two
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
-// to call configmanagement and other Kubernetes APIs.  stopChan is a channel
-// that the controller will close when it announces that it will stop.
-func NewController(configDir string, pollPeriod time.Duration, parser *Parser, client meta.Interface, stopChan chan struct{}) (*Controller, error) {
+// to call configmanagement and other Kubernetes APIs.
+func NewReconciler(configDir string, parser *Parser, client meta.Interface, stopChan <-chan struct{}) (*Reconciler, error) {
 	if err := configmanagementscheme.AddToScheme(scheme.Scheme); err != nil {
-		return nil, errors.Wrapf(err, "filesystem.NewController: can not add to scheme")
+		return nil, errors.Wrapf(err, "filesystem.NewReconciler: can not add to scheme")
 	}
 
-	informerFactory := informer.NewSharedInformerFactory(
-		client.ConfigManagement(), resync)
+	informerFactory := informer.NewSharedInformerFactory(client.ConfigManagement(), resync)
 	differ := actions.NewDiffer(
 		actions.NewFactories(
 			client.ConfigManagement().ConfigmanagementV1(),
@@ -66,164 +129,150 @@ func NewController(configDir string, pollPeriod time.Duration, parser *Parser, c
 			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
 			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
 			informerFactory.Configmanagement().V1().Syncs().Lister()))
-	repoClient := repo.NewForImporter(client.ConfigManagement().ConfigmanagementV1().Repos(), informerFactory.Configmanagement().V1().Repos().Lister())
+	repoClient := repo.NewForImporter(
+		client.ConfigManagement().ConfigmanagementV1().Repos(),
+		informerFactory.Configmanagement().V1().Repos().Lister())
 
-	return &Controller{
-		configDir:             configDir,
-		pollPeriod:            pollPeriod,
-		parser:                parser,
-		differ:                differ,
-		discoveryClient:       client.Kubernetes().Discovery(),
-		informerFactory:       informerFactory,
-		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
-		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
-		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
-		repoClient:            repoClient,
-		stopChan:              stopChan,
-		client:                client,
-	}, nil
-}
-
-// Run runs the controller and blocks until an error occurs or stopChan is closed.
-//
-// Each iteration of the loop does the following:
-//   * Checks for updates to the filesystem that stores config source of truth.
-//   * When there are updates, parses the filesystem into AllConfigs, an in-memory
-//     representation of desired configs.
-//   * Gets the configs currently stored in Kubernetes API server.
-//   * Compares current and desired configs.
-//   * Writes updates to make current match desired.
-func (c *Controller) Run(ctx context.Context) error {
 	// Start informers
-	c.informerFactory.Start(c.stopChan)
+	informerFactory.Start(stopChan)
 	glog.Infof("Waiting for cache to sync")
-	synced := c.informerFactory.WaitForCacheSync(c.stopChan)
+	synced := informerFactory.WaitForCacheSync(stopChan)
 	for syncType, ok := range synced {
 		if !ok {
 			elemType := syncType.Elem()
-			return errors.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
+			return nil, errors.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
 		}
 	}
 	glog.Infof("Caches synced")
 
-	c.pollDir(ctx)
-	return nil
+	return &Reconciler{
+		configDir:             configDir,
+		parser:                parser,
+		differ:                differ,
+		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
+		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
+		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
+		repoClient:            repoClient,
+	}, nil
 }
 
-func (c *Controller) pollDir(ctx context.Context) {
-	currentDir := ""
-	ticker := time.NewTicker(c.pollPeriod)
-	// lastSyncs are the syncs that were present during the previous poll loop.
-	var lastSyncs map[string]v1.Sync
-
-	for {
-		select {
-		case <-ticker.C:
-			glog.V(4).Infof("pollDir: run")
-			startTime := time.Now()
-
-			// Detect whether symlink has changed.
-			newDir, err := filepath.EvalSymlinks(c.configDir)
-			if err != nil {
-				glog.Errorf("Failed to resolve config directory: %v", err)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				sErr := status.SourceError.Errorf("unable to sync repo: %v\n"+
-					"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
-					err)
-				c.updateSourceStatus(ctx, nil, sErr.ToCME())
-				continue
-			}
-
-			// Check if Syncs have changed on the cluster.  We need to
-			// reconcile in case the user removed Syncs that should be there.
-			// We don't have a watcher for this event, but rely instead on the
-			// poll period to trigger a reconcile.
-			currentSyncs, err := namespaceconfig.ListSyncs(c.syncLister)
-			if err != nil {
-				glog.Errorf("failed quick check of current syncs: %v", err)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				continue
-			}
-
-			// If last syncs has more sync than current on-cluster sync
-			// content, this means that syncs have been removed on the cluster
-			// without our intention.
-			unchangedSyncs := len(c.differ.SyncsInFirstOnly(lastSyncs, currentSyncs)) == 0
-			unchangedDir := currentDir == newDir
-
-			if unchangedDir && unchangedSyncs {
-				glog.V(4).Info("pollDir: no new changes, nothing to do.")
-				continue
-			}
-			glog.Infof("Resolved config dir: %s. Polling config dir: %s", newDir, c.configDir)
-
-			// Parse the commit hash from the new directory to use as an import token.
-			token, err := git.CommitHash(newDir)
-			if err != nil {
-				glog.Warningf("Invalid format for config directory format: %v", err)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateSourceStatus(ctx, nil, status.SourceError.Errorf("unable to parse commit hash: %v", err).ToCME())
-				continue
-			}
-
-			// Before we start parsing the new directory, update the source token to reflect that this
-			// cluster has seen the change even if it runs into issues parsing/importing it.
-			repoObj := c.updateSourceStatus(ctx, &token)
-			if repoObj == nil {
-				glog.Warningf("Repo object is missing. Restarting import of %s.", token)
-				// If we failed to get the Repo, restart the controller loop to try to fetch it again.
-				continue
-			}
-
-			currentConfigs, err := namespaceconfig.ListConfigs(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
-			if err != nil {
-				glog.Errorf("failed to list current configs: %v", err)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				continue
-			}
-
-			// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-			desiredConfigs, mErr := c.parser.Parse(newDir, token, currentConfigs, startTime)
-			if mErr != nil {
-				glog.Warningf("Failed to parse: %v", mErr)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
-				continue
-			}
-
-			// Update the SyncState for all NamespaceConfigs and ClusterConfig.
-			for n := range desiredConfigs.NamespaceConfigs {
-				pn := desiredConfigs.NamespaceConfigs[n]
-				pn.Status.SyncState = v1.StateStale
-				desiredConfigs.NamespaceConfigs[n] = pn
-			}
-			desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
-
-			if errs := c.updateConfigs(currentConfigs, desiredConfigs); errs != nil {
-				glog.Warningf("Failed to apply actions: %v", errs)
-				importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-				// TODO(b/126598308): Inspect the actual error type and fully populate the CME fields.
-				c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
-				continue
-			}
-
-			currentDir = newDir
-			importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
-			importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
-			c.updateImportStatus(ctx, repoObj, token, startTime, nil)
-
-			lastSyncs = desiredConfigs.Syncs
-			glog.V(4).Infof("pollDir: completed")
-
-		case <-c.stopChan:
-			glog.Info("Stop polling")
-			return
-		}
+// Reconcile implements Reconciler.
+// It does the following:
+//   * Checks for updates to the filesystem that stores config source of truth.
+//   * When there are updates, parses the filesystem into AllConfigs, an in-memory
+//     representation of desired configs.
+//   * Gets the Nomos CRs currently stored in Kubernetes API server.
+//   * Compares current and desired Nomos CRs.
+//   * Writes updates to make current match desired.
+func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	// TODO(b/118385500): Update this check when we support watching/reconciling all Nomos CRs.
+	if request.Name != pollFilesystem {
+		glog.Errorf("Unexpected reconcile event: %v", request)
+		return reconcile.Result{}, nil
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	defer cancel()
+
+	glog.V(4).Infof("Reconciling: %v", request)
+	startTime := time.Now()
+
+	// Detect whether symlink has changed.
+	newDir, err := filepath.EvalSymlinks(c.configDir)
+	if err != nil {
+		glog.Errorf("Failed to resolve config directory: %v", err)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		sErr := status.SourceError.Errorf("unable to sync repo: %v\n"+
+			"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
+			err)
+		c.updateSourceStatus(ctx, nil, sErr.ToCME())
+		return reconcile.Result{}, nil
+	}
+
+	// Check if Syncs have changed on the cluster.  We need to
+	// reconcile in case the user removed Syncs that should be there.
+	// We don't have a watcher for this event, but rely instead on the
+	// poll period to trigger a reconcile.
+	currentSyncs, err := namespaceconfig.ListSyncs(c.syncLister)
+	if err != nil {
+		glog.Errorf("failed quick check of current syncs: %v", err)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		return reconcile.Result{}, nil
+	}
+
+	// If last syncs has more sync than current on-cluster sync
+	// content, this means that syncs have been removed on the cluster
+	// without our intention.
+	unchangedSyncs := len(c.differ.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
+	unchangedDir := c.currentDir == newDir
+
+	if unchangedDir && unchangedSyncs {
+		glog.V(4).Info("no new changes, nothing to do.")
+		return reconcile.Result{}, nil
+	}
+	glog.Infof("Resolved config dir: %s. Polling config dir: %s", newDir, c.configDir)
+
+	// Parse the commit hash from the new directory to use as an import token.
+	token, err := git.CommitHash(newDir)
+	if err != nil {
+		glog.Warningf("Invalid format for config directory format: %v", err)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		c.updateSourceStatus(ctx, nil, status.SourceError.Errorf("unable to parse commit hash: %v", err).ToCME())
+		return reconcile.Result{}, nil
+	}
+
+	// Before we start parsing the new directory, update the source token to reflect that this
+	// cluster has seen the change even if it runs into issues parsing/importing it.
+	repoObj := c.updateSourceStatus(ctx, &token)
+	if repoObj == nil {
+		glog.Warningf("Repo object is missing. Restarting import of %s.", token)
+		// If we failed to get the Repo, restart the controller loop to try to fetch it again.
+		return reconcile.Result{}, nil
+	}
+
+	currentConfigs, err := namespaceconfig.ListConfigs(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+	if err != nil {
+		glog.Errorf("failed to list current configs: %v", err)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		return reconcile.Result{}, nil
+	}
+
+	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
+	desiredConfigs, mErr := c.parser.Parse(newDir, token, currentConfigs, startTime)
+	if mErr != nil {
+		glog.Warningf("Failed to parse: %v", mErr)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
+		return reconcile.Result{}, nil
+	}
+
+	// Update the SyncState for all NamespaceConfigs and ClusterConfig.
+	for n := range desiredConfigs.NamespaceConfigs {
+		pn := desiredConfigs.NamespaceConfigs[n]
+		pn.Status.SyncState = v1.StateStale
+		desiredConfigs.NamespaceConfigs[n] = pn
+	}
+	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
+
+	if errs := c.updateConfigs(currentConfigs, desiredConfigs); errs != nil {
+		glog.Warningf("Failed to apply actions: %v", errs)
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
+		return reconcile.Result{}, nil
+	}
+
+	c.currentDir = newDir
+	importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
+	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
+	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
+
+	c.lastSyncs = desiredConfigs.Syncs
+	glog.V(4).Infof("Reconcile completed")
+	return reconcile.Result{}, nil
 }
 
 // updateImportStatus write an updated RepoImportStatus based upon the given arguments.
-func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, token string, loadTime time.Time, errs []v1.ConfigManagementError) {
+func (c *Reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, token string, loadTime time.Time, errs []v1.ConfigManagementError) {
 	// Try to get a fresh copy of Repo since it is has high contention with syncer.
 	freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
@@ -245,7 +294,7 @@ func (c *Controller) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 // is loaded every time before updating.  If errs is nil,
 // Repo.Source.Status.Errors will be cleared.  if token is nil, it will not be
 // updated so as to preserve any prior content.
-func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
+func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
 	r, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
 		glog.Errorf("failed to get fresh Repo: %v", err)
@@ -277,7 +326,7 @@ func (c *Controller) updateSourceStatus(ctx context.Context, token *string, errs
 //
 // If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
 // the resource is restored in config before the Syncer starts managing that type.
-func (c *Controller) updateConfigs(current, desired *namespaceconfig.AllConfigs) status.MultiError {
+func (c *Reconciler) updateConfigs(current, desired *namespaceconfig.AllConfigs) status.MultiError {
 	// Calculate the sequence of actions needed to transition from current to desired state.
 	a := c.differ.Diff(*current, *desired)
 	return applyActions(a)

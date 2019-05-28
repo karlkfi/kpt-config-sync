@@ -67,7 +67,7 @@ func New(
 }
 
 // NewForConfig will r
-func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) {
+func NewForConfig(cfg *rest.Config, syncPeriod time.Duration) (*Client, error) {
 	kubernetesClientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create kubernetes clientset")
@@ -83,7 +83,7 @@ func NewForConfig(cfg *rest.Config, syncPeriod *time.Duration) (*Client, error) 
 		return nil, errors.Wrapf(err, "Failed to create apiextensions clientset")
 	}
 
-	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: syncPeriod})
+	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: &syncPeriod})
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to create manager")
 	}

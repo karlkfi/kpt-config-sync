@@ -52,14 +52,13 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 
 // clusterConfigs returns an AllPolicies with only the ClusterConfigs populated.
 func clusterConfigs(config *rest.Config, stopCh <-chan struct{}) (*namespaceconfig.AllConfigs, error) {
-	minute := time.Minute
-	client, err := meta.NewForConfig(config, &minute)
+	client, err := meta.NewForConfig(config, time.Minute)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create client")
 	}
 
 	informerFactory := informer.NewSharedInformerFactory(
-		client.ConfigManagement(), minute)
+		client.ConfigManagement(), time.Minute)
 	_, iErr := informerFactory.ForResource(v1.SchemeGroupVersion.WithResource("clusterconfigs"))
 	if iErr != nil {
 		return nil, errors.Wrap(iErr, "failed get clusterconfig informater")

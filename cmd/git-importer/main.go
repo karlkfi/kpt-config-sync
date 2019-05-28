@@ -3,19 +3,18 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
-	"path"
 	"time"
 
-	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/client/meta"
-	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 var (
@@ -29,36 +28,30 @@ func main() {
 	flag.Parse()
 	log.Setup()
 
-	config, err := restconfig.NewRestConfig()
-	if err != nil {
-		glog.Fatalf("Failed to create rest config: %+v", err)
-	}
-
-	client, err := meta.NewForConfig(config, resyncPeriod)
-	if err != nil {
-		glog.Fatalf("Failed to create client: %+v", err)
-	}
-
-	policyDir := path.Join(*gitDir, *policyDirRelative)
-	glog.Infof("Policy dir: %s", policyDir)
-
-	parser := filesystem.NewParser(
-		&genericclioptions.ConfigFlags{}, filesystem.ParserOpt{Validate: true, Extension: &filesystem.NomosVisitorProvider{}})
-	if err := parser.ValidateInstallation(); err != nil {
-		glog.Fatalf("Found issues: %v", err)
-	}
-
 	go service.ServeMetrics()
 
-	stopChan := make(chan struct{})
-
-	c, err := filesystem.NewController(policyDir, *pollPeriod, parser, client, stopChan)
+	// Get a config to talk to the apiserver.
+	cfg, err := restconfig.NewRestConfig()
 	if err != nil {
-		glog.Fatalf("Failure creating controller: %v", err)
+		glog.Fatalf("failed to create rest config: %+v", err)
 	}
-	go service.WaitForShutdownSignalCb(stopChan)
-	if err := c.Run(context.Background()); err != nil {
-		glog.Fatalf("Failure running controller: %+v", err)
+
+	// Create a new Manager to provide shared dependencies and start components.
+	mgr, err := manager.New(cfg, manager.Options{})
+	if err != nil {
+		glog.Fatalf("Failed to create manager: %+v", err)
 	}
+
+	stopCh := signals.SetupSignalHandler()
+	// Set up controllers.
+	if err := filesystem.AddController(mgr, *gitDir, *policyDirRelative, *pollPeriod, *resyncPeriod, stopCh); err != nil {
+		glog.Fatalf("Error adding Sync controller: %+v", err)
+	}
+
+	// Start the Manager.
+	if err := mgr.Start(stopCh); err != nil {
+		glog.Fatalf("Error starting controller: %+v", err)
+	}
+
 	glog.Info("Exiting")
 }
