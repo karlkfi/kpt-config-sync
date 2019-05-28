@@ -52,8 +52,6 @@ K8S_APIS_PROTO=(
 OUTPUT_BASE="${GOPATH}/src"
 OUTPUT_CLIENT="${REPO}/clientgen"
 
-BOILERPLATE="$(dirname "${0}")/boilerplate.go.txt"
-
 LOGGING_FLAGS=${LOGGING_FLAGS:- --logtostderr -v 5}
 if ${SILENT:-false}; then
   LOGGING_FLAGS=""
@@ -116,7 +114,6 @@ echo "Generating APIs"
   --input="${INPUT_APIS}" \
   --clientset-name="apis" \
   --output-base="${OUTPUT_BASE}" \
-  --go-header-file="${BOILERPLATE}" \
   --clientset-path "${OUTPUT_CLIENT}"
 
 informer_inputs=""
@@ -134,7 +131,6 @@ echo "informer"
   --versioned-clientset-package="${OUTPUT_CLIENT}/apis" \
   --listers-package="${OUTPUT_CLIENT}/listers" \
   --output-base="$GOWORK/src" \
-  --go-header-file="${BOILERPLATE}" \
   --output-package="${OUTPUT_CLIENT}/informer" \
   --single-directory
 
@@ -144,7 +140,6 @@ echo "deepcopy"
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-file-base="types.generated" \
-  --go-header-file="${BOILERPLATE}" \
   --output-base="${OUTPUT_BASE}"
 
 echo "lister"
@@ -152,7 +147,6 @@ echo "lister"
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-base="$GOWORK/src" \
-  --go-header-file="${BOILERPLATE}" \
   --output-package="${OUTPUT_CLIENT}/listers"
 
 if $GEN_PROTO; then
@@ -165,8 +159,7 @@ if $GEN_PROTO; then
       --proto-import="${NOMOS_ROOT}/third_party/protobuf" \
       --packages="+${INPUT_BASE}/${api}" \
       --apimachinery-packages="$(IFS=, ; echo "${K8S_APIS_PROTO[*]}")" \
-      --output-base="$GOWORK/src" \
-      --go-header-file="${BOILERPLATE}"
+      --output-base="$GOWORK/src"
   done
 
   # go-to-protobuf changes generated proto given in K8S_APIS_PROTO
