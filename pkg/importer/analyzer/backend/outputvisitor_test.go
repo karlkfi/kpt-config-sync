@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -347,60 +346,6 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 			},
 		),
-	},
-	{
-		name: "syncs",
-		input: &ast.Root{
-			SystemObjects: []*ast.SystemObject{
-				{
-					FileObject: ast.FileObject{
-						Path: cmpath.FromSlash("<builtin>"),
-						Object: &v1.Sync{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: v1.SchemeGroupVersion.String(),
-								Kind:       "Sync",
-							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "stuff",
-							},
-						},
-					},
-				},
-			},
-		},
-		expect: &namespaceconfig.AllConfigs{
-			NamespaceConfigs: map[string]v1.NamespaceConfig{},
-			ClusterConfig: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.ClusterConfigName,
-				},
-			},
-			CRDClusterConfig: &v1.ClusterConfig{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.CRDClusterConfigName,
-				},
-			},
-			Syncs: map[string]v1.Sync{
-				"stuff": {
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "Sync",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "stuff",
-						Finalizers: []string{v1.SyncFinalizer},
-					},
-				},
-			},
-		},
 	},
 }
 
