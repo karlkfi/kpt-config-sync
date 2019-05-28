@@ -1,17 +1,17 @@
 package parse
 
 import (
-	"fmt"
+	"context"
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/clientgen/informer"
-	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -19,6 +19,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+const timeout = time.Second * 15
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
@@ -35,10 +37,10 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 		return nil, errors.Wrap(err, "Found issues")
 	}
 
-	stopCh := make(chan struct{})
-	go service.WaitForShutdownSignalCb(stopCh)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-	policies, cErr := clusterConfigs(config, stopCh)
+	policies, cErr := clusterConfigs(ctx, config)
 	if cErr != nil {
 		return nil, cErr
 	}
@@ -51,29 +53,24 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 }
 
 // clusterConfigs returns an AllPolicies with only the ClusterConfigs populated.
-func clusterConfigs(config *rest.Config, stopCh <-chan struct{}) (*namespaceconfig.AllConfigs, error) {
-	client, err := meta.NewForConfig(config, time.Minute)
+func clusterConfigs(ctx context.Context, config *rest.Config) (*namespaceconfig.AllConfigs, error) {
+	mapper, err := apiutil.NewDiscoveryRESTMapper(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create client")
+		return nil, errors.Wrapf(err, "failed to create mapper")
 	}
 
-	informerFactory := informer.NewSharedInformerFactory(
-		client.ConfigManagement(), time.Minute)
-	_, iErr := informerFactory.ForResource(v1.SchemeGroupVersion.WithResource("clusterconfigs"))
-	if iErr != nil {
-		return nil, errors.Wrap(iErr, "failed get clusterconfig informater")
+	s := runtime.NewScheme()
+	if sErr := v1.AddToScheme(s); sErr != nil {
+		return nil, errors.Wrap(sErr, "could not add configmanagement types to scheme")
 	}
-	informerFactory.Start(stopCh)
-	synced := informerFactory.WaitForCacheSync(stopCh)
-	for syncType, ok := range synced {
-		if !ok {
-			elemType := syncType.Elem()
-			return nil, fmt.Errorf("failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
-		}
+	c, cErr := client.New(config, client.Options{
+		Scheme: s,
+		Mapper: mapper,
+	})
+	if cErr != nil {
+		return nil, errors.Wrapf(cErr, "failed to create client")
 	}
-	lister := informerFactory.Configmanagement().V1().ClusterConfigs().Lister()
-
 	configs := &namespaceconfig.AllConfigs{}
-	err = namespaceconfig.DecorateWithClusterConfigs(lister, configs)
+	err = namespaceconfig.DecorateWithClusterConfigs(ctx, c, configs)
 	return configs, err
 }

@@ -17,7 +17,7 @@ type namespaceConfigEqualTestcase struct {
 }
 
 func (t *namespaceConfigEqualTestcase) Run(tt *testing.T) {
-	equal := namespaceConfigsEqual(t.lhs, t.rhs)
+	equal := NamespaceConfigsEqual(t.lhs, t.rhs)
 	if t.wantEqual == equal {
 		return
 	}

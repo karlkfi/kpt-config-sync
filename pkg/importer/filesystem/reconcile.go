@@ -6,40 +6,32 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	configmanagementscheme "github.com/google/nomos/clientgen/apis/scheme"
-	"github.com/google/nomos/clientgen/informer"
-	listersv1 "github.com/google/nomos/clientgen/listers/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/client/action"
-	"github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/actions"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/status"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const resync = time.Minute * 15
 const reconcileTimeout = time.Minute * 5
 
 var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type Reconciler struct {
-	configDir             string
-	parser                *Parser
-	differ                *actions.Differ
-	namespaceConfigLister listersv1.NamespaceConfigLister
-	clusterConfigLister   listersv1.ClusterConfigLister
-	syncLister            listersv1.SyncLister
-	repoClient            *repo.Client
-	currentDir            string
-	lastSyncs             map[string]v1.Sync
+	configDir  string
+	parser     *Parser
+	client     *syncerclient.Client
+	repoClient *repo.Client
+	cache      cache.Cache
+	currentDir string
+	lastSyncs  map[string]v1.Sync
 }
 
 // NewReconciler returns a new Reconciler.
@@ -50,43 +42,15 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(configDir string, parser *Parser, client meta.Interface, stopChan <-chan struct{}) (*Reconciler, error) {
-	if err := configmanagementscheme.AddToScheme(scheme.Scheme); err != nil {
-		return nil, errors.Wrapf(err, "filesystem.NewReconciler: can not add to scheme")
-	}
-
-	informerFactory := informer.NewSharedInformerFactory(client.ConfigManagement(), resync)
-	differ := actions.NewDiffer(
-		actions.NewFactories(
-			client.ConfigManagement().ConfigmanagementV1(),
-			client.ConfigManagement().ConfigmanagementV1(),
-			informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
-			informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
-			informerFactory.Configmanagement().V1().Syncs().Lister()))
-	repoClient := repo.NewForImporter(
-		client.ConfigManagement().ConfigmanagementV1().Repos(),
-		informerFactory.Configmanagement().V1().Repos().Lister())
-
-	// Start informers
-	informerFactory.Start(stopChan)
-	glog.Infof("Waiting for cache to sync")
-	synced := informerFactory.WaitForCacheSync(stopChan)
-	for syncType, ok := range synced {
-		if !ok {
-			elemType := syncType.Elem()
-			return nil, errors.Errorf("Failed to sync %s:%s", elemType.PkgPath(), elemType.Name())
-		}
-	}
-	glog.Infof("Caches synced")
+func NewReconciler(configDir string, parser *Parser, client *syncerclient.Client, cache cache.Cache) (*Reconciler, error) {
+	repoClient := repo.New(client)
 
 	return &Reconciler{
-		configDir:             configDir,
-		parser:                parser,
-		differ:                differ,
-		namespaceConfigLister: informerFactory.Configmanagement().V1().NamespaceConfigs().Lister(),
-		clusterConfigLister:   informerFactory.Configmanagement().V1().ClusterConfigs().Lister(),
-		syncLister:            informerFactory.Configmanagement().V1().Syncs().Lister(),
-		repoClient:            repoClient,
+		configDir:  configDir,
+		parser:     parser,
+		client:     client,
+		repoClient: repoClient,
+		cache:      cache,
 	}, nil
 }
 
@@ -127,7 +91,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// reconcile in case the user removed Syncs that should be there.
 	// We don't have a watcher for this event, but rely instead on the
 	// poll period to trigger a reconcile.
-	currentSyncs, err := namespaceconfig.ListSyncs(c.syncLister)
+	currentSyncs, err := namespaceconfig.ListSyncs(ctx, c.cache)
 	if err != nil {
 		glog.Errorf("failed quick check of current syncs: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -137,7 +101,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// If last syncs has more sync than current on-cluster sync
 	// content, this means that syncs have been removed on the cluster
 	// without our intention.
-	unchangedSyncs := len(c.differ.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
+	unchangedSyncs := len(actions.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
 	unchangedDir := c.currentDir == newDir
 
 	if unchangedDir && unchangedSyncs {
@@ -164,7 +128,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	currentConfigs, err := namespaceconfig.ListConfigs(c.namespaceConfigLister, c.clusterConfigLister, c.syncLister)
+	currentConfigs, err := namespaceconfig.ListConfigs(ctx, c.cache)
 	if err != nil {
 		glog.Errorf("failed to list current configs: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -188,8 +152,8 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
-	if errs := c.updateConfigs(currentConfigs, desiredConfigs); errs != nil {
-		glog.Warningf("Failed to apply actions: %v", errs)
+	if errs := actions.Update(ctx, c.client, *currentConfigs, *desiredConfigs); errs != nil {
+		glog.Warningf("Failed to apply actions: %v", errs.Error())
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
 		return reconcile.Result{}, nil
@@ -243,38 +207,4 @@ func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs
 		glog.Errorf("failed to update Repo source status: %v", err)
 	}
 	return r
-}
-
-// updateConfigs calculates and applies the actions needed to go from current to desired.
-// The order of actions is as follows:
-//   1. Delete Syncs. This includes any Syncs that are deleted outright, as well as any Syncs that
-//      are present in both current and desired, but which lose one or more SyncVersions in the
-//      transition.
-//   2. Apply NamespaceConfig and ClusterConfig updates.
-//   3. Apply remaining Sync updates.
-//
-// This careful ordering matters in the case where both a Sync and a Resource of the same type are
-// deleted in the same commit. The desired outcome is that the resource is not deleted, so we delete
-// the Sync first. That way, Syncer stops listening to updates for that type before the resource is
-// deleted from configs.
-//
-// If the same resource and Sync are added again in a subsequent commit, the ordering ensures that
-// the resource is restored in config before the Syncer starts managing that type.
-func (c *Reconciler) updateConfigs(current, desired *namespaceconfig.AllConfigs) status.MultiError {
-	// Calculate the sequence of actions needed to transition from current to desired state.
-	a := c.differ.Diff(*current, *desired)
-	return applyActions(a)
-}
-
-// applyActions attempts to apply the list of actions provided and returns a slice of all
-// errors resulting from the application of those actions
-func applyActions(actions []action.Interface) status.MultiError {
-	var errs []error
-	for _, a := range actions {
-		if err := a.Execute(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	// if errs is nil, From returns nil
-	return status.From(errs...)
 }

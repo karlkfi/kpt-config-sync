@@ -14,13 +14,14 @@ func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.
 	return action.NewSpec(
 		new(v1.Sync),
 		v1.SchemeGroupVersion,
-		syncsEqual,
+		SyncsEqual,
 		client,
 		lister)
 }
 
-func syncsEqual(lhs runtime.Object, rhs runtime.Object) bool {
+// SyncsEqual returns true if the syncs are equivalent.
+func SyncsEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	l := lhs.(*v1.Sync)
 	r := rhs.(*v1.Sync)
-	return cmp.Equal(l.Spec, r.Spec)
+	return cmp.Equal(l.Spec, r.Spec) && action.ObjectMetaEqual(l, r)
 }

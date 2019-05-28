@@ -259,7 +259,7 @@ func ToUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter, o
 	return result
 }
 
-// cmpDiffMatcher returns true iff cmp.Diff returns empty string.
+// cmpDiffMatcher returns true iff cmp.Update returns empty string.
 // Prints the diff if there is one, as the gomock diff is garbage.
 type cmpDiffMatcher struct {
 	t        *testing.T
@@ -294,7 +294,7 @@ func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
 	return true
 }
 
-// Diff represents the arguments to an Applier.Update invocation.
+// Diff represents the arguments to an Applier.Updawte invocation.
 type Diff struct {
 	Declared runtime.Object
 	Actual   runtime.Object

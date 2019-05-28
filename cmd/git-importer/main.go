@@ -7,21 +7,22 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
-	resyncPeriod      = flag.Duration("resync-period", time.Minute, "The resync period for the importer system")
 )
 
 func main() {
@@ -42,14 +43,18 @@ func main() {
 		glog.Fatalf("Failed to create manager: %+v", err)
 	}
 
-	stopCh := signals.SetupSignalHandler()
+	// Set up Scheme for nomos resources.
+	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
+		glog.Fatalf("Error adding configmanagement resaources to scheme: %v", err)
+	}
+
 	// Set up controllers.
-	if err := filesystem.AddController(mgr, *gitDir, *policyDirRelative, *pollPeriod, *resyncPeriod, stopCh); err != nil {
+	if err := filesystem.AddController(mgr, *gitDir, *policyDirRelative, *pollPeriod); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
 	// Start the Manager.
-	if err := mgr.Start(stopCh); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		glog.Fatalf("Error starting controller: %+v", err)
 	}
 

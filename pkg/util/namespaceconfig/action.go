@@ -16,7 +16,7 @@ func NewActionSpec(client typedv1.ConfigmanagementV1Interface, lister listersv1.
 	return action.NewSpec(
 		new(v1.NamespaceConfig),
 		v1.SchemeGroupVersion,
-		namespaceConfigsEqual,
+		NamespaceConfigsEqual,
 		client,
 		lister)
 }
@@ -32,8 +32,9 @@ var pnsIgnore = []cmp.Option{
 	cmpopts.IgnoreFields(v1.NamespaceConfigSpec{}, "Token", "ImportTime"),
 }
 
-func namespaceConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {
+// NamespaceConfigsEqual returns true if the namespaceconfigs are equivalent.
+func NamespaceConfigsEqual(lhs runtime.Object, rhs runtime.Object) bool {
 	l := lhs.(*v1.NamespaceConfig)
 	r := rhs.(*v1.NamespaceConfig)
-	return cmp.Equal(l.Spec, r.Spec, pnsIgnore...)
+	return cmp.Equal(l.Spec, r.Spec, pnsIgnore...) && action.ObjectMetaEqual(l, r)
 }

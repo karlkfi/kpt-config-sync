@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/client/meta"
-	"github.com/google/nomos/pkg/client/restconfig"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -23,16 +23,8 @@ const (
 )
 
 // AddController adds the git-importer controller to the manager.
-func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod, resyncPeriod time.Duration, stopCh <-chan struct{}) error {
-	config, err := restconfig.NewRestConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to create rest config")
-	}
-
-	client, err := meta.NewForConfig(config, resyncPeriod)
-	if err != nil {
-		return errors.Wrap(err, "failed to create client")
-	}
+func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
+	client := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
 	policyDir := path.Join(gitDir, policyDirRelative)
 	glog.Infof("Policy dir: %s", policyDir)
@@ -43,7 +35,7 @@ func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPe
 		return err
 	}
 
-	r, err := NewReconciler(policyDir, parser, client, stopCh)
+	r, err := NewReconciler(policyDir, parser, client, mgr.GetCache())
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

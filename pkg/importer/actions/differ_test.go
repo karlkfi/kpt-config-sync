@@ -1,12 +1,15 @@
 package actions
 
 import (
-	"sort"
+	"context"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/client/action"
+	"github.com/golang/mock/gomock"
+	"github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/syncer/testing/mocks"
+
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"k8s.io/api/policy/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,11 +18,13 @@ import (
 
 type testCase struct {
 	testName                           string
-	oldNodes, newNodes                 []v1.NamespaceConfig
+	oldNodes, newNodes                 []*v1.NamespaceConfig
 	oldClusterConfig, newClusterConfig *v1.ClusterConfig
-	oldSyncs, newSyncs                 []v1.Sync
+	oldSyncs, newSyncs                 []*v1.Sync
 	// String representation of expected actions
-	expected []string
+	wantCreate []runtime.Object
+	wantUpdate []runtime.Object
+	wantDelete []runtime.Object
 }
 
 func TestDiffer(t *testing.T) {
@@ -29,85 +34,93 @@ func TestDiffer(t *testing.T) {
 		},
 		{
 			testName: "All Empty",
-			oldNodes: []v1.NamespaceConfig{},
-			newNodes: []v1.NamespaceConfig{},
+			oldNodes: []*v1.NamespaceConfig{},
+			newNodes: []*v1.NamespaceConfig{},
 		},
 		{
 			testName: "One node Create",
-			oldNodes: []v1.NamespaceConfig{},
-			newNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{},
+			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 			},
-			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/create"},
+			wantCreate: []runtime.Object{
+				namespaceConfig("r"),
+			},
 		},
 		{
 			testName: "One node delete",
-			oldNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 			},
-			newNodes: []v1.NamespaceConfig{},
-			expected: []string{"configmanagement.gke.io/v1/NamespaceConfigs/r/update"},
+			newNodes: []*v1.NamespaceConfig{},
+			wantDelete: []runtime.Object{
+				namespaceConfig("r"),
+			},
 		},
 		{
 			testName: "Rename root node",
-			oldNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 			},
-			newNodes: []v1.NamespaceConfig{
+			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r2"),
 			},
-			expected: []string{
-				"configmanagement.gke.io/v1/NamespaceConfigs/r2/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/r/update",
+			wantDelete: []runtime.Object{
+				namespaceConfig("r"),
+			},
+			wantCreate: []runtime.Object{
+				namespaceConfig("r2"),
 			},
 		},
 		{
 			testName: "Create 2 nodes",
-			oldNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 			},
-			newNodes: []v1.NamespaceConfig{
+			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 				namespaceConfig("c1"),
 				namespaceConfig("c2"),
 			},
-			expected: []string{
-				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
+			wantCreate: []runtime.Object{
+				namespaceConfig("c1"),
+				namespaceConfig("c2"),
 			},
 		},
 		{
 			testName: "Create 2 nodes and delete 2",
-			oldNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 				namespaceConfig("co1"),
 				namespaceConfig("co2"),
 			},
-			newNodes: []v1.NamespaceConfig{
+			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 				namespaceConfig("c2"),
 				namespaceConfig("c1"),
 			},
-			expected: []string{
-				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/co2/update",
-				"configmanagement.gke.io/v1/NamespaceConfigs/co1/update",
+			wantCreate: []runtime.Object{
+				namespaceConfig("c1"),
+				namespaceConfig("c2"),
+			},
+			wantDelete: []runtime.Object{
+				namespaceConfig("co1"),
+				namespaceConfig("co2"),
 			},
 		},
 		{
 			testName:         "ClusterConfig create",
 			newClusterConfig: clusterConfig("foo", true),
-			expected: []string{
-				"configmanagement.gke.io/v1/ClusterConfigs/foo/create",
+			wantCreate: []runtime.Object{
+				clusterConfig("foo", true),
 			},
 		},
 		{
 			testName:         "ClusterConfig update",
 			oldClusterConfig: clusterConfig("foo", true),
 			newClusterConfig: clusterConfig("foo", false),
-			expected: []string{
-				"configmanagement.gke.io/v1/ClusterConfigs/foo/update",
+			wantUpdate: []runtime.Object{
+				clusterConfig("foo", false),
 			},
 		},
 		{
@@ -118,114 +131,91 @@ func TestDiffer(t *testing.T) {
 		{
 			testName:         "ClusterConfig delete",
 			oldClusterConfig: clusterConfig("foo", true),
-			expected: []string{
-				"configmanagement.gke.io/v1/ClusterConfigs/foo/delete",
+			wantDelete: []runtime.Object{
+				clusterConfig("foo", true),
 			},
 		},
 		{
 			testName: "Create 2 nodes and a ClusterConfig",
-			oldNodes: []v1.NamespaceConfig{
+			oldNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 			},
-			newNodes: []v1.NamespaceConfig{
+			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r"),
 				namespaceConfig("c2"),
 				namespaceConfig("c1"),
 			},
 			newClusterConfig: clusterConfig("foo", true),
-			expected: []string{
-				"configmanagement.gke.io/v1/NamespaceConfigs/c1/create",
-				"configmanagement.gke.io/v1/NamespaceConfigs/c2/create",
-				"configmanagement.gke.io/v1/ClusterConfigs/foo/create",
+			wantCreate: []runtime.Object{
+				clusterConfig("foo", true),
+				namespaceConfig("c1"),
+				namespaceConfig("c2"),
 			},
 		},
 		{
 			testName: "Empty Syncs",
-			oldSyncs: []v1.Sync{},
-			newSyncs: []v1.Sync{},
+			oldSyncs: []*v1.Sync{},
+			newSyncs: []*v1.Sync{},
 		},
 		{
 			testName: "Sync create",
-			oldSyncs: []v1.Sync{},
-			newSyncs: []v1.Sync{
-				*v1.NewSync("", "ResourceQuota"),
+			oldSyncs: []*v1.Sync{},
+			newSyncs: []*v1.Sync{
+				v1.NewSync("", "ResourceQuota"),
 			},
-			expected: []string{
-				"configmanagement.gke.io/v1/Syncs/resourcequota/create",
+			wantCreate: []runtime.Object{
+				v1.NewSync("", "ResourceQuota"),
 			},
 		},
 		{
 			testName: "Sync update no change",
-			oldSyncs: []v1.Sync{
-				*v1.NewSync("", "ResourceQuota"),
+			oldSyncs: []*v1.Sync{
+				v1.NewSync("", "ResourceQuota"),
 			},
-			newSyncs: []v1.Sync{
-				*v1.NewSync("", "ResourceQuota"),
+			newSyncs: []*v1.Sync{
+				v1.NewSync("", "ResourceQuota"),
 			},
 		},
 		{
 			testName: "Sync delete",
-			oldSyncs: []v1.Sync{
-				*v1.NewSync("", "ResourceQuota"),
+			oldSyncs: []*v1.Sync{
+				v1.NewSync("", "ResourceQuota"),
 			},
-			newSyncs: []v1.Sync{},
-			expected: []string{
-				"configmanagement.gke.io/v1/Syncs/resourcequota/delete",
+			newSyncs: []*v1.Sync{},
+			wantDelete: []runtime.Object{
+				v1.NewSync("", "ResourceQuota"),
 			},
 		},
 	} {
 		t.Run(test.testName, func(t *testing.T) {
-			g := NewDiffer(NewFactories(nil, nil, nil, nil, nil))
-			g.SortDiff = true
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-			gotActions := g.Diff(
+			mockClient := mocks.NewMockClient(mockCtrl)
+			for _, c := range test.wantCreate {
+				mockClient.EXPECT().Create(gomock.Any(), gomock.Eq(c))
+			}
+			for _, c := range test.wantDelete {
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
+				mockClient.EXPECT().Delete(gomock.Any(), gomock.Eq(c), gomock.Any())
+			}
+			for _, c := range test.wantUpdate {
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
+				mockClient.EXPECT().Update(gomock.Any(), gomock.Eq(c))
+			}
+
+			err := Update(context.Background(), client.New(mockClient, metrics.APICallDuration),
 				allConfigs(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
 				allConfigs(test.newNodes, test.newClusterConfig, test.newSyncs))
-
-			if len(gotActions) != len(test.expected) {
-				t.Fatalf("Actual number of actions was %d but expected %d",
-					len(gotActions), len(test.expected))
-			}
-
-			var actual []string
-			for _, a := range gotActions {
-				actual = append(actual, a.String())
-			}
-			sort.Strings(test.expected)
-			sort.Strings(actual)
-			if !cmp.Equal(test.expected, actual) {
-				t.Fatalf("Exepcted and actual actions differ: %s", cmp.Diff(test.expected, actual))
-			}
-
-			namespaceConfigs := make(map[string]v1.NamespaceConfig)
-			for _, pn := range test.oldNodes {
-				namespaceConfigs[pn.Name] = pn
-			}
-			for _, a := range gotActions {
-				executeAction(t, a, namespaceConfigs)
+			if err != nil {
+				t.Fatalf("unexpected error in diff: %v", err)
 			}
 		})
 	}
 }
 
-func executeAction(t *testing.T, a action.Interface, nodes map[string]v1.NamespaceConfig) {
-	if a.Kind() != action.Plural(v1.NamespaceConfig{}) {
-		// We only test transient states for NamespaceConfigs
-		return
-	}
-	op := a.Operation()
-	switch op {
-	case action.CreateOperation, action.UpdateOperation, action.UpsertOperation:
-		nodes[a.Name()] = namespaceConfig(a.Name())
-	case action.DeleteOperation:
-		delete(nodes, a.Name())
-	default:
-		t.Fatalf("Unexpected operation: %v", op)
-	}
-}
-
-func namespaceConfig(name string) v1.NamespaceConfig {
-	return v1.NamespaceConfig{
+func namespaceConfig(name string) *v1.NamespaceConfig {
+	return &v1.NamespaceConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
@@ -261,7 +251,7 @@ func clusterConfig(name string, priviledged bool) *v1.ClusterConfig {
 	}
 }
 
-func allConfigs(nodes []v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []v1.Sync) namespaceconfig.AllConfigs {
+func allConfigs(nodes []*v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []*v1.Sync) namespaceconfig.AllConfigs {
 	configs := namespaceconfig.AllConfigs{
 		ClusterConfig: clusterConfig,
 	}
@@ -270,14 +260,14 @@ func allConfigs(nodes []v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syn
 		if i == 0 {
 			configs.NamespaceConfigs = make(map[string]v1.NamespaceConfig)
 		}
-		configs.NamespaceConfigs[n.Name] = n
+		configs.NamespaceConfigs[n.Name] = *n
 	}
 
 	if len(syncs) > 0 {
 		configs.Syncs = make(map[string]v1.Sync)
 	}
 	for _, s := range syncs {
-		configs.Syncs[s.Name] = s
+		configs.Syncs[s.Name] = *s
 	}
 
 	return configs
