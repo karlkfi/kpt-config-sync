@@ -16,18 +16,15 @@ type APIInfoBuilderVisitor struct {
 	*visitor.Base
 	client             discovery.ServerResourcesInterface
 	ephemeralResources []*metav1.APIResourceList
-	enableCRDs         bool
 	errs               status.MultiError
 }
 
 // NewAPIInfoBuilderVisitor instantiates a CRDClusterConfigInfoVisitor with a set of objects to add.
-func NewAPIInfoBuilderVisitor(client discovery.ServerResourcesInterface, ephemeralResources []*metav1.APIResourceList,
-	enableCRDs bool) *APIInfoBuilderVisitor {
+func NewAPIInfoBuilderVisitor(client discovery.ServerResourcesInterface, ephemeralResources []*metav1.APIResourceList) *APIInfoBuilderVisitor {
 	v := &APIInfoBuilderVisitor{
 		Base:               visitor.NewBase(),
 		client:             client,
 		ephemeralResources: ephemeralResources,
-		enableCRDs:         enableCRDs,
 	}
 	v.SetImpl(v)
 	return v
@@ -45,22 +42,21 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	if err != nil {
 		v.errs = status.Append(v.errs, status.APIServerWrapf(err, "discovery failed for server resources"))
 	}
-	if v.enableCRDs {
-		for _, cr := range r.ClusterObjects {
-			if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
-				continue
-			}
 
-			crd, err := clusterconfig.AsCRD(cr.Object)
-			if err != nil {
-				v.errs = status.Append(v.errs, status.PathWrapf(err, cr.SlashPath()))
-				continue
-			}
-			apiInfo.AddCustomResources(crd)
+	for _, cr := range r.ClusterObjects {
+		if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
+			continue
 		}
-	}
-	v.errs = status.Append(v.errs, utildiscovery.AddAPIInfo(r, apiInfo))
 
+		crd, err := clusterconfig.AsCRD(cr.Object)
+		if err != nil {
+			v.errs = status.Append(v.errs, status.PathWrapf(err, cr.SlashPath()))
+			continue
+		}
+		apiInfo.AddCustomResources(crd)
+	}
+
+	v.errs = status.Append(v.errs, utildiscovery.AddAPIInfo(r, apiInfo))
 	return r
 }
 

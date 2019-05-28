@@ -13,12 +13,12 @@ import (
 
 // NewHierarchyConfigKindValidator returns a Visitor that ensures only supported Resource Kinds are declared in
 // HierarchyConfigs.
-func NewHierarchyConfigKindValidator(enableCRDs bool) ast.Visitor {
+func NewHierarchyConfigKindValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
-				if err := ValidateKinds(gkc, enableCRDs); err != nil {
+				if err := ValidateKinds(gkc); err != nil {
 					return err
 				}
 			}
@@ -28,8 +28,8 @@ func NewHierarchyConfigKindValidator(enableCRDs bool) ast.Visitor {
 }
 
 // ValidateKinds ensures that only supported Resource Kinds are declared in HierarchyConfigs.
-func ValidateKinds(config FileGroupKindHierarchyConfig, enableCRDs bool) status.MultiError {
-	if AllowedInHierarchyConfigs(config.GroupKind(), enableCRDs) {
+func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
+	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}
 	return status.From(vet.UnsupportedResourceInHierarchyConfigError{
@@ -38,18 +38,16 @@ func ValidateKinds(config FileGroupKindHierarchyConfig, enableCRDs bool) status.
 }
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
-func AllowedInHierarchyConfigs(gk schema.GroupKind, enableCRDs bool) bool {
-	return !unsupportedHierarchyConfigResources(enableCRDs)[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
+func AllowedInHierarchyConfigs(gk schema.GroupKind) bool {
+	return !unsupportedHierarchyConfigResources()[gk] && gk.Group != configmanagement.GroupName && gk.Kind != ""
 }
 
 // unsupportedHierarchyConfigResources returns a map of each type where syncing is explicitly not supported.
-func unsupportedHierarchyConfigResources(enableCRDs bool) map[schema.GroupKind]bool {
+func unsupportedHierarchyConfigResources() map[schema.GroupKind]bool {
 	m := map[schema.GroupKind]bool{
 		kinds.Namespace().GroupKind():        true,
 		kinds.ConfigManagement().GroupKind(): true,
 	}
-	if !enableCRDs {
-		m[kinds.CustomResourceDefinition().GroupKind()] = true
-	}
+
 	return m
 }

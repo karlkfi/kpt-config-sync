@@ -30,8 +30,7 @@ returns a non-zero error code if any issues are found.
 		dir := flags.Path.String()
 		_, err := parse.Parse(
 			dir,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, EnableCRDs: true,
-				Extension: &filesystem.NomosVisitorProvider{}})
+			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

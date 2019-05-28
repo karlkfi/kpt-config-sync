@@ -10,7 +10,7 @@ import (
 )
 
 // AddControllers adds all controllers that manage other controllers.
-func AddControllers(mgr manager.Manager, enableCRDs bool) error {
+func AddControllers(mgr manager.Manager) error {
 	// Set up Scheme for nomos resources.
 	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
 		return err
@@ -20,8 +20,6 @@ func AddControllers(mgr manager.Manager, enableCRDs bool) error {
 	if err := sync.AddController(mgr, rc); err != nil {
 		return err
 	}
-	if enableCRDs {
-		return crd.AddCRDController(mgr, sync.RestartSignal(rc))
-	}
-	return nil
+
+	return crd.AddCRDController(mgr, sync.RestartSignal(rc))
 }

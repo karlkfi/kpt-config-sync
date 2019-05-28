@@ -59,8 +59,7 @@ type ParserOpt struct {
 	Validate bool
 	// Extension is the ParserConfig object that the parser will consume for configuring various
 	// aspects of the execution (see ParserConfig).
-	Extension  ParserConfig
-	EnableCRDs bool
+	Extension ParserConfig
 }
 
 // NewParser creates a new Parser using the specified RESTClientGetter and parser options.
@@ -147,12 +146,12 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath, false, crds...)),
 		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
 		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath, crds...)),
-		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources(), p.opts.EnableCRDs),
+		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()),
 		tree.NewCRDClusterConfigInfoVisitor(crdInfo),
 	}
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet, p.opts.EnableCRDs)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
 
-	outputVisitor := backend.NewOutputVisitor(p.opts.EnableCRDs)
+	outputVisitor := backend.NewOutputVisitor()
 	visitors = append(visitors,
 		transform.NewSyncGenerator(),
 		outputVisitor)

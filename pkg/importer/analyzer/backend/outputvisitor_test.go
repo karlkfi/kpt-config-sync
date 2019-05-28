@@ -4,8 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/kinds"
+
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -17,9 +19,10 @@ import (
 
 var helper = vt.NewTestHelper()
 
-func allConfigs(cp v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.AllConfigs {
+func allConfigs(c, crd v1.ClusterConfig, pns []v1.NamespaceConfig) *namespaceconfig.AllConfigs {
 	ap := &namespaceconfig.AllConfigs{
-		ClusterConfig:    &cp,
+		ClusterConfig:    &c,
+		CRDClusterConfig: &crd,
 		NamespaceConfigs: map[string]v1.NamespaceConfig{},
 		Syncs:            map[string]v1.Sync{},
 		ImportToken:      vt.ImportToken,
@@ -37,7 +40,7 @@ type OutputVisitorTestcase struct {
 }
 
 func (tc *OutputVisitorTestcase) Run(t *testing.T) {
-	ov := NewOutputVisitor(false)
+	ov := NewOutputVisitor()
 	tc.input.Accept(ov)
 	actual := ov.AllConfigs()
 	// LoadTime is hard to get right, so just set it to zero
@@ -65,6 +68,19 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					ImportTime: metav1.NewTime(vt.ImportTime),
 				},
 			},
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+				},
+			},
 			[]v1.NamespaceConfig{},
 		),
 	},
@@ -82,6 +98,19 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+				},
+			},
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
 					Token:      vt.ImportToken,
@@ -140,6 +169,64 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 					},
 				},
 			},
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+				},
+			},
+			[]v1.NamespaceConfig{},
+		),
+	},
+	{
+		name:  "crd cluster configs",
+		input: helper.CRDClusterConfig(),
+		expect: allConfigs(
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.ClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+				},
+			},
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+					Resources: []v1.GenericResources{
+						{
+							Group: kinds.CustomResourceDefinition().Group,
+							Kind:  kinds.CustomResourceDefinition().Kind,
+							Versions: []v1.GenericVersionResources{
+								{
+									Version: kinds.CustomResourceDefinition().Version,
+									Objects: []runtime.RawExtension{{Object: helper.CRD()}},
+								},
+							},
+						},
+					},
+				},
+			},
 			[]v1.NamespaceConfig{},
 		),
 	},
@@ -154,6 +241,19 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
+				},
+				Spec: v1.ClusterConfigSpec{
+					Token:      vt.ImportToken,
+					ImportTime: metav1.NewTime(vt.ImportTime),
+				},
+			},
+			v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
 				},
 				Spec: v1.ClusterConfigSpec{
 					Token:      vt.ImportToken,
@@ -277,6 +377,15 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
+				},
+			},
+			CRDClusterConfig: &v1.ClusterConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1.SchemeGroupVersion.String(),
+					Kind:       "ClusterConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.CRDClusterConfigName,
 				},
 			},
 			Syncs: map[string]v1.Sync{

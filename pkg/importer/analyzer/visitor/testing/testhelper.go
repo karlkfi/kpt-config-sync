@@ -3,6 +3,9 @@ package testing
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/kinds"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/util/repo"
 
@@ -162,6 +165,31 @@ func (t *TestHelper) NomosPodSecurityPolicy() *policyv1beta1.PodSecurityPolicy {
 	}
 }
 
+// CRD returns a CRD for testing.
+func (t *TestHelper) CRD() *v1beta1.CustomResourceDefinition {
+	return &v1beta1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1beta1.SchemeGroupVersion.String(),
+			Kind:       kinds.CustomResourceDefinition().Kind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "example",
+		},
+		Spec: v1beta1.CustomResourceDefinitionSpec{
+			Group: "some.group",
+			Versions: []v1beta1.CustomResourceDefinitionVersion{{
+				Name:    "v1",
+				Served:  true,
+				Storage: true,
+			}},
+			Names: v1beta1.CustomResourceDefinitionNames{
+				Plural: "names",
+				Kind:   "Name",
+			},
+		},
+	}
+}
+
 // EmptyRoot returns an empty Root.
 func (t *TestHelper) EmptyRoot() *ast.Root {
 	return &ast.Root{
@@ -176,6 +204,17 @@ func (t *TestHelper) ClusterConfigs() *ast.Root {
 		ClusterObjects: t.AcmeCluster(),
 		ImportToken:    t.ImportToken,
 		LoadTime:       t.ImportTime,
+	}
+}
+
+// CRDClusterConfig returns a Root with only the CRD Cluster Config.
+func (t *TestHelper) CRDClusterConfig() *ast.Root {
+	return &ast.Root{
+		ClusterObjects: ClusterObjectSets(
+			t.CRD(),
+		),
+		ImportToken: t.ImportToken,
+		LoadTime:    t.ImportTime,
 	}
 }
 

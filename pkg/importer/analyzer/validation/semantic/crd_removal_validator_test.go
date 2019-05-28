@@ -27,11 +27,7 @@ func CRDInfo(crdInfo *clusterconfig.CRDInfo) ast.BuildOpt {
 }
 
 func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
-	vf := func() ast.Visitor {
-		return NewCRDRemovalValidator(true)
-	}
-
-	test := asttest.Validator(vf,
+	test := asttest.Validator(NewCRDRemovalValidator,
 		vet.UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("no CRD pending delete for corresponding namespace-scoped Custom Resource",
 			fake.CustomResourceDefinition("cluster/crd.yaml"),
@@ -47,15 +43,12 @@ func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
 }
 
 func TestKnownResourceValidatorWithPendingRemovals(t *testing.T) {
-	vf := func() ast.Visitor {
-		return NewCRDRemovalValidator(true)
-	}
 	crd := fake.CustomResourceDefinition("cluster/crd.yaml").Object.(*v1beta1.CustomResourceDefinition)
 	anvilCRDInfo := clusterconfig.StubbedCRDInfo(map[schema.GroupKind]*v1beta1.CustomResourceDefinition{
 		kinds.Anvil().GroupKind(): crd,
 	})
 
-	test := asttest.Validator(vf,
+	test := asttest.Validator(NewCRDRemovalValidator,
 		vet.UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("CRD pending delete, but no corresponding Custom Resource"),
 		asttest.Fail("CRD pending delete for corresponding namespace-scoped Custom Resource",

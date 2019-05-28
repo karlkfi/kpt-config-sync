@@ -26,8 +26,7 @@ type NomosVisitorProvider struct {
 // Visitors implements ParserConfig
 func (n NomosVisitorProvider) Visitors(
 	configs []*v1.HierarchyConfig,
-	vetEnabled bool,
-	enableCRDs bool) []ast.Visitor {
+	vetEnabled bool) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	v := []ast.Visitor{
@@ -37,10 +36,10 @@ func (n NomosVisitorProvider) Visitors(
 		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
-		hierarchyconfig.NewHierarchyConfigKindValidator(enableCRDs),
+		hierarchyconfig.NewHierarchyConfigKindValidator(),
 		hierarchyconfig.NewKnownResourceValidator(),
 		hierarchyconfig.NewInheritanceValidator(),
-		visitors.NewSupportedClusterResourcesValidator(enableCRDs),
+		visitors.NewSupportedClusterResourcesValidator(),
 		syntax.NewClusterRegistryKindValidator(),
 		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
@@ -60,7 +59,7 @@ func (n NomosVisitorProvider) Visitors(
 		semantic.NewAbstractResourceValidator(),
 		syntax.NewDisallowedCRDNameValidator(),
 		syntax.NewDisallowedCRDsValidator(),
-		semantic.NewCRDRemovalValidator(enableCRDs),
+		semantic.NewCRDRemovalValidator(),
 		transform.NewPathAnnotationVisitor(),
 		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree

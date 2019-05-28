@@ -37,10 +37,9 @@ func TestPolicyManagementNotInstalled(t *testing.T) {
 			p := NewParser(
 				f,
 				ParserOpt{
-					Vet:        false,
-					Validate:   true,
-					EnableCRDs: true,
-					Extension:  &NomosVisitorProvider{},
+					Vet:       false,
+					Validate:  true,
+					Extension: &NomosVisitorProvider{},
 				},
 			)
 			eb := p.ValidateInstallation()

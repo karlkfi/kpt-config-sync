@@ -19,9 +19,6 @@ import (
 var (
 	resyncPeriod = flag.Duration(
 		"resync_period", time.Minute, "The resync period for the syncer system")
-	// TODO(129774660): Clean up after launching CRD syncing.
-	enableCRDs = flag.Bool(
-		"enable_crds", true, "When true, enable syncing CRDs")
 )
 
 func main() {
@@ -43,7 +40,7 @@ func main() {
 	}
 
 	// Set up controllers.
-	if err := meta.AddControllers(mgr, *enableCRDs); err != nil {
+	if err := meta.AddControllers(mgr); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 

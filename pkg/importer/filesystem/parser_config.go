@@ -15,8 +15,7 @@ type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
 	Visitors(
 		configs []*v1.HierarchyConfig,
-		vet bool,
-		enableCRDs bool) []ast.Visitor
+		vet bool) []ast.Visitor
 
 	// NamespacesDir returns the name of the namespaces dir.
 	NamespacesDir() string

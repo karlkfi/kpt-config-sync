@@ -83,8 +83,7 @@ func TestAPIInfoVisitor(t *testing.T) {
 			client := newFakeDiscoveryClient(tc.resources)
 
 			root := &ast.Root{}
-			// TODO(sbochins): add tests with CRDs enabled
-			root.Accept(tree.NewAPIInfoBuilderVisitor(client, transform.EphemeralResources(), false))
+			root.Accept(tree.NewAPIInfoBuilderVisitor(client, transform.EphemeralResources()))
 			actual, err := utildiscovery.GetAPIInfo(root)
 			if err != nil {
 				t.Fatal(err)
@@ -142,8 +141,7 @@ func TestAPIInfoVisitorError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := &ast.Root{}
-			// TODO(sbochins): add tests with CRDs enabled
-			v := tree.NewAPIInfoBuilderVisitor(tc.client, transform.EphemeralResources(), false)
+			v := tree.NewAPIInfoBuilderVisitor(tc.client, transform.EphemeralResources())
 			root.Accept(v)
 
 			if v.Error() == nil {

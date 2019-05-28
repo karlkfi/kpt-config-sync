@@ -12,13 +12,12 @@ import (
 // while its corresponding Custom Resources still exist on the cluster.
 type CRDRemovalValidator struct {
 	*visitor.ValidatorBase
-	crdInfo    *clusterconfig.CRDInfo
-	enableCRDs bool
+	crdInfo *clusterconfig.CRDInfo
 }
 
 // NewCRDRemovalValidator instantiates an CRDRemovalValidator.
-func NewCRDRemovalValidator(enableCRDs bool) ast.Visitor {
-	return visitor.NewValidator(&CRDRemovalValidator{enableCRDs: enableCRDs})
+func NewCRDRemovalValidator() ast.Visitor {
+	return visitor.NewValidator(&CRDRemovalValidator{})
 }
 
 // ValidateRoot adds CRDClusterConfigInfo to Root Extensions.
@@ -39,10 +38,8 @@ func (v *CRDRemovalValidator) ValidateObject(o *ast.NamespaceObject) status.Mult
 }
 
 func (v *CRDRemovalValidator) validate(o ast.FileObject) status.MultiError {
-	if v.enableCRDs {
-		if crd, pendingRemoval := v.crdInfo.CRDPendingRemoval(o); pendingRemoval {
-			return status.From(vet.UnsupportedCRDRemovalError{Resource: ast.ParseFileObject(crd)})
-		}
+	if crd, pendingRemoval := v.crdInfo.CRDPendingRemoval(o); pendingRemoval {
+		return status.From(vet.UnsupportedCRDRemovalError{Resource: ast.ParseFileObject(crd)})
 	}
 	return nil
 }

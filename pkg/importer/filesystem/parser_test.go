@@ -1718,10 +1718,9 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	p := NewParser(
 		f,
 		ParserOpt{
-			Vet:        tc.vet,
-			Validate:   true,
-			EnableCRDs: true,
-			Extension:  &NomosVisitorProvider{},
+			Vet:       tc.vet,
+			Validate:  true,
+			Extension: &NomosVisitorProvider{},
 		},
 	)
 	actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
@@ -2576,10 +2575,9 @@ func TestEmptyDirectories(t *testing.T) {
 			p := NewParser(
 				f,
 				ParserOpt{
-					Vet:        false,
-					Validate:   true,
-					EnableCRDs: true,
-					Extension:  &NomosVisitorProvider{},
+					Vet:       false,
+					Validate:  true,
+					Extension: &NomosVisitorProvider{},
 				},
 			)
 			actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})

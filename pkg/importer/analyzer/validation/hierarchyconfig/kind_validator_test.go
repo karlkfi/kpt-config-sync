@@ -13,7 +13,7 @@ import (
 
 func TestKindValidator(t *testing.T) {
 	v := func() ast.Visitor {
-		return NewHierarchyConfigKindValidator(false)
+		return NewHierarchyConfigKindValidator()
 	}
 	test := asttest.Validator(v,
 		vet.UnsupportedResourceInHierarchyConfigErrorCode,
@@ -22,7 +22,7 @@ func TestKindValidator(t *testing.T) {
 			fake.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
-		asttest.Fail("CRD not supported",
+		asttest.Pass("CRD supported",
 			fake.Build(kinds.HierarchyConfig(),
 				HierarchyConfigResource(kinds.CustomResourceDefinition(), v1.HierarchyModeDefault)),
 		),

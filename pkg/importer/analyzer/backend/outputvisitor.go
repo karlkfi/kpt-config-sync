@@ -20,14 +20,13 @@ type OutputVisitor struct {
 	allConfigs      *namespaceconfig.AllConfigs
 	namespaceConfig []*v1.NamespaceConfig
 	syncs           []*v1.Sync
-	enableCRDs      bool
 }
 
 var _ ast.Visitor = &OutputVisitor{}
 
 // NewOutputVisitor creates a new output visitor.
-func NewOutputVisitor(enableCRDs bool) *OutputVisitor {
-	v := &OutputVisitor{Base: visitor.NewBase(), enableCRDs: enableCRDs}
+func NewOutputVisitor() *OutputVisitor {
+	v := &OutputVisitor{Base: visitor.NewBase()}
 	v.SetImpl(v)
 	return v
 }
@@ -68,13 +67,7 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 				ImportTime: v.loadTime,
 			},
 		},
-		Repo:        g.Repo,
-		LoadTime:    g.LoadTime,
-		ImportToken: g.ImportToken,
-	}
-
-	if v.enableCRDs {
-		v.allConfigs.CRDClusterConfig = &v1.ClusterConfig{
+		CRDClusterConfig: &v1.ClusterConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
 				Kind:       kinds.ClusterConfig().Kind,
@@ -86,7 +79,10 @@ func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
 				Token:      v.importToken,
 				ImportTime: v.loadTime,
 			},
-		}
+		},
+		Repo:        g.Repo,
+		LoadTime:    g.LoadTime,
+		ImportToken: g.ImportToken,
 	}
 
 	v.Base.VisitRoot(g)

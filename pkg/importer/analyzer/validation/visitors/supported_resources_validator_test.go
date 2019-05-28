@@ -12,9 +12,8 @@ import (
 )
 
 func TestSupportedClusterResourcesValidator(t *testing.T) {
-	// TODO: enable CRDs
 	newSupportedClusterResourcesValidator := func() *visitor.ValidatorVisitor {
-		return NewSupportedClusterResourcesValidator(false)
+		return NewSupportedClusterResourcesValidator()
 	}
 	test := visitortesting.ObjectValidatorTest{
 		Validator: newSupportedClusterResourcesValidator,
