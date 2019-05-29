@@ -21,7 +21,10 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -43,8 +46,8 @@ func init() {
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
 }
 
-// Cmd runs a loop that fetches Repos from all available clusters and prints a summary of the status
-// of Config Management for each cluster.
+// Cmd runs a loop that fetches ACM objects from all available clusters and prints a summary of the
+// status of Config Management for each cluster.
 var Cmd = &cobra.Command{
 	Hidden: true,
 	Use:    "status",
@@ -53,7 +56,7 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Connecting to clusters...")
 
-		clientMap, err := repoClients(flags.Contexts)
+		clientMap, err := statusClients(flags.Contexts)
 		if err != nil {
 			glog.Fatalf("Failed to get clients: %v", err)
 		}
@@ -63,18 +66,18 @@ var Cmd = &cobra.Command{
 		writer := util.NewWriter(os.Stdout)
 		if pollingInterval > 0 {
 			for {
-				printRepos(writer, clientMap, names)
+				printStatus(writer, clientMap, names)
 				time.Sleep(pollingInterval)
 			}
 		} else {
-			printRepos(writer, clientMap, names)
+			printStatus(writer, clientMap, names)
 		}
 	},
 }
 
-// repoClients returns a map of of typed clients keyed by the name of the kubeconfig context they
+// statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
-func repoClients(contexts []string) (map[string]typedv1.RepoInterface, error) {
+func statusClients(contexts []string) (map[string]*statusClient, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if configs == nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
@@ -84,14 +87,34 @@ func repoClients(contexts []string) (map[string]typedv1.RepoInterface, error) {
 	}
 	configs = filterConfigs(contexts, configs)
 
-	clientMap := make(map[string]typedv1.RepoInterface)
+	clientMap := make(map[string]*statusClient)
 	unreachableClusters := false
+
 	for name, cfg := range configs {
 		policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 		if err != nil {
-			fmt.Printf("Failed to generate clientset for %q: %v\n", name, err)
-		} else if isReachable(policyHierarchyClientSet, name) {
-			clientMap[name] = policyHierarchyClientSet.ConfigmanagementV1().Repos()
+			fmt.Printf("Failed to generate Repo client for %q: %v\n", name, err)
+			continue
+		}
+
+		k8sClientset, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			fmt.Printf("Failed to generate Kubernetes client for %q: %v\n", name, err)
+			continue
+		}
+
+		cmClient, err := util.NewConfigManagementClient(cfg)
+		if err != nil {
+			fmt.Printf("Failed to generate ConfigManagement client for %q: %v\n", name, err)
+			continue
+		}
+
+		if isReachable(policyHierarchyClientSet, name) {
+			clientMap[name] = &statusClient{
+				policyHierarchyClientSet.ConfigmanagementV1().Repos(),
+				k8sClientset.CoreV1().Pods("kube-system"),
+				cmClient,
+			}
 		} else {
 			clientMap[name] = nil
 			unreachableClusters = true
@@ -138,7 +161,7 @@ func isReachable(clientset *apis.Clientset, cluster string) bool {
 }
 
 // clusterNames returns a sorted list of names from the given clientMap.
-func clusterNames(clientMap map[string]typedv1.RepoInterface) []string {
+func clusterNames(clientMap map[string]*statusClient) []string {
 	var names []string
 	var unreachableNames []string
 	for name, cl := range clientMap {
@@ -153,13 +176,13 @@ func clusterNames(clientMap map[string]typedv1.RepoInterface) []string {
 	return append(names, unreachableNames...)
 }
 
-// printRepos fetches RepoStatus from each cluster in the given map and then prints a formatted
-// status row for each one. If there are any errors reported by the RepoStatus, those are printed in
-// a second table under the status table.
+// printStatus fetches ConfigManagementStatus and/or RepoStatus from each cluster in the given map
+// and then prints a formatted status row for each one. If there are any errors reported by either
+// object, those are printed in a second table under the status table.
 // nolint:errcheck
-func printRepos(writer *tabwriter.Writer, clientMap map[string]typedv1.RepoInterface, names []string) {
+func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, names []string) {
 	// First build up maps of all the things we want to display.
-	writeMap, errorMap := fetchRepos(clientMap)
+	writeMap, errorMap := fetchStatus(clientMap)
 	// Now we write everything at once. Processing and then printing helps avoid screen strobe.
 
 	if pollingInterval > 0 {
@@ -192,9 +215,9 @@ func printRepos(writer *tabwriter.Writer, clientMap map[string]typedv1.RepoInter
 	writer.Flush()
 }
 
-// fetchRepos returns two maps which are both keyed by cluster name. The first is a map of printable
-// cluster status rows and the second is a map of printable cluster error rows.
-func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, map[string][]string) {
+// fetchStatus returns two maps which are both keyed by cluster name. The first is a map of
+// printable cluster status rows and the second is a map of printable cluster error rows.
+func fetchStatus(clientMap map[string]*statusClient) (map[string]string, map[string][]string) {
 	var mapMutex sync.Mutex
 	var wg sync.WaitGroup
 	writeMap := make(map[string]string)
@@ -211,21 +234,8 @@ func fetchRepos(clientMap map[string]typedv1.RepoInterface) (map[string]string, 
 		}
 		wg.Add(1)
 
-		go func(name string, repoClient typedv1.RepoInterface) {
-			var status string
-			var errs []string
-
-			repoList, listErr := repoClient.List(metav1.ListOptions{})
-
-			if listErr != nil {
-				status = errorRow(name, util.NotInstalledMsg)
-			} else if len(repoList.Items) == 0 {
-				status = errorRow(name, util.UnknownMsg)
-			} else {
-				repoStatus := repoList.Items[0].Status
-				status = statusRow(name, repoStatus)
-				errs = statusErrors(repoStatus)
-			}
+		go func(name string, sClient *statusClient) {
+			status, errs := sClient.clusterStatus(name)
 
 			mapMutex.Lock()
 			writeMap[name] = status
@@ -257,6 +267,55 @@ func clearTerminal(out io.Writer) {
 	if err := cmd.Run(); err != nil {
 		glog.Warningf("Failed to execute command: %v", err)
 	}
+}
+
+type statusClient struct {
+	repos            typedv1.RepoInterface
+	pods             corev1.PodInterface
+	configManagement *util.ConfigManagementClient
+}
+
+func (c *statusClient) clusterStatus(name string) (status string, errs []string) {
+	repoList, err := c.repos.List(metav1.ListOptions{})
+
+	if err == nil && len(repoList.Items) > 0 {
+		repoStatus := repoList.Items[0].Status
+		status = statusRow(name, repoStatus)
+		errs = statusErrors(repoStatus)
+		return
+	}
+
+	podList, err := c.pods.List(metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			status = util.NotInstalledMsg
+		} else {
+			status = errorRow(name, util.ErrorMsg)
+			errs = append(errs, err.Error())
+		}
+		return
+	} else if len(podList.Items) == 0 {
+		status = errorRow(name, util.NotInstalledMsg)
+		return
+	}
+
+	errs, err = c.configManagement.NestedStringSlice("status", "errors")
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			status = errorRow(name, util.NotConfiguredMsg)
+			errs = append(errs, "ConfigManagement resource is missing")
+		} else {
+			status = errorRow(name, util.ErrorMsg)
+			errs = append(errs, err.Error())
+		}
+	} else if len(errs) > 0 {
+		status = errorRow(name, util.NotConfiguredMsg)
+	} else {
+		status = errorRow(name, util.UnknownMsg)
+	}
+	return
 }
 
 // shortName returns a cluster name which has been truncated to the maximum name length.

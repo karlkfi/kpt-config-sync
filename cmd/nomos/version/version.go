@@ -14,16 +14,10 @@ import (
 	"github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
 
-const (
-	configManagementName        = "config-management"
-	configManagementVersionName = "configManagementVersion"
-)
+const configManagementVersionName = "configManagementVersion"
 
 func init() {
 	flags.AddContexts(Cmd)
@@ -38,10 +32,6 @@ var (
 	clientVersion = func() string {
 		return version.VERSION
 	}
-
-	// dynamicCLient obtains a client based on the supplied REST config.  Can
-	// be overridden in tests.
-	dynamicClient = dynamic.NewForConfig
 
 	// Cmd is the Cobra object representing the nomos version command.
 	Cmd = &cobra.Command{
@@ -92,34 +82,11 @@ func filterConfigs(contexts []string, all map[string]*rest.Config) map[string]*r
 	return cfgs
 }
 
-func client(name string, c *rest.Config) (dynamic.ResourceInterface, error) {
-	cl, err := dynamicClient(c)
+func lookupVersion(cfg *rest.Config) (string, error) {
+	cmClient, err := util.NewConfigManagementClient(cfg)
 	if err != nil {
-		return nil, err
-	}
-	gvr := schema.GroupVersionResource{
-		Group:   "addons.sigs.k8s.io",
-		Version: "v1alpha1",
-		// The dynamic client needs the plural resource form to be able to
-		// construct a correct resource URL.
-		Resource: "configmanagements",
-	}
-	return cl.Resource(gvr).Namespace(""), nil
-}
-
-func lookupVersion(name string, cfg *rest.Config) (string, error) {
-	i, err := client(name, cfg)
-	if err != nil {
-		return "", err
-	}
-	u, err := i.Get(configManagementName, metav1.GetOptions{}, "")
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return util.NotInstalledMsg, nil
-		}
 		return util.ErrorMsg, err
 	}
-	c := u.UnstructuredContent()
 	// {
 	//   ...
 	//   "status": {
@@ -128,26 +95,17 @@ func lookupVersion(name string, cfg *rest.Config) (string, error) {
 	//     ...
 	//   }
 	// }
-	s, ok := c["status"]
-	if !ok {
-		return util.ErrorMsg, fmt.Errorf("internal error: can not parse status")
+	cmVersion, err := cmClient.NestedString("status", configManagementVersionName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return util.NotInstalledMsg, nil
+		}
+		return util.ErrorMsg, err
 	}
-	sp, ok := s.(map[string]interface{})
-	if !ok {
-		return util.ErrorMsg, fmt.Errorf("internal error: status is not a map")
+	if cmVersion == "" {
+		cmVersion = util.UnknownMsg
 	}
-	d, ok := sp[configManagementVersionName]
-	if !ok {
-		return util.UnknownMsg, nil
-	}
-	v, ok := d.(string)
-	if !ok {
-		return util.ErrorMsg, fmt.Errorf("internal error: configManagementVersion is not a string")
-	}
-	if v == "" {
-		v = util.UnknownMsg
-	}
-	return v, nil
+	return cmVersion, nil
 }
 
 // vErr is either a version or an error.
@@ -172,7 +130,7 @@ func versions(cfgs map[string]*rest.Config) map[string]vErr {
 		go func(n string, c *rest.Config) {
 			defer g.Done()
 			var ve vErr
-			ve.version, ve.err = lookupVersion(n, c)
+			ve.version, ve.err = lookupVersion(c)
 			m.Lock()
 			vs[n] = ve
 			m.Unlock()
@@ -197,7 +155,7 @@ type entry struct {
 func entries(vs map[string]vErr) []entry {
 	var es []entry
 	for n, v := range vs {
-		es = append(es, entry{name: n, component: configManagementName, vErr: v})
+		es = append(es, entry{name: n, component: util.ConfigManagementName, vErr: v})
 	}
 	// Also fill in the client version here.
 	es = append(es, entry{
