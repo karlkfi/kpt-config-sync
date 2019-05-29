@@ -81,7 +81,7 @@ func NewClusterSelectors(
 		name := cs.ObjectMeta.Name
 		s, err := AsPopulatedSelector(&cs.Spec.Selector)
 		if err != nil {
-			return nil, vet.InvalidSelectorError{Name: name, Cause: err}
+			return nil, vet.InvalidSelectorError(name, err)
 		}
 		if IsSelected(cc.cluster.ObjectMeta.Labels, s) {
 			cc.selectors[name] = cs

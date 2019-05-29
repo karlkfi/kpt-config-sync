@@ -42,7 +42,7 @@ func NewForCluster(
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
 			// TODO(b/120229144): Impossible to get here.
-			errs = status.Append(errs, vet.InvalidSelectorError{Name: sn, Cause: err})
+			errs = status.Append(errs, vet.InvalidSelectorError(sn, err))
 			continue
 		}
 		for _, c := range clusters {

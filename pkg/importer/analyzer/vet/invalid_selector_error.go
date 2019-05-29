@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -10,27 +9,12 @@ import (
 const InvalidSelectorErrorCode = "1014" // TODO: Must refactor to use properly
 
 func init() {
-	status.Register(InvalidSelectorErrorCode, InvalidSelectorError{
-		Name:  "name",
-		Cause: errors.New("problem with selector"),
-	})
+	status.AddExamples(InvalidSelectorErrorCode, InvalidSelectorError("name", errors.New("problem with selector")))
 }
 
-// InvalidSelectorError is a validation error.
-type InvalidSelectorError struct {
-	Name  string
-	Cause error
-}
+var invalidSelectorError = status.NewErrorBuilder(InvalidSelectorErrorCode)
 
-// Error implements error.
-func (e InvalidSelectorError) Error() string {
-	return status.Format(e, errors.Wrapf(e.Cause, "Selector for %q has validation errors that must be corrected", e.Name).Error())
-}
-
-// Code implements Error
-func (e InvalidSelectorError) Code() string { return InvalidSelectorErrorCode }
-
-// ToCME implements ToCMEr.
-func (e InvalidSelectorError) ToCME() v1.ConfigManagementError {
-	return status.FromError(e)
+// InvalidSelectorError reports that a selector is invalid.
+func InvalidSelectorError(name string, cause error) status.Error {
+	return invalidSelectorError.Wrapf(cause, "Selector for %q has validation errors that must be corrected", name)
 }

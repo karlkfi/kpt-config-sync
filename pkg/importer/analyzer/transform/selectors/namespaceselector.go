@@ -19,11 +19,11 @@ func IsConfigApplicableToNamespace(namespaceLabels map[string]string, config met
 	}
 	var ns v1.NamespaceSelector
 	if err := json.Unmarshal([]byte(ls), &ns); err != nil {
-		return false, vet.InvalidSelectorError{Name: config.GetName(), Cause: err}
+		return false, vet.InvalidSelectorError(config.GetName(), err)
 	}
 	selector, err := AsPopulatedSelector(&ns.Spec.Selector)
 	if err != nil {
-		return false, vet.InvalidSelectorError{Name: ns.Name, Cause: err}
+		return false, vet.InvalidSelectorError(ns.Name, err)
 	}
 	return IsSelected(namespaceLabels, selector), nil
 }

@@ -98,7 +98,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 		}
 		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs = status.Append(v.errs, vet.InvalidSelectorError{Name: s.Name, Cause: err})
+			v.errs = status.Append(v.errs, vet.InvalidSelectorError(s.Name, err))
 			continue
 		}
 		content, err := json.Marshal(s)

@@ -25,7 +25,7 @@ func NewDeprecatedGroupKindValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
 		gk := o.GroupVersionKind().GroupKind()
 		if expected, invalid := invalidToValidGroupKinds[gk]; invalid {
-			return status.From(vet.DeprecatedGroupKindError{Resource: &o, Expected: expected})
+			return status.From(vet.DeprecatedGroupKindError(&o, expected))
 		}
 		return nil
 	})
