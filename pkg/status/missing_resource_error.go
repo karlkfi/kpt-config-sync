@@ -9,7 +9,7 @@ const MissingResourceErrorCode = "2011"
 
 func init() {
 	// TODO: add a way to generate valid error without dependency cycle.
-	//status.Register(MissingResourceErrorCode, MissingResourceError{})
+	//status.AddExamples(MissingResourceErrorCode, MissingResourceError{})
 }
 
 var missingResourceError = NewErrorBuilder(MissingResourceErrorCode)

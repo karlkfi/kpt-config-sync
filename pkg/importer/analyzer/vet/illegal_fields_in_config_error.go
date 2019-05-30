@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -10,39 +9,16 @@ import (
 const IllegalFieldsInConfigErrorCode = "1045"
 
 func init() {
-	status.Register(IllegalFieldsInConfigErrorCode, IllegalFieldsInConfigError{
-		Resource: replicaSet(),
-		Field:    id.OwnerReference,
-	})
+	status.AddExamples(IllegalFieldsInConfigErrorCode,
+		IllegalFieldsInConfigError(replicaSet(), id.OwnerReference))
 }
+
+var illegalFieldsInConfigError = status.NewErrorBuilder(IllegalFieldsInConfigErrorCode)
 
 // IllegalFieldsInConfigError reports that an object has an illegal field set.
-type IllegalFieldsInConfigError struct {
-	id.Resource
-	Field id.DisallowedField
-}
-
-var _ status.ResourceError = IllegalFieldsInConfigError{}
-
-// Error implements error
-func (e IllegalFieldsInConfigError) Error() string {
-	return status.Format(e,
+func IllegalFieldsInConfigError(resource id.Resource, field id.DisallowedField) status.Error {
+	return illegalFieldsInConfigError.Errorf(
 		"Configs with %[1]q specified are not allowed. "+
 			"To fix, either remove the config or remove the %[1]q field in the config:",
-		e.Field)
-}
-
-// Code implements Error
-func (e IllegalFieldsInConfigError) Code() string {
-	return IllegalFieldsInConfigErrorCode
-}
-
-// Resources implements ResourceError
-func (e IllegalFieldsInConfigError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalFieldsInConfigError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
+		field)
 }

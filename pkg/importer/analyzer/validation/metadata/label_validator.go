@@ -18,7 +18,7 @@ func NewLabelValidator() ast.Visitor {
 				}
 			}
 			if errors != nil {
-				return status.From(vet.IllegalLabelDefinitionError{Resource: &o, Labels: errors})
+				return status.From(vet.IllegalLabelDefinitionError(&o, errors))
 			}
 			return nil
 		})

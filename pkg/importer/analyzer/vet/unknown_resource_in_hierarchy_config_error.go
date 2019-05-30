@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -12,12 +11,12 @@ import (
 const UnknownResourceInHierarchyConfigErrorCode = "1040"
 
 func init() {
-	status.Register(UnknownResourceInHierarchyConfigErrorCode, UnknownResourceInHierarchyConfigError{
-		HierarchyConfig: fakeHierarchyConfig{
+	status.AddExamples(UnknownResourceInHierarchyConfigErrorCode, UnknownResourceInHierarchyConfigError(
+		fakeHierarchyConfig{
 			Resource: hierarchyConfig(),
 			gk:       kinds.Repo().GroupKind(),
 		},
-	})
+	))
 }
 
 type fakeHierarchyConfig struct {
@@ -30,34 +29,14 @@ func (hc fakeHierarchyConfig) GroupKind() schema.GroupKind {
 	return hc.gk
 }
 
+var unknownResourceInHierarchyConfigError = status.NewErrorBuilder(UnknownResourceInHierarchyConfigErrorCode)
+
 // UnknownResourceInHierarchyConfigError reports that a Resource defined in a HierarchyConfig does not have a definition in
 // the cluster.
-type UnknownResourceInHierarchyConfigError struct {
-	id.HierarchyConfig
-}
-
-var _ status.ResourceError = UnknownResourceInHierarchyConfigError{}
-
-// Error implements error
-func (e UnknownResourceInHierarchyConfigError) Error() string {
-	gk := e.GroupKind()
-	return status.Format(e,
+func UnknownResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
+	gk := config.GroupKind()
+	return unknownResourceInHierarchyConfigError.WithResources(config).Errorf(
 		"This HierarchyConfig defines the APIResource %q which does not exist on cluster. "+
 			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.",
 		gk.String())
-}
-
-// Code implements Error
-func (e UnknownResourceInHierarchyConfigError) Code() string {
-	return UnknownResourceInHierarchyConfigErrorCode
-}
-
-// Resources implements ResourceError
-func (e UnknownResourceInHierarchyConfigError) Resources() []id.Resource {
-	return []id.Resource{e.HierarchyConfig}
-}
-
-// ToCME implements ToCMEr.
-func (e UnknownResourceInHierarchyConfigError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

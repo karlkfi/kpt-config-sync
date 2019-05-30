@@ -10,27 +10,17 @@ import (
 const ObjectHasUnknownClusterSelectorCode = "1013"
 
 func init() {
-	status.Register(ObjectHasUnknownClusterSelectorCode, ObjectHasUnknownClusterSelector{
-		Resource:   role(),
-		Annotation: "non-existent-cluster",
-	})
+	status.AddExamples(ObjectHasUnknownClusterSelectorCode, ObjectHasUnknownClusterSelector(
+		role(),
+		"non-existent-cluster",
+	))
 }
+
+var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownClusterSelectorCode)
 
 // ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
-type ObjectHasUnknownClusterSelector struct {
-	id.Resource
-	Annotation string
-}
-
-// Error implements error.
-func (e ObjectHasUnknownClusterSelector) Error() string {
-	return status.Format(e, "Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector", e.Name(), v1.ClusterSelectorAnnotationKey, e.Annotation)
-}
-
-// Code implements Error
-func (e ObjectHasUnknownClusterSelector) Code() string { return ObjectHasUnknownClusterSelectorCode }
-
-// ToCME implements ToCMEr.
-func (e ObjectHasUnknownClusterSelector) ToCME() v1.ConfigManagementError {
-	return status.FromError(e)
+func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
+	return objectHasUnknownClusterSelector.WithResources(resource).Errorf(
+		"Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
+		resource.Name(), v1.ClusterSelectorAnnotationKey, annotation)
 }

@@ -48,7 +48,7 @@ func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) statu
 func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) error {
 	gk := gkc.GroupKind()
 	if !k.apiInfo.GroupKindExists(gk) {
-		return status.From(vet.UnknownResourceInHierarchyConfigError{HierarchyConfig: gkc})
+		return status.From(vet.UnknownResourceInHierarchyConfigError(gkc))
 	}
 
 	scope := k.apiInfo.GetScopeForGroupKind(gk)

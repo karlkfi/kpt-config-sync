@@ -20,7 +20,7 @@ func NewSingletonResourceValidator(gvk schema.GroupVersionKind) *visitor.Validat
 			}
 		}
 		if len(duplicates) > 1 {
-			return status.From(vet.MultipleSingletonsError{Duplicates: duplicates})
+			return status.From(vet.MultipleSingletonsError(duplicates...))
 		}
 		return nil
 	})

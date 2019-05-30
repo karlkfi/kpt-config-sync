@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
@@ -21,41 +20,21 @@ func init() {
 	rq2 := resourceQuota()
 	rq2.Path = cmpath.FromSlash("namespaces/foo/rq2.yaml")
 	rq2.MetaObject().SetName("quota-2")
-	status.Register(MultipleSingletonsErrorCode, MultipleSingletonsError{
-		Duplicates: []id.Resource{
-			rq1, rq2,
-		},
-	})
+	status.AddExamples(MultipleSingletonsErrorCode, MultipleSingletonsError(
+		rq1, rq2,
+	))
 }
+
+var multipleSingletonsError = status.NewErrorBuilder(MultipleSingletonsErrorCode)
 
 // MultipleSingletonsError reports that multiple singletons are defined in the same directory.
-type MultipleSingletonsError struct {
-	Duplicates []id.Resource
-}
-
-var _ status.ResourceError = MultipleSingletonsError{}
-
-// Error implements error
-func (e MultipleSingletonsError) Error() string {
+func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
 	var gvk schema.GroupVersionKind
-	if len(e.Duplicates) > 0 {
-		gvk = e.Duplicates[0].GroupVersionKind()
+	if len(duplicates) > 0 {
+		gvk = duplicates[0].GroupVersionKind()
 	}
 
-	return status.Format(e,
+	return multipleSingletonsError.WithResources(duplicates...).Errorf(
 		"A directory may declare at most one %[1]q Resource:",
 		kinds.ResourceString(gvk))
-}
-
-// Code implements Error
-func (e MultipleSingletonsError) Code() string { return MultipleSingletonsErrorCode }
-
-// Resources implements ResourceError
-func (e MultipleSingletonsError) Resources() []id.Resource {
-	return e.Duplicates
-}
-
-// ToCME implements ToCMEr.
-func (e MultipleSingletonsError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

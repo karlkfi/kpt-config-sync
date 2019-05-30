@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -10,39 +9,18 @@ import (
 const IllegalMetadataNamespaceDeclarationErrorCode = "1009"
 
 func init() {
-	status.Register(IllegalMetadataNamespaceDeclarationErrorCode, IllegalMetadataNamespaceDeclarationError{
-		Resource:          role(),
-		ExpectedNamespace: "foo",
-	})
+	status.AddExamples(IllegalMetadataNamespaceDeclarationErrorCode, IllegalMetadataNamespaceDeclarationError(
+		role(),
+		"foo",
+	))
 }
+
+var illegalMetadataNamespaceDeclarationError = status.NewErrorBuilder(IllegalMetadataNamespaceDeclarationErrorCode)
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
-type IllegalMetadataNamespaceDeclarationError struct {
-	id.Resource
-	ExpectedNamespace string
-}
-
-var _ status.ResourceError = IllegalMetadataNamespaceDeclarationError{}
-
-// Error implements error.
-func (e IllegalMetadataNamespaceDeclarationError) Error() string {
-	return status.Format(e,
+func IllegalMetadataNamespaceDeclarationError(resource id.Resource, expectedNamespace string) status.Error {
+	return illegalMetadataNamespaceDeclarationError.WithResources(resource).Errorf(
 		"A config MUST either declare a `metadata.namespace` field exactly matching the directory "+
 			"containing the config, %q, or leave the field blank:",
-		e.ExpectedNamespace)
-}
-
-// Code implements Error
-func (e IllegalMetadataNamespaceDeclarationError) Code() string {
-	return IllegalMetadataNamespaceDeclarationErrorCode
-}
-
-// Resources implements ResourceError
-func (e IllegalMetadataNamespaceDeclarationError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalMetadataNamespaceDeclarationError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
+		expectedNamespace)
 }

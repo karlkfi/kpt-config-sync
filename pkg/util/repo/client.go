@@ -53,7 +53,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		for i, r := range repoList.Items {
 			resList[i] = ast.ParseFileObject(&r)
 		}
-		return nil, status.MultipleSingletonsWrap(resList...)
+		return nil, status.MultipleSingletonsError(resList...)
 	}
 	if len(repoList.Items) == 1 {
 		return setTypeMeta(repoList.Items[0].DeepCopy()), nil
@@ -152,7 +152,7 @@ func (c *genClient) getRepo() (*v1.Repo, status.Error) {
 		for i, r := range repos {
 			resList[i] = ast.ParseFileObject(r)
 		}
-		return nil, status.MultipleSingletonsWrap(resList...)
+		return nil, status.MultipleSingletonsError(resList...)
 	}
 	if len(repos) == 1 {
 		return setTypeMeta(repos[0].DeepCopy()), nil

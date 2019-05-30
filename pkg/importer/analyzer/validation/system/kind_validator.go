@@ -16,7 +16,7 @@ func NewKindValidator() *visitor.ValidatorVisitor {
 		case *v1.Repo:
 		case *v1.HierarchyConfig:
 		default:
-			return status.From(vet.IllegalKindInSystemError{Resource: o})
+			return status.From(vet.IllegalKindInSystemError(o))
 		}
 		return nil
 	})

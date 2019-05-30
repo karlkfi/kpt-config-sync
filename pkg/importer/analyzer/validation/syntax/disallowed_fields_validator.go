@@ -17,35 +17,35 @@ func NewDisallowedFieldsValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
 		m := o.MetaObject()
 		if len(m.GetOwnerReferences()) > 0 {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.OwnerReference})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.OwnerReference))
 		}
 		if m.GetSelfLink() != "" {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.SelfLink})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.SelfLink))
 		}
 		if m.GetUID() != "" {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.UID})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.UID))
 		}
 		if m.GetResourceVersion() != "" {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.ResourceVersion})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.ResourceVersion))
 		}
 		if m.GetGeneration() != 0 {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.Generation})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.Generation))
 		}
 		if !m.GetCreationTimestamp().Time.IsZero() {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.CreationTimestamp})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.CreationTimestamp))
 		}
 		if m.GetDeletionTimestamp() != nil {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.DeletionTimestamp})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.DeletionTimestamp))
 		}
 		if m.GetDeletionGracePeriodSeconds() != nil {
-			return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.DeletionGracePeriodSeconds})
+			return status.From(vet.IllegalFieldsInConfigError(&o, id.DeletionGracePeriodSeconds))
 		}
 		if o.GroupVersionKind().Group != v1.SchemeGroupVersion.Group {
 			// We don't need to check status fields for nomos resources, they are never synced.
 			if u, err := o.Unstructured(); err != nil {
-				return status.From(vet.ObjectParseError{Resource: &o})
+				return status.From(vet.ObjectParseError(&o))
 			} else if hasStatusField(u) {
-				return status.From(vet.IllegalFieldsInConfigError{Resource: &o, Field: id.Status})
+				return status.From(vet.IllegalFieldsInConfigError(&o, id.Status))
 			}
 		}
 

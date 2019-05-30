@@ -20,21 +20,21 @@ func NewNameValidator() *visitor.ValidatorVisitor {
 
 			if o.Name() == "" {
 				// Name MUST NOT be empty
-				return status.From(vet.MissingObjectNameError{Resource: &o})
+				return status.From(vet.MissingObjectNameError(&o))
 			} else if isDefaultCrdAllowedInNomos(gvk) {
 				// If CRD, then name must be a valid DNS1123 subdomain
 				errs := validation.IsDNS1123Subdomain(o.Name())
 				if errs != nil {
-					return status.From(vet.InvalidMetadataNameError{Resource: &o})
+					return status.From(vet.InvalidMetadataNameError(&o))
 				}
 			} else if gvk == kinds.Namespace() {
 				// TODO(willbeason) Move this to its own Validator.
 				expectedName := o.Dir().Base()
 				if expectedName == repo.NamespacesDir {
-					return status.From(vet.IllegalTopLevelNamespaceError{Resource: &o})
+					return status.From(vet.IllegalTopLevelNamespaceError(&o))
 				}
 				if o.Name() != expectedName {
-					return status.From(vet.InvalidNamespaceNameError{Resource: &o, Expected: expectedName})
+					return status.From(vet.InvalidNamespaceNameError(&o, expectedName))
 				}
 			}
 			return nil

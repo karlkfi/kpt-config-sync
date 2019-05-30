@@ -43,10 +43,10 @@ func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 }
 
 func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unstructured.Unstructured) {
-	err := vet.IllegalManagementAnnotationError{
-		Resource: ast.ParseFileObject(declared),
-		Value:    declared.GetAnnotations()[v1.ResourceManagementKey],
-	}
+	err := vet.IllegalManagementAnnotationError(
+		ast.ParseFileObject(declared),
+		declared.GetAnnotations()[v1.ResourceManagementKey],
+	)
 	glog.Warning(err)
 	recorder.Event(declared, corev1.EventTypeWarning, "InvalidAnnotation", err.Error())
 }

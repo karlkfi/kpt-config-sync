@@ -22,7 +22,7 @@ func NewDisallowedCRDsValidator() *visitor.ValidatorVisitor {
 			return status.From(status.ResourceWrap(err, "could not deserialize CRD", o))
 		}
 		if crd.Spec.Group == v1.SchemeGroupVersion.Group {
-			return status.From(vet.UnsupportedObjectError{Resource: o})
+			return status.From(vet.UnsupportedObjectError(o))
 		}
 		return nil
 	})

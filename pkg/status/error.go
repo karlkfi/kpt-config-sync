@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/pkg/errors"
 )
 
 const urlBase = "For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv"
@@ -73,22 +72,6 @@ func format(err error, references string, code string) string {
 	return sb.String()
 }
 
-// Format formats the start of error messages consistently.
-//
-// To be deprecated. Prefer NewErrorBuilder.
-func Format(err Error, fmt string, a ...interface{}) string {
-	references := ""
-
-	switch e := err.(type) {
-	case ResourceError:
-		references = formatResources(e.Resources())
-	case PathError:
-		panic("deprecated for PathErrors; use NewErrorBuilder instead")
-	}
-
-	return format(errors.Errorf(fmt, a...), references, err.Code())
-}
-
 // PathError defines a status error associated with one or more path-identifiable locations in the
 // repo.
 type PathError interface {
@@ -109,14 +92,6 @@ func nextCandidate(code string) (int, error) {
 		return c, nil
 	}
 	panic("unreachable code")
-}
-
-// Register registers a unique code for use and examples for it.
-//
-// Soo to be deprecated. Use NewErrorBuilder and AddExamples instead.
-func Register(code string, errs ...Error) {
-	register(code)
-	AddExamples(code, errs...)
 }
 
 // AddExamples adds examples for a specific error code for use in documentation. For example, via

@@ -13,7 +13,7 @@ import (
 func NewSupportedClusterResourcesValidator() *visitor.ValidatorVisitor {
 	ensureSupported := func(o *ast.ClusterObject) status.MultiError {
 		if !hierarchyconfig.AllowedInHierarchyConfigs(o.GroupVersionKind().GroupKind()) {
-			return status.From(vet.UnsupportedObjectError{Resource: o})
+			return status.From(vet.UnsupportedObjectError(o))
 		}
 		return nil
 	}

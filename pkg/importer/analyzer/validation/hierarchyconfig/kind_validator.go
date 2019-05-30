@@ -32,9 +32,7 @@ func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
 	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}
-	return status.From(vet.UnsupportedResourceInHierarchyConfigError{
-		HierarchyConfig: config,
-	})
+	return status.From(vet.UnsupportedResourceInHierarchyConfigError(config))
 }
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.

@@ -3,7 +3,6 @@ package vet
 import (
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -18,36 +17,17 @@ func init() {
 	r1.Path = cmpath.FromSlash("namespaces/foo/r1.yaml")
 	r2 := role()
 	r2.Path = cmpath.FromSlash("namespaces/foo/r2.yaml")
-	status.Register(MetadataNameCollisionErrorCode, MetadataNameCollisionError{
-		Name:       "role",
-		Duplicates: []id.Resource{r1, r2},
-	})
+	status.AddExamples(MetadataNameCollisionErrorCode, MetadataNameCollisionError(
+		"role",
+		r1, r2,
+	))
 }
+
+var metadataNameCollisionError = status.NewErrorBuilder(MetadataNameCollisionErrorCode)
 
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
-type MetadataNameCollisionError struct {
-	Name       string
-	Duplicates []id.Resource
-}
-
-var _ status.ResourceError = &MetadataNameCollisionError{}
-
-// Error implements error
-func (e MetadataNameCollisionError) Error() string {
-	return status.Format(e,
+func MetadataNameCollisionError(name string, resources ...id.Resource) status.Error {
+	return metadataNameCollisionError.WithResources(resources...).Errorf(
 		"Configs of the same Kind MUST have unique names in the same %[1]s and their parent %[2]ss:",
 		node.Namespace, strings.ToLower(string(node.AbstractNamespace)))
-}
-
-// Code implements Error
-func (e MetadataNameCollisionError) Code() string { return MetadataNameCollisionErrorCode }
-
-// Resources implements ResourceError
-func (e MetadataNameCollisionError) Resources() []id.Resource {
-	return e.Duplicates
-}
-
-// ToCME implements ToCMEr.
-func (e MetadataNameCollisionError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

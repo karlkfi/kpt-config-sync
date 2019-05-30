@@ -38,14 +38,14 @@ func (v *QuotaValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		// Scope-related fields aren't supported by the merge so error pre-emptively if set.
 		if quota.Spec.Scopes != nil {
-			v.errs = status.Append(v.errs, vet.IllegalResourceQuotaFieldError{
-				Resource: o,
-				Field:    "scopes"})
+			v.errs = status.Append(v.errs, vet.IllegalResourceQuotaFieldError(
+				o,
+				"scopes"))
 		}
 		if quota.Spec.ScopeSelector != nil {
-			v.errs = status.Append(v.errs, vet.IllegalResourceQuotaFieldError{
-				Resource: o,
-				Field:    "scopeSelector"})
+			v.errs = status.Append(v.errs, vet.IllegalResourceQuotaFieldError(
+				o,
+				"scopeSelector"))
 		}
 	}
 

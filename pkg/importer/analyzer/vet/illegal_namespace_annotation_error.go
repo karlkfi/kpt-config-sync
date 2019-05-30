@@ -11,35 +11,15 @@ import (
 const IllegalNamespaceAnnotationErrorCode = "1004"
 
 func init() {
-	status.Register(IllegalNamespaceAnnotationErrorCode, IllegalNamespaceAnnotationError{Resource: role()})
+	status.AddExamples(IllegalNamespaceAnnotationErrorCode, IllegalNamespaceAnnotationError(role()))
 }
+
+var illegalNamespaceAnnotationError = status.NewErrorBuilder(IllegalNamespaceAnnotationErrorCode)
 
 // IllegalNamespaceAnnotationError represents an illegal usage of the namespace selector annotation.
-type IllegalNamespaceAnnotationError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = IllegalNamespaceAnnotationError{}
-
-// Error implements error.
-func (e IllegalNamespaceAnnotationError) Error() string {
-	return status.Format(e,
+func IllegalNamespaceAnnotationError(resource id.Resource) status.Error {
+	return illegalNamespaceAnnotationError.WithResources(resource).Errorf(
 		"A %s MUST NOT use the annotation %s. "+
 			"Remove metadata.annotations.%[2]s from:",
 		node.Namespace, v1.NamespaceSelectorAnnotationKey)
-}
-
-// Code implements Error
-func (e IllegalNamespaceAnnotationError) Code() string {
-	return IllegalNamespaceAnnotationErrorCode
-}
-
-// Resources implements ResourceError
-func (e IllegalNamespaceAnnotationError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalNamespaceAnnotationError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

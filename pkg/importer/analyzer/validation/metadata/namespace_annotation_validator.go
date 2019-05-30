@@ -15,7 +15,7 @@ func NewNamespaceAnnotationValidator() *visitor.ValidatorVisitor {
 		func(o ast.FileObject) status.MultiError {
 			if o.GroupVersionKind() == kinds.Namespace() {
 				if _, found := o.MetaObject().GetAnnotations()[v1.NamespaceSelectorAnnotationKey]; found {
-					return status.From(vet.IllegalNamespaceAnnotationError{Resource: &o})
+					return status.From(vet.IllegalNamespaceAnnotationError(&o))
 				}
 			}
 			return nil

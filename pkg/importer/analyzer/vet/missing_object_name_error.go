@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -12,31 +11,13 @@ const MissingObjectNameErrorCode = "1031"
 func init() {
 	r := role()
 	r.MetaObject().SetName("")
-	status.Register(MissingObjectNameErrorCode, MissingObjectNameError{Resource: r})
+	status.AddExamples(MissingObjectNameErrorCode, MissingObjectNameError(r))
 }
+
+var missingObjectNameError = status.NewErrorBuilder(MissingObjectNameErrorCode)
 
 // MissingObjectNameError reports that an object has no name.
-type MissingObjectNameError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = &MissingObjectNameError{}
-
-// Error implements error
-func (e MissingObjectNameError) Error() string {
-	return status.Format(e,
+func MissingObjectNameError(resource id.Resource) status.Error {
+	return missingObjectNameError.WithResources(resource).Errorf(
 		"Configs must declare `metadata.name`:")
-}
-
-// Code implements Error
-func (e MissingObjectNameError) Code() string { return MissingObjectNameErrorCode }
-
-// Resources implements ResourceError
-func (e MissingObjectNameError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e MissingObjectNameError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -13,34 +12,17 @@ import (
 const IllegalTopLevelNamespaceErrorCode = "1019"
 
 func init() {
-	status.Register(IllegalTopLevelNamespaceErrorCode, IllegalTopLevelNamespaceError{
-		Resource: namespace(cmpath.FromSlash("namespaces/ns.yaml")),
-	})
+	status.AddExamples(IllegalTopLevelNamespaceErrorCode, IllegalTopLevelNamespaceError(
+		namespace(cmpath.FromSlash("namespaces/ns.yaml")),
+	))
 }
+
+var illegalTopLevelNamespaceError = status.NewErrorBuilder(IllegalTopLevelNamespaceErrorCode)
 
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
-type IllegalTopLevelNamespaceError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = &IllegalTopLevelNamespaceError{}
-
 // Error implements error
-func (e IllegalTopLevelNamespaceError) Error() string {
-	return status.Format(e,
+func IllegalTopLevelNamespaceError(resource id.Resource) status.Error {
+	return illegalTopLevelNamespaceError.Errorf(
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
 		repo.NamespacesDir, node.Namespace)
-}
-
-// Code implements Error
-func (e IllegalTopLevelNamespaceError) Code() string { return IllegalTopLevelNamespaceErrorCode }
-
-// Resources implements ResourceError
-func (e IllegalTopLevelNamespaceError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalTopLevelNamespaceError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

@@ -43,8 +43,8 @@ func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
 	})
 }
 
-func illegalObject(r *ast.NamespaceObject) vet.IllegalKindInNamespacesError {
-	return vet.IllegalKindInNamespacesError{Resource: r}
+func illegalObject(r *ast.NamespaceObject) status.Error {
+	return vet.IllegalKindInNamespacesError(r)
 }
 
 var (

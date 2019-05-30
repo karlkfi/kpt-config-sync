@@ -2,7 +2,6 @@ package vet
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -11,34 +10,14 @@ import (
 const UnsupportedObjectErrorCode = "1043"
 
 func init() {
-	status.Register(UnsupportedObjectErrorCode, UnsupportedObjectError{
-		Resource: role(),
-	})
+	status.AddExamples(UnsupportedObjectErrorCode, UnsupportedObjectError(role()))
 }
+
+var unsupportedObjectError = status.NewErrorBuilder(UnsupportedObjectErrorCode)
 
 // UnsupportedObjectError reports than an unsupported object is in the namespaces/ sub-directories or clusters/ directory.
-type UnsupportedObjectError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = UnsupportedObjectError{}
-
-// Error implements error.
-func (e UnsupportedObjectError) Error() string {
-	return status.Format(e,
+func UnsupportedObjectError(resource id.Resource) status.Error {
+	return unsupportedObjectError.WithResources(resource).Errorf(
 		"%s cannot configure this resource. To fix, remove this resource from the repo.",
 		configmanagement.ProductName)
-}
-
-// Code implements Error
-func (e UnsupportedObjectError) Code() string { return UnsupportedObjectErrorCode }
-
-// Resources implements ResourceError
-func (e UnsupportedObjectError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e UnsupportedObjectError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

@@ -39,7 +39,7 @@ func NewAnnotationValidator() ast.Visitor {
 				}
 			}
 			if errors != nil {
-				return status.From(vet.IllegalAnnotationDefinitionError{Resource: &o, Annotations: errors})
+				return status.From(vet.IllegalAnnotationDefinitionError(&o, errors))
 			}
 			return nil
 		})
@@ -51,10 +51,10 @@ func NewManagedAnnotationValidator() ast.Visitor {
 		func(o ast.FileObject) status.MultiError {
 			value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
 			if found && (value != v1.ResourceManagementDisabled) {
-				return status.From(vet.IllegalManagementAnnotationError{
-					Resource: &o,
-					Value:    value,
-				})
+				return status.From(vet.IllegalManagementAnnotationError(
+					&o,
+					value,
+				))
 			}
 			return nil
 		})

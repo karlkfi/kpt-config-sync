@@ -25,7 +25,7 @@ func NewDisallowedCRDNameValidator() *visitor.ValidatorVisitor {
 
 		expectedName := fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
 		if crd.Name != expectedName {
-			return status.From(vet.InvalidCRDNameError{Resource: o})
+			return status.From(vet.InvalidCRDNameError(o))
 		}
 
 		return nil

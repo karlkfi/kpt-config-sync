@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -12,34 +11,14 @@ const InvalidMetadataNameErrorCode = "1036"
 func init() {
 	r := role()
 	r.MetaObject().SetName("a`b.c")
-	status.Register(InvalidMetadataNameErrorCode, InvalidMetadataNameError{
-		Resource: r,
-	})
+	status.AddExamples(InvalidMetadataNameErrorCode, InvalidMetadataNameError(r))
 }
+
+var invalidMetadataNameError = status.NewErrorBuilder(InvalidMetadataNameErrorCode)
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
-type InvalidMetadataNameError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = InvalidMetadataNameError{}
-
-// Error implements error.
-func (e InvalidMetadataNameError) Error() string {
-	return status.Format(e,
-		"Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric "+
+func InvalidMetadataNameError(resource id.Resource) status.Error {
+	return invalidMetadataNameError.WithResources(resource).Errorf(
+		"Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric " +
 			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:")
-}
-
-// Code implements Error
-func (e InvalidMetadataNameError) Code() string { return InvalidMetadataNameErrorCode }
-
-// Resources implements ResourceError
-func (e InvalidMetadataNameError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e InvalidMetadataNameError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

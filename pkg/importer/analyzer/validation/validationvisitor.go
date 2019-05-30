@@ -96,7 +96,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
 		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
-			v.errs = status.Append(v.errs, vet.NamespaceSelectorMayNotHaveAnnotation{Object: s})
+			v.errs = status.Append(v.errs, vet.NamespaceSelectorMayNotHaveAnnotation(s))
 		}
 	}
 }
@@ -118,7 +118,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
 		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
-			v.errs = status.Append(v.errs, vet.IllegalAbstractNamespaceObjectKindError{Resource: o})
+			v.errs = status.Append(v.errs, vet.IllegalAbstractNamespaceObjectKindError(o))
 		}
 	}
 

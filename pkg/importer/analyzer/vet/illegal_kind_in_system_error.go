@@ -1,7 +1,6 @@
 package vet
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -11,36 +10,16 @@ import (
 const IllegalKindInSystemErrorCode = "1024"
 
 func init() {
-	status.Register(IllegalKindInSystemErrorCode, IllegalKindInSystemError{
-		Resource: role(),
-	})
+	status.AddExamples(IllegalKindInSystemErrorCode, IllegalKindInSystemError(
+		role(),
+	))
 }
+
+var illegalKindInSystemError = status.NewErrorBuilder(IllegalKindInSystemErrorCode)
 
 // IllegalKindInSystemError reports that an object has been illegally defined in system/
-type IllegalKindInSystemError struct {
-	id.Resource
-}
-
-var _ status.ResourceError = IllegalKindInSystemError{}
-
-// Error implements error
-func (e IllegalKindInSystemError) Error() string {
-	return status.Format(e,
+func IllegalKindInSystemError(resource id.Resource) status.Error {
+	return illegalKindInSystemError.WithResources(resource).Errorf(
 		"Configs of this Kind may not be declared in the `%s/` directory of the repo:",
 		repo.SystemDir)
-}
-
-// Code implements Error
-func (e IllegalKindInSystemError) Code() string {
-	return IllegalKindInSystemErrorCode
-}
-
-// Resources implements ResourceError
-func (e IllegalKindInSystemError) Resources() []id.Resource {
-	return []id.Resource{e.Resource}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalKindInSystemError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
 }

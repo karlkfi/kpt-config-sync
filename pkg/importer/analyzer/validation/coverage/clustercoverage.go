@@ -74,7 +74,7 @@ func (c ForCluster) ValidateObject(o *ast.FileObject) status.MultiError {
 		return nil
 	}
 	if !c.selectorNames[a] {
-		return status.From(vet.ObjectHasUnknownClusterSelector{Resource: o, Annotation: a})
+		return status.From(vet.ObjectHasUnknownClusterSelector(o, a))
 	}
 	return nil
 }

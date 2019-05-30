@@ -13,46 +13,29 @@ import (
 const IllegalHierarchyModeErrorCode = "1042"
 
 func init() {
-	status.Register(IllegalHierarchyModeErrorCode, IllegalHierarchyModeError{
-		HierarchyConfig: fakeHierarchyConfig{
+	status.AddExamples(IllegalHierarchyModeErrorCode, IllegalHierarchyModeError(
+		fakeHierarchyConfig{
 			Resource: hierarchyConfig(),
 			gk:       kinds.Role().GroupKind(),
 		},
-		HierarchyMode: "invalid mode",
-		Allowed:       map[v1.HierarchyModeType]bool{v1.HierarchyModeNone: true},
-	})
+		"invalid mode",
+		map[v1.HierarchyModeType]bool{v1.HierarchyModeNone: true},
+	))
 }
+
+var illegalHierarchyModeError = status.NewErrorBuilder(IllegalHierarchyModeErrorCode)
 
 // IllegalHierarchyModeError reports that a HierarchyConfig is defined with a disallowed hierarchyMode.
-type IllegalHierarchyModeError struct {
-	id.HierarchyConfig
-	HierarchyMode v1.HierarchyModeType
-	Allowed       map[v1.HierarchyModeType]bool
-}
-
-var _ status.ResourceError = &IllegalHierarchyModeError{}
-
-// Error implements error
-func (e IllegalHierarchyModeError) Error() string {
+func IllegalHierarchyModeError(
+	config id.HierarchyConfig,
+	mode v1.HierarchyModeType,
+	allowed map[v1.HierarchyModeType]bool) status.Error {
 	var allowedStr []string
-	for a := range e.Allowed {
+	for a := range allowed {
 		allowedStr = append(allowedStr, string(a))
 	}
-	gk := e.GroupKind()
-	return status.Format(e,
+	gk := config.GroupKind()
+	return illegalHierarchyModeError.WithResources(config).Errorf(
 		"HierarchyMode %q is not a valid value for the APIResource %q. Allowed values are [%s].",
-		e.HierarchyMode, gk.String(), strings.Join(allowedStr, ","))
-}
-
-// Code implements Error
-func (e IllegalHierarchyModeError) Code() string { return IllegalHierarchyModeErrorCode }
-
-// Resources implements ResourceError
-func (e IllegalHierarchyModeError) Resources() []id.Resource {
-	return []id.Resource{e.HierarchyConfig}
-}
-
-// ToCME implements ToCMEr.
-func (e IllegalHierarchyModeError) ToCME() v1.ConfigManagementError {
-	return status.FromResourceError(e)
+		mode, gk.String(), strings.Join(allowedStr, ","))
 }

@@ -48,9 +48,9 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.NamespaceScope:
-		p.errs = status.Append(p.errs, vet.IllegalKindInClusterError{Resource: o})
+		p.errs = status.Append(p.errs, vet.IllegalKindInClusterError(o))
 	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, vet.UnknownObjectError{Resource: &o.FileObject})
+		p.errs = status.Append(p.errs, vet.UnknownObjectError(&o.FileObject))
 	}
 
 	return o
@@ -62,9 +62,9 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 
 	switch p.apiInfo.GetScope(gvk) {
 	case discovery.ClusterScope:
-		p.errs = status.Append(p.errs, vet.IllegalKindInNamespacesError{Resource: o})
+		p.errs = status.Append(p.errs, vet.IllegalKindInNamespacesError(o))
 	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, vet.UnknownObjectError{Resource: &o.FileObject})
+		p.errs = status.Append(p.errs, vet.UnknownObjectError(&o.FileObject))
 	}
 
 	return o

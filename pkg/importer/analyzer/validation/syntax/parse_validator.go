@@ -28,7 +28,7 @@ func NewParseValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
 		if _, ok := o.Object.(*unstructured.Unstructured); ok {
 			if requiredTypedStructs[o.GroupVersionKind()] {
-				return status.From(vet.ObjectParseError{Resource: &o})
+				return status.From(vet.ObjectParseError(&o))
 			}
 		}
 		return nil

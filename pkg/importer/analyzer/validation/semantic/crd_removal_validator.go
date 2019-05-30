@@ -39,7 +39,7 @@ func (v *CRDRemovalValidator) ValidateObject(o *ast.NamespaceObject) status.Mult
 
 func (v *CRDRemovalValidator) validate(o ast.FileObject) status.MultiError {
 	if crd, pendingRemoval := v.crdInfo.CRDPendingRemoval(o); pendingRemoval {
-		return status.From(vet.UnsupportedCRDRemovalError{Resource: ast.ParseFileObject(crd)})
+		return status.From(vet.UnsupportedCRDRemovalError(ast.ParseFileObject(crd)))
 	}
 	return nil
 }

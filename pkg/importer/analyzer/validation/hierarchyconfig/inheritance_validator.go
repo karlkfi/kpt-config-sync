@@ -53,9 +53,9 @@ func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1.Hierarc
 	if allowed[config.HierarchyMode] {
 		return nil
 	}
-	return status.From(vet.IllegalHierarchyModeError{
-		HierarchyConfig: config,
-		HierarchyMode:   config.HierarchyMode,
-		Allowed:         allowed,
-	})
+	return status.From(vet.IllegalHierarchyModeError(
+		config,
+		config.HierarchyMode,
+		allowed,
+	))
 }
