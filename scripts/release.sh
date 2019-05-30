@@ -22,7 +22,7 @@ Options
        Everything after the 'v' in the bucket name,  e.g. 0.1.2-rc.34
     -o operator_release_version
        REQUIRED for 'staging' and 'restore'
-       Everything after the 'nomos-operator-v' in the bucket name,
+       Everything after the 'v' in the bucket name,
        e.g. 0.1.2-rc.34
     -p project - use a different project from the default
        (default=$DEFAULT_PROJECT)
@@ -32,7 +32,7 @@ Options
 
 Examples
 
-    # stage nomos v0.1.2-rc.34 and nomos-operator-v9.8.7-rc.65
+    # stage nomos v0.1.2-rc.34 and v9.8.7-rc.65
     release.sh -a staging -n 0.1.2-rc.34 -o 9.8.7-rc.65
 
     # promote whatever's in staging to staging-verified (both nomos and
@@ -194,7 +194,7 @@ readonly nomos_archive_bucket_base="${BUCKET}/stable-v"
 readonly nomos_version_label="nomos-version"
 
 readonly operator_rc_bucket="${BUCKET}/operator-rc"
-readonly operator_rc_prefix="nomos-operator-v"
+readonly operator_rc_prefix="v"
 readonly operator_staging_bucket="${BUCKET}/operator-staging"
 readonly operator_staging_verified_bucket="${BUCKET}/operator-staging-verified"
 readonly operator_stable_bucket="${BUCKET}/operator-stable"
