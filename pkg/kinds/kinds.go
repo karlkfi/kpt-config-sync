@@ -3,7 +3,7 @@ package kinds
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -156,4 +156,45 @@ func ConfigManagement() schema.GroupVersionKind {
 // ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.
 func ResourceString(gvk schema.GroupVersionKind) string {
 	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)
+}
+
+// Organization returns the Group and Kind of Organizations.
+func Organization() schema.GroupKind {
+	return schema.GroupKind{
+		// TODO(b/134173753) Align with Nomos team about value of Group, same below.
+		Group: "bespin.dev",
+		Kind:  "Organization",
+	}
+}
+
+// Folder returns the Group and Kind of Folders.
+func Folder() schema.GroupKind {
+	return schema.GroupKind{
+		Group: "bespin.dev",
+		Kind:  "Folder",
+	}
+}
+
+// Project returns the Group and Kind of Projects.
+func Project() schema.GroupKind {
+	return schema.GroupKind{
+		Group: "bespin.dev",
+		Kind:  "Project",
+	}
+}
+
+// IAMPolicy returns the Group and Kind of IAMPolicies.
+func IAMPolicy() schema.GroupKind {
+	return schema.GroupKind{
+		Group: "bespin.dev",
+		Kind:  "IAMPolicy",
+	}
+}
+
+// OrganizationPolicy returns the Group and Kind of OrganizationPolicies.
+func OrganizationPolicy() schema.GroupKind {
+	return schema.GroupKind{
+		Group: "bespin.dev",
+		Kind:  "OrganizationPolicy",
+	}
 }

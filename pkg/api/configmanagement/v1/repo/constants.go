@@ -10,4 +10,6 @@ const (
 	SystemDir = "system"
 	// ClusterRegistryDir is the name of the directory containing cluster registry and cluster selectors.
 	ClusterRegistryDir = "clusterregistry"
+	// GCPResourceDir is the name of the directory containing containing GCP resources.
+	GCPResourceDir = "hierarchy"
 )

@@ -31,7 +31,7 @@ func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
 			result.ClusterRegistryObjects = append(result.ClusterRegistryObjects, object)
 		case repo.ClusterDir:
 			result.ClusterObjects = append(result.ClusterObjects, object)
-		case repo.NamespacesDir:
+		case repo.NamespacesDir, repo.GCPResourceDir:
 			result.NamespaceObjects = append(result.NamespaceObjects, object)
 		default:
 			t.Fatalf("test resource not in known top-level directory: %s", object.SlashPath())
