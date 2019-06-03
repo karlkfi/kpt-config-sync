@@ -8,7 +8,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer"
-	"github.com/google/nomos/pkg/importer/actions"
+	"github.com/google/nomos/pkg/importer/differ"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -101,7 +101,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// If last syncs has more sync than current on-cluster sync
 	// content, this means that syncs have been removed on the cluster
 	// without our intention.
-	unchangedSyncs := len(actions.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
+	unchangedSyncs := len(differ.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
 	unchangedDir := c.currentDir == newDir
 
 	if unchangedDir && unchangedSyncs {
@@ -152,7 +152,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
-	if errs := actions.Update(ctx, c.client, *currentConfigs, *desiredConfigs); errs != nil {
+	if errs := differ.Update(ctx, c.client, *currentConfigs, *desiredConfigs); errs != nil {
 		glog.Warningf("Failed to apply actions: %v", errs.Error())
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))

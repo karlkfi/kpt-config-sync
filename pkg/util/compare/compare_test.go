@@ -1,4 +1,4 @@
-package action
+package compare
 
 import (
 	"testing"
@@ -18,69 +18,6 @@ func newObjectMeta(labels map[string]string, annotations map[string]string) meta
 	return metav1.ObjectMeta{
 		Labels:      labels,
 		Annotations: annotations,
-	}
-}
-
-var objectMetaSubsetTestcases = []ObjectMetaTestCase{
-	{
-		Name: "labels and annotations are both subsets",
-		Left: newObjectMeta(
-			map[string]string{"k1": "v1", "k2": "v2"},
-			map[string]string{"k3": "v3", "k4": "v4"},
-		),
-		Right: newObjectMeta(
-			map[string]string{"k1": "v1"},
-			map[string]string{"k3": "v3"},
-		),
-		ExpectReturn: true,
-	},
-	{
-		Name: "labels not subset",
-		Left: newObjectMeta(
-			map[string]string{"k1": "v1", "k2": "v2"},
-			map[string]string{"k3": "v3", "k4": "v4"},
-		),
-		Right: newObjectMeta(
-			map[string]string{"k5": "v5"},
-			map[string]string{"k3": "v3"},
-		),
-		ExpectReturn: false,
-	},
-	{
-		Name: "annotations not subset",
-		Left: newObjectMeta(
-			map[string]string{"k1": "v1", "k2": "v2"},
-			map[string]string{"k3": "v3", "k4": "v4"},
-		),
-		Right: newObjectMeta(
-			map[string]string{"k1": "v1"},
-			map[string]string{"k5": "v5"},
-		),
-		ExpectReturn: false,
-	},
-	{
-		Name: "neither are subset",
-		Left: newObjectMeta(
-			map[string]string{"k1": "v1", "k2": "v2"},
-			map[string]string{"k3": "v3", "k4": "v4"},
-		),
-		Right: newObjectMeta(
-			map[string]string{"k5": "v5"},
-			map[string]string{"k6": "v6"},
-		),
-		ExpectReturn: false,
-	},
-}
-
-func TestObjectMetaSubset(t *testing.T) {
-	for _, tc := range objectMetaSubsetTestcases {
-		t.Run(tc.Name, func(t *testing.T) {
-			set := &rbacv1.Role{ObjectMeta: tc.Left}
-			subset := &rbacv1.Role{ObjectMeta: tc.Right}
-			if ObjectMetaSubset(set, subset) != tc.ExpectReturn {
-				t.Fatalf("Testcase Failure %v", tc)
-			}
-		})
 	}
 }
 

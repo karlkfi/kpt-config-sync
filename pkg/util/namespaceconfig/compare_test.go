@@ -22,7 +22,7 @@ func (t *namespaceConfigEqualTestcase) Run(tt *testing.T) {
 		return
 	}
 
-	diff := cmp.Diff(t.lhs, t.rhs, pnsIgnore...)
+	diff := cmp.Diff(t.lhs, t.rhs, ncsIgnore...)
 	if equal {
 		tt.Errorf("wanted not equal, got equal: %s", diff)
 	} else {

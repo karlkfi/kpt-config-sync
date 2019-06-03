@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/metrics"
-
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/client/action"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,6 +39,10 @@ func New(client client.Client, latencyMetric *prometheus.HistogramVec) *Client {
 // clientUpdateFn is a Client function signature for updating an entire resource or a resource's status.
 type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
+// update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
+// so no there is no need to worry about mutating the argument when implementing an Update function.
+type update func(runtime.Object) (runtime.Object, error)
+
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
 func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Error {
 	description, kind := resourceInfo(obj)
@@ -68,7 +70,7 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 			// Object is already deleted
 			return nil
 		}
-		if action.IsFinalizing(obj.(metav1.Object)) {
+		if isFinalizing(obj.(metav1.Object)) {
 			glog.V(3).Infof("Delete skipped, resource is finalizing %s", description)
 			return nil
 		}
@@ -93,20 +95,19 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.Error) {
+func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn action.Update) (runtime.Object, status.Error) {
+func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
 // update updates the given obj in the Kubernetes cluster using clientUpdateFn and records prometheus
 // metrics. In the event of a conflicting update, it will retry.
 // This operation always involves retrieving the resource from API Server before actually updating it.
-// Refer to action package for expected return values for updateFn.
-func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action.Update,
+func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn update,
 	clientUpdateFn clientUpdateFn) (runtime.Object, status.Error) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := obj.DeepCopyObject()
@@ -123,7 +124,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn action
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(workingObj.DeepCopyObject())
 		if err != nil {
-			if action.IsNoUpdateNeeded(err) {
+			if IsNoUpdateNeeded(err) {
 				return newObj, nil
 			}
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
@@ -214,4 +215,9 @@ func resourceVersion(obj runtime.Object) string {
 func metaNamespacedName(obj runtime.Object) (metav1.Object, types.NamespacedName) {
 	m := obj.(metav1.Object)
 	return m, types.NamespacedName{Namespace: m.GetNamespace(), Name: m.GetName()}
+}
+
+// isFinalizing returns true if the object is finalizing.
+func isFinalizing(m metav1.Object) bool {
+	return m.GetDeletionTimestamp() != nil
 }
