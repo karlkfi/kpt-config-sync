@@ -352,6 +352,9 @@ func getStatus(status v1.RepoStatus) string {
 	if hasErrors(status) {
 		return util.ErrorMsg
 	}
+	if len(status.Sync.LatestToken) == 0 {
+		return pendingMsg
+	}
 	if status.Sync.LatestToken == status.Source.Token && len(status.Sync.InProgress) == 0 {
 		return syncedMsg
 	}
