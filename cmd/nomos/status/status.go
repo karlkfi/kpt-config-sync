@@ -87,6 +87,8 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 	}
 	configs = filterConfigs(contexts, configs)
 
+	var mapMutex sync.Mutex
+	var wg sync.WaitGroup
 	clientMap := make(map[string]*statusClient)
 	unreachableClusters := false
 
@@ -109,17 +111,28 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 			continue
 		}
 
-		if isReachable(policyHierarchyClientSet, name) {
-			clientMap[name] = &statusClient{
-				policyHierarchyClientSet.ConfigmanagementV1().Repos(),
-				k8sClientset.CoreV1().Pods("kube-system"),
-				cmClient,
+		wg.Add(1)
+
+		go func(pcs *apis.Clientset, kcs *kubernetes.Clientset, cmc *util.ConfigManagementClient, cfgName string) {
+			if isReachable(pcs, cfgName) {
+				mapMutex.Lock()
+				clientMap[cfgName] = &statusClient{
+					pcs.ConfigmanagementV1().Repos(),
+					kcs.CoreV1().Pods("kube-system"),
+					cmc,
+				}
+				mapMutex.Unlock()
+			} else {
+				mapMutex.Lock()
+				clientMap[cfgName] = nil
+				unreachableClusters = true
+				mapMutex.Unlock()
 			}
-		} else {
-			clientMap[name] = nil
-			unreachableClusters = true
-		}
+			wg.Done()
+		}(policyHierarchyClientSet, k8sClientset, cmClient, name)
 	}
+
+	wg.Wait()
 
 	if unreachableClusters {
 		// We can't stop the underlying libraries from spamming to glog when a cluster is unreachable,
