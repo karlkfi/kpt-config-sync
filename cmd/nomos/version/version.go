@@ -36,9 +36,9 @@ var (
 	// Cmd is the Cobra object representing the nomos version command.
 	Cmd = &cobra.Command{
 		Use:   "version",
-		Short: "Prints the version of this binary",
-		Long: `Prints the version of the "nomos" client binary for debugging purposes.
-`,
+		Short: "Prints the version of ACM for each cluster as well this CLI",
+		Long: `Prints the version of Configuration Management installed on each cluster and the version 
+of the "nomos" client binary for debugging purposes.`,
 		Example: `  nomos version`,
 		Run: func(_ *cobra.Command, _ []string) {
 			allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)

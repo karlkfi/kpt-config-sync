@@ -49,8 +49,7 @@ func init() {
 // Cmd runs a loop that fetches ACM objects from all available clusters and prints a summary of the
 // status of Config Management for each cluster.
 var Cmd = &cobra.Command{
-	Hidden: true,
-	Use:    "status",
+	Use: "status",
 	// TODO: make Configuration Management a constant (for product renaming)
 	Short: `Prints the status of all clusters with Configuration Management installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
