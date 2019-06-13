@@ -244,13 +244,20 @@ function main() {
 # Params:
 #   $1: File path to the JSON file containing service account credentials.
 #   #2: Optional, GCS file that we want to download the configuration from.
-function setup_prober_cred() {
+setup_prober_cred() {
   echo "+++ Setting up prober credentials"
   local cred_file="$1"
 
   # Makes the service account from ${_cred_file} the active account that drives
   # cluster changes.
   gcloud --quiet auth activate-service-account --key-file="${cred_file}"
+
+  # Installs gcloud as an auth helper for kubectl with the credentials that
+  # were set with the service account activation above.
+  # Needs cloud.containers.get permission.
+  # shellcheck disable=SC2154
+  gcloud --quiet container clusters get-credentials "${gcp_cluster_name}" \
+    --zone="${gotopt2_zone}" --project="${gotopt2_project}"
 }
 
 echo "e2e/setup.sh: executed with args" "$@"
