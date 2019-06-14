@@ -40,7 +40,7 @@ e2e-staging: \
 download-cli: GO_BIN_DIR:=$(OUTPUT_DIR)/go/bin/linux_amd64
 download-cli: $(OUTPUT_DIR)
 	@mkdir -p $(GO_BIN_DIR)
-	@curl -o $(GO_BIN_DIR)/nomos https://storage.googleapis.com/config-management-release/latest/linux_amd64/nomos
+	@gsutil cp gs://config-management-release/latest/linux_amd64/nomos $(GO_BIN_DIR)/nomos
 	@chmod +x $(GO_BIN_DIR)/nomos
 
 # Builds the e2e docker image and depencencies.
