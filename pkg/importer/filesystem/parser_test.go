@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
@@ -1715,15 +1716,22 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		}
 	}()
 
+	var err error
+	rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
+	if err != nil {
+		t.Error(err)
+	}
+
 	p := NewParser(
 		f,
 		ParserOpt{
 			Vet:       tc.vet,
 			Validate:  true,
 			Extension: &NomosVisitorProvider{},
+			RootPath:  rootPath,
 		},
 	)
-	actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
+	actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{})
 
 	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 	if mErr != nil {
@@ -2572,15 +2580,22 @@ func TestEmptyDirectories(t *testing.T) {
 				}
 			}()
 
+			var err error
+			rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
+			if err != nil {
+				t.Error(err)
+			}
+
 			p := NewParser(
 				f,
 				ParserOpt{
 					Vet:       false,
 					Validate:  true,
 					Extension: &NomosVisitorProvider{},
+					RootPath:  rootPath,
 				},
 			)
-			actualConfigs, mErr := p.Parse(d.rootDir, "", &namespaceconfig.AllConfigs{}, time.Time{})
+			actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{})
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)
 			}

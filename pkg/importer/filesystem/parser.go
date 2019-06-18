@@ -51,7 +51,7 @@ type Parser struct {
 	errors       status.MultiError
 }
 
-// ParserOpt has often customized parser options. Use for example in NewParser.
+// ParserOpt has often customizes the behavior of Parser.Parse.
 type ParserOpt struct {
 	// Vet turns on vetting mode, which catches a wider range of cross-cluster errors.
 	Vet bool
@@ -60,6 +60,8 @@ type ParserOpt struct {
 	// Extension is the ParserConfig object that the parser will consume for configuring various
 	// aspects of the execution (see ParserConfig).
 	Extension ParserConfig
+	// RootPath is the file path to parse as GRoot.
+	RootPath cmpath.Root
 }
 
 // NewParser creates a new Parser using the specified RESTClientGetter and parser options.
@@ -76,8 +78,8 @@ func (p *Parser) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDef
 }
 
 // crtdsInRepo parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
-func (p *Parser) crdsInRepo(rootPath cmpath.Root) ([]*v1beta1.CustomResourceDefinition, status.Error) {
-	fileObjects := p.readClusterResources(rootPath, true)
+func (p *Parser) crdsInRepo() ([]*v1beta1.CustomResourceDefinition, status.Error) {
+	fileObjects := p.readClusterResources(true)
 
 	var crds []*v1beta1.CustomResourceDefinition
 	for _, f := range fileObjects {
@@ -102,15 +104,13 @@ func (p *Parser) crdsInRepo(rootPath cmpath.Root) ([]*v1beta1.CustomResourceDefi
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(root string, importToken string, currentConfigs *namespaceconfig.AllConfigs,
+func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs,
 	loadTime time.Time) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
-	rootPath, err := cmpath.NewRoot(cmpath.FromOS(root))
-	p.errors = status.Append(p.errors, err)
 
 	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
 	// if we haven't yet added the CRDs to the cluster.
-	crds, cErr := p.crdsInRepo(rootPath)
+	crds, cErr := p.crdsInRepo()
 	if cErr != nil {
 		p.errors = status.Append(p.errors, cErr)
 		return nil, p.errors
@@ -125,10 +125,8 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 		LoadTime:    loadTime,
 		ClusterName: os.Getenv("CLUSTER_NAME"),
 	}
-	astRoot.Data, err = ast.Add(astRoot.Data, RootPath{}, rootPath)
-	p.errors = status.Append(p.errors, err)
 
-	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources(rootPath))
+	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
 	crdInfo, err := clusterconfig.NewCRDInfo(
 		decode.NewGenericResourceDecoder(scheme.Scheme),
 		currentConfigs.CRDClusterConfig,
@@ -143,10 +141,10 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 	}
 
 	visitors := []ast.Visitor{
-		tree.NewSystemBuilderVisitor(p.readSystemResources(rootPath)),
-		tree.NewClusterBuilderVisitor(p.readClusterResources(rootPath, false, crds...)),
-		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources(rootPath)),
-		tree.NewBuilderVisitor(p.readNamespaceResources(rootPath, crds...)),
+		tree.NewSystemBuilderVisitor(p.readSystemResources()),
+		tree.NewClusterBuilderVisitor(p.readClusterResources(false, crds...)),
+		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources()),
+		tree.NewBuilderVisitor(p.readNamespaceResources(crds...)),
 		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()),
 		tree.NewCRDClusterConfigInfoVisitor(crdInfo),
 	}
@@ -183,21 +181,21 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 	}
 }
 
-func (p *Parser) readSystemResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.SystemDir)), false)
+func (p *Parser) readSystemResources() []ast.FileObject {
+	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false)
 }
 
-func (p *Parser) readNamespaceResources(root cmpath.Root, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
+func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
 }
 
-func (p *Parser) readClusterResources(root cmpath.Root, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.
+func (p *Parser) readClusterResources(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.
 	FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
+	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
 }
 
-func (p *Parser) readClusterRegistryResources(root cmpath.Root) []ast.FileObject {
-	return p.readResources(root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
+func (p *Parser) readClusterRegistryResources() []ast.FileObject {
+	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
 }
 
 // readResources walks dir recursively, looking for resources, and builds FileInfos from them.

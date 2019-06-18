@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
@@ -26,16 +27,22 @@ const (
 func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
 	client := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
-	policyDir := path.Join(gitDir, policyDirRelative)
-	glog.Infof("Policy dir: %s", policyDir)
+	rootDir := path.Join(gitDir, policyDirRelative)
+	glog.Infof("Policy dir: %s", rootDir)
+
+	var err error
+	rootPath, err := cmpath.NewRoot(cmpath.FromOS(rootDir))
+	if err != nil {
+		return err
+	}
 
 	parser := NewParser(
-		&genericclioptions.ConfigFlags{}, ParserOpt{Validate: true, Extension: &NomosVisitorProvider{}})
+		&genericclioptions.ConfigFlags{}, ParserOpt{Validate: true, Extension: &NomosVisitorProvider{}, RootPath: rootPath})
 	if err := parser.ValidateInstallation(); err != nil {
 		return err
 	}
 
-	r, err := NewReconciler(policyDir, parser, client, mgr.GetCache())
+	r, err := NewReconciler(rootDir, parser, client, mgr.GetCache())
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

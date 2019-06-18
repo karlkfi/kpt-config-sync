@@ -31,10 +31,11 @@ non-zero error code.`,
   nomos view --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		dir := flags.Path.String()
+		rootDir := flags.Path.String()
+		rootPath := util.GetRootOrDie(rootDir)
+
 		resources, err := parse.Parse(
-			dir,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}})
+			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

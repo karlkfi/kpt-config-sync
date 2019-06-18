@@ -81,8 +81,8 @@ func (o *FileObject) Namespace() string {
 	return o.MetaObject().GetNamespace()
 }
 
-// Root represents a set of declared configs, settings for how those configs will be interpreted,
-// and information regarding where those configs came from.
+// Root represents a hierarchy of declared configs, settings for how those configs will be
+// interpreted, and information regarding where those configs came from.
 type Root struct {
 	// ImportToken is the token for context
 	ImportToken string

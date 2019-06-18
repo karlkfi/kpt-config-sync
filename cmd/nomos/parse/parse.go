@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -24,7 +25,11 @@ const timeout = time.Second * 15
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
+func Parse(parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
+	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
+		return nil, status.InternalError.New("No root path specified.")
+	}
+
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
 		glog.Fatalf("Failed to create rest config: %+v", err)
@@ -44,7 +49,7 @@ func Parse(dir string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConf
 	if cErr != nil {
 		return nil, cErr
 	}
-	resources, mErr := p.Parse(dir, "", policies, time.Time{})
+	resources, mErr := p.Parse("", policies, time.Time{})
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

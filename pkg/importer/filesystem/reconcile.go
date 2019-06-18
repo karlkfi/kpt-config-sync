@@ -136,7 +136,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredConfigs, mErr := c.parser.Parse(newDir, token, currentConfigs, startTime)
+	desiredConfigs, mErr := c.parser.Parse(token, currentConfigs, startTime)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", mErr)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
