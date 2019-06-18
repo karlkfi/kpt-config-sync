@@ -3,6 +3,7 @@ package view
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -33,8 +34,9 @@ non-zero error code.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
+		clusterName := os.Getenv("CLUSTER_NAME")
 
-		resources, err := parse.Parse(
+		resources, err := parse.Parse(clusterName,
 			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
 		if err != nil {
 			util.PrintErrAndDie(err)

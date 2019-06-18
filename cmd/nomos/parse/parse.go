@@ -2,7 +2,6 @@ package parse
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -26,7 +25,7 @@ const timeout = time.Second * 15
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
+func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
 	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
 		return nil, status.InternalError.New("No root path specified.")
 	}
@@ -50,7 +49,7 @@ func Parse(parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) 
 	if cErr != nil {
 		return nil, cErr
 	}
-	resources, mErr := p.Parse("", policies, time.Time{}, os.Getenv("CLUSTER_NAME"))
+	resources, mErr := p.Parse("", policies, time.Time{}, clusterName)
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

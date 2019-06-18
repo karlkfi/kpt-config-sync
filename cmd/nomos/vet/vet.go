@@ -1,6 +1,8 @@
 package vet
 
 import (
+	"os"
+
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
@@ -29,8 +31,9 @@ returns a non-zero error code if any issues are found.
 	Run: func(cmd *cobra.Command, args []string) {
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
+		clusterName := os.Getenv("CLUSTER_NAME")
 
-		_, err := parse.Parse(
+		_, err := parse.Parse(clusterName,
 			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
 		if err != nil {
 			util.PrintErrAndDie(err)
