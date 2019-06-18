@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -26,13 +25,14 @@ var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type Reconciler struct {
-	configDir  string
-	parser     *Parser
-	client     *syncerclient.Client
-	repoClient *repo.Client
-	cache      cache.Cache
-	currentDir string
-	lastSyncs  map[string]v1.Sync
+	clusterName string
+	configDir   string
+	parser      *Parser
+	client      *syncerclient.Client
+	repoClient  *repo.Client
+	cache       cache.Cache
+	currentDir  string
+	lastSyncs   map[string]v1.Sync
 }
 
 // NewReconciler returns a new Reconciler.
@@ -43,7 +43,7 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(configDir string, parser *Parser, client *syncerclient.Client, cache cache.Cache) (*Reconciler, error) {
+func NewReconciler(clusterName string, configDir string, parser *Parser, client *syncerclient.Client, cache cache.Cache) (*Reconciler, error) {
 	repoClient := repo.New(client)
 
 	return &Reconciler{
@@ -137,7 +137,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredConfigs, mErr := c.parser.Parse(token, currentConfigs, startTime, os.Getenv("CLUSTER_NAME"))
+	desiredConfigs, mErr := c.parser.Parse(token, currentConfigs, startTime, c.clusterName)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", mErr)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())

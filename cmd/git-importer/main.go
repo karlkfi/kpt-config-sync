@@ -49,7 +49,8 @@ func main() {
 	}
 
 	// Set up controllers.
-	if err := filesystem.AddController(mgr, *gitDir, *policyDirRelative, *pollPeriod); err != nil {
+	clusterName := os.Getenv("CLUSTER_NAME")
+	if err := filesystem.AddController(clusterName, mgr, *gitDir, *policyDirRelative, *pollPeriod); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 

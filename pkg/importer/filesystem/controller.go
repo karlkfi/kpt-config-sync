@@ -24,7 +24,7 @@ const (
 )
 
 // AddController adds the git-importer controller to the manager.
-func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
+func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
 	client := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
 	rootDir := path.Join(gitDir, policyDirRelative)
@@ -42,7 +42,7 @@ func AddController(mgr manager.Manager, gitDir, policyDirRelative string, pollPe
 		return err
 	}
 
-	r, err := NewReconciler(rootDir, parser, client, mgr.GetCache())
+	r, err := NewReconciler(clusterName, rootDir, parser, client, mgr.GetCache())
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}
