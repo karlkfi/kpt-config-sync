@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	clusterName       = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"), "Cluster name to use for Cluster selection")
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
@@ -49,8 +50,7 @@ func main() {
 	}
 
 	// Set up controllers.
-	clusterName := os.Getenv("CLUSTER_NAME")
-	if err := filesystem.AddController(clusterName, mgr, *gitDir, *policyDirRelative, *pollPeriod); err != nil {
+	if err := filesystem.AddController(*clusterName, mgr, *gitDir, *policyDirRelative, *pollPeriod); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
