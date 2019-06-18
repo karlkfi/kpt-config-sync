@@ -1693,13 +1693,6 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	d := newTestDir(t)
 	defer d.remove()
 
-	// Used in per-cluster addressing tests.  If undefined should mean
-	// the behavior does not change with respect to "regular" state.
-	if err := os.Setenv("CLUSTER_NAME", tc.clusterName); err != nil {
-		t.Fatal("could not set up CLUSTER_NAME envvar for testing")
-	}
-	defer os.Unsetenv("CLUSTER_NAME")
-
 	if glog.V(6) {
 		glog.Infof("Testcase: %+v", spew.Sdump(tc))
 	}
@@ -1731,7 +1724,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			RootPath:  rootPath,
 		},
 	)
-	actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{})
+	actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{}, tc.clusterName)
 
 	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 	if mErr != nil {
@@ -2595,7 +2588,7 @@ func TestEmptyDirectories(t *testing.T) {
 					RootPath:  rootPath,
 				},
 			)
-			actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{})
+			actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{}, "")
 			if mErr != nil {
 				t.Fatalf("unexpected error: %v", mErr)
 			}

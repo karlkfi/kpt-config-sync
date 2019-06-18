@@ -2,6 +2,7 @@ package parse
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -49,7 +50,7 @@ func Parse(parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) 
 	if cErr != nil {
 		return nil, cErr
 	}
-	resources, mErr := p.Parse("", policies, time.Time{})
+	resources, mErr := p.Parse("", policies, time.Time{}, os.Getenv("CLUSTER_NAME"))
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

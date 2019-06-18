@@ -105,7 +105,7 @@ func (p *Parser) crdsInRepo() ([]*v1beta1.CustomResourceDefinition, status.Error
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs,
-	loadTime time.Time) (*namespaceconfig.AllConfigs, status.MultiError) {
+	loadTime time.Time, clusterName string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
 
 	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
@@ -123,7 +123,7 @@ func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllCo
 	astRoot := &ast.Root{
 		ImportToken: importToken,
 		LoadTime:    loadTime,
-		ClusterName: os.Getenv("CLUSTER_NAME"),
+		ClusterName: clusterName,
 	}
 
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
