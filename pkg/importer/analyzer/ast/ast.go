@@ -87,7 +87,11 @@ type Root struct {
 	// ImportToken is the token for context
 	ImportToken string
 	LoadTime    time.Time // Time at which the context was generated
-	Repo        *v1.Repo  // Nomos repo
+
+	// ClusterName is the name of the Cluster to generate the policy hierarchy for. Determines which
+	// ClusterSelectors are active.
+	ClusterName string
+	Repo        *v1.Repo // Nomos repo
 
 	// ClusterObjects represents resources that are cluster scoped.
 	ClusterObjects []*ClusterObject

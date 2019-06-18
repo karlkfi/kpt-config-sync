@@ -123,6 +123,7 @@ func (p *Parser) Parse(root string, importToken string, currentConfigs *namespac
 	astRoot := &ast.Root{
 		ImportToken: importToken,
 		LoadTime:    loadTime,
+		ClusterName: os.Getenv("CLUSTER_NAME"),
 	}
 	astRoot.Data, err = ast.Add(astRoot.Data, RootPath{}, rootPath)
 	p.errors = status.Append(p.errors, err)

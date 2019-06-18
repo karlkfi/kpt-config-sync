@@ -1,8 +1,6 @@
 package selectors
 
 import (
-	"os"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
@@ -64,7 +62,7 @@ func (v *ClusterSelectorAdder) VisitRoot(r *ast.Root) *ast.Root {
 	r.Data, err = ast.Add(r.Data, selectorsKey{}, v.selectors)
 	v.errs = status.Append(v.errs, err)
 
-	cs, err := NewClusterSelectors(v.clusters, v.selectors, os.Getenv("CLUSTER_NAME"))
+	cs, err := NewClusterSelectors(v.clusters, v.selectors, r.ClusterName)
 	v.errs = status.Append(v.errs, err)
 	err = SetClusterSelector(cs, r)
 	v.errs = status.Append(v.errs, err)
