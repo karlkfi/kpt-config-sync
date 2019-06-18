@@ -9,5 +9,5 @@ group:
 version: v1
 kind: Namespace
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1024
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1024
 

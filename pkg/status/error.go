@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
-const urlBase = "For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv"
+const urlBase = "For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv"
 
 func url(code string) string {
 	return urlBase + code

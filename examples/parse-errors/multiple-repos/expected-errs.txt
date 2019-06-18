@@ -15,5 +15,5 @@ group: configmanagement.gke.io
 version: v1
 kind: Repo
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1030
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1030
 

@@ -9,7 +9,7 @@ group: configmanagement.gke.io
 version: v1
 kind: HierarchyConfig
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1040
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1040
 
 
 [2] KNV1041: The "NamespaceConfig.configmanagement.gke.io" APIResource MUST NOT be declared in a HierarchyConfig:
@@ -20,7 +20,7 @@ group: configmanagement.gke.io
 version: v1
 kind: HierarchyConfig
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1041
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1041
 
 
 [3] KNV1046: This HierarchyConfig references the APIResource "CustomResourceDefinition.apiextensions.k8s.io" which has cluster scope. Cluster scoped objects are not permitted in HierarchyConfig.
@@ -31,7 +31,7 @@ group: configmanagement.gke.io
 version: v1
 kind: HierarchyConfig
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1046
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1046
 
 
 [4] KNV1046: This HierarchyConfig references the APIResource "NamespaceConfig.configmanagement.gke.io" which has cluster scope. Cluster scoped objects are not permitted in HierarchyConfig.
@@ -42,7 +42,7 @@ group: configmanagement.gke.io
 version: v1
 kind: HierarchyConfig
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1046
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1046
 
 
 [5] KNV1046: This HierarchyConfig references the APIResource "Sync.configmanagement.gke.io" which has cluster scope. Cluster scoped objects are not permitted in HierarchyConfig.
@@ -53,5 +53,5 @@ group: configmanagement.gke.io
 version: v1
 kind: HierarchyConfig
 
-For more information, see https://cloud.google.com/anthos-config-management/docs/errors#knv1046
+For more information, see https://cloud.google.com/anthos-config-management/docs/reference/errors#knv1046
 
