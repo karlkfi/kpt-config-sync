@@ -47,11 +47,12 @@ func NewReconciler(clusterName string, configDir string, parser *Parser, client 
 	repoClient := repo.New(client)
 
 	return &Reconciler{
-		configDir:  configDir,
-		parser:     parser,
-		client:     client,
-		repoClient: repoClient,
-		cache:      cache,
+		clusterName: clusterName,
+		configDir:   configDir,
+		parser:      parser,
+		client:      client,
+		repoClient:  repoClient,
+		cache:       cache,
 	}, nil
 }
 
