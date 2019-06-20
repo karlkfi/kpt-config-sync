@@ -77,8 +77,8 @@ func (p *Parser) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDef
 	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, stubMissing, crds...))
 }
 
-// crtdsInRepo parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
-func (p *Parser) crdsInRepo() ([]*v1beta1.CustomResourceDefinition, status.Error) {
+// ReadCRDs parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
+func (p *Parser) ReadCRDs() ([]*v1beta1.CustomResourceDefinition, status.Error) {
 	fileObjects := p.readClusterResources(true)
 
 	var crds []*v1beta1.CustomResourceDefinition
@@ -97,6 +97,68 @@ func (p *Parser) crdsInRepo() ([]*v1beta1.CustomResourceDefinition, status.Error
 	return crds, nil
 }
 
+// ReadObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
+// manifests.
+func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *FlatRoot {
+	return &FlatRoot{
+		SystemObjects:          p.readSystemResources(),
+		ClusterRegistryObjects: p.readClusterRegistryResources(),
+		ClusterObjects:         p.readClusterResources(false, crds...),
+		NamespaceObjects:       p.readNamespaceResources(crds...),
+	}
+}
+
+// GenerateVisitors creates the Visitors to use to hydrate and validate the root.
+func (p *Parser) GenerateVisitors(
+	flatRoot *FlatRoot,
+	currentConfigs *namespaceconfig.AllConfigs,
+	crds []*v1beta1.CustomResourceDefinition,
+) []ast.Visitor {
+	visitors := []ast.Visitor{
+		tree.NewSystemBuilderVisitor(flatRoot.SystemObjects),
+		tree.NewClusterBuilderVisitor(flatRoot.ClusterObjects),
+		tree.NewClusterRegistryBuilderVisitor(flatRoot.ClusterRegistryObjects),
+		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
+	}
+
+	crdInfo, err := clusterconfig.NewCRDInfo(
+		decode.NewGenericResourceDecoder(scheme.Scheme),
+		currentConfigs.CRDClusterConfig,
+		crds)
+	p.errors = status.Append(p.errors, err)
+	visitors = append(visitors, tree.NewCRDClusterConfigInfoVisitor(crdInfo))
+
+	discoveryClient, dErr := p.discoveryClient(crds...)
+	p.errors = status.Append(p.errors, dErr)
+	visitors = append(visitors, tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()))
+
+	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
+
+	visitors = append(visitors,
+		transform.NewSyncGenerator())
+
+	return visitors
+}
+
+// HydrateRoot hydrates configuration into a fully-configured Root with the passed visitors.
+func (p *Parser) HydrateRoot(
+	visitors []ast.Visitor,
+	importToken string,
+	loadTime time.Time,
+	clusterName string,
+) *ast.Root {
+	astRoot := &ast.Root{
+		ImportToken: importToken,
+		LoadTime:    loadTime,
+		ClusterName: clusterName,
+	}
+
+	p.runVisitors(astRoot, visitors)
+
+	return astRoot
+}
+
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
@@ -104,58 +166,27 @@ func (p *Parser) crdsInRepo() ([]*v1beta1.CustomResourceDefinition, status.Error
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs,
-	loadTime time.Time, clusterName string) (*namespaceconfig.AllConfigs, status.MultiError) {
+func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time, clusterName string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
 
 	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
 	// if we haven't yet added the CRDs to the cluster.
-	crds, cErr := p.crdsInRepo()
+	crds, cErr := p.ReadCRDs()
 	if cErr != nil {
 		p.errors = status.Append(p.errors, cErr)
 		return nil, p.errors
 	}
 
+	flatRoot := p.ReadObjects(crds)
 	if p.errors != nil {
 		return nil, p.errors
 	}
 
-	astRoot := &ast.Root{
-		ImportToken: importToken,
-		LoadTime:    loadTime,
-		ClusterName: clusterName,
-	}
-
-	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
-	crdInfo, err := clusterconfig.NewCRDInfo(
-		decode.NewGenericResourceDecoder(scheme.Scheme),
-		currentConfigs.CRDClusterConfig,
-		crds)
-	p.errors = status.Append(p.errors, err)
-
-	discoveryClient, dErr := p.discoveryClient(crds...)
-	p.errors = status.Append(p.errors, dErr)
-
-	if p.errors != nil {
-		return nil, p.errors
-	}
-
-	visitors := []ast.Visitor{
-		tree.NewSystemBuilderVisitor(p.readSystemResources()),
-		tree.NewClusterBuilderVisitor(p.readClusterResources(false, crds...)),
-		tree.NewClusterRegistryBuilderVisitor(p.readClusterRegistryResources()),
-		tree.NewBuilderVisitor(p.readNamespaceResources(crds...)),
-		tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()),
-		tree.NewCRDClusterConfigInfoVisitor(crdInfo),
-	}
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
-
+	visitors := p.GenerateVisitors(flatRoot, currentConfigs, crds)
 	outputVisitor := backend.NewOutputVisitor()
-	visitors = append(visitors,
-		transform.NewSyncGenerator(),
-		outputVisitor)
+	visitors = append(visitors, outputVisitor)
 
-	p.runVisitors(astRoot, visitors)
+	p.HydrateRoot(visitors, importToken, loadTime, clusterName)
 	if p.errors != nil {
 		return nil, p.errors
 	}
