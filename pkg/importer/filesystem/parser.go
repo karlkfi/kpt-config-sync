@@ -97,10 +97,15 @@ func (p *Parser) ReadCRDs() ([]*v1beta1.CustomResourceDefinition, status.Error) 
 	return crds, nil
 }
 
+// Errors returns the errors the Parser has encountered so far.
+func (p *Parser) Errors() status.MultiError {
+	return p.errors
+}
+
 // ReadObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *FlatRoot {
-	return &FlatRoot{
+func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *ast.FlatRoot {
+	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(),
 		ClusterRegistryObjects: p.readClusterRegistryResources(),
 		ClusterObjects:         p.readClusterResources(false, crds...),
@@ -110,7 +115,7 @@ func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *FlatRoot
 
 // GenerateVisitors creates the Visitors to use to hydrate and validate the root.
 func (p *Parser) GenerateVisitors(
-	flatRoot *FlatRoot,
+	flatRoot *ast.FlatRoot,
 	currentConfigs *namespaceconfig.AllConfigs,
 	crds []*v1beta1.CustomResourceDefinition,
 ) []ast.Visitor {
@@ -120,7 +125,6 @@ func (p *Parser) GenerateVisitors(
 		tree.NewClusterRegistryBuilderVisitor(flatRoot.ClusterRegistryObjects),
 		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
 	}
-
 	crdInfo, err := clusterconfig.NewCRDInfo(
 		decode.NewGenericResourceDecoder(scheme.Scheme),
 		currentConfigs.CRDClusterConfig,
@@ -135,8 +139,7 @@ func (p *Parser) GenerateVisitors(
 	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
 
-	visitors = append(visitors,
-		transform.NewSyncGenerator())
+	visitors = append(visitors, transform.NewSyncGenerator())
 
 	return visitors
 }

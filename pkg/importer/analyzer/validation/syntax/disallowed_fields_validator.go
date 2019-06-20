@@ -61,5 +61,5 @@ func hasStatusField(u runtime.Unstructured) bool {
 		// This should never happen!!!
 		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
 	}
-	return ok && m != nil
+	return ok && m != nil && len(m.(map[string]interface{})) != 0
 }

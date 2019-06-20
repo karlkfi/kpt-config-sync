@@ -18,6 +18,27 @@ func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 	return buildTree(t, &ast.Root{}, objects...)
 }
 
+// BuildFlatTree partitions FileObjects into a FlatRoot.
+func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
+	result := &ast.FlatRoot{}
+	for _, object := range objects {
+		switch object.Path.Split()[0] {
+		case repo.SystemDir:
+			result.SystemObjects = append(result.SystemObjects, object)
+		case repo.ClusterRegistryDir:
+			result.ClusterRegistryObjects = append(result.ClusterRegistryObjects, object)
+		case repo.ClusterDir:
+			result.ClusterObjects = append(result.ClusterObjects, object)
+		case repo.NamespacesDir:
+			result.NamespaceObjects = append(result.NamespaceObjects, object)
+		default:
+			t.Fatalf("test resource not in known top-level directory: %s", object.SlashPath())
+		}
+	}
+
+	return result
+}
+
 // BuildTreeWithAPIInfo builds the tree and sets the APIInfo in the root node.
 func BuildTreeWithAPIInfo(t *testing.T, apiInfo *discovery.APIInfo, objects ...ast.FileObject) *ast.Root {
 	t.Helper()
@@ -32,28 +53,12 @@ func BuildTreeWithAPIInfo(t *testing.T, apiInfo *discovery.APIInfo, objects ...a
 }
 
 func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Root {
-	// TODO: Move this to transforming visitors.
-	var namespaceObjects []ast.FileObject
-	var sytemObjects []ast.FileObject
-	var clusterObjects []ast.FileObject
-	for _, object := range objects {
-		switch object.Path.Split()[0] {
-		case repo.SystemDir:
-			sytemObjects = append(sytemObjects, object)
-		case repo.ClusterRegistryDir:
-			root.ClusterRegistryObjects = append(root.ClusterRegistryObjects, &ast.ClusterRegistryObject{FileObject: object})
-		case repo.ClusterDir:
-			clusterObjects = append(clusterObjects, object)
-		case repo.NamespacesDir:
-			namespaceObjects = append(namespaceObjects, object)
-		default:
-			t.Fatalf("test resource not in known top-level directory: %s", object.SlashPath())
-		}
-	}
+	flatRoot := BuildFlatTree(t, objects...)
 
-	root.Accept(tree.NewSystemBuilderVisitor(sytemObjects))
-	root.Accept(tree.NewClusterBuilderVisitor(clusterObjects))
-	root.Accept(tree.NewBuilderVisitor(namespaceObjects))
+	root.Accept(tree.NewSystemBuilderVisitor(flatRoot.SystemObjects))
+	root.Accept(tree.NewClusterRegistryBuilderVisitor(flatRoot.ClusterRegistryObjects))
+	root.Accept(tree.NewClusterBuilderVisitor(flatRoot.ClusterObjects))
+	root.Accept(tree.NewBuilderVisitor(flatRoot.NamespaceObjects))
 
 	return root
 }

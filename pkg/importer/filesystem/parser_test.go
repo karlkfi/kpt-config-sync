@@ -1,4 +1,4 @@
-package filesystem
+package filesystem_test
 
 import (
 	"bytes"
@@ -15,16 +15,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/google/nomos/testing/parsertest"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -425,28 +428,19 @@ func (d templateData) KindLower() string {
 
 type testDir struct {
 	rootDir string
-	*testing.T
-}
-
-func newTestDir(t *testing.T) *testDir {
-	root, err := ioutil.TempDir("", "test_dir")
-	if err != nil {
-		t.Fatalf("Failed to create test dir %v", err)
-	}
-	return &testDir{root, t}
 }
 
 func (d testDir) remove() {
 	os.RemoveAll(d.rootDir)
 }
 
-func (d testDir) createTestFile(path, contents string) {
+func (d testDir) createTestFile(path, contents string, t *testing.T) {
 	path = filepath.Join(d.rootDir, filepath.FromSlash(path))
 	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		d.Fatalf("error creating test dir %s: %v", path, err)
+		t.Fatalf("error creating test dir %s: %v", path, err)
 	}
 	if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
-		d.Fatalf("error creating test file %s: %v", path, err)
+		t.Fatalf("error creating test file %s: %v", path, err)
 	}
 }
 
@@ -1699,7 +1693,7 @@ func (tc *parserTestCase) Run(t *testing.T) {
 
 	for k, v := range tc.testFiles {
 		// stuff
-		d.createTestFile(k, v)
+		d.createTestFile(k, v, t)
 	}
 
 	f := fstesting.NewTestClientGetter(t)
@@ -1715,12 +1709,12 @@ func (tc *parserTestCase) Run(t *testing.T) {
 		t.Error(err)
 	}
 
-	p := NewParser(
+	p := filesystem.NewParser(
 		f,
-		ParserOpt{
+		filesystem.ParserOpt{
 			Vet:       tc.vet,
 			Validate:  true,
-			Extension: &NomosVisitorProvider{},
+			Extension: &filesystem.NomosVisitorProvider{},
 			RootPath:  rootPath,
 		},
 	)
@@ -2434,174 +2428,55 @@ func TestParserPerClusterAddressing(t *testing.T) {
 	}
 }
 
-// TestParserPerClusterAddressingVet tests nomos vet validation errors.
-func TestParserPerClusterAddressingVet(t *testing.T) {
-	tests := []parserTestCase{
-		{
-			testName:    "An object that has a cluster selector annotation for nonexistent cluster is an error",
-			clusterName: "cluster-1",
-			vet:         true,
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						v1.ClusterSelectorAnnotationKey: "unknown-selector",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
-			},
-			expectedErrorCodes: []string{vet.ObjectHasUnknownClusterSelectorCode},
+func TestParserVet(t *testing.T) {
+	test := parsertest.Test{
+		NewParser: parsertest.NewParser,
+		DefaultObjects: []ast.FileObject{
+			fake.Repo("system/repo.yaml"),
 		},
-		{
-			testName:    "A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
-			clusterName: "cluster-1",
-			vet:         true,
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{Name: "bar"}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{ID: "1",
-					Annotations: map[string]string{
-						v1.ClusterSelectorAnnotationKey: "unknown-selector",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedErrorCodes: []string{vet.ObjectHasUnknownClusterSelectorCode},
-		},
-		{
-			testName:    "Defining invalid yaml is an error.",
-			clusterName: "cluster-1",
-			vet:         true,
-			testFiles: fstesting.FileContentMap{
-				"namespaces/invalid.yaml": "This is not valid yaml.",
-			},
-			expectedErrorCodes: []string{status.APIServerErrorCode},
-		},
-		{
-			testName:    "A subdir of system is an error",
-			clusterName: "cluster-1",
-			vet:         true,
-			testFiles: fstesting.FileContentMap{
-				"system/sub/rb.yaml": templateData{
-					Kind:          "ConfigMap",
-					HierarchyMode: "inherit",
-				}.apply(aHierarchyConfig),
-			},
-			expectedErrorCodes: []string{vet.IllegalSubdirectoryErrorCode},
-		},
-		{
-			testName:    "Objects in non-namespaces/ with an invalid label is an error",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				"system/hc.yaml": `
-kind: HierarchyConfig
-apiVersion: configmanagement.gke.io/v1
-metadata:
-  name: hc
-  labels:
-    configmanagement.gke.io/illegal-label: "true"`,
-			},
-			expectedErrorCodes: []string{vet.IllegalLabelDefinitionErrorCode},
-		},
-		{
-			testName:    "Objects in non-namespaces/ with an invalid annotation is an error",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				"system/hc.yaml": `
-kind: HierarchyConfig
-apiVersion: configmanagement.gke.io/v1
-metadata:
-  name: hc
-  annotations:
-    configmanagement.gke.io/unsupported: "true"`,
-			},
-			expectedErrorCodes: []string{vet.IllegalAnnotationDefinitionErrorCode},
+		TestCases: []parsertest.TestCase{
+			parsertest.Failure("A subdir of system is an error",
+				vet.IllegalSubdirectoryErrorCode,
+				fake.Build(kinds.HierarchyConfig(), object.Path("system/sub/hc.yaml"))),
+			parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
+				vet.IllegalLabelDefinitionErrorCode,
+				fake.Build(kinds.HierarchyConfig(), object.Path("system/hc.yaml"),
+					object.Label("configmanagement.gke.io/illegal-label", "true")),
+			),
+			parsertest.Failure("Objects in non-namespaces/ with an invalid annotation is an error",
+				vet.IllegalAnnotationDefinitionErrorCode,
+				fake.Build(kinds.HierarchyConfig(), object.Path("system/hc.yaml"),
+					object.Annotation("configmanagement.gke.io/illegal-annotation", "true")),
+			),
 		},
 	}
-	for _, test := range tests {
-		test.testFiles["system/repo.yaml"] = aRepo
-		t.Run(test.testName, test.Run)
-	}
+
+	test.RunAll(t)
 }
 
-func TestEmptyDirectories(t *testing.T) {
-	d := newTestDir(t)
-	defer d.remove()
+func ClusterSelectorAnnotation(value string) object.Mutator {
+	return object.Annotation(v1.ClusterSelectorAnnotationKey, value)
+}
 
-	// Create required repo definition.
-	d.createTestFile(filepath.Join(repo.SystemDir, "repo.yaml"), aRepo)
-
-	for _, path := range []string{
-		filepath.Join(d.rootDir, repo.NamespacesDir),
-		filepath.Join(d.rootDir, repo.ClusterDir),
-	} {
-		t.Run(path, func(t *testing.T) {
-			if err := os.MkdirAll(path, 0750); err != nil {
-				d.Fatalf("error creating test dir %s: %v", path, err)
-			}
-
-			f := fstesting.NewTestClientGetter(t)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
-
-			var err error
-			rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
-			if err != nil {
-				t.Error(err)
-			}
-
-			p := NewParser(
-				f,
-				ParserOpt{
-					Vet:       false,
-					Validate:  true,
-					Extension: &NomosVisitorProvider{},
-					RootPath:  rootPath,
-				},
-			)
-			actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{}, "")
-			if mErr != nil {
-				t.Fatalf("unexpected error: %v", mErr)
-			}
-			expectedConfigs := &namespaceconfig.AllConfigs{
-				NamespaceConfigs: map[string]v1.NamespaceConfig{},
-				ClusterConfig:    createClusterConfig(),
-				CRDClusterConfig: createCRDClusterConfig(),
-				Syncs:            map[string]v1.Sync{},
-				Repo:             fake.Repo("").Object.(*v1.Repo),
-			}
-			if !cmp.Equal(actualConfigs, expectedConfigs) {
-				t.Errorf("actual and expected AllConfigs didn't match: %v", cmp.Diff(actualConfigs, expectedConfigs))
-			}
-		})
+func TestParserPerClusterAddressingVet(t *testing.T) {
+	test := parsertest.Test{
+		NewParser: parsertest.NewParser,
+		DefaultObjects: []ast.FileObject{
+			fake.Repo("system/repo.yaml"),
+		},
+		TestCases: []parsertest.TestCase{
+			parsertest.Failure(
+				"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
+				vet.ObjectHasUnknownClusterSelectorCode,
+				fake.Build(kinds.Namespace(), object.Path("namespaces/foo/namespace.yaml"), ClusterSelectorAnnotation("does-not-exist")),
+			),
+			parsertest.Failure(
+				"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
+				vet.ObjectHasUnknownClusterSelectorCode,
+				fake.Build(kinds.ClusterRole(), object.Path("cluster/role.yaml"), ClusterSelectorAnnotation("does-not-exist")),
+			),
+		},
 	}
+
+	test.RunAll(t)
 }
