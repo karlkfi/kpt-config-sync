@@ -13,11 +13,11 @@ func TestDirectoryNameValidator_Pass(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "foo",
-				Object: fake.Role("namespaces/foo/role.yaml"),
+				Object: fake.RoleAtPath("namespaces/foo/role.yaml"),
 			},
 			{
 				Name:   "foo1",
-				Object: fake.Role("namespaces/foo1/role.yaml"),
+				Object: fake.RoleAtPath("namespaces/foo1/role.yaml"),
 			},
 		},
 	}

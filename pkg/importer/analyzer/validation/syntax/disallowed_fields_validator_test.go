@@ -32,11 +32,11 @@ func TestDisallowedFieldsValidator(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "role without ownerReference",
-				Object: fake.Role("namespaces/foo/role.yaml"),
+				Object: fake.Role(),
 			},
 			{
 				Name:       "replicaSet with ownerReference",
-				Object:     fake.Build(kinds.ReplicaSet(), object.OwnerReference("some_deployment", "some_uid", kinds.Deployment())),
+				Object:     fake.ReplicaSet(object.OwnerReference("some_deployment", "some_uid", kinds.Deployment())),
 				ShouldFail: true,
 			},
 			{

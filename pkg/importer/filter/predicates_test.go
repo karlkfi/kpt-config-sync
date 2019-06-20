@@ -18,12 +18,12 @@ func TestGroup(t *testing.T) {
 	}{
 		{
 			name:     "foo matches foo",
-			obj:      fake.Build(fake.GVK(kinds.Role(), fake.Group("foo"))),
+			obj:      fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("foo"))),
 			expected: true,
 		},
 		{
 			name: "foo does not match bar",
-			obj:  fake.Build(fake.GVK(kinds.Role(), fake.Group("bar"))),
+			obj:  fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("bar"))),
 		},
 	}
 
@@ -46,12 +46,12 @@ func TestKind(t *testing.T) {
 	}{
 		{
 			name:     "Role matches Role",
-			obj:      fake.Build(fake.GVK(kinds.Role(), fake.Kind("Role"))),
+			obj:      fake.Unstructured(fake.GVK(kinds.Role(), fake.Kind("Role"))),
 			expected: true,
 		},
 		{
 			name: "Role does not match RoleBinding",
-			obj:  fake.Build(fake.GVK(kinds.Role(), fake.Kind("RoleBinding"))),
+			obj:  fake.Unstructured(fake.GVK(kinds.Role(), fake.Kind("RoleBinding"))),
 		},
 	}
 
@@ -74,16 +74,16 @@ func TestNamespace(t *testing.T) {
 	}{
 		{
 			name:     "prod matches prod",
-			obj:      fake.Build(kinds.Role(), object.Namespace("prod")),
+			obj:      fake.Role(object.Namespace("prod")),
 			expected: true,
 		},
 		{
 			name: "prod does not match dev",
-			obj:  fake.Build(kinds.Role(), object.Namespace("dev")),
+			obj:  fake.Role(object.Namespace("dev")),
 		},
 		{
 			name:     "prod matches Namespace prod",
-			obj:      fake.Build(kinds.Namespace(), object.Name("prod")),
+			obj:      fake.Namespace("namespaces/prod"),
 			expected: true,
 		},
 	}
@@ -109,13 +109,13 @@ func TestName(t *testing.T) {
 		{
 			name:     "admin matches admin",
 			filter:   "admin",
-			obj:      fake.Build(kinds.Role(), object.Name("admin")),
+			obj:      fake.Role(object.Name("admin")),
 			expected: true,
 		},
 		{
 			name:   "admin does not match user",
 			filter: "admin",
-			obj:    fake.Build(kinds.Role(), object.Name("user")),
+			obj:    fake.Role(object.Name("user")),
 		},
 	}
 
@@ -140,13 +140,13 @@ func TestNameGroup(t *testing.T) {
 		{
 			name:     "prod matches prod:admin",
 			group:    "prod",
-			obj:      fake.Build(kinds.Role(), object.Name("prod:admin")),
+			obj:      fake.Role(object.Name("prod:admin")),
 			expected: true,
 		},
 		{
 			name:  "prod does not match dev:admin",
 			group: "prod",
-			obj:   fake.Build(kinds.Role(), object.Name("dev:admin")),
+			obj:   fake.Role(object.Name("dev:admin")),
 		},
 	}
 
@@ -171,13 +171,13 @@ func TestLabel(t *testing.T) {
 		{
 			name:     "version matches version",
 			label:    "version",
-			obj:      fake.Build(kinds.Role(), object.Label("version", "")),
+			obj:      fake.Role(object.Label("version", "")),
 			expected: true,
 		},
 		{
 			name:  "version does not match instance",
 			label: "version",
-			obj:   fake.Build(kinds.Role(), object.Label("instance", "")),
+			obj:   fake.Role(object.Label("instance", "")),
 		},
 	}
 
@@ -192,13 +192,13 @@ func TestLabel(t *testing.T) {
 	}
 }
 
-func withOwner(controller *bool) object.Mutator {
-	return func(object *ast.FileObject) {
-		owners := object.MetaObject().GetOwnerReferences()
+func withOwner(controller *bool) object.MetaMutator {
+	return func(object v1.Object) {
+		owners := object.GetOwnerReferences()
 		owners = append(owners, v1.OwnerReference{
 			Controller: controller,
 		})
-		object.MetaObject().SetOwnerReferences(owners)
+		object.SetOwnerReferences(owners)
 	}
 }
 
@@ -214,24 +214,24 @@ func TestControlled(t *testing.T) {
 	}{
 		{
 			name: "no controller returns false",
-			obj:  fake.Build(kinds.Role()),
+			obj:  fake.Role(),
 		},
 		{
 			name: "nil controller returns false",
-			obj:  fake.Build(kinds.Role(), withOwner(nil)),
+			obj:  fake.Role(withOwner(nil)),
 		},
 		{
 			name: "false controller returns false",
-			obj:  fake.Build(kinds.Role(), withOwner(&falseC)),
+			obj:  fake.Role(withOwner(&falseC)),
 		},
 		{
 			name:     "true controller returns true",
-			obj:      fake.Build(kinds.Role(), withOwner(&trueC)),
+			obj:      fake.Role(withOwner(&trueC)),
 			expected: true,
 		},
 		{
 			name:     "false and true controller returns true",
-			obj:      fake.Build(kinds.Role(), withOwner(&falseC), withOwner(&trueC)),
+			obj:      fake.Role(withOwner(&falseC), withOwner(&trueC)),
 			expected: true,
 		},
 	}

@@ -5,24 +5,20 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func namespaceConfig(opts ...object.Mutator) *v1.NamespaceConfig {
-	return fake.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+func namespaceConfig(opts ...object.MetaMutator) *v1.NamespaceConfig {
+	result := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(opts...))
+	return result
 }
 
 func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
 	nsConfig.Spec.DeleteSyncedTime = metav1.Now()
 	return nsConfig
-}
-
-func namespace(opts ...object.Mutator) *corev1.Namespace {
-	return fake.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
 }
 
 var (
@@ -56,52 +52,52 @@ func TestNamespaceDiffType(t *testing.T) {
 		{
 			name:       "in both, update",
 			declared:   namespaceConfig(),
-			actual:     namespace(),
+			actual:     fake.NamespaceObject("foo"),
 			expectType: Update,
 		},
 		{
 			name:       "in both, update even though cluster has invalid annotation",
 			declared:   namespaceConfig(),
-			actual:     namespace(managementInvalid),
+			actual:     fake.NamespaceObject("foo", managementInvalid),
 			expectType: Update,
 		},
 		{
 			name:     "in both, management disabled unmanage",
 			declared: namespaceConfig(disableManaged),
-			actual:   namespace(enableManaged),
+			actual:   fake.NamespaceObject("foo", enableManaged),
 
 			expectType: Unmanage,
 		},
 		{
 			name:       "in both, management disabled noop",
 			declared:   namespaceConfig(disableManaged),
-			actual:     namespace(),
+			actual:     fake.NamespaceObject("foo"),
 			expectType: NoOp,
 		},
 		{
 			name:       "if not in repo but managed in cluster, delete",
-			actual:     namespace(enableManaged),
+			actual:     fake.NamespaceObject("foo", enableManaged),
 			expectType: Delete,
 		},
 		{
 			name:       "delete",
 			declared:   markForDeletion(namespaceConfig()),
-			actual:     namespace(enableManaged),
+			actual:     fake.NamespaceObject("foo", enableManaged),
 			expectType: Delete,
 		},
 		{
 			name:       "in cluster only, unset noop",
-			actual:     namespace(),
+			actual:     fake.NamespaceObject("foo"),
 			expectType: NoOp,
 		},
 		{
 			name:       "in cluster only, remove invalid management",
-			actual:     namespace(managementInvalid),
+			actual:     fake.NamespaceObject("foo", managementInvalid),
 			expectType: Unmanage,
 		},
 		{
 			name:       "in cluster only, remove quota",
-			actual:     namespace(object.Label(v1.ConfigManagementQuotaKey, "")),
+			actual:     fake.NamespaceObject("foo", object.Label(v1.ConfigManagementQuotaKey, "")),
 			expectType: Unmanage,
 		},
 	}

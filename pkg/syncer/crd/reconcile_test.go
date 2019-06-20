@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -36,24 +35,24 @@ var (
 	}
 )
 
-func clusterConfig(state v1.ConfigSyncState, opts ...object.Mutator) *v1.ClusterConfig {
-	opts = append(opts, func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Status.SyncState = state
-	})
-	return fake.Build(kinds.ClusterConfig(), opts...).Object.(*v1.ClusterConfig)
+func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	mutators := append(opts, fake.ClusterConfigMeta(syncertesting.Herrings...))
+	result := fake.ClusterConfigObject(mutators...)
+	result.Status.SyncState = state
+	return result
 }
 
-func customResourceDefinition(version string, opts ...object.Mutator) *v1beta1.CustomResourceDefinition {
-	opts = append(opts, func(o *ast.FileObject) {
-		o.Object.(*v1beta1.CustomResourceDefinition).Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{Name: version}}
-	}, syncertesting.Herrings)
-	return fake.Build(kinds.CustomResourceDefinition(), opts...).Object.(*v1beta1.CustomResourceDefinition)
+func customResourceDefinition(version string, opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
+	mutators := append(opts, syncertesting.Herrings...)
+	result := fake.CustomResourceDefinitionObject(mutators...)
+	result.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{Name: version}}
+	return result
 }
 
 var (
-	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ImportToken(syncertesting.Token), object.Name(v1.CRDClusterConfigName))
-	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ImportToken(syncertesting.Token),
-		object.Name(v1.CRDClusterConfigName), syncertesting.SyncTime(), syncertesting.SyncToken())
+	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token), fake.ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)))
+	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token),
+		fake.ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)), syncertesting.ClusterConfigSyncTime(), syncertesting.ClusterConfigSyncToken())
 )
 
 func TestClusterConfigReconcile(t *testing.T) {

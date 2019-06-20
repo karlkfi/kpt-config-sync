@@ -23,21 +23,21 @@ func TestClusterRegistryBuilderVisitor(t *testing.T) {
 		},
 		{
 			name:     "one object yeilds object",
-			objects:  []ast.FileObject{fake.Cluster("clusterregistry/cr.yaml")},
-			expected: treetesting.BuildTree(t, fake.Cluster("clusterregistry/cr.yaml")),
+			objects:  []ast.FileObject{fake.ClusterAtPath("clusterregistry/cr.yaml")},
+			expected: treetesting.BuildTree(t, fake.ClusterAtPath("clusterregistry/cr.yaml")),
 		},
 		{
 			name:     "two objects yields both",
-			objects:  []ast.FileObject{fake.Cluster("clusterregistry/cr.yaml")},
-			expected: treetesting.BuildTree(t, fake.Cluster("clusterregistry/cr.yaml")),
+			objects:  []ast.FileObject{fake.ClusterAtPath("clusterregistry/cr.yaml")},
+			expected: treetesting.BuildTree(t, fake.ClusterAtPath("clusterregistry/cr.yaml")),
 		},
 		{
 			name:    "one object with existing adds object",
-			initial: []ast.FileObject{fake.Cluster("clusterregistry/cr-1.yaml")},
-			objects: []ast.FileObject{fake.Cluster("clusterregistry/cr-2.yaml")},
+			initial: []ast.FileObject{fake.ClusterAtPath("clusterregistry/cr-1.yaml")},
+			objects: []ast.FileObject{fake.ClusterAtPath("clusterregistry/cr-2.yaml")},
 			expected: treetesting.BuildTree(t,
-				fake.Cluster("clusterregistry/cr-1.yaml"),
-				fake.Cluster("clusterregistry/cr-2.yaml")),
+				fake.ClusterAtPath("clusterregistry/cr-1.yaml"),
+				fake.ClusterAtPath("clusterregistry/cr-2.yaml")),
 		},
 	}
 

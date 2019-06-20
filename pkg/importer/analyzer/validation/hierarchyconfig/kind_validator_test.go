@@ -19,28 +19,28 @@ func TestKindValidator(t *testing.T) {
 		vet.UnsupportedResourceInHierarchyConfigErrorCode,
 
 		asttest.Pass("RoleBinding supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("CRD supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.CustomResourceDefinition(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.CustomResourceDefinition(), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("Namespace not supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.Namespace(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.Namespace(), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("omitting kind not supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(fake.GVK(kinds.RoleBinding(), fake.Kind("")), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(fake.GVK(kinds.RoleBinding(), fake.Kind("")), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("omitting group supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(fake.GVK(kinds.RoleBinding(), fake.Group("")), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(fake.GVK(kinds.RoleBinding(), fake.Group("")), v1.HierarchyModeDefault)),
 		),
 		asttest.Fail("configmanagement.gke.io group not supported",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.Sync(), v1.HierarchyModeDefault))),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.Sync(), v1.HierarchyModeDefault))),
 	)
 
 	test.RunAll(t)

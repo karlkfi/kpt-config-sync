@@ -15,15 +15,15 @@ func TestClusterregistryKindValidator(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "ClusterSelector allowed",
-				Object: fake.ClusterSelector("clusterregistry/cs.yaml"),
+				Object: fake.ClusterSelectorAtPath("clusterregistry/cs.yaml"),
 			},
 			{
 				Name:   "Cluster allowed",
-				Object: fake.Cluster("clusterregistry/cluster.yaml"),
+				Object: fake.ClusterAtPath("clusterregistry/cluster.yaml"),
 			},
 			{
 				Name:       "Role not allowed",
-				Object:     fake.Role("clusterregistry/role.yaml"),
+				Object:     fake.RoleAtPath("clusterregistry/role.yaml"),
 				ShouldFail: true,
 			},
 		},

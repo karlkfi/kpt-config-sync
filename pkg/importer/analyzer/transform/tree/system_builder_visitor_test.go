@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
@@ -24,29 +23,29 @@ func TestSystemBuilderVisitor(t *testing.T) {
 		},
 		{
 			name:     "one object yeilds object",
-			objects:  []ast.FileObject{fake.HierarchyConfig("system/hc.yaml")},
-			expected: treetesting.BuildTree(t, fake.HierarchyConfig("system/hc.yaml")),
+			objects:  []ast.FileObject{fake.HierarchyConfigAtPath("system/hc.yaml")},
+			expected: treetesting.BuildTree(t, fake.HierarchyConfigAtPath("system/hc.yaml")),
 		},
 		{
 			name:     "two objects yields both",
-			objects:  []ast.FileObject{fake.HierarchyConfig("system/hc.yaml")},
-			expected: treetesting.BuildTree(t, fake.HierarchyConfig("system/hc.yaml")),
+			objects:  []ast.FileObject{fake.HierarchyConfigAtPath("system/hc.yaml")},
+			expected: treetesting.BuildTree(t, fake.HierarchyConfigAtPath("system/hc.yaml")),
 		},
 		{
 			name:    "one object with existing adds object",
-			initial: []ast.FileObject{fake.HierarchyConfig("system/hc-1.yaml")},
-			objects: []ast.FileObject{fake.HierarchyConfig("system/hc-2.yaml")},
+			initial: []ast.FileObject{fake.HierarchyConfigAtPath("system/hc-1.yaml")},
+			objects: []ast.FileObject{fake.HierarchyConfigAtPath("system/hc-2.yaml")},
 			expected: treetesting.BuildTree(t,
-				fake.HierarchyConfig("system/hc-1.yaml"),
-				fake.HierarchyConfig("system/hc-2.yaml")),
+				fake.HierarchyConfigAtPath("system/hc-1.yaml"),
+				fake.HierarchyConfigAtPath("system/hc-2.yaml")),
 		},
 		{
 			name:    "repo yeilds repo",
-			objects: []ast.FileObject{fake.Repo("system/repo.yaml")},
+			objects: []ast.FileObject{fake.Repo()},
 			// BuildTree does do this now. This is for illustrative purposes.
 			expected: &ast.Root{
-				SystemObjects: []*ast.SystemObject{{FileObject: fake.Repo("system/repo.yaml")}},
-				Repo:          fake.Repo("system/repo.yaml").Object.(*v1.Repo),
+				SystemObjects: []*ast.SystemObject{{FileObject: fake.Repo()}},
+				Repo:          fake.RepoObject(),
 			},
 		},
 	}
@@ -57,6 +56,7 @@ func TestSystemBuilderVisitor(t *testing.T) {
 
 			if tc.initial != nil {
 				for _, o := range tc.initial {
+
 					actual.SystemObjects = append(actual.SystemObjects, &ast.SystemObject{FileObject: o})
 				}
 			}

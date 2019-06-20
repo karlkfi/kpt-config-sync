@@ -20,6 +20,8 @@ func BuildTree(t *testing.T, objects ...ast.FileObject) *ast.Root {
 
 // BuildFlatTree partitions FileObjects into a FlatRoot.
 func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
+	t.Helper()
+
 	result := &ast.FlatRoot{}
 	for _, object := range objects {
 		switch object.Path.Split()[0] {

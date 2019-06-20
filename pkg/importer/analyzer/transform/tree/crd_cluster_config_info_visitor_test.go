@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
@@ -17,7 +18,7 @@ import (
 )
 
 func namedCRD(name string) *v1beta1.CustomResourceDefinition {
-	crd := fake.CustomResourceDefinition("").Object.(*v1beta1.CustomResourceDefinition).DeepCopy()
+	crd := fake.CustomResourceDefinitionObject()
 	crd.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{
 		Name:    "v1",
 		Served:  true,
@@ -77,7 +78,7 @@ func TestCRDClusterConfigInfoVisitor(t *testing.T) {
 				m[schema.GroupKind{}] = tc.wantCRD
 			}
 			want := clusterconfig.StubbedCRDInfo(m)
-			if diff := cmp.Diff(want, crdInfo, cmp.AllowUnexported(clusterconfig.CRDInfo{})); diff != "" {
+			if diff := cmp.Diff(want, crdInfo, cmp.AllowUnexported(clusterconfig.CRDInfo{}), cmpopts.EquateEmpty()); diff != "" {
 				t.Fatal(diff)
 			}
 		})

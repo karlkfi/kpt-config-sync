@@ -2,13 +2,13 @@ package reconcile
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/nomos/pkg/syncer/metrics"
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -23,28 +23,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.Mutator) *appsv1.Deployment {
-	opts = append(opts, func(o *ast.FileObject) {
-		o.Object.(*appsv1.Deployment).Spec.Strategy.Type = deploymentStrategy
-	}, syncertesting.Herrings)
-	return fake.Build(kinds.Deployment(), opts...).Object.(*appsv1.Deployment)
+func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.MetaMutator) *appsv1.Deployment {
+	mutators := append(opts, syncertesting.Herrings...)
+	result := fake.DeploymentObject(mutators...)
+	result.Spec.Strategy.Type = deploymentStrategy
+	return result
 }
 
-func namespaceConfig(name string, state v1.ConfigSyncState, opts ...object.Mutator) *v1.NamespaceConfig {
-	opts = append(opts, object.Name(name), func(o *ast.FileObject) {
-		o.Object.(*v1.NamespaceConfig).Status.SyncState = state
-	})
-	return fake.Build(kinds.NamespaceConfig(), opts...).Object.(*v1.NamespaceConfig)
+func namespace(name string, opts ...object.MetaMutator) *corev1.Namespace {
+	result := fake.NamespaceObject(name, opts...)
+	fmt.Println(result.Annotations)
+	return result
 }
 
-func namespace(name string, opts ...object.Mutator) *corev1.Namespace {
-	opts = append(opts, object.Name(name))
-	return fake.Build(kinds.Namespace(), opts...).Object.(*corev1.Namespace)
+func namespaceConfig(name string, state v1.ConfigSyncState, opts ...fake.NamespaceConfigMutator) *v1.NamespaceConfig {
+	result := fake.NamespaceConfigObject(opts...)
+	result.Name = name
+	result.Status.SyncState = state
+	return result
 }
 
-func namespaceSyncError(err v1.ConfigManagementError) object.Mutator {
-	return func(o *ast.FileObject) {
-		o.Object.(*v1.NamespaceConfig).Status.SyncErrors = append(o.Object.(*v1.NamespaceConfig).Status.SyncErrors, err)
+func namespaceSyncError(err v1.ConfigManagementError) fake.NamespaceConfigMutator {
+	return func(nc *v1.NamespaceConfig) {
+		nc.Status.SyncErrors = append(nc.Status.SyncErrors, err)
 	}
 }
 
@@ -55,9 +56,9 @@ var (
 	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, managedQuotaLabels, syncertesting.TokenAnnotation)
 	unmanagedNamespace = namespace(eng)
 
-	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertesting.ImportToken(syncertesting.Token))
-	namespaceCfgSynced = namespaceConfig(eng, v1.StateSynced, syncertesting.ImportToken(syncertesting.Token),
-		syncertesting.SyncTime(), syncertesting.SyncToken())
+	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token))
+	namespaceCfgSynced = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
+		syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken())
 
 	managedNamespaceReconcileComplete = &syncertesting.Event{
 		Kind:    corev1.EventTypeNormal,
@@ -245,10 +246,10 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 	}{
 		{
 			name:                "clean up unmanaged namespace with namespaceconfig",
-			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token), syncertesting.SyncToken(), syncertesting.ManagementDisabled),
+			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			namespace:           namespace("eng", managedQuotaLabels, syncertesting.ManagementEnabled),
 			wantNamespaceUpdate: namespace("eng"),
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.ImportToken(syncertesting.Token), syncertesting.SyncTime(), syncertesting.SyncToken(),
+			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
 						{
@@ -257,7 +258,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 						},
 					},
 					ErrorMessage: unmanagedError(),
-				}), syncertesting.ManagementDisabled),
+				}), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			wantEvent: &syncertesting.Event{
 				Kind:   corev1.EventTypeWarning,
 				Reason: "UnmanagedNamespace",
@@ -271,11 +272,11 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 		},
 		{
 			name:            "unmanaged namespace has resources synced but status error",
-			namespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token), syncertesting.ManagementDisabled),
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			namespace:       namespace("eng"),
 			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
 			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), syncertesting.TokenAnnotation),
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.ImportToken(syncertesting.Token), syncertesting.SyncTime(), syncertesting.SyncToken(),
+			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
 						{
@@ -284,7 +285,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 						},
 					},
 					ErrorMessage: unmanagedError(),
-				}), syncertesting.ManagementDisabled),
+				}), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			wantEvent: &syncertesting.Event{
 				Kind:   corev1.EventTypeWarning,
 				Reason: "UnmanagedNamespace",
@@ -353,11 +354,11 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 	}{
 		{
 			name:                "do not add quota enforcement label on managed kube-system",
-			namespaceConfig:     namespaceConfig("kube-system", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token)),
+			namespaceConfig:     namespaceConfig("kube-system", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token)),
 			namespace:           namespace("kube-system", syncertesting.ManagementEnabled),
 			wantNamespaceUpdate: namespace("kube-system", syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
-			wantStatusUpdate: namespaceConfig("kube-system", v1.StateSynced, syncertesting.ImportToken(syncertesting.Token),
-				syncertesting.SyncTime(), syncertesting.SyncToken()),
+			wantStatusUpdate: namespaceConfig("kube-system", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
+				syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken()),
 		},
 	}
 
@@ -447,7 +448,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 			namespaceConfig: namespaceConfig("default",
 				v1.StateSynced,
-				syncertesting.ImportToken(syncertesting.Token),
+				syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.MarkForDeletion(),
 			),
 			wantNamespaceUpdate: namespace("default",
@@ -500,7 +501,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 			namespaceConfig: namespaceConfig("kube-system",
 				v1.StateSynced,
-				syncertesting.ImportToken(syncertesting.Token),
+				syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.MarkForDeletion(),
 			),
 			wantNamespaceUpdate: namespace("kube-system",

@@ -16,24 +16,24 @@ func TestKindValidator(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "Repo passes",
-				Object: fake.Repo("system/repo.yaml"),
+				Object: fake.Repo(),
 			},
 			{
 				Name:   "HierarchyConfig passes",
-				Object: fake.HierarchyConfig("system/config.yaml"),
+				Object: fake.HierarchyConfigAtPath("system/config.yaml"),
 			},
 			{
 				Name:       "Sync fails",
-				Object:     fake.Sync("system/sync.yaml"),
+				Object:     fake.SyncAtPath("system/sync.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:   "HierarchyConfig passes",
-				Object: fake.HierarchyConfig("system/hc.yaml"),
+				Object: fake.HierarchyConfigAtPath("system/hc.yaml"),
 			},
 			{
 				Name:       "Role fails",
-				Object:     fake.Role("system/role.yaml"),
+				Object:     fake.RoleAtPath("system/role.yaml"),
 				ShouldFail: true,
 			},
 		},

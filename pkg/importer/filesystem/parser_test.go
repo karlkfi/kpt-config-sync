@@ -13,6 +13,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -1773,9 +1774,9 @@ func (tc *parserTestCase) Run(t *testing.T) {
 			ClusterConfig:    tc.expectedClusterConfig,
 			CRDClusterConfig: tc.expectedCRDClusterConfig,
 			Syncs:            tc.expectedSyncs,
-			Repo:             fake.Repo("").Object.(*v1.Repo),
+			Repo:             fake.RepoObject(),
 		}
-		if d := cmp.Diff(expectedConfigs, actualConfigs, resourcequota.ResourceQuantityEqual()); d != "" {
+		if d := cmp.Diff(expectedConfigs, actualConfigs, resourcequota.ResourceQuantityEqual(), cmpopts.EquateEmpty()); d != "" {
 			t.Errorf("Actual and expected configs didn't match: diff\n%v", d)
 		}
 	}
@@ -2432,21 +2433,21 @@ func TestParserVet(t *testing.T) {
 	test := parsertest.Test{
 		NewParser: parsertest.NewParser,
 		DefaultObjects: []ast.FileObject{
-			fake.Repo("system/repo.yaml"),
+			fake.Repo(),
 		},
 		TestCases: []parsertest.TestCase{
 			parsertest.Failure("A subdir of system is an error",
 				vet.IllegalSubdirectoryErrorCode,
-				fake.Build(kinds.HierarchyConfig(), object.Path("system/sub/hc.yaml"))),
+				fake.HierarchyConfigAtPath("system/sub/hc.yaml")),
 			parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
 				vet.IllegalLabelDefinitionErrorCode,
-				fake.Build(kinds.HierarchyConfig(), object.Path("system/hc.yaml"),
-					object.Label("configmanagement.gke.io/illegal-label", "true")),
+				fake.HierarchyConfigAtPath("system/hc.yaml",
+					fake.HierarchyConfigMeta(object.Label("configmanagement.gke.io/illegal-label", "true"))),
 			),
 			parsertest.Failure("Objects in non-namespaces/ with an invalid annotation is an error",
 				vet.IllegalAnnotationDefinitionErrorCode,
-				fake.Build(kinds.HierarchyConfig(), object.Path("system/hc.yaml"),
-					object.Annotation("configmanagement.gke.io/illegal-annotation", "true")),
+				fake.HierarchyConfigAtPath("system/hc.yaml",
+					fake.HierarchyConfigMeta(object.Annotation("configmanagement.gke.io/illegal-annotation", "true"))),
 			),
 		},
 	}
@@ -2454,7 +2455,7 @@ func TestParserVet(t *testing.T) {
 	test.RunAll(t)
 }
 
-func ClusterSelectorAnnotation(value string) object.Mutator {
+func ClusterSelectorAnnotation(value string) object.MetaMutator {
 	return object.Annotation(v1.ClusterSelectorAnnotationKey, value)
 }
 
@@ -2462,18 +2463,18 @@ func TestParserPerClusterAddressingVet(t *testing.T) {
 	test := parsertest.Test{
 		NewParser: parsertest.NewParser,
 		DefaultObjects: []ast.FileObject{
-			fake.Repo("system/repo.yaml"),
+			fake.Repo(),
 		},
 		TestCases: []parsertest.TestCase{
 			parsertest.Failure(
 				"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
 				vet.ObjectHasUnknownClusterSelectorCode,
-				fake.Build(kinds.Namespace(), object.Path("namespaces/foo/namespace.yaml"), ClusterSelectorAnnotation("does-not-exist")),
+				fake.Namespace("namespaces/foo", ClusterSelectorAnnotation("does-not-exist")),
 			),
 			parsertest.Failure(
 				"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
 				vet.ObjectHasUnknownClusterSelectorCode,
-				fake.Build(kinds.ClusterRole(), object.Path("cluster/role.yaml"), ClusterSelectorAnnotation("does-not-exist")),
+				fake.ClusterRole(ClusterSelectorAnnotation("does-not-exist")),
 			),
 		},
 	}

@@ -64,12 +64,12 @@ func TestKnownResourceValidatorUnknown(t *testing.T) {
 		vet.UnknownResourceInHierarchyConfigErrorCode,
 
 		asttest.Fail("ResourceQuota throws error if not known",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeDefault)),
 		),
 		asttest.Pass("RoleBinding valid if known",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.RoleBinding(), v1.HierarchyModeDefault)),
 		),
 	).With(APIInfo(apiInfo))
 
@@ -88,8 +88,8 @@ func TestKnownResourceValidatorScope(t *testing.T) {
 	test := asttest.Validator(NewKnownResourceValidator,
 		vet.ClusterScopedResourceInHierarchyConfigErrorCode,
 		asttest.Fail("ClusterRoleBinding is cluster scoped",
-			fake.Build(kinds.HierarchyConfig(),
-				HierarchyConfigResource(kinds.ClusterRoleBinding(), v1.HierarchyModeDefault)),
+			fake.HierarchyConfig(
+				fake.HierarchyConfigResource(kinds.ClusterRoleBinding(), v1.HierarchyModeDefault)),
 		),
 	).With(APIInfo(apiInfo))
 

@@ -15,7 +15,7 @@ func TestNamespaceKindValidator(t *testing.T) {
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "Namespace allowed",
-				Object: fake.Namespace("namespaces/foo/namespace.yaml"),
+				Object: fake.Namespace("namespaces/foo"),
 			},
 			{
 				Name:       "ConfigManagement not allowed",

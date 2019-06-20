@@ -15,12 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func withoutPath() object.Mutator {
-	return func(o *ast.FileObject) {
-		o.Path = cmpath.Path{}
-	}
-}
-
 func TestPatherSingleObject(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -32,48 +26,49 @@ func TestPatherSingleObject(t *testing.T) {
 		},
 		{
 			name:     "Repo",
-			object:   fake.Build(kinds.Repo(), withoutPath()),
+			object:   fake.Repo(),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(repoBasePath),
 		},
 		{
 			name:     "HierarchyConfig",
-			object:   fake.Build(kinds.HierarchyConfig(), object.Name("hc"), withoutPath()),
+			object:   fake.HierarchyConfig(fake.HierarchyConfigMeta(object.Name("hc"))),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
 		{
 			name:     "Clusters",
-			object:   fake.Build(kinds.Cluster(), object.Name("us-east-1"), withoutPath()),
+			object:   fake.Cluster(object.Name("us-east-1")),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.Cluster().Kind) + "_us-east-1.yaml"),
 		},
 		{
 			name:     "ClusterSelector",
-			object:   fake.Build(kinds.ClusterSelector(), object.Name("cs"), withoutPath()),
+			object:   fake.ClusterSelector(object.Name("cs")),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.ClusterSelector().Kind) + "_cs.yaml"),
 		},
 		{
 			name:     "Namespace prod",
-			object:   fake.Build(kinds.Namespace(), object.Name("prod"), withoutPath()),
+			object:   fake.Namespace("namespaces/prod"),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("prod").Join(namespaceBasePath),
 		},
 		{
 			name:     "Namespace dev",
-			object:   fake.Build(kinds.Namespace(), object.Name("dev"), withoutPath()),
+			object:   fake.Namespace("namespaces/dev"),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join(namespaceBasePath),
 		},
 		{
 			name:     "Namespaced kind",
-			object:   fake.Build(kinds.Role(), object.Namespace("dev"), object.Name("admin"), withoutPath()),
+			object:   fake.Role(object.Namespace("dev"), object.Name("admin")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_admin.yaml"),
 		},
 		{
 			name:     "Clusters kind",
-			object:   fake.Build(kinds.ClusterRole(), object.Name("admin"), withoutPath()),
+			object:   fake.ClusterRole(object.Name("admin")),
 			expected: cmpath.FromSlash(repo.ClusterDir).Join("clusterrole_admin.yaml"),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.object.Path = cmpath.Path{} // unset path.
 			p := NewPather(apiresource.Roles(), apiresource.ClusterRoles())
 
 			objects := []ast.FileObject{tc.object}
@@ -87,7 +82,7 @@ func TestPatherSingleObject(t *testing.T) {
 }
 
 func TestPatherMultipleObjects(t *testing.T) {
-	other := fake.Build(fake.GVK(kinds.Role(), fake.Group("bar")), object.Name("admin"), object.Namespace("dev"), withoutPath())
+	other := fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("bar")), object.Name("admin"), object.Namespace("dev"))
 
 	testCases := []struct {
 		name     string
@@ -96,19 +91,19 @@ func TestPatherMultipleObjects(t *testing.T) {
 	}{
 		{
 			name: "kind/name conflict",
-			object: fake.Build(fake.GVK(kinds.Role(), fake.Group("foo")),
+			object: fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_foo_admin.yaml"),
 		},
 		{
 			name: "different namespace",
-			object: fake.Build(fake.GVK(kinds.Role(), fake.Group("foo")),
+			object: fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("prod")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("prod").Join("role_admin.yaml"),
 		},
 		{
 			name: "different kind",
-			object: fake.Build(fake.GVK(kinds.RoleBinding(), fake.Group("foo")),
+			object: fake.Unstructured(fake.GVK(kinds.RoleBinding(), fake.Group("foo")),
 				object.Name("admin"), object.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("rolebinding_admin.yaml"),
 		},

@@ -4,11 +4,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -24,7 +26,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 		},
 		{
 			name:    "namespace returns empty",
-			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml")},
+			objects: []ast.FileObject{fake.Namespace("namespaces/bar")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
 					Path: cmpath.FromSlash("namespaces"),
@@ -40,25 +42,25 @@ func TestEphemeralResourceRemover(t *testing.T) {
 		},
 		{
 			name:    "namespaceselector returns empty",
-			objects: []ast.FileObject{fake.NamespaceSelector("namespaces/ns.yaml")},
+			objects: []ast.FileObject{fake.NamespaceSelector(object.Name(""))},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
 					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Selectors: map[string]*v1.NamespaceSelector{
-						"": fake.NamespaceSelector("namespaces/ns.yaml").Object.(*v1.NamespaceSelector),
+						"": fake.NamespaceSelectorObject(object.Name("")),
 					},
 				},
 			},
 		},
 		{
 			name:     "keeps non-ephemeral",
-			objects:  []ast.FileObject{fake.Role("namespaces/bar/role.yaml")},
-			expected: treetesting.BuildTree(t, fake.Role("namespaces/bar/role.yaml")),
+			objects:  []ast.FileObject{fake.RoleAtPath("namespaces/bar/role.yaml")},
+			expected: treetesting.BuildTree(t, fake.RoleAtPath("namespaces/bar/role.yaml")),
 		},
 		{
 			name:    "only non-ephemeral",
-			objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml"), fake.Role("namespaces/bar/role.yaml")},
+			objects: []ast.FileObject{fake.Namespace("namespaces/bar"), fake.RoleAtPath("namespaces/bar/role.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
 					Path: cmpath.FromSlash("namespaces"),
@@ -67,7 +69,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 						{
 							Path:    cmpath.FromSlash("namespaces/bar"),
 							Type:    node.Namespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.Role("namespaces/bar/role.yaml")}},
+							Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/bar/role.yaml")}},
 						},
 					},
 				},
@@ -75,38 +77,38 @@ func TestEphemeralResourceRemover(t *testing.T) {
 		},
 		{
 			name:    "role in System returns same",
-			objects: []ast.FileObject{fake.Role("system/role.yaml")},
+			objects: []ast.FileObject{fake.RoleAtPath("system/role.yaml")},
 			expected: &ast.Root{
-				SystemObjects: []*ast.SystemObject{{FileObject: fake.Role("system/role.yaml")}},
+				SystemObjects: []*ast.SystemObject{{FileObject: fake.RoleAtPath("system/role.yaml")}},
 			},
 		},
 		{
 			name:    "role in ClusterRegistry returns same",
-			objects: []ast.FileObject{fake.Role("clusterregistry/role.yaml")},
+			objects: []ast.FileObject{fake.RoleAtPath("clusterregistry/role.yaml")},
 			expected: &ast.Root{
-				ClusterRegistryObjects: []*ast.ClusterRegistryObject{{FileObject: fake.Role("clusterregistry/role.yaml")}},
+				ClusterRegistryObjects: []*ast.ClusterRegistryObject{{FileObject: fake.RoleAtPath("clusterregistry/role.yaml")}},
 			},
 		},
 		{
 			name:    "role in Cluster returns same",
-			objects: []ast.FileObject{fake.Role("cluster/role.yaml")},
+			objects: []ast.FileObject{fake.RoleAtPath("cluster")},
 			expected: &ast.Root{
-				ClusterObjects: []*ast.ClusterObject{{FileObject: fake.Role("cluster/role.yaml")}},
+				ClusterObjects: []*ast.ClusterObject{{FileObject: fake.RoleAtPath("cluster")}},
 			},
 		},
 		{
 			name:     "namespace in System returns empty",
-			objects:  []ast.FileObject{fake.Namespace("system/ns.yaml")},
+			objects:  []ast.FileObject{fake.Namespace("system")},
 			expected: &ast.Root{},
 		},
 		{
 			name:     "namespace in ClusterRegistry returns empty",
-			objects:  []ast.FileObject{fake.Namespace("clusterregistry/ns.yaml")},
+			objects:  []ast.FileObject{fake.Namespace("clusterregistry")},
 			expected: &ast.Root{},
 		},
 		{
 			name:     "namespace in Cluster returns empty",
-			objects:  []ast.FileObject{fake.Namespace("cluster/ns.yaml")},
+			objects:  []ast.FileObject{fake.Namespace("cluster")},
 			expected: &ast.Root{},
 		},
 	}
@@ -117,7 +119,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 
 			root.Accept(NewEphemeralResourceRemover())
 
-			if diff := cmp.Diff(tc.expected, root, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
+			if diff := cmp.Diff(tc.expected, root, cmp.AllowUnexported(ast.FileObject{}), cmpopts.EquateEmpty()); diff != "" {
 				t.Fatalf("unexpected difference in trees\n\n%s", diff)
 			}
 		})

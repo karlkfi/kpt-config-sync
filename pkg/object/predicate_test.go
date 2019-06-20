@@ -83,8 +83,8 @@ func TestPredicateObjects(t *testing.T) {
 	isRole := filter.GroupKind(kinds.Role().GroupKind())
 	isRoleBinding := filter.GroupKind(kinds.RoleBinding().GroupKind())
 
-	role := fake.Build(kinds.Role(), object.Name("admin"))
-	roleBinding := fake.Build(kinds.RoleBinding(), object.Name("admin"))
+	role := fake.Role(object.Name("admin"))
+	roleBinding := fake.RoleBinding(object.Name("admin"))
 
 	objects := []ast.FileObject{role, roleBinding}
 

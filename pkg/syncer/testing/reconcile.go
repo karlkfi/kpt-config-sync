@@ -9,9 +9,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
+	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,9 +34,9 @@ var (
 	Converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
 
 	// ManagementEnabled sets management labels and annotations on the object.
-	ManagementEnabled object.Mutator = func(obj *ast.FileObject) {
-		object.SetAnnotation(obj.MetaObject(), v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-		object.SetLabel(obj.MetaObject(), v1.ManagedByKey, v1.ManagedByValue)
+	ManagementEnabled object.MetaMutator = func(obj metav1.Object) {
+		object.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		object.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 	}
 	// ManagementDisabled sets the management disabled annotation on the object.
 	ManagementDisabled = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
@@ -46,10 +46,10 @@ var (
 	TokenAnnotation = object.Annotation(v1.SyncTokenAnnotationKey, Token)
 
 	// Herrings is used when the decoder mangles empty vs. non-existent entries in map.
-	Herrings = object.Mutate(
+	Herrings = []object.MetaMutator{
 		object.Annotation("red", "herring"),
 		object.Label("red", "herring"),
-	)
+	}
 )
 
 // NewTestMocks returns a new TestMocks.
@@ -311,57 +311,52 @@ type Event struct {
 	Obj runtime.Object
 }
 
-// ImportToken sets the object's import token.
-func ImportToken(t string) object.Mutator {
-	return func(o *ast.FileObject) {
-		switch obj := o.Object.(type) {
-		case *v1.ClusterConfig:
-			obj.Spec.Token = t
-		case *v1.NamespaceConfig:
-			obj.Spec.Token = t
-		default:
-			panic(fmt.Sprintf("Invalid type %T", obj))
-		}
+// ClusterConfigImportToken adds an import token to a ClusterConfig.
+func ClusterConfigImportToken(t string) fake.ClusterConfigMutator {
+	return func(cc *v1.ClusterConfig) {
+		cc.Spec.Token = t
 	}
 }
 
-// SyncTime sets the object's sync time.
-func SyncTime() object.Mutator {
-	return func(o *ast.FileObject) {
-		switch obj := o.Object.(type) {
-		case *v1.ClusterConfig:
-			obj.Status.SyncTime = Now()
-		case *v1.NamespaceConfig:
-			obj.Status.SyncTime = Now()
-		default:
-			panic(fmt.Sprintf("Invalid type %T", obj))
-		}
+// ClusterConfigSyncTime adds a SyncTime to a ClusterConfig.
+func ClusterConfigSyncTime() fake.ClusterConfigMutator {
+	return func(cc *v1.ClusterConfig) {
+		cc.Status.SyncTime = Now()
 	}
 }
 
-// SyncToken sets the object's sync token.
-func SyncToken() object.Mutator {
-	return func(o *ast.FileObject) {
-		switch obj := o.Object.(type) {
-		case *v1.ClusterConfig:
-			obj.Status.Token = Token
-		case *v1.NamespaceConfig:
-			obj.Status.Token = Token
-		default:
-			panic(fmt.Sprintf("Invalid type %T", obj))
-		}
+// ClusterConfigSyncToken adds a sync token to a ClusterConfig.
+func ClusterConfigSyncToken() fake.ClusterConfigMutator {
+	return func(cc *v1.ClusterConfig) {
+		cc.Status.Token = Token
+	}
+}
+
+// NamespaceConfigImportToken adds an import token to a Namespace Config.
+func NamespaceConfigImportToken(t string) fake.NamespaceConfigMutator {
+	return func(nc *v1.NamespaceConfig) {
+		nc.Spec.Token = t
+	}
+}
+
+// NamespaceConfigSyncTime adds a sync time to a Namespace Config.
+func NamespaceConfigSyncTime() fake.NamespaceConfigMutator {
+	return func(nc *v1.NamespaceConfig) {
+		nc.Status.SyncTime = Now()
+	}
+}
+
+// NamespaceConfigSyncToken adds a sync token to a Namespace Config.
+func NamespaceConfigSyncToken() fake.NamespaceConfigMutator {
+	return func(nc *v1.NamespaceConfig) {
+		nc.Status.Token = Token
 	}
 }
 
 // MarkForDeletion marks a NamespaceConfig with an intent to be delete
-func MarkForDeletion() object.Mutator {
-	return func(o *ast.FileObject) {
-		switch obj := o.Object.(type) {
-		case *v1.NamespaceConfig:
-			obj.Spec.DeleteSyncedTime = metav1.Now()
-		default:
-			panic(fmt.Sprintf("Invalid type %T", obj))
-		}
+func MarkForDeletion() fake.NamespaceConfigMutator {
+	return func(nc *v1.NamespaceConfig) {
+		nc.Spec.DeleteSyncedTime = metav1.Now()
 	}
 }
 

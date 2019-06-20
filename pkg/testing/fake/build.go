@@ -1,84 +1,56 @@
 package fake
 
 import (
-	"strings"
-
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/object"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Build constructs an ast.FileObject of the specified GroupVersionKind and applies the passed Mutators.
+// defaultMutations are the standard Meta set on all fake objects. All can be overwritten with mutators.
 //
-// If the type is one of the types supported in fake.go, returns an empty version of the specified
-// object. Otherwise returns a FakeObject.
-//
-// Sets a default name for the object. The name may be removed by using the option Name("").
-// Sets a default valid path for the object based on the kind. If the kind does not have a default path,
-// it must be specified manually with Path("")
-func Build(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
-	var o ast.FileObject
-	switch gvk {
-	case kinds.Anvil():
-		o = Anvil("namespaces/anvil.yaml")
-	case kinds.Cluster():
-		o = Cluster("clusterregistry/cluster.yaml")
-	case kinds.ClusterConfig():
-		o = ClusterConfig()
-	case kinds.ClusterRole():
-		o = ClusterRole("cluster/cr.yaml")
-	case kinds.ClusterSelector():
-		o = ClusterSelector("cluster/cs.yaml")
-	case kinds.CustomResourceDefinition():
-		o = CustomResourceDefinition("cluster/crd.yaml")
-	case kinds.Deployment():
-		o = Deployment("namespaces/foo/deployment.yaml")
-	case kinds.HierarchyConfig():
-		o = HierarchyConfig("system/hc.yaml")
-	case kinds.Namespace():
-		o = Namespace("namespaces/foo/namespace.yaml")
-	case kinds.NamespaceConfig():
-		o = NamespaceConfig()
-	case kinds.NamespaceSelector():
-		o = NamespaceSelector("namespaces/foo/ns.yaml")
-	case kinds.PersistentVolume():
-		o = PersistentVolume()
-	case kinds.ReplicaSet():
-		o = ReplicaSet("namespaces/foo/replicaset.yaml")
-	case kinds.Repo():
-		o = Repo("system/repo.yaml")
-	case kinds.Role():
-		o = Role("namespaces/foo/role.yaml")
-	case kinds.RoleBinding():
-		o = RoleBinding("namespaces/foo/rb.yaml")
-	default:
-		o = asttesting.NewFakeFileObject(gvk, "")
-	}
-
-	// defaults are modifications which are made by default to all objects.
-	var defaults = []object.Mutator{
-		// Underlying implementations of meta.v1.Object inconsistently implement SetAnnotations and
-		// SetLabels behavior on nil and when being initialized, so this guarantees tests will always
-		// operate from the same state.
-		object.Annotations(map[string]string{}),
-		object.Labels(map[string]string{}),
-		object.Name(strings.ToLower(gvk.Kind)).If(func(o ast.FileObject) bool {
-			return o.Name() == ""
-		})}
-
-	opts = append(defaults, opts...)
-
-	object.Mutate(opts...)(&o)
-	return o
+// Annotations and Lables required when constructing any Object or else gomock will complain the nil
+// and empty map are different. There is no other way to deal with this as the underlying
+// implementations outside of our control handle empty vs nil maps inconsistently. Explicitly
+// setting labels and annotations to empty map circumvents the issue.
+var defaultMutations = []object.MetaMutator{
+	object.Name("default-name"),
+	object.Annotations(map[string]string{}),
+	object.Labels(map[string]string{}),
 }
 
-// Unstructured returns an Unstructured with the specified gvk.
-func Unstructured(gvk schema.GroupVersionKind, opts ...object.Mutator) ast.FileObject {
+func defaultMutate(object v1.Object) {
+	for _, m := range defaultMutations {
+		m(object)
+	}
+}
+
+func mutate(object v1.Object, opts ...object.MetaMutator) {
+	for _, m := range opts {
+		m(object)
+	}
+}
+
+// fileObject is a shorthand for converting to an ast.fileObject.
+func fileObject(object runtime.Object, path string) ast.FileObject {
+	return ast.NewFileObject(object, cmpath.FromSlash(path))
+}
+
+// Unstructured initializes an Unstructured.
+func Unstructured(gvk schema.GroupVersionKind, opts ...object.MetaMutator) ast.FileObject {
+	return UnstructuredAtPath(gvk, "namespaces/obj.yaml", opts...)
+}
+
+// UnstructuredAtPath returns an Unstructured with the specified gvk.
+func UnstructuredAtPath(gvk schema.GroupVersionKind, path string, opts ...object.MetaMutator) ast.FileObject {
 	o := ast.ParseFileObject(&unstructured.Unstructured{})
 	o.GetObjectKind().SetGroupVersionKind(gvk)
-	object.Mutate(opts...)(o)
+
+	defaultMutate(o.MetaObject())
+	mutate(o.MetaObject(), opts...)
+	o.Path = cmpath.FromSlash(path)
 	return *o
 }

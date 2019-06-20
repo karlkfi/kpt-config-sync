@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -30,30 +29,30 @@ var (
 	}
 )
 
-func clusterSyncError(err v1.ConfigManagementError) object.Mutator {
-	return func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Status.SyncErrors = append(o.Object.(*v1.ClusterConfig).Status.SyncErrors, err)
+func clusterSyncError(err v1.ConfigManagementError) fake.ClusterConfigMutator {
+	return func(cc *v1.ClusterConfig) {
+		cc.Status.SyncErrors = append(cc.Status.SyncErrors, err)
 	}
 }
 
-func clusterConfig(state v1.ConfigSyncState, opts ...object.Mutator) *v1.ClusterConfig {
-	opts = append(opts, func(o *ast.FileObject) {
-		o.Object.(*v1.ClusterConfig).Status.SyncState = state
-	})
-	return fake.Build(kinds.ClusterConfig(), opts...).Object.(*v1.ClusterConfig)
+func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	mutators := append(opts, fake.ClusterConfigMeta(syncertesting.Herrings...))
+	result := fake.ClusterConfigObject(mutators...)
+	result.Status.SyncState = state
+	return result
 }
 
-func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.Mutator) *corev1.PersistentVolume {
-	opts = append(opts, func(o *ast.FileObject) {
-		o.Object.(*corev1.PersistentVolume).Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
-	}, syncertesting.Herrings)
-	return fake.Build(kinds.PersistentVolume(), opts...).Object.(*corev1.PersistentVolume)
+func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.MetaMutator) *corev1.PersistentVolume {
+	mutators := append(opts, syncertesting.Herrings...)
+	result := fake.PersistentVolumeObject(mutators...)
+	result.Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
+	return result
 }
 
 var (
-	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ImportToken(syncertesting.Token))
-	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ImportToken(syncertesting.Token),
-		syncertesting.SyncTime(), syncertesting.SyncToken())
+	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token))
+	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token),
+		syncertesting.ClusterConfigSyncTime(), syncertesting.ClusterConfigSyncToken())
 )
 
 func TestClusterConfigReconcile(t *testing.T) {
@@ -237,10 +236,10 @@ func TestInvalidClusterConfig(t *testing.T) {
 	}{
 		{
 			name:          "error on clusterconfig with invalid name",
-			clusterConfig: clusterConfig(v1.StateSynced, object.Name("some-incorrect-name")),
+			clusterConfig: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(object.Name("some-incorrect-name"))),
 			wantStatusUpdate: clusterConfig(v1.StateError,
-				object.Name("some-incorrect-name"),
-				syncertesting.SyncTime(),
+				fake.ClusterConfigMeta(object.Name("some-incorrect-name")),
+				syncertesting.ClusterConfigSyncTime(),
 				clusterSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
 						{
@@ -255,7 +254,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 				Kind:    corev1.EventTypeWarning,
 				Reason:  "InvalidClusterConfig",
 				Varargs: true,
-				Obj:     clusterConfig(v1.StateSynced, object.Name("some-incorrect-name")),
+				Obj:     clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(object.Name("some-incorrect-name"))),
 			},
 		},
 	}

@@ -20,50 +20,50 @@ func TestAbstractResourceValidator(t *testing.T) {
 			{
 				Name: "Namespace without resources is valid",
 				Objects: []ast.FileObject{
-					fake.Namespace("namespaces/foo/ns.yaml"),
+					fake.Namespace("namespaces/foo"),
 				},
 			},
 			{
 				Name: "Empty Namespace with resource is valid",
 				Objects: []ast.FileObject{
-					fake.Namespace("namespaces/foo/ns.yaml"),
-					fake.Role("namespaces/foo/role.yaml"),
+					fake.Namespace("namespaces/foo"),
+					fake.Role(),
 				},
 			},
 			{
 				Name: "Abstract Namespace without resource is valid",
 				Objects: []ast.FileObject{
-					fake.NamespaceSelector("namespaces/foo/nsel.yaml"),
+					fake.NamespaceSelectorAtPath("namespaces/foo/nsel.yaml"),
 				},
 			},
 			{
 				Name: "Abstract Namespace with resource is invalid",
 				Objects: []ast.FileObject{
-					fake.Role("namespaces/foo/role.yaml"),
+					fake.Role(),
 				},
 				ShouldFail: true,
 			},
 			{
 				Name: "Abstract Namespace with resource and Namespace child is valid",
 				Objects: []ast.FileObject{
-					fake.Role("namespaces/foo/role.yaml"),
-					fake.Namespace("namespaces/foo/bar/ns.yaml"),
+					fake.Role(),
+					fake.Namespace("namespaces/foo/bar"),
 				},
 			},
 			{
 				Name: "Abstract Namespace with resource and Abstract Namespace child is invalid",
 				Objects: []ast.FileObject{
-					fake.Role("namespaces/foo/role.yaml"),
-					fake.NamespaceSelector("namespaces/foo/bar/nsel.yaml"),
+					fake.Role(),
+					fake.NamespaceSelectorAtPath("namespaces/foo/bar/nsel.yaml"),
 				},
 				ShouldFail: true,
 			},
 			{
 				Name: "Abstract Namespace with resource, Abstract Namespace child, and Namespace child is valid",
 				Objects: []ast.FileObject{
-					fake.Role("namespaces/foo/role.yaml"),
-					fake.Namespace("namespaces/foo/bar/ns.yaml"),
-					fake.NamespaceSelector("namespaces/foo/baz/nsel.yaml"),
+					fake.Role(),
+					fake.Namespace("namespaces/foo/bar"),
+					fake.NamespaceSelectorAtPath("namespaces/foo/baz/nsel.yaml"),
 				},
 			},
 		},

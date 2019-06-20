@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -64,7 +63,7 @@ func TestValidateObject(t *testing.T) {
 				},
 			},
 			objects: []ast.FileObject{
-				fake.Build(kinds.Role(),
+				fake.Role(
 					object.Annotation(v1.ClusterSelectorAnnotationKey, "sel-1")),
 			},
 		},

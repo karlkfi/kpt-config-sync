@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -22,32 +21,32 @@ func TestLabelValidator(t *testing.T) {
 		vet.IllegalLabelDefinitionErrorCode,
 
 		asttest.Pass("no labels",
-			fake.Build(kinds.Role()),
+			fake.Role(),
 		),
 		asttest.Pass("one legal label",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(legalLabel, "")),
 		),
 		asttest.Fail("one illegal label",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(illegalLabel, "")),
 		),
 		asttest.Fail("two illegal labels",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(illegalLabel, ""),
 				object.Label(illegalLabel2, "")),
 		),
 		asttest.Fail("one legal and one illegal label",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(legalLabel, ""),
 				object.Label(illegalLabel, "")),
 		),
 		asttest.Fail("namespaceselector label",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(v1.NamespaceSelectorAnnotationKey, "")),
 		),
 		asttest.Fail("clusterselector label",
-			fake.Build(kinds.Role(),
+			fake.Role(
 				object.Label(v1.ClusterSelectorAnnotationKey, "")),
 		),
 	)

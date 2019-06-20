@@ -20,21 +20,21 @@ func TestUniqueNamespaceValidator(t *testing.T) {
 			},
 			{
 				Name:    "one namespace",
-				Objects: []ast.FileObject{fake.Namespace("namespaces/bar/ns.yaml")},
+				Objects: []ast.FileObject{fake.Namespace("namespaces/bar")},
 			},
 			{
 				Name: "two namespace same dir",
 				Objects: []ast.FileObject{
-					fake.Namespace("namespaces/bar/ns-1.yaml"),
-					fake.Namespace("namespaces/bar/ns-2.yaml"),
+					fake.Namespace("namespaces/bar"),
+					fake.Namespace("namespaces/bar"),
 				},
 				ShouldFail: true,
 			},
 			{
 				Name: "two namespace different dir",
 				Objects: []ast.FileObject{
-					fake.Namespace("namespaces/bar/ns.yaml"),
-					fake.Namespace("namespaces/foo/ns.yaml"),
+					fake.Namespace("namespaces/bar"),
+					fake.Namespace("namespaces/foo"),
 				},
 			},
 		},

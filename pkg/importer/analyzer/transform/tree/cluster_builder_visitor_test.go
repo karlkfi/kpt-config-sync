@@ -23,21 +23,21 @@ func TestClusterBuilderVisitor(t *testing.T) {
 		},
 		{
 			name:     "one object yeilds object",
-			objects:  []ast.FileObject{fake.ClusterRole("cluster/cr.yaml")},
-			expected: treetesting.BuildTree(t, fake.ClusterRole("cluster/cr.yaml")),
+			objects:  []ast.FileObject{fake.ClusterRoleAtPath("cluster/cr.yaml")},
+			expected: treetesting.BuildTree(t, fake.ClusterRoleAtPath("cluster/cr.yaml")),
 		},
 		{
 			name:     "two objects yields both",
-			objects:  []ast.FileObject{fake.ClusterRole("cluster/cr.yaml")},
-			expected: treetesting.BuildTree(t, fake.ClusterRole("cluster/cr.yaml")),
+			objects:  []ast.FileObject{fake.ClusterRoleAtPath("cluster/cr.yaml")},
+			expected: treetesting.BuildTree(t, fake.ClusterRoleAtPath("cluster/cr.yaml")),
 		},
 		{
 			name:    "one object with existing adds object",
-			initial: []ast.FileObject{fake.ClusterRole("cluster/cr-1.yaml")},
-			objects: []ast.FileObject{fake.ClusterRole("cluster/cr-2.yaml")},
+			initial: []ast.FileObject{fake.ClusterRoleAtPath("cluster/cr-1.yaml")},
+			objects: []ast.FileObject{fake.ClusterRoleAtPath("cluster/cr-2.yaml")},
 			expected: treetesting.BuildTree(t,
-				fake.ClusterRole("cluster/cr-1.yaml"),
-				fake.ClusterRole("cluster/cr-2.yaml")),
+				fake.ClusterRoleAtPath("cluster/cr-1.yaml"),
+				fake.ClusterRoleAtPath("cluster/cr-2.yaml")),
 		},
 	}
 

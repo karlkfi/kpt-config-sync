@@ -5,7 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/util/repo"
+	"github.com/google/nomos/pkg/object"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -14,94 +14,88 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"k8s.io/kubernetes/pkg/apis/rbac"
 )
 
-// Namespace returns a Kubernetes Namespace resource at the specified path.
-// Initializes with metadata.name set to the correct name.
-func Namespace(path string) ast.FileObject {
-	relative := cmpath.FromSlash(path)
-	return ast.NewFileObject(
-		&corev1.Namespace{
-			TypeMeta: toTypeMeta(kinds.Namespace()),
-			ObjectMeta: v1.ObjectMeta{
-				Name: relative.Dir().Base(),
-			},
-		},
-		relative,
-	)
+// NamespaceSelectorObject returns an initialized NamespaceSelector.
+func NamespaceSelectorObject(opts ...object.MetaMutator) *nomosv1.NamespaceSelector {
+	result := &nomosv1.NamespaceSelector{
+		TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
+	}
+	defaultMutate(result)
+	mutate(result, opts...)
+
+	return result
 }
 
-// NamespaceSelector returns a Nomos NamespaceSelector at the specified path.
-func NamespaceSelector(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.NamespaceSelector{
-			TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
-		},
-		cmpath.FromSlash(path),
-	)
+// NamespaceSelector returns a Nomos NamespaceSelector at a default path.
+func NamespaceSelector(opts ...object.MetaMutator) ast.FileObject {
+	return NamespaceSelectorAtPath("namespaces/ns.yaml", opts...)
 }
 
-// Role returns an RBAC Role at the specified path.
-func Role(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&rbacv1alpha1.Role{
-			TypeMeta: toTypeMeta(kinds.Role()),
-		},
-		cmpath.FromSlash(path),
-	)
+// NamespaceSelectorAtPath returns a NamespaceSelector at the specified path.
+func NamespaceSelectorAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	return fileObject(NamespaceSelectorObject(opts...), path)
 }
 
-// RoleBinding returns an RBAC RoleBinding at the specified path.
-func RoleBinding(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&rbacv1alpha1.RoleBinding{
-			TypeMeta: toTypeMeta(kinds.RoleBinding()),
-		},
-		cmpath.FromSlash(path),
-	)
+// RoleBinding returns an RBAC RoleBinding.
+func RoleBinding(opts ...object.MetaMutator) ast.FileObject {
+	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)
+}
+
+// RoleBindingAtPath returns a RoleBinding at the specified path.
+func RoleBindingAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	obj := &rbacv1alpha1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return fileObject(obj, path)
 }
 
 // ClusterRole returns an RBAC ClusterRole at the specified path.
-func ClusterRole(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&rbacv1alpha1.ClusterRole{
-			TypeMeta: toTypeMeta(kinds.ClusterRole()),
-		},
-		cmpath.FromSlash(path),
-	)
+func ClusterRole(opts ...object.MetaMutator) ast.FileObject {
+	return ClusterRoleAtPath("cluster/cr.yaml", opts...)
 }
 
-// ClusterSelector returns a Nomos ClusterSelector at the specified path.
-func ClusterSelector(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.ClusterSelector{
-			TypeMeta: toTypeMeta(kinds.ClusterSelector()),
-		},
-		cmpath.FromSlash(path),
-	)
+// ClusterRoleAtPath returns a ClusterRole at the specified path.
+func ClusterRoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	obj := &rbacv1alpha1.ClusterRole{TypeMeta: toTypeMeta(kinds.ClusterRole())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return fileObject(obj, path)
 }
 
-// Cluster returns a K8S Cluster resource at the specified path.
-func Cluster(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&clusterregistry.Cluster{
-			TypeMeta: toTypeMeta(kinds.Cluster()),
-		},
-		cmpath.FromSlash(path),
-	)
+// ClusterSelector returns a Nomos ClusterSelector.
+func ClusterSelector(opts ...object.MetaMutator) ast.FileObject {
+	return ClusterSelectorAtPath("cluster/cs.yaml", opts...)
 }
 
-// ClusterConfig returns a ClusterConfig.
-func ClusterConfig() ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.ClusterConfig{
-			TypeMeta: toTypeMeta(kinds.ClusterConfig()),
-			ObjectMeta: v1.ObjectMeta{
-				Name: nomosv1.ClusterConfigName,
-			},
-		},
-		cmpath.FromSlash(""),
-	)
+// ClusterSelectorAtPath returns a ClusterSelector at the specified path.
+func ClusterSelectorAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	obj := &nomosv1.ClusterSelector{TypeMeta: toTypeMeta(kinds.ClusterSelector())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return fileObject(obj, path)
+}
+
+// Cluster returns a K8S Cluster resource in a fileObject.
+func Cluster(opts ...object.MetaMutator) ast.FileObject {
+	obj := &clusterregistry.Cluster{
+		TypeMeta: toTypeMeta(kinds.Cluster()),
+	}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return fileObject(obj, "clusterregistry/cluster.yaml")
+}
+
+// ClusterAtPath returns a Cluster at the specified path.
+func ClusterAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	result := Cluster(opts...)
+	result.Path = cmpath.FromSlash(path)
+	return result
 }
 
 // ConfigManagement returns a fake ConfigManagement.
@@ -111,106 +105,74 @@ func ConfigManagement(path string) ast.FileObject {
 	return ast.NewFileObject(u, cmpath.FromSlash(path))
 }
 
-// CustomResourceDefinition returns a K8S CustomResourceDefinition resource at the specified path.
-func CustomResourceDefinition(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&v1beta1.CustomResourceDefinition{
-			TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
-			ObjectMeta: v1.ObjectMeta{
-				Name: "crd",
-			},
-		},
-		cmpath.FromSlash(path),
-	)
+// CustomResourceDefinitionObject returns an initialized CustomResourceDefinition.
+func CustomResourceDefinitionObject(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
+	result := &v1beta1.CustomResourceDefinition{
+		TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
+	}
+	defaultMutate(result)
+	mutate(result, opts...)
+
+	return result
 }
 
-// Anvil returns an Anvil Custom Resource.
-func Anvil(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&v1beta1.CustomResourceDefinition{
-			TypeMeta: toTypeMeta(kinds.Anvil()),
-			ObjectMeta: v1.ObjectMeta{
-				Name: "anvil",
-			},
-		},
-		cmpath.FromSlash(path),
-	)
+// CustomResourceDefinition returns a fileObject containing a CustomResourceDefinition at a
+// default path.
+func CustomResourceDefinition(opts ...object.MetaMutator) ast.FileObject {
+	return fileObject(CustomResourceDefinitionObject(opts...), "cluster/crd.yaml")
 }
 
-// NamespaceConfig returns a default NamespaceConfig.
-func NamespaceConfig() ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.NamespaceConfig{
-			TypeMeta: toTypeMeta(kinds.NamespaceConfig()),
+// AnvilAtPath returns an Anvil Custom Resource.
+func AnvilAtPath(path string) ast.FileObject {
+	obj := &v1beta1.CustomResourceDefinition{
+		TypeMeta: toTypeMeta(kinds.Anvil()),
+		ObjectMeta: v1.ObjectMeta{
+			Name: "anvil",
 		},
-		cmpath.FromSlash(""),
-	)
+	}
+	defaultMutate(obj)
+
+	return fileObject(obj, path)
 }
 
-// Repo returns a nomos Repo at the specified path.
-func Repo(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.Repo{
-			TypeMeta: toTypeMeta(kinds.Repo()),
-			ObjectMeta: v1.ObjectMeta{
-				Name: "repo",
-			},
-			Spec: nomosv1.RepoSpec{
-				Version: repo.CurrentVersion,
-			},
-		},
-		cmpath.FromSlash(path),
-	)
+// SyncAtPath returns a nomos Sync at the specified path.
+func SyncAtPath(path string) ast.FileObject {
+	obj := &nomosv1.Sync{TypeMeta: toTypeMeta(kinds.Sync())}
+	defaultMutate(obj)
+
+	return fileObject(obj, path)
 }
 
-// HierarchyConfig returns an empty HierarchyConfig at the specified path.
-func HierarchyConfig(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.HierarchyConfig{
-			TypeMeta: toTypeMeta(kinds.HierarchyConfig()),
-		},
-		cmpath.FromSlash(path),
-	)
-}
+// PersistentVolumeObject returns a PersistentVolume Object.
+func PersistentVolumeObject(opts ...object.MetaMutator) *corev1.PersistentVolume {
+	result := &corev1.PersistentVolume{TypeMeta: toTypeMeta(kinds.PersistentVolume())}
+	defaultMutate(result)
+	mutate(result, opts...)
 
-// Sync returns a nomos Sync at the specified path.
-func Sync(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&nomosv1.Sync{
-			TypeMeta: toTypeMeta(kinds.Sync()),
-		},
-		cmpath.FromSlash(path),
-	)
-}
-
-// PersistentVolume returns a PersistentVolume Object.
-func PersistentVolume() ast.FileObject {
-	return ast.NewFileObject(
-		&corev1.PersistentVolume{
-			TypeMeta: toTypeMeta(kinds.PersistentVolume()),
-		},
-		cmpath.FromSlash(""),
-	)
-}
-
-// Deployment returns a default Deployment object.
-func Deployment(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&appsv1.Deployment{
-			TypeMeta: toTypeMeta(kinds.Deployment()),
-		},
-		cmpath.FromSlash(path),
-	)
+	return result
 }
 
 // ReplicaSet returns a default ReplicaSet object.
-func ReplicaSet(path string) ast.FileObject {
-	return ast.NewFileObject(
-		&appsv1.ReplicaSet{
-			TypeMeta: toTypeMeta(kinds.ReplicaSet()),
-		},
-		cmpath.FromSlash(path),
-	)
+func ReplicaSet(opts ...object.MetaMutator) ast.FileObject {
+	obj := &appsv1.ReplicaSet{TypeMeta: toTypeMeta(kinds.ReplicaSet())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return fileObject(obj, "namespaces/foo/replicaset.yaml")
+}
+
+// RoleAtPath returns an initialized Role in a fileObject.
+func RoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	obj := &rbac.Role{TypeMeta: toTypeMeta(kinds.Role())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return ast.NewFileObject(obj, cmpath.FromSlash(path))
+}
+
+// Role returns a Role with a default file path.
+func Role(opts ...object.MetaMutator) ast.FileObject {
+	return RoleAtPath("namespaces/foo/role.yaml", opts...)
 }
 
 func toTypeMeta(gvk schema.GroupVersionKind) v1.TypeMeta {

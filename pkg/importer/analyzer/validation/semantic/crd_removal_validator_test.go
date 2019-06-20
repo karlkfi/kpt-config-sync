@@ -30,12 +30,12 @@ func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
 	test := asttest.Validator(NewCRDRemovalValidator,
 		vet.UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("no CRD pending delete for corresponding namespace-scoped Custom Resource",
-			fake.CustomResourceDefinition("cluster/crd.yaml"),
-			fake.Anvil("namespaces/anvil.yaml"),
+			fake.CustomResourceDefinition(),
+			fake.AnvilAtPath("namespaces/anvil.yaml"),
 		),
 		asttest.Pass("no CRD pending delete for corresponding cluster-scoped Custom Resource",
-			fake.CustomResourceDefinition("cluster/crd.yaml"),
-			fake.Anvil("cluster/anvil.yaml"),
+			fake.CustomResourceDefinition(),
+			fake.AnvilAtPath("cluster/anvil.yaml"),
 		),
 	).With(CRDInfo(clusterconfig.StubbedCRDInfo(nil)))
 
@@ -43,7 +43,7 @@ func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
 }
 
 func TestKnownResourceValidatorWithPendingRemovals(t *testing.T) {
-	crd := fake.CustomResourceDefinition("cluster/crd.yaml").Object.(*v1beta1.CustomResourceDefinition)
+	crd := fake.CustomResourceDefinition().Object.(*v1beta1.CustomResourceDefinition)
 	anvilCRDInfo := clusterconfig.StubbedCRDInfo(map[schema.GroupKind]*v1beta1.CustomResourceDefinition{
 		kinds.Anvil().GroupKind(): crd,
 	})
@@ -52,10 +52,10 @@ func TestKnownResourceValidatorWithPendingRemovals(t *testing.T) {
 		vet.UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("CRD pending delete, but no corresponding Custom Resource"),
 		asttest.Fail("CRD pending delete for corresponding namespace-scoped Custom Resource",
-			fake.Anvil("namespaces/anvil.yaml"),
+			fake.AnvilAtPath("namespaces/anvil.yaml"),
 		),
 		asttest.Fail("CRD pending delete for corresponding cluster-scoped Custom Resource",
-			fake.Anvil("cluster/anvil.yaml"),
+			fake.AnvilAtPath("cluster/anvil.yaml"),
 		),
 	).With(CRDInfo(anvilCRDInfo))
 

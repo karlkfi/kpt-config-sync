@@ -7,57 +7,65 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Namespace replaces the metadata.namesapce of the FileObject under test.
-func Namespace(namespace string) Mutator {
-	return func(o *ast.FileObject) {
-		o.MetaObject().SetNamespace(namespace)
+// MetaMutator is a Mutator that modifies the metadata of an Object.
+type MetaMutator func(meta metav1.Object)
+
+// Mutate implements object.Mutator.
+func (m MetaMutator) Mutate(object *ast.FileObject) {
+	m(object.MetaObject())
+}
+
+// Namespace replaces the metadata.namesapce of the MetaObjectunder test.
+func Namespace(namespace string) MetaMutator {
+	return func(o metav1.Object) {
+		o.SetNamespace(namespace)
 	}
 }
 
-// Name replaces the metadata.name of the FileObject under test.
-func Name(name string) Mutator {
-	return func(o *ast.FileObject) {
-		o.MetaObject().SetName(name)
+// Name replaces the metadata.name of the MetaObjectunder test.
+func Name(name string) MetaMutator {
+	return func(o metav1.Object) {
+		o.SetName(name)
 	}
 }
 
-// Label adds label=value to the metadata.labels of the FileObject under test.
-func Label(label, value string) Mutator {
-	return func(o *ast.FileObject) {
-		SetLabel(o.MetaObject(), label, value)
+// Label adds label=value to the metadata.labels of the MetaObjectunder test.
+func Label(label, value string) MetaMutator {
+	return func(o metav1.Object) {
+		SetLabel(o, label, value)
 	}
 }
 
 // Labels sets the object's labels to a copy of the passed map.
 // Setting to nil causes a call to SetLabels(nil), but the underlying implementation may set Labels
 // to empty map.
-func Labels(labels map[string]string) Mutator {
-	return func(o *ast.FileObject) {
-		SetLabels(o.MetaObject(), labels)
+func Labels(labels map[string]string) MetaMutator {
+	return func(o metav1.Object) {
+		SetLabels(o, labels)
 	}
 }
 
-// Annotation adds annotation=value to the metadata.annotations of the FileObject under test.
-func Annotation(annotation, value string) Mutator {
-	return func(o *ast.FileObject) {
-		SetAnnotation(o.MetaObject(), annotation, value)
+// Annotation adds annotation=value to the metadata.annotations of the MetaObjectunder test.
+func Annotation(annotation, value string) MetaMutator {
+	return func(o metav1.Object) {
+		SetAnnotation(o, annotation, value)
 	}
 }
 
 // Annotations sets the object's annotations to a copy of the passed map.
 // Setting to nil causes a call to SetAnnotations(nil), but the underlying implementation may set
 // Annotations to empty map.
-func Annotations(annotations map[string]string) Mutator {
-	return func(o *ast.FileObject) {
-		SetAnnotations(o.MetaObject(), annotations)
+func Annotations(annotations map[string]string) MetaMutator {
+	return func(o metav1.Object) {
+		SetAnnotations(o, annotations)
 	}
 }
 
 // OwnerReference sets the object's ownerReference.
-func OwnerReference(name, uid string, gvk schema.GroupVersionKind) Mutator {
-	return func(o *ast.FileObject) {
+func OwnerReference(name, uid string, gvk schema.GroupVersionKind) MetaMutator {
+	return func(o metav1.Object) {
 		apiVersion, kind := gvk.ToAPIVersionAndKind()
-		o.MetaObject().SetOwnerReferences([]metav1.OwnerReference{{
+		o.SetOwnerReferences([]metav1.OwnerReference{{
 			Name:       name,
 			UID:        types.UID(uid),
 			APIVersion: apiVersion,

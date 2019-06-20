@@ -64,7 +64,7 @@ func TestDisallowedCRDsValidator(t *testing.T) {
 			},
 			{
 				Name:   "non-CRD config",
-				Object: fake.ClusterRole("cluster/clusterrole.yaml"),
+				Object: fake.ClusterRoleAtPath("cluster/clusterrole.yaml"),
 			},
 		},
 	}

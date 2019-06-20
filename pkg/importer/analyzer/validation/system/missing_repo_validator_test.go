@@ -21,7 +21,7 @@ func TestMissingRepoValidator(t *testing.T) {
 			},
 			{
 				Name:    "Has repo passes",
-				Objects: []ast.FileObject{fake.Repo("system/repo.yaml")},
+				Objects: []ast.FileObject{fake.Repo()},
 			},
 		},
 	}

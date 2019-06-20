@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -112,7 +111,7 @@ func TestResourceLister(t *testing.T) {
 			name:        "returns object list if one resource",
 			apiResource: apiresource.Roles(),
 			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
-				role: newSuccessLister(t, fake.Build(kinds.Role())),
+				role: newSuccessLister(t, fake.Role()),
 			}},
 			expectedLength: 1,
 		},
@@ -120,14 +119,14 @@ func TestResourceLister(t *testing.T) {
 			name:        "returns no objects if not listable",
 			apiResource: apiresource.TokenReviews(), // TokenReviews are not listable.
 			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
-				tokenReview: newSuccessLister(t, fake.Build(kinds.Role())),
+				tokenReview: newSuccessLister(t, fake.Role()),
 			}},
 		},
 		{
 			name:        "returns object list if two resources",
 			apiResource: apiresource.Roles(),
 			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
-				role: newSuccessLister(t, fake.Build(kinds.Role()), fake.Build(kinds.Role())),
+				role: newSuccessLister(t, fake.Role(), fake.Role()),
 			}},
 			expectedLength: 2,
 		},
@@ -135,14 +134,14 @@ func TestResourceLister(t *testing.T) {
 			name:        "returns no resources if none of that type",
 			apiResource: apiresource.Roles(),
 			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
-				roleBinding: newSuccessLister(t, fake.Build(kinds.RoleBinding()), fake.Build(kinds.RoleBinding())),
+				roleBinding: newSuccessLister(t, fake.RoleBinding(), fake.RoleBinding()),
 			}},
 		},
 		{
 			name:        "returns all objects if paged",
 			apiResource: apiresource.Roles(),
 			resourcer: fakeResourcer{resources: map[schema.GroupVersionResource]Lister{
-				role: newSuccessLister(t, fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role()), fake.Build(kinds.Role())),
+				role: newSuccessLister(t, fake.Role(), fake.Role(), fake.Role(), fake.Role(), fake.Role(), fake.Role()),
 			}},
 			expectedLength: 6,
 		},
