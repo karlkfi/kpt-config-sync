@@ -32,7 +32,6 @@ type Reconciler struct {
 	repoClient  *repo.Client
 	cache       cache.Cache
 	currentDir  string
-	lastSyncs   map[string]v1.Sync
 }
 
 // NewReconciler returns a new Reconciler.
@@ -65,19 +64,12 @@ func NewReconciler(clusterName string, configDir string, parser *Parser, client 
 //   * Compares current and desired Nomos CRs.
 //   * Writes updates to make current match desired.
 func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	// TODO(b/118385500): Update this check when we support watching/reconciling all Nomos CRs.
-	if request.Name != pollFilesystem {
-		glog.Errorf("Unexpected reconcile event: %v", request)
-		return reconcile.Result{}, nil
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
 	glog.V(4).Infof("Reconciling: %v", request)
 	startTime := time.Now()
 
-	// Detect whether symlink has changed.
 	newDir, err := filepath.EvalSymlinks(c.configDir)
 	if err != nil {
 		glog.Errorf("Failed to resolve config directory: %v", err)
@@ -89,26 +81,12 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	// Check if Syncs have changed on the cluster.  We need to
-	// reconcile in case the user removed Syncs that should be there.
-	// We don't have a watcher for this event, but rely instead on the
-	// poll period to trigger a reconcile.
-	currentSyncs, err := namespaceconfig.ListSyncs(ctx, c.cache)
-	if err != nil {
-		glog.Errorf("failed quick check of current syncs: %v", err)
-		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-		return reconcile.Result{}, nil
-	}
-
-	// If last syncs has more sync than current on-cluster sync
-	// content, this means that syncs have been removed on the cluster
-	// without our intention.
-	unchangedSyncs := len(differ.SyncsInFirstOnly(c.lastSyncs, currentSyncs)) == 0
-	unchangedDir := c.currentDir == newDir
-
-	if unchangedDir && unchangedSyncs {
-		glog.V(4).Info("no new changes, nothing to do.")
-		return reconcile.Result{}, nil
+	if request.Name == pollFilesystem {
+		// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
+		if c.currentDir == newDir {
+			glog.V(4).Info("no new changes, nothing to do.")
+			return reconcile.Result{}, nil
+		}
 	}
 	glog.Infof("Resolved config dir: %s. Polling config dir: %s", newDir, c.configDir)
 
@@ -166,7 +144,6 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
 
-	c.lastSyncs = desiredConfigs.Syncs
 	glog.V(4).Infof("Reconcile completed")
 	return reconcile.Result{}, nil
 }

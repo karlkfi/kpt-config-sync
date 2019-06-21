@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -20,7 +21,11 @@ import (
 
 const (
 	controllerName = "git-importer"
-	pollFilesystem = "poll-filesystem"
+	// pollFilesystem is an invalid resource name used to signal that the event
+	// triggering the reconcile is a periodic poll of the filesystem. The reason
+	// it is an invalid name is we want to prevent treating a namespaceconfig
+	// change as a poll filesystem event, if it happens to be named poll-filesystem.
+	pollFilesystem = "@poll-filesystem"
 )
 
 // AddController adds the git-importer controller to the manager.
@@ -51,6 +56,17 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	})
 	if err != nil {
 		return errors.Wrap(err, "failure creating controller")
+	}
+
+	// Watch all Nomos CRs that are managed by the importer.
+	if err = c.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", controllerName)
+	}
+	if err = c.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", controllerName)
+	}
+	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return errors.Wrapf(err, "could not watch Syncs in the %q controller", controllerName)
 	}
 
 	return watchFileSystem(c, pollPeriod)
