@@ -4,6 +4,12 @@ import (
 	"path"
 	"time"
 
+	"github.com/google/nomos/pkg/syncer/decode"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -47,7 +53,13 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return err
 	}
 
-	r, err := NewReconciler(clusterName, rootDir, parser, client, mgr.GetCache())
+	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create discoveryclient")
+	}
+
+	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
+	r, err := NewReconciler(clusterName, rootDir, parser, client, dc, mgr.GetCache(), decoder)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}
@@ -58,20 +70,29 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return errors.Wrap(err, "failure creating controller")
 	}
 
+	// We map all requests generated from from watching Nomos CRs to the same request.
+	// The reason we do this is because the logic is the same in the reconcile loop,
+	// regardless of which resource changed. Having a constant used for the reconcile.Request
+	// avoids doing redundant reconciles.
+	mapToConstant := &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(nomosResourceRequest),
+	}
+
 	// Watch all Nomos CRs that are managed by the importer.
-	if err = c.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, mapToConstant); err != nil {
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", controllerName)
 	}
-	if err = c.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, mapToConstant); err != nil {
 		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", controllerName)
 	}
-	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, mapToConstant); err != nil {
 		return errors.Wrapf(err, "could not watch Syncs in the %q controller", controllerName)
 	}
 
 	return watchFileSystem(c, pollPeriod)
 }
 
+// watchFileSystem issues a reconcile.Request after every pollPeriod.
 func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
 	pollCh := make(chan event.GenericEvent)
 	go func() {
@@ -87,4 +108,14 @@ func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
 	}
 
 	return nil
+}
+
+// nomosResourceRequest maps resources being watched,
+// to reconciliation requests for a cluster-scoped resource with name "nomos-resource".
+func nomosResourceRequest(_ handler.MapObject) []reconcile.Request {
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Name: "nomos-resource",
+		},
+	}}
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"k8s.io/api/policy/v1beta1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -21,10 +20,8 @@ type testCase struct {
 	oldNodes, newNodes                 []*v1.NamespaceConfig
 	oldClusterConfig, newClusterConfig *v1.ClusterConfig
 	oldSyncs, newSyncs                 []*v1.Sync
-	// String representation of expected actions
-	wantCreate []runtime.Object
-	wantUpdate []runtime.Object
-	wantDelete []runtime.Object
+	wantCreate                         []runtime.Object
+	wantDelete                         []runtime.Object
 }
 
 func TestDiffer(t *testing.T) {
@@ -110,29 +107,21 @@ func TestDiffer(t *testing.T) {
 		},
 		{
 			testName:         "ClusterConfig create",
-			newClusterConfig: clusterConfig("foo", true),
+			newClusterConfig: clusterConfig("foo"),
 			wantCreate: []runtime.Object{
-				clusterConfig("foo", true),
-			},
-		},
-		{
-			testName:         "ClusterConfig update",
-			oldClusterConfig: clusterConfig("foo", true),
-			newClusterConfig: clusterConfig("foo", false),
-			wantUpdate: []runtime.Object{
-				clusterConfig("foo", false),
+				clusterConfig("foo"),
 			},
 		},
 		{
 			testName:         "ClusterConfig update no change",
-			oldClusterConfig: clusterConfig("foo", true),
-			newClusterConfig: clusterConfig("foo", true),
+			oldClusterConfig: clusterConfig("foo"),
+			newClusterConfig: clusterConfig("foo"),
 		},
 		{
 			testName:         "ClusterConfig delete",
-			oldClusterConfig: clusterConfig("foo", true),
+			oldClusterConfig: clusterConfig("foo"),
 			wantDelete: []runtime.Object{
-				clusterConfig("foo", true),
+				clusterConfig("foo"),
 			},
 		},
 		{
@@ -145,9 +134,9 @@ func TestDiffer(t *testing.T) {
 				namespaceConfig("c2"),
 				namespaceConfig("c1"),
 			},
-			newClusterConfig: clusterConfig("foo", true),
+			newClusterConfig: clusterConfig("foo"),
 			wantCreate: []runtime.Object{
-				clusterConfig("foo", true),
+				clusterConfig("foo"),
 				namespaceConfig("c1"),
 				namespaceConfig("c2"),
 			},
@@ -199,12 +188,9 @@ func TestDiffer(t *testing.T) {
 				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().Delete(gomock.Any(), gomock.Eq(c), gomock.Any())
 			}
-			for _, c := range test.wantUpdate {
-				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockClient.EXPECT().Update(gomock.Any(), gomock.Eq(c))
-			}
 
 			err := Update(context.Background(), client.New(mockClient, metrics.APICallDuration),
+				mocks.NewFakeDecoder(nil),
 				allConfigs(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
 				allConfigs(test.newNodes, test.newClusterConfig, test.newSyncs))
 			if err != nil {
@@ -223,31 +209,12 @@ func namespaceConfig(name string) *v1.NamespaceConfig {
 	}
 }
 
-func clusterConfig(name string, priviledged bool) *v1.ClusterConfig {
+func clusterConfig(name string) *v1.ClusterConfig {
 	return &v1.ClusterConfig{
 		ObjectMeta: meta.ObjectMeta{
 			Name: name,
 		},
-		Spec: v1.ClusterConfigSpec{
-			Resources: []v1.GenericResources{
-				{
-					Group: v1beta1.GroupName,
-					Kind:  "PodSecurityPolicy",
-					Versions: []v1.GenericVersionResources{
-						{
-							Version: v1beta1.SchemeGroupVersion.Version,
-							Objects: []runtime.RawExtension{
-								{
-									Object: &v1beta1.PodSecurityPolicy{
-										Spec: v1beta1.PodSecurityPolicySpec{Privileged: priviledged},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		Spec: v1.ClusterConfigSpec{},
 	}
 }
 

@@ -1,4 +1,4 @@
-package manager
+package scheme
 
 import (
 	"reflect"
@@ -12,8 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// addtoSchemeUnstructured adds the GroupVersionKinds to the scheme as unstructured.Unstructured objects.
-func addToSchemeUnstructured(scheme *runtime.Scheme, gvks map[schema.GroupVersionKind]bool) {
+// AddToSchemeAsUnstructured adds the GroupVersionKinds to the scheme as unstructured.Unstructured objects.
+func AddToSchemeAsUnstructured(scheme *runtime.Scheme, gvks map[schema.GroupVersionKind]bool) {
 	for gvk := range gvks {
 		if !scheme.Recognizes(gvk) {
 			scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
@@ -52,8 +52,8 @@ func resourceTypes(gvks map[schema.GroupVersionKind]bool,
 	return m, nil
 }
 
-// resourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
-func resourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Scheme,
+// ResourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
+func ResourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Scheme,
 	apirs *discovery.APIInfo) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
 	rts, err := resourceTypes(gvks, scheme)
 	if err != nil {

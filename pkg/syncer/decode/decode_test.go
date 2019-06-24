@@ -53,6 +53,35 @@ func TestDecodeResources(t *testing.T) {
 			},
 		},
 		{
+			name: "one resource that is already an Object",
+			genericResource: []nomosv1.GenericResources{
+				{
+					Kind: "ObjectTest",
+					Versions: []nomosv1.GenericVersionResources{{
+						Version: "v1test",
+						Objects: []runtime.RawExtension{{
+							Object: &unstructured.Unstructured{
+								Object: map[string]interface{}{
+									"kind":       "ObjectTest",
+									"apiVersion": "v1test",
+								},
+							},
+						}},
+					}},
+				},
+			},
+			want: map[schema.GroupVersionKind][]*unstructured.Unstructured{
+				schema.GroupVersionKind{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
+					&unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"kind":       "ObjectTest",
+							"apiVersion": "v1test",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "multiple resources",
 			genericResource: []nomosv1.GenericResources{
 				{

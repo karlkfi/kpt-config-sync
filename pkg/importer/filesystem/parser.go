@@ -254,8 +254,8 @@ func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v
 	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		crdBuilder := p.getBuilder(stubMissing, crds...)
-		result := crdBuilder.
+		builder := p.getBuilder(stubMissing, crds...)
+		result := builder.
 			Unstructured().
 			ContinueOnError().
 			FilenameParam(false, options).

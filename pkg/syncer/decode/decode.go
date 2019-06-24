@@ -4,6 +4,8 @@ package decode
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/syncer/scheme"
+
 	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,12 +21,15 @@ type Decoder interface {
 	// resources and returns a slice of all the resources grouped by their
 	// respective GroupVersionKind.
 	DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
+	// UpdateScheme updates the scheme of the underlying decoder, so it can decode the given GroupVersionKinds.
+	UpdateScheme(gvks map[schema.GroupVersionKind]bool)
 }
 
 var _ Decoder = &GenericResourceDecoder{}
 
 // GenericResourceDecoder implements Decoder.
 type GenericResourceDecoder struct {
+	scheme                *runtime.Scheme
 	decoder               runtime.Decoder
 	unstructuredConverter runtime.UnstructuredConverter
 }
@@ -32,9 +37,16 @@ type GenericResourceDecoder struct {
 // NewGenericResourceDecoder returns a new GenericResourceDecoder.
 func NewGenericResourceDecoder(scheme *runtime.Scheme) *GenericResourceDecoder {
 	return &GenericResourceDecoder{
+		scheme:                scheme,
 		decoder:               serializer.NewCodecFactory(scheme).UniversalDeserializer(),
 		unstructuredConverter: runtime.DefaultUnstructuredConverter,
 	}
+}
+
+// UpdateScheme implements Decoder.
+func (d *GenericResourceDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+	scheme.AddToSchemeAsUnstructured(d.scheme, gvks)
+	d.decoder = serializer.NewCodecFactory(d.scheme).UniversalDeserializer()
 }
 
 // DecodeResources implements Decoder.
@@ -44,10 +56,13 @@ func (d *GenericResourceDecoder) DecodeResources(genericResources ...nomosv1.Gen
 		for _, v := range gr.Versions {
 			for _, genericObject := range v.Objects {
 				gvk := schema.GroupVersionKind{Group: gr.Group, Version: v.Version, Kind: gr.Kind}
-				var o runtime.Object
-				o, _, err := d.decoder.Decode(genericObject.Raw, &gvk, o)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not decode runtime.Object from %q RawExtension bytes", gvk)
+				o := genericObject.Object
+				if o == nil {
+					var err error
+					o, _, err = d.decoder.Decode(genericObject.Raw, &gvk, o)
+					if err != nil {
+						return nil, errors.Wrapf(err, "could not decode runtime.Object from %q RawExtension bytes", gvk)
+					}
 				}
 				au, ok := o.(*unstructured.Unstructured)
 				if !ok {

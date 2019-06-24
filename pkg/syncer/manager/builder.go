@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/decode"
+	syncerscheme "github.com/google/nomos/pkg/syncer/scheme"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,14 +48,14 @@ func (r *SyncAwareBuilder) UpdateScheme(scheme *runtime.Scheme, gvks map[schema.
 	if err := v1.AddToScheme(scheme); err != nil {
 		return err
 	}
-	addToSchemeUnstructured(scheme, gvks)
+	syncerscheme.AddToSchemeAsUnstructured(scheme, gvks)
 	return nil
 }
 
 // StartControllers starts all the controllers watching sync-enabled resources.
 func (r *SyncAwareBuilder) StartControllers(ctx context.Context, sm *SubManager,
 	gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error {
-	namespace, cluster, err := resourceScopes(gvks, sm.GetScheme(), apirs)
+	namespace, cluster, err := syncerscheme.ResourceScopes(gvks, sm.GetScheme(), apirs)
 	if err != nil {
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}

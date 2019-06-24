@@ -25,6 +25,10 @@ func NewFakeDecoder(us []*unstructured.Unstructured) *FakeDecoder {
 	return &FakeDecoder{data: m}
 }
 
+// UpdateScheme does nothing.
+func (d *FakeDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+}
+
 // DecodeResources returns fake data.
 func (d *FakeDecoder) DecodeResources(_ ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	return d.data, nil

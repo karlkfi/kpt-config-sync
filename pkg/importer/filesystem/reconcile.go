@@ -5,16 +5,21 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/nomos/pkg/importer/git"
+	"github.com/pkg/errors"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/differ"
-	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/decode"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -25,13 +30,15 @@ var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type Reconciler struct {
-	clusterName string
-	configDir   string
-	parser      *Parser
-	client      *syncerclient.Client
-	repoClient  *repo.Client
-	cache       cache.Cache
-	currentDir  string
+	clusterName     string
+	configDir       string
+	parser          *Parser
+	client          *syncerclient.Client
+	discoveryClient discovery.DiscoveryInterface
+	decoder         decode.Decoder
+	repoClient      *repo.Client
+	cache           cache.Cache
+	currentDir      string
 }
 
 // NewReconciler returns a new Reconciler.
@@ -42,16 +49,20 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(clusterName string, configDir string, parser *Parser, client *syncerclient.Client, cache cache.Cache) (*Reconciler, error) {
+func NewReconciler(clusterName string, configDir string, parser *Parser, client *syncerclient.Client,
+	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
+	decoder decode.Decoder) (*Reconciler, error) {
 	repoClient := repo.New(client)
 
 	return &Reconciler{
-		clusterName: clusterName,
-		configDir:   configDir,
-		parser:      parser,
-		client:      client,
-		repoClient:  repoClient,
-		cache:       cache,
+		clusterName:     clusterName,
+		configDir:       configDir,
+		parser:          parser,
+		client:          client,
+		discoveryClient: discoveryClient,
+		repoClient:      repoClient,
+		cache:           cache,
+		decoder:         decoder,
 	}, nil
 }
 
@@ -132,7 +143,12 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
-	if errs := differ.Update(ctx, c.client, *currentConfigs, *desiredConfigs); errs != nil {
+	if err := c.updateDecoderWithAPIResources(currentConfigs.Syncs, desiredConfigs.Syncs); err != nil {
+		glog.Warningf("Failed to parse sync resources: %v", err)
+		return reconcile.Result{}, nil
+	}
+
+	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs); errs != nil {
 		glog.Warningf("Failed to apply actions: %v", errs.Error())
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
@@ -186,4 +202,33 @@ func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs
 		glog.Errorf("failed to update Repo source status: %v", err)
 	}
 	return r
+}
+
+// updateDecoderWithAPIResources uses the discovery API and the set of existing
+// syncs on cluster to update the set of resource types the Decoder is able to decode.
+func (c *Reconciler) updateDecoderWithAPIResources(syncMaps ...map[string]v1.Sync) error {
+	resources, discoveryErr := c.discoveryClient.ServerResources()
+	if discoveryErr != nil {
+		return errors.Wrap(discoveryErr, "failed to get server resources")
+	}
+
+	// We need to populate the scheme with the latest resources on cluster in order to decode GenericResources in
+	// NamespaceConfigs and ClusterConfigs.
+	apiInfo, err := utildiscovery.NewAPIInfo(resources)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse server resources")
+	}
+
+	var syncList []*v1.Sync
+	for _, m := range syncMaps {
+		for n := range m {
+			sync := m[n]
+			syncList = append(syncList, &sync)
+		}
+	}
+	gvks := apiInfo.GroupVersionKinds(syncList...)
+
+	// Update the decoder with all sync-enabled resource types on the cluster.
+	c.decoder.UpdateScheme(gvks)
+	return nil
 }
