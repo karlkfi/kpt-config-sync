@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/testing/testoutput"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -135,7 +136,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 			testFiles: fstesting.FileContentMap{
 				"namespaces/bar/ns.yaml": aNamespace("bar"),
 			},
-			expectedNamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/bar", nil)),
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/bar", nil)),
 		},
 		{
 			testName: "Namespace dir with JSON Namespace",
@@ -150,7 +151,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 }
 `,
 			},
-			expectedNamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/bar", nil)),
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/bar", nil)),
 		},
 		{
 			testName: "Namespaces dir with ignored file",
@@ -165,7 +166,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 				"namespaces/bar/ignore":  "",
 				"namespaces/bar/ignore2": "blah blah blah",
 			},
-			expectedNamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/bar", nil)),
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/bar", nil)),
 		},
 		{
 			testName: "Namespace dir with Namespace with labels/annotations",
@@ -181,8 +182,8 @@ metadata:
     audit: "true"
 `,
 			},
-			expectedNamespaceConfigs: namespaceConfigs(
-				namespaceConfig("", "namespaces/bar",
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(
+				testoutput.NamespaceConfig("", "namespaces/bar",
 					object.Mutations(object.Label("env", "prod"), object.Annotation("audit", "true"))),
 			),
 		},
@@ -218,9 +219,9 @@ spec:
     pods: "10"
 `,
 			},
-			expectedNamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/bar", nil,
-				resourceQuotaObject(object.Name("pod-quota"), source("namespaces/bar/combo.yaml")))),
-			expectedSyncs: syncs(kinds.ResourceQuota()),
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/bar", nil,
+				resourceQuotaObject(object.Name("pod-quota"), testoutput.Source("namespaces/bar/combo.yaml")))),
+			expectedSyncs: testoutput.Syncs(kinds.ResourceQuota()),
 		},
 		{
 			testName: "Namespace dir with Custom Resource",
@@ -235,7 +236,7 @@ spec:
   cafePreference: 3
 `,
 			},
-			expectedNamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/bar", nil,
+			expectedNamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/bar", nil,
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
 						"apiVersion": "employees/v1alpha1",
@@ -248,7 +249,7 @@ spec:
 							"cafePreference": int64(3),
 						}}},
 			)),
-			expectedSyncs: syncs(schema.GroupVersionKind{
+			expectedSyncs: testoutput.Syncs(schema.GroupVersionKind{
 				Group:   "employees",
 				Version: "v1alpha1",
 				Kind:    "Engineer",

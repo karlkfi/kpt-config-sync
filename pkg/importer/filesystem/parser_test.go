@@ -2,7 +2,6 @@ package filesystem_test
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -24,13 +22,12 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/parsertest"
+	"github.com/google/nomos/testing/testoutput"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func engineerCRD(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
@@ -91,10 +88,10 @@ func TestParserVetErrors(t *testing.T) {
 	test := parsertest.VetTest(
 		parsertest.Success("ResourceQuota with scope and normal quota",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/bar", nil, scopedResourceQuota(source("namespaces/bar/rq.yaml"))),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/bar", nil, scopedResourceQuota(testoutput.Source("namespaces/bar/rq.yaml"))),
 				),
-				Syncs: syncs(kinds.ResourceQuota()),
+				Syncs: testoutput.Syncs(kinds.ResourceQuota()),
 			},
 			fake.Namespace("namespaces/bar"),
 			fake.FileObject(scopedResourceQuota(), "namespaces/bar/rq.yaml"),
@@ -107,16 +104,16 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("Engineer CustomResourceDefinition",
 			&namespaceconfig.AllConfigs{
-				CRDClusterConfig: crdClusterConfig(engineerCRD(source("cluster/engineer-crd.yaml"))),
-				Syncs:            syncs(kinds.CustomResourceDefinition()),
+				CRDClusterConfig: testoutput.CRDClusterConfig(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml"))),
+				Syncs:            testoutput.Syncs(kinds.CustomResourceDefinition()),
 			},
 			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
 		),
 		parsertest.Success("Valid to have Abstract Namespace with both Namespace and Abstract Namespace children",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/bar/foo", nil),
-					namespaceConfig("", "namespaces/bar/qux/lym", nil),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/bar/foo", nil),
+					testoutput.NamespaceConfig("", "namespaces/bar/qux/lym", nil),
 				),
 			},
 			fake.Namespace("namespaces/bar/foo"),
@@ -141,16 +138,16 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("NamespaceSelector",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/bar/prod-ns", object.Label("env", "prod"),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/bar/prod-ns", object.Label("env", "prod"),
 						fake.RoleBindingObject(object.Name("sre"),
 							inlinedNamespaceSelectorAnnotation(t, namespaceSelector("sre-supported", "env", "prod")),
-							source("namespaces/bar/rb.yaml"),
+							testoutput.Source("namespaces/bar/rb.yaml"),
 						),
 					),
-					namespaceConfig("", "namespaces/bar/test-ns", object.Label("env", "test")),
+					testoutput.NamespaceConfig("", "namespaces/bar/test-ns", object.Label("env", "test")),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			fake.FileObject(namespaceSelector("sre-supported", "env", "prod"), "namespaces/bar/ns-selector.yaml"),
 			fake.RoleBindingAtPath("namespaces/bar/rb.yaml", object.Name("sre"), namespaceSelectorAnnotation("sre-supported")),
@@ -169,30 +166,30 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces")),
 		parsertest.Success("Namespaces dir with ResourceQuota and hierarchical quota inheritance",
 			&namespaceconfig.AllConfigs{
-				ClusterConfig: clusterConfig(
+				ClusterConfig: testoutput.ClusterConfig(
 					fake.HierarchicalQuotaObject(fake.HierarchicalQuotaRoot(
 						fake.HierarchicalQuotaNode("namespaces", v1.HierarchyNodeAbstractNamespace,
-							resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), source("namespaces/rq.yaml")),
+							resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml")),
 							fake.HierarchicalQuotaNode("bar", v1.HierarchyNodeNamespace,
-								resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), source("namespaces/rq.yaml"), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
+								resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml"), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
 					)),
 				),
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/bar", nil,
-						resourceQuotaObject(source("namespaces/rq.yaml"), object.Name(resourcequota.ResourceQuotaObjectName), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
-				Syncs: syncs(kinds.ResourceQuota(), kinds.HierarchicalQuota()),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/bar", nil,
+						resourceQuotaObject(testoutput.Source("namespaces/rq.yaml"), object.Name(resourcequota.ResourceQuotaObjectName), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
+				Syncs: testoutput.Syncs(kinds.ResourceQuota(), kinds.HierarchicalQuota()),
 			},
 			fake.HierarchyConfigAtPath("system/rq.yaml", fake.HierarchyConfigMeta(object.Name("resourcequota")), fake.HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeHierarchicalQuota)),
 			fake.FileObject(resourceQuotaObject(object.Name("pod-quota")), "namespaces/rq.yaml"),
 			fake.Namespace("namespaces/bar")),
 		parsertest.Success("Namespace with multiple inherited RoleBindings",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/foo", nil,
-						fake.RoleBindingObject(object.Name("alice"), source("namespaces/rb-1.yaml")),
-						fake.RoleBindingObject(object.Name("bob"), source("namespaces/rb-2.yaml"))),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/foo", nil,
+						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/rb-1.yaml")),
+						fake.RoleBindingObject(object.Name("bob"), testoutput.Source("namespaces/rb-2.yaml"))),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			fake.RoleBindingAtPath("namespaces/rb-1.yaml", object.Name("alice")),
 			fake.RoleBindingAtPath("namespaces/rb-2.yaml", object.Name("bob")),
@@ -209,17 +206,17 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("Two abstract Namespace dirs with non-unique names are allowed.",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/foo/foo/bar", nil),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/foo/foo/bar", nil),
 				),
 			},
 			fake.Namespace("namespaces/foo/foo/bar"),
 		),
 		parsertest.Success("An abstract namespace and a leaf namespace may share a name",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/bar/foo", nil),
-					namespaceConfig("", "namespaces/foo/bar", nil),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/bar/foo", nil),
+					testoutput.NamespaceConfig("", "namespaces/foo/bar", nil),
 				),
 			},
 			fake.Namespace("namespaces/bar/foo"),
@@ -227,19 +224,19 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("kube-* is a system dir but is allowed",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/kube-something", nil)),
+				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/kube-something", nil)),
 			},
 			fake.Namespace("namespaces/kube-something"),
 		),
 		parsertest.Success("kube-system is a system dir but is allowed",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/kube-system", nil)),
+				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/kube-system", nil)),
 			},
 			fake.Namespace("namespaces/kube-system"),
 		),
 		parsertest.Success("Default namespace is allowed",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(namespaceConfig("", "namespaces/default", nil)),
+				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig("", "namespaces/default", nil)),
 			},
 			fake.Namespace("namespaces/default"),
 		),
@@ -285,13 +282,13 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("No name collision if different types",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/foo", nil,
-						fake.RoleObject(object.Name("alice"), source("namespaces/foo/role.yaml")),
-						fake.RoleBindingObject(object.Name("alice"), source("namespaces/foo/rolebinding.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/foo", nil,
+						fake.RoleObject(object.Name("alice"), testoutput.Source("namespaces/foo/role.yaml")),
+						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/rolebinding.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.Role(), kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.Role(), kinds.RoleBinding()),
 			},
 			fake.Namespace("namespaces/foo"),
 			fake.RoleAtPath("namespaces/foo/role.yaml", object.Name("alice")),
@@ -311,13 +308,13 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Success("No name collision in sibling nodes",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig("", "namespaces/foo/bar", nil,
-						fake.RoleBindingObject(object.Name("alice"), source("namespaces/foo/bar/rb-1.yaml"))),
-					namespaceConfig("", "namespaces/foo/qux", nil,
-						fake.RoleBindingObject(object.Name("alice"), source("namespaces/foo/qux/rb-2.yaml"))),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig("", "namespaces/foo/bar", nil,
+						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/bar/rb-1.yaml"))),
+					testoutput.NamespaceConfig("", "namespaces/foo/qux", nil,
+						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/qux/rb-2.yaml"))),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			fake.Namespace("namespaces/foo/bar"),
 			fake.RoleBindingAtPath("namespaces/foo/bar/rb-1.yaml", object.Name("alice")),
@@ -434,16 +431,16 @@ func (tc *parserTestCase) Run(t *testing.T) {
 	}
 
 	if tc.expectedNamespaceConfigs == nil {
-		tc.expectedNamespaceConfigs = namespaceConfigs()
+		tc.expectedNamespaceConfigs = testoutput.NamespaceConfigs()
 	}
 	if tc.expectedSyncs == nil {
-		tc.expectedSyncs = syncs()
+		tc.expectedSyncs = testoutput.Syncs()
 	}
 
 	expectedConfigs := &namespaceconfig.AllConfigs{
 		NamespaceConfigs: tc.expectedNamespaceConfigs,
-		ClusterConfig:    clusterConfig(),
-		CRDClusterConfig: crdClusterConfig(),
+		ClusterConfig:    testoutput.ClusterConfig(),
+		CRDClusterConfig: testoutput.CRDClusterConfig(),
 		Syncs:            tc.expectedSyncs,
 		Repo:             fake.RepoObject(),
 	}
@@ -511,83 +508,10 @@ func inlinedSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) objec
 	return inlinedClusterSelectorAnnotation(t, selector)
 }
 
-func inCluster(clusterName string) object.MetaMutator {
-	return object.Annotation(v1.ClusterNameAnnotationKey, clusterName)
-}
-
-func source(path string) object.MetaMutator {
-	return object.Annotation(v1.SourcePathAnnotationKey, path)
-}
-
 func resourceVersion(version string) object.MetaMutator {
 	return func(meta metav1.Object) {
 		meta.SetResourceVersion(version)
 	}
-}
-
-func crdClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
-	config := fake.CRDClusterConfigObject()
-	config.Spec.Resources = genericResources(objects...)
-	return config
-}
-
-// clusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
-// cluster-scoped runtime.Objects.
-func clusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
-	config := fake.ClusterConfigObject()
-	config.Spec.Resources = genericResources(objects...)
-	return config
-}
-
-// namespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
-// hydrated runtime.Objects for that Namespace.
-func namespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ...runtime.Object) v1.NamespaceConfig {
-	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(source(dir)))
-	if clusterName != "" {
-		inCluster(clusterName)(config)
-	}
-	config.Name = cmpath.FromSlash(dir).Base()
-	config.Spec.Resources = genericResources(objects...)
-	if opt != nil {
-		opt(config)
-	}
-	return *config
-}
-
-// namespaceConfigs turns a list of NamespaceConfigs into the map AllConfigs requires.
-func namespaceConfigs(ncs ...v1.NamespaceConfig) map[string]v1.NamespaceConfig {
-	result := map[string]v1.NamespaceConfig{}
-	for _, nc := range ncs {
-		result[nc.Name] = nc
-	}
-	return result
-}
-
-// genericResources convers a list of runtime.Objects to the GenericResources array required for
-// AllConfigs.
-func genericResources(objects ...runtime.Object) []v1.GenericResources {
-	var result []v1.GenericResources
-	for _, obj := range objects {
-		result = backend.AppendResource(result, obj)
-	}
-	return result
-}
-
-// syncs generates the sync map to be put in AllConfigs.
-func syncs(gvks ...schema.GroupVersionKind) map[string]v1.Sync {
-	result := map[string]v1.Sync{}
-	for _, gvk := range gvks {
-		result[groupKind(gvk)] = *fake.SyncObject(gvk.GroupKind())
-	}
-	return result
-}
-
-// groupKind factors out the two-line operation of getting the GroupKind string from a
-// GroupVersionKind. The GroupKind.String() method has a pointer receiver, so
-// gvk.GroupKind.String() is an error.
-func groupKind(gvk schema.GroupVersionKind) string {
-	gk := gvk.GroupKind()
-	return strings.ToLower(gk.String())
 }
 
 // Test how the parser handles ClusterSelectors
@@ -614,12 +538,12 @@ func TestParseClusterSelector(t *testing.T) {
 	test := parsertest.VetTest(
 		parsertest.Success("Resource without selector always exists 1",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(prodCluster, "namespaces/bar", nil,
-						fake.RoleBindingObject(inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(prodCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(testoutput.InCluster(prodCluster), testoutput.Source("namespaces/bar/rolebinding.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -630,12 +554,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(prodCluster),
 		parsertest.Success("Resource without selector always exists 2",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(devCluster, "namespaces/bar", nil,
-						fake.RoleBindingObject(inCluster(devCluster), source("namespaces/bar/rolebinding.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(devCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -646,12 +570,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Namespace resource selected",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(prodCluster, "namespaces/bar", nil,
-						fake.RoleBindingObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(prodCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(prodSelectorAnnotationInlined, testoutput.InCluster(prodCluster), testoutput.Source("namespaces/bar/rolebinding.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -662,8 +586,8 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(prodCluster),
 		parsertest.Success("Namespace resource not selected",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(devCluster, "namespaces/bar", nil),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(devCluster, "namespaces/bar", nil),
 				),
 			},
 			cluster(prodCluster, prodLabel),
@@ -675,12 +599,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Namespace selected",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(prodCluster, "namespaces/bar", prodSelectorAnnotationInlined,
-						fake.RoleBindingObject(inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(prodCluster, "namespaces/bar", prodSelectorAnnotationInlined,
+						fake.RoleBindingObject(testoutput.InCluster(prodCluster), testoutput.Source("namespaces/bar/rolebinding.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -700,10 +624,10 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Cluster resource selected",
 			&namespaceconfig.AllConfigs{
-				ClusterConfig: clusterConfig(
-					fake.ClusterRoleBindingObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("cluster/crb.yaml")),
+				ClusterConfig: testoutput.ClusterConfig(
+					fake.ClusterRoleBindingObject(prodSelectorAnnotationInlined, testoutput.InCluster(prodCluster), testoutput.Source("cluster/crb.yaml")),
 				),
-				Syncs: syncs(kinds.ClusterRoleBinding()),
+				Syncs: testoutput.Syncs(kinds.ClusterRoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -721,12 +645,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Abstract Namespace resouce selected",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(prodCluster, "namespaces/foo/bar", nil,
-						fake.ConfigMapObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("namespaces/foo/configmap.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(prodCluster, "namespaces/foo/bar", nil,
+						fake.ConfigMapObject(prodSelectorAnnotationInlined, testoutput.InCluster(prodCluster), testoutput.Source("namespaces/foo/configmap.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.ConfigMap()),
+				Syncs: testoutput.Syncs(kinds.ConfigMap()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -738,12 +662,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(prodCluster),
 		parsertest.Success("Colliding resources selected to different clusters may coexist",
 			&namespaceconfig.AllConfigs{
-				NamespaceConfigs: namespaceConfigs(
-					namespaceConfig(devCluster, "namespaces/bar", nil,
-						fake.RoleBindingObject(devSelectorAnnotationInlined, inCluster(devCluster), source("namespaces/bar/rolebinding-2.yaml")),
+				NamespaceConfigs: testoutput.NamespaceConfigs(
+					testoutput.NamespaceConfig(devCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(devSelectorAnnotationInlined, testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding-2.yaml")),
 					),
 				),
-				Syncs: syncs(kinds.RoleBinding()),
+				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
