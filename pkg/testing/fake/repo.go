@@ -11,13 +11,6 @@ import (
 // RepoMutator modifies a Repo.
 type RepoMutator func(repo *nomosv1.Repo)
 
-// RepoMeta modifies the metadata of a Repo.
-func RepoMeta(opts ...object.MetaMutator) RepoMutator {
-	return func(repo *nomosv1.Repo) {
-		mutate(repo, opts...)
-	}
-}
-
 // RepoVersion sets the Spec.Version of a Repo.
 func RepoVersion(version string) RepoMutator {
 	return func(f *nomosv1.Repo) {
@@ -40,5 +33,10 @@ func RepoObject(opts ...RepoMutator) *nomosv1.Repo {
 
 // Repo returns a default Repo with sensible defaults.
 func Repo(opts ...RepoMutator) ast.FileObject {
-	return FileObject(RepoObject(opts...), "system/repo.yaml")
+	return RepoAtPath("system/repo.yaml", opts...)
+}
+
+// RepoAtPath returns a Repo at a specified path.
+func RepoAtPath(path string, opts ...RepoMutator) ast.FileObject {
+	return FileObject(RepoObject(opts...), path)
 }

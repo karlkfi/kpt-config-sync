@@ -141,7 +141,7 @@ func (p *Parser) GenerateVisitors(
 	p.errors = status.Append(p.errors, dErr)
 	visitors = append(visitors, tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()))
 
-	hierarchyConfigs := extractHierarchyConfigs(p.readSystemResources())
+	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
 
 	visitors = append(visitors, transform.NewSyncGenerator())

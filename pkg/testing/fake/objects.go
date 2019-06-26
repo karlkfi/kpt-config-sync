@@ -40,6 +40,15 @@ func NamespaceSelectorAtPath(path string, opts ...object.MetaMutator) ast.FileOb
 	return FileObject(NamespaceSelectorObject(opts...), path)
 }
 
+// ResourceQuotaObject initializes a ResouceQuota.
+func ResourceQuotaObject(opts ...object.MetaMutator) *corev1.ResourceQuota {
+	obj := &corev1.ResourceQuota{TypeMeta: toTypeMeta(kinds.ResourceQuota())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return obj
+}
+
 // RoleBindingObject initializes a RoleBinding.
 func RoleBindingObject(opts ...object.MetaMutator) *rbacv1alpha1.RoleBinding {
 	obj := &rbacv1alpha1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}
@@ -196,13 +205,18 @@ func ReplicaSet(opts ...object.MetaMutator) ast.FileObject {
 	return FileObject(obj, "namespaces/foo/replicaset.yaml")
 }
 
-// RoleAtPath returns an initialized Role in a FileObject.
-func RoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+// RoleObject initializes a Role.
+func RoleObject(opts ...object.MetaMutator) *rbac.Role {
 	obj := &rbac.Role{TypeMeta: toTypeMeta(kinds.Role())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
-	return ast.NewFileObject(obj, cmpath.FromSlash(path))
+	return obj
+}
+
+// RoleAtPath returns an initialized Role in a FileObject.
+func RoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+	return ast.NewFileObject(RoleObject(opts...), cmpath.FromSlash(path))
 }
 
 // Role returns a Role with a default file path.

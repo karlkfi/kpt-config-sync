@@ -15,7 +15,7 @@ func (m MetaMutator) Mutate(object *ast.FileObject) {
 	m(object.MetaObject())
 }
 
-// Namespace replaces the metadata.namesapce of the MetaObjectunder test.
+// Namespace replaces the metadata.namespace of the MetaObjectunder test.
 func Namespace(namespace string) MetaMutator {
 	return func(o metav1.Object) {
 		o.SetNamespace(namespace)
@@ -58,6 +58,15 @@ func Annotation(annotation, value string) MetaMutator {
 func Annotations(annotations map[string]string) MetaMutator {
 	return func(o metav1.Object) {
 		SetAnnotations(o, annotations)
+	}
+}
+
+// Mutations groups several MetaMutators into a single MetaMutator.
+func Mutations(mutations ...MetaMutator) MetaMutator {
+	return func(meta metav1.Object) {
+		for _, mutation := range mutations {
+			mutation(meta)
+		}
 	}
 }
 

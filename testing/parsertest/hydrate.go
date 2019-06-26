@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
@@ -81,12 +82,19 @@ func Success(name string, expected *namespaceconfig.AllConfigs, objects ...ast.F
 }
 
 // Failure represents a test case which is expected to fail with a single error code.
-//
-// TODO: Write method which allows specifying multiple errors, Failures().
 func Failure(name string, err string, objects ...ast.FileObject) TestCase {
 	return TestCase{
 		Name:    name,
 		Errors:  []string{err},
+		Objects: objects,
+	}
+}
+
+// Failures represents a test case which is expected to fail with multiple error codes.
+func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
+	return TestCase{
+		Name: name,
+		Errors: errs,
 		Objects: objects,
 	}
 }
@@ -119,7 +127,11 @@ func (pt Test) RunAll(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			parser := pt.NewParser(t)
 
-			objects := append(pt.DefaultObjects(), tc.Objects...)
+			var objects []ast.FileObject
+			if pt.DefaultObjects != nil {
+				objects = append(objects, pt.DefaultObjects()...)
+			}
+			objects = append(objects, tc.Objects...)
 			flatRoot := treetesting.BuildFlatTree(t, objects...)
 
 			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
@@ -153,7 +165,7 @@ func (pt Test) RunAll(t *testing.T) {
 				}
 
 				actual := outputVisitor.AllConfigs()
-				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty()); diff != "" {
+				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
 					t.Fatalf(diff)
 				}
 			}

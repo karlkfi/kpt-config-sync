@@ -12,7 +12,7 @@ import (
 
 // defaultMutations are the standard Meta set on all fake objects. All can be overwritten with mutators.
 //
-// Annotations and Lables required when constructing any Object or else gomock will complain the nil
+// Annotations and Labels required when constructing any Object or else gomock will complain the nil
 // and empty map are different. There is no other way to deal with this as the underlying
 // implementations outside of our control handle empty vs nil maps inconsistently. Explicitly
 // setting labels and annotations to empty map circumvents the issue.
