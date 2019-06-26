@@ -33,10 +33,8 @@ FOOCORP_NAMESPACES=(
   git::commit
 
   local ns
-  local commit_hash
-  commit_hash="$(git::hash)"
   for ns in "${FOOCORP_NAMESPACES[@]}"; do
-    wait::for -- namespaceconfig::sync_token_eq "${ns}" "${commit_hash}"
+    wait::for -- namespaceconfig::synced "${ns}"
   done
   for ns in "${ACME_NAMESPACES[@]}"; do
     wait::for -f -- kubectl get ns "${ns}"

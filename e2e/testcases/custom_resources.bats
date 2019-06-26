@@ -187,7 +187,6 @@ function teardown() {
   git::commit
 
   debug::log "Verify that clusteranvil (lbs: 10) is still on cluster, and not clusteranvil-heavier (lbs: 100)"
-  wait::for -t 30 -- namespaceconfig::sync_token_eq newer-prj "$(git::hash)"
   debug::log "ClusterAnvil events: $(kubectl get events | grep "ClusterAnvil")"
   wait::for -o "10" -t 30 -- \
     kubectl get clusteranvil ${resname} \

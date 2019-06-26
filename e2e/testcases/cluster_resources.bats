@@ -12,7 +12,15 @@ load "../lib/wait"
 setup() {
   setup::common
   setup::git::initialize
-  setup::git::init_acme
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo"
+
+  mkdir -p acme/system
+  cp -r /opt/testing/e2e/examples/acme/system acme
+
+  mkdir -p acme/cluster
+  git add -A
+  git::commit -a -m "Commit minimal repo contents."
 }
 
 teardown() {
@@ -29,6 +37,21 @@ function sync_token_eq() {
     echo "sync token is $stoken waiting for $expect"
     return 1
   fi
+}
+
+function resource_field_eq() {
+  local res="${1:-}"
+  local resname="${2:-}"
+  local jsonpath="${3:-}"
+  local expect="${4:-}"
+
+  # wait for resource creation
+  wait::for -t 20 -- kubectl get ${res} ${resname}
+
+  # check selection for correct value
+  local selection
+  selection=$(kubectl get ${res} ${resname} -ojson | jq -c "${jsonpath}")
+  [[ "$selection" == "$expect" ]] || debug::error "$selection != $expect"
 }
 
 function check_cluster_scoped_resource() {
@@ -49,13 +72,8 @@ function check_cluster_scoped_resource() {
   git::add ${YAML_DIR}/${res}${resext}-create.yaml ${respath}
   git::commit
 
-  # wait for resource creation
-  wait::for kubectl get ${res} ${resname}
-
   # check selection for correct value
-  local selection
-  selection=$(kubectl get ${res} ${resname} -ojson | jq -c "${jsonpath}")
-  [[ "$selection" == "$create" ]] || debug::error "$selection != $create"
+  wait::for -t 30 -- resource_field_eq ${res} ${resname} ${jsonpath} ${create}
 
   local resver
   resver=$(resource::resource_version ${res} e2e-test-${res})

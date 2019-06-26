@@ -15,3 +15,16 @@ function namespaceconfig::sync_token_eq() {
     return 1
   fi
 }
+
+# Check if a NamespaceConfig has .status.syncState=synced
+#
+# Arguments:
+#   namespace: the namespace name
+function namespaceconfig::synced() {
+  local namespace="${1:-}"
+  status="$(kubectl get namespaceconfig "${namespace}" -ojsonpath='{.status.syncState}')"
+  if [[ "$status" != "synced" ]]; then
+    echo "sync status is \"$status\" waiting for \"synced\""
+    return 1
+  fi
+}

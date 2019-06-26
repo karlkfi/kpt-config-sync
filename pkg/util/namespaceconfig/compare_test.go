@@ -49,21 +49,20 @@ var namespaceConfigEqualTestcases = []namespaceConfigEqualTestcase{
 		},
 		wantEqual: true,
 	},
-	// TODO(b/135766013): re-enable after fixing equality check.
-	//{
-	//	name: "different import token",
-	//	lhs: &v1.NamespaceConfig{
-	//		Spec: v1.NamespaceConfigSpec{
-	//			Token: "1234567890123456789012345678901234567890",
-	//		},
-	//	},
-	//	rhs: &v1.NamespaceConfig{
-	//		Spec: v1.NamespaceConfigSpec{
-	//			Token: "1234567890123456789012345678900000000000",
-	//		},
-	//	},
-	//	wantEqual: true,
-	//},
+	{
+		name: "different import token",
+		lhs: &v1.NamespaceConfig{
+			Spec: v1.NamespaceConfigSpec{
+				Token: "1234567890123456789012345678901234567890",
+			},
+		},
+		rhs: &v1.NamespaceConfig{
+			Spec: v1.NamespaceConfigSpec{
+				Token: "1234567890123456789012345678900000000000",
+			},
+		},
+		wantEqual: true,
+	},
 	{
 		name: "different import time",
 		lhs: &v1.NamespaceConfig{

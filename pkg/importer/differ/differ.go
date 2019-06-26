@@ -92,7 +92,8 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 	if current == nil {
 		d.errs = status.Append(d.errs, d.client.Create(ctx, desired))
 		return
-	} else if desired == nil {
+	}
+	if desired == nil {
 		d.errs = status.Append(d.errs, d.client.Delete(ctx, current))
 		return
 	}

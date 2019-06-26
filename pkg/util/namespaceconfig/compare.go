@@ -31,8 +31,6 @@ func NamespaceConfigsEqual(decoder decode.Decoder, lhs runtime.Object, rhs runti
 	metaEqual := compare.ObjectMetaEqual(l, r)
 	// We only care about the DeleteSyncedTime field in .spec; all the other fields are
 	// expected to change in between reconciles.
-	// TODO(b/135766013): fix e2e tests to expect namespaceconfigs to not always be updated every reconcile and then remove
-	//  the .spec.Token check.
-	namespaceConfigsEqual := resourceEqual && metaEqual && l.Spec.DeleteSyncedTime == r.Spec.DeleteSyncedTime && l.Spec.Token == r.Spec.Token
+	namespaceConfigsEqual := resourceEqual && metaEqual && l.Spec.DeleteSyncedTime == r.Spec.DeleteSyncedTime
 	return namespaceConfigsEqual, nil
 }
