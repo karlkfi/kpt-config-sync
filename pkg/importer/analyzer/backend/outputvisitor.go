@@ -144,21 +144,21 @@ func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 	} else {
 		spec = &v.allConfigs.ClusterConfig.Spec
 	}
-	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
+	spec.Resources = AppendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 
 // VisitObject implements Visitor
 func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	spec := &v.namespaceConfig[len(v.namespaceConfig)-1].Spec
-	spec.Resources = appendResource(spec.Resources, o.FileObject.Object)
+	spec.Resources = AppendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 
-// appendResource adds Object o to resources.
+// AppendResource adds Object o to resources.
 // GenericResources is grouped first by kind and then by version, and this method takes care of
 // adding any required groupings for the new object, or adding to existing groupings if present.
-func appendResource(resources []v1.GenericResources, o runtime.Object) []v1.GenericResources {
+func AppendResource(resources []v1.GenericResources, o runtime.Object) []v1.GenericResources {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	var gr *v1.GenericResources
 	for i := range resources {

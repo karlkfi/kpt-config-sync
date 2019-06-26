@@ -17,8 +17,8 @@ func DeploymentObject(opts ...object.MetaMutator) *appsv1.Deployment {
 	return result
 }
 
-// Deployment returns a Deployment in a fileObject.
+// Deployment returns a Deployment in a FileObject.
 func Deployment(dir string, opts ...object.MetaMutator) ast.FileObject {
 	relative := cmpath.FromSlash(dir).Join("deployment.yaml")
-	return fileObject(DeploymentObject(opts...), relative.SlashPath())
+	return FileObject(DeploymentObject(opts...), relative.SlashPath())
 }

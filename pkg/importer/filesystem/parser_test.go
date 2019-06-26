@@ -2,6 +2,7 @@ package filesystem_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -208,16 +210,6 @@ spec:
   - '*'
 `
 
-	aConfigMapTemplate = `
-kind: ConfigMap
-apiVersion: v1
-data:
-  {{.Namespace}}: {{.Attribute}}
-metadata:
-  name: {{.Name}}
-{{template "objectmetatemplate" .}}
-`
-
 	aReplicasetWithOwnerRefTemplate = `
 kind: ReplicaSet
 apiVersion: apps/v1
@@ -318,35 +310,6 @@ metadata:
   name: gke-1234
 `
 
-	aClusterRegistryClusterTemplate = `
-apiVersion: clusterregistry.k8s.io/v1alpha1
-kind: Cluster
-metadata:
-  name: {{.Name}}
-{{template "objectmetatemplate" .}}
-`
-
-	aClusterSelectorTemplate = `
-apiVersion: configmanagement.gke.io/v1
-kind: ClusterSelector
-metadata:
-  name: {{.Name}}
-spec:
-  selector:
-    matchLabels:
-      environment: prod
-`
-
-	aClusterSelectorWithEnvTemplate = `
-apiVersion: configmanagement.gke.io/v1
-kind: ClusterSelector
-metadata:
-  name: {{.Name}}
-spec:
-  selector:
-    matchLabels:
-      environment: {{.Environment}}
-`
 	anUndefinedResourceTemplate = `
 apiVersion: does.not.exist/v1
 kind: Nonexistent
@@ -389,14 +352,10 @@ var (
 	aClusterRoleBinding                = tpl("aClusterRoleBinding", aClusterRoleBindingTemplate)
 	aPodSecurityPolicy                 = tpl("aPodSecurityPolicyTemplate", aPodSecurityPolicyTemplate)
 	aReplicaSetWithOwnerRef            = tpl("aReplicaSetWithOwnerRef", aReplicasetWithOwnerRefTemplate)
-	aConfigMap                         = tpl("aConfigMap", aConfigMapTemplate)
 	aHierarchyConfig                   = tpl("aHierarchyConfig", aHierarchyConfigTemplate)
 	anEngineer                         = tpl("anEngineer", anEngineerTemplate)
 	anEngineerCRD                      = tpl("anEngineerCRD", anEngineerCRDTemplate)
 	aNode                              = tpl("aNode", aNodeTemplate)
-	aClusterRegistryCluster            = tpl("aClusterRegistryCluster", aClusterRegistryClusterTemplate)
-	aClusterSelector                   = tpl("aClusterSelector", aClusterSelectorTemplate)
-	aClusterSelectorWithEnv            = tpl("aClusterSelector", aClusterSelectorWithEnvTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
 	anUndefinedResource                = tpl("AnUndefinedResource", anUndefinedResourceTemplate)
@@ -480,20 +439,6 @@ func rbs(ds ...templateData) []rbacv1.RoleBinding {
 		o = append(o, rb(d))
 	}
 	return o
-}
-
-func crbPtr(d templateData) *rbacv1.ClusterRoleBinding {
-	s := d.apply(aClusterRoleBinding)
-	var o rbacv1.ClusterRoleBinding
-	mustParse(s, &o)
-	return &o
-}
-
-func cfgMapPtr(d templateData) *corev1.ConfigMap {
-	s := d.apply(aConfigMap)
-	var o corev1.ConfigMap
-	mustParse(s, &o)
-	return &o
 }
 
 type Configs struct {
@@ -1462,7 +1407,7 @@ spec:
 		expectedErrorCodes: []string{vet.IllegalNamespaceAnnotationErrorCode},
 	},
 	{
-		testName: "NamespaceSelector may not have ClusterSelector annotations",
+		testName: "NamespaceSelector may not have clusterSelector annotations",
 		testFiles: fstesting.FileContentMap{
 			"namespaces/bar/ns-selector.yaml": templateData{
 				Annotations: map[string]string{
@@ -1789,695 +1734,290 @@ func TestParser(t *testing.T) {
 	}
 }
 
-// TestParserPerClusterAddressing contains tests cases that use the per-cluster
-// addressing feature.  These test cases have been factored out into a separate
-// test function since the baseline setup is a bit long, and it gets stenciled
-// several times over.
-func TestParserPerClusterAddressing(t *testing.T) {
-	tests := []parserTestCase{
-		{
-			// Baseline test case: the selector matches the cluster labels, and
-			// all resources are targeted to that selector.  This should yield
-			// a set of config documents that are all present and all fully
-			// annotated as appropriate.
-			testName:    "Cluster filter, all resources selected",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{
-					Name: "bar",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "rbac.authorization.k8s.io",
-							Kind:  "ClusterRoleBinding",
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: runtime.Object(
-												&rbacv1.ClusterRoleBinding{
-													TypeMeta: metav1.TypeMeta{
-														APIVersion: "rbac.authorization.k8s.io/v1",
-														Kind:       "ClusterRoleBinding",
-													},
-													ObjectMeta: metav1.ObjectMeta{
-														Name: "job-creators1",
-														Annotations: map[string]string{
-															v1.ClusterNameAnnotationKey:     "cluster-1",
-															v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-														},
-													},
-													Subjects: []rbacv1.Subject{{
-														Kind:     "Group",
-														APIGroup: "rbac.authorization.k8s.io",
-														Name:     "bob@acme.com",
-													},
-													},
-													RoleRef: rbacv1.RoleRef{
-														Kind:     "ClusterRole",
-														APIGroup: "rbac.authorization.k8s.io",
-														Name:     "job-creator",
-													},
-												},
-											),
-										},
-									},
-								},
-							},
-						},
-					},
-				}),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/bar",
-					&Configs{
-						RoleBindingsV1: []rbacv1.RoleBinding{
-							{
-								TypeMeta: metav1.TypeMeta{
-									APIVersion: "rbac.authorization.k8s.io/v1",
-									Kind:       "RoleBinding",
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "job-creators",
-									Annotations: map[string]string{
-										v1.ClusterNameAnnotationKey:     "cluster-1",
-										v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-										v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
-									},
-								},
-								Subjects: []rbacv1.Subject{{
-									Kind:     "Group",
-									APIGroup: "rbac.authorization.k8s.io",
-									Name:     "bob@acme.com",
-								},
-								},
-								RoleRef: rbacv1.RoleRef{
-									Kind:     "Role",
-									APIGroup: "rbac.authorization.k8s.io",
-									Name:     "job-creator",
-								},
-							},
-						},
-					},
-					/* Labels */
-					nil,
-					/* Annotations */
-					map[string]string{
-						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-					}),
-			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
-		},
-		{
-			testName:    "Generic resource in Abstract Namespace",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// System dir
-
-				"system/configmap-config.yaml": templateData{
-					Kind:          "ConfigMap",
-					HierarchyMode: "inherit",
-				}.apply(aHierarchyConfig),
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/foo/bar/bar.yaml": templateData{
-					Name: "bar",
-				}.apply(aNamespace),
-				"namespaces/foo/configmap.yaml": templateData{
-					Name:      "cfg",
-					Namespace: "key",
-					Attribute: "value",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aConfigMap),
-				"namespaces/foo/configmap2.yaml": templateData{
-					Name:      "cfg-excluded",
-					Namespace: "key",
-					Attribute: "value",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-2",
-					},
-				}.apply(aConfigMap),
-			},
-			expectedClusterConfig:    createClusterConfig(),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/foo/bar",
-					&Configs{
-						Resources: []v1.GenericResources{
-							{
-								Group: "",
-								Kind:  "ConfigMap",
-								Versions: []v1.GenericVersionResources{
-									{
-										Version: "v1",
-										Objects: []runtime.RawExtension{
-											{
-												Object: runtime.Object(
-													cfgMapPtr(templateData{
-														Name:      "cfg",
-														Namespace: "key",
-														Attribute: "value",
-														Annotations: map[string]string{
-															v1.ClusterNameAnnotationKey:     "cluster-1",
-															v1.SourcePathAnnotationKey:      "namespaces/foo/configmap.yaml",
-															v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-														},
-													}),
-												),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					/* Labels */
-					nil,
-					/* Annotations */
-					map[string]string{
-						v1.ClusterNameAnnotationKey: "cluster-1",
-					}),
-			},
-			expectedSyncs: singleSyncMap(corev1.SchemeGroupVersion.Group, "ConfigMap"),
-		},
-		{
-			// When cluster selector doesn't match, nothing (except for top-level dir) is created.
-			testName: "Cluster filter, no resources selected",
-			// Note that cluster-2 is not part of the selector.
-			clusterName: "cluster-2",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{
-					Name: "bar",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig:    createClusterConfig(),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
-			expectedSyncs:            syncMap(),
-		},
-		{
-			// This shows how a namespace scoped resource doesn't get synced if
-			// its selector does not match.
-			testName:    "Namespace resource selector does not match",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{
-					Name: "bar",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aNamespace),
-				// This role binding is targeted to a different selector.
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-2",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "rbac.authorization.k8s.io",
-							Kind:  "ClusterRoleBinding",
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: runtime.Object(
-												crbPtr(templateData{
-													ID: "1",
-													Annotations: map[string]string{
-														v1.ClusterNameAnnotationKey:     "cluster-1",
-														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-													},
-												}),
-											),
-										},
-									},
-								},
-							},
-						},
-					},
-				}),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/bar",
-					&Configs{},
-					/* Labels */
-					nil,
-					/* Annotations */
-					map[string]string{
-						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-					}),
-			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
-		},
-		{
-			testName:    "If namespace is not selected, its resources are not selected either.",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				// Note the whole namespace won't match selector "sel-2".
-				"namespaces/bar/bar.yaml": templateData{
-					Name: "bar",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-2",
-					},
-				}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "rbac.authorization.k8s.io",
-							Kind:  "ClusterRoleBinding",
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: runtime.Object(
-												crbPtr(templateData{
-													ID: "1",
-													Annotations: map[string]string{
-														v1.ClusterNameAnnotationKey:     "cluster-1",
-														v1.SourcePathAnnotationKey:      "cluster/crb1.yaml",
-														v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-													},
-												}),
-											),
-										},
-									},
-								},
-							},
-						},
-					},
-				}),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{},
-			expectedSyncs: syncMap(
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
-		},
-		{
-			testName:    "Cluster resources not matching selector",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml": templateData{
-					Name: "bar",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{
-					Name: "role",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-1",
-					},
-				}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						"configmanagement.gke.io/cluster-selector": "sel-2",
-					},
-				}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig:    createClusterConfig(),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/bar",
-					&Configs{
-						RoleBindingsV1: rbs(
-							templateData{
-								Name: "job-creators",
-								Annotations: map[string]string{
-									v1.ClusterNameAnnotationKey:     "cluster-1",
-									v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-									v1.SourcePathAnnotationKey:      "namespaces/bar/rolebinding.yaml",
-								},
-							}),
-					},
-					/* Labels */
-					nil,
-					/* Annotations */
-					map[string]string{
-						v1.ClusterNameAnnotationKey:     "cluster-1",
-						v1.ClusterSelectorAnnotationKey: `{"kind":"ClusterSelector","apiVersion":"configmanagement.gke.io/v1","metadata":{"name":"sel-1","creationTimestamp":null},"spec":{"selector":{"matchLabels":{"environment":"prod"}}}}`,
-					}),
-			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-			),
-		},
-		{
-			testName:    "Resources without cluster selectors are never filtered out",
-			clusterName: "cluster-1",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name: "sel-1",
-				}.apply(aClusterSelector),
-				// Tree dir
-				"namespaces/bar/bar.yaml":         templateData{Name: "bar"}.apply(aNamespace),
-				"namespaces/bar/rolebinding.yaml": templateData{Name: "role"}.apply(aRoleBinding),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "rbac.authorization.k8s.io",
-							Kind:  "ClusterRoleBinding",
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: runtime.Object(
-												crbPtr(templateData{
-													ID: "1",
-													Annotations: map[string]string{
-														v1.ClusterNameAnnotationKey: "cluster-1",
-														v1.SourcePathAnnotationKey:  "cluster/crb1.yaml",
-													},
-												}),
-											),
-										},
-									},
-								},
-							},
-						},
-					},
-				}),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/bar",
-					&Configs{
-						RoleBindingsV1: rbs(
-							templateData{Name: "job-creators",
-								Annotations: map[string]string{
-									v1.ClusterNameAnnotationKey: "cluster-1",
-									v1.SourcePathAnnotationKey:  "namespaces/bar/rolebinding.yaml",
-								},
-							}),
-					},
-					/* Labels */
-					nil,
-					/* Annotations */
-					map[string]string{
-						v1.ClusterNameAnnotationKey: "cluster-1",
-					}),
-			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.RoleBinding().Group, kinds.RoleBinding().Kind),
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
-		},
-		{
-			// Look at Tree dir below for the meat of the test.
-			testName: "Quotas targeted to different clusters may coexist in a namespace",
-			testFiles: fstesting.FileContentMap{
-				// Cluster registry dir
-				"clusterregistry/cluster-1.yaml": templateData{
-					Name: "cluster-1",
-					Labels: map[string]string{
-						"environment": "prod",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/cluster-2.yaml": templateData{
-					Name: "cluster-2",
-					Labels: map[string]string{
-						"environment": "test",
-					},
-				}.apply(aClusterRegistryCluster),
-				"clusterregistry/sel-1.yaml": templateData{
-					Name:        "sel-1",
-					Environment: "prod",
-				}.apply(aClusterSelectorWithEnv),
-				"clusterregistry/sel-2.yaml": templateData{
-					Name:        "sel-2",
-					Environment: "test",
-				}.apply(aClusterSelectorWithEnv),
-				// Tree dir  The quota resources below are in the same directory,
-				// but targeted to a different cluster.
-				"namespaces/bar/quota-1.yaml": templateData{
-					ID: "1",
-					Annotations: map[string]string{
-						v1.ClusterSelectorAnnotationKey: "sel-1",
-					},
-				}.apply(aQuota),
-				"namespaces/bar/quota-2.yaml": templateData{
-					ID: "2",
-					Annotations: map[string]string{
-						v1.ClusterSelectorAnnotationKey: "sel-2",
-					},
-				}.apply(aQuota),
-				"namespaces/bar/ns.yaml": templateData{Name: "bar"}.apply(aNamespace),
-				// Cluster dir (cluster scoped objects).
-				"cluster/crb1.yaml": templateData{ID: "1"}.apply(aClusterRoleBinding),
-			},
-			expectedClusterConfig: createClusterConfigWithSpec(
-				v1.ClusterConfigName,
-				&v1.ClusterConfigSpec{
-					Resources: []v1.GenericResources{
-						{
-							Group: "rbac.authorization.k8s.io",
-							Kind:  "ClusterRoleBinding",
-							Versions: []v1.GenericVersionResources{
-								{
-									Version: "v1",
-									Objects: []runtime.RawExtension{
-										{
-											Object: runtime.Object(
-												crbPtr(templateData{
-													ID: "1",
-													Annotations: map[string]string{
-														v1.SourcePathAnnotationKey: "cluster/crb1.yaml",
-													},
-												}),
-											),
-										},
-									},
-								},
-							},
-						},
-					},
-				}),
-			expectedCRDClusterConfig: createCRDClusterConfig(),
-			expectedNamespaceConfigs: map[string]v1.NamespaceConfig{
-				"bar": createPNWithMeta("namespaces/bar",
-					/* Configs */
-					nil,
-					/* Labels */
-					nil,
-					/* Annotations */
-					nil),
-			},
-			expectedSyncs: syncMap(
-				makeSync(kinds.ClusterRoleBinding().Group, kinds.ClusterRoleBinding().Kind),
-			),
-		},
-	}
-	for _, test := range tests {
-		test.testFiles["system/repo.yaml"] = aRepo
-		t.Run(test.testName, test.Run)
-	}
+func clusterSelectorAnnotation(value string) object.MetaMutator {
+	return object.Annotation(v1.ClusterSelectorAnnotationKey, value)
 }
 
-func TestParserVet(t *testing.T) {
-	test := parsertest.Test{
-		NewParser: parsertest.NewParser,
-		DefaultObjects: []ast.FileObject{
-			fake.Repo(),
-		},
-		TestCases: []parsertest.TestCase{
-			parsertest.Failure("A subdir of system is an error",
-				vet.IllegalSubdirectoryErrorCode,
-				fake.HierarchyConfigAtPath("system/sub/hc.yaml")),
-			parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
-				vet.IllegalLabelDefinitionErrorCode,
-				fake.HierarchyConfigAtPath("system/hc.yaml",
-					fake.HierarchyConfigMeta(object.Label("configmanagement.gke.io/illegal-label", "true"))),
-			),
-			parsertest.Failure("Objects in non-namespaces/ with an invalid annotation is an error",
-				vet.IllegalAnnotationDefinitionErrorCode,
-				fake.HierarchyConfigAtPath("system/hc.yaml",
-					fake.HierarchyConfigMeta(object.Annotation("configmanagement.gke.io/illegal-annotation", "true"))),
-			),
-		},
+func inlinedClusterSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) object.MetaMutator {
+	content, err := json.Marshal(selector)
+	if err != nil {
+		t.Error(err)
 	}
+	return object.Annotation(v1.ClusterSelectorAnnotationKey, string(content))
+}
+
+func cluster(name string, opts ...object.MetaMutator) ast.FileObject {
+	mutators := append(opts, object.Name(name))
+	return fake.Cluster(mutators...)
+}
+
+func clusterSelectorObject(name, key, value string) *v1.ClusterSelector {
+	obj := fake.ClusterSelectorObject(object.Name(name))
+	obj.Spec.Selector.MatchLabels = map[string]string{key: value}
+	return obj
+}
+
+func inlinedSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) object.MetaMutator {
+	return inlinedClusterSelectorAnnotation(t, selector)
+}
+
+func inCluster(clusterName string) object.MetaMutator {
+	return object.Annotation(v1.ClusterNameAnnotationKey, clusterName)
+}
+
+func source(path string) object.MetaMutator {
+	return object.Annotation(v1.SourcePathAnnotationKey, path)
+}
+
+// clusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
+// cluster-scoped runtime.Objects.
+func clusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
+	config := fake.ClusterConfigObject(fake.ClusterConfigMeta())
+	config.Spec.Resources = genericResources(objects...)
+	return config
+}
+
+// namespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
+// hydrated runtime.Objects for that Namespace.
+func namespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ...runtime.Object) v1.NamespaceConfig {
+	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(inCluster(clusterName), source(dir)))
+	config.Name = cmpath.FromSlash(dir).Base()
+	config.Spec.Resources = genericResources(objects...)
+	if opt != nil {
+		opt(config)
+	}
+	return *config
+}
+
+// namespaceConfigs turns a list of NamespaceConfigs into the map AllConfigs requires.
+func namespaceConfigs(ncs ...v1.NamespaceConfig) map[string]v1.NamespaceConfig {
+	result := map[string]v1.NamespaceConfig{}
+	for _, nc := range ncs {
+		result[nc.Name] = nc
+	}
+	return result
+}
+
+// genericResources convers a list of runtime.Objects to the GenericResources array required for
+// AllConfigs.
+func genericResources(objects ...runtime.Object) []v1.GenericResources {
+	var result []v1.GenericResources
+	for _, obj := range objects {
+		result = backend.AppendResource(result, obj)
+	}
+	return result
+}
+
+// syncs generates the sync map to be put in AllConfigs.
+func syncs(gvks ...schema.GroupVersionKind) map[string]v1.Sync {
+	result := map[string]v1.Sync{}
+	for _, gvk := range gvks {
+		result[groupKind(gvk)] = *fake.SyncObject(gvk.GroupKind())
+	}
+	return result
+}
+
+// groupKind factors out the two-line operation of getting the GroupKind string from a
+// GroupVersionKind. The GroupKind.String() method has a pointer receiver, so
+// gvk.GroupKind.String() is an error.
+func groupKind(gvk schema.GroupVersionKind) string {
+	gk := gvk.GroupKind()
+	return strings.ToLower(gk.String())
+}
+
+// Test how the parser handles ClusterSelectors
+func TestParseClusterSelector(t *testing.T) {
+	prodCluster := "cluster-1"
+	devCluster := "cluster-2"
+
+	prodSelectorName := "sel-1"
+	prodLabel := object.Label("environment", "prod")
+	prodSelectorObject := func() *v1.ClusterSelector {
+		return clusterSelectorObject(prodSelectorName, "environment", "prod")
+	}
+	prodSelectorAnnotation := clusterSelectorAnnotation(prodSelectorName)
+	prodSelectorAnnotationInlined := inlinedSelectorAnnotation(t, prodSelectorObject())
+
+	devSelectorName := "sel-2"
+	devLabel := object.Label("environment", "dev")
+	devSelectorObject := func() *v1.ClusterSelector {
+		return clusterSelectorObject(devSelectorName, "environment", "dev")
+	}
+	devSelectorAnnotation := clusterSelectorAnnotation(devSelectorName)
+	devSelectorAnnotationInlined := inlinedSelectorAnnotation(t, devSelectorObject())
+
+	test := parsertest.VetTest(
+		parsertest.Success("Resource without selector always exists 1",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(prodCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.RoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(prodCluster),
+		parsertest.Success("Resource without selector always exists 2",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(devCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(inCluster(devCluster), source("namespaces/bar/rolebinding.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.RoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(devCluster),
+		parsertest.Success("Namespace resource selected",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(prodCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.RoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
+		).ForCluster(prodCluster),
+		parsertest.Success("Namespace resource not selected",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(devCluster, "namespaces/bar", nil),
+				),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
+		).ForCluster(devCluster),
+		parsertest.Success("Namespace selected",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(prodCluster, "namespaces/bar", prodSelectorAnnotationInlined,
+						fake.RoleBindingObject(inCluster(prodCluster), source("namespaces/bar/rolebinding.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.RoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar", prodSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(prodCluster),
+		parsertest.Success("Namespace not selected",
+			nil,
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar", prodSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(devCluster),
+		parsertest.Success("Cluster resource selected",
+			&namespaceconfig.AllConfigs{
+				ClusterConfig: clusterConfig(
+					fake.ClusterRoleBindingObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("cluster/crb.yaml")),
+				),
+				Syncs: syncs(kinds.ClusterRoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.ClusterRoleBinding(prodSelectorAnnotation),
+		).ForCluster(prodCluster),
+		parsertest.Success("Cluster resource not selected",
+			nil,
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.ClusterRoleBinding(prodSelectorAnnotation),
+		).ForCluster(devCluster),
+		parsertest.Success("Abstract Namespace resouce selected",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(prodCluster, "namespaces/foo/bar", nil,
+						fake.ConfigMapObject(prodSelectorAnnotationInlined, inCluster(prodCluster), source("namespaces/foo/configmap.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.ConfigMap()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.HierarchyConfig(fake.HierarchyConfigResource(kinds.ConfigMap(), v1.HierarchyModeInherit)),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/foo/bar"),
+			fake.ConfigMapAtPath("namespaces/foo/configmap.yaml", prodSelectorAnnotation),
+		).ForCluster(prodCluster),
+		parsertest.Success("Colliding resources selected to different clusters may coexist",
+			&namespaceconfig.AllConfigs{
+				NamespaceConfigs: namespaceConfigs(
+					namespaceConfig(devCluster, "namespaces/bar", nil,
+						fake.RoleBindingObject(devSelectorAnnotationInlined, inCluster(devCluster), source("namespaces/bar/rolebinding-2.yaml")),
+					),
+				),
+				Syncs: syncs(kinds.RoleBinding()),
+			},
+			cluster(prodCluster, prodLabel),
+			cluster(devCluster, devLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+			fake.FileObject(devSelectorObject(), "clusterregistry/cs.yaml"),
+
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", prodSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-2.yaml", devSelectorAnnotation),
+		).ForCluster(devCluster),
+		parsertest.Failure(
+			"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
+			vet.ObjectHasUnknownClusterSelectorCode,
+			fake.Namespace("namespaces/foo", clusterSelectorAnnotation("does-not-exist")),
+		),
+		parsertest.Failure(
+			"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
+			vet.ObjectHasUnknownClusterSelectorCode,
+			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
+		))
 
 	test.RunAll(t)
 }
 
-func ClusterSelectorAnnotation(value string) object.MetaMutator {
-	return object.Annotation(v1.ClusterSelectorAnnotationKey, value)
-}
-
-func TestParserPerClusterAddressingVet(t *testing.T) {
-	test := parsertest.Test{
-		NewParser: parsertest.NewParser,
-		DefaultObjects: []ast.FileObject{
-			fake.Repo(),
-		},
-		TestCases: []parsertest.TestCase{
-			parsertest.Failure(
-				"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
-				vet.ObjectHasUnknownClusterSelectorCode,
-				fake.Namespace("namespaces/foo", ClusterSelectorAnnotation("does-not-exist")),
-			),
-			parsertest.Failure(
-				"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
-				vet.ObjectHasUnknownClusterSelectorCode,
-				fake.ClusterRole(ClusterSelectorAnnotation("does-not-exist")),
-			),
-		},
-	}
+func TestParserVet(t *testing.T) {
+	test := parsertest.VetTest(
+		parsertest.Failure("A subdir of system is an error",
+			vet.IllegalSubdirectoryErrorCode,
+			fake.HierarchyConfigAtPath("system/sub/hc.yaml")),
+		parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
+			vet.IllegalLabelDefinitionErrorCode,
+			fake.HierarchyConfigAtPath("system/hc.yaml",
+				fake.HierarchyConfigMeta(object.Label("configmanagement.gke.io/illegal-label", "true"))),
+		),
+		parsertest.Failure("Objects in non-namespaces/ with an invalid annotation is an error",
+			vet.IllegalAnnotationDefinitionErrorCode,
+			fake.HierarchyConfigAtPath("system/hc.yaml",
+				fake.HierarchyConfigMeta(object.Annotation("configmanagement.gke.io/illegal-annotation", "true"))),
+		))
 
 	test.RunAll(t)
 }

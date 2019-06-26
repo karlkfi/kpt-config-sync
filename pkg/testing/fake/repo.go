@@ -40,5 +40,5 @@ func RepoObject(opts ...RepoMutator) *nomosv1.Repo {
 
 // Repo returns a default Repo with sensible defaults.
 func Repo(opts ...RepoMutator) ast.FileObject {
-	return fileObject(RepoObject(opts...), "system/repo.yaml")
+	return FileObject(RepoObject(opts...), "system/repo.yaml")
 }

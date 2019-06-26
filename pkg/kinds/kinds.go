@@ -138,6 +138,11 @@ func NetworkPolicy() schema.GroupVersionKind {
 	return networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy")
 }
 
+// ConfigMap returns the canconical ConfigMap GroupVersionKind
+func ConfigMap() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("ConfigMap")
+}
+
 // ConfigManagement returns the GroupVersionKind for ConfigManagement, an object
 // that does not have other representation than a CRD in the operator library.
 func ConfigManagement() schema.GroupVersionKind {

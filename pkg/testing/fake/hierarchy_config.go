@@ -30,7 +30,7 @@ func HierarchyConfigResource(gvk schema.GroupVersionKind, mode v1.HierarchyModeT
 	}
 }
 
-// HierarchyConfig initializes  HierarchyConfig in a fileObject.
+// HierarchyConfig initializes  HierarchyConfig in a FileObject.
 func HierarchyConfig(opts ...HierarchyConfigMutator) ast.FileObject {
 	return HierarchyConfigAtPath("system/hc.yaml", opts...)
 }
@@ -43,5 +43,5 @@ func HierarchyConfigAtPath(path string, opts ...HierarchyConfigMutator) ast.File
 		opt(result)
 	}
 
-	return fileObject(result, path)
+	return FileObject(result, path)
 }

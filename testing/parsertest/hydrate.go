@@ -5,12 +5,15 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 )
@@ -33,6 +36,26 @@ type TestCase struct {
 
 	// Errors is the errors the test case expects, if any.
 	Errors []string
+
+	// ClusterName is the name of the cluster this test case is for.
+	ClusterName string
+}
+
+// ForCluster modifies this TestCase to be applied to a specific cluster.
+func (tc TestCase) ForCluster(clusterName string) TestCase {
+	tc.ClusterName = clusterName
+	return tc
+}
+
+// VetTest performs the sensible defaults for testing most parser vetting and hydrating behavior.
+func VetTest(testCases ...TestCase) Test {
+	return Test{
+		NewParser: NewParser,
+		DefaultObjects: func() []ast.FileObject {return []ast.FileObject{
+			fake.Repo(),
+		}},
+		TestCases: testCases,
+	}
 }
 
 // Test is a suite of tests to run on Parser's vetting and hydration functionality.
@@ -42,16 +65,24 @@ type Test struct {
 	NewParser func(t *testing.T) *filesystem.Parser
 
 	// DefaultObjects is the list of objects implicitly included in every test case.
-	DefaultObjects []ast.FileObject
+	DefaultObjects func() []ast.FileObject
 
 	// TestCases is the list of test cases to run.
 	TestCases []TestCase
 }
 
+// Success represents a test case which is expected to hydrate successfully.
+func Success(name string, expected *namespaceconfig.AllConfigs, objects ...ast.FileObject) TestCase {
+	return TestCase{
+		Name: name,
+		Expected: expected,
+		Objects: objects,
+	}
+}
+
 // Failure represents a test case which is expected to fail with a single error code.
 //
 // TODO: Write method which allows specifying multiple errors, Failures().
-// TODO: Write Success() function for when parsing succeeds.
 func Failure(name string, err string, objects ...ast.FileObject) TestCase {
 	return TestCase{
 		Name:    name,
@@ -88,21 +119,41 @@ func (pt Test) RunAll(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			parser := pt.NewParser(t)
 
-			objects := append(pt.DefaultObjects, tc.Objects...)
+			objects := append(pt.DefaultObjects(), tc.Objects...)
 			flatRoot := treetesting.BuildFlatTree(t, objects...)
 
 			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
 			outputVisitor := backend.NewOutputVisitor()
 			visitors = append(visitors, outputVisitor)
 
-			// TODO: Allow tests to use clusterName parameter.
-			parser.HydrateRoot(visitors, "", time.Time{}, "")
+			parser.HydrateRoot(visitors, "", time.Time{}, tc.ClusterName)
 
-			if tc.Errors != nil {
+			if tc.Errors != nil || parser.Errors() != nil {
 				vettesting.ExpectErrors(tc.Errors, parser.Errors(), t)
 			} else {
+				if tc.Expected == nil {
+					// Make error messages for expected successes more helpful when writing tests.
+					tc.Expected = &namespaceconfig.AllConfigs{}
+				}
+				if tc.Expected.Repo == nil {
+					// Reasonably assume a repo object exist.
+					tc.Expected.Repo = fake.RepoObject()
+				}
+				if tc.Expected.ClusterConfig == nil {
+					// Assume a default empty and valid ClusterConfig if none specified.
+					tc.Expected.ClusterConfig = fake.ClusterConfigObject()
+				}
+				if tc.Expected.CRDClusterConfig == nil {
+					// Assume a default empty and valid CRDClusterConfig if none specified.
+					tc.Expected.CRDClusterConfig = fake.CRDClusterConfigObject()
+				}
+				if tc.Expected.NamespaceConfigs == nil {
+					// Make NamespaceConfig errors more helpful when writing tests.
+					tc.Expected.NamespaceConfigs = map[string]v1.NamespaceConfig{}
+				}
+
 				actual := outputVisitor.AllConfigs()
-				if diff := cmp.Diff(tc.Expected, actual); diff != "" {
+				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty()); diff != "" {
 					t.Fatalf(diff)
 				}
 			}

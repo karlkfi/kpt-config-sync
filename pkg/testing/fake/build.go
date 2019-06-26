@@ -34,8 +34,8 @@ func mutate(object v1.Object, opts ...object.MetaMutator) {
 	}
 }
 
-// fileObject is a shorthand for converting to an ast.fileObject.
-func fileObject(object runtime.Object, path string) ast.FileObject {
+// FileObject is a shorthand for converting to an ast.FileObject.
+func FileObject(object runtime.Object, path string) ast.FileObject {
 	return ast.NewFileObject(object, cmpath.FromSlash(path))
 }
 
