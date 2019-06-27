@@ -3,16 +3,14 @@ package syntax
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
-	"github.com/google/nomos/pkg/testing/fake"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -72,15 +70,6 @@ func TestDisallowedFieldsValidator(t *testing.T) {
 			{
 				Name:       "deployment with deletionGracePeriodSeconds",
 				Object:     metaObject(kinds.Deployment(), &metav1.ObjectMeta{DeletionGracePeriodSeconds: &second}),
-				ShouldFail: true,
-			},
-			{
-				Name: "CRD with status",
-				Object: ast.NewFileObject(&v1beta1.CustomResourceDefinition{
-					Status: v1beta1.CustomResourceDefinitionStatus{
-						StoredVersions: []string{"v1"},
-					},
-				}, cmpath.FromSlash("cluster/crd.yaml")),
 				ShouldFail: true,
 			},
 		},

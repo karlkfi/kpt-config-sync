@@ -6,6 +6,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
+
+	"github.com/google/nomos/pkg/importer/id"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -179,6 +184,9 @@ func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllCo
 		p.errors = status.Append(p.errors, cErr)
 		return nil, p.errors
 	}
+	if p.errors != nil {
+		return nil, p.errors
+	}
 
 	flatRoot := p.ReadObjects(crds)
 	if p.errors != nil {
@@ -269,12 +277,29 @@ func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v
 			if err != nil {
 				continue
 			}
+
 			object := asDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObjectUnstructured(object, info.Object.(runtime.Unstructured), source.Path())
+			fileObject := ast.NewFileObject(object, source.Path())
+			isNomosObject := info.Object.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
+			if !isNomosObject && hasStatusField(info.Object.(runtime.Unstructured)) {
+				p.errors = status.Append(p.errors, status.From(vet.IllegalFieldsInConfigError(&fileObject, id.Status)))
+				return nil
+			}
 			fileObjects = append(fileObjects, fileObject)
 		}
 	}
 	return fileObjects
+}
+
+func hasStatusField(u runtime.Unstructured) bool {
+	// The following call will only error out if the UnstructuredContent returns something that is not a map.
+	// This has already been verified upstream.
+	m, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status")
+	if err != nil {
+		// This should never happen!!!
+		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
+	}
+	return ok && m != nil && len(m.(map[string]interface{})) != 0
 }
 
 // toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later

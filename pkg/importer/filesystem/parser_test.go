@@ -303,6 +303,33 @@ spec:
       storage: true
 `
 
+	anEngineerCRDWithStatusTemplate = `
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: engineers.employees
+spec:
+  group: employees
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: engineers
+    singular: engineer
+    kind: Engineer
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+status:
+  acceptedNames:
+    kind: Membership
+    listKind: MembershipList
+    plural: memberships
+    singular: membership
+  storedVersions:
+  - v1alpha1
+`
+
 	aNodeTemplate = `
 apiVersion: v1
 kind: Node
@@ -355,6 +382,7 @@ var (
 	aHierarchyConfig                   = tpl("aHierarchyConfig", aHierarchyConfigTemplate)
 	anEngineer                         = tpl("anEngineer", anEngineerTemplate)
 	anEngineerCRD                      = tpl("anEngineerCRD", anEngineerCRDTemplate)
+	anEngineerCRDWithStatus            = tpl("anEngineerCRD", anEngineerCRDWithStatusTemplate)
 	aNode                              = tpl("aNode", aNodeTemplate)
 	aNamespaceSelector                 = tpl("aNamespaceSelectorTemplate", aNamespaceSelectorTemplate)
 	aNamedRole                         = tpl("aNamedRole", aNamedRoleTemplate)
@@ -929,6 +957,13 @@ var parserTestCases = []parserTestCase{
 				}},
 			}),
 		expectedSyncs: singleSyncMap(kinds.CustomResourceDefinition().Group, kinds.CustomResourceDefinition().Kind),
+	},
+	{
+		testName: "CustomResourceDefinition with status field",
+		testFiles: fstesting.FileContentMap{
+			"cluster/engineer-crd.yaml": templateData{}.apply(anEngineerCRDWithStatus),
+		},
+		expectedErrorCodes: []string{vet.IllegalFieldsInConfigErrorCode},
 	},
 	{
 		testName: "Namespace dir with duplicate Roles",

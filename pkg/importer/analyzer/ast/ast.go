@@ -3,8 +3,6 @@ package ast
 import (
 	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -16,12 +14,9 @@ import (
 
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
-	// TODO(b/133510622): Only include the runtime.Unstructured version of the object and decode it to the typed version as
-	//  needed.
 	runtime.Object
 	// Path is the path this object has relative to Nomos Root, if known.
 	cmpath.Path
-	unstructured runtime.Unstructured
 }
 
 var _ id.Resource = &FileObject{}
@@ -29,12 +24,7 @@ var _ id.Resource = &FileObject{}
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
 func NewFileObject(object runtime.Object, source cmpath.Path) FileObject {
-	return NewFileObjectUnstructured(object, nil, source)
-}
-
-// NewFileObjectUnstructured returns an ast.FileObject with a specified runtime.Unstructured version of the object.
-func NewFileObjectUnstructured(object runtime.Object, unstructured runtime.Unstructured, source cmpath.Path) FileObject {
-	return FileObject{Object: object, unstructured: unstructured, Path: source}
+	return FileObject{Object: object, Path: source}
 }
 
 // ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
@@ -48,22 +38,6 @@ func ParseFileObject(object runtime.Object) *FileObject {
 // MetaObject converts the underlying object to a metav1.Object
 func (o *FileObject) MetaObject() metav1.Object {
 	return o.Object.(metav1.Object)
-}
-
-// Unstructured returns the unstructured version of the object if populated,
-// otherwise it converts the typed version to an unstructured version.
-func (o *FileObject) Unstructured() (runtime.Unstructured, error) {
-	if o.unstructured != nil {
-		return o.unstructured, nil
-	}
-	if u, ok := o.Object.(runtime.Unstructured); ok {
-		return u, nil
-	}
-	d, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o.Object)
-	if err != nil {
-		return nil, err
-	}
-	return &unstructured.Unstructured{Object: d}, nil
 }
 
 // GroupVersionKind unambiguously defines the kind of object.
