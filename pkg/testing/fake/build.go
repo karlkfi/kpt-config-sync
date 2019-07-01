@@ -39,6 +39,16 @@ func FileObject(object runtime.Object, path string) ast.FileObject {
 	return ast.NewFileObject(object, cmpath.FromSlash(path))
 }
 
+// UnstructuredObject initializes an unstructured.Unstructured.
+func UnstructuredObject(gvk schema.GroupVersionKind, opts ...object.MetaMutator) *unstructured.Unstructured {
+	o := &unstructured.Unstructured{}
+	o.GetObjectKind().SetGroupVersionKind(gvk)
+
+	defaultMutate(o)
+	mutate(o, opts...)
+	return o
+}
+
 // Unstructured initializes an Unstructured.
 func Unstructured(gvk schema.GroupVersionKind, opts ...object.MetaMutator) ast.FileObject {
 	return UnstructuredAtPath(gvk, "namespaces/obj.yaml", opts...)
@@ -46,11 +56,5 @@ func Unstructured(gvk schema.GroupVersionKind, opts ...object.MetaMutator) ast.F
 
 // UnstructuredAtPath returns an Unstructured with the specified gvk.
 func UnstructuredAtPath(gvk schema.GroupVersionKind, path string, opts ...object.MetaMutator) ast.FileObject {
-	o := ast.ParseFileObject(&unstructured.Unstructured{})
-	o.GetObjectKind().SetGroupVersionKind(gvk)
-
-	defaultMutate(o.MetaObject())
-	mutate(o.MetaObject(), opts...)
-	o.Path = cmpath.FromSlash(path)
-	return *o
+	return FileObject(UnstructuredObject(gvk, opts...), path)
 }
