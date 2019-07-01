@@ -4,30 +4,37 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const timeout = time.Second * 15
 
+// NewParser constructs a Parser from ParserOpt.
+func NewParser(parserOpt filesystem.ParserOpt) (*filesystem.Parser, error) {
+	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
+		return nil, status.InternalError.New("No root path specified.")
+	}
+
+	return filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt), nil
+}
+
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
 func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
-	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
-		return nil, status.InternalError.New("No root path specified.")
+	p, err := NewParser(parserOpt)
+	if err != nil {
+		return nil, err
 	}
 
 	config, err := restconfig.NewRestConfig()
@@ -35,9 +42,6 @@ func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig
 		glog.Fatalf("Failed to create rest config: %+v", err)
 	}
 
-	// TODO(119066037): Override the host in a way that doesn't involve overwriting defaults set internally in client-go.
-	clientcmd.ClusterDefaults = clientcmdapi.Cluster{Server: config.Host}
-	p := filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt)
 	if err := p.ValidateInstallation(); err != nil {
 		return nil, errors.Wrap(err, "Found issues")
 	}

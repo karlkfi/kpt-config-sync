@@ -74,15 +74,23 @@ func (v *ClusterSelectorAdder) Error() status.MultiError {
 	return v.errs
 }
 
-func getClusters(objects []*ast.ClusterRegistryObject) []clusterregistry.Cluster {
+// FilterClusters returns the list of Clusters in the passed array of FileObjects.
+func FilterClusters(objects []ast.FileObject) []clusterregistry.Cluster {
 	var clusters []clusterregistry.Cluster
 	for _, object := range objects {
-		switch o := object.Object.(type) {
-		case *clusterregistry.Cluster:
+		if o, ok := object.Object.(*clusterregistry.Cluster); ok {
 			clusters = append(clusters, *o)
 		}
 	}
 	return clusters
+}
+
+func getClusters(objects []*ast.ClusterRegistryObject) []clusterregistry.Cluster {
+	objs := make([]ast.FileObject, len(objects))
+	for i, obj := range objects {
+		objs[i] = obj.FileObject
+	}
+	return FilterClusters(objs)
 }
 
 // processClusterRegistryDir looks at all files in <root>/clusterregistry and

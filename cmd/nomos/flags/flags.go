@@ -42,7 +42,7 @@ var (
 	// Path says where the Nomos directory is
 	Path = repo.WorkingDirectoryPath
 
-	// Contexts contains the list of clusters that are targets of cross-cluster
+	// Contexts contains the list of .kubeconfig contexts that are targets of cross-cluster
 	// commands.
 	Contexts []string
 )

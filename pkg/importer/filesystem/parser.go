@@ -112,7 +112,7 @@ func (p *Parser) Errors() status.MultiError {
 func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *ast.FlatRoot {
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(),
-		ClusterRegistryObjects: p.readClusterRegistryResources(),
+		ClusterRegistryObjects: p.ReadClusterRegistryResources(),
 		ClusterObjects:         p.readClusterResources(false, crds...),
 		NamespaceObjects:       p.readNamespaceResources(crds...),
 	}
@@ -236,7 +236,8 @@ func (p *Parser) readClusterResources(stubMissing bool, crds ...*v1beta1.CustomR
 	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
 }
 
-func (p *Parser) readClusterRegistryResources() []ast.FileObject {
+// ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
+func (p *Parser) ReadClusterRegistryResources() []ast.FileObject {
 	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
 }
 

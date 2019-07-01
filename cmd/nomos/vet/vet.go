@@ -2,11 +2,16 @@ package vet
 
 import (
 	"os"
+	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,12 +36,23 @@ returns a non-zero error code if any issues are found.
 	Run: func(cmd *cobra.Command, args []string) {
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
-		clusterName := os.Getenv("CLUSTER_NAME")
 
-		_, err := parse.Parse(clusterName,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
+		opts := filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
+		parser, err := parse.NewParser(opts)
 		if err != nil {
 			util.PrintErrAndDie(err)
+		}
+
+		// TODO: Allow choosing which clusters to show errors for.
+		encounteredError := false
+		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
+			if err != nil {
+				util.PrintErrOrDie(errors.Wrapf(err, "errors in Cluster %q", clusterName))
+				encounteredError = true
+			}
+		})
+		if encounteredError {
+			os.Exit(1)
 		}
 	},
 }
