@@ -9,7 +9,7 @@
 #    will fail if you have not uploaded your new image.
 #
 
-ARG GOLANG_CONTAINER=golang:1.11.2-alpine
+ARG GOLANG_CONTAINER=golang:1.12.5-alpine
 
 # Environment to build the helper binaries from.
 FROM ${GOLANG_CONTAINER} AS tools-base
