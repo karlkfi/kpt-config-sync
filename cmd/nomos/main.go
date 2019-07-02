@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/google/nomos/cmd/nomos/hydrate"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/version"
@@ -33,6 +34,7 @@ var (
 
 func init() {
 	rootCmd.AddCommand(initialize.Cmd)
+	rootCmd.AddCommand(hydrate.Cmd)
 	rootCmd.AddCommand(vet.Cmd)
 	rootCmd.AddCommand(view.Cmd)
 	rootCmd.AddCommand(version.Cmd)

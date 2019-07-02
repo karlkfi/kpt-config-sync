@@ -44,14 +44,9 @@ returns a non-zero error code if any issues are found.
 			util.PrintErrAndDie(err)
 		}
 
-		allClusters := false
-		if flags.Clusters == nil {
-			allClusters = true
-		}
-
 		encounteredError := false
-		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
-			clusterEnabled := allClusters
+		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, _ *namespaceconfig.AllConfigs, err status.MultiError) {
+			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {
 					clusterEnabled = true

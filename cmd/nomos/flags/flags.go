@@ -58,3 +58,8 @@ func AddValidate(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&Validate, validateFlag, true,
 		`If true, use a schema to validate the Anthos Configuration Management repository.`)
 }
+
+// AllClusters returns true if all clusters should be processed.
+func AllClusters() bool {
+	return Clusters == nil
+}
