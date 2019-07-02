@@ -120,7 +120,7 @@ var Cmd = &cobra.Command{
 			util.PrintErrAndDie(err)
 		}
 		// TODO(b/136575755): Output full Kubernetes List for --flat.
-		content, err := json.MarshalIndent(unstructuredList["items"], "", "\t")
+		content, err := json.MarshalIndent(unstructuredList, "", "\t")
 		_, err = outFile.Write(content)
 	},
 }
