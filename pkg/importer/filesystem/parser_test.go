@@ -3,19 +3,10 @@ package filesystem_test
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/glog"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/resourcequota"
@@ -23,7 +14,6 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -48,14 +38,6 @@ func engineerCRD(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
 		},
 	}
 	return obj
-}
-
-type parserTestCase struct {
-	testName                 string
-	testFiles                fstesting.FileContentMap
-	expectedNamespaceConfigs map[string]v1.NamespaceConfig
-	expectedSyncs            map[string]v1.Sync
-	expectedErrorCodes       []string
 }
 
 func scopedResourceQuota(opts ...object.MetaMutator) *corev1.ResourceQuota {
@@ -386,67 +368,6 @@ func TestParserVetErrors(t *testing.T) {
 	)
 
 	test.RunAll(t)
-}
-
-func (tc *parserTestCase) Run(t *testing.T) {
-	d := newTestDir(t)
-	defer d.remove(t)
-
-	if glog.V(6) {
-		glog.Infof("Testcase: %+v", spew.Sdump(tc))
-	}
-
-	for k, v := range tc.testFiles {
-		d.createTestFile(k, v, t)
-	}
-
-	f := fstesting.NewTestClientGetter(t)
-	defer func() {
-		if err := f.Cleanup(); err != nil {
-			t.Fatal(errors.Wrap(err, "could not clean up"))
-		}
-	}()
-
-	var err error
-	rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
-	if err != nil {
-		t.Error(err)
-	}
-
-	p := filesystem.NewParser(
-		f,
-		filesystem.ParserOpt{
-			Vet:       true,
-			Validate:  true,
-			Extension: &filesystem.NomosVisitorProvider{},
-			RootPath:  rootPath,
-		},
-	)
-	actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{}, "")
-
-	vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
-	if mErr != nil || tc.expectedErrorCodes != nil {
-		// We expected there to be an error, so no need to do config validation
-		return
-	}
-
-	if tc.expectedNamespaceConfigs == nil {
-		tc.expectedNamespaceConfigs = testoutput.NamespaceConfigs()
-	}
-	if tc.expectedSyncs == nil {
-		tc.expectedSyncs = testoutput.Syncs()
-	}
-
-	expectedConfigs := &namespaceconfig.AllConfigs{
-		NamespaceConfigs: tc.expectedNamespaceConfigs,
-		ClusterConfig:    testoutput.ClusterConfig(),
-		CRDClusterConfig: testoutput.CRDClusterConfig(),
-		Syncs:            tc.expectedSyncs,
-		Repo:             fake.RepoObject(),
-	}
-	if diff := cmp.Diff(expectedConfigs, actualConfigs, resourcequota.ResourceQuantityEqual(), cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("Actual and expected configs didn't match: diff\n%v", diff)
-	}
 }
 
 func resourceQuotaObject(opts ...object.MetaMutator) *corev1.ResourceQuota {

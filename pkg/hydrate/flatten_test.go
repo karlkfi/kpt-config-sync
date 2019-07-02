@@ -27,7 +27,7 @@ func TestFlatten(t *testing.T) {
 			configs: &namespaceconfig.AllConfigs{},
 		},
 		{
-			name:    "one CRD",
+			name: "one CRD",
 			configs: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: testoutput.CRDClusterConfig(
 					fake.CustomResourceDefinitionObject(),
@@ -38,7 +38,7 @@ func TestFlatten(t *testing.T) {
 			},
 		},
 		{
-			name:    "one Cluster object",
+			name: "one Cluster object",
 			configs: &namespaceconfig.AllConfigs{
 				ClusterConfig: testoutput.ClusterConfig(
 					fake.ClusterRoleBindingObject(),
@@ -49,7 +49,7 @@ func TestFlatten(t *testing.T) {
 			},
 		},
 		{
-			name:    "one Namespaced object",
+			name: "one Namespaced object",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
 					"", "namespaces/bar", nil,
@@ -61,7 +61,7 @@ func TestFlatten(t *testing.T) {
 			},
 		},
 		{
-			name:    "two Namespaced objects",
+			name: "two Namespaced objects",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
 					"", "namespaces/bar", nil,
@@ -77,7 +77,7 @@ func TestFlatten(t *testing.T) {
 			},
 		},
 		{
-			name:    "one of each",
+			name: "one of each",
 			configs: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: testoutput.CRDClusterConfig(
 					fake.CustomResourceDefinitionObject(),

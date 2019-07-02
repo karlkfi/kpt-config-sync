@@ -6,15 +6,25 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -112,7 +122,13 @@ func TestEmptyDirectories(t *testing.T) {
 
 // TestParserPerClusterAddressingVet tests nomos vet validation errors.
 func TestFailOnInvalidYAML(t *testing.T) {
-	tests := []parserTestCase{
+	tests := []struct {
+		testName                 string
+		testFiles                fstesting.FileContentMap
+		expectedNamespaceConfigs map[string]v1.NamespaceConfig
+		expectedSyncs            map[string]v1.Sync
+		expectedErrorCodes       []string
+	}{
 		{
 			testName: "Defining invalid yaml is an error.",
 			testFiles: fstesting.FileContentMap{
@@ -123,11 +139,10 @@ func TestFailOnInvalidYAML(t *testing.T) {
 		{
 			testName: "No name is an error",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/foo/bar/role1.yaml": `
-kind: Role
+				"cluster/clusterrole.yaml": `
+kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 `,
-				"namespaces/foo/bar/ns.yaml": aNamespace("bar"),
 			},
 			expectedErrorCodes: []string{vet.MissingObjectNameErrorCode},
 		},
@@ -271,8 +286,8 @@ spec:
 			},
 		},
 	}
-	for _, test := range tests {
-		test.testFiles["system/repo.yaml"] = `
+	for _, tc := range tests {
+		tc.testFiles["system/repo.yaml"] = `
 kind: Repo
 apiVersion: configmanagement.gke.io/v1
 spec:
@@ -280,6 +295,66 @@ spec:
 metadata:
   name: repo
 `
-		t.Run(test.testName, test.Run)
+		t.Run(tc.testName, func(t *testing.T) {
+
+			d := newTestDir(t)
+			defer d.remove(t)
+
+			if glog.V(6) {
+				glog.Infof("Testcase: %+v", spew.Sdump(tc))
+			}
+
+			for k, v := range tc.testFiles {
+				d.createTestFile(k, v, t)
+			}
+
+			f := fstesting.NewTestClientGetter(t)
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
+
+			var err error
+			rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
+			if err != nil {
+				t.Error(err)
+			}
+
+			p := filesystem.NewParser(
+				f,
+				filesystem.ParserOpt{
+					Vet:       true,
+					Validate:  true,
+					Extension: &filesystem.NomosVisitorProvider{},
+					RootPath:  rootPath,
+				},
+			)
+			actualConfigs, mErr := p.Parse("", &namespaceconfig.AllConfigs{}, time.Time{}, "")
+
+			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
+			if mErr != nil || tc.expectedErrorCodes != nil {
+				// We expected there to be an error, so no need to do config validation
+				return
+			}
+
+			if tc.expectedNamespaceConfigs == nil {
+				tc.expectedNamespaceConfigs = testoutput.NamespaceConfigs()
+			}
+			if tc.expectedSyncs == nil {
+				tc.expectedSyncs = testoutput.Syncs()
+			}
+
+			expectedConfigs := &namespaceconfig.AllConfigs{
+				NamespaceConfigs: tc.expectedNamespaceConfigs,
+				ClusterConfig:    testoutput.ClusterConfig(),
+				CRDClusterConfig: testoutput.CRDClusterConfig(),
+				Syncs:            tc.expectedSyncs,
+				Repo:             fake.RepoObject(),
+			}
+			if diff := cmp.Diff(expectedConfigs, actualConfigs, resourcequota.ResourceQuantityEqual(), cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("Actual and expected configs didn't match: diff\n%v", diff)
+			}
+		})
 	}
 }
