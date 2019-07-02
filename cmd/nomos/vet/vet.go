@@ -16,6 +16,7 @@ import (
 )
 
 func init() {
+	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
 	flags.AddValidate(Cmd)
 }
@@ -43,11 +44,28 @@ returns a non-zero error code if any issues are found.
 			util.PrintErrAndDie(err)
 		}
 
-		// TODO: Allow choosing which clusters to show errors for.
+		allClusters := false
+		if flags.Clusters == nil {
+			allClusters = true
+		}
+
 		encounteredError := false
 		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
+			clusterEnabled := allClusters
+			for _, cluster := range flags.Clusters {
+				if clusterName == cluster {
+					clusterEnabled = true
+				}
+			}
+			if !clusterEnabled {
+				return
+			}
+
 			if err != nil {
-				util.PrintErrOrDie(errors.Wrapf(err, "errors in Cluster %q", clusterName))
+				if clusterName == "" {
+					clusterName = parse.UnregisteredCluster
+				}
+				util.PrintErrOrDie(errors.Wrapf(err, "errors for Cluster %q", clusterName))
 				encounteredError = true
 			}
 		})

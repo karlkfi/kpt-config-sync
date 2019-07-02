@@ -39,3 +39,14 @@ teardown() {
   ${NOMOS_BIN} init
   ${NOMOS_BIN} vet
 }
+
+@test "CLI Vet Multicluster" {
+  debug::log "Expect default to fail since there is a collision in prod-cluster"
+  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision
+
+  debug::log "Expect prod-cluster to fail since there is a collision"
+  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision --clusters=prod-cluster
+
+  debug::log "Expect dev-cluster to succeed since there is no collision"
+  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision --clusters=dev-cluster
+}
