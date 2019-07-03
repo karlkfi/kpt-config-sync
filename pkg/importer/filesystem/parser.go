@@ -3,12 +3,8 @@
 package filesystem
 
 import (
-	"os"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-
-	"github.com/google/nomos/pkg/importer/id"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/davecgh/go-spew/spew"
@@ -53,6 +49,7 @@ func init() {
 type Parser struct {
 	opts         ParserOpt
 	clientGetter genericclioptions.RESTClientGetter
+	reader       Reader
 	errors       status.MultiError
 }
 
@@ -73,6 +70,7 @@ type ParserOpt struct {
 func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) *Parser {
 	p := &Parser{
 		clientGetter: c,
+		reader:       &FilesystemReader{ClientGetter: c},
 		opts:         opts,
 	}
 	return p
@@ -224,72 +222,28 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
 }
 
 func (p *Parser) readSystemResources() []ast.FileObject {
-	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false)
+	p.errors = status.Append(p.errors, errs)
+	return result
 }
 
 func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
+	p.errors = status.Append(p.errors, errs)
+	return result
 }
 
-func (p *Parser) readClusterResources(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.
-	FileObject {
-	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
+func (p *Parser) readClusterResources(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
+	p.errors = status.Append(p.errors, errs)
+	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
 func (p *Parser) ReadClusterRegistryResources() []ast.FileObject {
-	return p.readResources(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
-}
-
-// readResources walks dir recursively, looking for resources, and builds FileInfos from them.
-func (p *Parser) readResources(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	// If there aren't any resources, skip builder, because builder treats that as an error.
-	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
-		// Return empty list if unable to read directory
-		return nil
-	} else if err != nil {
-		// If there was another error reading the directory, give up parsing the dir
-		p.errors = status.Append(p.errors, status.PathWrapf(err, dir.AbsoluteOSPath()))
-		return nil
-	}
-
-	visitors, err := resource.ExpandPathsToFileVisitors(
-		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, nil)
-	if err != nil {
-		p.errors = status.Append(p.errors, status.PathWrapf(err, dir.AbsoluteOSPath()))
-		return nil
-	}
-
-	var fileObjects []ast.FileObject
-	if len(visitors) > 0 {
-		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		builder := p.getBuilder(stubMissing, crds...)
-		result := builder.
-			Unstructured().
-			ContinueOnError().
-			FilenameParam(false, options).
-			Do()
-		fileInfos, err := result.Infos()
-		p.errors = status.Append(p.errors, status.APIServerWrapf(err, "failed to get resource infos"))
-		for _, info := range fileInfos {
-			// Assign relative path since that's what we actually need.
-			source, err := dir.Root().Rel(cmpath.FromOS(info.Source))
-			p.errors = status.Append(p.errors, err)
-			if err != nil {
-				continue
-			}
-
-			object := asDefaultVersionedOrOriginal(info.Object, info.Mapping)
-			fileObject := ast.NewFileObject(object, source.Path())
-			isNomosObject := info.Object.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
-			if !isNomosObject && hasStatusField(info.Object.(runtime.Unstructured)) {
-				p.errors = status.Append(p.errors, status.From(vet.IllegalFieldsInConfigError(&fileObject, id.Status)))
-				return nil
-			}
-			fileObjects = append(fileObjects, fileObject)
-		}
-	}
-	return fileObjects
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
+	p.errors = status.Append(p.errors, errs)
+	return result
 }
 
 func hasStatusField(u runtime.Unstructured) bool {
