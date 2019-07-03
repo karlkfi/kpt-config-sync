@@ -59,7 +59,7 @@ FOOCORP_NAMESPACES=(
   resource::check clusterrole pod-creator -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrolebinding -c 1
   resource::check clusterrolebinding namespace-readers -a "configmanagement.gke.io/managed=enabled"
-  resource::check_count -a "configmanagement.gke.io/managed=enabled" -r customresourcedefinition -c 1
+  resource::check customresourcedefinition fulfillmentcenters.foo-corp.com -a "configmanagement.gke.io/managed=enabled"
 
   # Namespace-scoped resources
   # audit

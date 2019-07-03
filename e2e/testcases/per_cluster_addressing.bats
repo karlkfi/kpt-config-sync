@@ -25,13 +25,20 @@ function add_clusterregistry_data() {
   debug::log "Add cluster, and cluster registry data"
   git::add \
     "${YAML_DIR}/clusterregistry-cluster-env-prod.yaml" \
-    acme/clusterregistry/cluster-1.yaml
+    acme/clusterregistry/cluster-prod.yaml
+  git::add \
+    "${YAML_DIR}/clusterregistry-cluster-env-test.yaml" \
+    acme/clusterregistry/cluster-test.yaml
+
   git::add \
     "${YAML_DIR}/clusterselector-env-prod.yaml" \
-    acme/clusterregistry/clusterselector-1.yaml
+    acme/clusterregistry/clusterselector-prod.yaml
+  git::add \
+    "${YAML_DIR}/clusterselector-env-test.yaml" \
+    acme/clusterregistry/clusterselector-test.yaml
   git::add \
     "${YAML_DIR}/clusterselector-env-other.yaml" \
-    acme/clusterregistry/clusterselector-2.yaml
+    acme/clusterregistry/clusterselector-other.yaml
   git::commit -m "Add cluster and cluster registry data"
 }
 
@@ -154,8 +161,8 @@ function get_cluster_name() {
 
   debug::log "Modify the cluster selector to select a different environment"
   git::update \
-    "${YAML_DIR}/clusterselector-env-test.yaml" \
-    acme/clusterregistry/clusterselector-1.yaml
+    "${YAML_DIR}/clusterselector-env-prod-2.yaml" \
+    acme/clusterregistry/clusterselector-prod.yaml
   git::commit -m "Modify the cluster selector to select a different environment"
 
   debug::log "Wait for bob-rolebinding to disappear from the namespace backend"
@@ -189,15 +196,6 @@ function get_cluster_name() {
   debug::log "Change the cluster name"
   wait::for -- kubectl patch configmanagement config-management --type=merge \
     -p '{"spec":{"clusterName": "test-cluster-env-test"}}'
-
-  debug::log "Change the cluster and selector to point to test"
-  git::update \
-    "${YAML_DIR}/clusterregistry-cluster-env-test.yaml" \
-    acme/clusterregistry/cluster-1.yaml
-  git::update \
-    "${YAML_DIR}/clusterselector-env-test.yaml" \
-    acme/clusterregistry/clusterselector-1.yaml
-  git::commit -m "Change cluster selector to selector-env-test"
 
   debug::log "Wait for bob-rolebinding to reappear in the backend namespace"
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding

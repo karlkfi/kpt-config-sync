@@ -1,7 +1,7 @@
 package validation
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -57,13 +57,11 @@ func (v *InputValidator) Error() status.MultiError {
 // VisitRoot gets the clusters and selectors stored in Root.Data and constructs coverage if vet is
 // enabled.
 func (v *InputValidator) VisitRoot(r *ast.Root) *ast.Root {
-	if v.vet {
-		clusters, err := selectors.GetClusters(r)
-		v.errs = status.Append(v.errs, err)
-		sels, err := selectors.GetSelectors(r)
-		v.errs = status.Append(v.errs, err)
-		v.coverage, v.errs = coverage.NewForCluster(clusters, sels)
-	}
+	clusters, err := selectors.GetClusters(r)
+	v.errs = status.Append(v.errs, err)
+	sels, err := selectors.GetSelectors(r)
+	v.errs = status.Append(v.errs, err)
+	v.coverage, v.errs = coverage.NewForCluster(clusters, sels)
 
 	return v.Base.VisitRoot(r)
 }
