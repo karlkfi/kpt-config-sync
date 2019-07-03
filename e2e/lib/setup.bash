@@ -75,6 +75,48 @@ setup::git::init_acme() {
   done
 }
 
+# Adds the contents of the acme directory to the git repository's root
+# 
+# This is part of the tests that evaluate behavior with undefined POLICY_DIR
+#
+setup::git::add_acme_contents_to_root() {
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo"
+
+  cp -r /opt/testing/e2e/examples/acme/* ./
+
+  git add -A
+  git commit -m "add files to root"
+  git push origin master:master -f
+  cd "$CWD"
+
+  local ns
+  for ns in "${ACME_NAMESPACES[@]}"; do
+    wait::for -- namespaceconfig::synced "${ns}"
+  done
+}
+
+# This removes the acme folder, leaving behind the other files in the project root
+# 
+# This is part of the tests that evaluate behavior with undefined POLICY_DIR
+#
+setup::git::remove_acme_folder() {
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo"
+
+  rm -r ./acme
+
+  git add -A
+  git commit -m "add files to root"
+  git push origin master:master -f
+  cd "$CWD"
+
+  local ns
+  for ns in "${ACME_NAMESPACES[@]}"; do
+    wait::for -- namespaceconfig::synced "${ns}"
+  done
+}
+
 # Record timing info, and implement the test filter. This is cheap, and all tests should do it.
 setup::common() {
   START_TIME=$(date +%s%3N)

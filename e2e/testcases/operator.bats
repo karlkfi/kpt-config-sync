@@ -57,3 +57,4 @@ teardown() {
   wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} config-management-system
   wait::for -t 30 -f -- kubectl get rolebindings -n backend branch-rolebinding
 }
+

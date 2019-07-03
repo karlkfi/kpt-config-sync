@@ -1,0 +1,19 @@
+#
+#  Note the absence of the POLICY_DIR field.  This is to engage Nomos' default behavior
+#  of searching for the cluster, namespaces, and systems directories at the git repository's
+#  root directory.
+#
+apiVersion: addons.sigs.k8s.io/v1alpha1
+kind: ConfigManagement
+metadata:
+  name: config-management
+  namespace: config-management-system
+spec:
+  channel: dev
+  enableAggregateNamespaceQuotas: true
+  clusterName: e2e-test-cluster
+  git:
+    syncRepo: git@test-git-server.config-management-system-test:/git-server/repos/sot.git
+    syncBranch: master
+    syncWait: 1
+    secretType: ssh
