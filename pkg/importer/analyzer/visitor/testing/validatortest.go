@@ -16,7 +16,7 @@ type ObjectValidatorTestCase struct {
 	Name       string
 	ShouldFail bool
 	Object     ast.FileObject
-	APIInfo    *discovery.APIInfo
+	APIInfo    discovery.Scoper
 }
 
 // ObjectValidatorTest defines a Validator which is initialized and run on each of the provided test

@@ -38,7 +38,7 @@ func newFakeDiscoveryClient(resources []*v1.APIResourceList) discovery.ServerRes
 	return &fakeDiscoveryClient{resources: resources}
 }
 
-func ToAPIInfo(t *testing.T, resources []*v1.APIResourceList) *utildiscovery.APIInfo {
+func ToAPIInfo(t *testing.T, resources []*v1.APIResourceList) utildiscovery.Scoper {
 	result, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +65,7 @@ func TestAPIInfoVisitor(t *testing.T) {
 	testCases := []struct {
 		name      string
 		resources []*v1.APIResourceList
-		expected  *utildiscovery.APIInfo
+		expected  utildiscovery.Scoper
 	}{
 		{
 			name:     "no server resources returns ephemeral resources",
@@ -84,7 +84,7 @@ func TestAPIInfoVisitor(t *testing.T) {
 
 			root := &ast.Root{}
 			root.Accept(tree.NewAPIInfoBuilderVisitor(client, transform.EphemeralResources()))
-			actual, err := utildiscovery.GetAPIInfo(root)
+			actual, err := utildiscovery.GetScoper(root)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -54,7 +54,7 @@ func resourceTypes(gvks map[schema.GroupVersionKind]bool,
 
 // ResourceScopes returns two slices representing the namespace and cluster scoped resource types with sync enabled.
 func ResourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Scheme,
-	apirs *discovery.APIInfo) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
+	scoper discovery.Scoper) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
 	rts, err := resourceTypes(gvks, scheme)
 	if err != nil {
 		return nil, nil, err
@@ -66,7 +66,7 @@ func ResourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Schem
 			// CRDs are handled in the CRD controller and shouldn't be handled in any of SubManager's controllers.
 			continue
 		}
-		switch apirs.GetScope(gvk) {
+		switch scoper.GetScope(gvk.GroupKind()) {
 		case discovery.NamespaceScope:
 			namespace[gvk] = obj
 		case discovery.ClusterScope:

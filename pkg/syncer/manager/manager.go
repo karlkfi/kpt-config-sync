@@ -17,7 +17,7 @@ type RestartableManager interface {
 	// Restart restarts the Manager and all the controllers it manages. The given schema.
 	// GroupVersionKinds will be added to the scheme.
 	// Returns if a restart actually happened and if there were any errors while doing it.
-	Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) (bool, error)
+	Restart(gvks map[schema.GroupVersionKind]bool, scoper discovery.Scoper, force bool) (bool, error)
 }
 
 var _ RestartableManager = &SubManager{}
@@ -58,7 +58,7 @@ func (m *SubManager) context() context.Context {
 }
 
 // Restart implements RestartableManager.
-func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo, force bool) (bool, error) {
+func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, scoper discovery.Scoper, force bool) (bool, error) {
 	if !force && !m.controllerBuilder.NeedsRestart(gvks) {
 		return false, nil
 	}
@@ -73,7 +73,7 @@ func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, apirs *disco
 	if err := m.controllerBuilder.UpdateScheme(m.GetScheme(), gvks); err != nil {
 		return true, errors.Wrap(err, "could not update the scheme")
 	}
-	if err := m.controllerBuilder.StartControllers(ctx, m, gvks, apirs); err != nil {
+	if err := m.controllerBuilder.StartControllers(ctx, m, gvks, scoper); err != nil {
 		return true, errors.Wrap(err, "could not start controllers")
 	}
 

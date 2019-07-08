@@ -42,11 +42,11 @@ func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
 }
 
 // BuildTreeWithAPIInfo builds the tree and sets the APIInfo in the root node.
-func BuildTreeWithAPIInfo(t *testing.T, apiInfo *discovery.APIInfo, objects ...ast.FileObject) *ast.Root {
+func BuildTreeWithAPIInfo(t *testing.T, apiInfo discovery.Scoper, objects ...ast.FileObject) *ast.Root {
 	t.Helper()
 
 	root := &ast.Root{}
-	err := discovery.AddAPIInfo(root, apiInfo)
+	err := discovery.AddScoper(root, apiInfo)
 	if err != nil {
 		t.Fatal(err)
 	}

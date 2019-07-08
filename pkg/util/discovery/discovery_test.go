@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -40,19 +41,11 @@ func TestAddCustomResource(t *testing.T) {
 				},
 			},
 			wantAPIInfo: &APIInfo{
-				groupKindVersions: map[schema.GroupKind][]string{
-					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: {"v1"},
+				groupVersionKinds: map[schema.GroupVersionKind]bool{
+					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: true,
 				},
-				resources: map[schema.GroupVersionKind]metav1.APIResource{
-					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: {
-						Name:         "anvils",
-						SingularName: "anvil",
-						Namespaced:   true,
-						Group:        "com.acme",
-						Kind:         "Anvil",
-						ShortNames:   []string{"av"},
-						Version:      "v1",
-					},
+				groupKindsNamespaced: map[schema.GroupKind]bool{
+					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: true,
 				},
 			},
 		},
@@ -81,19 +74,11 @@ func TestAddCustomResource(t *testing.T) {
 				},
 			},
 			wantAPIInfo: &APIInfo{
-				groupKindVersions: map[schema.GroupKind][]string{
-					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: {"v1"},
+				groupVersionKinds: map[schema.GroupVersionKind]bool{
+					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: true,
 				},
-				resources: map[schema.GroupVersionKind]metav1.APIResource{
-					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: {
-						Name:         "anvils",
-						SingularName: "anvil",
-						Namespaced:   true,
-						Group:        "com.acme",
-						Kind:         "Anvil",
-						ShortNames:   []string{"av"},
-						Version:      "v1",
-					},
+				groupKindsNamespaced: map[schema.GroupKind]bool{
+					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: true,
 				},
 			},
 		},
@@ -122,28 +107,12 @@ func TestAddCustomResource(t *testing.T) {
 				},
 			},
 			wantAPIInfo: &APIInfo{
-				groupKindVersions: map[schema.GroupKind][]string{
-					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: {"v1", "v2"},
+				groupVersionKinds: map[schema.GroupVersionKind]bool{
+					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: true,
+					schema.GroupVersionKind{Group: "com.acme", Version: "v2", Kind: "Anvil"}: true,
 				},
-				resources: map[schema.GroupVersionKind]metav1.APIResource{
-					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: {
-						Name:         "anvils",
-						SingularName: "anvil",
-						Namespaced:   true,
-						Group:        "com.acme",
-						Kind:         "Anvil",
-						ShortNames:   []string{"av"},
-						Version:      "v1",
-					},
-					schema.GroupVersionKind{Group: "com.acme", Version: "v2", Kind: "Anvil"}: {
-						Name:         "anvils",
-						SingularName: "anvil",
-						Namespaced:   true,
-						Group:        "com.acme",
-						Kind:         "Anvil",
-						ShortNames:   []string{"av"},
-						Version:      "v2",
-					},
+				groupKindsNamespaced: map[schema.GroupKind]bool{
+					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: true,
 				},
 			},
 		},
@@ -156,8 +125,73 @@ func TestAddCustomResource(t *testing.T) {
 				t.Fatal(errors.Wrap(err, "unexpected error initializing APIInfo"))
 			}
 			apiInfo.AddCustomResources(&tc.crd)
-			if !cmp.Equal(apiInfo, tc.wantAPIInfo, cmpopts.EquateEmpty(), cmp.AllowUnexported(APIInfo{})) {
-				t.Errorf("Unexpected APIInfo: %v", cmp.Diff(apiInfo, tc.wantAPIInfo))
+			if diff := cmp.Diff(tc.wantAPIInfo, apiInfo, cmpopts.EquateEmpty(), cmp.AllowUnexported(APIInfo{})); diff != "" {
+				t.Errorf("Unexpected APIInfo: %v", diff)
+			}
+		})
+	}
+}
+
+func TestAPIInfo_GroupVersionKinds(t *testing.T) {
+	testCases := []struct {
+		name          string
+		resourceLists []*metav1.APIResourceList
+		syncs         []*v1.Sync
+		expected      map[schema.GroupVersionKind]bool
+	}{
+		{
+			name: "Lists only mentioned gks",
+			resourceLists: []*metav1.APIResourceList{
+				{
+					GroupVersion: "rbac/v1",
+					APIResources: []metav1.APIResource{
+						{
+							Kind: "Role",
+						},
+					},
+				},
+				{
+					GroupVersion: "rbac/v2",
+					APIResources: []metav1.APIResource{
+						{
+							Kind: "Role",
+						},
+					},
+				},
+				{
+					GroupVersion: "apps/v1",
+					APIResources: []metav1.APIResource{
+						{
+							Kind: "Deployment",
+						},
+					},
+				},
+			},
+			syncs: []*v1.Sync{
+				{
+					Spec: v1.SyncSpec{
+						Group: "rbac",
+						Kind:  "Role",
+					},
+				},
+			},
+			expected: map[schema.GroupVersionKind]bool{
+				schema.GroupVersionKind{Group: "rbac", Version: "v1", Kind: "Role"}: true,
+				schema.GroupVersionKind{Group: "rbac", Version: "v2", Kind: "Role"}: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			api, err := NewAPIInfo(tc.resourceLists)
+			if err != nil {
+				t.Error(err)
+			}
+
+			result := api.GroupVersionKinds(tc.syncs...)
+			if diff := cmp.Diff(tc.expected, result); diff != "" {
+				t.Fatal(diff)
 			}
 		})
 	}

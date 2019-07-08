@@ -19,12 +19,15 @@ func withPath(o runtime.Object, path string) ast.FileObject {
 	return ast.NewFileObject(o, cmpath.FromSlash(path))
 }
 
-func withScope(r *ast.Root) *ast.Root {
+func withScope(t *testing.T, r *ast.Root) *ast.Root {
 	apiInfos, err := discovery.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
 	if err != nil {
-		panic("testdata error")
+		t.Error("testdata error")
 	}
-	discovery.AddAPIInfo(r, apiInfos)
+	err = discovery.AddScoper(r, apiInfos)
+	if err != nil {
+		t.Error(err)
+	}
 	return r
 }
 
@@ -41,42 +44,42 @@ func TestScope(t *testing.T) {
 		Testcases: []vt.MutatingVisitorTestcase{
 			{
 				Name:       "empty",
-				Input:      withScope(vt.Helper.EmptyRoot()),
+				Input:      withScope(t, vt.Helper.EmptyRoot()),
 				ExpectNoop: true,
 			},
 			{
 				Name:       "acme",
-				Input:      withScope(vt.Helper.AcmeRoot()),
+				Input:      withScope(t, vt.Helper.AcmeRoot()),
 				ExpectNoop: true,
 			},
 			{
 				Name:      "cluster resource at namespace scope",
-				Input:     withScope(treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "namespaces/cr.yaml"))),
+				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "namespaces/cr.yaml"))),
 				ExpectErr: true,
 			},
 			{
 				Name:       "cluster resource at cluster scope",
-				Input:      withScope(treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "cluster/cr.yaml"))),
+				Input:      withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "cluster/cr.yaml"))),
 				ExpectNoop: true,
 			},
 			{
 				Name:      "namespace resource at cluster scope",
-				Input:     withScope(treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "cluster/cr.yaml"))),
+				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "cluster/cr.yaml"))),
 				ExpectErr: true,
 			},
 			{
 				Name:       "namespace resource at namespace scope",
-				Input:      withScope(treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "namespaces/cr.yaml"))),
+				Input:      withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "namespaces/cr.yaml"))),
 				ExpectNoop: true,
 			},
 			{
 				Name:      "unknown namespace resource",
-				Input:     withScope(treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "namespaces/cr.yaml"))),
+				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "namespaces/cr.yaml"))),
 				ExpectErr: true,
 			},
 			{
 				Name:      "unknown cluster resource",
-				Input:     withScope(treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "cluster/cr.yaml"))),
+				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "cluster/cr.yaml"))),
 				ExpectErr: true,
 			},
 		},

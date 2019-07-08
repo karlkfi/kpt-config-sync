@@ -22,47 +22,54 @@ const (
 	UnknownScope = ObjectScope("unknown")
 )
 
-type apiInfoKey struct{}
+type scoperKey struct{}
 
-// AddAPIInfo returns a copy of the Extension with the APIInfo set.
-// The value is only accessible with GetAPIInfo.
-func AddAPIInfo(r *ast.Root, apiInfo *APIInfo) status.Error {
+// AddScoper returns a copy of the Extension with the APIInfo set.
+// The value is only accessible with GetScoper.
+func AddScoper(r *ast.Root, scoper Scoper) status.Error {
 	var err status.Error
-	r.Data, err = ast.Add(r.Data, apiInfoKey{}, apiInfo)
+	r.Data, err = ast.Add(r.Data, scoperKey{}, scoper)
 	return err
 }
 
-// GetAPIInfo gets the APIInfo from the Extension.
-func GetAPIInfo(r *ast.Root) (*APIInfo, status.Error) {
-	result, err := ast.Get(r.Data, apiInfoKey{})
+// GetScoper gets the APIInfo from the Extension.
+func GetScoper(r *ast.Root) (Scoper, status.Error) {
+	result, err := ast.Get(r.Data, scoperKey{})
 	if err != nil {
 		return nil, err
 	}
-	return result.(*APIInfo), nil
+	return result.(Scoper), nil
 }
 
-// APIInfo allows for looking up the discovery metav1.APIResource information by group version kind
+// APIInfo caches whether APIResources are Namespaced and which are synced.
 type APIInfo struct {
-	groupKindVersions map[schema.GroupKind][]string
-	resources         map[schema.GroupVersionKind]metav1.APIResource
+	// groupVersionKinds holds the set of known GroupVersionKinds
+	groupVersionKinds map[schema.GroupVersionKind]bool
+
+	// groupKindsNamespaced is true for Namespaced GroupKinds, false if not Namespaced, and not
+	// present if missing.
+	groupKindsNamespaced map[schema.GroupKind]bool
 }
 
 // NewAPIInfo returns a new APIInfo object
 func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
-	resources := map[schema.GroupVersionKind]metav1.APIResource{}
-	groupKindVersions := map[schema.GroupKind][]string{}
+	result := &APIInfo{
+		groupVersionKinds:    map[schema.GroupVersionKind]bool{},
+		groupKindsNamespaced: map[schema.GroupKind]bool{},
+	}
 	for _, resourceList := range resourceLists {
 		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse discovery APIResourceList")
 		}
 		for _, resource := range resourceList.APIResources {
-			resources[groupVersion.WithKind(resource.Kind)] = resource
-			gk := groupVersion.WithKind(resource.Kind).GroupKind()
-			groupKindVersions[gk] = append(groupKindVersions[gk], groupVersion.Version)
+			gvk := groupVersion.WithKind(resource.Kind)
+			result.groupKindsNamespaced[gvk.GroupKind()] = resource.Namespaced
+			result.groupVersionKinds[gvk] = true
 		}
 	}
-	return &APIInfo{resources: resources, groupKindVersions: groupKindVersions}, nil
+
+	return result, nil
 }
 
 // AddCustomResources updates APIInfo with custom resource metadata from the provided CustomResourceDefinitions.
@@ -70,98 +77,58 @@ func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
 func (a *APIInfo) AddCustomResources(crds ...*v1beta1.CustomResourceDefinition) {
 	for _, crd := range crds {
 		crSpec := crd.Spec
-		crNames := crSpec.Names
-		group := crSpec.Group
-		kind := crSpec.Names.Kind
-		apiResourceTemplate := metav1.APIResource{
-			Name:         crNames.Plural,
-			SingularName: crNames.Singular,
-			Namespaced:   crSpec.Scope == v1beta1.NamespaceScoped,
-			Group:        group,
-			Kind:         kind,
-			ShortNames:   crNames.ShortNames,
-			Categories:   crNames.Categories,
-			// TODO(sbochins): consider populating Verbs
-		}
 
-		gk := schema.GroupKind{Group: group, Kind: kind}
-		setVersion := func(version string) {
-			gvk := gk.WithVersion(version)
-			if _, ok := a.resources[gvk]; ok {
-				// We've already added information for this GroupVersionKind; don't add duplicate info.
-				return
-			}
-			a.groupKindVersions[gk] = append(a.groupKindVersions[gk], version)
-
-			apiResource := *apiResourceTemplate.DeepCopy()
-			apiResource.Version = version
-			a.resources[gk.WithVersion(version)] = apiResource
-		}
-
+		gk := schema.GroupKind{Group: crSpec.Group, Kind: crSpec.Names.Kind}
+		namespaced := crSpec.Scope == v1beta1.NamespaceScoped
 		for _, v := range crSpec.Versions {
 			if !v.Served {
 				continue
 			}
-			setVersion(v.Name)
+			gvk := gk.WithVersion(v.Name)
+			if _, found := a.groupVersionKinds[gvk]; found {
+				continue
+			}
+			a.groupVersionKinds[gvk] = true
+			a.groupKindsNamespaced[gk] = namespaced
 		}
+
 		if version := crSpec.Version; version != "" {
-			setVersion(version)
+			// For compatibility with deprecated Version field.
+			gvk := gk.WithVersion(version)
+			if _, found := a.groupVersionKinds[gvk]; found {
+				continue
+			}
+			a.groupVersionKinds[gvk] = true
+			a.groupKindsNamespaced[gk] = namespaced
 		}
 	}
 }
 
-// GetScope returns the scope for the object.  If not found, UnknownScope will be returned.
-func (a *APIInfo) GetScope(gvk schema.GroupVersionKind) ObjectScope {
-	resource, found := a.resources[gvk]
+// GetScope returns the scope for the GroupKind, or UnknownScope if not found.
+func (a *APIInfo) GetScope(gk schema.GroupKind) ObjectScope {
+	namespaced, found := a.groupKindsNamespaced[gk]
 	if !found {
 		return UnknownScope
 	}
-	if resource.Namespaced {
+	if namespaced {
 		return NamespaceScope
 	}
 	return ClusterScope
 }
 
-// GetScopeForGroupKind returns the scope for the object based on Group and Kind.  If not found,
-// UnknownScope will be returned.
-func (a *APIInfo) GetScopeForGroupKind(gk schema.GroupKind) ObjectScope {
-	for gvk, resource := range a.resources {
-		if gvk.GroupKind() == gk {
-			if resource.Namespaced {
-				return NamespaceScope
-			}
-			return ClusterScope
-		}
-	}
-	return UnknownScope
-}
-
-// Exists returns true if the GroupVersionKind is in the APIResources.
-func (a *APIInfo) Exists(gvk schema.GroupVersionKind) bool {
-	_, exists := a.resources[gvk]
-	return exists
-}
-
-// GroupKindExists returns true if the GroupKind is in the APIResources.
-func (a *APIInfo) GroupKindExists(gk schema.GroupKind) bool {
-	_, ok := a.groupKindVersions[gk]
-	return ok
-}
-
-// AllowedVersions returns a list of the versions allowed for the passed Group/Kind.
-func (a *APIInfo) AllowedVersions(gk schema.GroupKind) []string {
-	return a.groupKindVersions[gk]
-}
-
 // GroupVersionKinds returns a set of GroupVersionKinds represented by the slice of Syncs with only
 // Group and Kind specified.
 func (a *APIInfo) GroupVersionKinds(syncs ...*v1.Sync) map[schema.GroupVersionKind]bool {
-	allGvk := make(map[schema.GroupVersionKind]bool)
-	for _, s := range syncs {
-		gk := schema.GroupKind{Group: s.Spec.Group, Kind: s.Spec.Kind}
-		for _, v := range a.AllowedVersions(gk) {
-			allGvk[gk.WithVersion(v)] = true
+	syncedGks := make(map[schema.GroupKind]bool, len(syncs))
+	for _, sync := range syncs {
+		syncedGks[schema.GroupKind{Group: sync.Spec.Group, Kind: sync.Spec.Kind}] = true
+	}
+
+	syncedGvks := make(map[schema.GroupVersionKind]bool, len(syncs))
+	for gvk := range a.groupVersionKinds {
+		if syncedGks[gvk.GroupKind()] {
+			syncedGvks[gvk] = true
 		}
 	}
-	return allGvk
+	return syncedGvks
 }

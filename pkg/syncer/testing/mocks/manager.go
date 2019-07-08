@@ -36,7 +36,7 @@ func (m *MockRestartableManager) EXPECT() *MockRestartableManagerMockRecorder {
 }
 
 // Restart mocks base method
-func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 *discovery.APIInfo, arg2 bool) (bool, error) {
+func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 discovery.Scoper, arg2 bool) (bool, error) {
 	ret := m.ctrl.Call(m, "Restart", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)

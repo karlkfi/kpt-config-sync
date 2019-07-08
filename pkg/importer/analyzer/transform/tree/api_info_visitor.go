@@ -56,7 +56,7 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		apiInfo.AddCustomResources(crd)
 	}
 
-	v.errs = status.Append(v.errs, utildiscovery.AddAPIInfo(r, apiInfo))
+	v.errs = status.Append(v.errs, utildiscovery.AddScoper(r, apiInfo))
 	return r
 }
 

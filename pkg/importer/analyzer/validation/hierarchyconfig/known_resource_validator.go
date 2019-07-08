@@ -14,7 +14,7 @@ import (
 // KnownResourceValidator validates that HierarchyConfig resources can be looked up using Discovery API.
 type KnownResourceValidator struct {
 	*visitor.ValidatorBase
-	apiInfo *discovery.APIInfo
+	scoper discovery.Scoper
 }
 
 // NewKnownResourceValidator returns a new KnownResourceValidator.
@@ -25,7 +25,7 @@ func NewKnownResourceValidator() ast.Visitor {
 // ValidateRoot implement ast.Visitor.
 func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
 	var err error
-	k.apiInfo, err = discovery.GetAPIInfo(r)
+	k.scoper, err = discovery.GetScoper(r)
 	return status.From(err)
 }
 
@@ -46,19 +46,14 @@ func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) statu
 // validateGroupKind validates a group kind for both existing in the API discovery as well as
 // being at namespace scope.
 func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) error {
-	gk := gkc.GroupKind()
-	if !k.apiInfo.GroupKindExists(gk) {
+	switch scope := k.scoper.GetScope(gkc.GroupKind()); scope {
+	case discovery.UnknownScope:
 		return status.From(vet.UnknownResourceInHierarchyConfigError(gkc))
-	}
-
-	scope := k.apiInfo.GetScopeForGroupKind(gk)
-	switch scope {
 	case discovery.NamespaceScope:
-		// noop
+		return nil
 	case discovery.ClusterScope:
 		return status.From(vet.ClusterScopedResourceInHierarchyConfigError(gkc, scope))
 	default:
 		panic(fmt.Sprintf("programmer error: case %s should not occur", scope))
 	}
-	return nil
 }

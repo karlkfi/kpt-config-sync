@@ -139,7 +139,8 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	// Finalize Syncs that have not already been finalized.
 	for _, tf := range toFinalize {
 		// Make sure to delete all Sync-managed resource before finalizing the Sync.
-		mErr = status.Append(mErr, r.finalizeSync(ctx, tf, apirs))
+		gvksToFinalize := apirs.GroupVersionKinds(tf)
+		mErr = status.Append(mErr, r.finalizeSync(ctx, tf, gvksToFinalize))
 	}
 
 	// Update status sub-resource for enabled Syncs, if we have not already done so.
@@ -163,7 +164,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	return mErr
 }
 
-func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) status.MultiError {
+func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
@@ -183,17 +184,16 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, apiInf
 	sync = sync.DeepCopy()
 	sync.Finalizers = newFinalizers
 	glog.Infof("Beginning Sync finalize for %s", sync.Name)
-	if err := r.gcResources(ctx, sync, apiInfo); err != nil {
+	if err := r.gcResources(ctx, sync, gvks); err != nil {
 		return err
 	}
 	err := r.client.Upsert(ctx, sync)
 	return status.From(status.APIServerWrapf(err, "could not finalize sync pending delete"))
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, apiInfo *utildiscovery.APIInfo) status.MultiError {
+func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
-	gvks := apiInfo.GroupVersionKinds(sync)
 	if len(gvks) == 0 {
 		glog.Warningf("Could not find a gvk for %s, CRD may have been deleted, skipping garbage collection.", sync.Name)
 		return nil

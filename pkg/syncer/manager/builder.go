@@ -22,7 +22,7 @@ type ControllerBuilder interface {
 	// UpdateScheme updates the scheme with the GroupVersionKinds.
 	UpdateScheme(scheme *runtime.Scheme, toWatch map[schema.GroupVersionKind]bool) error
 	// StartControllers starts the relevant controllers using the SubManager to manage them.
-	StartControllers(ctx context.Context, sm *SubManager, gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error
+	StartControllers(ctx context.Context, sm *SubManager, gvks map[schema.GroupVersionKind]bool, apirs discovery.Scoper) error
 }
 
 var _ ControllerBuilder = &SyncAwareBuilder{}
@@ -54,8 +54,8 @@ func (r *SyncAwareBuilder) UpdateScheme(scheme *runtime.Scheme, gvks map[schema.
 
 // StartControllers starts all the controllers watching sync-enabled resources.
 func (r *SyncAwareBuilder) StartControllers(ctx context.Context, sm *SubManager,
-	gvks map[schema.GroupVersionKind]bool, apirs *discovery.APIInfo) error {
-	namespace, cluster, err := syncerscheme.ResourceScopes(gvks, sm.GetScheme(), apirs)
+	gvks map[schema.GroupVersionKind]bool, scoper discovery.Scoper) error {
+	namespace, cluster, err := syncerscheme.ResourceScopes(gvks, sm.GetScheme(), scoper)
 	if err != nil {
 		return errors.Wrap(err, "could not get resource scope information from discovery API")
 	}

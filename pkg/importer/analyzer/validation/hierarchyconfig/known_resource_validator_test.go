@@ -32,7 +32,7 @@ func apiResource(known schema.GroupVersionKind, namespaced bool) apiInfoOption {
 	}
 }
 
-func toAPIInfo(opts ...apiInfoOption) (*discovery.APIInfo, error) {
+func toAPIInfo(opts ...apiInfoOption) (discovery.Scoper, error) {
 	var resources []*metav1.APIResourceList
 	for _, o := range opts {
 		resources = o(resources)
@@ -41,12 +41,12 @@ func toAPIInfo(opts ...apiInfoOption) (*discovery.APIInfo, error) {
 }
 
 // APIInfo adds an APIInfo to the AST.
-func APIInfo(apiInfo *discovery.APIInfo) ast.BuildOpt {
+func APIInfo(apiInfo discovery.Scoper) ast.BuildOpt {
 	return func(root *ast.Root) status.MultiError {
 		if apiInfo == nil {
 			return nil
 		}
-		discovery.AddAPIInfo(root, apiInfo)
+		discovery.AddScoper(root, apiInfo)
 		return nil
 	}
 }

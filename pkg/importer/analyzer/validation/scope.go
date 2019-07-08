@@ -12,8 +12,8 @@ import (
 // the tree meets various conditions before we set it on the API server.
 type Scope struct {
 	*visitor.Base
-	errs    status.MultiError
-	apiInfo *discovery.APIInfo
+	errs   status.MultiError
+	scoper discovery.Scoper
 }
 
 var _ ast.Visitor = &Scope{}
@@ -37,16 +37,16 @@ func (p *Scope) Error() status.MultiError {
 // VisitRoot implement ast.Visitor.
 func (p *Scope) VisitRoot(r *ast.Root) *ast.Root {
 	var err error
-	p.apiInfo, err = discovery.GetAPIInfo(r)
+	p.scoper, err = discovery.GetScoper(r)
 	p.errs = status.Append(p.errs, err)
 	return p.Base.VisitRoot(r)
 }
 
 // VisitClusterObject implements Visitor
 func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	gvk := o.Object.GetObjectKind().GroupVersionKind()
+	gk := o.GroupVersionKind().GroupKind()
 
-	switch p.apiInfo.GetScope(gvk) {
+	switch p.scoper.GetScope(gk) {
 	case discovery.NamespaceScope:
 		p.errs = status.Append(p.errs, vet.IllegalKindInClusterError(o))
 	case discovery.UnknownScope:
@@ -58,9 +58,9 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 
 // VisitObject implements Visitor
 func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	gvk := o.Object.GetObjectKind().GroupVersionKind()
+	gk := o.GroupVersionKind().GroupKind()
 
-	switch p.apiInfo.GetScope(gvk) {
+	switch p.scoper.GetScope(gk) {
 	case discovery.ClusterScope:
 		p.errs = status.Append(p.errs, vet.IllegalKindInNamespacesError(o))
 	case discovery.UnknownScope:
