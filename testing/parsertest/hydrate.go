@@ -147,10 +147,6 @@ func (pt Test) RunAll(t *testing.T) {
 					// Make error messages for expected successes more helpful when writing tests.
 					tc.Expected = &namespaceconfig.AllConfigs{}
 				}
-				if tc.Expected.Repo == nil {
-					// Reasonably assume a repo object exist.
-					tc.Expected.Repo = fake.RepoObject()
-				}
 				if tc.Expected.ClusterConfig == nil {
 					// Assume a default empty and valid ClusterConfig if none specified.
 					tc.Expected.ClusterConfig = fake.ClusterConfigObject()

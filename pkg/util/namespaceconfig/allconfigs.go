@@ -1,9 +1,7 @@
 package namespaceconfig
 
 import (
-	"time"
-
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 // AllConfigs holds things that Importer wants to sync. It is only used in-process, not written
@@ -17,10 +15,4 @@ type AllConfigs struct {
 	CRDClusterConfig *v1.ClusterConfig
 	// Map of names to Syncs.
 	Syncs map[string]v1.Sync
-	// Singleton Repo for the cluster.
-	Repo *v1.Repo
-	// LoadTime is when the configs were last modified
-	LoadTime time.Time
-	// ImportToken is the last commit token for the configs
-	ImportToken string
 }
