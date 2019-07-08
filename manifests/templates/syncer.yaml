@@ -45,3 +45,10 @@ spec:
         ports:
         - containerPort: 8675
           name: metrics-port
+        resources:
+          requests:
+            cpu: "150m"
+            memory: "100Mi"
+          limits:
+            cpu: "500m"
+            memory: "200Mi"

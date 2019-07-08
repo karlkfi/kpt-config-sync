@@ -55,6 +55,13 @@ spec:
           - configMapRef:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
+        resources:
+          requests:
+            cpu: "150m"
+            memory: "100Mi"
+          limits:
+            cpu: "1"
+            memory: "200Mi"
       - name: git-sync
         image: gcr.io/config-management-release/git-sync:v3.1.1-gke.2__linux_amd64
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See
