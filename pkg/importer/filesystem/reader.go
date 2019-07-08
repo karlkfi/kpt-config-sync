@@ -21,14 +21,14 @@ type Reader interface {
 	Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError)
 }
 
-// FilesystemReader reads FileObjects from a file system.
-type FilesystemReader struct {
+// FileReader reads FileObjects from a filesystem.
+type FileReader struct {
 	ClientGetter genericclioptions.RESTClientGetter
 }
 
-var _ Reader = &FilesystemReader{}
+var _ Reader = &FileReader{}
 
-func (r *FilesystemReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
@@ -78,6 +78,6 @@ func (r *FilesystemReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*
 	return fileObjects, errs
 }
 
-func (r *FilesystemReader) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
+func (r *FileReader) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
 	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(r.ClientGetter, stubMissing, crds...))
 }

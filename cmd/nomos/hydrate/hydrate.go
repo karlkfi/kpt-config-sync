@@ -99,7 +99,7 @@ var Cmd = &cobra.Command{
 		}
 		list := &corev1.List{
 			TypeMeta: metav1.TypeMeta{
-				Kind: "List",
+				Kind:       "List",
 				APIVersion: "v1",
 			},
 		}
@@ -121,7 +121,13 @@ var Cmd = &cobra.Command{
 		}
 		// TODO(b/136575755): Output full Kubernetes List for --flat.
 		content, err := json.MarshalIndent(unstructuredList, "", "\t")
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
 		_, err = outFile.Write(content)
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
 	},
 }
 

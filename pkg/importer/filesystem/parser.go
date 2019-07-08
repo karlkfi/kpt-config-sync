@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
@@ -70,14 +69,10 @@ type ParserOpt struct {
 func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) *Parser {
 	p := &Parser{
 		clientGetter: c,
-		reader:       &FilesystemReader{ClientGetter: c},
+		reader:       &FileReader{ClientGetter: c},
 		opts:         opts,
 	}
 	return p
-}
-
-func (p *Parser) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
-	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, stubMissing, crds...))
 }
 
 // ReadCRDs parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.

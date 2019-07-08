@@ -212,7 +212,7 @@ spec:
 				t.Error(err)
 			}
 
-			r := &filesystem.FilesystemReader{
+			r := &filesystem.FileReader{
 				ClientGetter: f,
 			}
 			_, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false)
