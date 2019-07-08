@@ -25,9 +25,7 @@ type NomosVisitorProvider struct {
 }
 
 // Visitors implements ParserConfig
-func (n NomosVisitorProvider) Visitors(
-	configs []*v1.HierarchyConfig,
-	vetEnabled bool) []ast.Visitor {
+func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	v := []ast.Visitor{
@@ -56,7 +54,7 @@ func (n NomosVisitorProvider) Visitors(
 		metadata.NewAnnotationValidator(),
 		metadata.NewManagedAnnotationValidator(),
 		metadata.NewLabelValidator(),
-		validation.NewInputValidator(specs, vetEnabled),
+		validation.NewInputValidator(specs),
 		semantic.NewAbstractResourceValidator(),
 		syntax.NewDisallowedCRDNameValidator(),
 		syntax.NewDisallowedCRDsValidator(),

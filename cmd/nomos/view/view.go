@@ -15,7 +15,6 @@ import (
 
 func init() {
 	flags.AddPath(Cmd)
-	flags.AddValidate(Cmd)
 }
 
 // Cmd is the Cobra object representing the nomos view command.
@@ -37,7 +36,7 @@ non-zero error code.`,
 		clusterName := os.Getenv("CLUSTER_NAME")
 
 		resources, err := parse.Parse(clusterName,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
+			filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

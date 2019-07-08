@@ -13,9 +13,7 @@ import (
 // the ParserOpt could take multiple ParserExtensions and run them all.
 type ParserConfig interface {
 	// Visitors *overrides* the normal visitor functionality of the parser.
-	Visitors(
-		configs []*v1.HierarchyConfig,
-		vet bool) []ast.Visitor
+	Visitors(configs []*v1.HierarchyConfig) []ast.Visitor
 
 	// NamespacesDir returns the name of the namespaces dir.
 	NamespacesDir() string

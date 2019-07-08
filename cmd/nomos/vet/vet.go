@@ -18,7 +18,6 @@ import (
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
-	flags.AddValidate(Cmd)
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -38,7 +37,7 @@ returns a non-zero error code if any issues are found.
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
 
-		opts := filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
+		opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
 		parser, err := parse.NewParser(opts)
 		if err != nil {
 			util.PrintErrAndDie(err)

@@ -32,7 +32,7 @@ during parsing, prints those errors and returns a non-zero error code.`,
 		start := time.Now()
 
 		resources, err := parse.Parse(clusterName,
-			filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
+			filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath})
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

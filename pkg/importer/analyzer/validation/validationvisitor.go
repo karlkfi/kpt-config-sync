@@ -22,7 +22,6 @@ type InputValidator struct {
 	*visitor.Base
 	errs             status.MultiError
 	nodes            []*ast.TreeNode
-	vet              bool
 	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
@@ -36,13 +35,10 @@ var _ ast.Visitor = &InputValidator{}
 // is the list of clusters defined in the source of truth, and cs is the list
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
 // in nomos vet.
-func NewInputValidator(
-	specs map[schema.GroupKind]*transform.InheritanceSpec,
-	vet bool) *InputValidator {
+func NewInputValidator(specs map[schema.GroupKind]*transform.InheritanceSpec) *InputValidator {
 	v := &InputValidator{
 		Base:             visitor.NewBase(),
 		inheritanceSpecs: specs,
-		vet:              vet,
 	}
 	v.Base.SetImpl(v)
 

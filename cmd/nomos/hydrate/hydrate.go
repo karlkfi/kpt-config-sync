@@ -27,7 +27,6 @@ var (
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
-	flags.AddValidate(Cmd)
 
 	Cmd.Flags().StringVar(&out, "output", "compiled",
 		`Location to write compiled configuration to`)
@@ -45,7 +44,7 @@ var Cmd = &cobra.Command{
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
 
-		opts := filesystem.ParserOpt{Validate: flags.Validate, Vet: true, Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
+		opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
 		parser, err := parse.NewParser(opts)
 		if err != nil {
 			util.PrintErrAndDie(err)

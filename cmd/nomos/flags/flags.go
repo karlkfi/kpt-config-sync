@@ -9,9 +9,6 @@ const (
 	// pathFlag is the flag to set the Path of the Nomos directory.
 	pathFlag = "path"
 
-	// validateFlag is the flag to set the Validate value
-	validateFlag = "validate"
-
 	// contextsFlag is the flag name for the Contexts below.
 	contextsFlag = "contexts"
 
@@ -50,13 +47,6 @@ func AddClusters(cmd *cobra.Command) {
 func AddPath(cmd *cobra.Command) {
 	cmd.Flags().Var(&Path, pathFlag,
 		`Root directory to use as a Anthos Configuration Management repository.`)
-}
-
-// AddValidate adds the --validate flag for whether to use schemas for
-// validating
-func AddValidate(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&Validate, validateFlag, true,
-		`If true, use a schema to validate the Anthos Configuration Management repository.`)
 }
 
 // AllClusters returns true if all clusters should be processed.

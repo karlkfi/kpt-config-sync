@@ -113,8 +113,6 @@ func NewParser(t *testing.T) *filesystem.Parser {
 	return filesystem.NewParser(
 		f,
 		filesystem.ParserOpt{
-			Vet:       true,
-			Validate:  true,
 			Extension: &filesystem.NomosVisitorProvider{},
 		})
 }

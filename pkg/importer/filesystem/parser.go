@@ -54,10 +54,6 @@ type Parser struct {
 
 // ParserOpt has often customizes the behavior of Parser.Parse.
 type ParserOpt struct {
-	// Vet turns on vetting mode, which catches a wider range of cross-cluster errors.
-	Vet bool
-	// Validate will raise validation errors if set.
-	Validate bool
 	// Extension is the ParserConfig object that the parser will consume for configuring various
 	// aspects of the execution (see ParserConfig).
 	Extension ParserConfig
@@ -135,7 +131,7 @@ func (p *Parser) GenerateVisitors(
 	visitors = append(visitors, tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()))
 
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs, p.opts.Vet)...)
+	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs)...)
 
 	visitors = append(visitors, transform.NewSyncGenerator())
 
