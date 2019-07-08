@@ -18,7 +18,8 @@ func ClusterConfigMeta(opts ...object.MetaMutator) ClusterConfigMutator {
 
 // CRDClusterConfigObject initializes a valid CRDClusterConfig.
 func CRDClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
-	return ClusterConfigObject(ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)))
+	mutators := append(opts, ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)))
+	return ClusterConfigObject(mutators...)
 }
 
 // ClusterConfigObject initializes a ClusterConfig.

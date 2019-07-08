@@ -40,7 +40,7 @@ func checkDuplicates(objects []id.Resource) status.MultiError {
 	var errs status.MultiError
 	for _, duplicates := range duplicateMap {
 		if len(duplicates) > 1 {
-			errs = status.Append(errs, vet.MetadataNameCollisionError(duplicates[0].Name(), duplicates...))
+			errs = status.Append(errs, vet.MetadataNameCollisionError(duplicates...))
 		}
 	}
 	return errs

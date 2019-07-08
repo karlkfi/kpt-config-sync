@@ -16,5 +16,5 @@ var missingResourceError = NewErrorBuilder(MissingResourceErrorCode)
 
 // MissingResourceWrap returns a MissingResourceError wrapping the given error and Resources.
 func MissingResourceWrap(err error, msg string, resources ...id.Resource) Error {
-	return missingResourceError.WithResources(resources...).Wrap(err, "Expected resources were not found:")
+	return missingResourceError.WithResources(resources...).Wrapf(err, "%s: expected resources were not found:", msg)
 }

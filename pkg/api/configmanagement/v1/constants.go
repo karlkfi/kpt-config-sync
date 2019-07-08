@@ -45,8 +45,6 @@ type SyncState string
 const (
 	// Syncing indicates these resources are being actively managed by Nomos.
 	Syncing SyncState = "syncing"
-	// Error means errors were encountered while attempting to enable syncing for these resources.
-	Error SyncState = "error"
 )
 
 // SyncFinalizer is a finalizer handled by Syncer to ensure Sync deletions complete before Importer writes ClusterConfig

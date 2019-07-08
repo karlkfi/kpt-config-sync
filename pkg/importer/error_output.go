@@ -5,11 +5,6 @@ import (
 	"os"
 )
 
-// NewStandardErrorOutput initializes an ErrorOutput with os.Stderr.
-func NewStandardErrorOutput() *ErrorOutput {
-	return &ErrorOutput{out: os.Stderr}
-}
-
 // ErrorOutput provides common functions for handling errors.
 type ErrorOutput struct {
 	// out is the output stream to write errors to.

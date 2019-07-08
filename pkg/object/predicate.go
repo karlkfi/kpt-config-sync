@@ -45,13 +45,6 @@ func Any(ps ...Predicate) Predicate {
 	}
 }
 
-// Not returns a Predicate which returns true iff the underlying Predicate would return false.
-func Not(p Predicate) Predicate {
-	return func(object ast.FileObject) bool {
-		return !p(object)
-	}
-}
-
 // Filter returns a list of the passed FileObjects for which p returns false.
 // Preserves the relative order of passed objects.
 func Filter(objects []ast.FileObject, p Predicate) []ast.FileObject {

@@ -233,11 +233,6 @@ func ConfigMapObject(opts ...object.MetaMutator) *corev1.ConfigMap {
 	return obj
 }
 
-// ConfigMap returns a ConfigMap at a default filepath.
-func ConfigMap(opts ...object.MetaMutator) ast.FileObject {
-	return ConfigMapAtPath("namespaces/foo/configmap.yaml", opts...)
-}
-
 // ConfigMapAtPath returns a ConfigMap at the specified filepath.
 func ConfigMapAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
 	return FileObject(ConfigMapObject(opts...), path)

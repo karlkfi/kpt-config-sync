@@ -22,7 +22,7 @@ var illegalTopLevelNamespaceError = status.NewErrorBuilder(IllegalTopLevelNamesp
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 // Error implements error
 func IllegalTopLevelNamespaceError(resource id.Resource) status.Error {
-	return illegalTopLevelNamespaceError.Errorf(
+	return illegalTopLevelNamespaceError.WithResources(resource).Errorf(
 		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
 		repo.NamespacesDir, node.Namespace)
 }

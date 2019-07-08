@@ -61,15 +61,6 @@ func Annotations(annotations map[string]string) MetaMutator {
 	}
 }
 
-// Mutations groups several MetaMutators into a single MetaMutator.
-func Mutations(mutations ...MetaMutator) MetaMutator {
-	return func(meta metav1.Object) {
-		for _, mutation := range mutations {
-			mutation(meta)
-		}
-	}
-}
-
 // OwnerReference sets the object's ownerReference.
 func OwnerReference(name, uid string, gvk schema.GroupVersionKind) MetaMutator {
 	return func(o metav1.Object) {

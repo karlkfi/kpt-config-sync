@@ -18,7 +18,6 @@ func init() {
 	r2 := role()
 	r2.Path = cmpath.FromSlash("namespaces/foo/r2.yaml")
 	status.AddExamples(MetadataNameCollisionErrorCode, MetadataNameCollisionError(
-		"role",
 		r1, r2,
 	))
 }
@@ -26,7 +25,7 @@ func init() {
 var metadataNameCollisionError = status.NewErrorBuilder(MetadataNameCollisionErrorCode)
 
 // MetadataNameCollisionError reports that multiple objects in the same namespace of the same Kind share a name.
-func MetadataNameCollisionError(name string, resources ...id.Resource) status.Error {
+func MetadataNameCollisionError(resources ...id.Resource) status.Error {
 	return metadataNameCollisionError.WithResources(resources...).Errorf(
 		"Configs of the same Kind MUST have unique names in the same %[1]s and their parent %[2]ss:",
 		node.Namespace, strings.ToLower(string(node.AbstractNamespace)))
