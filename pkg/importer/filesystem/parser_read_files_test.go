@@ -62,9 +62,9 @@ metadata:
 // TestFilesystemReader tests reading from the file system.
 func TestFilesystemReader(t *testing.T) {
 	tests := []struct {
-		testName                 string
-		testFiles                fstesting.FileContentMap
-		expectedErrorCodes       []string
+		testName           string
+		testFiles          fstesting.FileContentMap
+		expectedErrorCodes []string
 	}{
 		{
 			testName: "Defining invalid yaml is an error.",
