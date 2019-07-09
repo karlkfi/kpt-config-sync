@@ -3,6 +3,7 @@ package hydrate
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
@@ -79,7 +80,7 @@ var Cmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = os.MkdirAll(out, os.ModePerm)
+		err = os.MkdirAll(filepath.Dir(out), os.ModePerm)
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}
