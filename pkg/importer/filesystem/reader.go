@@ -18,6 +18,9 @@ import (
 
 // Reader reads a list of FileObjects.
 type Reader interface {
+	// Read returns the list of FileObjects in the passed directory.
+	//
+	// stubMissing disables the need for CRDs to be present in order to parse unknown objects.
 	Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError)
 }
 

@@ -18,7 +18,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
@@ -71,26 +70,6 @@ func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) *Parser {
 	return p
 }
 
-// ReadCRDs parses the cluster directory of the repo and returns all CustomResourceDefinitions it contains.
-func (p *Parser) ReadCRDs() ([]*v1beta1.CustomResourceDefinition, status.Error) {
-	fileObjects := p.readClusterResources(true)
-
-	var crds []*v1beta1.CustomResourceDefinition
-	for _, f := range fileObjects {
-		object := f.Object
-		if object.GetObjectKind().GroupVersionKind() != kinds.CustomResourceDefinition() {
-			continue
-		}
-
-		crd, err := clusterconfig.AsCRD(object)
-		if err != nil {
-			return nil, status.PathWrapf(err, f.SlashPath())
-		}
-		crds = append(crds, crd)
-	}
-	return crds, nil
-}
-
 // Errors returns the errors the Parser has encountered so far.
 func (p *Parser) Errors() status.MultiError {
 	return p.errors
@@ -102,7 +81,7 @@ func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *ast.Flat
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(),
 		ClusterRegistryObjects: p.ReadClusterRegistryResources(),
-		ClusterObjects:         p.readClusterResources(false, crds...),
+		ClusterObjects:         p.readClusterResources(crds...),
 		NamespaceObjects:       p.readNamespaceResources(crds...),
 	}
 }
@@ -168,7 +147,7 @@ func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllCo
 
 	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
 	// if we haven't yet added the CRDs to the cluster.
-	crds, cErr := p.ReadCRDs()
+	crds, cErr := readCRDs(p.reader, p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)))
 	if cErr != nil {
 		p.errors = status.Append(p.errors, cErr)
 		return nil, p.errors
@@ -224,8 +203,8 @@ func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinitio
 	return result
 }
 
-func (p *Parser) readClusterResources(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), stubMissing, crds...)
+func (p *Parser) readClusterResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), false, crds...)
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
