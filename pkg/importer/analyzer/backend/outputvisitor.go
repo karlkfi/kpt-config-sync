@@ -5,21 +5,14 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // OutputVisitor converts the AST into NamespaceConfig and ClusterConfig objects.
 type OutputVisitor struct {
 	*visitor.Base
-	importToken     string
-	loadTime        metav1.Time
-	allConfigs      *namespaceconfig.AllConfigs
-	namespaceConfig []*v1.NamespaceConfig
-	syncs           []*v1.Sync
+	allConfigs *namespaceconfig.AllConfigs
 }
 
 var _ ast.Visitor = &OutputVisitor{}
@@ -33,161 +26,48 @@ func NewOutputVisitor() *OutputVisitor {
 
 // AllConfigs returns the AllConfigs object created by the visitor.
 func (v *OutputVisitor) AllConfigs() *namespaceconfig.AllConfigs {
-	for _, s := range v.syncs {
-		s.SetFinalizers(append(s.GetFinalizers(), v1.SyncFinalizer))
-	}
-	v.allConfigs.Syncs = mapByName(v.syncs)
 	return v.allConfigs
 }
 
-func mapByName(syncs []*v1.Sync) map[string]v1.Sync {
-	m := make(map[string]v1.Sync)
-	for _, sync := range syncs {
-		m[sync.Name] = *sync
-	}
-	return m
-}
-
-// VisitRoot implements Visitor
+// VisitRoot implements Visitor.
 func (v *OutputVisitor) VisitRoot(g *ast.Root) *ast.Root {
-	v.importToken = g.ImportToken
-	v.loadTime = metav1.NewTime(g.LoadTime)
-	v.allConfigs = &namespaceconfig.AllConfigs{
-		NamespaceConfigs: map[string]v1.NamespaceConfig{},
-		ClusterConfig: &v1.ClusterConfig{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       kinds.ClusterConfig().Kind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1.ClusterConfigName,
-			},
-			Spec: v1.ClusterConfigSpec{
-				Token:      v.importToken,
-				ImportTime: v.loadTime,
-			},
-		},
-		CRDClusterConfig: &v1.ClusterConfig{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       kinds.ClusterConfig().Kind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1.CRDClusterConfigName,
-			},
-			Spec: v1.ClusterConfigSpec{
-				Token:      v.importToken,
-				ImportTime: v.loadTime,
-			},
-		},
-	}
-
+	v.allConfigs = namespaceconfig.NewAllConfigs(g.ImportToken, g.LoadTime)
 	v.Base.VisitRoot(g)
 	return nil
 }
 
-// VisitSystemObject implements Visitor
+// VisitSystemObject implements Visitor.
 func (v *OutputVisitor) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
-	switch obj := o.FileObject.Object.(type) {
-	case *v1.Sync:
-		v.syncs = append(v.syncs, obj)
+	if sync, ok := o.Object.(*v1.Sync); ok {
+		v.allConfigs.AddSync(*sync)
 	}
 	return o
 }
 
-// VisitTreeNode implements Visitor
+// VisitTreeNode implements Visitor.
 func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	origLen := len(v.namespaceConfig)
-	var name string
-
-	switch origLen {
-	case 0:
-	case 1:
-		name = n.Base()
-	default:
-		name = n.Base()
-	}
-
-	pn := &v1.NamespaceConfig{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "NamespaceConfig",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Annotations: n.Annotations,
-			Labels:      n.Labels,
-		},
-		Spec: v1.NamespaceConfigSpec{
-			Token:      v.importToken,
-			ImportTime: v.loadTime,
-		},
-	}
-	v.namespaceConfig = append(v.namespaceConfig, pn)
-	v.Base.VisitTreeNode(n)
-	v.namespaceConfig = v.namespaceConfig[:origLen]
-	// NamespaceConfigs are emitted only for leaf nodes.
 	if n.Type == node.Namespace {
-		v.allConfigs.NamespaceConfigs[name] = *pn
-	}
-	return nil
-}
-
-// VisitClusterObject implements Visitor
-func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	var spec *v1.ClusterConfigSpec
-	if o.GroupVersionKind() == kinds.CustomResourceDefinition() {
-		spec = &v.allConfigs.CRDClusterConfig.Spec
+		// Only emit NamespaceConfigs for leaf nodes.
+		v.allConfigs.AddNamespaceConfig(n.Name(), n.Annotations, n.Labels)
+		// Just loop inside here rather than using VisitObject becuase this is easier to follow.
+		for _, o := range n.Objects {
+			v.allConfigs.AddNamespaceResource(n.Name(), o.Object)
+		}
+		// Namespace has no children, so no need to process further.
 	} else {
-		spec = &v.allConfigs.ClusterConfig.Spec
+		// Visit children of the Abstract Namespace
+		v.Base.VisitTreeNode(n)
 	}
-	spec.Resources = AppendResource(spec.Resources, o.FileObject.Object)
 	return nil
 }
 
-// VisitObject implements Visitor
-func (v *OutputVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	spec := &v.namespaceConfig[len(v.namespaceConfig)-1].Spec
-	spec.Resources = AppendResource(spec.Resources, o.FileObject.Object)
+// VisitClusterObject implements Visitor.
+func (v *OutputVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
+	v.allConfigs.AddClusterResource(o.Object)
 	return nil
 }
 
-// AppendResource adds Object o to resources.
-// GenericResources is grouped first by kind and then by version, and this method takes care of
-// adding any required groupings for the new object, or adding to existing groupings if present.
-func AppendResource(resources []v1.GenericResources, o runtime.Object) []v1.GenericResources {
-	gvk := o.GetObjectKind().GroupVersionKind()
-	var gr *v1.GenericResources
-	for i := range resources {
-		if resources[i].Group == gvk.Group && resources[i].Kind == gvk.Kind {
-			gr = &resources[i]
-			break
-		}
-	}
-	if gr == nil {
-		resources = append(resources, v1.GenericResources{
-			Group: gvk.Group,
-			Kind:  gvk.Kind,
-		})
-		gr = &resources[len(resources)-1]
-	}
-	var gvr *v1.GenericVersionResources
-	for i := range gr.Versions {
-		if gr.Versions[i].Version == gvk.Version {
-			gvr = &gr.Versions[i]
-			break
-		}
-	}
-	if gvr == nil {
-		gr.Versions = append(gr.Versions, v1.GenericVersionResources{
-			Version: gvk.Version,
-		})
-		gvr = &gr.Versions[len(gr.Versions)-1]
-	}
-	gvr.Objects = append(gvr.Objects, runtime.RawExtension{Object: o})
-	return resources
-}
-
+// Error implements Visitor.
 func (v *OutputVisitor) Error() status.MultiError {
 	return nil
 }

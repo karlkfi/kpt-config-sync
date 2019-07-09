@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -16,14 +15,18 @@ import (
 // cluster-scoped runtime.Objects.
 func ClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
 	config := fake.ClusterConfigObject()
-	config.Spec.Resources = GenericResources(objects...)
+	for _, o := range objects {
+		config.AddResource(o)
+	}
 	return config
 }
 
 // CRDClusterConfig generates a valid ClusterConfig which holds the list of CRDs in the repo.
 func CRDClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
 	config := fake.CRDClusterConfigObject()
-	config.Spec.Resources = GenericResources(objects...)
+	for _, o := range objects {
+		config.AddResource(o)
+	}
 	return config
 }
 
@@ -35,7 +38,9 @@ func NamespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ..
 		InCluster(clusterName)(config)
 	}
 	config.Name = cmpath.FromSlash(dir).Base()
-	config.Spec.Resources = GenericResources(objects...)
+	for _, o := range objects {
+		config.AddResource(o)
+	}
 	if opt != nil {
 		opt(config)
 	}
@@ -47,16 +52,6 @@ func NamespaceConfigs(ncs ...v1.NamespaceConfig) map[string]v1.NamespaceConfig {
 	result := map[string]v1.NamespaceConfig{}
 	for _, nc := range ncs {
 		result[nc.Name] = nc
-	}
-	return result
-}
-
-// GenericResources convers a list of runtime.Objects to the GenericResources array required for
-// AllConfigs.
-func GenericResources(objects ...runtime.Object) []v1.GenericResources {
-	var result []v1.GenericResources
-	for _, obj := range objects {
-		result = backend.AppendResource(result, obj)
 	}
 	return result
 }
