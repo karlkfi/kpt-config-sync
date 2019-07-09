@@ -18,6 +18,7 @@ type genericStopper struct {
 	stop func()
 }
 
+// Stop implements Stoppable.
 func (s *genericStopper) Stop() {
 	s.stop()
 }

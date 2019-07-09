@@ -59,9 +59,9 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() m
 	}
 }
 
-// TODO(b/130295620): Enable linting once we use error interfaces instead of structs.
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
 // nolint
+// TODO(b/130295620): Enable linting once we use error interfaces instead of structs.
 func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("repo").Set(float64(start.Unix()))

@@ -13,7 +13,7 @@ const EndpointRegistrationTimeout = time.Second * 5
 
 // Admitter is the interface for admission controller implementations
 type Admitter interface {
-	// Returns an admission review status based on the admission review request
+	// Admit returns an admission review status based on the admission review request
 	// containing the resource being modified.
 	Admit(review admissionv1beta1.AdmissionReview) *admissionv1beta1.AdmissionResponse
 }

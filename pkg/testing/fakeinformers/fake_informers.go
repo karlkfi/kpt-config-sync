@@ -21,14 +21,14 @@ func NewHierarchicalQuotaInformer(content ...runtime.Object) informersv1.Hierarc
 	fakeClientSet := pnfake.NewSimpleClientset(content...)
 	factory := informer.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
-	informer := factory.Configmanagement().V1().HierarchicalQuotas()
-	informer.Informer()
+	result := factory.Configmanagement().V1().HierarchicalQuotas()
+	result.Informer()
 	factory.Start(nil)
 	glog.Infof("cache sync...")
-	if !cache.WaitForCacheSync(nil, informer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(nil, result.Informer().HasSynced) {
 		panic("timed out waiting for cache sync")
 	}
-	return informer
+	return result
 }
 
 // NewResourceQuotaInformer creates a fake SharedIndexInformer, injecting 'content'
@@ -38,12 +38,12 @@ func NewResourceQuotaInformer(content ...runtime.Object) corev1.ResourceQuotaInf
 	fakeClientSet := corefake.NewSimpleClientset(content...)
 	factory := informers.NewSharedInformerFactory(
 		fakeClientSet, 1*time.Minute)
-	informer := factory.Core().V1().ResourceQuotas()
-	informer.Informer()
+	result := factory.Core().V1().ResourceQuotas()
+	result.Informer()
 	factory.Start(nil)
 	glog.Infof("cache sync...")
-	if !cache.WaitForCacheSync(nil, informer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(nil, result.Informer().HasSynced) {
 		panic("timed out waiting for cache sync")
 	}
-	return informer
+	return result
 }

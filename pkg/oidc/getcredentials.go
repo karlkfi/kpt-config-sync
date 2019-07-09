@@ -71,11 +71,11 @@ type credsFlow struct {
 func getCreds(_ *cobra.Command, _ []string) {
 	var f credsFlow
 
-	cid := f.GetClientID()
-	config := f.LoadKubeConfig(kubeConfig)
-	clusterRec := f.Cluster(config, cluster)
+	cid := f.getClientID()
+	cfg := f.LoadKubeConfig(kubeConfig)
+	clusterRec := f.Cluster(cfg, cluster)
 
-	clusterConfig := f.EmbedClientID(cluster, clusterRec, cid)
+	clusterConfig := f.embedClientID(cluster, clusterRec, cid)
 	output := f.ToYAML(clusterConfig)
 
 	if f.err != nil {
@@ -87,11 +87,11 @@ func getCreds(_ *cobra.Command, _ []string) {
 	fmt.Println(output)
 }
 
-func (f *credsFlow) GetClientID() config.ClientID {
+func (f *credsFlow) getClientID() config.ClientID {
 	var cid config.ClientID
 
 	if clientFile != "" {
-		c := f.Open(clientFile)
+		c := f.open(clientFile)
 		cid = f.DecodeJSON(c)
 	} else {
 		cid.TypeMeta.Kind = "ClientID"
@@ -105,7 +105,7 @@ func (f *credsFlow) GetClientID() config.ClientID {
 	return cid
 }
 
-func (f *credsFlow) Open(clientID string) io.Reader {
+func (f *credsFlow) open(clientID string) io.Reader {
 	if f.err != nil {
 		return nil
 	}
@@ -146,13 +146,13 @@ func (f *credsFlow) LoadKubeConfig(kubeConfig string) *api.Config {
 		loadingRules.Precedence = append([]string{kubeConfig}, loadingRules.Precedence...)
 	}
 
-	config, err := loadingRules.Load()
+	cfg, err := loadingRules.Load()
 	if err != nil {
 		f.err = fmt.Errorf("could not load config: %v", err)
 		return nil
 	}
-	glog.V(6).Infof("config: %+v", config)
-	return config
+	glog.V(6).Infof("config: %+v", cfg)
+	return cfg
 }
 
 // Cluster returns the cluster record with the given name from the given
@@ -170,7 +170,7 @@ func (f *credsFlow) Cluster(config *api.Config, cluster string) *api.Cluster {
 	return clusterRec
 }
 
-func (f *credsFlow) EmbedClientID(cluster string, clusterRec *api.Cluster, clientID config.ClientID) *api.Config {
+func (f *credsFlow) embedClientID(cluster string, clusterRec *api.Cluster, clientID config.ClientID) *api.Config {
 	if f.err != nil {
 		return nil
 	}
@@ -185,12 +185,12 @@ func (f *credsFlow) ToYAML(clusterConfig *api.Config) string {
 	if f.err != nil {
 		return ""
 	}
-	json, err := runtime.Encode(clientcmdlatest.Codec, clusterConfig)
+	jsonContent, err := runtime.Encode(clientcmdlatest.Codec, clusterConfig)
 	if err != nil {
 		f.err = fmt.Errorf("while encoding: %v", err)
 		return ""
 	}
-	output, err := yaml.JSONToYAML(json)
+	output, err := yaml.JSONToYAML(jsonContent)
 	if err != nil {
 		f.err = fmt.Errorf("while encoding: %+v", err)
 		return ""

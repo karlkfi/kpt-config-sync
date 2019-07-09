@@ -69,7 +69,7 @@ func (l licenseType) String() string {
 	}
 }
 
-func (l licenseType) Disallowed() bool {
+func (l licenseType) disallowed() bool {
 	return l == restricted
 }
 
@@ -148,7 +148,7 @@ func (l *linter) detectLicenseType() error {
 			}
 			m.LicenseText = append(m.LicenseText, content)
 		}
-		if resultType.Disallowed() && *noRestrictedLicense {
+		if resultType.disallowed() && *noRestrictedLicense {
 			return errors.Errorf("Licence type %q not allowed in %s", resultType, m.AbsPath)
 		}
 		m.LicenseType = resultType

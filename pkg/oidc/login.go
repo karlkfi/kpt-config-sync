@@ -105,8 +105,8 @@ func login(_ *cobra.Command, _ []string) {
 	authInfoName := l.Run(cfg, issuerURL)
 
 	// Make the new context be the current one.
-	context := l.Context(clusterName, authInfoName)
-	result.Contexts[clusterName] = context
+	ctx := l.Context(clusterName, authInfoName)
+	result.Contexts[clusterName] = ctx
 	result.CurrentContext = clusterName
 
 	// Write the result out.
@@ -137,7 +137,7 @@ func (l *loginFlow) MergeKubeConfigs(result *api.Config) {
 	if l.Err != nil {
 		return
 	}
-	tempKubeConfig := l.TempFile()
+	tempKubeConfig := l.tempFile()
 	tempName := tempKubeConfig.Name()
 	defer func() {
 		if err := os.Remove(tempName); err != nil {
@@ -287,7 +287,7 @@ func (l *loginFlow) printKubeConfig(authInfo *api.AuthInfo, authInfoName string)
 	}
 
 	if writeConfig {
-		tempKubeConfig := l.TempFile()
+		tempKubeConfig := l.tempFile()
 		if l.Err != nil {
 			return
 		}
@@ -433,7 +433,7 @@ func (l *loginFlow) mergeWithKubeConfig(file string) *api.Config {
 	return mergedConfig
 }
 
-func (l *loginFlow) TempFile() *os.File {
+func (l *loginFlow) tempFile() *os.File {
 	if l.Err != nil {
 		return nil
 	}
