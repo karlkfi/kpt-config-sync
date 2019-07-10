@@ -82,7 +82,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 		{
 			name:               "create from declared state",
 			declared:           deployment(appsv1.RollingUpdateDeploymentStrategyType),
-			expectCreate:       deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace(eng), syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+			expectCreate:       deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			expectStatusUpdate: namespaceCfgSynced,
 			expectEvent:        managedNamespaceReconcileComplete,
 		},
@@ -99,7 +99,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Kind:   corev1.EventTypeWarning,
 				Reason: "InvalidAnnotation",
 				Obj: syncertesting.ToUnstructured(t, syncertesting.Converter, deployment(appsv1.RollingUpdateDeploymentStrategyType,
-					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation, object.Namespace(eng))),
+					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation)),
 			},
 		},
 		{
@@ -107,7 +107,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType),
 			actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			expectUpdate: &syncertesting.Diff{
-				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace(eng), syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
@@ -118,7 +118,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType),
 			actual:   deployment(appsv1.RecreateDeploymentStrategyType),
 			expectUpdate: &syncertesting.Diff{
-				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace(eng), syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
@@ -129,7 +129,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType),
 			actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			expectUpdate: &syncertesting.Diff{
-				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace(eng), syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+				Declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
@@ -144,7 +144,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Kind:   corev1.EventTypeWarning,
 				Reason: "InvalidAnnotation",
 				Obj: syncertesting.ToUnstructured(t, syncertesting.Converter, deployment(appsv1.RollingUpdateDeploymentStrategyType,
-					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation, object.Namespace(eng))),
+					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation)),
 			},
 		},
 		{
@@ -275,7 +275,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			namespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			namespace:       namespace("eng"),
 			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), syncertesting.TokenAnnotation),
+			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.TokenAnnotation),
 			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
@@ -292,8 +292,8 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 				Obj:    namespace("eng"),
 			},
 			wantUpdate: &syncertesting.Diff{
-				Declared: deployment(appsv1.RecreateDeploymentStrategyType, object.Namespace("eng"), syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
-				Actual:   deployment(appsv1.RollingUpdateDeploymentStrategyType, object.Namespace("eng"), syncertesting.TokenAnnotation),
+				Declared: deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+				Actual:   deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.TokenAnnotation),
 			},
 		},
 	}

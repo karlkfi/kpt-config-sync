@@ -20,6 +20,9 @@ func HierarchicalQuotaRoot(root v1.HierarchicalQuotaNode) HierarchicalQuotaMutat
 
 // HierarchicalQuotaNode initializes a HierarchicalQuotaNode.
 func HierarchicalQuotaNode(name string, nodeType v1.HierarchyNodeType, rq *corev1.ResourceQuota, children ...v1.HierarchicalQuotaNode) v1.HierarchicalQuotaNode {
+	if name != "namespaces" {
+		rq.SetNamespace(name)
+	}
 	return v1.HierarchicalQuotaNode{
 		Name:            name,
 		Type:            nodeType,
