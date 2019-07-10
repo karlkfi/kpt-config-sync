@@ -25,10 +25,6 @@ e2e-staging: \
 	@mkdir -p $(E2E_DIR)
 	@cp -r ./third_party/bats-core $(E2E_DIR)/bats
 	@cp -r ./examples $(OUTPUT_DIR)/e2e
-	@if [ -f $(HOME)/.ssh/id_rsa.nomos ]; then \
-		cp -n $(HOME)/.ssh/id_rsa.nomos $(E2E_DIR)/id_rsa.nomos; \
-		cp $(HOME)/.ssh/id_rsa.nomos.pub $(E2E_DIR)/id_rsa.nomos.pub; \
-	fi
 	@cp ./scripts/init-git-server.sh $(E2E_DIR)
 	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(E2E_DIR)
 	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)

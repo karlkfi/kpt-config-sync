@@ -15,6 +15,9 @@ FWD_SSH_PORT=2222
 
 GIT_SERVER_NS=config-management-system-test
 
+# Create ssh keys
+ssh-keygen -t rsa -b 4096 -N "" -f /opt/testing/e2e/id_rsa.nomos -C "key generated for use in e2e tests"
+
 rm -rf "${TEST_LOG_REPO}"
 
 kubectl apply -f /opt/testing/e2e/git-server.yaml
