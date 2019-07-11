@@ -53,6 +53,9 @@ func (v *InheritanceVisitor) Error() status.MultiError {
 }
 
 // VisitTreeNode implements Visitor
+//
+// Copies inherited objects into their Namespaces. Otherwise mutating the object later in any
+// individual object modifies all copies in other Namespaces.
 func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
@@ -69,7 +72,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 					continue
 				}
 				if isApplicable {
-					newNode.Objects = append(newNode.Objects, inherited)
+					newNode.Objects = append(newNode.Objects, inherited.DeepCopy())
 				}
 			}
 		}
