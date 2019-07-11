@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -40,7 +39,6 @@ func NamespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ..
 	}
 	config.Name = cmpath.FromSlash(dir).Base()
 	for _, o := range objects {
-		o.(metav1.Object).SetNamespace(config.Name)
 		config.AddResource(o)
 	}
 	if opt != nil {

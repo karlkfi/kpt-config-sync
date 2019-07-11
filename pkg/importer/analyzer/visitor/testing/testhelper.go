@@ -262,8 +262,7 @@ func (t *TestHelper) PodReaderRole() *rbacv1.Role {
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod-reader",
-			Namespace: "frontend",
+			Name: "pod-reader",
 		},
 		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{"get", "list", "watch"},
@@ -281,8 +280,7 @@ func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "admin",
-			Namespace: "frontend",
+			Name: "admin",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -307,8 +305,7 @@ func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "deployment-reader",
-			Namespace: "frontend-test",
+			Name: "deployment-reader",
 		},
 		Rules: []rbacv1.PolicyRule{{
 			Verbs:     []string{"get", "list", "watch"},
@@ -326,8 +323,7 @@ func (t *TestHelper) DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "admin",
-			Namespace: "frontend-test",
+			Name: "admin",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -370,8 +366,7 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 			Kind:       "ResourceQuota",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "quota",
-			Namespace: "frontend",
+			Name: "quota",
 		},
 		Spec: corev1.ResourceQuotaSpec{
 			Hard: corev1.ResourceList{

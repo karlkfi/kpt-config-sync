@@ -260,6 +260,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
+			decl.SetNamespace(config.GetName())
 			object.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
