@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
@@ -57,7 +58,7 @@ func TestFlatten(t *testing.T) {
 				)),
 			},
 			expected: []runtime.Object{
-				fake.RoleBindingObject(),
+				fake.RoleBindingObject(object.Namespace("bar")),
 			},
 		},
 		{
@@ -72,8 +73,8 @@ func TestFlatten(t *testing.T) {
 				)),
 			},
 			expected: []runtime.Object{
-				fake.RoleBindingObject(),
-				fake.RoleObject(),
+				fake.RoleBindingObject(object.Namespace("bar")),
+				fake.RoleObject(object.Namespace("foo")),
 			},
 		},
 		{
@@ -92,7 +93,7 @@ func TestFlatten(t *testing.T) {
 			},
 			expected: []runtime.Object{
 				fake.CustomResourceDefinitionObject(),
-				fake.RoleBindingObject(),
+				fake.RoleBindingObject(object.Namespace("bar")),
 				fake.ClusterRoleBindingObject(),
 			},
 		},
