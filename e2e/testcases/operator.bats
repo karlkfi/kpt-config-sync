@@ -58,3 +58,27 @@ teardown() {
   wait::for -t 30 -f -- kubectl get rolebindings -n backend branch-rolebinding
 }
 
+@test "Syncing can be temporarily stopped and restarted" {
+  # Begin by checking for the existence of the pods we'll stop.
+  # We want to make sure that the pods we're talking about exist.
+  wait::for kubectl get deployments -n kube-system config-management-operator
+  wait::for kubectl get deployments -n config-management-system syncer
+  wait::for kubectl get deployments -n config-management-system git-importer
+
+  # Run the stop commands from
+  # https://cloud.google.com/anthos-config-management/docs/how-to/stopping-resuming-syncing
+  kubectl -n kube-system scale deployment config-management-operator --replicas=0 \
+  && kubectl wait -n kube-system --for=delete pods -l k8s-app=config-management-operator \
+  && kubectl -n config-management-system scale deployment syncer --replicas=0 \
+  && kubectl wait -n config-management-system --for=delete pods -l app=syncer \
+  && kubectl -n config-management-system scale deployment git-importer --replicas=0 \
+  && kubectl wait -n config-management-system --for=delete pods -l app=git-importer
+
+  # Re-schedule the operator
+  kubectl -n kube-system scale deployment config-management-operator --replicas=1
+
+  #  Wait for all the resources to run again
+  wait::for kubectl get deployments -n kube-system config-management-operator
+  wait::for kubectl get deployments -n config-management-system syncer
+  wait::for kubectl get deployments -n config-management-system git-importer
+}
