@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// We are guaranteed no Cluster's name is the empty string as that is a validation error.
-	defaultCluster = ""
+	// We assume users will not name any cluster "defaultcluster".
+	defaultCluster = "defaultcluster"
 )
 
 // ForEachCluster hydrates an AllConfigs for each declared cluster and executes the passed function

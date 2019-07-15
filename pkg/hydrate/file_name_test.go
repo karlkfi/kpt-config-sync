@@ -5,12 +5,17 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+func cluster(name string) object.MetaMutator {
+	return object.Annotation(v1.ClusterNameAnnotationKey, name)
+}
 
 func TestToFileObjects(t *testing.T) {
 	testCases := []struct {
@@ -24,19 +29,19 @@ func TestToFileObjects(t *testing.T) {
 		{
 			name: "namespaced role works",
 			objects: []runtime.Object{
-				fake.RoleObject(object.Name("alice"), object.Namespace("prod")),
+				fake.RoleObject(object.Name("alice"), object.Namespace("prod"), cluster("na-1")),
 			},
 			expected: []ast.FileObject{
-				fake.FileObject(fake.RoleObject(object.Name("alice"), object.Namespace("prod")), "prod/role_alice.yaml"),
+				fake.FileObject(fake.RoleObject(object.Name("alice"), object.Namespace("prod"), cluster("na-1")), "na-1/prod/role_alice.yaml"),
 			},
 		},
 		{
 			name: "non-namespaced clusterrolebinding works",
 			objects: []runtime.Object{
-				fake.ClusterRoleBindingObject(object.Name("alice")),
+				fake.ClusterRoleBindingObject(object.Name("alice"), cluster("eu-2")),
 			},
 			expected: []ast.FileObject{
-				fake.FileObject(fake.ClusterRoleBindingObject(object.Name("alice")), "clusterrolebinding_alice.yaml"),
+				fake.FileObject(fake.ClusterRoleBindingObject(object.Name("alice"), cluster("eu-2")), "eu-2/clusterrolebinding_alice.yaml"),
 			},
 		},
 		{
@@ -55,11 +60,11 @@ func TestToFileObjects(t *testing.T) {
 				fake.UnstructuredAtPath(schema.GroupVersionKind{
 					Group: "rbac",
 					Kind:  "ClusterRole",
-				}, "clusterrole.rbac_alice.yaml", object.Name("alice")),
+				}, "defaultcluster/clusterrole.rbac_alice.yaml", object.Name("alice")),
 				fake.UnstructuredAtPath(schema.GroupVersionKind{
 					Group: "oauth",
 					Kind:  "ClusterRole",
-				}, "clusterrole.oauth_alice.yaml", object.Name("alice")),
+				}, "defaultcluster/clusterrole.oauth_alice.yaml", object.Name("alice")),
 			},
 		},
 	}

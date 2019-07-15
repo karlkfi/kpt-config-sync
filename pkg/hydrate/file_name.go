@@ -2,8 +2,10 @@ package hydrate
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,41 +18,36 @@ func ToFileObjects(extension string, objects ...runtime.Object) []ast.FileObject
 	result := make([]ast.FileObject, len(objects))
 	duplicates := make(map[string]int, len(objects))
 	for i, obj := range objects {
-		fo := ast.NewFileObject(obj, cmpath.FromSlash(defaultPath(extension, obj)))
+		fo := ast.NewFileObject(obj, cmpath.FromSlash(filename(extension, obj, false)))
 		result[i] = fo
 		duplicates[fo.SlashPath()]++
 	}
 
 	for i, obj := range result {
 		if duplicates[obj.SlashPath()] > 1 {
-			result[i] = ast.NewFileObject(obj.Object, cmpath.FromSlash(longPath(extension, obj.Object)))
+			result[i] = ast.NewFileObject(obj.Object, cmpath.FromSlash(filename(extension, obj.Object, true)))
 		}
 	}
 
 	return result
 }
 
-// defaultPath returns the default (short) path in the repository.
-func defaultPath(extension string, o runtime.Object) string {
+func filename(extension string, o runtime.Object, includeGroup bool) string {
 	metaObj := o.(metav1.Object)
 	gvk := o.GetObjectKind().GroupVersionKind()
-	path := fmt.Sprintf("%s_%s.%s", gvk.Kind, metaObj.GetName(), extension)
-	path = strings.ToLower(path)
-	if namespace := metaObj.GetNamespace(); namespace != "" {
-		path = fmt.Sprintf("%s/%s", namespace, path)
+	var path string
+	if includeGroup {
+		path = fmt.Sprintf("%s.%s_%s.%s", gvk.Kind, gvk.Group, metaObj.GetName(), extension)
+	} else {
+		path = fmt.Sprintf("%s_%s.%s", gvk.Kind, metaObj.GetName(), extension)
 	}
-	return path
-}
-
-// longPath returns the long path which ensures guarantees unique filenames for a valid set of
-// manifests (no group/kind/name collisions).
-func longPath(extension string, o runtime.Object) string {
-	metaObj := o.(metav1.Object)
-	gvk := o.GetObjectKind().GroupVersionKind()
-	path := fmt.Sprintf("%s.%s_%s.%s", gvk.Kind, gvk.Group, metaObj.GetName(), extension)
-	path = strings.ToLower(path)
 	if namespace := metaObj.GetNamespace(); namespace != "" {
-		path = fmt.Sprintf("%s/%s", namespace, path)
+		path = filepath.Join(namespace, path)
 	}
-	return path
+	if clusterName, found := metaObj.GetAnnotations()[v1.ClusterNameAnnotationKey]; found {
+		path = filepath.Join(clusterName, path)
+	} else {
+		path = filepath.Join(defaultCluster, path)
+	}
+	return strings.ToLower(path)
 }
