@@ -14,15 +14,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	pkgversion "github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-// logging returns whether to add the logging flags to the binary.
-func logging() bool {
-	// Set to true to enable logging for internal developer use.
-	// Do not check in or release to customers if set to true.
-	return false
-}
 
 var (
 	rootCmd = &cobra.Command{
@@ -51,9 +43,6 @@ func init() {
 }
 
 func main() {
-	if logging() {
-		pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	}
 	// glog gripes if you don't parse flags before making any logging statements.
 	flag.CommandLine.Parse([]string{}) // nolint:errcheck
 	if err := rootCmd.Execute(); err != nil {
