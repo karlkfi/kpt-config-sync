@@ -17,7 +17,7 @@ import (
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -57,6 +57,13 @@ var Cmd = &cobra.Command{
 
 		clientMap, err := statusClients(flags.Contexts)
 		if err != nil {
+			// If "no such file or directory" error, unwrap and display before exiting
+			if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
+				// nolint:errcheck
+				fmt.Printf("failed to create client configs: %v\n", unWrapped)
+				os.Exit(255)
+			}
+
 			glog.Fatalf("Failed to get clients: %v", err)
 		}
 		// Use a sorted order of names to avoid shuffling in the output.

@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/version"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
@@ -37,20 +38,26 @@ var (
 	Cmd = &cobra.Command{
 		Use:   "version",
 		Short: "Prints the version of ACM for each cluster as well this CLI",
-		Long: `Prints the version of Configuration Management installed on each cluster and the version 
+		Long: `Prints the version of Configuration Management installed on each cluster and the version
 of the "nomos" client binary for debugging purposes.`,
 		Example: `  nomos version`,
 		Run: func(_ *cobra.Command, _ []string) {
 			allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)
 			if err != nil {
+				// Unwrap the "no such file or directory" error for better readability
+				if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
+					err = unWrapped
+				}
+
 				// nolint:errcheck
 				fmt.Printf("failed to create client configs: %v\n", err)
 			}
+
+			versionInternal(allCfgs, os.Stdout, flags.Contexts)
+
 			if allCfgs == nil {
 				os.Exit(255)
 			}
-
-			versionInternal(allCfgs, os.Stdout, flags.Contexts)
 		},
 	}
 )
