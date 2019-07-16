@@ -99,10 +99,6 @@ version="v1.4.7"
 # because they may no longer apply.
 
 [[constraint]]
-  branch = "master"
-  name = "k8s.io/gengo"
-
-[[constraint]]
   revision = "97aa668b73e764ccdd786bc3ccd2edffe621150e"
   name = "github.com/google/go-cmp"
 
