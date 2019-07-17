@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	oidcconfig "github.com/google/nomos/pkg/oidc/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -101,11 +100,6 @@ func ClusterConfig() schema.GroupVersionKind {
 // Cluster returns the canonical Cluster GroupVersionKind
 func Cluster() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "clusterregistry.k8s.io", Version: "v1alpha1", Kind: "Cluster"}
-}
-
-// ClientID returns the canonical ClientID GroupVersionKind
-func ClientID() schema.GroupVersionKind {
-	return oidcconfig.SchemeGroupVersion.WithKind("ClientID")
 }
 
 // Deployment returns the canonical Deployment GroupVersionKind
