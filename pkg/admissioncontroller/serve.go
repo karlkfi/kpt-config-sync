@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/clientgen/apis"
 	namespaceconfigversions "github.com/google/nomos/clientgen/informer"
 	informersv1 "github.com/google/nomos/clientgen/informer/configmanagement/v1"
-	namespaceconfigmeta "github.com/google/nomos/pkg/client/meta"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -163,13 +163,14 @@ func ServeFunc(controller Admitter) http.HandlerFunc {
 }
 
 // SetupHierarchicalQuotaInformer returns a newly configured HierarchicalQuotaInformer.
-func SetupHierarchicalQuotaInformer(config *rest.Config, syncPeriod time.Duration) (informersv1.HierarchicalQuotaInformer, error) {
-	hierarchicalQuotaClient, err := namespaceconfigmeta.NewForConfig(config, syncPeriod)
+func SetupHierarchicalQuotaInformer(config *rest.Config) (informersv1.HierarchicalQuotaInformer, error) {
+	configManagementClient, err := apis.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "Failed to create configmanagement client")
 	}
+
 	namespaceConfigFactory := namespaceconfigversions.NewSharedInformerFactory(
-		hierarchicalQuotaClient.ConfigManagement(), time.Minute,
+		configManagementClient, time.Minute,
 	)
 
 	hierarchicalQuotaInformer := namespaceConfigFactory.Configmanagement().V1().HierarchicalQuotas()

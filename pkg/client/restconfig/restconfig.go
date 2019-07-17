@@ -24,7 +24,7 @@ var configSources = []configSource{
 	},
 	{
 		name:   "kubectl",
-		create: NewKubectlConfig,
+		create: newKubectlConfig,
 	},
 }
 

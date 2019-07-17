@@ -15,32 +15,12 @@ import (
 
 const kubectlConfigPath = ".kube/config"
 
-var (
-	// The function to use to get default current user.  Can be changed for tests
-	// using SetCurrentUserForTest.
-	userCurrentTestHook = defaultGetCurrentUser
-	currentUser         = &user.User{}
-)
+// The function to use to get default current user.  Can be changed for tests
+// using SetCurrentUserForTest.
+var userCurrentTestHook = defaultGetCurrentUser
 
 func defaultGetCurrentUser() (*user.User, error) {
 	return user.Current()
-}
-
-func customGetCurrentUser() (*user.User, error) {
-	return currentUser, nil
-}
-
-// SetCurrentUserForTest sets the current user that will be returned, and/or
-// the error to be reported.  This makes the tests independent of CGO for
-// user.Current() that depend on CGO. Set the user to nil to revert to the
-// default way of getting the current user.
-func SetCurrentUserForTest(u *user.User) {
-	if u == nil {
-		userCurrentTestHook = defaultGetCurrentUser
-		return
-	}
-	userCurrentTestHook = customGetCurrentUser
-	currentUser = u
 }
 
 // newConfigPath returns the correct kubeconfig file path to use, depending on
@@ -110,8 +90,8 @@ func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
 	return configs, cfgErrs
 }
 
-// NewKubectlConfig creates a config for whichever context is active in kubectl.
-func NewKubectlConfig() (*rest.Config, error) {
+// newKubectlConfig creates a config for whichever context is active in kubectl.
+func newKubectlConfig() (*rest.Config, error) {
 	path, err := newConfigPath()
 	if err != nil {
 		return nil, errors.Wrapf(err, "while getting config path")
