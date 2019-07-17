@@ -91,9 +91,9 @@ func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
 	for ctxName := range apiCfg.Contexts {
 		cfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			rules, &clientcmd.ConfigOverrides{CurrentContext: ctxName})
-		restCfg, err := cfg.ClientConfig()
-		if err != nil {
-			badConfigs = append(badConfigs, fmt.Sprintf("%q: %v", ctxName, err))
+		restCfg, err2 := cfg.ClientConfig()
+		if err2 != nil {
+			badConfigs = append(badConfigs, fmt.Sprintf("%q: %v", ctxName, err2))
 			continue
 		}
 
@@ -112,10 +112,6 @@ func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
 
 // NewKubectlConfig creates a config for whichever context is active in kubectl.
 func NewKubectlConfig() (*rest.Config, error) {
-	if *flagKubectlContext != "" {
-		return NewKubectlContextConfig(*flagKubectlContext)
-	}
-
 	path, err := newConfigPath()
 	if err != nil {
 		return nil, errors.Wrapf(err, "while getting config path")
@@ -127,27 +123,14 @@ func NewKubectlConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-// NewKubectlContextConfig creates a new configuration for connnecting to kubernetes from the kubectl
-// config file on localhost.
-func NewKubectlContextConfig(contextName string) (*rest.Config, error) {
-	clientConfig, err := NewClientConfigWithOverrides(
-		&clientcmd.ConfigOverrides{
-			CurrentContext: contextName,
-		})
-	if err != nil {
-		return nil, errors.Wrapf(err, "NewKubectlContextConfig")
-	}
-	return clientConfig.ClientConfig()
-}
-
 // NewClientConfig returns the current (local) Kubernetes client configuration.
 func NewClientConfig() (clientcmd.ClientConfig, error) {
-	return NewClientConfigWithOverrides(&clientcmd.ConfigOverrides{})
+	return newClientConfigWithOverrides(&clientcmd.ConfigOverrides{})
 }
 
-// NewClientConfigWithOverrides returns a client configuration with supplied
+// newClientConfigWithOverrides returns a client configuration with supplied
 // overrides.
-func NewClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.ClientConfig, error) {
+func newClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.ClientConfig, error) {
 	configPath, err := newConfigPath()
 	if err != nil {
 		return nil, errors.Wrapf(err, "while getting config path")
@@ -156,7 +139,7 @@ func NewClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.Clien
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}, o), nil
 }
 
-// NewLocalClusterConfig creates a config for connecting to the local cluster API server.
-func NewLocalClusterConfig() (*rest.Config, error) {
+// newLocalClusterConfig creates a config for connecting to the local cluster API server.
+func newLocalClusterConfig() (*rest.Config, error) {
 	return rest.InClusterConfig()
 }

@@ -49,7 +49,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 
 	parser := NewParser(
 		&genericclioptions.ConfigFlags{}, ParserOpt{Extension: &NomosVisitorProvider{}, RootPath: rootPath})
-	if err := parser.ValidateInstallation(); err != nil {
+	if err = parser.ValidateInstallation(); err != nil {
 		return err
 	}
 

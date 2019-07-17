@@ -1,7 +1,6 @@
 package restconfig
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 
@@ -10,15 +9,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // kubectl auth provider plugins
 	"k8s.io/client-go/rest"
 )
-
-var flagRestConfigSource = flag.String(
-	"restConfigSource",
-	"",
-	"Rest config source for the NewRestConfig call, values podServiceAccount, kubectl")
-var flagKubectlContext = flag.String(
-	"kubectlContext",
-	"",
-	"Select a specific context to use when loading kubectl config")
 
 // A source for creating a rest config
 type configSource struct {
@@ -30,7 +20,7 @@ type configSource struct {
 var configSources = []configSource{
 	{
 		name:   "podServiceAccount",
-		create: NewLocalClusterConfig,
+		create: newLocalClusterConfig,
 	},
 	{
 		name:   "kubectl",
@@ -42,16 +32,6 @@ var configSources = []configSource{
 // the first successfully created configuration.  The flag restConfigSource, if specified, will
 // change the behvior to attempt to create from only the configured source.
 func NewRestConfig() (*rest.Config, error) {
-	if *flagRestConfigSource != "" {
-		glog.V(1).Infof("Creating new rest config from flag defined source %s", *flagRestConfigSource)
-		for _, source := range configSources {
-			if source.name == *flagRestConfigSource {
-				return source.create()
-			}
-		}
-		glog.Fatalf("No rest config source named %s", *flagRestConfigSource)
-	}
-
 	var errorStrs []string
 	for _, source := range configSources {
 		config, err := source.create()

@@ -52,8 +52,8 @@ func (c *Client) Runtime() client.Client {
 	return c.runtimeClient
 }
 
-// New creates a new Client directly from member client sets.
-func New(
+// newClient creates a new Client directly from member client sets.
+func newClient(
 	kubernetesClientset *kubernetes.Clientset,
 	configManagementClientset *apis.Clientset,
 	apiExtensionsClientset *apiextensions.Clientset,
@@ -88,10 +88,10 @@ func NewForConfig(cfg *rest.Config, syncPeriod time.Duration) (*Client, error) {
 		return nil, errors.Wrapf(err, "Failed to create manager")
 	}
 
-	return New(kubernetesClientset, configManagementClientset, apiExtensionsClientset, mgr.GetClient()), nil
+	return newClient(kubernetesClientset, configManagementClientset, apiExtensionsClientset, mgr.GetClient()), nil
 }
 
-// NewForConfigOrDie creates a new Client from the given config and panics if there is an error.
+// NewForConfigOrDie creates a newClient Client from the given config and panics if there is an error.
 func NewForConfigOrDie(cfg *rest.Config) *Client {
 	return &Client{
 		kubernetesClientset:       kubernetes.NewForConfigOrDie(cfg),
