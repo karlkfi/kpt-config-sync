@@ -116,6 +116,34 @@ func TestAddCustomResource(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "add CRD with empty scope defaults to Namespaced scope",
+			crd: v1beta1.CustomResourceDefinition{
+				Spec: v1beta1.CustomResourceDefinitionSpec{
+					Group: "com.acme",
+					Names: v1beta1.CustomResourceDefinitionNames{
+						Plural:     "anvils",
+						Singular:   "anvil",
+						Kind:       "Anvil",
+						ShortNames: []string{"av"},
+					},
+					Versions: []v1beta1.CustomResourceDefinitionVersion{
+						{
+							Name:   "v1",
+							Served: true,
+						},
+					},
+				},
+			},
+			wantAPIInfo: &APIInfo{
+				groupVersionKinds: map[schema.GroupVersionKind]bool{
+					schema.GroupVersionKind{Group: "com.acme", Version: "v1", Kind: "Anvil"}: true,
+				},
+				groupKindsNamespaced: map[schema.GroupKind]bool{
+					schema.GroupKind{Group: "com.acme", Kind: "Anvil"}: true,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

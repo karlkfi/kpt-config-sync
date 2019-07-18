@@ -39,14 +39,11 @@ func crdRestMappings(crds []*v1beta1.CustomResourceDefinition) map[schema.GroupV
 				Version: version,
 				Kind:    crd.Spec.Names.Kind,
 			}
-			scope := apimeta.RESTScopeRoot
-			if crd.Spec.Scope == v1beta1.NamespaceScoped {
-				scope = apimeta.RESTScopeNamespace
-			}
+
 			mappings[gvk] = &apimeta.RESTMapping{
 				Resource:         gvk.GroupVersion().WithResource(crd.Spec.Names.Plural),
 				GroupVersionKind: gvk,
-				Scope:            scope,
+				Scope:            restScope(crd.Spec.Scope),
 			}
 		}
 
@@ -62,6 +59,15 @@ func crdRestMappings(crds []*v1beta1.CustomResourceDefinition) map[schema.GroupV
 		}
 	}
 	return mappings
+}
+
+func restScope(scope v1beta1.ResourceScope) apimeta.RESTScope {
+	switch scope {
+	case v1beta1.ClusterScoped:
+		return apimeta.RESTScopeRoot
+	default:
+		return apimeta.RESTScopeNamespace
+	}
 }
 
 // RESTMapping implements RESTMapper.

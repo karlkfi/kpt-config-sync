@@ -79,7 +79,8 @@ func (a *APIInfo) AddCustomResources(crds ...*v1beta1.CustomResourceDefinition) 
 		crSpec := crd.Spec
 
 		gk := schema.GroupKind{Group: crSpec.Group, Kind: crSpec.Names.Kind}
-		namespaced := crSpec.Scope == v1beta1.NamespaceScoped
+		// CRD Scope defaults to Namespaced
+		namespaced := crSpec.Scope != v1beta1.ClusterScoped
 		for _, v := range crSpec.Versions {
 			if !v.Served {
 				continue
