@@ -23,11 +23,18 @@ setup() {
 }
 
 teardown() {
+  # Ensure syncing doesn't happen between tests.
+  # If we don't do this, the Repo object gets synced back immediately in the previous state,
+  # making tests flaky.
+  rm -rf acme
+  git::commit -a -m "Delete repo contents."
+  # Force delete repo object.
   kubectl delete repo repo --ignore-not-found
+
   setup::common_teardown
 }
 
-@test "Invalid policydir gets an error message in status.source.errors" { 
+@test "Invalid policydir gets an error message in status.source.errors" {
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
   kubectl patch configmanagement config-management \
@@ -167,6 +174,8 @@ function get_last_update() {
   local resource_name="${2}"
   local component_name="${3}"
 
+  # Ensure repo exists before checking it.
+  wait::for -t 30 -- kubectl get repo repo
   run kubectl get "${resource_type}" "${resource_name}" \
       --output="jsonpath={.status.${component_name}.lastUpdate}"
 }
