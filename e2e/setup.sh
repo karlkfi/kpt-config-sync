@@ -69,12 +69,12 @@ function uninstall() {
     echo "+++++ Uninstalling"
 
     if kubectl get configmanagement &> /dev/null; then
-      echo "++++++ Removing configmanagement"
+      echo "++++++ Removing ConfigManagement"
+      # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
+      #  leaves the cluster in an inconsistent state.
       kubectl -n=config-management-system delete configmanagement --all
     fi
     echo "++++++ Wait to confirm shutdown"
-    # TODO(138117321): This exits uninstall() if the command fails and leaves the system in an
-    #  inconsistent state.
     wait::for -s -t 300 -- install::nomos_uninstalled
     echo "++++++ Delete operator bundle"
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
