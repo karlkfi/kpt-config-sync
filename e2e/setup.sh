@@ -37,7 +37,8 @@ function ensure_config_management_removed() {
   echo "++++++ Removing ConfigManagement CRD"
   # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
   #  leaves the cluster in an inconsistent state. Thus, time out after a reasonable 30 seconds.
-  if [[ $(kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s) -ne 0 ]]; then
+  if ! kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s; then
+    echo "++++++ Timed out waiting for ConfigManagement CRD to be deleted normally"
     # We enter this block if both:
     # 1) The ConfigManagement CRD exists, and
     # 2) Deleting that CRD timed out.
@@ -49,7 +50,7 @@ function ensure_config_management_removed() {
     kubectl get configmanagements config-management -oyaml >> "${TEST_DIR}/tmp-config-management.yaml"
     grep -vwE "operator.configmanagement.gke.io" "${TEST_DIR}/tmp-config-management.yaml" >> "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
     kubectl apply -f "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
-    if [[ $(kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s) -ne 0 ]]; then
+    if ! kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s; then
       echo "++++++ Exiting Because Unable to Remove ConfigManagement CRD"
       exit 1
     fi
