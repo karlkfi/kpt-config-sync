@@ -29,30 +29,37 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
-  name: $account
+  name: ${account}
 EOF
 }
 
 function ensure_config_management_removed() {
-  echo "++++++ Removing ConfigManagement"
+  echo "++++++ Removing ConfigManagement CRD"
   # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
   #  leaves the cluster in an inconsistent state. Thus, time out after a reasonable 30 seconds.
-  kubectl delete configmanagements config-management --ignore-not-found --timeout=30s
-  if [[ $? -ne 0 ]]; then
+  if [[ $(kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s) -ne 0 ]]; then
+    # We enter this block if both:
+    # 1) The ConfigManagement CRD exists, and
+    # 2) Deleting that CRD timed out.
+
     # Since the normal deletion process failed, then the operator is not running properly and
     # we have to manually remove the finalizer, then apply the ConfigManagement without the
-    # problematic finalizer.
+    # problematic finalizer. We assume this is the standard ConfigManagement named
+    # "config-management", and that the problem preventing deletion is the finalizer.
     kubectl get configmanagements config-management -oyaml >> "${TEST_DIR}/tmp-config-management.yaml"
-    grep -vwE "operator.configmanagement.gke.io" "${TEST_DIR}/tmp-config-management.yaml" >> "${TEST_DIR}/tmp-config-management.yaml"
-    kubectl apply -f "${TEST_DIR}/tmp-config-management.yaml"
-  # TODO(b/138117321): Consider exiting test with error if still unable to remove ConfigManagement.
-    kubectl delete configmanagements config-management --ignore-not-found --timeout=30s
+    grep -vwE "operator.configmanagement.gke.io" "${TEST_DIR}/tmp-config-management.yaml" >> "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
+    kubectl apply -f "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
+    if [[ $(kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s) -ne 0 ]]; then
+      echo "++++++ Exiting Because Unable to Remove ConfigManagement CRD"
+      exit 1
+    fi
   fi
+  echo "++++++ Removed ConfigManagement CRD"
 }
 
 # Runs the installer process to set up the cluster under test.
 function install() {
-  if $do_installation; then
+  if ${do_installation}; then
     echo "+++++ Installing"
     # Make sure config-management-system doesn't exist before installing.
     # The google3/ move shouldn't require this as clusters will not persist between tests.
@@ -61,7 +68,7 @@ function install() {
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
-    if $stable_channel; then
+    if ${stable_channel}; then
       echo "++++++ Applying Nomos using stable channel"
       kubectl apply -f "${TEST_DIR}/operator-config-git-stable.yaml"
     else
@@ -81,7 +88,7 @@ function install() {
 
 # Runs the uninstaller process to uninstall nomos in the cluster under test.
 function uninstall() {
-  if $do_installation; then
+  if ${do_installation}; then
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling"
 
@@ -163,7 +170,7 @@ function clean_up() {
 }
 
 function post_clean() {
-  if $clean; then
+  if ${clean}; then
     clean_up
   fi
 }
@@ -206,7 +213,7 @@ function main() {
   fi
 
   local bats_cmd=("${TEST_DIR}/bats/bin/bats")
-  if $tap; then
+  if ${tap}; then
     bats_cmd+=(--tap)
   fi
 
@@ -319,7 +326,7 @@ flags:
 - name: "gcp-cluster-name"
   type: string
   help: "The name of the GCP cluster to use for testing.  This is used to obtain cluster credentials at the start of the installation process"
-  default: "$USER-cluster-1"
+  default: "${USER}-cluster-1"
 - name: "skip_installation"
   type: bool
   help: "If set, skips the installation step"
@@ -379,14 +386,14 @@ if ${create_ssh_key}; then
   install::create_keypair
 fi
 
-if $preclean; then
+if ${preclean}; then
   clean_up
 fi
 
-if $setup; then
+if ${setup}; then
   set_up_env
 else
-  if $clean; then
+  if ${clean}; then
     echo "Already cleaned up, skipping minimal setup!"
   else
     set_up_env_minimal
@@ -396,7 +403,7 @@ fi
 # Always run clean_up before exit at this point
 trap post_clean EXIT
 
-if $run_tests; then
+if ${run_tests}; then
   # shellcheck disable=SC2154
   main "${gotopt2_file_filter}"
 else
