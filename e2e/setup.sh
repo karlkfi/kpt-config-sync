@@ -37,6 +37,10 @@ EOF
 function install() {
   if $do_installation; then
     echo "+++++ Installing"
+    # Make sure config-management-system doesn't exist before installing.
+    # The google3/ move shouldn't require this as clusters will not persist between tests.
+    kubectl delete ns config-management-system --ignore-not-found
+
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
@@ -69,11 +73,13 @@ function uninstall() {
       kubectl -n=config-management-system delete configmanagement --all
     fi
     echo "++++++ Wait to confirm shutdown"
+    # TODO(138117321): This exits uninstall() if the command fails and leaves the system in an
+    #  inconsistent state.
     wait::for -s -t 300 -- install::nomos_uninstalled
     echo "++++++ Delete operator bundle"
     kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
 
-    # make sure that config-management-system is no longer existant
+    # make sure that config-management-system no longer exists.
     if kubectl delete ns config-management-system &> /dev/null; then
       echo "Error: config-management-system was not deleted during operator removal."
     fi
