@@ -33,13 +33,30 @@ subjects:
 EOF
 }
 
+function ensure_config_management_removed() {
+  echo "++++++ Removing ConfigManagement"
+  # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
+  #  leaves the cluster in an inconsistent state. Thus, time out after a reasonable 30 seconds.
+  kubectl delete configmanagements config-management --ignore-not-found --timeout=30s
+  if [[ $? -ne 0 ]]; then
+    # Since the normal deletion process failed, then the operator is not running properly and
+    # we have to manually remove the finalizer, then apply the ConfigManagement without the
+    # problematic finalizer.
+    kubectl get configmanagements config-management -oyaml >> "${TEST_DIR}/tmp-config-management.yaml"
+    grep -vwE "operator.configmanagement.gke.io" "${TEST_DIR}/tmp-config-management.yaml" >> "${TEST_DIR}/tmp-config-management.yaml"
+    kubectl apply -f "${TEST_DIR}/tmp-config-management.yaml"
+  # TODO(b/138117321): Consider exiting test with error if still unable to remove ConfigManagement.
+    kubectl delete configmanagements config-management --ignore-not-found --timeout=30s
+  fi
+}
+
 # Runs the installer process to set up the cluster under test.
 function install() {
   if $do_installation; then
     echo "+++++ Installing"
     # Make sure config-management-system doesn't exist before installing.
     # The google3/ move shouldn't require this as clusters will not persist between tests.
-    kubectl delete ns config-management-system --ignore-not-found
+    ensure_config_management_removed
 
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
@@ -69,10 +86,7 @@ function uninstall() {
     echo "+++++ Uninstalling"
 
     if kubectl get configmanagement &> /dev/null; then
-      echo "++++++ Removing ConfigManagement"
-      # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
-      #  leaves the cluster in an inconsistent state.
-      kubectl -n=config-management-system delete configmanagement --all
+      ensure_config_management_removed
     fi
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
