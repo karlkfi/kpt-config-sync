@@ -83,6 +83,10 @@ var Cmd = &cobra.Command{
 
 // statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
+//
+// TODO(b/131767793) This function (and its children) make up the body of this file, which is far
+// too long and lacks unit testing.  To begin, some logic (especially error handling) should be
+// extracted fro the two commands, placed in pkg/, and unit tested.
 func statusClients(contexts []string) (map[string]*statusClient, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if configs == nil {
@@ -211,8 +215,8 @@ func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, n
 	}
 
 	// Print table header.
-	fmt.Fprintln(writer, "Context\tStatus\tLast Synced Token\t")
-	fmt.Fprintln(writer, "-------\t------\t-----------------\t")
+	fmt.Fprintln(writer, "Context\tStatus\tLast Synced Token\tSync Branch")
+	fmt.Fprintln(writer, "-------\t------\t-----------------\t-----------")
 
 	// Print a summary of all clusters.
 	for _, name := range names {
@@ -295,11 +299,24 @@ type statusClient struct {
 }
 
 func (c *statusClient) clusterStatus(name string) (status string, errs []string) {
+	syncBranch, err := c.configManagement.NestedString("spec", "git", "syncBranch")
+	// TODO(b/131767793): Error logic (and more) needs to be refactored out of status.go
+	// and into the pkg directory, where:
+	//   a) common code between status.go and version.go can be shared
+	//   b) error handling of these two functions can be unified
+	//   c) more code can be covered by unit tests
+	if err != nil {
+		fmt.Printf("Failed to retrieve syncBranch for %q: %v\n", name, err)
+	}
+
 	repoList, err := c.repos.List(metav1.ListOptions{})
+	if err != nil {
+		fmt.Printf("Failed to retrieve repos for %q: %v\n", name, err)
+	}
 
 	if err == nil && len(repoList.Items) > 0 {
 		repoStatus := repoList.Items[0].Status
-		status = statusRow(name, repoStatus)
+		status = statusRow(name, repoStatus, syncBranch)
 		errs = statusErrors(repoStatus)
 		return
 	}
@@ -350,15 +367,16 @@ func errorRow(name string, err string) string {
 	return fmt.Sprintf("%s\t%s\n", shortName(name), err)
 }
 
-// statusRow returns the given RepoStatus formated as a printable row.
-func statusRow(name string, status v1.RepoStatus) string {
+// statusRow returns the given RepoStatus and syncBranch formated as a printable row.
+// This consists of (in order) the: Context, Status, Last Synced Token, Sync Branch
+func statusRow(name string, status v1.RepoStatus, syncBranch string) string {
 	token := status.Sync.LatestToken
 	if len(token) == 0 {
 		token = "N/A"
 	} else if len(token) > maxTokenLength {
 		token = token[:maxTokenLength]
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t\n", shortName(name), getStatus(status), token)
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t\n", shortName(name), getStatus(status), token, syncBranch)
 }
 
 // naStatusRow returns a printable row for a cluster that is N/A.
