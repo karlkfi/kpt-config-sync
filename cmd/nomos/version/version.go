@@ -8,14 +8,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
+
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/version"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/rest"
 )
 
 const configManagementVersionName = "configManagementVersion"
@@ -149,6 +151,9 @@ func versions(cfgs map[string]*rest.Config) map[string]vErr {
 
 // entry is one entry of the output
 type entry struct {
+	// current denotes the current context. the value is a '*' if this is the current context,
+	// or any empty string otherwise
+	current string
 	// name is the context's name.
 	name string
 	// component is the nomos component name.
@@ -160,9 +165,18 @@ type entry struct {
 // entries produces a stable list of version reports based on the unordered
 // versions provided.
 func entries(vs map[string]vErr) []entry {
+	currentContext, err := restconfig.CurrentContextName()
+	if err != nil {
+		fmt.Printf("Failed to get current context name with err: %v\n", errors.Cause(err))
+	}
+
 	var es []entry
 	for n, v := range vs {
-		es = append(es, entry{name: n, component: util.ConfigManagementName, vErr: v})
+		curr := ""
+		if n == currentContext && err == nil {
+			curr = "*"
+		}
+		es = append(es, entry{current: curr, name: n, component: util.ConfigManagementName, vErr: v})
 	}
 	// Also fill in the client version here.
 	es = append(es, entry{
@@ -177,7 +191,7 @@ func entries(vs map[string]vErr) []entry {
 // tabulate prints out the findings in the provided entries in a nice tabular
 // form.  It's the sixties, go for it!
 func tabulate(es []entry, out io.Writer) {
-	const format = "%s\t%s\t%s\n"
+	format := "%s\t%s\t%s\t%s\n"
 	w := util.NewWriter(out)
 	defer func() {
 		if err := w.Flush(); err != nil {
@@ -186,14 +200,14 @@ func tabulate(es []entry, out io.Writer) {
 		}
 	}()
 	// nolint:errcheck
-	fmt.Fprintf(w, format, "NAME", "COMPONENT", "VERSION")
+	fmt.Fprintf(w, format, "CURRENT", "NAME", "COMPONENT", "VERSION")
 	for _, e := range es {
 		if e.err != nil {
 			// nolint:errcheck
-			fmt.Fprintf(w, format, e.name, e.component, fmt.Sprintf("<error: %v>", e.err))
+			fmt.Fprintf(w, format, e.current, e.name, e.component, fmt.Sprintf("<error: %v>", e.err))
 			continue
 		}
 		// nolint:errcheck
-		fmt.Fprintf(w, format, e.name, e.component, e.version)
+		fmt.Fprintf(w, format, e.current, e.name, e.component, e.version)
 	}
 }

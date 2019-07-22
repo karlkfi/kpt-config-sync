@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const kubectlConfigPath = ".kube/config"
@@ -50,20 +51,45 @@ func newConfigFromPath(path string) (*rest.Config, error) {
 	return config, nil
 }
 
-// AllKubectlConfigs creates a config for every context available in the kubeconfig. The configs are
-// mapped by context name. There is no way to detect unhealthy clusters specified by a context, so
-// timeout can be used to prevent calls to those clusters from hanging for long periods of time.
-func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
+// newRawConfigWithRules returns a clientcmdapi.Config from a configuration file whose path is
+// provided by newConfigPath, and the clientcmd.ClientConfigLoadingRules associated with it
+func newRawConfigWithRules() (*clientcmdapi.Config, *clientcmd.ClientConfigLoadingRules, error) {
 	configPath, err := newConfigPath()
 	if err != nil {
-		return nil, errors.Wrap(err, "while getting config path")
+		return nil, nil, errors.Wrap(err, "while getting config path")
 	}
 
 	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}
 	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	apiCfg, err := clientCfg.RawConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "while building client config")
+		return nil, nil, errors.Wrap(err, "while building client config")
+	}
+
+	return &apiCfg, rules, nil
+}
+
+// CurrentContextName returns the name of the currently active k8s context as a string
+// Can be changed in tests by reassigning this pointer.
+var CurrentContextName = currentContextNameFromConfig
+
+// currentContextNameFromConfig returns the name of the user's currently active context as a string.
+// This information is read from the local kubeconfig file.
+func currentContextNameFromConfig() (string, error) {
+	apiCfg, _, err := newRawConfigWithRules()
+	if err != nil {
+		return "", err
+	}
+	return apiCfg.CurrentContext, nil
+}
+
+// AllKubectlConfigs creates a config for every context available in the kubeconfig. The configs are
+// mapped by context name. There is no way to detect unhealthy clusters specified by a context, so
+// timeout can be used to prevent calls to those clusters from hanging for long periods of time.
+func AllKubectlConfigs(timeout time.Duration) (map[string]*rest.Config, error) {
+	apiCfg, rules, err := newRawConfigWithRules()
+	if err != nil {
+		return nil, err
 	}
 
 	var badConfigs []string

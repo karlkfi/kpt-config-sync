@@ -206,6 +206,19 @@ func clusterNames(clientMap map[string]*statusClient) []string {
 func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, names []string) {
 	// First build up maps of all the things we want to display.
 	writeMap, errorMap := fetchStatus(clientMap)
+
+	// Prepend an asterisk for the "Current" column, which denotes the users' current context
+	currentContext, err := restconfig.CurrentContextName()
+	if err != nil {
+		fmt.Printf("Failed to get current context name with err: %v\n", errors.Cause(err))
+	}
+	for _, name := range names {
+		if name == currentContext {
+			writeMap[name] = "*\t" + writeMap[name]
+		} else {
+			writeMap[name] = "\t" + writeMap[name]
+		}
+	}
 	// Now we write everything at once. Processing and then printing helps avoid screen strobe.
 
 	if pollingInterval > 0 {
@@ -215,8 +228,10 @@ func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, n
 	}
 
 	// Print table header.
-	fmt.Fprintln(writer, "Context\tStatus\tLast Synced Token\tSync Branch")
-	fmt.Fprintln(writer, "-------\t------\t-----------------\t-----------")
+	// To prevent column width flickering when Nomos status is in poll mode, we artificially pad
+	// the status column to the length of the longest status (14 characters)
+	fmt.Fprintln(writer, "Current\tContext\tStatus        \tLast Synced Token\tSync Branch")
+	fmt.Fprintln(writer, "-------\t-------\t------        \t-----------------\t-----------")
 
 	// Print a summary of all clusters.
 	for _, name := range names {

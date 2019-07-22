@@ -20,6 +20,5 @@ const (
 // NewWriter returns a standardized writer for the CLI for writing tabular output to the console.
 func NewWriter(out io.Writer) *tabwriter.Writer {
 	padding := 3
-	minWidth := len(NotConfiguredMsg) + padding
-	return tabwriter.NewWriter(out, minWidth, 0, padding, ' ', 0)
+	return tabwriter.NewWriter(out, 0, 0, padding, ' ', 0)
 }

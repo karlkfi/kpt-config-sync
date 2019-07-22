@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/client/restconfig"
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -17,12 +18,13 @@ import (
 
 func TestVersion(t *testing.T) {
 	tests := []struct {
-		name     string
-		version  string
-		objects  []runtime.Object
-		expected []string
-		contexts []string
-		configs  map[string]*rest.Config
+		name           string
+		version        string
+		objects        []runtime.Object
+		expected       []string
+		currentContext string
+		contexts       []string
+		configs        map[string]*rest.Config
 	}{
 		{
 			name:     "specify zero clusters",
@@ -45,8 +47,8 @@ func TestVersion(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"NAME             COMPONENT        VERSION",
-				"                 <client>         v1.2.3",
+				"CURRENT   NAME   COMPONENT   VERSION",
+				"                 <client>    v1.2.3",
 				"",
 			},
 		},
@@ -54,12 +56,13 @@ func TestVersion(t *testing.T) {
 			name:    "not installed",
 			version: "v2.3.4-rc.5",
 			expected: []string{
-				"NAME             COMPONENT           VERSION",
-				"                 <client>            v2.3.4-rc.5",
-				"config           config-management   NOT INSTALLED",
+				"CURRENT   NAME     COMPONENT           VERSION",
+				"                   <client>            v2.3.4-rc.5",
+				"*         config   config-management   NOT INSTALLED",
 				"",
 			},
-			configs: map[string]*rest.Config{"config": nil},
+			configs:        map[string]*rest.Config{"config": nil},
+			currentContext: "config",
 		},
 		{
 			name:    "installed something",
@@ -80,12 +83,13 @@ func TestVersion(t *testing.T) {
 				},
 			},
 			expected: []string{
-				"NAME             COMPONENT           VERSION",
-				"                 <client>            v3.4.5-rc.6",
-				"config           config-management   v1.2.3-rc.42",
+				"CURRENT   NAME     COMPONENT           VERSION",
+				"                   <client>            v3.4.5-rc.6",
+				"*         config   config-management   v1.2.3-rc.42",
 				"",
 			},
-			configs: map[string]*rest.Config{"config": nil},
+			configs:        map[string]*rest.Config{"config": nil},
+			currentContext: "config",
 		},
 	}
 	for _, test := range tests {
@@ -96,6 +100,9 @@ func TestVersion(t *testing.T) {
 			}
 			util.DynamicClient = func(c *rest.Config) (dynamic.Interface, error) {
 				return fake.NewSimpleDynamicClient(runtime.NewScheme(), test.objects...), nil
+			}
+			restconfig.CurrentContextName = func() (string, error) {
+				return test.currentContext, nil
 			}
 			var b strings.Builder
 			versionInternal(test.configs, &b, test.contexts)
