@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/api/core/v1"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -312,7 +313,7 @@ func NewSync(group, kind string) *Sync {
 	return &Sync{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "Sync",
+			Kind:       configmanagement.SyncKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

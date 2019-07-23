@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/google/nomos/pkg/api/configmanagement"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -10,7 +11,7 @@ func NewClusterConfig(importToken string, loadTime metav1.Time) *ClusterConfig {
 	return &ClusterConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "ClusterConfig",
+			Kind:       configmanagement.ClusterConfigKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ClusterConfigName,
@@ -40,7 +41,7 @@ func NewNamespaceConfig(
 	return &NamespaceConfig{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: SchemeGroupVersion.String(),
-			Kind:       "NamespaceConfig",
+			Kind:       configmanagement.NamespaceConfigKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,

@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/status"
-	"github.com/googleapis/gnostic/OpenAPIv2"
+	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -427,20 +427,20 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1alpha1": {
-					{Name: "clusterselectors", Namespaced: false, Kind: "ClusterSelector"},
-					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
-					{Name: "repos", Namespaced: false, Kind: "Repo"},
-					{Name: "syncs", Namespaced: false, Kind: "Sync"},
-					{Name: "hierarchyconfigs", Namespaced: false, Kind: "HierarchyConfig"},
-					{Name: "namespaceconfigs", Namespaced: false, Kind: "NamespaceConfig"},
+					{Name: "clusterselectors", Namespaced: false, Kind: configmanagement.ClusterSelectorKind},
+					{Name: "namespaceselectors", Namespaced: false, Kind: configmanagement.NamespaceSelectorKind},
+					{Name: "repos", Namespaced: false, Kind: configmanagement.RepoKind},
+					{Name: "syncs", Namespaced: false, Kind: configmanagement.SyncKind},
+					{Name: "hierarchyconfigs", Namespaced: false, Kind: configmanagement.HierarchyConfigKind},
+					{Name: "namespaceconfigs", Namespaced: false, Kind: configmanagement.NamespaceConfigKind},
 				},
 				"v1": {
-					{Name: "clusterselectors", Namespaced: false, Kind: "ClusterSelector"},
-					{Name: "namespaceselectors", Namespaced: false, Kind: "NamespaceSelector"},
-					{Name: "repos", Namespaced: false, Kind: "Repo"},
-					{Name: "syncs", Namespaced: false, Kind: "Sync"},
-					{Name: "hierarchyconfigs", Namespaced: false, Kind: "HierarchyConfig"},
-					{Name: "namespaceconfigs", Namespaced: false, Kind: "NamespaceConfig"},
+					{Name: "clusterselectors", Namespaced: false, Kind: configmanagement.ClusterSelectorKind},
+					{Name: "namespaceselectors", Namespaced: false, Kind: configmanagement.NamespaceSelectorKind},
+					{Name: "repos", Namespaced: false, Kind: configmanagement.RepoKind},
+					{Name: "syncs", Namespaced: false, Kind: configmanagement.SyncKind},
+					{Name: "hierarchyconfigs", Namespaced: false, Kind: configmanagement.HierarchyConfigKind},
+					{Name: "namespaceconfigs", Namespaced: false, Kind: configmanagement.NamespaceConfigKind},
 				},
 			},
 		},

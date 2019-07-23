@@ -1,6 +1,7 @@
 package transform
 
 import (
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
@@ -82,7 +83,7 @@ func (v *QuotaVisitor) VisitRoot(c *ast.Root) *ast.Root {
 	h := &v1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "HierarchicalQuota",
+			Kind:       configmanagement.HierarchicalQuotaKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourcequota.ResourceQuotaHierarchyName,

@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -244,7 +245,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 					ErrorResources: []v1.ErrorResource{
 						{
 							ResourceName: "some-incorrect-name",
-							ResourceGVK:  v1.SchemeGroupVersion.WithKind("ClusterConfig"),
+							ResourceGVK:  v1.SchemeGroupVersion.WithKind(configmanagement.ClusterConfigKind),
 						},
 					},
 					ErrorMessage: `ClusterConfig resource has invalid name "some-incorrect-name". To fix, delete the ClusterConfig.`,

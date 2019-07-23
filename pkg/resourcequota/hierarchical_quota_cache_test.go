@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
 	corev1 "k8s.io/api/core/v1"
@@ -139,7 +140,7 @@ func makeHierarchicalQuota(root *v1.HierarchicalQuotaNode) *v1.HierarchicalQuota
 	return &v1.HierarchicalQuota{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1.SchemeGroupVersion.String(),
-			Kind:       "HierarchicalQuota",
+			Kind:       configmanagement.HierarchicalQuotaKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ResourceQuotaHierarchyName,

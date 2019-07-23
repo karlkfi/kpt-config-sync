@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/api/configmanagement"
 
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,7 +32,7 @@ func TestVersion(t *testing.T) {
 			objects: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"kind":       "ConfigManagement",
+						"kind":       configmanagement.OperatorKind,
 						"apiVersion": "addons.sigs.k8s.io/v1alpha1",
 						"metadata": map[string]interface{}{
 							"name":      "config-management",
@@ -66,7 +67,7 @@ func TestVersion(t *testing.T) {
 			objects: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"kind":       "ConfigManagement",
+						"kind":       configmanagement.OperatorKind,
 						"apiVersion": "addons.sigs.k8s.io/v1alpha1",
 						"metadata": map[string]interface{}{
 							"name":      "config-management",

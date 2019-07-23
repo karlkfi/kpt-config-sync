@@ -3,6 +3,7 @@ package resourcequota
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fakeinformers"
@@ -20,7 +21,7 @@ func TestQuotaAuthorize(t *testing.T) {
 		&v1.HierarchicalQuota{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "HierarchicalQuota",
+				Kind:       configmanagement.HierarchicalQuotaKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: resourcequota.ResourceQuotaHierarchyName,

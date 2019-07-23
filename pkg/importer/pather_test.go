@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -25,12 +26,12 @@ func TestPatherSingleObject(t *testing.T) {
 			name: "does nothing if object is nil",
 		},
 		{
-			name:     "Repo",
+			name:     configmanagement.RepoKind,
 			object:   fake.Repo(),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(repoBasePath),
 		},
 		{
-			name:     "HierarchyConfig",
+			name:     configmanagement.HierarchyConfigKind,
 			object:   fake.HierarchyConfig(fake.HierarchyConfigMeta(object.Name("hc"))),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
@@ -40,7 +41,7 @@ func TestPatherSingleObject(t *testing.T) {
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.Cluster().Kind) + "_us-east-1.yaml"),
 		},
 		{
-			name:     "ClusterSelector",
+			name:     configmanagement.ClusterSelectorKind,
 			object:   fake.ClusterSelector(object.Name("cs")),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.ClusterSelector().Kind) + "_cs.yaml"),
 		},

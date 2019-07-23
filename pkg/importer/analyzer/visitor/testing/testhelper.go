@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/util/repo"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -443,7 +443,7 @@ func (t *TestHelper) System() []*ast.SystemObject {
 		&v1.Repo{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "Repo",
+				Kind:       configmanagement.RepoKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "repo",

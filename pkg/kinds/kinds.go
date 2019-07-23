@@ -3,6 +3,7 @@ package kinds
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -24,7 +25,7 @@ func Anvil() schema.GroupVersionKind {
 
 // Sync returns the canonical Sync GroupVersionKind
 func Sync() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("Sync")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.SyncKind)
 }
 
 // RoleBinding returns the canonical RoleBinding GroupVersionKind
@@ -44,7 +45,7 @@ func ResourceQuota() schema.GroupVersionKind {
 
 // Repo returns the canonical Repo GroupVersionKind
 func Repo() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("Repo")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.RepoKind)
 }
 
 // PersistentVolume returns the canonical PersistentVolume GroupVersionKind
@@ -54,7 +55,7 @@ func PersistentVolume() schema.GroupVersionKind {
 
 // NamespaceConfig returns the canonical NamespaceConfig GroupVersionKind
 func NamespaceConfig() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("NamespaceConfig")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.NamespaceConfigKind)
 }
 
 // PodSecurityPolicy returns the canonical PodSecurityPolicy GroupVersionKind
@@ -64,7 +65,7 @@ func PodSecurityPolicy() schema.GroupVersionKind {
 
 // NamespaceSelector returns the canonical NamespaceSelector GroupVersionKind
 func NamespaceSelector() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("NamespaceSelector")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.NamespaceSelectorKind)
 }
 
 // Namespace returns the canonical Namespace GroupVersionKind
@@ -79,7 +80,7 @@ func CustomResourceDefinition() schema.GroupVersionKind {
 
 // ClusterSelector returns the canonical ClusterSelector GroupVersionKind
 func ClusterSelector() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("ClusterSelector")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.ClusterSelectorKind)
 }
 
 // ClusterRoleBinding returns the canonical ClusterRoleBinding GroupVersionKind
@@ -94,7 +95,7 @@ func ClusterRole() schema.GroupVersionKind {
 
 // ClusterConfig returns the canonical ClusterConfig GroupVersionKind
 func ClusterConfig() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("ClusterConfig")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.ClusterConfigKind)
 }
 
 // Cluster returns the canonical Cluster GroupVersionKind
@@ -119,12 +120,12 @@ func ReplicaSet() schema.GroupVersionKind {
 
 // HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind
 func HierarchyConfig() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("HierarchyConfig")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.HierarchyConfigKind)
 }
 
 // HierarchicalQuota returns the canonical HierarchyConfig GroupVersionKind
 func HierarchicalQuota() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("HierarchicalQuota")
+	return v1.SchemeGroupVersion.WithKind(configmanagement.HierarchicalQuotaKind)
 }
 
 // NetworkPolicy returns the canonical NetworkPolicy GroupVersionKind
@@ -143,7 +144,7 @@ func ConfigManagement() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "addons.sigs.k8s.io",
 		Version: "v1alpha1",
-		Kind:    "ConfigManagement",
+		Kind:    configmanagement.OperatorKind,
 	}
 }
 

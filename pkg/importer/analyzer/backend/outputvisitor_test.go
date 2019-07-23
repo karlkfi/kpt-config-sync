@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
@@ -48,6 +49,7 @@ func (tc *OutputVisitorTestcase) Run(t *testing.T) {
 	}
 }
 
+// TODO(b/138395335): Simplify these tests.  They are overly verbose.
 var outputVisitorTestCases = []OutputVisitorTestcase{
 	{
 		name:  "empty",
@@ -56,7 +58,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
@@ -69,7 +71,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.CRDClusterConfigName,
@@ -92,7 +94,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
@@ -105,7 +107,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.CRDClusterConfigName,
@@ -125,7 +127,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
@@ -170,7 +172,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.CRDClusterConfigName,
@@ -190,7 +192,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
@@ -203,7 +205,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.CRDClusterConfigName,
@@ -235,7 +237,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.ClusterConfigName,
@@ -248,7 +250,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			v1.ClusterConfig{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1.SchemeGroupVersion.String(),
-					Kind:       "ClusterConfig",
+					Kind:       configmanagement.ClusterConfigKind,
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: v1.CRDClusterConfigName,
@@ -262,7 +264,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "NamespaceConfig",
+						Kind:       configmanagement.NamespaceConfigKind,
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend",
@@ -309,7 +311,7 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 				{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: v1.SchemeGroupVersion.String(),
-						Kind:       "NamespaceConfig",
+						Kind:       configmanagement.NamespaceConfigKind,
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "frontend-test",
