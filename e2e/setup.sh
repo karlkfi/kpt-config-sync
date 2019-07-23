@@ -35,10 +35,8 @@ EOF
 
 function ensure_config_management_removed() {
   echo "++++++ Removing ConfigManagement CRD"
-  # TODO(b/138117321): If this runs indefinitely (i.e. if there is a finalizer problem), it
-  #  leaves the cluster in an inconsistent state. Thus, time out after a reasonable 30 seconds.
   if ! kubectl delete crd configmanagements.addons.sigs.k8s.io --ignore-not-found --timeout=30s; then
-    echo "++++++ Timed out waiting for ConfigManagement CRD to be deleted normally"
+    echo "++++++ Timed out waiting for ConfigManagement CRD to be deleted normally b/138222737"
     # We enter this block if both:
     # 1) The ConfigManagement CRD exists, and
     # 2) Deleting that CRD timed out.
@@ -99,10 +97,10 @@ function uninstall() {
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
     echo "++++++ Delete operator bundle"
-    kubectl delete --ignore-not-found -f defined-operator-bundle.yaml
+    kubectl delete --ignore-not-found -f defined-operator-bundle.yaml --timeout=30s
 
     # make sure that config-management-system no longer exists.
-    if kubectl delete ns config-management-system &> /dev/null; then
+    if ! kubectl get ns config-management-system &> /dev/null; then
       echo "Error: config-management-system was not deleted during operator removal."
     fi
     echo clean

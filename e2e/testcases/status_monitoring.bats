@@ -97,14 +97,17 @@ function token_exists() {
 }
 
 @test "repo .status.import.token is populated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is populated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is populated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.sync.latestToken"
 }
 
@@ -199,18 +202,22 @@ function timestamp_updated() {
 }
 
 @test "repo .status.import.token is updated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.import.token"
 }
 
 @test "repo .status.source.token is updated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.source.token"
 }
 
 @test "repo .status.sync.latestToken is updated" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.sync.latestToken"
 }
 
 @test "repo .status.import.errors is populated on error" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
 
@@ -230,6 +237,7 @@ function timestamp_updated() {
 # valid.  Normally, `nomos vet` will notice this before the error gets into a
 # cluster.
 @test "repo .status.sync.errors is populated on error" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
 
@@ -249,6 +257,7 @@ function timestamp_updated() {
 }
 
 @test "repo .status.sync.token is not populated on initial invalid repo" {
+  skip # TODO(b/138198997): Make non-flaky or remove.
   get_last_update "repo" "repo" "sync"
   local last_update="${output}"
 
