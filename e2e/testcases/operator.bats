@@ -10,6 +10,8 @@ load "../lib/configmap"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -20,7 +22,7 @@ teardown() {
   setup::common_teardown
 }
 
-@test "ResourceQuota live uninstall/reinstall" {
+@test "${FILE_NAME}: ResourceQuota live uninstall/reinstall" {
   # Verify the resourcequota admission controller is currently installed
   wait::for kubectl get deployment -n config-management-system resourcequota-admission-controller
   wait::for kubectl get validatingwebhookconfigurations resource-quota.configmanagement.gke.io
@@ -36,7 +38,7 @@ teardown() {
   wait::for kubectl get validatingwebhookconfigurations resource-quota.configmanagement.gke.io
 }
 
-@test "Changing TheNomos target branch takes effect" {
+@test "${FILE_NAME}: Changing TheNomos target branch takes effect" {
   local configMapPrefix="git-importer"
   # Create a new git branch and make a change there
   cd "${TEST_REPO}"
@@ -58,7 +60,7 @@ teardown() {
   wait::for -t 30 -f -- kubectl get rolebindings -n backend branch-rolebinding
 }
 
-@test "Syncing can be temporarily stopped and restarted" {
+@test "${FILE_NAME}: Syncing can be temporarily stopped and restarted" {
   # Begin by checking for the existence of the pods we'll stop.
   # We want to make sure that the pods we're talking about exist.
   wait::for kubectl get deployments -n kube-system config-management-operator

@@ -9,6 +9,8 @@ load "../lib/setup"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 function setup() {
   setup::common
 }
@@ -41,7 +43,7 @@ function test_invalid_yamls_for_resource() {
 
 # TODO(sbochins): Make these three separate tests after we speed up setup and
 # teardown for tests that do not depend on acme repo.
-@test "Validation prevents invalid Nomos Resource writes" {
+@test "${FILE_NAME}: Validation prevents invalid Nomos Resource writes" {
   test_invalid_yamls_for_resource "namespaceconfig"
   test_invalid_yamls_for_resource "clusterconfig"
   test_invalid_yamls_for_resource "sync"

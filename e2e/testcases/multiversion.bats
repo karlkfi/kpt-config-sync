@@ -6,6 +6,8 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -18,7 +20,7 @@ teardown() {
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/multiversion
 
-@test "Multiple versions of RoleBindings" {
+@test "${FILE_NAME}: Multiple versions of RoleBindings" {
   git::add "${YAML_DIR}/v1beta1.yaml" acme/namespaces/eng/backend/v1beta1.yaml
   git::commit
 

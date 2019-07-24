@@ -8,6 +8,8 @@ load "../lib/setup"
 load "../lib/wait"
 load "../lib/resource"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -57,15 +59,15 @@ EOF
   rm "${ns_file}"
 }
 
-@test "Create 10 namespaces" {
+@test "${FILE_NAME}: Create 10 namespaces" {
   stress::create_many_namespaces "10"
 }
 
-@test "Create 100 namespaces" {
+@test "${FILE_NAME}: Create 100 namespaces" {
   stress::create_many_namespaces "100"
 }
 
-@test "Create 1000 namespaces" {
+@test "${FILE_NAME}: Create 1000 namespaces" {
   stress::create_many_namespaces "1000"
 }
 
@@ -124,15 +126,15 @@ EOF
   rm -f "${ns_file}" "${resource_file}"
 }
 
-@test "Create 10 resources in a single namespace" {
+@test "${FILE_NAME}: Create 10 resources in a single namespace" {
   stress::create_many_resources "10"
 }
 
-@test "Create 100 resources in a single namespace" {
+@test "${FILE_NAME}: Create 100 resources in a single namespace" {
   stress::create_many_resources "100"
 }
 
-@test "Create 1000 resources in a single namespace" {
+@test "${FILE_NAME}: Create 1000 resources in a single namespace" {
   stress::create_many_resources "1000"
 }
 
@@ -197,18 +199,18 @@ EOF
   rm -f "${ns_file}" "${resource_file}"
 }
 
-@test "Create 100 resources, slow speed" {
+@test "${FILE_NAME}: Create 100 resources, slow speed" {
   stress::create_many_commits "100" "10"
 }
 
-@test "Create 100 resources, medium speed" {
+@test "${FILE_NAME}: Create 100 resources, medium speed" {
   stress::create_many_commits "100" "3"
 }
 
-@test "Create 100 resources, fast" {
+@test "${FILE_NAME}: Create 100 resources, fast" {
   stress::create_many_commits "100" "1"
 }
 
-@test "Create 100 resources, RLY fast" {
+@test "${FILE_NAME}: Create 100 resources, RLY fast" {
   stress::create_many_commits "100" "0"
 }

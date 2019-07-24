@@ -12,6 +12,8 @@ load "../lib/wait"
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 WATCH_PID=""
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -31,7 +33,7 @@ function teardown() {
   setup::common_teardown
 }
 
-@test "CRD deleted before repo update" {
+@test "${FILE_NAME}: CRD deleted before repo update" {
   local resname="e2e-test-anvil"
   kubectl apply -f "${YAML_DIR}/customresources/anvil-crd.yaml"
   kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-crd.yaml"
@@ -56,7 +58,7 @@ function teardown() {
   wait::for -f -t 10 -- kubectl get sync anvils.acme.com
 }
 
-@test "Sync custom namespace scoped resource" {
+@test "${FILE_NAME}: Sync custom namespace scoped resource" {
   local resname="e2e-test-anvil"
 
   debug::log "Adding CRDs out of band"
@@ -133,7 +135,7 @@ function teardown() {
   wait::for -t 30 -f -- kubectl get anvil ${resname} --all-namespaces
 }
 
-@test "Sync custom cluster scoped resource" {
+@test "${FILE_NAME}: Sync custom cluster scoped resource" {
   local resname="e2e-test-clusteranvil"
 
   debug::log "Adding CRDs out of band"

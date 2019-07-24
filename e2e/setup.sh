@@ -175,7 +175,7 @@ function post_clean() {
 }
 
 function main() {
-  local file_filter="${1:-}"
+  local file_filter="${1}"
   local testcase_filter=""
 
   start_time=$(date +%s)

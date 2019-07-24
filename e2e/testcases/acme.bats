@@ -13,6 +13,9 @@ load "../lib/setup"
 load "../lib/wait"
 
 declare KUBE_PROXY_PID
+
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -39,7 +42,7 @@ function check_metrics_pages() {
     || debug::error "Failed to scrape ${service} /metrics: ${output}"
 }
 
-@test "All acme corp created" {
+@test "${FILE_NAME}: All acme corp created" {
   local ns
 
   resource::check_count -r namespace -a "configmanagement.gke.io/managed=enabled" -c ${#ACME_NAMESPACES[@]}

@@ -9,6 +9,8 @@ load "../lib/namespaceconfig"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   local active=()
@@ -29,7 +31,7 @@ function teardown() {
   setup::common_teardown
 }
 
-@test "Namespace has enabled annotation and declared" {
+@test "${FILE_NAME}: Namespace has enabled annotation and declared" {
   local ns=decl-namespace-annotation-enabled
   namespace::create $ns -a "configmanagement.gke.io/managed=enabled"
   namespace::declare $ns
@@ -39,7 +41,7 @@ function teardown() {
   namespace::check_no_warning $ns
 }
 
-@test "Namespace exists and declared" {
+@test "${FILE_NAME}: Namespace exists and declared" {
   local ns=decl-namespace-annotation-none
   namespace::create $ns
   namespace::declare $ns
@@ -49,7 +51,7 @@ function teardown() {
   namespace::check_warning $ns
 }
 
-@test "Namespace does not exist and declared" {
+@test "${FILE_NAME}: Namespace does not exist and declared" {
   local ns=decl-namespace-noexist
   namespace::declare $ns
   git::commit
@@ -58,19 +60,19 @@ function teardown() {
   namespace::check_no_warning $ns
 }
 
-@test "Namespace has enabled annotation with no declarations" {
+@test "${FILE_NAME}: Namespace has enabled annotation with no declarations" {
   local ns=undeclared-annotation-enabled
   namespace::create $ns -a "configmanagement.gke.io/managed=enabled"
   namespace::check_not_found $ns
 }
 
-@test "Namespace exists with no declaration" {
+@test "${FILE_NAME}: Namespace exists with no declaration" {
   local ns=undeclared-annotation-none
   namespace::create $ns
   namespace::check_warning $ns
 }
 
-@test "Namespace with management disabled gets cleaned" {
+@test "${FILE_NAME}: Namespace with management disabled gets cleaned" {
   local ns=unmanage-test
 
   debug::log "Declare namespace and wait for it to exist"
@@ -115,7 +117,7 @@ function teardown() {
   [[ "${labelValue}" == "null" ]] || debug::error "managed-by annotation not removed"
 }
 
-@test "Namespace with invalid management annotation cleaned" {
+@test "${FILE_NAME}: Namespace with invalid management annotation cleaned" {
   local validns=valid-annotation
   local invalidns=invalid-annotation
 
@@ -131,7 +133,7 @@ function teardown() {
   namespace::check_warning $invalidns
 }
 
-@test "Sync labels and annotations from decls" {
+@test "${FILE_NAME}: Sync labels and annotations from decls" {
   debug::log "Creating namespace"
   local ns=labels-and-annotations
   namespace::declare $ns \

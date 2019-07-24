@@ -7,6 +7,8 @@ load "../lib/configmap"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -18,7 +20,7 @@ teardown() {
 }
 
 
-@test "Absence of cluster, namespaces, systems directories at POLICY_DIR yields a missing repo error" {
+@test "${FILE_NAME}: Absence of cluster, namespaces, systems directories at POLICY_DIR yields a missing repo error" {
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-no-policy-dir.yaml"
 
   # Verify that the application of the operator config yields the correct error code
@@ -29,7 +31,7 @@ teardown() {
 
 # This test case gradually adjusts root and acme directories' contents to move from:
 # POLICY_DIR == "acme" to: POLICY_DIR undefined in the template.  Thus the gradual steps.
-@test "Confirm that config-management-operator starts correctly with POLICY_DIR unset" {
+@test "${FILE_NAME}: Confirm that config-management-operator starts correctly with POLICY_DIR unset" {
   setup::git::add_acme_contents_to_root
 
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-no-policy-dir.yaml"

@@ -9,6 +9,8 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -56,7 +58,7 @@ function get_cluster_name() {
   echo "${cluster_name}"
 }
 
-@test "ClusterSelector: Target different ResourceQuotas to different clusters" {
+@test "${FILE_NAME}: ClusterSelector: Target different ResourceQuotas to different clusters" {
   add_clusterregistry_data
 
   debug::log "Ensure that the cluster has expected name at the beginning"
@@ -76,7 +78,7 @@ function get_cluster_name() {
     config-management-resource-quota --output='jsonpath={.spec.hard.pods}'
 }
 
-@test "ClusterSelector: Object reacts to per-cluster annotations" {
+@test "${FILE_NAME}: ClusterSelector: Object reacts to per-cluster annotations" {
   debug::log "Require that the cluster name exists on the cluster"
   wait::for -t 10 -- kubectl get configmaps -n config-management-system cluster-name
 
@@ -110,7 +112,7 @@ function get_cluster_name() {
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
-@test "ClusterSelector: Namespace reacts to per-cluster annotations" {
+@test "${FILE_NAME}: ClusterSelector: Namespace reacts to per-cluster annotations" {
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a namespace"
@@ -147,7 +149,7 @@ function get_cluster_name() {
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
-@test "ClusterSelector: Object reacts to changing the selector" {
+@test "${FILE_NAME}: ClusterSelector: Object reacts to changing the selector" {
   add_clusterregistry_data
 
   debug::log "Adding a valid cluster selector annotation to a role binding"
@@ -169,7 +171,7 @@ function get_cluster_name() {
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 }
 
-@test "ClusterSelector: Cluster reacts to CLUSTER_NAME change" {
+@test "${FILE_NAME}: ClusterSelector: Cluster reacts to CLUSTER_NAME change" {
   debug::log "Require that the cluster name exists on the cluster"
   wait::for -t 10 -- kubectl get configmaps -n config-management-system cluster-name
 
@@ -224,7 +226,7 @@ function expect_rename_to() {
   wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} config-management-system
 }
 
-@test "Operator: Cluster rename load test" {
+@test "${FILE_NAME}: Operator: Cluster rename load test" {
   for count in {0..3}; do
     expect_rename_to "eenie_${count}"
     expect_rename_to "meenie_${count}"

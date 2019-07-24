@@ -11,6 +11,8 @@ load "../lib/wait"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -35,7 +37,7 @@ function teardown() {
   setup::common_teardown
 }
 
-@test "CRD added, CR added, CRD removed, and then CR removed from repo" {
+@test "${FILE_NAME}: CRD added, CR added, CRD removed, and then CR removed from repo" {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit
@@ -66,7 +68,7 @@ function teardown() {
   wait::for -f -t 30 -- kubectl get crd anvils.acme.com
 }
 
-@test "namespace-scoped CRD and CR added, CRD updated, and both removed from repo" {
+@test "${FILE_NAME}: namespace-scoped CRD and CR added, CRD updated, and both removed from repo" {
   debug::log "Adding CRD and Custom Resource"
   git::add "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
@@ -117,7 +119,7 @@ function teardown() {
   wait::for -f -t 30 -- kubectl get crd anvils.acme.com
 }
 
-@test "cluster-scoped CRD and CR added, CRD updated, and both removed from repo" {
+@test "${FILE_NAME}: cluster-scoped CRD and CR added, CRD updated, and both removed from repo" {
   debug::log "Adding CRD and Custom Resource"
   git::add "${YAML_DIR}/customresources/clusteranvil-crd.yaml" acme/cluster/clusteranvil-crd.yaml
   git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml
@@ -150,7 +152,7 @@ function teardown() {
   wait::for -f -t 30 -- kubectl get crd clusteranvils.acme.com
 }
 
-@test "CRD added, unmanaged CR added, and CRD removed which removes CR from cluster" {
+@test "${FILE_NAME}: CRD added, unmanaged CR added, and CRD removed which removes CR from cluster" {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit
@@ -175,7 +177,7 @@ function teardown() {
   wait::for -f -t 30 -- kubectl get anvils e2e-test-anvil -n default
 }
 
-@test "CRD added, CR added, CRD removed, which causes vet failure" {
+@test "${FILE_NAME}: CRD added, CR added, CRD removed, which causes vet failure" {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit
@@ -199,7 +201,7 @@ function teardown() {
   wait::for -f -t 5 -- /opt/testing/go/bin/linux_amd64/nomos vet --path="${BATS_TMPDIR}/repo"
 }
 
-@test "invalid CRD added and replaced with valid one" {
+@test "${FILE_NAME}: invalid CRD added and replaced with valid one" {
   debug::log "Adding Invalid CRD and Custom Resource"
   git::add "${YAML_DIR}/customresources/anvil-crd-invalid.yaml" acme/cluster/anvil-crd.yaml
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml

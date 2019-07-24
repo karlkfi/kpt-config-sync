@@ -10,6 +10,8 @@ load "../lib/namespace"
 load "../lib/resource"
 load "../lib/setup"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -26,7 +28,7 @@ FOOCORP_NAMESPACES=(
   shipping-staging
 )
 
-@test "All foo-corp created" {
+@test "${FILE_NAME}: All foo-corp created" {
   # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.
   # This should be resolved with new repo format.
   git::add /opt/testing/e2e/examples/foo-corp-example/foo-corp acme

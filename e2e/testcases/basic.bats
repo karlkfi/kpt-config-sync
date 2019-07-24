@@ -8,6 +8,8 @@ load "../lib/setup"
 load "../lib/wait"
 load "../lib/resource"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -26,7 +28,7 @@ teardown() {
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
-@test "Recreate a sync deleted by the user" {
+@test "${FILE_NAME}: Recreate a sync deleted by the user" {
   debug::log "Add a deployment to a directory"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
@@ -42,7 +44,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -t 60 -- kubectl get sync deployment.apps
 }
 
-@test "Namespace garbage collection" {
+@test "${FILE_NAME}: Namespace garbage collection" {
   mkdir -p acme/namespaces/accounting
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/accounting/namespace.yaml
   git::commit
@@ -55,7 +57,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   assert::contains "not found"
 }
 
-@test "Namespace to Policyspace conversion" {
+@test "${FILE_NAME}: Namespace to Policyspace conversion" {
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::commit
   wait::for kubectl get ns dir
@@ -68,7 +70,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -f -- kubectl get ns dir
 }
 
-@test "Start syncer and only sync namespace" {
+@test "${FILE_NAME}: Start syncer and only sync namespace" {
   debug::log "Restarting syncer with an empty repo"
   kubectl delete pods -n config-management-system -l app=syncer
   wait::for -f -- kubectl get ns dir
@@ -79,7 +81,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for kubectl get ns dir
 }
 
-@test "Deleting deployment removes corresponding replicaset" {
+@test "${FILE_NAME}: Deleting deployment removes corresponding replicaset" {
   debug::log "Add a deployment"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
@@ -100,7 +102,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -f -t 10 -- resource::check replicaset -n dir -l "app=hello-world"
 }
 
-@test "Sync deployment and replicaset" {
+@test "${FILE_NAME}: Sync deployment and replicaset" {
   debug::log "Add a deployment and corresponding replicaset"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
@@ -120,7 +122,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -t 10 -- resource::check -r replicaset -n dir -l "app=hello-world"
 }
 
-@test "RoleBindings updated" {
+@test "${FILE_NAME}: RoleBindings updated" {
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
   git::commit
@@ -146,7 +148,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -t 30 -- namespaceconfig::sync_token_eq backend "$itoken"
 }
 
-@test "RoleBindings enforced" {
+@test "${FILE_NAME}: RoleBindings enforced" {
   git::add /opt/testing/e2e/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
   git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
@@ -168,7 +170,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
     kubectl get pods -n frontend --as alice@acme.com
 }
 
-@test "ResourceQuota enforced" {
+@test "${FILE_NAME}: ResourceQuota enforced" {
   clean_test_configmaps
   git::add /opt/testing/e2e/examples/acme/namespaces/rnd acme/namespaces/rnd/
   git::commit
@@ -217,19 +219,19 @@ function manage_namespace() {
     --ignore-not-found --namespace="${ns}"
 }
 
-@test "Namespace default can be managed" {
+@test "${FILE_NAME}: Namespace default can be managed" {
   manage_namespace "default"
 }
 
-@test "Namespace kube-system can be managed" {
+@test "${FILE_NAME}: Namespace kube-system can be managed" {
   manage_namespace "kube-system"
 }
 
-@test "Namespace kube-public can be managed" {
+@test "${FILE_NAME}: Namespace kube-public can be managed" {
   manage_namespace "kube-public"
 }
 
-@test "Namespace kube-whatever can be managed and has a normal lifecycle" {
+@test "${FILE_NAME}: Namespace kube-whatever can be managed and has a normal lifecycle" {
   debug::log "Create a system namespace -- it is not required to exist"
   kubectl get ns "kube-whatever" || kubectl create ns "kube-whatever"
   manage_namespace "kube-whatever"

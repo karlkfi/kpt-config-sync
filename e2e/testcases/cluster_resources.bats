@@ -9,6 +9,8 @@ load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -100,7 +102,7 @@ function check_cluster_scoped_resource() {
   wait::for -f -- kubectl get ${res} ${resname}
 }
 
-@test "Local kubectl apply to clusterroles gets reverted" {
+@test "${FILE_NAME}: Local kubectl apply to clusterroles gets reverted" {
   local clusterrole_name
   clusterrole_name="e2e-test-clusterrole"
   debug::log "Add initial clusterrole"
@@ -117,7 +119,7 @@ function check_cluster_scoped_resource() {
     clusterrole::validate_management_selection ${clusterrole_name} '.rules[0].verbs' '["get","list","create"]'
 }
 
-@test "Lifecycle for clusterroles" {
+@test "${FILE_NAME}: Lifecycle for clusterroles" {
   check_cluster_scoped_resource \
     clusterrole \
     ".rules[].verbs" \
@@ -125,7 +127,7 @@ function check_cluster_scoped_resource() {
     '["get","list","create"]'
 }
 
-@test "Lifecycle for clusterrolebindings" {
+@test "${FILE_NAME}: Lifecycle for clusterrolebindings" {
   check_cluster_scoped_resource \
     clusterrolebinding \
     ".subjects[].name" \
@@ -134,7 +136,7 @@ function check_cluster_scoped_resource() {
     "-2"
 }
 
-@test "Lifecycle for podsecuritypolicies" {
+@test "${FILE_NAME}: Lifecycle for podsecuritypolicies" {
   check_cluster_scoped_resource \
     podsecuritypolicy \
     ".spec.privileged" \

@@ -10,6 +10,8 @@ load "../lib/resource"
 
 readonly YAML_DIR="${BATS_TEST_DIRNAME}/../testdata"
 
+FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -34,7 +36,7 @@ teardown() {
   setup::common_teardown
 }
 
-@test "Invalid policydir gets an error message in status.source.errors" {
+@test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
   kubectl patch configmanagement config-management \
@@ -91,22 +93,22 @@ function token_exists() {
   fi
 }
 
-@test "Version populated in ConfigManagement.status.configManagementVersion" {
+@test "${FILE_NAME}: Version populated in ConfigManagement.status.configManagementVersion" {
   wait::for -t 60 -- token_exists \
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
 
-@test "repo .status.import.token is populated" {
+@test "${FILE_NAME}: repo .status.import.token is populated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.import.token"
 }
 
-@test "repo .status.source.token is populated" {
+@test "${FILE_NAME}: repo .status.source.token is populated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.source.token"
 }
 
-@test "repo .status.sync.latestToken is populated" {
+@test "${FILE_NAME}: repo .status.sync.latestToken is populated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   wait::for -t 60 -- token_exists "repo" "repo" ".status.sync.latestToken"
 }
@@ -201,22 +203,22 @@ function timestamp_updated() {
   return 0
 }
 
-@test "repo .status.import.token is updated" {
+@test "${FILE_NAME}: repo .status.import.token is updated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.import.token"
 }
 
-@test "repo .status.source.token is updated" {
+@test "${FILE_NAME}: repo .status.source.token is updated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.source.token"
 }
 
-@test "repo .status.sync.latestToken is updated" {
+@test "${FILE_NAME}: repo .status.sync.latestToken is updated" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_token_updated "repo" "repo" ".status.sync.latestToken"
 }
 
-@test "repo .status.import.errors is populated on error" {
+@test "${FILE_NAME}: repo .status.import.errors is populated on error" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
@@ -236,7 +238,7 @@ function timestamp_updated() {
 # a perfectly legit service in a managed namespace, except that its name is not
 # valid.  Normally, `nomos vet` will notice this before the error gets into a
 # cluster.
-@test "repo .status.sync.errors is populated on error" {
+@test "${FILE_NAME}: repo .status.sync.errors is populated on error" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   ensure_error_free_repo
   wait::for -t 30 -f -- kubectl get namespace dir
@@ -256,7 +258,7 @@ function timestamp_updated() {
       --output='jsonpath={.status.sync.inProgress[0].errors[0].code}'
 }
 
-@test "repo .status.sync.token is not populated on initial invalid repo" {
+@test "${FILE_NAME}: repo .status.sync.token is not populated on initial invalid repo" {
   skip # TODO(b/138198997): Make non-flaky or remove.
   get_last_update "repo" "repo" "sync"
   local last_update="${output}"
