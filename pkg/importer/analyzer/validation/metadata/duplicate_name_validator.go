@@ -19,13 +19,15 @@ type duplicateNameValidator struct {
 	visitor.ValidatorBase
 }
 
+type duplicateError func(...id.Resource) status.Error
+
 // NewDuplicateNameValidator ensures the flattened config output contains no resources in the same
 // config which share the same group, kind, and name.
 func NewDuplicateNameValidator() ast.Visitor {
 	return visitor.NewValidator(&duplicateNameValidator{})
 }
 
-func checkDuplicates(objects []id.Resource) status.MultiError {
+func checkDuplicates(objects []id.Resource, errorType duplicateError) status.MultiError {
 	duplicateMap := make(map[groupKindName][]id.Resource)
 
 	for _, o := range objects {
@@ -40,7 +42,7 @@ func checkDuplicates(objects []id.Resource) status.MultiError {
 	var errs status.MultiError
 	for _, duplicates := range duplicateMap {
 		if len(duplicates) > 1 {
-			errs = status.Append(errs, vet.MetadataNameCollisionError(duplicates...))
+			errs = status.Append(errs, errorType(duplicates...))
 		}
 	}
 	return errs
@@ -56,7 +58,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiE
 		resources[i] = object
 	}
 
-	return checkDuplicates(resources)
+	return checkDuplicates(resources, vet.NamespaceMetadataNameCollisionError)
 }
 
 // ValidateCluster ensures the Cluster config contains no duplicates.
@@ -66,5 +68,5 @@ func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) status.
 		resources[i] = object
 	}
 
-	return checkDuplicates(resources)
+	return checkDuplicates(resources, vet.ClusterMetadataNameCollisionError)
 }
