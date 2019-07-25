@@ -54,15 +54,15 @@ WORKDIR /go/src/${KIND_REPO}
 RUN git checkout ${KIND_RELEASE} && go install ${KIND_REPO}
 
 # Build intermediate image for gcloud / kubectl
-FROM ubuntu:16.04 as gcloud-install
+FROM ubuntu:18.04 as gcloud-install
 
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 RUN apt-get update && apt-get install -y curl python
 ARG DL_GOOGLE_COM="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads"
-RUN curl ${DL_GOOGLE_COM}/google-cloud-sdk-210.0.0-linux-x86_64.tar.gz \
+RUN curl ${DL_GOOGLE_COM}/google-cloud-sdk-255.0.0-linux-x86_64.tar.gz \
 	> /tmp/google-cloud-sdk.tar.gz
 # Verify SHA256 sum for the downloaded archive for reproducibility.
-RUN echo "b98c9253e3c45e39a42b4ba8b055dad4d3cb3b3f63d1ec41f617a3478db9fb42 /tmp/google-cloud-sdk.tar.gz" | \
+RUN echo "18fcbc81b3b095ff5ef92fd41286a045f782c18d99a976c0621140a8fde3fbad /tmp/google-cloud-sdk.tar.gz" | \
 		sha256sum --check -
 RUN mkdir -p /opt/gcloud && \
     tar -C /opt/gcloud -xf /tmp/google-cloud-sdk.tar.gz && \
@@ -70,7 +70,7 @@ RUN mkdir -p /opt/gcloud && \
     gcloud components install alpha beta
 
 # Build e2e image
-FROM ubuntu:16.04 as e2e-base
+FROM ubuntu:18.04 as e2e-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -111,7 +111,7 @@ RUN bash -c '[ $UID == 0 ] || useradd -u $UID -G $GID $UNAME'
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
   && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
-  && apt-get install -y kubectl=1.13.3-00
+  && apt-get install -y kubectl=1.15.1-00
 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
