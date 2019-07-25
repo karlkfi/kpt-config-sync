@@ -65,14 +65,6 @@
   version = "v1.3.1"
 
 [[projects]]
-  digest = "1:f6e5e1bc64c2908167e6aa9a1fe0c084d515132a1c63ad5b6c84036aa06dc0c1"
-  name = "github.com/coreos/go-oidc"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "1180514eaf4d9f38d0d19eef639a1d695e066e72"
-  version = "v2.0.0"
-
-[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -106,17 +98,6 @@
   pruneopts = "UT"
   revision = "5858425f75500d40c52783dce87d085a483ce135"
   version = "v4.2.0"
-
-[[projects]]
-  digest = "1:71a0c3c2bd4bc64860f9263492a8f57b304d27c0f2393da1d8a9a446dd14a6f0"
-  name = "github.com/filmil/k8s-oidc-helper"
-  packages = [
-    "pkg/helper",
-    "pkg/oidc",
-  ]
-  pruneopts = "UT"
-  revision = "b0928391a74562241a146a1b11458359fea857a6"
-  version = "v0.3.1-oidc"
 
 [[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
@@ -415,17 +396,6 @@
   version = "v0.8.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:bd9efe4e0b0f768302a1e2f0c22458149278de533e521206e5ddc71848c269a0"
-  name = "github.com/pquerna/cachecontrol"
-  packages = [
-    ".",
-    "cacheobject",
-  ]
-  pruneopts = "UT"
-  revision = "1555304b9b35fdd2b425bccf1a5613677705e7d0"
-
-[[projects]]
   digest = "1:93a746f1060a8acbcf69344862b2ceced80f854170e1caae089b2834c5fbf7f4"
   name = "github.com/prometheus/client_golang"
   packages = [
@@ -522,14 +492,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bac77e18329fa88ea880b9a7cfcb8fd25d8b835397dd9143f4b162a43e35bb60"
+  digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
   name = "golang.org/x/crypto"
-  packages = [
-    "ed25519",
-    "ed25519/internal/edwards25519",
-    "pbkdf2",
-    "ssh/terminal",
-  ]
+  packages = ["ssh/terminal"]
   pruneopts = "UT"
   revision = "a29dc8fdc73485234dbef99ebedb95d2eced08de"
 
@@ -648,18 +613,6 @@
   version = "v0.9.1"
 
 [[projects]]
-  digest = "1:8c05919580be8a5be668709d7e5a69d5cd19b8ee9f23d62ce5b10d3457bf6a13"
-  name = "gopkg.in/square/go-jose.v2"
-  packages = [
-    ".",
-    "cipher",
-    "json",
-  ]
-  pruneopts = "UT"
-  revision = "730df5f748271903322feb182be83b43ebbbe27d"
-  version = "v2.3.1"
-
-[[projects]]
   digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -709,16 +662,11 @@
   version = "kubernetes-1.12.3"
 
 [[projects]]
-  digest = "1:9733f90c2a08d0e487a154f2cce2ac3cca64b17ba27b4b251cd20324e334df5f"
+  digest = "1:927046c20a717792cc778dcdb0efb026586cb7381d91fa60eeda96a471a18d36"
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1",
-    "pkg/client/clientset/clientset",
-    "pkg/client/clientset/clientset/fake",
-    "pkg/client/clientset/clientset/scheme",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1/fake",
     "pkg/features",
   ]
   pruneopts = "UT"
@@ -1088,11 +1036,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/coreos/go-oidc",
     "github.com/davecgh/go-spew/spew",
-    "github.com/filmil/k8s-oidc-helper/pkg/helper",
-    "github.com/filmil/k8s-oidc-helper/pkg/oidc",
-    "github.com/ghodss/yaml",
     "github.com/golang/dep",
     "github.com/golang/glog",
     "github.com/golang/mock/gomock",
@@ -1104,7 +1048,6 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
-    "golang.org/x/oauth2",
     "gopkg.in/yaml.v2",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
@@ -1117,8 +1060,6 @@
     "k8s.io/api/rbac/v1",
     "k8s.io/api/rbac/v1alpha1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
-    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset",
-    "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/meta",
     "k8s.io/apimachinery/pkg/api/resource",
@@ -1162,7 +1103,6 @@
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api",
-    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1",
