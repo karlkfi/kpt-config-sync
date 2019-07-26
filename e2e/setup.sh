@@ -112,11 +112,15 @@ function set_up_env() {
   if ${gotopt2_set_admin_role_binding:-false}; then
     apply_cluster_admin_binding "$(gcloud config get-value account)"
   fi
-  declare -a waitpids
-  /opt/testing/e2e/init-git-server.sh & waitpids+=("${!}")
-  install & waitpids+=("${!}")
-  echo "++++ Waiting for setup to finish"
-  wait "${waitpids[@]}"
+
+  # NOTE: we have to set up the git server first, otherwise there's a race
+  # condition where the importer can come up faster than the git server and have
+  # to wait two minutes for timeout.
+  echo "++++ Setting up git server"
+  /opt/testing/e2e/init-git-server.sh
+  echo "++++ Setting up Nomos"
+  install
+  echo "++++ Env setup complete"
 }
 
 function set_up_env_minimal() {
