@@ -3,6 +3,7 @@ package reconcile
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -251,12 +252,27 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 	if config == nil {
 		return nil
 	}
+
+	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); gks != nil {
+		glog.Infof(
+			"NamespaceConfigReconciler encountered "+
+				"group-kind(s) %s that were not present in a sync, waiting for reconciler restart",
+			strings.Join(gks, ", "))
+		// We only reach this case on a race condition where the reconciler is run before the
+		// changes to Sync objects are picked up.  We exit early since there are resources we can't
+		// properly handle which will cause status on the NamespaceConfig to incorrectly report that
+		// everything is fully synced.  We log info and return nil here since the Sync metacontroller
+		// will restart this reconciler shortly.
+		return nil
+	}
+
 	var errBuilder status.MultiError
 	reconcileCount := 0
 	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
 	if err != nil {
 		return errors.Wrapf(err, "could not process namespaceconfig: %q", config.GetName())
 	}
+
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {

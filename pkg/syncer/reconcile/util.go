@@ -9,14 +9,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/client"
 )
 
 // AllVersionNames returns the set of names of all resources with the specified GroupKind.
@@ -101,4 +102,23 @@ func filterMultiErrorWithCause(errs status.MultiError, cause error) status.Multi
 		}
 	}
 	return filtered
+}
+
+// resourcesWithoutSync returns a list of strings representing all group/kind in the
+// v1.GenericResources list that are not found in a Sync.
+func resourcesWithoutSync(
+	resources []v1.GenericResources, toSync []schema.GroupVersionKind) []string {
+	declaredGroupKind := map[schema.GroupKind]struct{}{}
+	for _, res := range resources {
+		declaredGroupKind[schema.GroupKind{Group: res.Group, Kind: res.Kind}] = struct{}{}
+	}
+	for _, gvk := range toSync {
+		delete(declaredGroupKind, gvk.GroupKind())
+	}
+
+	var gks []string
+	for gk := range declaredGroupKind {
+		gks = append(gks, gk.String())
+	}
+	return gks
 }

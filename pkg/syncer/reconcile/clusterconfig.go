@@ -2,12 +2,13 @@ package reconcile
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
@@ -106,6 +107,19 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 }
 
 func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.ClusterConfig) error {
+	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); gks != nil {
+		glog.Infof(
+			"ClusterConfigReconciler encountered "+
+				"group-kind(s) %s that were not present in a sync, waiting for reconciler restart",
+			strings.Join(gks, ", "))
+		// We only reach this case on a race condition where the reconciler is run before the
+		// changes to Sync objects are picked up.  We exit early since there are resources we can't
+		// properly handle which will cause status on the ClusterConfig to incorrectly report that
+		// everything is fully synced.  We log info and return nil here since the Sync metacontroller
+		// will restart this reconciler shortly.
+		return nil
+	}
+
 	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
 	if err != nil {
 		return errors.Wrapf(err, "could not process cluster config: %q", config.GetName())
