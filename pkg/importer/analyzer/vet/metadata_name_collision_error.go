@@ -36,7 +36,6 @@ func NamespaceMetadataNameCollisionError(resources ...id.Resource) status.Error 
 // ClusterMetadataNameCollisionError reports that multiple cluster-scoped objects of the same Kind and
 // namespace have the same metadata name
 func ClusterMetadataNameCollisionError(resources ...id.Resource) status.Error {
-	return metadataNameCollisionErrorBuilder.WithResources(resources...).Errorf(
-		fmt.Sprintf("Cluster configs of the same Kind MUST have unique names if they are also have the same %[1]s:",
-			node.Namespace))
+	return metadataNameCollisionErrorBuilder.WithResources(resources...).New(
+		"Cluster configs of the same Kind MUST have unique names")
 }
