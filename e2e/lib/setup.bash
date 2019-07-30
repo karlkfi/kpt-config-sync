@@ -13,6 +13,8 @@ source "$DIR/ignore.bash"
 source "$DIR/namespace.bash"
 # shellcheck source=e2e/lib/namespaceconfig.bash
 source "$DIR/namespaceconfig.bash"
+# shellcheck source=e2e/lib/nomos.bash
+source "$DIR/nomos.bash"
 # shellcheck source=e2e/lib/resource.bash
 source "$DIR/resource.bash"
 # shellcheck source=e2e/lib/wait.bash
@@ -69,14 +71,11 @@ setup::git::init_acme() {
   git push origin master:master -f
   cd "$CWD"
 
-  local ns
-  for ns in "${ACME_NAMESPACES[@]}"; do
-    wait::for -- namespaceconfig::synced "${ns}"
-  done
+  wait::for -t 60 -- nomos::repo_synced
 }
 
 # Adds the contents of the acme directory to the git repository's root
-# 
+#
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
 setup::git::add_acme_contents_to_root() {
@@ -90,10 +89,7 @@ setup::git::add_acme_contents_to_root() {
   git push origin master:master -f
   cd "$CWD"
 
-  local ns
-  for ns in "${ACME_NAMESPACES[@]}"; do
-    wait::for -- namespaceconfig::synced "${ns}"
-  done
+  wait::for -t 60 -- nomos::repo_synced
 }
 
 # This removes the acme folder, leaving behind the other files in the project root
@@ -111,10 +107,7 @@ setup::git::remove_acme_folder() {
   git push origin master:master -f
   cd "$CWD"
 
-  local ns
-  for ns in "${ACME_NAMESPACES[@]}"; do
-    wait::for -- namespaceconfig::synced "${ns}"
-  done
+  wait::for -t 60 -- nomos::repo_synced
 }
 
 # Record timing info, and implement the test filter. This is cheap, and all tests should do it.

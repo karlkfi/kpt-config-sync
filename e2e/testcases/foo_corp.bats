@@ -7,6 +7,7 @@ set -euo pipefail
 
 load "../lib/git"
 load "../lib/namespace"
+load "../lib/nomos"
 load "../lib/resource"
 load "../lib/setup"
 
@@ -34,28 +35,16 @@ FOOCORP_NAMESPACES=(
   git::add /opt/testing/e2e/examples/foo-corp-example/foo-corp acme
   git::commit
 
+  wait::for -t 60 -- nomos::repo_synced
+
   local ns
   for ns in "${FOOCORP_NAMESPACES[@]}"; do
-    wait::for -- namespaceconfig::synced "${ns}"
-  done
-  for ns in "${ACME_NAMESPACES[@]}"; do
-    wait::for -f -- kubectl get ns "${ns}"
+    namespace::check_exists "$ns" \
+      -l "configmanagement.gke.io/quota=true" \
+      -a "configmanagement.gke.io/managed=enabled"
   done
 
-  # Cluster-scoped resources
-  namespace::check_exists audit \
-    -l "configmanagement.gke.io/quota=true" \
-    -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_exists shipping-dev \
-    -l "configmanagement.gke.io/quota=true" \
-    -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_exists shipping-staging \
-    -l "configmanagement.gke.io/quota=true" \
-    -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_exists shipping-prod \
-    -l "configmanagement.gke.io/quota=true" \
-    -a "configmanagement.gke.io/managed=enabled"
-  resource::check_count -r namespace -l "configmanagement.gke.io/quota=true" -a "configmanagement.gke.io/managed=enabled" -c 4
+  resource::check_count -r namespace -l "configmanagement.gke.io/quota=true" -a "configmanagement.gke.io/managed=enabled" -c ${#FOOCORP_NAMESPACES[@]}
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrole -c 2
   resource::check clusterrole namespace-reader -a "configmanagement.gke.io/managed=enabled"
   resource::check clusterrole pod-creator -a "configmanagement.gke.io/managed=enabled"
