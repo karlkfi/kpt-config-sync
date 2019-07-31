@@ -56,7 +56,8 @@ setup::git::initialize() {
   git config user.email testing_nome@example.com
 }
 
-setup::git::init_acme() {
+
+setup::git::__init_acme_dir() {
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
 
@@ -66,12 +67,48 @@ setup::git::init_acme() {
   git commit -a -m "initial commit"
 
   cp -r /opt/testing/e2e/examples/acme ./
+}
+
+setup::git::__commit_acme_dir_and_wait() {
   git add -A
   git commit -m "setUp commit"
   git push origin master:master -f
   cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
+}
+
+# Adds the example acme repo to git, pushes it, and blocks until the proper namespaces are created.
+setup::git::init_acme() {
+  setup::git::__init_acme_dir
+  setup::git::__commit_acme_dir_and_wait
+}
+
+# Same as init_acme, but allows for specified files/directories to be excluded from the acme repo.
+#
+# Variadic Args:
+#   The paths of any files/directories from the acme example repo to exclude
+# Example:
+# - To exclude directory foo/bar/ and file foo/bazz.yaml:
+#   setup::git::init_acme() foo/bar/ foo/bazz.yaml
+setup::git::init_acme_without() {
+  if [[ $# -eq 0 ]]; then
+    echo "Error: No paths supplied to 'init_acme_without'. Use 'init_acme' if there are no paths to exclude"
+    exit 1
+  fi
+
+  setup::git::__init_acme_dir
+  for path in "$@"; do
+    if [[ -d ${path} ]]; then
+      rm -r ${path}
+    elif [[ -f ${path} ]]; then
+      rm $path
+    elif ! [[ -e ${path} ]]; then
+      echo "Error: Specified path $path does not exist in the acme repo"
+      exit 1
+    fi
+  done
+  setup::git::__commit_acme_dir_and_wait
 }
 
 # Adds the contents of the acme directory to the git repository's root

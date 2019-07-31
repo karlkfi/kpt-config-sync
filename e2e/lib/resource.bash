@@ -111,6 +111,7 @@ function resource::wait_for_update() {
 # Flags:
 #  -n [namespace] get the count for a namespaced resource
 #  -l [label] (repeated) specify a label that must exist on the resource
+#  -a [annotation] (repeated) specify an annotation that must exist on the resource
 # Args:
 #  [resource] the resource, eg clusterrole
 #  [name] the resource name, eg, cluster-admin
