@@ -379,7 +379,7 @@ func shortName(name string) string {
 
 // errorRow returns the given error message formated as a printable row.
 func errorRow(name string, err string) string {
-	return fmt.Sprintf("%s\t%s\n", shortName(name), err)
+	return stringForRow(name, err, "", "")
 }
 
 // statusRow returns the given RepoStatus and syncBranch formated as a printable row.
@@ -391,12 +391,12 @@ func statusRow(name string, status v1.RepoStatus, syncBranch string) string {
 	} else if len(token) > maxTokenLength {
 		token = token[:maxTokenLength]
 	}
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t\n", shortName(name), getStatus(status), token, syncBranch)
+	return stringForRow(name, getStatus(status), token, syncBranch)
 }
 
 // naStatusRow returns a printable row for a cluster that is N/A.
 func naStatusRow(name string) string {
-	return fmt.Sprintf("%s\t%s\n", shortName(name), "N/A")
+	return stringForRow(name, "N/A", "", "")
 }
 
 // getStatus returns the given RepoStatus formatted as a short summary string.
@@ -438,4 +438,12 @@ func statusErrors(status v1.RepoStatus) []string {
 		}
 	}
 	return errs
+}
+
+// stringForRow returns a string containing all of the columns in a particular row, except for
+// the 'Current' column which is prepended prior to printing.
+// Note: It is necessary to include tabs even for columns which are empty, otherwise the formatting
+// of rows below will be misaligned.
+func stringForRow(name string, status string, token string, syncBranch string) string {
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t\n", shortName(name), status, token, syncBranch)
 }
