@@ -20,7 +20,7 @@ NOTE: The only common case where a modification to this (the Nomos binary)
 repository requires a change to the Nomos Operator repository is if the yaml
 manifests for Nomos objects are modified. Then, the developer must generate a
 new set of manifests for the Operator, as documented in the Operator Readme
-[here](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/README.md#updating-the-nomos-binary-the-operator-deploys).
+[here](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/README.md#updating-the-yaml-files-manifests_the-operator-deploys).
 Soon after the change to the Nomos binary is merged, the commesurate change to
 generate a new set of manifests in the Operator repository should be released as
 the latest Release Candidate for the Operator. This can be done by running `make
