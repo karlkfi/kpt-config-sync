@@ -12,6 +12,10 @@ import (
 
 var _ apimeta.RESTMapper = CRDAwareRestMapper{}
 
+// DefaultCLIOptions are the CLIOptions we use everywhere since many interfaces ask for it but we
+// always use the default options.
+var DefaultCLIOptions = &genericclioptions.ConfigFlags{}
+
 // CRDAwareRestMapper generates rest mappings based on the discovery API and a set of CRDs.
 type CRDAwareRestMapper struct {
 	apimeta.RESTMapper

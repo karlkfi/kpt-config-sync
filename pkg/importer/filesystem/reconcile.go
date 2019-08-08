@@ -32,7 +32,7 @@ var _ reconcile.Reconciler = &Reconciler{}
 type Reconciler struct {
 	clusterName     string
 	configDir       string
-	parser          *Parser
+	parser          configParser
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
 	decoder         decode.Decoder
@@ -49,7 +49,7 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(clusterName string, configDir string, parser *Parser, client *syncerclient.Client,
+func NewReconciler(clusterName string, configDir string, parser configParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
 	decoder decode.Decoder) (*Reconciler, error) {
 	repoClient := repo.New(client)

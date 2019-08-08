@@ -51,6 +51,8 @@ type Parser struct {
 	errors       status.MultiError
 }
 
+var _ configParser = &Parser{}
+
 // ParserOpt has often customizes the behavior of Parser.Parse.
 type ParserOpt struct {
 	// Extension is the ParserConfig object that the parser will consume for configuring various
@@ -142,7 +144,12 @@ func (p *Parser) HydrateRoot(
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
-func (p *Parser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time, clusterName string) (*namespaceconfig.AllConfigs, status.MultiError) {
+func (p *Parser) Parse(
+	importToken string,
+	currentConfigs *namespaceconfig.AllConfigs,
+	loadTime time.Time,
+	clusterName string,
+) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
 
 	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
@@ -250,14 +257,14 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 
 // ValidateInstallation checks to see if Nomos is installed properly.
 // TODO(b/123598820): Server-side validation for this check.
-func (p *Parser) ValidateInstallation() status.MultiError {
-	resources, err := p.discoveryClient()
+func ValidateInstallation(client genericclioptions.RESTClientGetter) status.MultiError {
+	discoveryClient, err := client.ToDiscoveryClient()
 	if err != nil {
 		return status.From(err)
 	}
 
 	gv := v1.SchemeGroupVersion.String()
-	_, rErr := resources.ServerResourcesForGroupVersion(gv)
+	_, rErr := discoveryClient.ServerResourcesForGroupVersion(gv)
 	if rErr != nil {
 		if apierrors.IsNotFound(rErr) {
 			return status.From(vet.ConfigManagementNotInstalledError(

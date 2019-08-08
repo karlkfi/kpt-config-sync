@@ -34,13 +34,7 @@ func TestPolicyManagementNotInstalled(t *testing.T) {
 				}
 			}()
 
-			p := NewParser(
-				f,
-				ParserOpt{
-					Extension: &NomosVisitorProvider{},
-				},
-			)
-			eb := p.ValidateInstallation()
+			eb := ValidateInstallation(f)
 
 			if tc.shouldFail {
 				if eb == nil {

@@ -86,7 +86,7 @@ func TestRawParser_Parse(t *testing.T) {
 			discoveryClient := fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources()))
 
 			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, discoveryClient)
-			result, err := p.Parse(importToken, nil, loadTime)
+			result, err := p.Parse(importToken, nil, loadTime, "")
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -23,9 +23,11 @@ type RawParser struct {
 	client discovery.CachedDiscoveryInterface
 }
 
+var _ configParser = &RawParser{}
+
 // NewRawParser instantiates a RawParser.
-func NewRawParser(path cmpath.Relative, reader Reader, client discovery.CachedDiscoveryInterface) RawParser {
-	return RawParser{
+func NewRawParser(path cmpath.Relative, reader Reader, client discovery.CachedDiscoveryInterface) *RawParser {
+	return &RawParser{
 		path:   path,
 		reader: reader,
 		client: client,
@@ -33,7 +35,7 @@ func NewRawParser(path cmpath.Relative, reader Reader, client discovery.CachedDi
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time) (*namespaceconfig.AllConfigs, status.MultiError) {
+func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	// Get all known API resources from the server.
 	p.client.Invalidate()
 	apiResources, err := p.client.ServerResources()

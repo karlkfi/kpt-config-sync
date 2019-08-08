@@ -5,17 +5,18 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/namespaceconfig"
 )
 
 const timeout = time.Second * 15
@@ -26,7 +27,7 @@ func NewParser(parserOpt filesystem.ParserOpt) (*filesystem.Parser, error) {
 		return nil, status.InternalError.New("No root path specified.")
 	}
 
-	return filesystem.NewParser(&genericclioptions.ConfigFlags{}, parserOpt), nil
+	return filesystem.NewParser(importer.DefaultCLIOptions, parserOpt), nil
 }
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
@@ -42,7 +43,7 @@ func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig
 		glog.Fatalf("Failed to create rest config: %+v", err)
 	}
 
-	if err := p.ValidateInstallation(); err != nil {
+	if err := filesystem.ValidateInstallation(importer.DefaultCLIOptions); err != nil {
 		return nil, errors.Wrap(err, "Found issues")
 	}
 

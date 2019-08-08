@@ -1,28 +1,32 @@
 package filesystem
 
 import (
+	"os"
 	"path"
+	"strconv"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/decode"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/syncer/decode"
+
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/metrics"
 )
 
 const (
@@ -47,9 +51,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return err
 	}
 
-	parser := NewParser(
-		&genericclioptions.ConfigFlags{}, ParserOpt{Extension: &NomosVisitorProvider{}, RootPath: rootPath})
-	if err = parser.ValidateInstallation(); err != nil {
+	if err = ValidateInstallation(importer.DefaultCLIOptions); err != nil {
 		return err
 	}
 
@@ -59,7 +61,16 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
-	r, err := NewReconciler(clusterName, rootDir, parser, client, dc, mgr.GetCache(), decoder)
+	// If HIERARCHY_DISABLED is invalid, ignore it.
+	hierarchyDisabled, _ := strconv.ParseBool(os.Getenv("HIERARCHY_DISABLED"))
+	var cfgParser configParser
+	if hierarchyDisabled {
+		// Nomos hierarchy is disabled, so use the RawParser.
+		cfgParser = NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &FileReader{ClientGetter: importer.DefaultCLIOptions}, nil)
+	} else {
+		cfgParser = NewParser(importer.DefaultCLIOptions, ParserOpt{Extension: &NomosVisitorProvider{}, RootPath: rootPath})
+	}
+	r, err := NewReconciler(clusterName, rootDir, cfgParser, client, dc, mgr.GetCache(), decoder)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}
