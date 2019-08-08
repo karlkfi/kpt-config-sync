@@ -151,6 +151,14 @@ function set_up_env_minimal() {
 }
 
 function clean_up_test_resources() {
+  echo "printing diagnostics"
+  echo "+ operator logs"
+  (kubectl -n kube-system logs -l k8s-app=config-management-operator --tail=100) || true
+  echo "+ importer pod"
+  (kubectl -n config-management-system describe pod git-importer) || true
+  echo "+ importer logs"
+  (kubectl -n config-management-system logs -l app=git-importer -c importer --tail=100) || true
+
   kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 
