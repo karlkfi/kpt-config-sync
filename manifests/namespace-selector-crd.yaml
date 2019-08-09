@@ -7,12 +7,15 @@ metadata:
     configmanagement.gke.io/system: "true"
 spec:
   group: configmanagement.gke.io
-  version: v1
   scope: Cluster
   names:
     plural: namespaceselectors
     singular: namespaceselector
     kind: NamespaceSelector
+  versions:
+    - name: v1
+      served: true
+      storage: true
   validation:
    # openAPIV3Schema is the schema for validating custom objects.
    # TODO(frankf): Complete and tests this once 1.11 beta is out.

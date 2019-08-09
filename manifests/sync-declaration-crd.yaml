@@ -10,7 +10,6 @@ metadata:
     configmanagement.gke.io/system: "true"
 spec:
   group: configmanagement.gke.io
-  version: v1
   scope: Cluster
   names:
     plural: syncs
@@ -18,6 +17,10 @@ spec:
     kind: Sync
   subresources:
     status: {}
+  versions:
+    - name: v1
+      served: true
+      storage: true
   validation:
     openAPIV3Schema:
       required:

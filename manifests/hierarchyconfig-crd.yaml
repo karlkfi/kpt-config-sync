@@ -9,9 +9,12 @@ metadata:
     configmanagement.gke.io/system: "true"
 spec:
   group: configmanagement.gke.io
-  version: v1
   scope: Cluster
   names:
     plural: hierarchyconfigs
     singular: hierarchyconfig
     kind: HierarchyConfig
+  versions:
+    - name: v1
+      served: true
+      storage: true
