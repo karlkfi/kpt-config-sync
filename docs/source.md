@@ -108,12 +108,6 @@ $ ./scripts/fix-dep.sh  # clears out license related changes.
 Updating dependencies in the `vendor` directory may result in pulling in new
 dependencies that need licensing scrutiny.
 
-Before you begin, ensure that your local system has `licenselinter` installed:
-
-```console
-$ make install github.com/google/nomos/cmd/licenselinter
-```
-
 To check licenses (it is a part of the linter checks, using licenselinter), run:
 
 ```console
