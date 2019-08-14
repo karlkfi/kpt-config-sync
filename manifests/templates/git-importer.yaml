@@ -55,6 +55,9 @@ spec:
           - configMapRef:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
+          - configMapRef:
+              name: disable-hierarchy
+              optional: true
         resources:
           requests:
             cpu: "150m"

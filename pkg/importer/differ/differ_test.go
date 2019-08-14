@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
@@ -150,29 +151,29 @@ func TestDiffer(t *testing.T) {
 			testName: "Sync create",
 			oldSyncs: []*v1.Sync{},
 			newSyncs: []*v1.Sync{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 			wantCreate: []runtime.Object{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 		},
 		{
 			testName: "Sync update no change",
 			oldSyncs: []*v1.Sync{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 			newSyncs: []*v1.Sync{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 		},
 		{
 			testName: "Sync delete",
 			oldSyncs: []*v1.Sync{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 			newSyncs: []*v1.Sync{},
 			wantDelete: []runtime.Object{
-				v1.NewSync("", "ResourceQuota"),
+				v1.NewSync(kinds.ResourceQuota().GroupKind()),
 			},
 		},
 	} {

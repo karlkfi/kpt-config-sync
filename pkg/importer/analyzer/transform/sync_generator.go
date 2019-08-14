@@ -40,7 +40,7 @@ func (v *SyncGenerator) VisitRoot(r *ast.Root) *ast.Root {
 	})
 	for _, gk := range gkList {
 		nr.SystemObjects = append(nr.SystemObjects, &ast.SystemObject{
-			FileObject: *ast.ParseFileObject(v.genSync(gk)),
+			FileObject: *ast.ParseFileObject(v1.NewSync(gk)),
 		})
 	}
 	return nr
@@ -56,8 +56,4 @@ func (v *SyncGenerator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObj
 func (v *SyncGenerator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	v.allGk[o.GroupVersionKind().GroupKind()] = struct{}{}
 	return o
-}
-
-func (v *SyncGenerator) genSync(gk schema.GroupKind) *v1.Sync {
-	return v1.NewSync(gk.Group, gk.Kind)
 }

@@ -7,6 +7,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/kinds"
 
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 )
@@ -29,12 +30,12 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				SystemObjects: vt.SystemObjectSets(
-					v1.NewSync("rbac.authorization.k8s.io", "ClusterRole"),
-					v1.NewSync("rbac.authorization.k8s.io", "ClusterRoleBinding"),
-					v1.NewSync("policy", "PodSecurityPolicy"),
-					v1.NewSync("", "ResourceQuota"),
-					v1.NewSync("rbac.authorization.k8s.io", "Role"),
-					v1.NewSync("rbac.authorization.k8s.io", "RoleBinding"),
+					v1.NewSync(kinds.ClusterRole().GroupKind()),
+					v1.NewSync(kinds.ClusterRoleBinding().GroupKind()),
+					v1.NewSync(kinds.PodSecurityPolicy().GroupKind()),
+					v1.NewSync(kinds.ResourceQuota().GroupKind()),
+					v1.NewSync(kinds.Role().GroupKind()),
+					v1.NewSync(kinds.RoleBinding().GroupKind()),
 				),
 				ClusterObjects: vt.Helper.AcmeCluster(),
 				Tree:           vt.Helper.AcmeTree(),

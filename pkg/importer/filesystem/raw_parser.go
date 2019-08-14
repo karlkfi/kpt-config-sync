@@ -1,15 +1,19 @@
 package filesystem
 
 import (
+	"fmt"
 	"time"
 
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"k8s.io/client-go/discovery"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -18,27 +22,30 @@ import (
 // This currently lacks much of the validation of Parser, but we may decide to add it in later.
 // TODO(b/137202024)
 type RawParser struct {
-	path   cmpath.Relative
-	reader Reader
-	client discovery.CachedDiscoveryInterface
+	path         cmpath.Relative
+	reader       Reader
+	clientGetter genericclioptions.RESTClientGetter
 }
 
 var _ configParser = &RawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(path cmpath.Relative, reader Reader, client discovery.CachedDiscoveryInterface) *RawParser {
+func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.RESTClientGetter) *RawParser {
 	return &RawParser{
-		path:   path,
-		reader: reader,
-		client: client,
+		path:         path,
+		reader:       reader,
+		clientGetter: client,
 	}
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
 func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	// Get all known API resources from the server.
-	p.client.Invalidate()
-	apiResources, err := p.client.ServerResources()
+	dc, err := p.clientGetter.ToDiscoveryClient()
+	if err != nil {
+		return nil, status.From(status.APIServerWrapf(err, "failed to get discovery client"))
+	}
+	apiResources, err := dc.ServerResources()
 	if err != nil {
 		return nil, status.From(status.APIServerWrapf(err, "failed to get server resources"))
 	}
@@ -62,6 +69,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	if errs != nil {
 		return nil, errs
 	}
+	fileObjects = deduplicate(fileObjects)
 	result := namespaceconfig.NewAllConfigs(importToken, loadTime)
 	for _, f := range fileObjects {
 		if f.GroupVersionKind() == kinds.Namespace() {
@@ -72,6 +80,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 			continue
 		}
 
+		result.AddSync(*v1.NewSync(f.GroupVersionKind().GroupKind()))
 		switch scoper.GetScope(f.GroupVersionKind().GroupKind()) {
 		case utildiscovery.ClusterScope:
 			result.AddClusterResource(f.Object)
@@ -89,4 +98,20 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	}
 
 	return result, errs
+}
+
+func deduplicate(os []ast.FileObject) []ast.FileObject {
+	// First object found wins. Others are ignored.
+	m := map[string]bool{}
+	var result []ast.FileObject
+
+	for _, o := range os {
+		id := fmt.Sprintf("%s/%s/%s", o.GroupVersionKind().String(), o.Namespace(), o.Name())
+		if m[id] {
+			continue
+		}
+		m[id] = true
+		result = append(result, o)
+	}
+	return result
 }

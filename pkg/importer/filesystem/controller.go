@@ -60,16 +60,17 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return errors.Wrapf(err, "failed to create discoveryclient")
 	}
 
-	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
 	// If HIERARCHY_DISABLED is invalid, ignore it.
 	hierarchyDisabled, _ := strconv.ParseBool(os.Getenv("HIERARCHY_DISABLED"))
 	var cfgParser configParser
 	if hierarchyDisabled {
 		// Nomos hierarchy is disabled, so use the RawParser.
-		cfgParser = NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &FileReader{ClientGetter: importer.DefaultCLIOptions}, nil)
+		cfgParser = NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &FileReader{ClientGetter: importer.DefaultCLIOptions}, importer.DefaultCLIOptions)
 	} else {
 		cfgParser = NewParser(importer.DefaultCLIOptions, ParserOpt{Extension: &NomosVisitorProvider{}, RootPath: rootPath})
 	}
+
+	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
 	r, err := NewReconciler(clusterName, rootDir, cfgParser, client, dc, mgr.GetCache(), decoder)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")

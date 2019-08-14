@@ -561,6 +561,7 @@ func (in *NamespaceConfigSpec) DeepCopyInto(out *NamespaceConfigSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.DeleteSyncedTime.DeepCopyInto(&out.DeleteSyncedTime)
 	return
 }
 

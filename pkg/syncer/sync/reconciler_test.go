@@ -216,7 +216,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func makeSync(group, kind string, state v1.SyncState) v1.Sync {
-	s := *v1.NewSync(group, kind)
+	s := *v1.NewSync(schema.GroupKind{Group: group, Kind: kind})
 	if state != "" {
 		s.Status = v1.SyncStatus{Status: state}
 	}

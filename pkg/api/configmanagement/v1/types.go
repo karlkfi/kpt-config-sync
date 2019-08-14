@@ -303,12 +303,12 @@ type Sync struct {
 
 // NewSync creates a sync object for consumption by the syncer, this will only populate the
 // group and kind as those are the only fields the syncer presently consumes.
-func NewSync(group, kind string) *Sync {
+func NewSync(gk schema.GroupKind) *Sync {
 	var name string
-	if group == "" {
-		name = strings.ToLower(kind)
+	if gk.Group == "" {
+		name = strings.ToLower(gk.Kind)
 	} else {
-		name = fmt.Sprintf("%s.%s", strings.ToLower(kind), group)
+		name = fmt.Sprintf("%s.%s", strings.ToLower(gk.Kind), gk.Group)
 	}
 	return &Sync{
 		TypeMeta: metav1.TypeMeta{
@@ -319,8 +319,8 @@ func NewSync(group, kind string) *Sync {
 			Name: name,
 		},
 		Spec: SyncSpec{
-			Group: group,
-			Kind:  kind,
+			Group: gk.Group,
+			Kind:  gk.Kind,
 		},
 	}
 }
