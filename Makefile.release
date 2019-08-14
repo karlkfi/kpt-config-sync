@@ -55,15 +55,21 @@ VERSION = $(shell git describe --tags --always --dirty)
 # repository.
 NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
 
-# b/125003511 Until Nomos Beta completes we are restricting access to
-# Nomos binaries to a small set of google groups and the google.com
-# domain.  Once we are GA, we should replace this value with a simple
-# allUsers, e.g. user:allUsers:legacyObjectReader
+# Until we have a real licensing model, we are restricting access to
+# nomos binaries and the operator yaml to a small set of groups and
+# domains.  See b/125003511 and b/139345284 for some history.
+#
+# TODO(sandyjensen): Once we have mechanisms in place to enforce
+# license compliance in the software, we should replace this value
+# with a simple allUsers, e.g. user:allUsers:legacyObjectReader, for
+# releases that contain that mechanism.
 READ_ACCESS_LIST ?= \
 	group:gke-on-prem-release-readers-external@googlegroups.com:legacyObjectReader \
 	group:gke-on-prem-docs-readers-external@googlegroups.com:legacyObjectReader \
 	group:gke-hub-eap-users-external@google.com:legacyObjectReader \
 	group:kpm-external@google.com:legacyObjectReader \
+	domain:anthosworkshop.com:legacyObjectReader \
+	domain:qwiklabs.net:legacyObjectReader \
 	domain:google.com:legacyObjectReader \
 	serviceAccount:425329972751-compute@developer.gserviceaccount.com:legacyObjectReader #prowbot
 
