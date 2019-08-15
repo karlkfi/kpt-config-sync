@@ -16,14 +16,6 @@ GIT_SYNC_TAG := v3.1.2-gke.0__linux_amd64
 GIT_SYNC := git-sync:$(GIT_SYNC_TAG)
 GIT_SYNC_SRC := gcr.io/config-management-release/$(GIT_SYNC)
 
-# b/129084668 - this can be removed entirely once we've cut over to
-# using the new GCP project for releasing the product.
-OLD_DEV_BUCKET := gs://nomos-release/operator-latest
-OLD_DEV_BUCKET_USER ?= gs://nomos-release/${USER}
-OLD_GIT_SYNC_SRC := gcr.io/nomos-release/$(GIT_SYNC)
-OLD_GCP_PROJECT := nomos-release
-OLD_GCR_PREFIX := nomos-release
-
 # Download the current latest or stable operator manifest from cloud storage
 # into the location where other targets can use it.
 download-operator-latest:
@@ -73,8 +65,8 @@ endif
 		> ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 # b/129084668 - this section can be removed entirely once we've cut over to
 # using the new GCP project for releasing the product.
-	docker tag $(GIT_SYNC_SRC) gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
-	docker push gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
+	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 
 # deploy-operator installs the operator prepared with prepare-operator
 .PHONY: deploy-operator
@@ -103,8 +95,8 @@ endif
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 # b/129084668 - this section can be removed entirely once we've cut over to
 # using the new GCP project for releasing the product.
-	docker tag $(OLD_GIT_SYNC_SRC) gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
-	docker push gcr.io/${OLD_GCR_PREFIX}/$(GIT_SYNC)
+	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
+	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 
 # deploy-operator-user installs the operator prepared with prepare-operator-user
 .PHONY: deploy-operator-user
