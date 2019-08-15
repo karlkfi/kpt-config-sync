@@ -39,3 +39,11 @@ func ClusterMetadataNameCollisionError(resources ...id.Resource) status.Error {
 	return metadataNameCollisionErrorBuilder.WithResources(resources...).New(
 		"Cluster configs of the same Kind MUST have unique names")
 }
+
+// NameCollisionError reports that multiple objects of the same Kind and Namespace have the same Name.
+// For non-hierarchical repositories.
+func NameCollisionError(resources ...id.Resource) status.Error {
+	return metadataNameCollisionErrorBuilder.WithResources(resources...).New(
+		"No two configs may declare the same API Group, kind, metadata.name, and metadata.namespace",
+	)
+}

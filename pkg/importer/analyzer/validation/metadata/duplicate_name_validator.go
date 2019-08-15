@@ -9,10 +9,11 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-type groupKindName struct {
-	group string
-	kind  string
-	name  string
+type groupKindNamespaceName struct {
+	group     string
+	kind      string
+	namespace string
+	name      string
 }
 
 type duplicateNameValidator struct {
@@ -27,16 +28,19 @@ func NewDuplicateNameValidator() ast.Visitor {
 	return visitor.NewValidator(&duplicateNameValidator{})
 }
 
-func checkDuplicates(objects []id.Resource, errorType duplicateError) status.MultiError {
-	duplicateMap := make(map[groupKindName][]id.Resource)
+// CheckDuplicates returns an error if it detects multiple objects with the same Group, Kind,
+// metadata.namespace, and metadata.name.
+func CheckDuplicates(objects []id.Resource, errorType duplicateError) status.MultiError {
+	duplicateMap := make(map[groupKindNamespaceName][]id.Resource)
 
 	for _, o := range objects {
-		gkn := groupKindName{
-			group: o.GroupVersionKind().Group,
-			kind:  o.GroupVersionKind().Kind,
-			name:  o.Name(),
+		gknn := groupKindNamespaceName{
+			group:     o.GroupVersionKind().Group,
+			kind:      o.GroupVersionKind().Kind,
+			namespace: o.Namespace(),
+			name:      o.Name(),
 		}
-		duplicateMap[gkn] = append(duplicateMap[gkn], o)
+		duplicateMap[gknn] = append(duplicateMap[gknn], o)
 	}
 
 	var errs status.MultiError
@@ -58,7 +62,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiE
 		resources[i] = object
 	}
 
-	return checkDuplicates(resources, vet.NamespaceMetadataNameCollisionError)
+	return CheckDuplicates(resources, vet.NamespaceMetadataNameCollisionError)
 }
 
 // ValidateCluster ensures the Cluster config contains no duplicates.
@@ -68,5 +72,5 @@ func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) status.
 		resources[i] = object
 	}
 
-	return checkDuplicates(resources, vet.ClusterMetadataNameCollisionError)
+	return CheckDuplicates(resources, vet.ClusterMetadataNameCollisionError)
 }

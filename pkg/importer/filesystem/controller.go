@@ -60,7 +60,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return errors.Wrapf(err, "failed to create discoveryclient")
 	}
 
-	// If HIERARCHY_DISABLED is invalid, ignore it.
+	// If HIERARCHY_DISABLED is invalid, assume disabled.
 	hierarchyDisabled, _ := strconv.ParseBool(os.Getenv("HIERARCHY_DISABLED"))
 	var cfgParser configParser
 	if hierarchyDisabled {

@@ -1,13 +1,13 @@
 package filesystem
 
 import (
-	"fmt"
 	"time"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
@@ -18,9 +18,6 @@ import (
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
-//
-// This currently lacks much of the validation of Parser, but we may decide to add it in later.
-// TODO(b/137202024)
 type RawParser struct {
 	path         cmpath.Relative
 	reader       Reader
@@ -69,7 +66,12 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	if errs != nil {
 		return nil, errs
 	}
-	fileObjects = deduplicate(fileObjects)
+
+	errs = validate(fileObjects)
+	if errs != nil {
+		return nil, errs
+	}
+
 	result := namespaceconfig.NewAllConfigs(importToken, loadTime)
 	for _, f := range fileObjects {
 		if f.GroupVersionKind() == kinds.Namespace() {
@@ -100,18 +102,20 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	return result, errs
 }
 
-func deduplicate(os []ast.FileObject) []ast.FileObject {
-	// First object found wins. Others are ignored.
-	m := map[string]bool{}
-	var result []ast.FileObject
+var validators = []nonhierarchical.Validator{
+	nonhierarchical.DuplicateNameValidator,
+	nonhierarchical.IllegalHierarchicalKindValidator,
+	nonhierarchical.NamespaceValidator,
+	// TODO(b/137202024):
+	//  - Illegal labels and annotations.
+	//  - Forbid owner references
+	//  - Forbid invalid metadata.name and metadata.namespace.
+}
 
-	for _, o := range os {
-		id := fmt.Sprintf("%s/%s/%s", o.GroupVersionKind().String(), o.Namespace(), o.Name())
-		if m[id] {
-			continue
-		}
-		m[id] = true
-		result = append(result, o)
+func validate(os []ast.FileObject) status.MultiError {
+	var err status.MultiError
+	for _, v := range validators {
+		err = status.Append(v.Validate(os))
 	}
-	return result
+	return err
 }
