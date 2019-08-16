@@ -16,6 +16,7 @@ setup() {
 }
 
 teardown() {
+  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
   setup::common_teardown
 }
 
@@ -25,8 +26,6 @@ teardown() {
 
   # Verify that the application of the operator config yields the correct error code
   wait::for -t 60 -o "KNV1017" -- kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
-
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
 }
 
 # This test case gradually adjusts root and acme directories' contents to move from:
@@ -47,6 +46,4 @@ teardown() {
   )"
 
   wait::for -t 60 -o "" -- kubectl get repo repo -o=jsonpath='{.status.import.errors}'
-
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
 }

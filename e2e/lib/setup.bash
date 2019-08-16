@@ -58,19 +58,22 @@ setup::git::initialize() {
 
 
 setup::git::__init_acme_dir() {
+  local DIR_NAME=${1:-acme}
+
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
 
-  mkdir acme
-  touch acme/README.md
-  git add acme/README.md
+  mkdir "${DIR_NAME}"
+  touch "${DIR_NAME}/README.md"
+  git add "${DIR_NAME}/README.md"
   git commit -a -m "initial commit"
 
-  cp -r /opt/testing/e2e/examples/acme ./
+  cp -r "/opt/testing/e2e/examples/${DIR_NAME}" ./
 }
 
 setup::git::__commit_acme_dir_and_wait() {
   git add -A
+  git status
   git commit -m "setUp commit"
   git push origin master:master -f
   cd "$CWD"
@@ -80,7 +83,9 @@ setup::git::__commit_acme_dir_and_wait() {
 
 # Adds the example acme repo to git, pushes it, and blocks until the proper namespaces are created.
 setup::git::init_acme() {
-  setup::git::__init_acme_dir
+  local DIR_NAME=${1:-acme}
+
+  setup::git::__init_acme_dir "${DIR_NAME}"
   setup::git::__commit_acme_dir_and_wait
 }
 
@@ -116,10 +121,12 @@ setup::git::init_acme_without() {
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
 setup::git::add_acme_contents_to_root() {
+  local DIR_NAME=${1:-acme}
+
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
 
-  cp -r /opt/testing/e2e/examples/acme/* ./
+  cp -r "/opt/testing/e2e/examples/${DIR_NAME}/"* ./
 
   git add -A
   git commit -m "add files to root"

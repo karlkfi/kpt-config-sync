@@ -124,6 +124,5 @@ function check_metrics_pages() {
   for service in "${services[@]}"; do
     check_metrics_pages ${service}
   done
-
 }
 
