@@ -48,6 +48,10 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	if err != nil {
 		return nil, status.From(status.APIServerWrapf(err, "failed to get server resources"))
 	}
+	apiInfo, err := utildiscovery.NewAPIInfo(apiResources)
+	if err != nil {
+		return nil, status.From(status.APIServerWrapf(err, "discovery failed for server resources"))
+	}
 
 	// Read any CRDs in the directory so the parser is aware of them.
 	crds, errs := readCRDs(p.reader, p.path)
@@ -88,7 +92,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		nonhierarchical.CRDNameValidator,
 		nonhierarchical.IllegalCRDValidator,
 		nonhierarchical.CRDRemovalValidator(crdInfo),
-		// TODO(b/137202024): Add other validation checks to avoid obviously terrible interactions.
+		nonhierarchical.ScopeValidator(apiInfo),
 	}
 	for _, v := range validators {
 		errs = status.Append(v.Validate(fileObjects))

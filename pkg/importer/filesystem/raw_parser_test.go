@@ -72,20 +72,6 @@ func TestRawParser_Parse(t *testing.T) {
 				return result
 			}(),
 		},
-		{
-			name: "defaults to default Namespace",
-			objects: []ast.FileObject{
-				fake.Role(),
-			},
-			expected: func() *namespaceconfig.AllConfigs {
-				result := namespaceconfig.NewAllConfigs(importToken, loadTime)
-				// Whether the Role specifies metadata.namespace has no impact on the behavior of applying
-				// the object.
-				result.AddNamespaceResource("default", fake.Role().Object)
-				result.AddSync(*v1.NewSync(kinds.Role().GroupKind()))
-				return result
-			}(),
-		},
 	}
 
 	for _, tc := range testCases {
