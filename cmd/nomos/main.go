@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/version"
 	"github.com/google/nomos/cmd/nomos/vet"
-	"github.com/google/nomos/cmd/nomos/view"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	pkgversion "github.com/google/nomos/pkg/version"
 	"github.com/spf13/cobra"
@@ -28,7 +27,6 @@ func init() {
 	rootCmd.AddCommand(initialize.Cmd)
 	rootCmd.AddCommand(hydrate.Cmd)
 	rootCmd.AddCommand(vet.Cmd)
-	rootCmd.AddCommand(view.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 	rootCmd.AddCommand(status.Cmd)
 }

@@ -2,6 +2,7 @@ package hydrate
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -55,12 +57,16 @@ apply the configuration to a cluster.`)
 
 // Cmd is the Cobra object representing the hydrate command.
 //
-// TODO(b/136576007): Beter error messages.
+// TODO(b/136576007): Better error messages.
 var Cmd = &cobra.Command{
 	Use:    "hydrate",
-	Short:  "Hydrate ",
+	Long:  fmt.Sprintf(`Hydrate manifests in a %s repository to their form on a server.
+
+The output directory consists of one directory per declared Cluster, and defaultcluster/ for
+clusters without declarations. Each directory holds the full set of manifests which you could
+kubectl apply -fR to the cluster, and is equivalent to the state ConfigManagement maintains on your
+clusters.`, configmanagement.ProductName),
 	Args:   cobra.ExactArgs(0),
-	Hidden: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		switch extension {
 		case "yaml", "json": // do nothing
