@@ -49,13 +49,15 @@ func NewAnnotationValidator() ast.Visitor {
 func NewManagedAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
-			value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
-			if found && (value != v1.ResourceManagementDisabled) {
-				return status.From(vet.IllegalManagementAnnotationError(
-					&o,
-					value,
-				))
-			}
-			return nil
+			return status.From(ValidManagementAnnotation(o))
 		})
+}
+
+// ValidManagementAnnotation returns an Error if the user-specified Managment annotation is invalid.
+func ValidManagementAnnotation(o ast.FileObject) status.Error {
+	value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
+	if found && (value != v1.ResourceManagementDisabled) {
+		return vet.IllegalManagementAnnotationError(&o, value)
+	}
+	return nil
 }

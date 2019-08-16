@@ -105,11 +105,12 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 var validators = []nonhierarchical.Validator{
 	nonhierarchical.DuplicateNameValidator,
 	nonhierarchical.IllegalHierarchicalKindValidator,
+	nonhierarchical.IllegalNamespaceValidator,
+	nonhierarchical.DisallowedFieldsValidator,
+	nonhierarchical.NameValidator,
 	nonhierarchical.NamespaceValidator,
-	// TODO(b/137202024):
-	//  - Illegal labels and annotations.
-	//  - Forbid owner references
-	//  - Forbid invalid metadata.name and metadata.namespace.
+	nonhierarchical.ManagementAnnotationValidator,
+	// TODO(b/137202024): Add other validation checks to avoid obviously terrible interactions.
 }
 
 func validate(os []ast.FileObject) status.MultiError {

@@ -44,7 +44,7 @@ func TestNameExistenceValidation(t *testing.T) {
 func TestCrdNameValidation(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
 		Validator: NewNameValidator,
-		ErrorCode: vet.InvalidMetadataNameErrorCode,
+		ErrorCode: InvalidMetadataNameErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:       "illegal crd name",

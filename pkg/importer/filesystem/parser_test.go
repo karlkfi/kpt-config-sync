@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
@@ -307,7 +309,7 @@ func TestParserVetErrors(t *testing.T) {
 			vet.MissingObjectNameErrorCode,
 			fake.ClusterRole(object.Name(""))),
 		parsertest.Failure("Specifying resourceVersion is an error",
-			vet.IllegalFieldsInConfigErrorCode,
+			syntax.IllegalFieldsInConfigErrorCode,
 			fake.ClusterRole(resourceVersion("999")),
 		),
 		parsertest.Failures("Repo outside system/ is an error",
@@ -349,7 +351,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.HierarchyConfig(fake.HierarchyConfigResource(kinds.Sync(), v1.HierarchyModeInherit)),
 		),
 		parsertest.Failure("Invalid name for HierarchyConfig",
-			vet.InvalidMetadataNameErrorCode,
+			metadata.InvalidMetadataNameErrorCode,
 			fake.HierarchyConfig(fake.HierarchyConfigMeta(object.Name("RBAC"))),
 		),
 		parsertest.Failure("Illegal Namespace in clusterregistry/",
@@ -362,7 +364,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.FileObject(namespaceSelectorObject("sel", "env", "prod"), "namespaces/foo/ns.yam"),
 		),
 		parsertest.Failure("Resource with OwnerReferences specified",
-			vet.IllegalFieldsInConfigErrorCode,
+			syntax.IllegalFieldsInConfigErrorCode,
 			fake.Namespace("namespaces/foo", object.OwnerReference("owner", "1", kinds.Cluster())),
 		),
 	)

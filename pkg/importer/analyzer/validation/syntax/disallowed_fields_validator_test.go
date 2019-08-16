@@ -3,16 +3,16 @@ package syntax
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func metaObject(gvk schema.GroupVersionKind, m *metav1.ObjectMeta) ast.FileObject {
@@ -26,7 +26,7 @@ func TestDisallowedFieldsValidator(t *testing.T) {
 
 	test := vt.ObjectValidatorTest{
 		Validator: NewDisallowedFieldsValidator,
-		ErrorCode: vet.IllegalFieldsInConfigErrorCode,
+		ErrorCode: IllegalFieldsInConfigErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "role without ownerReference",

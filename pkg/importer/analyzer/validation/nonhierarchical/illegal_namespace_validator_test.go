@@ -29,5 +29,5 @@ func TestNamespaceValidator(t *testing.T) {
 		),
 	}
 
-	nht.RunAll(t, nonhierarchical.NamespaceValidator, testCases)
+	nht.RunAll(t, nonhierarchical.IllegalNamespaceValidator, testCases)
 }

@@ -22,7 +22,7 @@ func (v validator) Validate(objects []ast.FileObject) status.MultiError {
 
 var _ Validator = validator{}
 
-func perObjectValidator(fn func(ast.FileObject) status.Error) Validator {
+func perObjectValidator(fn func(o ast.FileObject) status.Error) Validator {
 	return validator{
 		validate: func(objects []ast.FileObject) status.MultiError {
 			var err status.MultiError

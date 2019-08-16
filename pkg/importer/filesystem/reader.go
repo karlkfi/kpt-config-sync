@@ -3,17 +3,18 @@ package filesystem
 import (
 	"os"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
+
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 )
 
 // Reader reads a list of FileObjects.
@@ -73,7 +74,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 			fileObject := ast.NewFileObject(object, source.Path())
 			isNomosObject := info.Object.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
 			if !isNomosObject && hasStatusField(info.Object.(runtime.Unstructured)) {
-				errs = status.Append(errs, status.From(vet.IllegalFieldsInConfigError(&fileObject, id.Status)))
+				errs = status.Append(errs, status.From(syntax.IllegalFieldsInConfigError(&fileObject, id.Status)))
 			}
 			fileObjects = append(fileObjects, fileObject)
 		}

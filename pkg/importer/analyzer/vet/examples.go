@@ -1,13 +1,13 @@
 package vet
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kinds"
 )
 
 func deprecatedDeployment() *ast.FileObject {
@@ -70,22 +70,6 @@ func role() *ast.FileObject {
 			},
 		},
 		cmpath.FromSlash("namespaces/foo/role.yaml"),
-	)
-	return &o
-}
-
-func replicaSet() *ast.FileObject {
-	o := ast.NewFileObject(
-		&appsv1.ReplicaSet{
-			TypeMeta: v1.TypeMeta{
-				APIVersion: kinds.ReplicaSet().GroupVersion().String(),
-				Kind:       kinds.ReplicaSet().Kind,
-			},
-			ObjectMeta: v1.ObjectMeta{
-				Name: "replicaSet",
-			},
-		},
-		cmpath.FromSlash("namespaces/foo/replicaset.yaml"),
 	)
 	return &o
 }
