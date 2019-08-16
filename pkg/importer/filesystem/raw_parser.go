@@ -4,14 +4,16 @@ import (
 	"time"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/decode"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 )
@@ -67,7 +69,30 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		return nil, errs
 	}
 
-	errs = validate(fileObjects)
+	crdInfo, err := clusterconfig.NewCRDInfo(
+		decode.NewGenericResourceDecoder(scheme.Scheme),
+		&v1.ClusterConfig{},
+		crds)
+	if err != nil {
+		return nil, status.From(err)
+	}
+
+	var validators = []nonhierarchical.Validator{
+		nonhierarchical.DuplicateNameValidator,
+		nonhierarchical.IllegalHierarchicalKindValidator,
+		nonhierarchical.IllegalNamespaceValidator,
+		nonhierarchical.DisallowedFieldsValidator,
+		nonhierarchical.NameValidator,
+		nonhierarchical.NamespaceValidator,
+		nonhierarchical.ManagementAnnotationValidator,
+		nonhierarchical.CRDNameValidator,
+		nonhierarchical.IllegalCRDValidator,
+		nonhierarchical.CRDRemovalValidator(crdInfo),
+		// TODO(b/137202024): Add other validation checks to avoid obviously terrible interactions.
+	}
+	for _, v := range validators {
+		errs = status.Append(v.Validate(fileObjects))
+	}
 	if errs != nil {
 		return nil, errs
 	}
@@ -100,23 +125,4 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	}
 
 	return result, errs
-}
-
-var validators = []nonhierarchical.Validator{
-	nonhierarchical.DuplicateNameValidator,
-	nonhierarchical.IllegalHierarchicalKindValidator,
-	nonhierarchical.IllegalNamespaceValidator,
-	nonhierarchical.DisallowedFieldsValidator,
-	nonhierarchical.NameValidator,
-	nonhierarchical.NamespaceValidator,
-	nonhierarchical.ManagementAnnotationValidator,
-	// TODO(b/137202024): Add other validation checks to avoid obviously terrible interactions.
-}
-
-func validate(os []ast.FileObject) status.MultiError {
-	var err status.MultiError
-	for _, v := range validators {
-		err = status.Append(v.Validate(os))
-	}
-	return err
 }

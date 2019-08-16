@@ -40,7 +40,7 @@ func crd(path, name string, gvk schema.GroupVersionKind) ast.FileObject {
 
 func TestDisallowedCRDsValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
-		Validator: NewDisallowedCRDsValidator,
+		Validator: NewDisallowedCRDValidator,
 		ErrorCode: vet.UnsupportedObjectErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{

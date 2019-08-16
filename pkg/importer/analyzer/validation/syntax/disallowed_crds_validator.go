@@ -10,20 +10,25 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 )
 
-// NewDisallowedCRDsValidator validates that Nomos CRDs are not in the repo.
-func NewDisallowedCRDsValidator() *visitor.ValidatorVisitor {
+// NewDisallowedCRDValidator validates that Nomos CRDs are not in the repo.
+func NewDisallowedCRDValidator() *visitor.ValidatorVisitor {
 	return visitor.NewClusterObjectValidator(func(o *ast.ClusterObject) status.MultiError {
-		if o.GroupVersionKind() != kinds.CustomResourceDefinition() {
-			return nil
-		}
-
-		crd, err := clusterconfig.AsCRD(o.Object)
-		if err != nil {
-			return status.From(status.ResourceWrap(err, "could not deserialize CRD", o))
-		}
-		if crd.Spec.Group == v1.SchemeGroupVersion.Group {
-			return status.From(vet.UnsupportedObjectError(o))
-		}
-		return nil
+		return status.From(IllegalCRD(o.FileObject))
 	})
+}
+
+// IllegalCRD returns an error if o is a CRD of a Nomos type.
+func IllegalCRD(o ast.FileObject) status.Error {
+	if o.GroupVersionKind() != kinds.CustomResourceDefinition() {
+		return nil
+	}
+
+	crd, err := clusterconfig.AsCRD(o.Object)
+	if err != nil {
+		return status.ResourceWrap(err, "could not deserialize CRD", &o)
+	}
+	if crd.Spec.Group == v1.SchemeGroupVersion.Group {
+		return vet.UnsupportedObjectError(&o)
+	}
+	return nil
 }

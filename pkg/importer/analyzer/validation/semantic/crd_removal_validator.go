@@ -29,17 +29,18 @@ func (v *CRDRemovalValidator) ValidateRoot(r *ast.Root) status.MultiError {
 
 // ValidateClusterObject implements Visitor.
 func (v *CRDRemovalValidator) ValidateClusterObject(o *ast.ClusterObject) status.MultiError {
-	return v.validate(o.FileObject)
+	return status.From(CheckCRDPendingRemoval(v.crdInfo, o.FileObject))
 }
 
 // ValidateObject implements Visitor.
 func (v *CRDRemovalValidator) ValidateObject(o *ast.NamespaceObject) status.MultiError {
-	return v.validate(o.FileObject)
+	return status.From(CheckCRDPendingRemoval(v.crdInfo, o.FileObject))
 }
 
-func (v *CRDRemovalValidator) validate(o ast.FileObject) status.MultiError {
-	if crd, pendingRemoval := v.crdInfo.CRDPendingRemoval(o); pendingRemoval {
-		return status.From(vet.UnsupportedCRDRemovalError(ast.ParseFileObject(crd)))
+// CheckCRDPendingRemoval returns an error if the type is from a CRD pending removal.
+func CheckCRDPendingRemoval(crdInfo *clusterconfig.CRDInfo, o ast.FileObject) status.Error {
+	if crd, pendingRemoval := crdInfo.CRDPendingRemoval(o); pendingRemoval {
+		return vet.UnsupportedCRDRemovalError(ast.ParseFileObject(crd))
 	}
 	return nil
 }
