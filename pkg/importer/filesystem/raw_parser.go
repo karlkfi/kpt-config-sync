@@ -7,6 +7,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -26,7 +27,7 @@ type RawParser struct {
 	clientGetter genericclioptions.RESTClientGetter
 }
 
-var _ configParser = &RawParser{}
+var _ ConfigParser = &RawParser{}
 
 // NewRawParser instantiates a RawParser.
 func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.RESTClientGetter) *RawParser {
@@ -129,4 +130,10 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	}
 
 	return result, errs
+}
+
+// ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
+// parsing is disabled.
+func (p *RawParser) ReadClusterRegistryResources() []ast.FileObject {
+	return nil
 }

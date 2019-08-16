@@ -1,23 +1,36 @@
 package vet
 
 import (
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
+var (
+	useHierarchyFlag = "use-hierarchy"
+
+	useHierarchy bool
+)
+
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
+	Cmd.Flags().BoolVar(&useHierarchy, useHierarchyFlag, true,
+		fmt.Sprintf("If true, validate as a %s Repo.\n"+
+			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -37,10 +50,16 @@ returns a non-zero error code if any issues are found.
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
 
-		opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
-		parser, err := parse.NewParser(opts)
-		if err != nil {
-			util.PrintErrAndDie(err)
+		var parser filesystem.ConfigParser
+		if useHierarchy {
+			opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
+			var err error
+			parser, err = parse.NewParser(opts)
+			if err != nil {
+				util.PrintErrAndDie(err)
+			}
+		} else {
+			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{ClientGetter: importer.DefaultCLIOptions}, importer.DefaultCLIOptions)
 		}
 
 		encounteredError := false

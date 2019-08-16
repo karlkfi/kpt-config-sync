@@ -13,7 +13,7 @@ import (
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-type fakeScoper struct {}
+type fakeScoper struct{}
 
 var _ discovery.Scoper = fakeScoper{}
 

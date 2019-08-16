@@ -17,7 +17,7 @@ const (
 // ForEachCluster hydrates an AllConfigs for each declared cluster and executes the passed function
 // on the result.
 func ForEachCluster(
-	p *filesystem.Parser,
+	p filesystem.ConfigParser,
 	importToken string,
 	loadTime time.Time,
 	f func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError),

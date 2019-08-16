@@ -51,7 +51,7 @@ type Parser struct {
 	errors       status.MultiError
 }
 
-var _ configParser = &Parser{}
+var _ ConfigParser = &Parser{}
 
 // ParserOpt has often customizes the behavior of Parser.Parse.
 type ParserOpt struct {
