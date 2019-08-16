@@ -17,7 +17,7 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 setup() {
   setup::common
   setup::git::initialize
-  setup::git::init_acme
+  setup::git::init acme
 }
 
 # This cleans up any CRDs that were created by a testcase

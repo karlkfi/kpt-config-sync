@@ -16,10 +16,19 @@ declare KUBE_PROXY_PID
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
+# Total count of namespaces in acme
+ACME_NAMESPACES=(
+  analytics
+  backend
+  frontend
+  new-prj
+  newer-prj
+)
+
 setup() {
   setup::common
   setup::git::initialize
-  setup::git::init_acme
+  setup::git::init acme
   kubectl proxy &
   KUBE_PROXY_PID=$!
 }

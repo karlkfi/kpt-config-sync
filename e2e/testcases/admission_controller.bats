@@ -30,7 +30,7 @@ setup() {
   setup::git::initialize
 
   # init acme without the example quotas
-  setup::git::init_acme_without acme/namespaces/eng/quota.yaml acme/namespaces/rnd/quota.yaml acme/namespaces/eng/backend/quota.yaml
+  setup::git::init_without acme -- acme/namespaces/eng/quota.yaml acme/namespaces/rnd/quota.yaml acme/namespaces/eng/backend/quota.yaml
 
   # ensure admissions controller is installed
   wait::for kubectl get deployment -n config-management-system resourcequota-admission-controller

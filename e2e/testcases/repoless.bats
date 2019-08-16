@@ -22,7 +22,7 @@ teardown() {
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-repoless-repo.yaml"
   setup::git::initialize
-  setup::git::init_acme repoless
+  setup::git::init repoless
 
   wait::for -t 60 -- nomos::repo_synced
 
@@ -39,7 +39,7 @@ teardown() {
 @test "${FILE_NAME}: Syncs correctly with only roles" {
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-repoless-no-ns.yaml"
   setup::git::initialize
-  setup::git::init_acme repoless-no-ns
+  setup::git::init repoless-no-ns
 
   wait::for -t 60 -- nomos::repo_synced
 

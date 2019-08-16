@@ -22,7 +22,7 @@ setup() {
     done
   fi
   setup::git::initialize
-  setup::git::init_acme
+  setup::git::init acme
 }
 
 # This cleans up any namespaces that were created by a testcase

@@ -20,24 +20,6 @@ source "$DIR/resource.bash"
 # shellcheck source=e2e/lib/wait.bash
 source "$DIR/wait.bash"
 
-# Total count of namespaces in acme
-ACME_NAMESPACES=(
-  analytics
-  backend
-  frontend
-  new-prj
-  newer-prj
-)
-
-# System namespaces (kubernetes + nomos)
-SYS_NAMESPACES=(
-  default
-  kube-public
-  kube-system
-  config-management-system
-  config-management-system-test
-)
-
 # Git-specific repository initialization.
 setup::git::initialize() {
   # Reset git repo to initial state.
@@ -57,8 +39,8 @@ setup::git::initialize() {
 }
 
 
-setup::git::__init_acme_dir() {
-  local DIR_NAME=${1:-acme}
+setup::git::__init_dir() {
+  local DIR_NAME=${1}
 
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
@@ -71,7 +53,7 @@ setup::git::__init_acme_dir() {
   cp -r "/opt/testing/e2e/examples/${DIR_NAME}" ./
 }
 
-setup::git::__commit_acme_dir_and_wait() {
+setup::git::__commit_dir_and_wait() {
   git add -A
   git status
   git commit -m "setUp commit"
@@ -81,47 +63,64 @@ setup::git::__commit_acme_dir_and_wait() {
   wait::for -t 60 -- nomos::repo_synced
 }
 
-# Adds the example acme repo to git, pushes it, and blocks until the proper namespaces are created.
-setup::git::init_acme() {
-  local DIR_NAME=${1:-acme}
+# Adds an example repo to git, pushes it, and blocks until the proper namespaces are created.
+setup::git::init() {
+  local DIR_NAME=${1}
 
-  setup::git::__init_acme_dir "${DIR_NAME}"
-  setup::git::__commit_acme_dir_and_wait
+  setup::git::__init_dir "${DIR_NAME}"
+  setup::git::__commit_dir_and_wait
 }
 
-# Same as init_acme, but allows for specified files/directories to be excluded from the acme repo.
+# Same as init, but allows for specified files/directories to be excluded from an example repo.
 #
 # Variadic Args:
-#   The paths of any files/directories from the acme example repo to exclude
+#   The paths of any files/directories from the example repo to exclude
 # Example:
 # - To exclude directory foo/bar/ and file foo/bazz.yaml:
-#   setup::git::init_acme() foo/bar/ foo/bazz.yaml
-setup::git::init_acme_without() {
+#   setup::git::init_without() foo -- foo/bar/ foo/bazz.yaml
+setup::git::init_without() {
   if [[ $# -eq 0 ]]; then
-    echo "Error: No paths supplied to 'init_acme_without'. Use 'init_acme' if there are no paths to exclude"
+    echo "Error: No paths supplied to 'init_without'. Use 'init' if there are no paths to exclude"
     exit 1
   fi
 
-  setup::git::__init_acme_dir
+  if [[ $# -lt 3 ]]; then
+    echo "Error: must supply both example directory and files to exclude, delineated by '--'.  Use 'init' if there are no paths to exclude"
+    exit 1
+  fi
+
+  if [[ ! " $* " =~ " -- " ]]; then
+    echo "Error: missing '--'.  Must delineate repo and files using like: exampleDir -- exampleDir/aFile exampleDir/anotherFile"
+    exit 1
+  fi
+
+  if [[ $2 != "--" ]]; then
+    echo "Error: misplaced '--'.  Proper format: exampleDir -- exampleDir/aFile exampleDir/anotherFile"
+  fi
+
+  local DIR_NAME=$1
+  shift 2
+
+  setup::git::__init_dir "${DIR_NAME}"
   for path in "$@"; do
     if [[ -d ${path} ]]; then
       rm -r ${path}
     elif [[ -f ${path} ]]; then
       rm $path
     elif ! [[ -e ${path} ]]; then
-      echo "Error: Specified path $path does not exist in the acme repo"
+      echo "Error: Specified path $path does not exist in the specified repo"
       exit 1
     fi
   done
-  setup::git::__commit_acme_dir_and_wait
+  setup::git::__commit_dir_and_wait
 }
 
-# Adds the contents of the acme directory to the git repository's root
+# Adds the contents of the specified example directory to the git repository's root
 #
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
-setup::git::add_acme_contents_to_root() {
-  local DIR_NAME=${1:-acme}
+setup::git::add_contents_to_root() {
+  local DIR_NAME=${1}
 
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
@@ -136,15 +135,17 @@ setup::git::add_acme_contents_to_root() {
   wait::for -t 60 -- nomos::repo_synced
 }
 
-# This removes the acme folder, leaving behind the other files in the project root
+# This removes the specified folder, leaving behind the other files in the project root
 # 
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
-setup::git::remove_acme_folder() {
+setup::git::remove_folder() {
+  local DIR_NAME=${1}
+
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
 
-  rm -r ./acme
+  rm -r "./${DIR_NAME}"
 
   git add -A
   git commit -m "add files to root"
@@ -172,38 +173,6 @@ setup::common() {
   fi
 
   echo "--- SETUP COMPLETE ---------------------------------------------------"
-}
-
-function setup::check_stable() {
-  debug::log "checking for stable"
-  local ns_states
-  ns_states="$(
-    kubectl get ns -ojsonpath="{.items[*].status.phase}" \
-    | tr ' ' '\n' \
-    | sort \
-    | uniq -c
-  )"
-  if echo "${ns_states}" | grep "Terminating" &> /dev/null; then
-    local count
-    count=$(echo "${ns_states}" | grep "Terminating" | sed -e 's/^ *//' -e 's/T.*//')
-    debug::log "Waiting for $count namespaces to finalize"
-    return 1
-  fi
-
-  local ns_count
-  ns_count=$(resource::count -r ns -a configmanagement.gke.io/managed)
-  if (( ns_count != ${#ACME_NAMESPACES[@]} )); then
-    debug::log "count mismatch $ns_count != ${#ACME_NAMESPACES[@]}"
-    return 1
-  fi
-
-  echo "Checking namespaces for active state"
-  for ns in "${ACME_NAMESPACES[@]}" "${SYS_NAMESPACES[@]}"; do
-    if ! kubectl get ns "${ns}" -oyaml | grep "phase: Active" &> /dev/null; then
-      debug::log "namespace ${ns} not active yet"
-      return 1
-    fi
-  done
 }
 
 # Record and print timing info. This is cheap, and all tests should do it.

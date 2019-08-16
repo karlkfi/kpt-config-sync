@@ -12,7 +12,7 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 setup() {
   setup::common
   setup::git::initialize
-  setup::git::init_acme
+  setup::git::init acme
 }
 
 teardown() {
@@ -31,11 +31,11 @@ teardown() {
 # This test case gradually adjusts root and acme directories' contents to move from:
 # POLICY_DIR == "acme" to: POLICY_DIR undefined in the template.  Thus the gradual steps.
 @test "${FILE_NAME}: Confirm that config-management-operator starts correctly with POLICY_DIR unset" {
-  setup::git::add_acme_contents_to_root
+  setup::git::add_contents_to_root acme
 
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-no-policy-dir.yaml"
 
-  setup::git::remove_acme_folder
+  setup::git::remove_folder acme
 
   wait::for -t 30 -- test "Running" == "$( \
     kubectl get pods \
