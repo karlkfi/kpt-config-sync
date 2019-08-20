@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
@@ -52,9 +52,11 @@ func (tc TestCase) ForCluster(clusterName string) TestCase {
 func VetTest(testCases ...TestCase) Test {
 	return Test{
 		NewParser: NewParser,
-		DefaultObjects: func() []ast.FileObject {return []ast.FileObject{
-			fake.Repo(),
-		}},
+		DefaultObjects: func() []ast.FileObject {
+			return []ast.FileObject{
+				fake.Repo(),
+			}
+		},
 		TestCases: testCases,
 	}
 }
@@ -75,9 +77,9 @@ type Test struct {
 // Success represents a test case which is expected to hydrate successfully.
 func Success(name string, expected *namespaceconfig.AllConfigs, objects ...ast.FileObject) TestCase {
 	return TestCase{
-		Name: name,
+		Name:     name,
 		Expected: expected,
-		Objects: objects,
+		Objects:  objects,
 	}
 }
 
@@ -93,8 +95,8 @@ func Failure(name string, err string, objects ...ast.FileObject) TestCase {
 // Failures represents a test case which is expected to fail with multiple error codes.
 func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
 	return TestCase{
-		Name: name,
-		Errors: errs,
+		Name:    name,
+		Errors:  errs,
 		Objects: objects,
 	}
 }

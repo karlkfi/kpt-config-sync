@@ -59,14 +59,14 @@ apply the configuration to a cluster.`)
 //
 // TODO(b/136576007): Better error messages.
 var Cmd = &cobra.Command{
-	Use:    "hydrate",
-	Long:  fmt.Sprintf(`Hydrate manifests in a %s repository to their form on a server.
+	Use: "hydrate",
+	Long: fmt.Sprintf(`Hydrate manifests in a %s repository to their form on a server.
 
 The output directory consists of one directory per declared Cluster, and defaultcluster/ for
 clusters without declarations. Each directory holds the full set of manifests which you could
 kubectl apply -fR to the cluster, and is equivalent to the state ConfigManagement maintains on your
 clusters.`, configmanagement.ProductName),
-	Args:   cobra.ExactArgs(0),
+	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		switch extension {
 		case "yaml", "json": // do nothing
