@@ -18,6 +18,9 @@ GIT_SYNC_SRC := gcr.io/config-management-release/$(GIT_SYNC)
 GATEKEEPER_TAG := v3.0.4-beta.g3
 GATEKEEPER := gatekeeper:$(GATEKEEPER_TAG)
 GATEKEEPER_SRC := gcr.io/config-management-release/$(GATEKEEPER)
+CNRM_TAG := 08b0467
+CNRM := cnrm-controller:$(CNRM_TAG)
+CNRM_SRC := gcr.io/config-management-release/$(CNRM)
 
 # Download the current latest or stable operator manifest from cloud storage
 # into the location where other targets can use it.
@@ -51,6 +54,12 @@ pull-gatekeeper:
 	docker image pull $(GATEKEEPER_SRC); \
 	fi
 
+.PHONY: pull-cnrm
+pull-cnrm:
+	@if ! docker image inspect $(CNRM_SRC) > /dev/null; then \
+	docker image pull $(CNRM_SRC); \
+	fi
+
 # prepare-operator builds and pushes the local tree, then retrieves the operator
 # manifest bundle from GCP_PROJECT and applies it, injecting PRIVATE_REGISTRY
 # so that the operator deploys the nomos binary from the local tree
@@ -58,7 +67,7 @@ pull-gatekeeper:
 # is the same for all developers on the nomos cluster. To use a custom operator
 # build, use deploy-operator-user.
 .PHONY: prepare-operator
-prepare-operator: push-to-gcr-nomos pull-git-sync pull-gatekeeper
+prepare-operator: push-to-gcr-nomos pull-git-sync pull-gatekeeper pull-cnrm
 ifndef GCR_PREFIX
 	$(error GCR_PREFIX must be set, but is not)
 endif
@@ -71,6 +80,8 @@ endif
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker tag $(GATEKEEPER_SRC) gcr.io/${GCR_PREFIX}/$(GATEKEEPER)
 	docker push gcr.io/${GCR_PREFIX}/$(GATEKEEPER)
+	docker tag $(CNRM_SRC) gcr.io/${GCR_PREFIX}/$(CNRM)
+	docker push gcr.io/${GCR_PREFIX}/$(CNRM)
 	@cat .output/staging/operator/operator-bundle.yaml \
 		| sed 's|private-registry=|private-registry=gcr.io/${GCR_PREFIX}|' \
 		> ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
@@ -104,6 +115,8 @@ endif
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker tag $(GATEKEEPER_SRC) gcr.io/${GCR_PREFIX}/$(GATEKEEPER)
 	docker push gcr.io/${GCR_PREFIX}/$(GATEKEEPER)
+	docker tag $(CNRM_SRC) gcr.io/${GCR_PREFIX}/$(CNRM)
+	docker push gcr.io/${GCR_PREFIX}/$(CNRM)
 	@IMAGE=gcr.io/${GCP_PROJECT}/${USER}/config-management-operator:${IMAGE_TAG} PRIVATE_REGISTRY="gcr.io/${GCR_PREFIX}" envsubst < \
 		${OPERATOR_STAGING_DIR}/operator-bundle.yaml > ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
 # b/129084668 - this section can be removed entirely once we've cut over to
