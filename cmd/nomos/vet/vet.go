@@ -20,15 +20,15 @@ import (
 )
 
 var (
-	useHierarchyFlag = "use-hierarchy"
+	disableHierarchyFlag = "disable-hierarchy"
 
-	useHierarchy bool
+	disableHierarchy bool
 )
 
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
-	Cmd.Flags().BoolVar(&useHierarchy, useHierarchyFlag, true,
+	Cmd.Flags().BoolVar(&disableHierarchy, disableHierarchyFlag, false,
 		fmt.Sprintf("If true, validate as a %s Repo.\n"+
 			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
 }
@@ -51,15 +51,15 @@ returns a non-zero error code if any issues are found.
 		rootPath := util.GetRootOrDie(rootDir)
 
 		var parser filesystem.ConfigParser
-		if useHierarchy {
+		if disableHierarchy {
+			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{ClientGetter: importer.DefaultCLIOptions}, importer.DefaultCLIOptions)
+		} else {
 			opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
 			var err error
 			parser, err = parse.NewParser(opts)
 			if err != nil {
 				util.PrintErrAndDie(err)
 			}
-		} else {
-			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{ClientGetter: importer.DefaultCLIOptions}, importer.DefaultCLIOptions)
 		}
 
 		encounteredError := false
