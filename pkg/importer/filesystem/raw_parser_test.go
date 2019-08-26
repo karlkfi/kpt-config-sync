@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -91,6 +92,51 @@ func TestRawParser_Parse(t *testing.T) {
 
 			if diff := cmp.Diff(tc.expected, result); diff != "" {
 				t.Errorf(diff)
+			}
+		})
+	}
+}
+
+func TestRawParser_ParseErrors(t *testing.T) {
+	testCases := []struct {
+		name              string
+		objects           []ast.FileObject
+		expectedErrorCode string
+	}{
+		{
+			name: "duplicate objects",
+			objects: []ast.FileObject{
+				fake.Role(object.Name("alice"), object.Namespace("shipping")),
+				fake.Role(object.Name("alice"), object.Namespace("shipping")),
+			},
+			expectedErrorCode: vet.MetadataNameCollisionErrorCode,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := fstesting.NewTestClientGetter(t)
+			defer func() {
+				if err := f.Cleanup(); err != nil {
+					t.Fatal(errors.Wrap(err, "could not clean up"))
+				}
+			}()
+
+			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, f)
+
+			_, err := p.Parse(importToken, nil, loadTime, "")
+			if err == nil {
+				t.Fatal("expected error")
+			}
+
+			errs := err.Errors()
+			if len(errs) != 1 {
+				t.Fatalf("expected only one error, got %+v", errs)
+			}
+
+			code := errs[0].Code()
+			if code != tc.expectedErrorCode {
+				t.Fatalf("expected code %q, got %q", tc.expectedErrorCode, code)
 			}
 		})
 	}

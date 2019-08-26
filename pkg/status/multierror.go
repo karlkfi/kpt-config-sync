@@ -18,12 +18,18 @@ type MultiError interface {
 // From creates a MultiError from one or more errors.
 // If err is nil, returns nil.
 func From(errs ...error) MultiError {
-	return Append(nil, errs...)
+	if len(errs) == 0 {
+		return Append(nil, nil)
+	}
+	return Append(nil, errs[0], errs[1:]...)
 }
 
 // Append adds one or more errors to an existing MultiError.
-// If m and err are nil, returns nil.
-func Append(m MultiError, errs ...error) MultiError {
+// If m, err, and errs are nil, returns nil.
+//
+// Requires at least one error to be passed explicitly to prevent developer mistakes.
+// There is no valid reason to call Append with exactly one argument. Use From instead.
+func Append(m MultiError, err error, errs ...error) MultiError {
 	result := &multiError{}
 
 	switch m.(type) {
@@ -37,6 +43,7 @@ func Append(m MultiError, errs ...error) MultiError {
 		}
 	}
 
+	result.add(err)
 	for _, e := range errs {
 		result.add(e)
 	}

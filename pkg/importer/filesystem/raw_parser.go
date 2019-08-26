@@ -96,7 +96,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		nonhierarchical.ScopeValidator(apiInfo),
 	}
 	for _, v := range validators {
-		errs = status.Append(v.Validate(fileObjects))
+		errs = status.Append(errs, v.Validate(fileObjects))
 	}
 	if errs != nil {
 		return nil, errs

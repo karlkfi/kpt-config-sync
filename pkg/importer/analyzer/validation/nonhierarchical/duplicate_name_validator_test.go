@@ -14,12 +14,12 @@ func TestDuplicateNameValidator(t *testing.T) {
 	// No need to fully duplicate here.
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("two non-duplicate objects",
-			fake.Role(object.Name("alice")),
-			fake.Role(object.Name("bob")),
+			fake.Role(object.Name("alice"), object.Namespace("shipping")),
+			fake.Role(object.Name("bob"), object.Namespace("shipping")),
 		),
 		nht.Fail("two duplicate objects",
-			fake.Role(object.Name("alice")),
-			fake.Role(object.Name("alice")),
+			fake.Role(object.Name("alice"), object.Namespace("shipping")),
+			fake.Role(object.Name("alice"), object.Namespace("shipping")),
 		),
 	}
 
