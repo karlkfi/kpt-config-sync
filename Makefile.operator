@@ -103,7 +103,7 @@ deploy-operator: prepare-operator
 # operator directory. If you have not created this for your user before, it does
 # not exist and must be created from the operator repository.
 .PHONY: prepare-operator-user
-prepare-operator-user: push-to-gcr-nomos pull-git-sync pull-gatekeeper
+prepare-operator-user: push-to-gcr-nomos pull-git-sync pull-gatekeeper pull-cnrm
 ifndef GCR_PREFIX
 	$(error GCR_PREFIX must be set, but is not)
 endif
