@@ -429,6 +429,9 @@ func hasErrors(status v1.RepoStatus) bool {
 // statusErrors returns all errors reported in the given RepoStatus as a single array.
 func statusErrors(status v1.RepoStatus) []string {
 	var errs []string
+	for _, err := range status.Source.Errors {
+		errs = append(errs, err.ErrorMessage)
+	}
 	for _, err := range status.Import.Errors {
 		errs = append(errs, err.ErrorMessage)
 	}

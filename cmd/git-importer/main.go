@@ -46,7 +46,7 @@ func main() {
 
 	// Set up Scheme for nomos resources.
 	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
-		glog.Fatalf("Error adding configmanagement resaources to scheme: %v", err)
+		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 
 	// Set up controllers.
