@@ -1,0 +1,32 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: acm-psp
+spec:
+  privileged: false
+  volumes:
+    - 'configMap'
+    - 'downwardAPI'
+    - 'emptyDir'
+    - 'persistentVolumeClaim'
+    - 'projected'
+    - 'secret'
+  # Block root privileges
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    # seLinux is a required field, but most configurations don't use it and if we set it to anything
+    # other than RunAsAny, then the host OS has to have the SELinux security module loaded.
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    # This range allows all GIDs except for root, which is 0
+    ranges:
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    # This range allows all GIDs except for root, which is 0
+    ranges:
+      - min: 1
+        max: 65535
