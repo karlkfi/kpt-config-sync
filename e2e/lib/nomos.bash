@@ -83,7 +83,7 @@ function nomos::cluster_synced() {
   done
 
   if (( ${#args[@]} != 0 )); then
-    log::error "Invalid number of args"
+    echo "Invalid number of args"
     return 1
   fi
 
@@ -174,7 +174,8 @@ function nomos::repo_synced() {
   done
 
   if (( ${#args[@]} != 1 )); then
-    log::error "Invalid number of args for ns_synced"
+    echo "Invalid number of args for repo_synced"
+    return 1
   fi
 
   local token
