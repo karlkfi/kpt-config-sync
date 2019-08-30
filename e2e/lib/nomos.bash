@@ -164,8 +164,14 @@ function nomos::repo_synced() {
     local arg="${1:-}"
     shift
     case "$arg" in
-      --error)
-        error=true
+      --sourceError)
+        sourceError=true
+        ;;
+      --importError)
+        importError=true
+        ;;
+      --syncError)
+        syncError=true
         ;;
       *)
         args+=("$arg")
@@ -173,7 +179,7 @@ function nomos::repo_synced() {
     esac
   done
 
-  if (( ${#args[@]} != 1 )); then
+  if (( ${#args[@]} != 0 )); then
     echo "Invalid number of args for repo_synced"
     return 1
   fi
