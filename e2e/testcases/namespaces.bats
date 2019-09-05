@@ -146,3 +146,14 @@ function teardown() {
     -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
     -a "foo-corp.com/awesome-controller-mixin=green"
 }
+
+@test "sync labels and annotations on kube-system namespace" {
+  debug::log "Managing kube-system ns"
+  namespace::declare "kube-system" \
+    -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
+    -a "foo-corp.com/awesome-controller-mixin=green"
+  git::commit
+
+  debug::log "Checking namespace exists"
+  wait::for -o "fuzzy" -- kubectl get ns kube-system -o=jsonpath="{.metadata.labels['foo-corp\.com/awesome-controller-flavour']}"
+}
