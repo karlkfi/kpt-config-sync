@@ -2,7 +2,7 @@ FROM k8s.gcr.io/debian-base:1.0.0
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apt-get update && apt-get install -y \
-  ca-certificates libcap2-bin
+  ca-certificates libcap2-bin bash
 
 RUN mkdir -p /opt/nomos/bin
 ENV PATH="/opt/nomos/bin:${PATH}"
