@@ -24,35 +24,35 @@ func NewKnownResourceValidator() ast.Visitor {
 
 // ValidateRoot implement ast.Visitor.
 func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
-	var err error
+	var err status.Error
 	k.scoper, err = discovery.GetScoper(r)
-	return status.From(err)
+	return err
 }
 
 // ValidateSystemObject implements Visitor.
 func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) status.MultiError {
-	var errs []error
+	var errs status.MultiError
 	switch h := o.Object.(type) {
 	case *v1.HierarchyConfig:
 		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
 			if err := k.validateGroupKind(gkc); err != nil {
-				errs = append(errs, err)
+				errs = status.Append(errs, err)
 			}
 		}
 	}
-	return status.From(errs...)
+	return errs
 }
 
 // validateGroupKind validates a group kind for both existing in the API discovery as well as
 // being at namespace scope.
-func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) error {
+func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) status.Error {
 	switch scope := k.scoper.GetScope(gkc.GroupKind()); scope {
 	case discovery.UnknownScope:
-		return status.From(vet.UnknownResourceInHierarchyConfigError(gkc))
+		return vet.UnknownResourceInHierarchyConfigError(gkc)
 	case discovery.NamespaceScope:
 		return nil
 	case discovery.ClusterScope:
-		return status.From(vet.ClusterScopedResourceInHierarchyConfigError(gkc, scope))
+		return vet.ClusterScopedResourceInHierarchyConfigError(gkc, scope)
 	default:
 		panic(fmt.Sprintf("programmer error: case %s should not occur", scope))
 	}

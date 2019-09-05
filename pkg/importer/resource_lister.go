@@ -52,7 +52,7 @@ func (l ResourceLister) List(apiResource metav1.APIResource) ([]ast.FileObject, 
 			Continue: token,
 		})
 		if err != nil {
-			return nil, status.From(status.APIServerWrapf(err, "unable to read %q resources", gvr.String()))
+			return nil, status.APIServerWrapf(err, "unable to read %q resources", gvr.String())
 		}
 		items = append(items, resources.Items...)
 		token = resources.GetContinue()

@@ -16,7 +16,7 @@ func NewClusterRegistryKindValidator() *visitor.ValidatorVisitor {
 		case *v1.ClusterSelector:
 		case *clusterregistry.Cluster:
 		default:
-			return status.From(vet.IllegalKindInClusterregistryError(object))
+			return vet.IllegalKindInClusterregistryError(object)
 		}
 		return nil
 	})

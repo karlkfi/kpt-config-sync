@@ -13,10 +13,16 @@ type errorImpl struct {
 
 var _ Error = errorImpl{}
 var _ Causer = errorImpl{}
+var _ MultiError = errorImpl{}
 
 // Error implements error.
 func (e errorImpl) Error() string {
 	return format(e.error, "", e.code)
+}
+
+// Errors implements MultiError.
+func (e errorImpl) Errors() []Error {
+	return []Error{e}
 }
 
 // Cause returns the the error that caused this error

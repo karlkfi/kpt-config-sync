@@ -23,6 +23,11 @@ func (p resourceErrorImpl) Cause() error {
 	return p.errorImpl.Cause()
 }
 
+// Errors implements MultiError.
+func (p resourceErrorImpl) Errors() []Error {
+	return []Error{p}
+}
+
 // Code implements Error.
 func (p resourceErrorImpl) Code() string {
 	return p.errorImpl.Code()

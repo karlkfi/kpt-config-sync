@@ -28,7 +28,7 @@ func validateFilename(o *ast.NamespaceObject) status.MultiError {
 	if allowed, ok := allowedGroupKindToFileName[gk]; ok {
 		filename := o.Base()
 		if filename != allowed {
-			return status.From(vet.InvalidGcpResourceFilenameError(o.Path))
+			return vet.InvalidGcpResourceFilenameError(o.Path)
 		}
 	}
 	return nil

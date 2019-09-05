@@ -20,7 +20,7 @@ func init() {
 // NewDisallowedFieldsValidator validates that imported objects do not contain disallowed fields.
 func NewDisallowedFieldsValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		return status.From(DisallowFields(o))
+		return DisallowFields(o)
 	})
 }
 

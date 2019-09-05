@@ -24,17 +24,17 @@ func NewCRDRemovalValidator() ast.Visitor {
 func (v *CRDRemovalValidator) ValidateRoot(r *ast.Root) status.MultiError {
 	crdInfo, err := clusterconfig.GetCRDInfo(r)
 	v.crdInfo = crdInfo
-	return status.From(err)
+	return err
 }
 
 // ValidateClusterObject implements Visitor.
 func (v *CRDRemovalValidator) ValidateClusterObject(o *ast.ClusterObject) status.MultiError {
-	return status.From(CheckCRDPendingRemoval(v.crdInfo, o.FileObject))
+	return CheckCRDPendingRemoval(v.crdInfo, o.FileObject)
 }
 
 // ValidateObject implements Visitor.
 func (v *CRDRemovalValidator) ValidateObject(o *ast.NamespaceObject) status.MultiError {
-	return status.From(CheckCRDPendingRemoval(v.crdInfo, o.FileObject))
+	return CheckCRDPendingRemoval(v.crdInfo, o.FileObject)
 }
 
 // CheckCRDPendingRemoval returns an error if the type is from a CRD pending removal.

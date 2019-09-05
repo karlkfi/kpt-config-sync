@@ -36,7 +36,7 @@ func InvalidMetadataNameError(resource id.Resource) status.Error {
 // NewNameValidator validates the value of metadata.name
 func NewNameValidator() *visitor.ValidatorVisitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		err := status.From(ValidName(o))
+		err := ValidName(o)
 		if err != nil {
 			return err
 		}
@@ -44,10 +44,10 @@ func NewNameValidator() *visitor.ValidatorVisitor {
 			// TODO(willbeason) Move this to its own Validator.
 			expectedName := o.Dir().Base()
 			if expectedName == repo.NamespacesDir {
-				return status.From(vet.IllegalTopLevelNamespaceError(&o))
+				return vet.IllegalTopLevelNamespaceError(&o)
 			}
 			if o.Name() != expectedName {
-				return status.From(vet.InvalidNamespaceNameError(&o, expectedName))
+				return vet.InvalidNamespaceNameError(&o, expectedName)
 			}
 		}
 		return nil

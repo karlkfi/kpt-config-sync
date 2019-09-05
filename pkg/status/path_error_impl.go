@@ -21,6 +21,11 @@ func (p pathErrorImpl) Error() string {
 	return format(p.errorImpl.error, formatPaths(p.paths), p.Code())
 }
 
+// Errors implements MultiError.
+func (p pathErrorImpl) Errors() []Error {
+	return []Error{p}
+}
+
 // Code implements Error.
 func (p pathErrorImpl) Code() string {
 	return p.errorImpl.Code()

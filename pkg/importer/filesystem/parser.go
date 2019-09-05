@@ -267,10 +267,10 @@ func ValidateInstallation(client genericclioptions.RESTClientGetter) status.Mult
 	_, rErr := discoveryClient.ServerResourcesForGroupVersion(gv)
 	if rErr != nil {
 		if apierrors.IsNotFound(rErr) {
-			return status.From(vet.ConfigManagementNotInstalledError(
-				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv)))
+			return vet.ConfigManagementNotInstalledError(
+				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv))
 		}
-		return status.From(vet.ConfigManagementNotInstalledError(rErr))
+		return vet.ConfigManagementNotInstalledError(rErr)
 	}
 	return nil
 }

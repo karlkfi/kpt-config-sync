@@ -13,7 +13,7 @@ import (
 // NewDisallowedCRDValidator validates that Nomos CRDs are not in the repo.
 func NewDisallowedCRDValidator() *visitor.ValidatorVisitor {
 	return visitor.NewClusterObjectValidator(func(o *ast.ClusterObject) status.MultiError {
-		return status.From(IllegalCRD(o.FileObject))
+		return IllegalCRD(o.FileObject)
 	})
 }
 

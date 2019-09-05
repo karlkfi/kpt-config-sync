@@ -188,7 +188,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 		return err
 	}
 	err := r.client.Upsert(ctx, sync)
-	return status.From(status.APIServerWrapf(err, "could not finalize sync pending delete"))
+	return status.APIServerWrapf(err, "could not finalize sync pending delete")
 }
 
 func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {

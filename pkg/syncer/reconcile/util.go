@@ -81,7 +81,11 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 
 func filterWithCause(err error, cause error) error {
 	if errs, ok := err.(status.MultiError); ok {
-		return filterMultiErrorWithCause(errs, cause)
+		if len(errs.Errors()) == 1 {
+			err = errs.Errors()[0]
+		} else {
+			return filterMultiErrorWithCause(errs, cause)
+		}
 	}
 	c := errors.Cause(err)
 	if reflect.DeepEqual(c, cause) {

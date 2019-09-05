@@ -43,15 +43,15 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	// Get all known API resources from the server.
 	dc, err := p.clientGetter.ToDiscoveryClient()
 	if err != nil {
-		return nil, status.From(status.APIServerWrapf(err, "failed to get discovery client"))
+		return nil, status.APIServerWrapf(err, "failed to get discovery client")
 	}
 	apiResources, err := dc.ServerResources()
 	if err != nil {
-		return nil, status.From(status.APIServerWrapf(err, "failed to get server resources"))
+		return nil, status.APIServerWrapf(err, "failed to get server resources")
 	}
 	apiInfo, err := utildiscovery.NewAPIInfo(apiResources)
 	if err != nil {
-		return nil, status.From(status.APIServerWrapf(err, "discovery failed for server resources"))
+		return nil, status.APIServerWrapf(err, "discovery failed for server resources")
 	}
 
 	// Read any CRDs in the directory so the parser is aware of them.

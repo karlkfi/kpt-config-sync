@@ -41,7 +41,7 @@ func Objects(objects ...ast.FileObject) ast.BuildOpt {
 			case repo.NamespacesDir:
 				namespaceObjects = append(namespaceObjects, object)
 			default:
-				return status.From(status.InternalErrorf("test resource not in known top-level directory: %s", object.SlashPath()))
+				return status.InternalErrorf("test resource not in known top-level directory: %s", object.SlashPath())
 			}
 		}
 

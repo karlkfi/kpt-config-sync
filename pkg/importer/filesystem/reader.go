@@ -36,7 +36,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
-		return nil, status.From(status.PathWrapf(err, dir.AbsoluteOSPath()))
+		return nil, status.PathWrapf(err, dir.AbsoluteOSPath())
 	}
 
 	// We do this visitor length check because Builder returns an untyped error if passed an empty
@@ -45,7 +45,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, nil)
 	if err != nil {
-		return nil, status.From(status.PathWrapf(err, dir.AbsoluteOSPath()))
+		return nil, status.PathWrapf(err, dir.AbsoluteOSPath())
 	}
 
 	var errs status.MultiError
@@ -60,7 +60,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 			Do()
 		fileInfos, err := result.Infos()
 		if err != nil {
-			return nil, status.From(status.APIServerWrapf(err, "failed to get resource infos"))
+			return nil, status.APIServerWrapf(err, "failed to get resource infos")
 		}
 		for _, info := range fileInfos {
 			//Assign relative path since that's what we actually need.
@@ -74,7 +74,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 			fileObject := ast.NewFileObject(object, source.Path())
 			isNomosObject := info.Object.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
 			if !isNomosObject && hasStatusField(info.Object.(runtime.Unstructured)) {
-				errs = status.Append(errs, status.From(syntax.IllegalFieldsInConfigError(&fileObject, id.Status)))
+				errs = status.Append(errs, syntax.IllegalFieldsInConfigError(&fileObject, id.Status))
 			}
 			fileObjects = append(fileObjects, fileObject)
 		}

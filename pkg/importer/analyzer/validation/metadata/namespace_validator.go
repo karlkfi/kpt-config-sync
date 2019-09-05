@@ -14,7 +14,7 @@ func NewNamespaceValidator() ast.Visitor {
 			expected := o.Dir().Base()
 			actual := o.MetaObject().GetNamespace()
 			if actual != "" && actual != expected {
-				return status.From(vet.IllegalMetadataNamespaceDeclarationError(&o, expected))
+				return vet.IllegalMetadataNamespaceDeclarationError(&o, expected)
 			}
 			return nil
 		})

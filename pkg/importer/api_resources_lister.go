@@ -22,7 +22,7 @@ type APIResourcesLister interface {
 // Currently unused; will be used once `clone` is implemented.
 func ListResources(lister APIResourcesLister) ([]metav1.APIResource, status.MultiError) {
 	apiResources, err := lister.ServerResources()
-	errs := status.From(status.APIServerWrapf(err, "unable to list supported API resources"))
+	errs := status.APIServerWrapf(err, "unable to list supported API resources")
 	if err != nil {
 		return nil, errs
 	}

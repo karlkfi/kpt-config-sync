@@ -33,7 +33,7 @@ func invalidCRDNameError(resource id.Resource) status.Error {
 // NewCRDNameValidator returns a validator that validates CRDs have valid names.
 func NewCRDNameValidator() *visitor.ValidatorVisitor {
 	return visitor.NewClusterObjectValidator(func(o *ast.ClusterObject) status.MultiError {
-		return status.From(ValidateCRDName(o.FileObject))
+		return ValidateCRDName(o.FileObject)
 	})
 }
 

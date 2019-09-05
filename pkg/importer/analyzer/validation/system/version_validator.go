@@ -24,10 +24,10 @@ func NewRepoVersionValidator() *visitor.ValidatorVisitor {
 		switch repoObj := o.Object.(type) {
 		case *v1.Repo:
 			if version := repoObj.Spec.Version; !allowedRepoVersions[version] {
-				return status.From(vet.UnsupportedRepoSpecVersion(
+				return vet.UnsupportedRepoSpecVersion(
 					o,
 					version,
-				))
+				)
 			}
 		}
 		return nil

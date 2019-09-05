@@ -26,9 +26,7 @@ func prefix(code string) string {
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
-	// error is the standard error interface.
-	error
-	// ToCMEr knows how to convert itself to a ConfigManagementError.
+	MultiError
 	// ToCME converts the implementor into ConfigManagementError, preserving
 	// structured information.
 	ToCME() v1.ConfigManagementError

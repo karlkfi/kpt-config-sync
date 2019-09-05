@@ -39,7 +39,7 @@ func NewAnnotationValidator() ast.Visitor {
 				}
 			}
 			if errors != nil {
-				return status.From(vet.IllegalAnnotationDefinitionError(&o, errors))
+				return vet.IllegalAnnotationDefinitionError(&o, errors)
 			}
 			return nil
 		})
@@ -49,7 +49,7 @@ func NewAnnotationValidator() ast.Visitor {
 func NewManagedAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
-			return status.From(ValidManagementAnnotation(o))
+			return ValidManagementAnnotation(o)
 		})
 }
 
