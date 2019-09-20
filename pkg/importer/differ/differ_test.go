@@ -3,6 +3,7 @@ package differ
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/kinds"
@@ -23,9 +24,30 @@ type testCase struct {
 	oldSyncs, newSyncs                 []*v1.Sync
 	wantCreate                         []runtime.Object
 	wantDelete                         []runtime.Object
+	wantUpdate                         []nsUpdateMatcher
+}
+
+var testTime = meta.NewTime(time.Unix(1234, 5678))
+
+type nsUpdateMatcher struct {
+	want *v1.NamespaceConfig
+}
+
+func (n nsUpdateMatcher) Matches(x interface{}) bool {
+	got := x.(*v1.NamespaceConfig)
+	return n.want.Name == got.Name && n.want.Spec.DeleteSyncedTime.Equal(&got.Spec.DeleteSyncedTime)
+}
+
+func (n nsUpdateMatcher) String() string {
+	return "NamespaceConfig " + n.want.Name
 }
 
 func TestDiffer(t *testing.T) {
+	// Mock out metav1.Now for testing.
+	now = func() meta.Time {
+		return testTime
+	}
+
 	for _, test := range []testCase{
 		{
 			testName: "Nil",
@@ -51,8 +73,8 @@ func TestDiffer(t *testing.T) {
 				namespaceConfig("r"),
 			},
 			newNodes: []*v1.NamespaceConfig{},
-			wantDelete: []runtime.Object{
-				namespaceConfig("r"),
+			wantUpdate: []nsUpdateMatcher{
+				{namespaceConfigToDelete("r")},
 			},
 		},
 		{
@@ -63,11 +85,11 @@ func TestDiffer(t *testing.T) {
 			newNodes: []*v1.NamespaceConfig{
 				namespaceConfig("r2"),
 			},
-			wantDelete: []runtime.Object{
-				namespaceConfig("r"),
-			},
 			wantCreate: []runtime.Object{
 				namespaceConfig("r2"),
+			},
+			wantUpdate: []nsUpdateMatcher{
+				{namespaceConfigToDelete("r")},
 			},
 		},
 		{
@@ -101,9 +123,9 @@ func TestDiffer(t *testing.T) {
 				namespaceConfig("c1"),
 				namespaceConfig("c2"),
 			},
-			wantDelete: []runtime.Object{
-				namespaceConfig("co1"),
-				namespaceConfig("co2"),
+			wantUpdate: []nsUpdateMatcher{
+				{namespaceConfigToDelete("co1")},
+				{namespaceConfigToDelete("co2")},
 			},
 		},
 		{
@@ -189,6 +211,10 @@ func TestDiffer(t *testing.T) {
 				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().Delete(gomock.Any(), gomock.Eq(c), gomock.Any())
 			}
+			for _, matcher := range test.wantUpdate {
+				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
+				mockClient.EXPECT().Update(gomock.Any(), matcher)
+			}
 
 			err := Update(context.Background(), client.New(mockClient, metrics.APICallDuration),
 				mocks.NewFakeDecoder(nil),
@@ -208,6 +234,12 @@ func namespaceConfig(name string) *v1.NamespaceConfig {
 		},
 		Spec: v1.NamespaceConfigSpec{},
 	}
+}
+
+func namespaceConfigToDelete(name string) *v1.NamespaceConfig {
+	ns := namespaceConfig(name)
+	ns.Spec.DeleteSyncedTime = testTime
+	return ns
 }
 
 func clusterConfig(name string) *v1.ClusterConfig {

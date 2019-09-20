@@ -16,6 +16,7 @@ setup() {
 }
 
 teardown() {
+  setup::git::remove_all acme
   kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
   setup::common_teardown
 }

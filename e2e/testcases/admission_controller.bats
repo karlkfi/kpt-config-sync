@@ -38,6 +38,7 @@ setup() {
 }
 
 teardown() {
+  setup::git::remove_all acme
   setup::common_teardown
 
   # Cleanup test specific resources not created by Nomos (i.e. not in the git repo)

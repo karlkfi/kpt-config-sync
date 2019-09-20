@@ -23,6 +23,7 @@ setup() {
 }
 
 teardown() {
+  setup::git::remove_all acme
   setup::common_teardown
 }
 

@@ -27,6 +27,7 @@ setup() {
 
 # This cleans up any namespaces that were created by a testcase
 function teardown() {
+  setup::git::remove_all acme
   kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
   setup::common_teardown
 }
@@ -63,7 +64,9 @@ function teardown() {
 @test "${FILE_NAME}: Namespace has enabled annotation with no declarations" {
   local ns=undeclared-annotation-enabled
   namespace::create $ns -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_not_found $ns
+  # TODO(b/141864705): Replace this sleep with a check on syncer status.
+  sleep 10  # Give syncer time to see the namespace and explicitly ignore it.
+  namespace::check_exists $ns
 }
 
 @test "${FILE_NAME}: Namespace exists with no declaration" {

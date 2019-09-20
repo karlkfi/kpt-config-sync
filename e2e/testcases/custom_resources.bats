@@ -30,6 +30,7 @@ function teardown() {
     kill $WATCH_PID || true
     WATCH_PID=""
   fi
+  setup::git::remove_all acme
   setup::common_teardown
 }
 

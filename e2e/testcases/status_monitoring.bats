@@ -25,11 +25,8 @@ setup() {
 }
 
 teardown() {
-  # Ensure syncing doesn't happen between tests.
-  # If we don't do this, the Repo object gets synced back immediately in the previous state,
-  # making tests flaky.
-  rm -rf acme
-  git::commit -a -m "Delete repo contents."
+  setup::git::remove_all acme
+
   # Force delete repo object.
   kubectl delete repo repo --ignore-not-found
 

@@ -55,7 +55,7 @@ func (d Diff) Type() Type {
 	if d.Declared != nil {
 		// The resource IS in the repository.
 		if managementUnset(d.Declared) {
-			// The declared resource has no resource management key, so it is manged.
+			// The declared resource has no resource management key, so it is managed.
 			if d.Actual != nil {
 				// The resource is also in the cluster, so update it.
 				return Update
@@ -104,7 +104,7 @@ func (d Diff) Type() Type {
 			// Delete resource with management enabled on API Server.
 			return Delete
 		}
-		// The resource has Nomos artifacts but is unmanged, so remove them.
+		// The resource has Nomos artifacts but is unmanaged, so remove them.
 		return Unmanage
 	}
 

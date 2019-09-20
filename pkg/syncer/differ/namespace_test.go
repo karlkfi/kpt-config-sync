@@ -75,9 +75,9 @@ func TestNamespaceDiffType(t *testing.T) {
 			expectType: NoOp,
 		},
 		{
-			name:       "if not in repo but managed in cluster, delete",
+			name:       "if not in repo but managed in cluster, noop",
 			actual:     fake.NamespaceObject("foo", enableManaged),
-			expectType: Delete,
+			expectType: NoOp,
 		},
 		{
 			name:       "delete",

@@ -115,6 +115,25 @@ setup::git::init_without() {
   setup::git::__commit_dir_and_wait
 }
 
+# Removes all managed resources of the specified repo from git, pushes it, and blocks until complete.
+setup::git::remove_all() {
+  local DIR_NAME=${1}
+
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo/${DIR_NAME}"
+
+  rm -rf "cluster"
+  rm -rf "namespaces"
+
+  git add -A
+  git status
+  git commit -m "wiping contents of ${DIR_NAME}"
+  git push origin master:master -f
+  cd "$CWD"
+
+  wait::for -t 60 -- nomos::repo_synced
+}
+
 # Adds the contents of the specified example directory to the git repository's root
 #
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR

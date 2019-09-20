@@ -36,6 +36,7 @@ setup() {
 function teardown() {
   kill $KUBE_PROXY_PID
   wait $KUBE_PROXY_PID || true
+  setup::git::remove_all acme
   setup::common_teardown
 }
 

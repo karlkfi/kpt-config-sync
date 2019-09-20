@@ -3,21 +3,22 @@ package differ
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/syncer/decode"
-
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/pkg/errors"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/sync"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// Alias metav1.Now to enable test mocking.
+var now = metav1.Now
 
 // Update updates the nomos CRs on the cluster based on the difference between the desired and current state.
 func Update(ctx context.Context, client *syncerclient.Client, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) status.MultiError {
@@ -35,6 +36,8 @@ type differ struct {
 	errs   status.MultiError
 }
 
+// updateNamespaceConfigs compares the given sets of current and desired NamespaaceConfigs and performs the necessary
+// actions to update the current set to match the desired set.
 func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) {
 	var deletes, creates, updates int
 	for name := range desired.NamespaceConfigs {
@@ -46,22 +49,7 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 				continue
 			}
 			if !equal {
-				_, err := d.client.Update(ctx, &intent, func(obj runtime.Object) (runtime.Object, error) {
-					oldObj := obj.(*v1.NamespaceConfig)
-					newObj := intent.DeepCopy()
-					if !oldObj.Spec.DeleteSyncedTime.IsZero() {
-						e := status.ResourceWrap(errors.Errorf("namespace %v terminating, cannot update", oldObj.Name), "",
-							ast.ParseFileObject(oldObj))
-						return nil, e
-					}
-					newObj.ResourceVersion = oldObj.ResourceVersion
-					newSyncState := newObj.Status.SyncState
-					oldObj.Status.DeepCopyInto(&newObj.Status)
-					if !newSyncState.IsUnknown() {
-						newObj.Status.SyncState = newSyncState
-					}
-					return newObj, nil
-				})
+				err := d.updateNamespaceConfig(ctx, &intent)
 				d.errs = status.Append(d.errs, err)
 				updates++
 			}
@@ -72,12 +60,44 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 	}
 	for name, mayDelete := range current.NamespaceConfigs {
 		if _, found := desired.NamespaceConfigs[name]; !found {
-			d.errs = status.Append(d.errs, d.client.Delete(ctx, &mayDelete))
+			d.errs = status.Append(d.errs, d.deleteNamespaceConfig(ctx, &mayDelete))
 			deletes++
 		}
 	}
 
 	glog.Infof("NamespaceConfig operations: create %d, update %d, delete %d", creates, updates, deletes)
+}
+
+// deleteNamespaceConfig marks the given NamespaceConfig for deletion by the syncer. This tombstone is more explicit
+// than having the importer just delete the NamespaceConfig directly.
+func (d *differ) deleteNamespaceConfig(ctx context.Context, nc *v1.NamespaceConfig) status.Error {
+	_, err := d.client.Update(ctx, nc, func(obj runtime.Object) (runtime.Object, error) {
+		newObj := obj.(*v1.NamespaceConfig).DeepCopy()
+		newObj.Spec.DeleteSyncedTime = now()
+		return newObj, nil
+	})
+	return err
+}
+
+// updateNamespaceConfig writes the given NamespaceConfig to storage as it is specified.
+func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.NamespaceConfig) status.Error {
+	_, err := d.client.Update(ctx, intent, func(obj runtime.Object) (runtime.Object, error) {
+		oldObj := obj.(*v1.NamespaceConfig)
+		newObj := intent.DeepCopy()
+		if !oldObj.Spec.DeleteSyncedTime.IsZero() {
+			e := status.ResourceWrap(errors.Errorf("namespace %v terminating, cannot update", oldObj.Name), "",
+				ast.ParseFileObject(oldObj))
+			return nil, e
+		}
+		newObj.ResourceVersion = oldObj.ResourceVersion
+		newSyncState := newObj.Status.SyncState
+		oldObj.Status.DeepCopyInto(&newObj.Status)
+		if !newSyncState.IsUnknown() {
+			newObj.Status.SyncState = newSyncState
+		}
+		return newObj, nil
+	})
+	return err
 }
 
 func (d *differ) updateClusterConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) {

@@ -87,5 +87,7 @@ FOOCORP_NAMESPACES=(
   resource::check_count -n shipping-prod -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-prod resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-prod -r fulfillmentcenter -c 1 -a "configmanagement.gke.io/managed=enabled"
+
+  setup::git::remove_all acme
 }
 

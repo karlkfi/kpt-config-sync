@@ -1,6 +1,7 @@
 package differ
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -63,8 +64,12 @@ func (d *NamespaceDiff) Type() Type {
 
 		// There are Nomos annotations or labels on the Namespace.
 		if managementEnabled(d.Actual) {
-			// Delete Namespace with management enabled on API Server.
-			return Delete
+			// This is a strange case to arrive at. A user would have to have a managed namespace,
+			// uninstall Nomos, remove the declaration of the namespace from the repo, then reinstall
+			// Nomos with the actual namespace still present and annotated from when it was managed. We
+			// can't infer the user's intent so we just NoOp.
+			glog.Warningf("Ignoring Namespace %q which has management annotations but there is no NamespaceConfig.", d.Name)
+			return NoOp
 		}
 		// The Namespace has Nomos artifacts but is unmanaged, so remove them.
 		return Unmanage
