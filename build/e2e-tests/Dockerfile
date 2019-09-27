@@ -47,11 +47,8 @@ RUN git checkout ${GOTOPT2_RELEASE} && go install ${GOTOPT2_REPO}/...
 
 # kind can run kubernetes clusters in docker
 # v0.2.1
-ARG KIND_RELEASE="5e292845d6d7e736515a8ca4da032acd85e153d1"
-ARG KIND_REPO="sigs.k8s.io/kind"
-RUN go get -d -u ${KIND_REPO}
-WORKDIR /go/src/${KIND_REPO}
-RUN git checkout ${KIND_RELEASE} && go install ${KIND_REPO}
+# TODO(juliankatz): Reevaluate the use of GO111MODULE.  It conflicts with declaration at the top.
+RUN GO111MODULE="on" go get sigs.k8s.io/kind@v0.2.1
 
 # Build intermediate image for gcloud / kubectl
 FROM ubuntu:18.04 as gcloud-install
