@@ -7,6 +7,10 @@ DIR=$(dirname "${BASH_SOURCE[0]}")
 source "$DIR/debug.bash"
 # shellcheck source=e2e/lib/git.bash
 source "$DIR/git.bash"
+# shellcheck source=e2e/lib/wait.bash
+source "$DIR/wait.bash"
+# shellcheck source=e2e/lib/resource.bash
+source "$DIR/resource.bash"
 
 # Returns success if the namespace has synced.
 # Synced is defined as
@@ -186,7 +190,11 @@ function nomos::repo_synced() {
 
   local token
   token="$(git::hash)"
+
   local output
+  # This fixes a race condition for when the repo object is deleted from git SOT
+  # as part of the testing scenario
+  wait::for -t 60 -p 1 -- resource::check repo repo
   output="$(kubectl get repo repo -ojson)"
 
   local status_token
