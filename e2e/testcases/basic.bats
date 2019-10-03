@@ -36,10 +36,10 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::commit -m "Add a deployment to a directory"
 
   debug::log "Ensure that the system created a sync for the deployment"
-  wait::for -t 10 -- kubectl get sync deployment.apps
+  wait::for -t 60 -- kubectl get sync deployment.apps
 
   debug::log "Force-delete the sync from the cluster"
-  wait::for -t 10 -- kubectl delete sync deployment.apps
+  wait::for -t 60 -- kubectl delete sync deployment.apps
 
   debug::log "Ensure that the system re-created the force-deleted sync"
   wait::for -t 60 -- kubectl get sync deployment.apps
@@ -91,16 +91,16 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for kubectl get ns dir
 
   debug::log "check that the deployment and replicaset were created"
-  wait::for -t 10 -- kubectl get deployment hello-world -n dir
-  wait::for -t 10 -- resource::check -r replicaset -n dir -l "app=hello-world"
+  wait::for -t 60 -- kubectl get deployment hello-world -n dir
+  wait::for -t 60 -- resource::check -r replicaset -n dir -l "app=hello-world"
 
   debug::log "Remove the deployment"
   git::rm acme/namespaces/dir/deployment.yaml
   git::commit
 
   debug::log "check that the deployment and replicaset were removed"
-  wait::for -f -t 10 -- kubectl get deployment hello-world -n dir
-  wait::for -f -t 10 -- resource::check replicaset -n dir -l "app=hello-world"
+  wait::for -f -t 60 -- kubectl get deployment hello-world -n dir
+  wait::for -f -t 60 -- resource::check replicaset -n dir -l "app=hello-world"
 }
 
 @test "${FILE_NAME}: Sync deployment and replicaset" {
@@ -111,16 +111,16 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::commit
 
   debug::log "check that the deployment and replicaset were created"
-  wait::for -t 10 -- kubectl get deployment hello-world -n dir
-  wait::for -t 10 -- resource::check -r replicaset -n dir -l "app=hello-world"
+  wait::for -t 60 -- kubectl get deployment hello-world -n dir
+  wait::for -t 60 -- resource::check -r replicaset -n dir -l "app=hello-world"
 
   debug::log "Remove the deployment"
   git::rm acme/namespaces/dir/deployment.yaml
   git::commit
 
   debug::log "check that the deployment was removed and replicaset remains"
-  wait::for -f -t 10 -- kubectl get deployment hello-world -n dir
-  wait::for -t 10 -- resource::check -r replicaset -n dir -l "app=hello-world"
+  wait::for -f -t 60 -- kubectl get deployment hello-world -n dir
+  wait::for -t 60 -- resource::check -r replicaset -n dir -l "app=hello-world"
 }
 
 @test "${FILE_NAME}: RoleBindings updated" {
@@ -161,13 +161,13 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -- kubectl get clusterrole acme-admin
 
   debug::log "Verify that bob@ and alice@ have their permissions enforced"
-  wait::for -o "No resources found." -t 10 -- \
+  wait::for -o "No resources found." -t 60 -- \
     kubectl get pods -n backend --as bob@acme.com
-  wait::for -o "No resources found." -t 10 -- \
+  wait::for -o "No resources found." -t 60 -- \
     kubectl get pods -n backend --as alice@acme.com
-  wait::for -f -t 10 -- \
+  wait::for -f -t 60 -- \
     kubectl get pods -n frontend --as bob@acme.com
-  wait::for -o "No resources found." -t 10 -- \
+  wait::for -o "No resources found." -t 60 -- \
     kubectl get pods -n frontend --as alice@acme.com
 }
 
@@ -211,10 +211,10 @@ function manage_namespace() {
   git::commit -m "Remove the namespace from the managed set of namespaces"
 
   debug::log "Wait until the managed resource disappears from the cluster"
-  wait::for -f -t 10 -- kubectl get services "some-service" --namespace="${ns}"
+  wait::for -f -t 60 -- kubectl get services "some-service" --namespace="${ns}"
 
   debug::log "Ensure that the unmanaged service remained"
-  wait::for -t 10 -- \
+  wait::for -t 60 -- \
     kubectl get services "some-other-service" --namespace="${ns}"
   kubectl delete service "some-other-service" \
     --ignore-not-found --namespace="${ns}"
