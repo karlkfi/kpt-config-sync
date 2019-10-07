@@ -26,6 +26,10 @@ working together
 
 A simple example to generalize how to define and enforce configuration
 
+### [Locality-Specific Policy](locality-specific-policy/)
+
+Configure policy to apply only to resources in specific regions
+
 ### [Validating configs in CI/CD](docs/how-to-validate-ci-cd)
 
 Guide on validating configuration changes with Cloud Build
