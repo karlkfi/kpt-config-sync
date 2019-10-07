@@ -33,9 +33,17 @@ teardown() {
   setup::common_teardown
 }
 
-@test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
+function ensure_error_free_repo () {
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
+  wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
+    --output='jsonpath={.status.healthy}'
+}
+
+@test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
+
+  ensure_error_free_repo
+
   kubectl patch configmanagement config-management \
     --type=merge \
     --patch '{"spec":{"git":{"policyDir":"acme"}}}'
@@ -64,13 +72,6 @@ teardown() {
   debug::log "Expect repo to recover from the error in source message"
   wait::for -t 60 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
-}
-
-function ensure_error_free_repo () {
-  debug::log "Ensure that the repo is error-free at the start of the test"
-  git::commit -a -m "Commit the repo contents."
-  wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
-    --output='jsonpath={.status.healthy}'
 }
 
 function token_exists() {
