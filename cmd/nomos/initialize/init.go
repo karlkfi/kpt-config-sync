@@ -70,7 +70,13 @@ func Initialize(dir repo.FilePath) error {
 	// Create system/
 	repoDir.createDir(v1repo.SystemDir)
 	repoDir.createSystemFile(readmeFile, systemReadmeContents)
-	err := util.WriteObject(&printers.YAMLPrinter{}, dir.String(), defaultRepo)
+	repoObj, err := defaultRepo()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = util.WriteObject(&printers.YAMLPrinter{}, dir.String(), repoObj)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

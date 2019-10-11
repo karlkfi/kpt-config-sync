@@ -46,13 +46,13 @@ if ! OUT="$(
 
   NC=''
   RED=''
-  if [ -t 1 ]; then
+  if [[ -t 1 ]]; then
     NC='\033[0m'
     RED='\033[0;31m'
   fi
 
   if echo "${OUT}" | grep "(goimports)" > /dev/null; then
-    echo -e "${RED}ADVICE${NC}: runing \"make goimports\" may fix the (goimports) error"
+    echo -e "${RED}ADVICE${NC}: running \"make goimports\" may fix the (goimports) error"
   fi
   exit 1
 fi
