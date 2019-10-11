@@ -60,7 +60,7 @@ function ensure_error_free_repo () {
   # Increased timeout from initial 30 to 60 for flakiness.  git-importer
   # gets restarted on each object change.
   debug::log "Expect an error to be present in status.source.errors"
-  wait::for -t 60 -c "some-nonexistent-policydir" -- \
+  wait::for -t 90 -c "some-nonexistent-policydir" -- \
     kubectl get repo repo -o=yaml \
       --output='jsonpath={.status.source.errors[0].errorMessage}'
 
@@ -70,7 +70,7 @@ function ensure_error_free_repo () {
     --patch '{"spec":{"git":{"policyDir":"acme"}}}'
 
   debug::log "Expect repo to recover from the error in source message"
-  wait::for -t 60 -o "" -- kubectl get repo repo \
+  wait::for -t 90 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
 
