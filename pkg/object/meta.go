@@ -73,3 +73,12 @@ func OwnerReference(name, uid string, gvk schema.GroupVersionKind) MetaMutator {
 		}})
 	}
 }
+
+// MetaMutators merges multiple MetaMutators into one.
+func MetaMutators(mutators ...MetaMutator) MetaMutator {
+	return func(o metav1.Object) {
+		for _, mutator := range mutators {
+			mutator(o)
+		}
+	}
+}

@@ -37,7 +37,7 @@ const (
 
 var (
 	// ImportTime defines a default time to use for testing.
-	ImportTime = time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60))
+	ImportTime = metav1.NewTime(time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60)))
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
@@ -99,7 +99,7 @@ type TestHelper struct {
 func NewTestHelper() *TestHelper {
 	return &TestHelper{
 		ImportToken: ImportToken,
-		ImportTime:  ImportTime,
+		ImportTime:  ImportTime.Time,
 	}
 }
 
