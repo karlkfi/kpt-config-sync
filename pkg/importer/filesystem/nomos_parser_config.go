@@ -40,7 +40,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		hierarchyconfig.NewInheritanceValidator(),
 		visitors.NewSupportedClusterResourcesValidator(),
 		syntax.NewClusterRegistryKindValidator(),
-		syntax.NewFlatNodeValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewDisallowSystemObjectsValidator(),
 		syntax.NewDeprecatedGroupKindValidator(),

@@ -610,15 +610,26 @@ func TestParseClusterSelector(t *testing.T) {
 			"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
 			vet.ObjectHasUnknownClusterSelectorCode,
 			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
-		))
+		),
+		parsertest.Success("A subdir of cluster/ is ok",
+			&namespaceconfig.AllConfigs{
+				ClusterConfig: testoutput.ClusterConfig(
+					fake.ClusterRoleBindingObject(testoutput.Source("cluster/foo/crb.yaml")),
+				),
+				Syncs: testoutput.Syncs(kinds.ClusterRoleBinding()),
+			},
+			fake.ClusterRoleBindingAtPath("cluster/foo/crb.yaml")),
+		parsertest.Success("A subdir of clusterregistry/ is ok",
+			&namespaceconfig.AllConfigs{},
+			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")))
 
 	test.RunAll(t)
 }
 
 func TestParserVet(t *testing.T) {
 	test := parsertest.VetTest(
-		parsertest.Failure("A subdir of system is an error",
-			vet.IllegalSubdirectoryErrorCode,
+		parsertest.Success("A subdir of system/ is ok",
+			&namespaceconfig.AllConfigs{},
 			fake.HierarchyConfigAtPath("system/sub/hc.yaml")),
 		parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
 			vet.IllegalLabelDefinitionErrorCode,
