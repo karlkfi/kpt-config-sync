@@ -1,10 +1,9 @@
 package filesystem
 
 import (
+	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
@@ -15,20 +14,14 @@ func readCRDs(r Reader, dir cmpath.Relative) ([]*v1beta1.CustomResourceDefinitio
 		return nil, errs
 	}
 
-	var crds []*v1beta1.CustomResourceDefinition
-	for _, f := range fileObjects {
-		// Rely on type meta instead of casting as the CRD could be an Unstructured.
-		if f.GroupVersionKind() != kinds.CustomResourceDefinition() {
-			continue
-		}
+	crdGks, errs := customresources.Process(fileObjects)
+	if errs != nil {
+		return nil, errs
+	}
 
-		crd, err := clusterconfig.AsCRD(f.Object)
-		if err != nil {
-			// Collect all CRD conversion errors together.
-			errs = status.Append(errs, err)
-			continue
-		}
+	var crds []*v1beta1.CustomResourceDefinition
+	for _, crd := range crdGks {
 		crds = append(crds, crd)
 	}
-	return crds, errs
+	return crds, nil
 }

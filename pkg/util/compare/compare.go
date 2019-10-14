@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 
@@ -31,12 +31,12 @@ func ObjectMetaEqual(left runtime.Object, right runtime.Object) bool {
 // comparing the underlying resources.
 func GenericResourcesEqual(decoder decode.Decoder, l []v1.GenericResources, r []v1.GenericResources,
 	cmpOptions ...cmp.Option) (bool, error) {
-	lr, lErr := decoder.DecodeResources(l...)
+	lr, lErr := decoder.DecodeResources(l)
 	if lErr != nil {
 		return false, status.InternalWrap(lErr)
 	}
 
-	rr, rErr := decoder.DecodeResources(r...)
+	rr, rErr := decoder.DecodeResources(r)
 	if rErr != nil {
 		return false, status.InternalWrap(rErr)
 	}

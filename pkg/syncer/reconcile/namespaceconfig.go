@@ -253,7 +253,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		return nil
 	}
 
-	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); gks != nil {
+	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); len(gks) != 0 {
 		glog.Infof(
 			"NamespaceConfigReconciler encountered "+
 				"group-kind(s) %s that were not present in a sync, waiting for reconciler restart",
@@ -268,7 +268,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 
 	var errBuilder status.MultiError
 	reconcileCount := 0
-	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
+	grs, err := r.decoder.DecodeResources(config.Spec.Resources)
 	if err != nil {
 		return errors.Wrapf(err, "could not process namespaceconfig: %q", config.GetName())
 	}

@@ -2,12 +2,16 @@ package crd
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
@@ -46,6 +50,13 @@ type Reconciler struct {
 	// signal is a handle that is used to restart the ClusterConfig and NamespaceConfig controllers and
 	// their manager.
 	signal sync.RestartSignal
+
+	// allCrds tracks the entire set of CRDs on the API server.
+	// We need to restart the syncer if a CRD is Created/Updated/Deleted since
+	// this will change the overall set of resources that the syncer can
+	// be handling (in this case gatekeeper will add CRDs to the cluster and we
+	// need to restart in order to have the syncer work properly).
+	allCrds map[schema.GroupVersionKind]struct{}
 }
 
 // NewReconciler returns a new Reconciler.
@@ -87,6 +98,35 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, nil
 }
 
+func (r *Reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
+	crdList := &v1beta1.CustomResourceDefinitionList{}
+	if err := r.client.List(ctx, &client.ListOptions{}, crdList); err != nil {
+		return nil, err
+	}
+	return crdList.Items, nil
+}
+
+func (r *Reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
+	allCRDs := map[schema.GroupVersionKind]struct{}{}
+	for _, crd := range crds {
+		crdGk := schema.GroupKind{
+			Group: crd.Spec.Group,
+			Kind:  crd.Spec.Names.Kind,
+		}
+
+		if crd.Spec.Version != "" {
+			allCRDs[crdGk.WithVersion(crd.Spec.Version)] = struct{}{}
+		}
+		for _, ver := range crd.Spec.Versions {
+			allCRDs[crdGk.WithVersion(ver.Name)] = struct{}{}
+		}
+	}
+	if len(allCRDs) == 0 {
+		return nil
+	}
+	return allCRDs
+}
+
 func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiError {
 	var mErr status.MultiError
 
@@ -103,7 +143,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	}
 	clusterConfig.SetGroupVersionKind(kinds.ClusterConfig())
 
-	grs, err := r.decoder.DecodeResources(clusterConfig.Spec.Resources...)
+	grs, err := r.decoder.DecodeResources(clusterConfig.Spec.Resources)
 	if err != nil {
 		mErr = status.Append(mErr, errors.Wrap(err, "could not decode ClusterConfig"))
 		return mErr
@@ -136,11 +176,31 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		}
 	}
 
+	var needRestart bool
 	if reconcileCount > 0 {
+		needRestart = true
 		// We've updated CRDs on the cluster; restart the NamespaceConfig and ClusterConfig controllers.
-		r.signal.Restart("crd")
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, "ReconcileComplete",
 			"crd cluster config was successfully reconciled: %d changes", reconcileCount)
+		glog.Info("Triggering restart due to repo CRD change")
+	}
+
+	crdList, err := r.listCrds(ctx)
+	if err != nil {
+		mErr = status.Append(mErr, err)
+	} else {
+		allCrds := r.toCrdSet(crdList)
+		if !reflect.DeepEqual(r.allCrds, allCrds) {
+			needRestart = true
+			r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, "CRDChange",
+				"crds changed on the cluster restarting syncer controllers")
+			glog.Info("Triggering restart due to external CRD change")
+		}
+		r.allCrds = allCrds
+	}
+
+	if needRestart {
+		r.signal.Restart("crd")
 	}
 
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs...); err != nil {

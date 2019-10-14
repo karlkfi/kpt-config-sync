@@ -107,20 +107,7 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 }
 
 func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.ClusterConfig) error {
-	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); gks != nil {
-		glog.Infof(
-			"ClusterConfigReconciler encountered "+
-				"group-kind(s) %s that were not present in a sync, waiting for reconciler restart",
-			strings.Join(gks, ", "))
-		// We only reach this case on a race condition where the reconciler is run before the
-		// changes to Sync objects are picked up.  We exit early since there are resources we can't
-		// properly handle which will cause status on the ClusterConfig to incorrectly report that
-		// everything is fully synced.  We log info and return nil here since the Sync metacontroller
-		// will restart this reconciler shortly.
-		return nil
-	}
-
-	grs, err := r.decoder.DecodeResources(config.Spec.Resources...)
+	grs, err := r.decoder.DecodeResources(config.Spec.Resources)
 	if err != nil {
 		return errors.Wrapf(err, "could not process cluster config: %q", config.GetName())
 	}
@@ -149,6 +136,28 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 			}
 		}
 	}
+
+	// There's two possibilities for reaching this case:
+	// 1) We reach this case on a race condition where the reconciler is run before the
+	// changes to Sync objects are picked up.  We exit early since there are resources we can't
+	// properly handle which will cause status on the ClusterConfig to incorrectly report that
+	// everything is fully synced.  We can need to skip the status update since
+	// not all resources will be synced and we are expecting a restart shortly.
+	// 2) Someone has added a gatekeeper ConstraintTemplate and Constraint in the same commit.
+	// The ConstraintTemplate will be applied at this point, but the Constraint
+	// will be skipped since it doesn't yet exist since Gatekeeper needs to create
+	// a CRD for it.  Once gatekeeper creates the CRD, the CRD meta controller will
+	// notice the new CRD and restart the cluster config controller which will
+	// allow the constraint to get applied.
+	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); len(gks) != 0 {
+		glog.Infof(
+			"ClusterConfigReconciler encountered "+
+				"group-kind(s) %s that were not present in a sync, "+
+				"skipping status update and waiting for reconciler restart",
+			strings.Join(gks, ", "))
+		return errBuilder
+	}
+
 	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, status.ToCME(errBuilder)...); err != nil {
 		errBuilder = status.Append(errBuilder, err)
 		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",

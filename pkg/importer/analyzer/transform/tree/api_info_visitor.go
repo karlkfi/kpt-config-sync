@@ -3,9 +3,8 @@ package tree
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -43,16 +42,12 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 		v.errs = status.Append(v.errs, status.APIServerWrapf(err, "discovery failed for server resources"))
 	}
 
-	for _, cr := range r.ClusterObjects {
-		if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
-			continue
-		}
+	crdMap, errs := customresources.ProcessClusterObjects(r.ClusterObjects)
+	if errs != nil {
+		v.errs = status.Extend(v.errs, errs)
+	}
 
-		crd, err := clusterconfig.AsCRD(cr.Object)
-		if err != nil {
-			v.errs = status.Append(v.errs, status.PathWrapf(err, cr.SlashPath()))
-			continue
-		}
+	for _, crd := range crdMap {
 		apiInfo.AddCustomResources(crd)
 	}
 

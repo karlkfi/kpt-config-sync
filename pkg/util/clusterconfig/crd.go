@@ -3,7 +3,7 @@ package clusterconfig
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -69,7 +69,7 @@ func crds(decoder decode.Decoder, clusterConfig *v1.ClusterConfig) (map[string]*
 		return crds, nil
 	}
 
-	gvkrs, err := decoder.DecodeResources(clusterConfig.Spec.Resources...)
+	gvkrs, err := decoder.DecodeResources(clusterConfig.Spec.Resources)
 	if err != nil {
 		return nil, status.APIServerWrapf(err, "could not deserialize CRD in %s", v1.CRDClusterConfigName)
 	}

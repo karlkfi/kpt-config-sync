@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -22,6 +22,17 @@ func From(errs ...error) MultiError {
 		return Append(nil, nil)
 	}
 	return Append(nil, errs[0], errs[1:]...)
+}
+
+// Extend appends all errors in mm to m.
+func Extend(m MultiError, mm MultiError) MultiError {
+	if mm == nil || len(mm.Errors()) == 0 {
+		return m
+	}
+	for _, err := range mm.Errors() {
+		mm = Append(mm, err)
+	}
+	return mm
 }
 
 // Append adds one or more errors to an existing MultiError.

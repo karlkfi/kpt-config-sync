@@ -20,7 +20,7 @@ type Decoder interface {
 	// DecodeResources reads the bytes in the RawExtensions representing k8s
 	// resources and returns a slice of all the resources grouped by their
 	// respective GroupVersionKind.
-	DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
+	DecodeResources(genericResources []nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
 	// UpdateScheme updates the scheme of the underlying decoder, so it can decode the given GroupVersionKinds.
 	UpdateScheme(gvks map[schema.GroupVersionKind]bool)
 }
@@ -50,7 +50,7 @@ func (d *GenericResourceDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]b
 }
 
 // DecodeResources implements Decoder.
-func (d *GenericResourceDecoder) DecodeResources(genericResources ...nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *GenericResourceDecoder) DecodeResources(genericResources []nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	us := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, gr := range genericResources {
 		for _, v := range gr.Versions {
@@ -58,8 +58,9 @@ func (d *GenericResourceDecoder) DecodeResources(genericResources ...nomosv1.Gen
 				gvk := schema.GroupVersionKind{Group: gr.Group, Version: v.Version, Kind: gr.Kind}
 				o := genericObject.Object
 				if o == nil {
+					u := &unstructured.Unstructured{}
 					var err error
-					o, _, err = d.decoder.Decode(genericObject.Raw, &gvk, o)
+					o, _, err = d.decoder.Decode(genericObject.Raw, &gvk, u)
 					if err != nil {
 						return nil, errors.Wrapf(err, "could not decode runtime.Object from %q RawExtension bytes", gvk)
 					}

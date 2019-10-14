@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/differ"
 	"github.com/google/nomos/pkg/status"
