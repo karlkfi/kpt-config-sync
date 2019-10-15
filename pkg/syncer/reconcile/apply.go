@@ -33,18 +33,18 @@ type Applier interface {
 	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
 }
 
-// ClientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
-type ClientApplier struct {
+// clientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
+type clientApplier struct {
 	dynamicClient    dynamic.Interface
 	discoveryClient  *discovery.DiscoveryClient
 	openAPIResources openapi.Resources
 	client           *client.Client
 }
 
-var _ Applier = &ClientApplier{}
+var _ Applier = &clientApplier{}
 
-// NewApplier returns a new ClientApplier.
-func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error) {
+// NewApplier returns a new clientApplier.
+func NewApplier(cfg *rest.Config, client *client.Client) (Applier, error) {
 	c, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 		return nil, err
 	}
 
-	return &ClientApplier{
+	return &clientApplier{
 		dynamicClient:    c,
 		discoveryClient:  dc,
 		openAPIResources: oa,
@@ -69,7 +69,7 @@ func NewApplier(cfg *rest.Config, client *client.Client) (*ClientApplier, error)
 }
 
 // Create implements Applier.
-func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.Error) {
+func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.Error) {
 	err := c.create(ctx, intendedState)
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 
@@ -80,7 +80,7 @@ func (c *ClientApplier) Create(ctx context.Context, intendedState *unstructured.
 }
 
 // Update implements Applier.
-func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
+func (c *clientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
 	updated, err := c.update(ctx, intendedState, currentState)
 	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 
@@ -91,7 +91,7 @@ func (c *ClientApplier) Update(ctx context.Context, intendedState, currentState 
 }
 
 // Delete implements Applier.
-func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
+func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	err := c.client.Delete(ctx, obj)
 	metrics.Operations.WithLabelValues("delete", obj.GetKind(), metrics.StatusLabel(err)).Inc()
 
@@ -102,7 +102,7 @@ func (c *ClientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 }
 
 // create creates the resource with the last-applied annotation set.
-func (c *ClientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
+func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
 	if err := kubectl.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
 		return errors.Wrap(err, "could not generate apply annotation")
 	}
@@ -111,7 +111,7 @@ func (c *ClientApplier) create(ctx context.Context, obj *unstructured.Unstructur
 }
 
 // clientFor returns the client which may interact with the passed object.
-func (c *ClientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
 	gvk := obj.GroupVersionKind()
 	apiResource, rErr := c.resource(gvk)
 	if rErr != nil {
@@ -126,7 +126,7 @@ func (c *ClientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubernetes/pkg/kubectl/cmd/apply.go
-func (c *ClientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, error) {
+func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, error) {
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
 	if cErr != nil {
@@ -150,57 +150,10 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 		return false, nil
 	}
 
-	var patch []byte
-	var patchType types.PatchType
-
-	gvk := intendedState.GetObjectKind().GroupVersionKind()
-	scheme := runtime.NewScheme()
-	versionedObject, sErr := scheme.New(gvk)
-	_, unversioned := scheme.IsUnversioned(intendedState)
-	switch {
-	case runtime.IsNotRegisteredError(sErr) || unversioned:
-		preconditions := []mergepatch.PreconditionFunc{
-			mergepatch.RequireKeyUnchanged("apiVersion"),
-			mergepatch.RequireKeyUnchanged("kind"),
-			mergepatch.RequireMetadataKeyUnchanged("name"),
-		}
-		var err error
-		patch, err = jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
-		patchType = types.MergePatchType
-		if err != nil {
-			if mergepatch.IsPreconditionFailed(err) {
-				return false, errors.New("at least one of apiVersion, kind and name was changed")
-			}
-			return false, errors.Wrap(err, "could not calculate the patch")
-		}
-	case sErr != nil:
-		return false, errors.Wrapf(sErr, "could not get an instance of versioned object %s", gvk)
-	case sErr == nil:
-		// Compute a three way strategic merge patch to send to server.
-		patchType = types.StrategicMergePatchType
-
-		if s := c.openAPIResources.LookupResource(gvk); s != nil {
-			// Try to use openapi first if the openapi spec is available and can successfully calculate the patch.
-			// Otherwise, fall back to baked-in types for creating the patch.
-			lookupPatchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: s}
-			openAPIPatch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, lookupPatchMeta, true)
-			if err != nil {
-				glog.Warning(errors.Wrap(err, "could not calculate the patch from openapi spec"))
-			} else {
-				patch = openAPIPatch
-			}
-		}
-
-		if patch == nil {
-			lookupPatchMeta, err := strategicpatch.NewPatchMetaFromStruct(versionedObject)
-			if err != nil {
-				return false, err
-			}
-			patch, err = strategicpatch.CreateThreeWayMergePatch(previous, modified, current, lookupPatchMeta, true)
-			if err != nil {
-				return false, err
-			}
-		}
+	gvk := intendedState.GroupVersionKind()
+	patch, patchType, err := c.calculatePatch(gvk, previous, modified, current)
+	if err != nil {
+		return false, err
 	}
 
 	if string(patch) == "{}" {
@@ -215,7 +168,7 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 
 	name, resourceDescription := nameDescription(intendedState)
 	start := time.Now()
-	_, err := resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
+	_, err = resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
 
@@ -228,8 +181,34 @@ func (c *ClientApplier) update(ctx context.Context, intendedState, currentState 
 	return true, nil
 }
 
+// calculatePatch computes a three way strategic merge patch to send to server.
+func (c *clientApplier) calculatePatch(gvk schema.GroupVersionKind, previous, modified, current []byte) ([]byte, types.PatchType, error) {
+	if s := c.openAPIResources.LookupResource(gvk); s != nil {
+		// Try to use schema from OpenAPI Spec. For Kubernetes 1.16 and earlier, the OpenAPI Spec does not include CRDs.
+		// Starting with ~1.17, the OpenAPI Spec will include CRDs so this won't be an issue.
+		patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: s}
+		patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
+		if err == nil {
+			return patch, types.StrategicMergePatchType, nil
+		}
+		glog.Warning(errors.Wrap(err, "could not calculate the patch from OpenAPI spec"))
+	}
+
+	// We weren't able to do a Strategic Merge because either:
+	// 1) the strategic merge patch failed, or
+	// 2) we don't have access to the schema.
+	// So, fall back to JSON Merge Patch.
+	preconditions := []mergepatch.PreconditionFunc{
+		mergepatch.RequireKeyUnchanged("apiVersion"),
+		mergepatch.RequireKeyUnchanged("kind"),
+		mergepatch.RequireMetadataKeyUnchanged("name"),
+	}
+	patch, err := jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
+	return patch, types.MergePatchType, err
+}
+
 // resource retrieves the plural resource name for the GroupVersionKind.
-func (c *ClientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
+func (c *clientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
 	apiResources, err := c.discoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 	if err != nil {
 		return "", errors.Wrapf(err, "could not look up %s using discovery API", gvk)

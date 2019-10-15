@@ -35,7 +35,7 @@ function test_invalid_yamls_for_resource() {
     debug::log "trying to update with ${invalid_yaml}"
     run kubectl apply -f "${invalid_yaml}"
     # shellcheck disable=SC2154
-    if [ "$status" -eq 0 ]; then
+    if [[ "$status" -eq 0 ]]; then
       debug::error "successfully applied invalid manifest: ${invalid_yaml}"
     fi
   done
