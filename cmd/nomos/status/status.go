@@ -86,7 +86,7 @@ var Cmd = &cobra.Command{
 //
 // TODO(b/131767793) This function (and its children) make up the body of this file, which is far
 // too long and lacks unit testing.  To begin, some logic (especially error handling) should be
-// extracted fro the two commands, placed in pkg/, and unit tested.
+// extracted from the two commands, placed in pkg/, and unit tested.
 func statusClients(contexts []string) (map[string]*statusClient, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if configs == nil {

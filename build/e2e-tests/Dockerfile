@@ -22,7 +22,7 @@
 # than a tag or a branch, so that rebuilds are reproducible. See examples below
 # on how.
 FROM golang:1.12.5-alpine AS build-base
-RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev
+RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev unzip
 
 # We don't use or support modules for the time being.
 ENV GO111MODULE=off
@@ -83,7 +83,8 @@ RUN apt-get update \
   jq \
   libtap-formatter-junit-perl \
   python \
-  software-properties-common
+  software-properties-common \
+  unzip
 
 # Add Tini
 ENV TINI_VERSION v0.18.0

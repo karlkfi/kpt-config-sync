@@ -30,9 +30,10 @@ var configSources = []configSource{
 
 // NewRestConfig will attempt to create a new rest config from all configured options and return
 // the first successfully created configuration.  The flag restConfigSource, if specified, will
-// change the behvior to attempt to create from only the configured source.
+// change the behavior to attempt to create from only the configured source.
 func NewRestConfig() (*rest.Config, error) {
 	var errorStrs []string
+
 	for _, source := range configSources {
 		config, err := source.create()
 		if err == nil {
@@ -40,6 +41,7 @@ func NewRestConfig() (*rest.Config, error) {
 			glog.V(7).Infof("Config: %#v", *config)
 			return config, nil
 		}
+
 		glog.V(5).Infof("Failed to create from %s: %s", source.name, err)
 		errorStrs = append(errorStrs, fmt.Sprintf("%s: %s", source.name, err))
 	}

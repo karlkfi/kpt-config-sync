@@ -10,14 +10,23 @@ load "../lib/namespaceconfig"
 load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
+load "../lib/namespace"
 
 NOMOS_BIN=/opt/testing/go/bin/linux_amd64/nomos
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
+CMS_NS="config-management-system"
+KS_NS="kube-system"
+
 setup() {
   setup::common
   setup::git::initialize
+
+  # Fixes a problem when running the tests locally
+  if [[ -z "${KUBECONFIG+x}" ]]; then
+    export KUBECONFIG="${HOME}/.kube/config"
+  fi
 }
 
 teardown() {
@@ -51,4 +60,63 @@ teardown() {
 
   debug::log "Expect dev-cluster to succeed since there is no collision"
   ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision --clusters=dev-cluster
+}
+
+@test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {
+  # confirm all the pods are up
+  namespace::check_exists ${KS_NS}
+  resource::check_count -n ${KS_NS} -r pod -c 1 -l "k8s-app=config-management-operator"
+
+  namespace::check_exists ${CMS_NS}
+  resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=git-importer"
+  resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=syncer"
+  resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=monitor"
+
+  # This flag is so that this test can run while the feature is being developed incrementally
+  # It will be removed when the feature is ready to be exposed in a release
+  BUG_REPORT=enabled "${NOMOS_BIN}" bugreport
+
+  # check that zip exists
+  BUG_REPORT_ZIP_NAME=$(get_bug_report_file_name)
+  [[ -e "${BUG_REPORT_ZIP_NAME}" ]]
+
+  # move into a directory for easy manipulation
+  mkdir contents
+  mv "${BUG_REPORT_ZIP_NAME}" contents
+  (cd contents; /usr/bin/unzip "${BUG_REPORT_ZIP_NAME}")
+
+  # Check that the correct files are there
+  check_singleton "config-management-system/git-importer.*/git-sync.txt" contents
+  check_singleton "config-management-system/git-importer.*/importer.txt" contents
+  check_singleton "config-management-system/monitor.*/monitor.txt" contents
+  check_singleton "config-management-system/syncer.*/syncer.txt" contents
+  check_singleton "kube-system/config-management-operator.*/manager.txt" contents
+}
+
+function get_bug_report_file_name {
+  for f in ./*
+  do
+    if [[ -e $(echo "${f}" | grep "bug_report_.*.zip" ) ]]; then
+      basename "${f}"
+    fi
+  done
+}
+
+function check_singleton {
+  local regex_string="${1}"
+  local base_dir="${2}"
+  local directory_contents
+  local num_results
+
+  directory_contents="$(cd "${base_dir}"; find . -name "*.txt")"
+  num_results="$(echo "${directory_contents}" | grep -c "${regex_string}")"
+
+  if [[ "${num_results}" -eq 1 ]]; then
+    return 0
+  else
+    printf "ERROR: %s results found matching regex: %s\n" "${num_results}" "${regex_string}"
+    echo "${directory_contents}"
+
+    return 1
+  fi
 }
