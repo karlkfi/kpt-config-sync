@@ -34,7 +34,8 @@ function teardown() {
 
 @test "constraint template and constraint in same commit" {
   debug::log "Adding gatekeeper CT CRD"
-  kubectl apply -f "${YAML_DIR}/constraint-template-crd.yaml"
+  # Don't do strict validation since the CRD includes fields introduced in 1.13.
+  kubectl apply -f "${YAML_DIR}/constraint-template-crd.yaml" --validate=false
 
   debug::log "Adding CT/C in one commit"
   git::add \
