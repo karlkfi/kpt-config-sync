@@ -50,7 +50,7 @@ function teardown() {
   wait::for -t 30 -- kubectl get constrainttemplate k8sallowedrepos
 
   debug::log "Applying CRD for constraint (simulates gatekeeper)"
-  kubectl apply -f "${YAML_DIR}/constraint-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/constraint-crd.yaml" --validate=false
 
   debug::log "Waiting for nomos to recover"
   wait::for -t 60 -- nomos::repo_synced
