@@ -16,6 +16,6 @@ var reservedDirectoryNameError = status.NewErrorBuilder(ReservedDirectoryNameErr
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
 func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
-	return reservedDirectoryNameError.Errorf("Directories MUST NOT have reserved namespace names. Rename or remove %q:\n\n" +
-		dir.Base())
+	return reservedDirectoryNameError.Errorf("Directories MUST NOT have reserved namespace names. Rename or remove %q:",
+		dir.OSPath())
 }
