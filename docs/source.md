@@ -77,8 +77,10 @@ Some good thoughts on how to write good git commit messages can be found
 
 ## Go Vendoring (Add a new import)
 
+### nomos
+
 We use [dep](https://golang.github.io/dep/docs/daily-dep.html) to manage our Go
-dependencies.
+dependencies in nomos.
 
 ```console
 $ go get -u github.com/golang/dep/cmd/dep
@@ -102,6 +104,32 @@ To update a single package (desired):
 $ dep ensure -update -v [package path]
 $ ./scripts/fix-dep.sh  # clears out license related changes.
 ```
+
+### nomos-operator
+
+nomos-operator has migrated to [go modules](https://github.com/golang/go/wiki/Modules) for managing
+its dependencies.  Go modules have been supported since go version 1.11, but, until 1.13, had to
+be turned on explicitly (`export GO111MODULE=on`).
+
+By 1.13, the GO111MODULE variable is set to "auto", meaning that you
+can use the operator without worrying about configuring your shell.  You can even use go modules
+inside of $GOPATH.
+
+If you make any changes to dependencies, simply run:
+
+```console
+make vendor
+```
+
+This calls `go mod` and does a basil test to make sure everything's doing well.
+
+For added confidence, run:
+
+```console
+go mod tidy
+```
+
+Which will ignore our symlinks report on the health of our dependencies.
 
 ## Updating license metadata
 
