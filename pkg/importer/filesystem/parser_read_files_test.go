@@ -184,6 +184,60 @@ spec:
 `,
 			},
 		},
+		{
+			testName: "metadata.annotations with number value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/ns.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  annotations:
+    number: 0000
+`,
+			},
+			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+		},
+		{
+			testName: "metadata.annotations with quoted number value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/ns.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  annotations:
+    number: "0000"
+`,
+			},
+		},
+		{
+			testName: "metadata.annotations with boolean value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/ns.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  annotations:
+    boolean: true
+`,
+			},
+			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+		},
+		{
+			testName: "metadata.annotations with quoted boolean value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/ns.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  annotations:
+    boolean: "true"
+`,
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.testName, func(t *testing.T) {

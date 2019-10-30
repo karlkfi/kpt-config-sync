@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	_ "github.com/google/nomos/pkg/importer/analyzer/vet" // required for vet errors
+	_ "github.com/google/nomos/pkg/importer/filesystem"   // required for fileystem errors
 	_ "github.com/google/nomos/pkg/importer/id"           // required for id errors
 	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
