@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/object"
 )
 
@@ -27,7 +28,16 @@ func NewPathAnnotationVisitor() *PathAnnotationVisitor {
 // VisitTreeNode implements Visitor
 func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	newNode := v.Copying.VisitTreeNode(n)
-	object.SetAnnotation(newNode, v1.SourcePathAnnotationKey, n.SlashPath())
+	// Annotate the TreeNode with the location of the Namespace. Otherwise we lose
+	// the base path.
+	for _, o := range n.Objects {
+		// Since this is a Namespace node, we know there is exactly one Namespace
+		// for a valid tree. We validate that property elsewhere.
+		if o.GroupVersionKind() == kinds.Namespace() {
+			object.SetAnnotation(newNode, v1.SourcePathAnnotationKey, o.SlashPath())
+			break
+		}
+	}
 	return newNode
 }
 

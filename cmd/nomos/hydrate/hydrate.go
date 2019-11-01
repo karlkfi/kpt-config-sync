@@ -138,7 +138,6 @@ func printFlatOutput(fileObjects []ast.FileObject) {
 }
 
 func printDirectoryOutput(fileObjects []ast.FileObject) {
-	// TODO: Make compatible with multi-cluster.
 	files := make(map[string][]*unstructured.Unstructured)
 	for _, obj := range fileObjects {
 		files[obj.SlashPath()] = append(files[obj.SlashPath()], toUnstructured(obj.Object))

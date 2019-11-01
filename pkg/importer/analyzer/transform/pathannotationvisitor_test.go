@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/testing/fake"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -47,9 +48,8 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        node.AbstractNamespace,
-					Path:        cmpath.FromSlash("namespaces"),
-					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
+					Type: node.AbstractNamespace,
+					Path: cmpath.FromSlash("namespaces"),
 				},
 			},
 		},
@@ -57,15 +57,36 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.Namespace,
+					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
+					Children: []*ast.TreeNode{
+						{
+							Type: node.Namespace,
+							Path: cmpath.FromSlash("namespaces/bar"),
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.Namespace("namespaces/bar")},
+							},
+						},
+					},
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        node.Namespace,
-					Path:        cmpath.FromSlash("namespaces"),
-					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
+					Type: node.AbstractNamespace,
+					Path: cmpath.FromSlash("namespaces"),
+					Children: []*ast.TreeNode{
+						{
+							Type: node.Namespace,
+							Path: cmpath.FromSlash("namespaces/bar"),
+							Annotations: map[string]string{
+								v1.SourcePathAnnotationKey: "namespaces/bar/namespace.yaml",
+							},
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.Namespace("namespaces/bar",
+									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -87,7 +108,6 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
 					),
-					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
 				},
 			},
 		},
@@ -95,21 +115,39 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate RoleBinding in namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.Namespace,
+					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
-					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.Helper.AdminRoleBinding(), cmpath.FromSlash("acme/admin.yaml")),
-					),
+					Children: []*ast.TreeNode{
+						{
+							Type: node.Namespace,
+							Path: cmpath.FromSlash("namespaces/bar"),
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.Namespace("namespaces/bar")},
+								{FileObject: fake.RoleAtPath("namespaces/bar/rb.yaml")},
+							},
+						},
+					},
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.Namespace,
+					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
-					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
-					),
-					Annotations: map[string]string{v1.SourcePathAnnotationKey: "namespaces"},
+					Children: []*ast.TreeNode{
+						{
+							Type: node.Namespace,
+							Path: cmpath.FromSlash("namespaces/bar"),
+							Annotations: map[string]string{
+								v1.SourcePathAnnotationKey: "namespaces/bar/namespace.yaml",
+							},
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.Namespace("namespaces/bar",
+									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+								{FileObject: fake.RoleAtPath("namespaces/bar/rb.yaml",
+									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/rb.yaml"))},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -129,7 +167,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 				Tree: &ast.TreeNode{
 					Type:        node.Namespace,
 					Path:        cmpath.FromSlash("namespaces"),
-					Annotations: map[string]string{"color": "orange", v1.SourcePathAnnotationKey: "namespaces"},
+					Annotations: map[string]string{"color": "orange"},
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
 					),

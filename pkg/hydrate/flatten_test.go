@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -53,11 +54,12 @@ func TestFlatten(t *testing.T) {
 			name: "one Namespaced object",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", nil,
+					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},
 			expected: []runtime.Object{
+				fake.NamespaceObject("bar"),
 				fake.RoleBindingObject(object.Namespace("bar")),
 			},
 		},
@@ -65,15 +67,17 @@ func TestFlatten(t *testing.T) {
 			name: "two Namespaced objects",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", nil,
+					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				), testoutput.NamespaceConfig(
-					"", "namespaces/foo", nil,
+					"", "namespaces/foo", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleObject(),
 				)),
 			},
 			expected: []runtime.Object{
+				fake.NamespaceObject("bar"),
 				fake.RoleBindingObject(object.Namespace("bar")),
+				fake.NamespaceObject("foo"),
 				fake.RoleObject(object.Namespace("foo")),
 			},
 		},
@@ -87,14 +91,15 @@ func TestFlatten(t *testing.T) {
 					fake.ClusterRoleBindingObject(),
 				),
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", nil,
+					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},
 			expected: []runtime.Object{
 				fake.CustomResourceDefinitionObject(),
-				fake.RoleBindingObject(object.Namespace("bar")),
 				fake.ClusterRoleBindingObject(),
+				fake.NamespaceObject("bar"),
+				fake.RoleBindingObject(object.Namespace("bar")),
 			},
 		},
 	}

@@ -1,6 +1,7 @@
 package testoutput
 
 import (
+	"path"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -34,7 +35,7 @@ func CRDClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
 // NamespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
 // hydrated runtime.Objects for that Namespace.
 func NamespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ...runtime.Object) v1.NamespaceConfig {
-	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(Source(dir)))
+	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(Source(path.Join(dir, "namespace.yaml"))))
 	if clusterName != "" {
 		InCluster(clusterName)(config)
 	}

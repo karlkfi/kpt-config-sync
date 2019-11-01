@@ -2,7 +2,9 @@ package hydrate
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -25,8 +27,15 @@ func Flatten(c *namespaceconfig.AllConfigs) []runtime.Object {
 		}
 	}
 	if c.NamespaceConfigs != nil {
-		for _, namespaceConfig := range c.NamespaceConfigs {
-			for _, namespaceObjects := range namespaceConfig.Spec.Resources {
+		for _, namespaceCfg := range c.NamespaceConfigs {
+			// Construct Namespace from NamespaceConfig
+			namespace := &corev1.Namespace{}
+			namespace.SetGroupVersionKind(kinds.Namespace())
+			// Note that this copies references to Annotations/Labels.
+			namespace.ObjectMeta = namespaceCfg.ObjectMeta
+			result = append(result, namespace)
+
+			for _, namespaceObjects := range namespaceCfg.Spec.Resources {
 				result = append(result, resourcesToFileObjects(namespaceObjects)...)
 			}
 		}

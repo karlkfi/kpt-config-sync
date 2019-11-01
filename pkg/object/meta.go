@@ -45,10 +45,17 @@ func Labels(labels map[string]string) MetaMutator {
 	}
 }
 
-// Annotation adds annotation=value to the metadata.annotations of the MetaObjectunder test.
+// Annotation adds annotation=value to the metadata.annotations of the MetaObject under test.
 func Annotation(annotation, value string) MetaMutator {
 	return func(o metav1.Object) {
 		SetAnnotation(o, annotation, value)
+	}
+}
+
+// WithoutAnnotation removes annotation from metadata.annotations of the MetaObject under test.
+func WithoutAnnotation(annotation string) MetaMutator {
+	return func(o metav1.Object) {
+		RemoveAnnotations(o, annotation)
 	}
 }
 
