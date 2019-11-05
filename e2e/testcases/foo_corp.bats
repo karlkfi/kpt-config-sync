@@ -35,7 +35,7 @@ FOOCORP_NAMESPACES=(
   git::add /opt/testing/e2e/examples/foo-corp-example/foo-corp acme
   git::commit
 
-  wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 180 -- nomos::repo_synced
 
   local ns
   for ns in "${FOOCORP_NAMESPACES[@]}"; do

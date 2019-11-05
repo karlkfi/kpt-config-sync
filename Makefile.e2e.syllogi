@@ -3,8 +3,21 @@
 # framework. The script that actually runs this image is in the Syllogi repo at
 # https://gke-internal.googlesource.com/syllogi/cluster-management/+/master/test-infra/scripts/
 
-image-e2e-syllogi: E2E_GIT_PROJECT=nomos-release
-image-e2e-syllogi: image-e2e-tests build/e2e-tests/Dockerfile.syllogi
+# image-e2e-syllogi builds the syllogi e2e test image and
+# pushes it to the syllogi test image container registry.
+# This will update the tests that run in the CI environments that
+# syllogi (GKE On-prem) manages.
+image-e2e-syllogi: E2E_GIT_PROJECT=syllogi-ci
+image-e2e-syllogi: __internal-image-e2e-syllogi
+
+# image-e2e-syllogi-dev buildes the syllogi e2e test image and pushes
+# it to our own test registry. This does not affect any CI environments,
+# and is intended as a development target to allow devs to test changes
+# made to the syllogi e2e test image easily.
+image-e2e-syllogi-dev: E2E_GIT_PROJECT=stolos-dev
+image-e2e-syllogi-dev: __internal-image-e2e-syllogi
+
+__internal-image-e2e-syllogi: image-e2e-tests build/e2e-tests/Dockerfile.syllogi
 	@echo "+++ Building the e2e syllogi image"
 	@docker build \
 	  --file=build/e2e-tests/Dockerfile.syllogi \
@@ -12,7 +25,7 @@ image-e2e-syllogi: image-e2e-tests build/e2e-tests/Dockerfile.syllogi
 	  --build-arg "UID=$(UID)" \
 	  --build-arg "GID=$(GID)" \
 	  --build-arg "UNAME=${USER}" \
-	  -t gcr.io/syllogi-ci/e2e-nomos-syllogi:latest \
+	  -t gcr.io/$(E2E_GIT_PROJECT)/e2e-nomos-syllogi:latest \
     $(DOCKER_BUILD_QUIET) \
 	  .
-	@docker push gcr.io/syllogi-ci/e2e-nomos-syllogi:latest
+	@docker push gcr.io/$(E2E_GIT_PROJECT)/e2e-nomos-syllogi:latest

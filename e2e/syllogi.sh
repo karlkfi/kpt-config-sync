@@ -34,15 +34,27 @@ function install() {
   echo "Nomos $image up and running"
 }
 
-function cleanup() {
+function print_diag() {
   echo "printing diagonstics"
   echo "+ operator logs"
   (kubectl -n kube-system logs -l k8s-app=config-management-operator --tail=100) || true
+  echo "+ operator pod"
+  (kubectl -n kube-system describe pod -l k8s-app=config-management-operator) || true
+  echo "+ importer deployment"
+  (kubectl -n config-management-system describe deployment git-importer) || true
   echo "+ importer pod"
   (kubectl -n config-management-system describe pod git-importer) || true
   echo "+ importer logs"
   (kubectl -n config-management-system logs -l app=git-importer -c importer --tail=100) || true
+  echo "+ configmanagement crds"
+  (kubectl get crds | grep configmanagement) || true
+  echo "+ configmanagements"
+  (kubectl get configmanagements -oyaml) || true
+}
+
+function cleanup() {
   echo "cleaning up"
+  print_diag
   kubectl delete configmanagement config-management --ignore-not-found
   wait::for -s -t 180 -- install::nomos_uninstalled
   echo "Nomos uninstalled"
@@ -62,10 +74,6 @@ function cleanup() {
 
 # Main
 
-cleanup
-
-install
-
 # Always clean up on exit
 trap cleanup EXIT
 
@@ -75,6 +83,11 @@ trap cleanup EXIT
 # https://stackoverflow.com/questions/54699272/docker-hangs-on-sigint-when-script-traps-exit
 # Note that ":" is the bashism for no-op; it evals to true.
 trap : SIGTERM SIGINT
+
+cleanup
+
+install
+
 
 exitcode=0
 echo "Starting Nomos tests"
