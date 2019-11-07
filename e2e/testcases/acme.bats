@@ -82,7 +82,6 @@ function check_metrics_pages() {
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrolebinding -c 2
   resource::check clusterrolebinding namespace-viewers -a "configmanagement.gke.io/managed=enabled"
   resource::check clusterrolebinding rbac-viewers -a "configmanagement.gke.io/managed=enabled"
-  resource::check_count -r podsecuritypolicy -c 1
   resource::check podsecuritypolicy example -a "configmanagement.gke.io/managed=enabled"
 
   # Namespace-scoped resources
