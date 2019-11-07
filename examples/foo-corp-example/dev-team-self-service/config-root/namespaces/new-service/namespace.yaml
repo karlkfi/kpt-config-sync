@@ -1,0 +1,7 @@
+# creates namespace named "new-service" in dev clusters
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: new-service
+    annotations:
+      configmanagement.gke.io/cluster-selector: selector-env-dev
