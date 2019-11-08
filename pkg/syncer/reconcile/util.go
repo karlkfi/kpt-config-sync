@@ -6,13 +6,13 @@ import (
 	"net/url"
 	"reflect"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -63,7 +63,7 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 		return nil
 	}
 
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		newConfig := obj.(*v1.ClusterConfig)
 		newConfig.Status.Token = config.Spec.Token
 		newConfig.Status.SyncTime = now()

@@ -7,10 +7,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/apiresource"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,17 +32,17 @@ func TestPatherSingleObject(t *testing.T) {
 		},
 		{
 			name:     configmanagement.HierarchyConfigKind,
-			object:   fake.HierarchyConfig(fake.HierarchyConfigMeta(object.Name("hc"))),
+			object:   fake.HierarchyConfig(fake.HierarchyConfigMeta(core.Name("hc"))),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
 		{
 			name:     "Clusters",
-			object:   fake.Cluster(object.Name("us-east-1")),
+			object:   fake.Cluster(core.Name("us-east-1")),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.Cluster().Kind) + "_us-east-1.yaml"),
 		},
 		{
 			name:     configmanagement.ClusterSelectorKind,
-			object:   fake.ClusterSelector(object.Name("cs")),
+			object:   fake.ClusterSelector(core.Name("cs")),
 			expected: cmpath.FromSlash(repo.ClusterRegistryDir).Join(strings.ToLower(kinds.ClusterSelector().Kind) + "_cs.yaml"),
 		},
 		{
@@ -57,12 +57,12 @@ func TestPatherSingleObject(t *testing.T) {
 		},
 		{
 			name:     "Namespaced kind",
-			object:   fake.Role(object.Namespace("dev"), object.Name("admin")),
+			object:   fake.Role(core.Namespace("dev"), core.Name("admin")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_admin.yaml"),
 		},
 		{
 			name:     "Clusters kind",
-			object:   fake.ClusterRole(object.Name("admin")),
+			object:   fake.ClusterRole(core.Name("admin")),
 			expected: cmpath.FromSlash(repo.ClusterDir).Join("clusterrole_admin.yaml"),
 		},
 	}
@@ -83,7 +83,7 @@ func TestPatherSingleObject(t *testing.T) {
 }
 
 func TestPatherMultipleObjects(t *testing.T) {
-	other := fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("bar")), object.Name("admin"), object.Namespace("dev"))
+	other := fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("bar")), core.Name("admin"), core.Namespace("dev"))
 
 	testCases := []struct {
 		name     string
@@ -93,19 +93,19 @@ func TestPatherMultipleObjects(t *testing.T) {
 		{
 			name: "kind/name conflict",
 			object: fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("foo")),
-				object.Name("admin"), object.Namespace("dev")),
+				core.Name("admin"), core.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("role_foo_admin.yaml"),
 		},
 		{
 			name: "different namespace",
 			object: fake.Unstructured(fake.GVK(kinds.Role(), fake.Group("foo")),
-				object.Name("admin"), object.Namespace("prod")),
+				core.Name("admin"), core.Namespace("prod")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("prod").Join("role_admin.yaml"),
 		},
 		{
 			name: "different kind",
 			object: fake.Unstructured(fake.GVK(kinds.RoleBinding(), fake.Group("foo")),
-				object.Name("admin"), object.Namespace("dev")),
+				core.Name("admin"), core.Namespace("dev")),
 			expected: cmpath.FromSlash(repo.NamespacesDir).Join("dev").Join("rolebinding_admin.yaml"),
 		},
 	}

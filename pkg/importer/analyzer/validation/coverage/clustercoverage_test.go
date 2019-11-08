@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +64,7 @@ func TestValidateObject(t *testing.T) {
 			},
 			objects: []ast.FileObject{
 				fake.Role(
-					object.Annotation(v1.ClusterSelectorAnnotationKey, "sel-1")),
+					core.Annotation(v1.ClusterSelectorAnnotationKey, "sel-1")),
 			},
 		},
 	}
@@ -92,7 +92,7 @@ func TestMapToClusters(t *testing.T) {
 		name      string
 		clusters  []clusterregistry.Cluster
 		selectors []v1.ClusterSelector
-		object    metav1.Object
+		object    core.Annotated
 		expected  []string
 	}{
 		{

@@ -2,15 +2,15 @@ package fake
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 )
 
 // ClusterConfigMutator mutates a ClusterConfig.
 type ClusterConfigMutator func(cc *v1.ClusterConfig)
 
 // ClusterConfigMeta wraps a MetaMutator for modifying ClusterConfigs.
-func ClusterConfigMeta(opts ...object.MetaMutator) ClusterConfigMutator {
+func ClusterConfigMeta(opts ...core.MetaMutator) ClusterConfigMutator {
 	return func(cc *v1.ClusterConfig) {
 		mutate(cc, opts...)
 	}
@@ -18,7 +18,7 @@ func ClusterConfigMeta(opts ...object.MetaMutator) ClusterConfigMutator {
 
 // CRDClusterConfigObject initializes a valid CRDClusterConfig.
 func CRDClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
-	mutators := append(opts, ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)))
+	mutators := append(opts, ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)))
 	return ClusterConfigObject(mutators...)
 }
 
@@ -26,7 +26,7 @@ func CRDClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
 func ClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
 	result := &v1.ClusterConfig{TypeMeta: toTypeMeta(kinds.ClusterConfig())}
 	defaultMutate(result)
-	mutate(result, object.Name(v1.ClusterConfigName))
+	mutate(result, core.Name(v1.ClusterConfigName))
 	for _, opt := range opts {
 		opt(result)
 	}

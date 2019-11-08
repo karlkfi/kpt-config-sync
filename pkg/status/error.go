@@ -128,8 +128,8 @@ func Registry() map[string][]Error {
 func toErrorResource(r id.Resource) v1.ErrorResource {
 	return v1.ErrorResource{
 		SourcePath:        r.SlashPath(),
-		ResourceName:      r.Name(),
-		ResourceNamespace: r.Namespace(),
+		ResourceName:      r.GetName(),
+		ResourceNamespace: r.GetNamespace(),
 		ResourceGVK:       r.GroupVersionKind(),
 	}
 }

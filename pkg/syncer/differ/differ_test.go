@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -27,7 +27,7 @@ func name(s string) func(*unstructured.Unstructured) {
 
 func managed(s string) func(*unstructured.Unstructured) {
 	return func(u *unstructured.Unstructured) {
-		object.SetAnnotation(u, v1.ResourceManagementKey, s)
+		core.SetAnnotation(u, v1.ResourceManagementKey, s)
 	}
 }
 

@@ -74,17 +74,17 @@ func (v *Copying) VisitRoot(c *ast.Root) *ast.Root {
 
 // VisitSystemObject implements Visitor
 func (v *Copying) VisitSystemObject(o *ast.SystemObject) *ast.SystemObject {
-	return o.DeepCopy()
+	return &ast.SystemObject{FileObject: o.DeepCopy()}
 }
 
 // VisitClusterRegistryObject implements Visitor
 func (v *Copying) VisitClusterRegistryObject(o *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
-	return o.DeepCopy()
+	return &ast.ClusterRegistryObject{FileObject: o.DeepCopy()}
 }
 
 // VisitClusterObject implements Visitor
 func (v *Copying) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	return o.DeepCopy()
+	return &ast.ClusterObject{FileObject: o.DeepCopy()}
 }
 
 // VisitTreeNode implements Visitor
@@ -109,7 +109,7 @@ func (v *Copying) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 // VisitObject implements Visitor
 func (v *Copying) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	return o.DeepCopy()
+	return &ast.NamespaceObject{FileObject: o.DeepCopy()}
 }
 
 // Fatal implements Visitor.

@@ -5,10 +5,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -30,22 +30,22 @@ func (s fakeScoper) GetScope(gk schema.GroupKind) discovery.ObjectScope {
 func TestScopeValidator(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Namespace-scoped object with metadata.namespace",
-			fake.Role(object.Namespace("backend")),
+			fake.Role(core.Namespace("backend")),
 		),
 		nht.Fail("Namespace-scoped object without metadata.namespace",
-			fake.Role(object.Namespace("")),
+			fake.Role(core.Namespace("")),
 		),
 		nht.Fail("Cluster-scoped object with metadata.namespace",
-			fake.ClusterRole(object.Namespace("backend")),
+			fake.ClusterRole(core.Namespace("backend")),
 		),
 		nht.Pass("Cluster-scoped object with metadata.namespace",
-			fake.ClusterRole(object.Namespace("")),
+			fake.ClusterRole(core.Namespace("")),
 		),
 		nht.Fail("Unknown type with metadata.namespace",
-			fake.NamespaceSelector(object.Namespace("backend")),
+			fake.NamespaceSelector(core.Namespace("backend")),
 		),
 		nht.Fail("Unknown type without metadata.namespace",
-			fake.NamespaceSelector(object.Namespace("")),
+			fake.NamespaceSelector(core.Namespace("")),
 		),
 	}
 

@@ -5,9 +5,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -96,7 +96,7 @@ func (stc *ClusterSelectors) ClusterName() string {
 }
 
 // Matches checks if the supplied annotated object matches the selector.
-func (stc *ClusterSelectors) Matches(o object.Annotated) bool {
+func (stc *ClusterSelectors) Matches(o core.Annotated) bool {
 	a := o.GetAnnotations()
 	if glog.V(7) {
 		glog.Infof("annotations: %+v", a)

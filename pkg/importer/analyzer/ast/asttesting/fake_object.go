@@ -1,6 +1,7 @@
 package asttesting
 
 import (
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,9 +38,7 @@ type FakeObject struct {
 	*v1.TypeMeta
 }
 
-var _ runtime.Object = &FakeObject{}
-
-var _ v1.Object = FakeObject{}
+var _ core.Object = &FakeObject{}
 
 // WithMeta returns a copy of the object with the metadata replaced with meta.
 func (o *FakeObject) WithMeta(meta *v1.ObjectMeta) *FakeObject {

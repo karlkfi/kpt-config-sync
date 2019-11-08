@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/core"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
@@ -12,10 +13,9 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func withPath(o runtime.Object, path string) ast.FileObject {
+func withPath(o core.Object, path string) ast.FileObject {
 	return ast.NewFileObject(o, cmpath.FromSlash(path))
 }
 

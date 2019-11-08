@@ -51,7 +51,7 @@ func (v *OutputVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		v.allConfigs.AddNamespaceConfig(n.Name(), n.Annotations, n.Labels)
 		// Just loop inside here rather than using VisitObject becuase this is easier to follow.
 		for _, o := range n.Objects {
-			o.MetaObject().SetNamespace(n.Name())
+			o.SetNamespace(n.Name())
 			v.allConfigs.AddNamespaceResource(n.Name(), o.Object)
 		}
 		// Namespace has no children, so no need to process further.

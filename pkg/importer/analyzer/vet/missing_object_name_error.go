@@ -10,7 +10,7 @@ const MissingObjectNameErrorCode = "1031"
 
 func init() {
 	r := role()
-	r.MetaObject().SetName("")
+	r.SetName("")
 	status.AddExamples(MissingObjectNameErrorCode, MissingObjectNameError(r))
 }
 

@@ -5,22 +5,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// MetaEqual returns true if left objects's labels and annotations are equal to labels and
-// annotations right object.
-func MetaEqual(left metav1.Object, right metav1.Object) bool {
-	return reflect.DeepEqual(left.GetLabels(), right.GetLabels()) && reflect.DeepEqual(left.GetAnnotations(), right.GetAnnotations())
-}
-
 // ObjectMetaEqual returns true if the Meta field of left and right objects are equal.
-func ObjectMetaEqual(left runtime.Object, right runtime.Object) bool {
-	return MetaEqual(left.(metav1.Object), right.(metav1.Object))
+func ObjectMetaEqual(left core.LabeledAndAnnotated, right core.LabeledAndAnnotated) bool {
+	return reflect.DeepEqual(left.GetLabels(), right.GetLabels()) && reflect.DeepEqual(left.GetAnnotations(), right.GetAnnotations())
 }
 
 // GenericResourcesEqual returns true if the GenericResources slices are

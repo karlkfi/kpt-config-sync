@@ -35,11 +35,11 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 	return perObjectValidator(func(o ast.FileObject) status.Error {
 		switch scoper.GetScope(o.GroupVersionKind().GroupKind()) {
 		case discovery.ClusterScope:
-			if o.Namespace() != "" {
+			if o.GetNamespace() != "" {
 				return illegalNamespaceOnClusterScopedResourceError(&o)
 			}
 		case discovery.NamespaceScope:
-			if o.Namespace() == "" {
+			if o.GetNamespace() == "" {
 				return missingNamespaceOnNamespacedResourceError(&o)
 			}
 		case discovery.UnknownScope:

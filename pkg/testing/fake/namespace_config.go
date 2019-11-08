@@ -2,15 +2,15 @@ package fake
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 )
 
 // NamespaceConfigMutator mutates a NamespaceConfig.
 type NamespaceConfigMutator func(nc *v1.NamespaceConfig)
 
 // NamespaceConfigMeta wraps MetaMutators to be specific to NamespaceConfigs.
-func NamespaceConfigMeta(opts ...object.MetaMutator) NamespaceConfigMutator {
+func NamespaceConfigMeta(opts ...core.MetaMutator) NamespaceConfigMutator {
 	return func(nc *v1.NamespaceConfig) {
 		mutate(nc, opts...)
 	}

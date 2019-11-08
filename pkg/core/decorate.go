@@ -1,4 +1,4 @@
-package object
+package core
 
 // Annotated is anything that has mutable annotations.  This is a subset of
 // the interface metav1.Object, and allows us to manipulate AST objects with

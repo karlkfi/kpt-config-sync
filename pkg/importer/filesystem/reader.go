@@ -3,8 +3,10 @@ package filesystem
 import (
 	"os"
 
+	"github.com/google/nomos/pkg/core"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 
@@ -70,13 +72,15 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 				continue
 			}
 
-			object := asDefaultVersionedOrOriginal(info.Object, info.Mapping)
+			// TODO(143557906): Don't assume this is an Object as it might be a List.
+			obj := asDefaultVersionedOrOriginal(info.Object, info.Mapping).(core.Object)
+
 			// TODO: Remove the validateAnnotations check when we migrate to
 			//  apimachinery 1.17 since it is fixed then.
 			errs = status.Append(errs, validateAnnotations(info.Object.(runtime.Unstructured), source.Path()))
 
-			fileObject := ast.NewFileObject(object, source.Path())
-			isNomosObject := info.Object.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
+			fileObject := ast.NewFileObject(obj, source.Path())
+			isNomosObject := fileObject.GroupVersionKind().Group == configmanagement.GroupName
 			if !isNomosObject && hasStatusField(info.Object.(runtime.Unstructured)) {
 				errs = status.Append(errs, syntax.IllegalFieldsInConfigError(&fileObject, id.Status))
 			}
@@ -114,10 +118,40 @@ func validateAnnotations(u runtime.Unstructured, path cmpath.Path) status.MultiE
 		}
 	}
 	if invalidKeys != nil {
-		o := ast.NewFileObject(u, path)
-		return invalidAnnotationValueError(&o, invalidKeys)
+		return invalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidKeys)
 	}
 	return nil
+}
+
+type unstructuredID struct {
+	runtime.Unstructured
+	cmpath.Path
+}
+
+var _ id.Resource = &unstructuredID{}
+
+// GetNamespace implements id.Resource.
+func (u unstructuredID) GetNamespace() string {
+	if namespaced, isNamespaced := u.Unstructured.(core.Namespaced); isNamespaced {
+		return namespaced.GetNamespace()
+	}
+	// We already hide Namespace from messages if it is empty string, so we don't have to handle this case specially.
+	return ""
+}
+
+// GetName implements id.Resource.
+func (u unstructuredID) GetName() string {
+	if named, isNamed := u.Unstructured.(core.Named); isNamed {
+		return named.GetName()
+	}
+	// TODO(143557906): Handle displaying errors for type that don't define metadata.name.
+	//  This occurs for any type with ListMeta.
+	return ""
+}
+
+// GroupVersionKind implements id.Resource.
+func (u unstructuredID) GroupVersionKind() schema.GroupVersionKind {
+	return u.Unstructured.GetObjectKind().GroupVersionKind()
 }
 
 func (r *FileReader) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {

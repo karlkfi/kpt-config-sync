@@ -6,20 +6,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestFlatten(t *testing.T) {
 	testCases := []struct {
 		name     string
 		configs  *namespaceconfig.AllConfigs
-		expected []runtime.Object
+		expected []core.Object
 	}{
 		{
 			name: "nil AllConfigs",
@@ -35,7 +33,7 @@ func TestFlatten(t *testing.T) {
 					fake.CustomResourceDefinitionObject(),
 				),
 			},
-			expected: []runtime.Object{
+			expected: []core.Object{
 				fake.CustomResourceDefinition().Object,
 			},
 		},
@@ -46,7 +44,7 @@ func TestFlatten(t *testing.T) {
 					fake.ClusterRoleBindingObject(),
 				),
 			},
-			expected: []runtime.Object{
+			expected: []core.Object{
 				fake.ClusterRoleBindingObject(),
 			},
 		},
@@ -54,31 +52,31 @@ func TestFlatten(t *testing.T) {
 			name: "one Namespaced object",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},
-			expected: []runtime.Object{
+			expected: []core.Object{
 				fake.NamespaceObject("bar"),
-				fake.RoleBindingObject(object.Namespace("bar")),
+				fake.RoleBindingObject(core.Namespace("bar")),
 			},
 		},
 		{
 			name: "two Namespaced objects",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				), testoutput.NamespaceConfig(
-					"", "namespaces/foo", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/foo", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleObject(),
 				)),
 			},
-			expected: []runtime.Object{
+			expected: []core.Object{
 				fake.NamespaceObject("bar"),
-				fake.RoleBindingObject(object.Namespace("bar")),
+				fake.RoleBindingObject(core.Namespace("bar")),
 				fake.NamespaceObject("foo"),
-				fake.RoleObject(object.Namespace("foo")),
+				fake.RoleObject(core.Namespace("foo")),
 			},
 		},
 		{
@@ -91,15 +89,15 @@ func TestFlatten(t *testing.T) {
 					fake.ClusterRoleBindingObject(),
 				),
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", object.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},
-			expected: []runtime.Object{
+			expected: []core.Object{
 				fake.CustomResourceDefinitionObject(),
 				fake.ClusterRoleBindingObject(),
 				fake.NamespaceObject("bar"),
-				fake.RoleBindingObject(object.Namespace("bar")),
+				fake.RoleBindingObject(core.Namespace("bar")),
 			},
 		},
 	}
@@ -108,16 +106,16 @@ func TestFlatten(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := hydrate.Flatten(tc.configs)
 
-			if diff := cmp.Diff(tc.expected, actual, cmpopts.SortSlices(sortRuntimeObjects)); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, cmpopts.SortSlices(sortObjects)); diff != "" {
 				t.Fatal(diff)
 			}
 		})
 	}
 }
 
-func sortRuntimeObjects(x, y runtime.Object) bool {
-	gvkX := x.GetObjectKind().GroupVersionKind()
-	gvkY := y.GetObjectKind().GroupVersionKind()
+func sortObjects(x, y core.Object) bool {
+	gvkX := x.GroupVersionKind()
+	gvkY := y.GroupVersionKind()
 	if gvkX.Group != gvkY.Group {
 		return gvkX.Group < gvkY.Group
 	}
@@ -125,10 +123,8 @@ func sortRuntimeObjects(x, y runtime.Object) bool {
 		return gvkX.Kind < gvkY.Kind
 	}
 
-	metaX := x.(metav1.Object)
-	metaY := y.(metav1.Object)
-	if metaX.GetNamespace() != metaY.GetNamespace() {
-		return metaX.GetNamespace() < metaY.GetNamespace()
+	if x.GetNamespace() != y.GetNamespace() {
+		return x.GetNamespace() < y.GetNamespace()
 	}
-	return metaX.GetName() < metaY.GetName()
+	return x.GetName() < y.GetName()
 }

@@ -7,30 +7,29 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors/seltest"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/object"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
-func withNamespaceSelector(o runtime.Object, selector string) runtime.Object {
-	object.SetAnnotation(o.(metav1.Object), v1.NamespaceSelectorAnnotationKey, selector)
+func withNamespaceSelector(o core.Object, selector string) core.Object {
+	core.SetAnnotation(o, v1.NamespaceSelectorAnnotationKey, selector)
 	return o
 }
 
-func withClusterSelector(o runtime.Object, selector string) runtime.Object {
-	object.SetAnnotation(o.(metav1.Object), v1.ClusterSelectorAnnotationKey, selector)
+func withClusterSelector(o core.Object, selector string) core.Object {
+	core.SetAnnotation(o, v1.ClusterSelectorAnnotationKey, selector)
 	return o
 }
 
-func withClusterName(o runtime.Object, name string) runtime.Object {
-	object.SetAnnotation(o.(metav1.Object), v1.ClusterNameAnnotationKey, name)
+func withClusterName(o core.Object, name string) core.Object {
+	core.SetAnnotation(o, v1.ClusterNameAnnotationKey, name)
 	return o
 }
 

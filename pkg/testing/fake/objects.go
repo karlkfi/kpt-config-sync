@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -20,7 +20,7 @@ import (
 )
 
 // NamespaceSelectorObject returns an initialized NamespaceSelector.
-func NamespaceSelectorObject(opts ...object.MetaMutator) *nomosv1.NamespaceSelector {
+func NamespaceSelectorObject(opts ...core.MetaMutator) *nomosv1.NamespaceSelector {
 	result := &nomosv1.NamespaceSelector{
 		TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 	}
@@ -31,17 +31,17 @@ func NamespaceSelectorObject(opts ...object.MetaMutator) *nomosv1.NamespaceSelec
 }
 
 // NamespaceSelector returns a Nomos NamespaceSelector at a default path.
-func NamespaceSelector(opts ...object.MetaMutator) ast.FileObject {
+func NamespaceSelector(opts ...core.MetaMutator) ast.FileObject {
 	return NamespaceSelectorAtPath("namespaces/ns.yaml", opts...)
 }
 
 // NamespaceSelectorAtPath returns a NamespaceSelector at the specified path.
-func NamespaceSelectorAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func NamespaceSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(NamespaceSelectorObject(opts...), path)
 }
 
 // ResourceQuotaObject initializes a ResouceQuota.
-func ResourceQuotaObject(opts ...object.MetaMutator) *corev1.ResourceQuota {
+func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	obj := &corev1.ResourceQuota{TypeMeta: toTypeMeta(kinds.ResourceQuota())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -50,7 +50,7 @@ func ResourceQuotaObject(opts ...object.MetaMutator) *corev1.ResourceQuota {
 }
 
 // RoleBindingObject initializes a RoleBinding.
-func RoleBindingObject(opts ...object.MetaMutator) *rbacv1alpha1.RoleBinding {
+func RoleBindingObject(opts ...core.MetaMutator) *rbacv1alpha1.RoleBinding {
 	obj := &rbacv1alpha1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -59,22 +59,22 @@ func RoleBindingObject(opts ...object.MetaMutator) *rbacv1alpha1.RoleBinding {
 }
 
 // RoleBinding returns an RBAC RoleBinding.
-func RoleBinding(opts ...object.MetaMutator) ast.FileObject {
+func RoleBinding(opts ...core.MetaMutator) ast.FileObject {
 	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)
 }
 
 // RoleBindingAtPath returns a RoleBinding at the specified path.
-func RoleBindingAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func RoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(RoleBindingObject(opts...), path)
 }
 
 // ClusterRole returns an RBAC ClusterRole at the specified path.
-func ClusterRole(opts ...object.MetaMutator) ast.FileObject {
+func ClusterRole(opts ...core.MetaMutator) ast.FileObject {
 	return ClusterRoleAtPath("cluster/cr.yaml", opts...)
 }
 
 // ClusterRoleBindingAtPath returns a ClusterRoleBinding at the specified path.
-func ClusterRoleBindingAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func ClusterRoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	obj := &rbacv1alpha1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -83,7 +83,7 @@ func ClusterRoleBindingAtPath(path string, opts ...object.MetaMutator) ast.FileO
 }
 
 // ClusterRoleBindingObject initializes a ClusterRoleBinding.
-func ClusterRoleBindingObject(opts ...object.MetaMutator) *rbacv1alpha1.ClusterRoleBinding {
+func ClusterRoleBindingObject(opts ...core.MetaMutator) *rbacv1alpha1.ClusterRoleBinding {
 	obj := &rbacv1alpha1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -92,12 +92,12 @@ func ClusterRoleBindingObject(opts ...object.MetaMutator) *rbacv1alpha1.ClusterR
 }
 
 // ClusterRoleBinding returns an initialized ClusterRoleBinding.
-func ClusterRoleBinding(opts ...object.MetaMutator) ast.FileObject {
+func ClusterRoleBinding(opts ...core.MetaMutator) ast.FileObject {
 	return ClusterRoleBindingAtPath("cluster/crb.yaml", opts...)
 }
 
 // ClusterRoleAtPath returns a ClusterRole at the specified path.
-func ClusterRoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func ClusterRoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	obj := &rbacv1alpha1.ClusterRole{TypeMeta: toTypeMeta(kinds.ClusterRole())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -106,7 +106,7 @@ func ClusterRoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
 }
 
 // ClusterSelectorObject initializes a ClusterSelector object.
-func ClusterSelectorObject(opts ...object.MetaMutator) *nomosv1.ClusterSelector {
+func ClusterSelectorObject(opts ...core.MetaMutator) *nomosv1.ClusterSelector {
 	obj := &nomosv1.ClusterSelector{TypeMeta: toTypeMeta(kinds.ClusterSelector())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -115,17 +115,17 @@ func ClusterSelectorObject(opts ...object.MetaMutator) *nomosv1.ClusterSelector 
 }
 
 // ClusterSelector returns a Nomos ClusterSelector.
-func ClusterSelector(opts ...object.MetaMutator) ast.FileObject {
+func ClusterSelector(opts ...core.MetaMutator) ast.FileObject {
 	return ClusterSelectorAtPath("cluster/cs.yaml", opts...)
 }
 
 // ClusterSelectorAtPath returns a ClusterSelector at the specified path.
-func ClusterSelectorAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func ClusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ClusterSelectorObject(opts...), path)
 }
 
 // Cluster returns a K8S Cluster resource in a FileObject.
-func Cluster(opts ...object.MetaMutator) ast.FileObject {
+func Cluster(opts ...core.MetaMutator) ast.FileObject {
 	obj := &clusterregistry.Cluster{
 		TypeMeta: toTypeMeta(kinds.Cluster()),
 	}
@@ -136,7 +136,7 @@ func Cluster(opts ...object.MetaMutator) ast.FileObject {
 }
 
 // ClusterAtPath returns a Cluster at the specified path.
-func ClusterAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	result := Cluster(opts...)
 	result.Path = cmpath.FromSlash(path)
 	return result
@@ -150,7 +150,7 @@ func ConfigManagement(path string) ast.FileObject {
 }
 
 // CustomResourceDefinitionObject returns an initialized CustomResourceDefinition.
-func CustomResourceDefinitionObject(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
+func CustomResourceDefinitionObject(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	result := &v1beta1.CustomResourceDefinition{
 		TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
 	}
@@ -162,7 +162,7 @@ func CustomResourceDefinitionObject(opts ...object.MetaMutator) *v1beta1.CustomR
 
 // CustomResourceDefinition returns a FileObject containing a CustomResourceDefinition at a
 // default path.
-func CustomResourceDefinition(opts ...object.MetaMutator) ast.FileObject {
+func CustomResourceDefinition(opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(CustomResourceDefinitionObject(opts...), "cluster/crd.yaml")
 }
 
@@ -180,7 +180,7 @@ func AnvilAtPath(path string) ast.FileObject {
 }
 
 // SyncObject returns a Sync configured for a particular
-func SyncObject(gk schema.GroupKind, opts ...object.MetaMutator) *nomosv1.Sync {
+func SyncObject(gk schema.GroupKind, opts ...core.MetaMutator) *nomosv1.Sync {
 	obj := &nomosv1.Sync{TypeMeta: toTypeMeta(kinds.Sync())}
 	obj.Name = strings.ToLower(gk.String())
 	obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers, nomosv1.SyncFinalizer)
@@ -192,12 +192,12 @@ func SyncObject(gk schema.GroupKind, opts ...object.MetaMutator) *nomosv1.Sync {
 }
 
 // SyncAtPath returns a nomos Sync at the specified path.
-func SyncAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func SyncAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(SyncObject(kinds.Role().GroupKind(), opts...), path)
 }
 
 // PersistentVolumeObject returns a PersistentVolume Object.
-func PersistentVolumeObject(opts ...object.MetaMutator) *corev1.PersistentVolume {
+func PersistentVolumeObject(opts ...core.MetaMutator) *corev1.PersistentVolume {
 	result := &corev1.PersistentVolume{TypeMeta: toTypeMeta(kinds.PersistentVolume())}
 	defaultMutate(result)
 	mutate(result, opts...)
@@ -206,7 +206,7 @@ func PersistentVolumeObject(opts ...object.MetaMutator) *corev1.PersistentVolume
 }
 
 // ReplicaSet returns a default ReplicaSet object.
-func ReplicaSet(opts ...object.MetaMutator) ast.FileObject {
+func ReplicaSet(opts ...core.MetaMutator) ast.FileObject {
 	obj := &appsv1.ReplicaSet{TypeMeta: toTypeMeta(kinds.ReplicaSet())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -215,7 +215,7 @@ func ReplicaSet(opts ...object.MetaMutator) ast.FileObject {
 }
 
 // RoleObject initializes a Role.
-func RoleObject(opts ...object.MetaMutator) *rbac.Role {
+func RoleObject(opts ...core.MetaMutator) *rbac.Role {
 	obj := &rbac.Role{TypeMeta: toTypeMeta(kinds.Role())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -224,17 +224,17 @@ func RoleObject(opts ...object.MetaMutator) *rbac.Role {
 }
 
 // RoleAtPath returns an initialized Role in a FileObject.
-func RoleAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func RoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return ast.NewFileObject(RoleObject(opts...), cmpath.FromSlash(path))
 }
 
 // Role returns a Role with a default file path.
-func Role(opts ...object.MetaMutator) ast.FileObject {
+func Role(opts ...core.MetaMutator) ast.FileObject {
 	return RoleAtPath("namespaces/foo/role.yaml", opts...)
 }
 
 // ConfigMapObject returns an initialized ConfigMap.
-func ConfigMapObject(opts ...object.MetaMutator) *corev1.ConfigMap {
+func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 	obj := &corev1.ConfigMap{TypeMeta: toTypeMeta(kinds.ConfigMap())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -243,7 +243,7 @@ func ConfigMapObject(opts ...object.MetaMutator) *corev1.ConfigMap {
 }
 
 // ConfigMapAtPath returns a ConfigMap at the specified filepath.
-func ConfigMapAtPath(path string, opts ...object.MetaMutator) ast.FileObject {
+func ConfigMapAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ConfigMapObject(opts...), path)
 }
 

@@ -12,13 +12,13 @@ import (
 var NamespaceValidator = perObjectValidator(validNamespace)
 
 func validNamespace(o ast.FileObject) status.Error {
-	if o.Namespace() == "" {
+	if o.GetNamespace() == "" {
 		return nil
 	}
 
 	// Do note that IsDNS1123Label is misleading. It refers to RFC 1123, and additionally forbids
 	// capital letters.
-	errs := validation.IsDNS1123Label(o.Namespace())
+	errs := validation.IsDNS1123Label(o.GetNamespace())
 	if errs != nil {
 		return vet.InvalidNamespaceError(&o, errs)
 	}

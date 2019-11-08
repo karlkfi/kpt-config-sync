@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // AllConfigs holds things that Importer wants to sync. It is only used in-process, not written
@@ -40,8 +40,8 @@ func NewAllConfigs(importToken string, t time.Time) *AllConfigs {
 }
 
 // AddClusterResource adds a cluster-scoped resource to the AllConfigs.
-func (c *AllConfigs) AddClusterResource(o runtime.Object) {
-	if o.GetObjectKind().GroupVersionKind() == kinds.CustomResourceDefinition() {
+func (c *AllConfigs) AddClusterResource(o core.Object) {
+	if o.GroupVersionKind() == kinds.CustomResourceDefinition() {
 		// CRDs end up in their own ClusterConfig.
 		c.CRDClusterConfig.AddResource(o)
 	} else {
@@ -64,7 +64,7 @@ func (c *AllConfigs) AddNamespaceConfig(name string, annotations map[string]stri
 
 // AddNamespaceResource adds an object to a Namespace node, instantiating a default Namespace if
 // none exists.
-func (c *AllConfigs) AddNamespaceResource(namespace string, o runtime.Object) {
+func (c *AllConfigs) AddNamespaceResource(namespace string, o core.Object) {
 	ns, found := c.NamespaceConfigs[namespace]
 	if !found {
 		// TODO(b/137213356): What should we do when a Namespace doesn't exist?

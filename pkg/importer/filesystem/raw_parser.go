@@ -108,7 +108,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 			// Namespace is a snowflake.
 			// This preserves the ordering behavior of kubectl apply -f. This means what is in the
 			// alphabetically-last file wins.
-			result.AddNamespaceConfig(f.Name(), f.MetaObject().GetAnnotations(), f.MetaObject().GetLabels())
+			result.AddNamespaceConfig(f.GetName(), f.GetAnnotations(), f.GetLabels())
 			continue
 		}
 
@@ -117,7 +117,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		case utildiscovery.ClusterScope:
 			result.AddClusterResource(f.Object)
 		case utildiscovery.NamespaceScope:
-			namespace := f.Namespace()
+			namespace := f.GetNamespace()
 			if namespace == "" {
 				// Empty string/non-declared metadata.namespace automatically maps to "default", so this
 				// ensures we maintain these in a single NamespaceConfig entry.

@@ -59,7 +59,7 @@ var (
 // checkForbiddenGVK checks for disallowed objects that do not have a go type
 // backing.
 func checkForbiddenGVK(o *ast.NamespaceObject, disallowed map[schema.GroupKind]bool) error {
-	gk := o.GetObjectKind().GroupVersionKind().GroupKind()
+	gk := o.GroupVersionKind().GroupKind()
 	if glog.V(7) {
 		glog.Infof("gk: %+v, compare: %+v", gk, kinds.ConfigManagement().GroupKind())
 	}

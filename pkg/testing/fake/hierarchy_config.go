@@ -2,9 +2,9 @@ package fake
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -12,7 +12,7 @@ import (
 type HierarchyConfigMutator func(hc *v1.HierarchyConfig)
 
 // HierarchyConfigMeta wraps MetaMutators to be specific to HierarchyConfigs.
-func HierarchyConfigMeta(opts ...object.MetaMutator) HierarchyConfigMutator {
+func HierarchyConfigMeta(opts ...core.MetaMutator) HierarchyConfigMutator {
 	return func(hc *v1.HierarchyConfig) {
 		mutate(hc, opts...)
 	}

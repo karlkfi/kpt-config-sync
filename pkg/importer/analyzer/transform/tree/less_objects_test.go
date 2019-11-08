@@ -67,7 +67,7 @@ func TestLessObjects(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.i.MetaObject().GetUID()
+			tc.i.GetUID()
 
 			actualLessThan := lessFileObject(tc.i, tc.j)
 

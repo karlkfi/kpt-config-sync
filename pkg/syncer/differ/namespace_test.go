@@ -5,13 +5,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func namespaceConfig(opts ...object.MetaMutator) *v1.NamespaceConfig {
+func namespaceConfig(opts ...core.MetaMutator) *v1.NamespaceConfig {
 	result := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(opts...))
 	return result
 }
@@ -22,9 +22,9 @@ func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
 }
 
 var (
-	enableManaged     = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-	disableManaged    = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
-	managementInvalid = object.Annotation(v1.ResourceManagementKey, "invalid")
+	enableManaged     = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	disableManaged    = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	managementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
 )
 
 func TestNamespaceDiffType(t *testing.T) {
@@ -97,7 +97,7 @@ func TestNamespaceDiffType(t *testing.T) {
 		},
 		{
 			name:       "in cluster only, remove quota",
-			actual:     fake.NamespaceObject("foo", object.Label(v1.ConfigManagementQuotaKey, "")),
+			actual:     fake.NamespaceObject("foo", core.Label(v1.ConfigManagementQuotaKey, "")),
 			expectType: Unmanage,
 		},
 	}

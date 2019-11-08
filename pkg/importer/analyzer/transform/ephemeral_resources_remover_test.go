@@ -6,11 +6,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -42,13 +42,13 @@ func TestEphemeralResourceRemover(t *testing.T) {
 		},
 		{
 			name:    "namespaceselector returns empty",
-			objects: []ast.FileObject{fake.NamespaceSelector(object.Name(""))},
+			objects: []ast.FileObject{fake.NamespaceSelector(core.Name(""))},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
 					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Selectors: map[string]*v1.NamespaceSelector{
-						"": fake.NamespaceSelectorObject(object.Name("")),
+						"": fake.NamespaceSelectorObject(core.Name("")),
 					},
 				},
 			},

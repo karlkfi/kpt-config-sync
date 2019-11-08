@@ -20,7 +20,7 @@ const InvalidMetadataNameErrorCode = "1036"
 
 func init() {
 	r := fake.Role()
-	r.MetaObject().SetName("a`b.c")
+	r.SetName("a`b.c")
 	status.AddExamples(InvalidMetadataNameErrorCode, InvalidMetadataNameError(&r))
 }
 
@@ -46,7 +46,7 @@ func NewNameValidator() *visitor.ValidatorVisitor {
 			if expectedName == repo.NamespacesDir {
 				return vet.IllegalTopLevelNamespaceError(&o)
 			}
-			if o.Name() != expectedName {
+			if o.GetName() != expectedName {
 				return vet.InvalidNamespaceNameError(&o, expectedName)
 			}
 		}
@@ -58,12 +58,12 @@ func NewNameValidator() *visitor.ValidatorVisitor {
 func ValidName(o ast.FileObject) status.Error {
 	gvk := o.GroupVersionKind()
 
-	if o.Name() == "" {
+	if o.GetName() == "" {
 		// Name MUST NOT be empty
 		return vet.MissingObjectNameError(&o)
 	} else if isDefaultCrdAllowedInNomos(gvk) {
 		// If CRD, then name must be a valid DNS1123 subdomain
-		errs := validation.IsDNS1123Subdomain(o.Name())
+		errs := validation.IsDNS1123Subdomain(o.GetName())
 		if errs != nil {
 			return InvalidMetadataNameError(&o)
 		}

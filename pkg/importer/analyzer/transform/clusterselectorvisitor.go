@@ -59,7 +59,7 @@ func (v *ClusterSelectorVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *ClusterSelectorVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	glog.V(6).Infof("VisitObject(): enter")
 	defer glog.V(6).Infof("VisitObject(): exit")
-	if !v.selectors.Matches(o.MetaObject()) {
+	if !v.selectors.Matches(o) {
 		glog.V(5).Infof("VisitObject(): omit")
 		// Omit this object.
 		return nil
@@ -72,7 +72,7 @@ func (v *ClusterSelectorVisitor) VisitObject(o *ast.NamespaceObject) *ast.Namesp
 func (v *ClusterSelectorVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	glog.V(6).Infof("VisitClusterObject(): enter")
 	defer glog.V(6).Infof("VisitClusterObject(): exit")
-	if !v.selectors.Matches(o.MetaObject()) {
+	if !v.selectors.Matches(o) {
 		glog.V(5).Infof("VisitClusterObject(): omit")
 		// Omit this object.
 		return nil

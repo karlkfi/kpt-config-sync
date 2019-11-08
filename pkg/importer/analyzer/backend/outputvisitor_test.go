@@ -7,9 +7,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
@@ -36,7 +36,7 @@ func allConfigs(c, crd *v1.ClusterConfig, pns map[string]v1.NamespaceConfig) *na
 	for name, nc := range pns {
 		nc.Spec.Token = vt.ImportToken
 		nc.Spec.ImportTime = vt.ImportTime
-		object.RemoveAnnotations(&nc, v1.SourcePathAnnotationKey)
+		core.RemoveAnnotations(&nc, v1.SourcePathAnnotationKey)
 		pns[name] = nc
 	}
 	ap.NamespaceConfigs = pns
@@ -104,17 +104,17 @@ var outputVisitorTestCases = []OutputVisitorTestcase{
 			testoutput.ClusterConfig(),
 			testoutput.CRDClusterConfig(),
 			testoutput.NamespaceConfigs(
-				testoutput.NamespaceConfig("", "frontend", object.MetaMutators(
-					object.Annotation("has-waffles", "true"),
-					object.Label("environment", "prod"),
+				testoutput.NamespaceConfig("", "frontend", core.MetaMutators(
+					core.Annotation("has-waffles", "true"),
+					core.Label("environment", "prod"),
 				),
 					helper.PodReaderRoleBinding(),
 					helper.PodReaderRole(),
 					helper.FrontendResourceQuota(),
 				),
-				testoutput.NamespaceConfig("", "frontend-test", object.MetaMutators(
-					object.Annotation("has-waffles", "false"),
-					object.Label("environment", "test"),
+				testoutput.NamespaceConfig("", "frontend-test", core.MetaMutators(
+					core.Annotation("has-waffles", "false"),
+					core.Label("environment", "test"),
 				),
 					helper.DeploymentReaderRoleBinding(),
 					helper.DeploymentReaderRole(),

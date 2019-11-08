@@ -11,7 +11,6 @@ import (
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -34,7 +33,7 @@ func TestDisallowedFieldsValidator(t *testing.T) {
 			},
 			{
 				Name:       "replicaSet with ownerReference",
-				Object:     fake.ReplicaSet(object.OwnerReference("some_deployment", "some_uid", kinds.Deployment())),
+				Object:     metaObject(kinds.Deployment(), &metav1.ObjectMeta{OwnerReferences: []metav1.OwnerReference{{Name: "some_deployment"}}}),
 				ShouldFail: true,
 			},
 			{

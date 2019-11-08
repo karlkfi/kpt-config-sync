@@ -3,7 +3,7 @@ package transform
 import (
 	"fmt"
 
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 )
 
 type valueMap map[string]string
@@ -21,7 +21,7 @@ func (t annotationTransformer) addMappingForKey(key string, mapping valueMap) {
 	t[key] = mapping
 }
 
-func (t annotationTransformer) transform(o object.Annotated) error {
+func (t annotationTransformer) transform(o core.Annotated) error {
 	a := o.GetAnnotations()
 	for k, vOldToNew := range t {
 		vOld, ok := a[k]

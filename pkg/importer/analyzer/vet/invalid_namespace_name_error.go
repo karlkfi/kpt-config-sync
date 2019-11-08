@@ -12,7 +12,7 @@ const InvalidNamespaceNameErrorCode = "1020"
 
 func init() {
 	ns := namespace(cmpath.FromSlash("namespaces/foo/ns.yaml"))
-	ns.MetaObject().SetName("bar")
+	ns.SetName("bar")
 	status.AddExamples(InvalidNamespaceNameErrorCode, InvalidNamespaceNameError(
 		ns,
 		"foo",

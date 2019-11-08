@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -34,21 +34,21 @@ var (
 	Converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
 
 	// ManagementEnabled sets management labels and annotations on the object.
-	ManagementEnabled object.MetaMutator = func(obj metav1.Object) {
-		object.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-		object.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
+	ManagementEnabled core.MetaMutator = func(obj core.Object) {
+		core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 	}
 	// ManagementDisabled sets the management disabled annotation on the object.
-	ManagementDisabled = object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	ManagementDisabled = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
 	// ManagementInvalid sets an invalid management annotation on the object.
-	ManagementInvalid = object.Annotation(v1.ResourceManagementKey, "invalid")
+	ManagementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
 	// TokenAnnotation sets the sync token annotation on the object
-	TokenAnnotation = object.Annotation(v1.SyncTokenAnnotationKey, Token)
+	TokenAnnotation = core.Annotation(v1.SyncTokenAnnotationKey, Token)
 
 	// Herrings is used when the decoder mangles empty vs. non-existent entries in map.
-	Herrings = []object.MetaMutator{
-		object.Annotation("red", "herring"),
-		object.Label("red", "herring"),
+	Herrings = []core.MetaMutator{
+		core.Annotation("red", "herring"),
+		core.Label("red", "herring"),
 	}
 )
 

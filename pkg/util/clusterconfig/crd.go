@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -11,7 +12,6 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -116,7 +116,7 @@ func StubbedCRDInfo(pendingDelete map[schema.GroupKind]*v1beta1.CustomResourceDe
 }
 
 // AsCRD returns the typed version of the CustomResourceDefinition passed in.
-func AsCRD(o runtime.Object) (*v1beta1.CustomResourceDefinition, error) {
+func AsCRD(o core.Object) (*v1beta1.CustomResourceDefinition, error) {
 	if crd, ok := o.(*v1beta1.CustomResourceDefinition); ok {
 		return crd, nil
 	}

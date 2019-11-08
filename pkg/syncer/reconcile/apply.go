@@ -225,5 +225,5 @@ func (c *clientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
 
 func nameDescription(u *unstructured.Unstructured) (string, string) {
 	name := u.GetName()
-	return name, fmt.Sprintf("%s, %s", u.GetObjectKind().GroupVersionKind(), name)
+	return name, fmt.Sprintf("%s, %s", u.GroupVersionKind(), name)
 }

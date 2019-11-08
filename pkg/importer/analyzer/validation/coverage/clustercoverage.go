@@ -6,12 +6,11 @@ import (
 	"sort"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	sels "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -60,7 +59,7 @@ func NewForCluster(
 
 // getClusterSelectorAnnotation returns the value of the cluster selector annotation
 // among the given annotations.  If the annotation is not there, "" is returned.
-func getClusterSelectorAnnotation(a object.Annotated) string {
+func getClusterSelectorAnnotation(a core.Annotated) string {
 	// Looking up in a nil map will also return "".
 	return a.GetAnnotations()[v1.ClusterSelectorAnnotationKey]
 }
@@ -69,7 +68,7 @@ func getClusterSelectorAnnotation(a object.Annotated) string {
 // may not have an annotation, but if it does, it has to map to a valid selector.  Also if an
 // object has a selector in the annotation, that annotation must refer to a valid selector.
 func (c ForCluster) ValidateObject(o *ast.FileObject) status.MultiError {
-	a := getClusterSelectorAnnotation(o.MetaObject())
+	a := getClusterSelectorAnnotation(o)
 	if a == "" {
 		return nil
 	}
@@ -82,7 +81,7 @@ func (c ForCluster) ValidateObject(o *ast.FileObject) status.MultiError {
 // MapToClusters returns the names of the clusters that this object maps to.
 // "" in the returned slice means "all clusters".  The output ordering is
 // stable.
-func (c ForCluster) MapToClusters(o metav1.Object) []string {
+func (c ForCluster) MapToClusters(o core.Annotated) []string {
 	a := getClusterSelectorAnnotation(o)
 	if a == "" {
 		return []string{""}

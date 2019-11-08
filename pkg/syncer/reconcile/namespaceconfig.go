@@ -8,8 +8,8 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -21,7 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -239,7 +238,7 @@ func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.
 func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, ns *corev1.Namespace) error {
-	_, err := r.client.Update(ctx, ns, func(o runtime.Object) (runtime.Object, error) {
+	_, err := r.client.Update(ctx, ns, func(o core.Object) (core.Object, error) {
 		nso := o.(*corev1.Namespace)
 		nso.GetObjectKind().SetGroupVersionKind(kinds.Namespace())
 		removeNomosMeta(nso)
@@ -276,7 +275,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			object.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
+			core.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
@@ -322,7 +321,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 		return nil
 	}
 
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		newPN := obj.(*v1.NamespaceConfig)
 		newPN.Status.Token = config.Spec.Token
 		newPN.Status.SyncTime = r.now()
@@ -364,7 +363,7 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 
 	namespace.SetLabels(nil)
 	for k, v := range namespaceConfig.Labels {
-		object.SetLabel(namespace, k, v)
+		core.SetLabel(namespace, k, v)
 	}
 	if !namespaceutil.IsSystem(namespace.GetName()) {
 		// Mark the namespace as supporting the management of hierarchical quota.
@@ -375,10 +374,10 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 
 	namespace.SetAnnotations(nil)
 	for k, v := range namespaceConfig.Annotations {
-		object.SetAnnotation(namespace, k, v)
+		core.SetAnnotation(namespace, k, v)
 	}
 	EnableManagement(namespace)
-	object.SetAnnotation(namespace, v1.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
+	core.SetAnnotation(namespace, v1.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
 
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
@@ -403,7 +402,7 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 
 	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceConfig.Name}}
 	namespace.SetGroupVersionKind(kinds.Namespace())
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		return withNamespaceConfigMeta(obj.(*corev1.Namespace), namespaceConfig), nil
 	}
 

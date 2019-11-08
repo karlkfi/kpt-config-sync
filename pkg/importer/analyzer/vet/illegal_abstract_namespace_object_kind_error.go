@@ -23,5 +23,5 @@ func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error 
 	return illegalAbstractNamespaceObjectKindError.Errorf(
 		"Config `%[3]s` illegally declared in an %[1]s directory. "+
 			"Move this config to a %[2]s directory:",
-		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.Name())
+		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.GetName())
 }

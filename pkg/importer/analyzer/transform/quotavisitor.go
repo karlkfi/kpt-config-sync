@@ -142,7 +142,7 @@ func (v *QuotaVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 // VisitObject implements Visitor, this should only be visited if the objectset
 // is of type ResourceQuota.
 func (v *QuotaVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	if kinds.ResourceQuota() == o.GetObjectKind().GroupVersionKind() {
+	if kinds.ResourceQuota() == o.GroupVersionKind() {
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		quota.Name = resourcequota.ResourceQuotaObjectName
 		v.ctx.quota = merge(&quota, v.ctx.quota)

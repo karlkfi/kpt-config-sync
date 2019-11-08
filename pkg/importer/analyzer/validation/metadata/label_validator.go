@@ -12,7 +12,7 @@ func NewLabelValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
 			var errors []string
-			for l := range o.MetaObject().GetLabels() {
+			for l := range o.GetLabels() {
 				if hasConfigManagementPrefix(l) {
 					errors = append(errors, l)
 				}

@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -82,7 +83,7 @@ clusters.`,
 			util.PrintErrAndDie(err)
 		}
 
-		var allObjects []runtime.Object
+		var allObjects []core.Object
 
 		encounteredError := false
 		numClusters := 0
@@ -148,7 +149,7 @@ func printDirectoryOutput(fileObjects []ast.FileObject) {
 	}
 }
 
-func toUnstructured(o runtime.Object) *unstructured.Unstructured {
+func toUnstructured(o core.Object) *unstructured.Unstructured {
 	// Must convert or else fields like status automatically get written.
 	unstructuredObject, err2 := converter.ToUnstructured(o)
 	if err2 != nil {
@@ -192,9 +193,9 @@ func printFile(file string, objects []*unstructured.Unstructured) {
 
 func toYAML(objects []*unstructured.Unstructured) string {
 	content := strings.Builder{}
-	for _, object := range objects {
+	for _, o := range objects {
 		content.WriteString("---\n")
-		bytes, err2 := yaml.Marshal(object.Object)
+		bytes, err2 := yaml.Marshal(o.Object)
 		if err2 != nil {
 			util.PrintErrAndDie(err2)
 		}

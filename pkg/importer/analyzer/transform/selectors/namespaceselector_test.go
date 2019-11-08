@@ -5,17 +5,16 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors/seltest"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type testCase struct {
 	testName           string
-	config             metav1.Object
+	config             core.Object
 	nsLabels           map[string]string
 	expectedApplicable bool
 	errors             []string
@@ -70,18 +69,14 @@ func TestIsConfigApplicableToNamespacenfigApplicableToNamespace(t *testing.T) {
 	}
 }
 
-func createConfigAnnotation(annotation string) metav1.Object {
+func createConfigAnnotation(annotation string) core.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: annotation})
-	o, err := meta.Accessor(rb)
-	if err != nil {
-		panic(err)
-	}
-	return o
+	return rb
 }
 
-func createConfig(s *v1.NamespaceSelector) metav1.Object {
+func createConfig(s *v1.NamespaceSelector) core.Object {
 	rb := &rbacv1.RoleBinding{}
 	rb.SetName("rb")
 	if s != nil {
@@ -91,9 +86,5 @@ func createConfig(s *v1.NamespaceSelector) metav1.Object {
 		}
 		rb.SetAnnotations(map[string]string{v1.NamespaceSelectorAnnotationKey: string(j)})
 	}
-	o, err := meta.Accessor(rb)
-	if err != nil {
-		panic(err)
-	}
-	return o
+	return rb
 }

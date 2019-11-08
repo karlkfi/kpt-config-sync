@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
@@ -66,7 +67,7 @@ func shortBase(o ast.FileObject) string {
 	}
 
 	kind := strings.ToLower(o.GroupVersionKind().Kind)
-	name := o.Name()
+	name := o.GetName()
 
 	return fmt.Sprintf("%s_%s.yaml", kind, name)
 }
@@ -75,13 +76,13 @@ func shortBase(o ast.FileObject) string {
 func longBase(o ast.FileObject) string {
 	kind := strings.ToLower(o.GroupVersionKind().Kind)
 	group := o.GroupVersionKind().Group
-	name := o.Name()
+	name := o.GetName()
 
 	return fmt.Sprintf("%s_%s_%s.yaml", kind, group, name)
 }
 
 // directory returns the relative directory to write the object to.
-func (p Pather) directory(o ast.FileObject) cmpath.Path {
+func (p Pather) directory(o core.Object) cmpath.Path {
 	gvk := o.GroupVersionKind()
 	switch {
 	case systemKinds[gvk]:
@@ -89,9 +90,9 @@ func (p Pather) directory(o ast.FileObject) cmpath.Path {
 	case clusterRegistryKinds[gvk]:
 		return cmpath.FromSlash(repo.ClusterRegistryDir)
 	case gvk == kinds.Namespace():
-		return cmpath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetName())
+		return cmpath.FromSlash(repo.NamespacesDir).Join(o.GetName())
 	case p.namespaced[gvk]:
-		return cmpath.FromSlash(repo.NamespacesDir).Join(o.MetaObject().GetNamespace())
+		return cmpath.FromSlash(repo.NamespacesDir).Join(o.GetNamespace())
 	default:
 		return cmpath.FromSlash(repo.ClusterDir)
 	}
@@ -103,18 +104,18 @@ func (p Pather) directory(o ast.FileObject) cmpath.Path {
 func (p Pather) AddPaths(objects []ast.FileObject) {
 	shortPathCounts := make(map[cmpath.Path]int)
 
-	for i, object := range objects {
-		if object.Object == nil {
+	for i, obj := range objects {
+		if obj.Object == nil {
 			continue
 		}
-		objectPath := p.directory(object).Join(shortBase(object))
+		objectPath := p.directory(obj).Join(shortBase(obj))
 		objects[i].Path = objectPath
 		shortPathCounts[objectPath]++
 	}
 
-	for i, object := range objects {
-		if shortPathCounts[object.Path] > 1 {
-			objects[i].Path = p.directory(object).Join(longBase(object))
+	for i, obj := range objects {
+		if shortPathCounts[obj.Path] > 1 {
+			objects[i].Path = p.directory(obj).Join(longBase(obj))
 		}
 	}
 }

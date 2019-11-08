@@ -7,8 +7,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
@@ -48,7 +48,7 @@ func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) 
 	return result
 }
 
-func customResourceDefinition(version string, opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
+func customResourceDefinition(version string, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	mutators := append(opts, syncertesting.Herrings...)
 	result := fake.CustomResourceDefinitionObject(mutators...)
 	result.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{Name: version}}
@@ -77,9 +77,9 @@ func crdList(gvks []schema.GroupVersionKind) v1beta1.CustomResourceDefinitionLis
 }
 
 var (
-	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token), fake.ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)))
+	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token), fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)))
 	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token),
-		fake.ClusterConfigMeta(object.Name(v1.CRDClusterConfigName)), syncertesting.ClusterConfigSyncTime(), syncertesting.ClusterConfigSyncToken())
+		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)), syncertesting.ClusterConfigSyncTime(), syncertesting.ClusterConfigSyncToken())
 )
 
 func TestClusterConfigReconcile(t *testing.T) {
@@ -215,9 +215,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name: "resource with owner reference is ignored",
 			actual: customResourceDefinition(v1Version, syncertesting.ManagementEnabled,
-				object.OwnerReference(
+				fake.OwnerReference(
 					"some_operator_config_object",
-					"some_uid",
 					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: v1Version}),
 			),
 			expectStatusUpdate: clusterCfgSynced,

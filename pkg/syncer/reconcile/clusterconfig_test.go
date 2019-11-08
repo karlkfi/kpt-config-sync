@@ -7,8 +7,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
@@ -43,7 +43,7 @@ func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) 
 	return result
 }
 
-func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...object.MetaMutator) *corev1.PersistentVolume {
+func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...core.MetaMutator) *corev1.PersistentVolume {
 	mutators := append(opts, syncertesting.Herrings...)
 	result := fake.PersistentVolumeObject(mutators...)
 	result.Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
@@ -178,9 +178,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name: "resource with owner reference is ignored",
 			actual: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementEnabled,
-				object.OwnerReference(
+				fake.OwnerReference(
 					"some_operator_config_object",
-					"some_uid",
 					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: "v1"}),
 			),
 			expectStatusUpdate: clusterCfgSynced,
@@ -237,9 +236,9 @@ func TestInvalidClusterConfig(t *testing.T) {
 	}{
 		{
 			name:          "error on clusterconfig with invalid name",
-			clusterConfig: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(object.Name("some-incorrect-name"))),
+			clusterConfig: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name"))),
 			wantStatusUpdate: clusterConfig(v1.StateError,
-				fake.ClusterConfigMeta(object.Name("some-incorrect-name")),
+				fake.ClusterConfigMeta(core.Name("some-incorrect-name")),
 				syncertesting.ClusterConfigSyncTime(),
 				clusterSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
@@ -255,7 +254,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 				Kind:    corev1.EventTypeWarning,
 				Reason:  "InvalidClusterConfig",
 				Varargs: true,
-				Obj:     clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(object.Name("some-incorrect-name"))),
+				Obj:     clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name"))),
 			},
 		},
 	}

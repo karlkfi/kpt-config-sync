@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/util/clusterconfig"
+	"github.com/google/nomos/pkg/util/compare"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/google/nomos/pkg/util/sync"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // Alias metav1.Now to enable test mocking.
@@ -71,7 +71,7 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 // deleteNamespaceConfig marks the given NamespaceConfig for deletion by the syncer. This tombstone is more explicit
 // than having the importer just delete the NamespaceConfig directly.
 func (d *differ) deleteNamespaceConfig(ctx context.Context, nc *v1.NamespaceConfig) status.Error {
-	_, err := d.client.Update(ctx, nc, func(obj runtime.Object) (runtime.Object, error) {
+	_, err := d.client.Update(ctx, nc, func(obj core.Object) (core.Object, error) {
 		newObj := obj.(*v1.NamespaceConfig).DeepCopy()
 		newObj.Spec.DeleteSyncedTime = now()
 		return newObj, nil
@@ -81,7 +81,7 @@ func (d *differ) deleteNamespaceConfig(ctx context.Context, nc *v1.NamespaceConf
 
 // updateNamespaceConfig writes the given NamespaceConfig to storage as it is specified.
 func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.NamespaceConfig) status.Error {
-	_, err := d.client.Update(ctx, intent, func(obj runtime.Object) (runtime.Object, error) {
+	_, err := d.client.Update(ctx, intent, func(obj core.Object) (core.Object, error) {
 		oldObj := obj.(*v1.NamespaceConfig)
 		newObj := intent.DeepCopy()
 		if !oldObj.Spec.DeleteSyncedTime.IsZero() {
@@ -118,13 +118,13 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 		return
 	}
 
-	equal, err := clusterconfig.ClusterConfigsEqual(decoder, desired, current)
+	equal, err := compare.GenericResourcesEqual(decoder, desired.Spec.Resources, current.Spec.Resources)
 	if err != nil {
 		d.errs = status.Append(d.errs, err)
 		return
 	}
 	if !equal {
-		_, err := d.client.Update(ctx, desired, func(obj runtime.Object) (runtime.Object, error) {
+		_, err := d.client.Update(ctx, desired, func(obj core.Object) (core.Object, error) {
 			oldObj := obj.(*v1.ClusterConfig)
 			newObj := desired.DeepCopy()
 			newObj.ResourceVersion = oldObj.ResourceVersion
@@ -143,8 +143,8 @@ func (d *differ) updateSyncs(ctx context.Context, current, desired namespaceconf
 	var creates, updates, deletes int
 	for name, newSync := range desired.Syncs {
 		if oldSync, exists := current.Syncs[name]; exists {
-			if !sync.SyncsEqual(&newSync, &oldSync) {
-				_, err := d.client.Update(ctx, &newSync, func(obj runtime.Object) (runtime.Object, error) {
+			if !syncsEqual(&newSync, &oldSync) {
+				_, err := d.client.Update(ctx, &newSync, func(obj core.Object) (core.Object, error) {
 					oldObj := obj.(*v1.Sync)
 					newObj := newSync.DeepCopy()
 					newObj.ResourceVersion = oldObj.ResourceVersion
@@ -167,4 +167,9 @@ func (d *differ) updateSyncs(ctx context.Context, current, desired namespaceconf
 	}
 
 	glog.Infof("Sync operations: %d updates, %d creates, %d deletes", updates, creates, deletes)
+}
+
+// syncsEqual returns true if the syncs are equivalent.
+func syncsEqual(l *v1.Sync, r *v1.Sync) bool {
+	return cmp.Equal(l.Spec, r.Spec) && compare.ObjectMetaEqual(l, r)
 }

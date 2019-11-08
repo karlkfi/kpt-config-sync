@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/core"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
@@ -11,14 +12,11 @@ import (
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func withName(o runtime.Object, name string) runtime.Object {
-	m := o.(metav1.Object)
-	m.SetName(name)
+func withName(o core.Object, name string) core.Object {
+	o.SetName(name)
 	return o
 }
 

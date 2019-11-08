@@ -2,10 +2,10 @@ package transform
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 )
 
 // PathAnnotationVisitor sets "configmanagement.gke.io/source-path" annotation on objects.
@@ -34,7 +34,7 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// Since this is a Namespace node, we know there is exactly one Namespace
 		// for a valid tree. We validate that property elsewhere.
 		if o.GroupVersionKind() == kinds.Namespace() {
-			object.SetAnnotation(newNode, v1.SourcePathAnnotationKey, o.SlashPath())
+			core.SetAnnotation(newNode, v1.SourcePathAnnotationKey, o.SlashPath())
 			break
 		}
 	}
@@ -44,13 +44,13 @@ func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 // VisitClusterObject implements Visitor
 func (v *PathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	newObject := v.Copying.VisitClusterObject(o)
-	object.SetAnnotation(newObject.MetaObject(), v1.SourcePathAnnotationKey, o.SlashPath())
+	core.SetAnnotation(newObject, v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject
 }
 
 // VisitObject implements Visitor
 func (v *PathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	newObject := v.Copying.VisitObject(o)
-	object.SetAnnotation(newObject.MetaObject(), v1.SourcePathAnnotationKey, o.SlashPath())
+	core.SetAnnotation(newObject, v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject
 }

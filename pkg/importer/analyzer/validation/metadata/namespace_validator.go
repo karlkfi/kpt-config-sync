@@ -12,7 +12,7 @@ func NewNamespaceValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
 			expected := o.Dir().Base()
-			actual := o.MetaObject().GetNamespace()
+			actual := o.GetNamespace()
 			if actual != "" && actual != expected {
 				return vet.IllegalMetadataNamespaceDeclarationError(&o, expected)
 			}

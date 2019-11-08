@@ -12,11 +12,11 @@ import (
 type Resource interface {
 	// Path is the embedded interface providing path information to this Resource.
 	Path
-	// Namespace returns the namespace containing this resource.
+	// GetNamespace returns the namespace containing this resource.
 	// If the resource is not namespaced, returns empty string.
-	Namespace() string
-	// Name returns the metadata.name of the Resource.
-	Name() string
+	GetNamespace() string
+	// GetName returns the metadata.name of the Resource.
+	GetName() string
 	// GroupVersionKind returns the K8S Group/Version/Kind of the Resource.
 	GroupVersionKind() schema.GroupVersionKind
 }
@@ -27,8 +27,8 @@ func PrintResource(r Resource) string {
 	if r.SlashPath() != "" {
 		sb.WriteString(fmt.Sprintf("source: %s\n", r.SlashPath()))
 	}
-	if r.Namespace() != "" {
-		sb.WriteString(fmt.Sprintf("namespace: %s\n", r.Namespace()))
+	if r.GetNamespace() != "" {
+		sb.WriteString(fmt.Sprintf("namespace: %s\n", r.GetNamespace()))
 	}
 	sb.WriteString(fmt.Sprintf("metadata.name:%s\n", name(r)))
 	sb.WriteString(printGroupVersionKind(r.GroupVersionKind()))
@@ -37,8 +37,8 @@ func PrintResource(r Resource) string {
 
 // name returns the empty string if r.Name is the empty string, otherwise prepends a space.
 func name(r Resource) string {
-	if r.Name() == "" {
+	if r.GetName() == "" {
 		return ""
 	}
-	return " " + r.Name()
+	return " " + r.GetName()
 }

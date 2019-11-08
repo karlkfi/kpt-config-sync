@@ -5,11 +5,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -59,7 +59,7 @@ func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 
 // UpdateImportStatus updates the portion of the RepoStatus related to the importer.
 func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		newRepo.Status.Import = repo.Status.Import
 		return newRepo, nil
@@ -73,7 +73,7 @@ func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 
 // UpdateSourceStatus updates the portion of the RepoStatus related to the source of truth.
 func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		newRepo.Status.Source = repo.Status.Source
 		return newRepo, nil
@@ -87,7 +87,7 @@ func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 
 // UpdateSyncStatus updates the portion of the RepoStatus related to the syncer.
 func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj runtime.Object) (runtime.Object, error) {
+	updateFn := func(obj core.Object) (core.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		if cmp.Equal(repo.Status.Sync, newRepo.Status.Sync) {
 			return nil, syncclient.NoUpdateNeeded()

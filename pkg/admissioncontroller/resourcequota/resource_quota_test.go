@@ -94,7 +94,7 @@ func TestQuotaAuthorize(t *testing.T) {
 						Kind:    "Pod",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&pod),
+						Object: &pod,
 					},
 					Operation: admissionv1beta1.Create,
 					Namespace: "kitties",
@@ -116,7 +116,7 @@ func TestQuotaAuthorize(t *testing.T) {
 						Kind:    "Secret",
 					},
 					Object: runtime.RawExtension{
-						Object: runtime.Object(&secret),
+						Object: &secret,
 					},
 					Operation: admissionv1beta1.Create,
 					Namespace: "kitties",

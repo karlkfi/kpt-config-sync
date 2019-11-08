@@ -64,7 +64,7 @@ func (v *testVisitor) VisitRoot(c *ast.Root) *ast.Root {
 
 // VisitSystemObject implements Visitor
 func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
-	v.visits = append(v.visits, fmt.Sprintf("SystemObject %s %s", c.GroupVersionKind(), c.Name()))
+	v.visits = append(v.visits, fmt.Sprintf("SystemObject %s %s", c.GroupVersionKind(), c.GetName()))
 	got := v.Visitor.VisitSystemObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -74,7 +74,7 @@ func (v *testVisitor) VisitSystemObject(c *ast.SystemObject) *ast.SystemObject {
 
 // VisitClusterRegistryObject implements Visitor
 func (v *testVisitor) VisitClusterRegistryObject(c *ast.ClusterRegistryObject) *ast.ClusterRegistryObject {
-	v.visits = append(v.visits, fmt.Sprintf("ClusterRegistryObject %s %s", c.GroupVersionKind(), c.Name()))
+	v.visits = append(v.visits, fmt.Sprintf("ClusterRegistryObject %s %s", c.GroupVersionKind(), c.GetName()))
 	got := v.Visitor.VisitClusterRegistryObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -84,7 +84,7 @@ func (v *testVisitor) VisitClusterRegistryObject(c *ast.ClusterRegistryObject) *
 
 // VisitClusterObject implements Visitor
 func (v *testVisitor) VisitClusterObject(c *ast.ClusterObject) *ast.ClusterObject {
-	v.visits = append(v.visits, fmt.Sprintf("ClusterObject %s %s", c.GroupVersionKind(), c.Name()))
+	v.visits = append(v.visits, fmt.Sprintf("ClusterObject %s %s", c.GroupVersionKind(), c.GetName()))
 	got := v.Visitor.VisitClusterObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))
@@ -104,7 +104,7 @@ func (v *testVisitor) VisitTreeNode(c *ast.TreeNode) *ast.TreeNode {
 
 // VisitObject implements Visitor
 func (v *testVisitor) VisitObject(c *ast.NamespaceObject) *ast.NamespaceObject {
-	v.visits = append(v.visits, fmt.Sprintf("NamespaceObject %s %s", c.GroupVersionKind(), c.Name()))
+	v.visits = append(v.visits, fmt.Sprintf("NamespaceObject %s %s", c.GroupVersionKind(), c.GetName()))
 	got := v.Visitor.VisitObject(c)
 	if (c == got) == v.wantEq {
 		v.errors = append(v.errors, errors.Errorf(v.fmt, "VisitRoot"))

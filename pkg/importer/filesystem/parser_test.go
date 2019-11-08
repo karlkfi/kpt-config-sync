@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
@@ -19,10 +19,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func engineerCRD(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
+func engineerCRD(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	obj := fake.CustomResourceDefinitionObject(opts...)
 	obj.Name = "engineers.employees"
 	obj.Spec.Group = "employees"
@@ -42,7 +41,7 @@ func engineerCRD(opts ...object.MetaMutator) *v1beta1.CustomResourceDefinition {
 	return obj
 }
 
-func scopedResourceQuota(opts ...object.MetaMutator) *corev1.ResourceQuota {
+func scopedResourceQuota(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	obj := fake.ResourceQuotaObject(opts...)
 	obj.Spec.Scopes = []corev1.ResourceQuotaScope{"Terminating"}
 	obj.Spec.ScopeSelector = &corev1.ScopeSelector{
@@ -123,20 +122,20 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Success("NamespaceSelector",
 			&namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(
-					testoutput.NamespaceConfig("", "namespaces/bar/prod-ns", object.Label("env", "prod"),
-						fake.RoleBindingObject(object.Name("sre"),
+					testoutput.NamespaceConfig("", "namespaces/bar/prod-ns", core.Label("env", "prod"),
+						fake.RoleBindingObject(core.Name("sre"),
 							inlinedNamespaceSelectorAnnotation(t, namespaceSelector("sre-supported", "env", "prod")),
 							testoutput.Source("namespaces/bar/rb.yaml"),
 						),
 					),
-					testoutput.NamespaceConfig("", "namespaces/bar/test-ns", object.Label("env", "test")),
+					testoutput.NamespaceConfig("", "namespaces/bar/test-ns", core.Label("env", "test")),
 				),
 				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			fake.FileObject(namespaceSelector("sre-supported", "env", "prod"), "namespaces/bar/ns-selector.yaml"),
-			fake.RoleBindingAtPath("namespaces/bar/rb.yaml", object.Name("sre"), namespaceSelectorAnnotation("sre-supported")),
-			fake.Namespace("namespaces/bar/prod-ns", object.Label("env", "prod")),
-			fake.Namespace("namespaces/bar/test-ns", object.Label("env", "test")),
+			fake.RoleBindingAtPath("namespaces/bar/rb.yaml", core.Name("sre"), namespaceSelectorAnnotation("sre-supported")),
+			fake.Namespace("namespaces/bar/prod-ns", core.Label("env", "prod")),
+			fake.Namespace("namespaces/bar/test-ns", core.Label("env", "test")),
 		),
 		parsertest.Success("minimal repo",
 			nil),
@@ -153,35 +152,35 @@ func TestParserVetErrors(t *testing.T) {
 				ClusterConfig: testoutput.ClusterConfig(
 					fake.HierarchicalQuotaObject(fake.HierarchicalQuotaRoot(
 						fake.HierarchicalQuotaNode("namespaces", v1.HierarchyNodeAbstractNamespace,
-							resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml")),
+							resourceQuotaObject(core.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml")),
 							fake.HierarchicalQuotaNode("bar", v1.HierarchyNodeNamespace,
-								resourceQuotaObject(object.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml"), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
+								resourceQuotaObject(core.Name(resourcequota.ResourceQuotaObjectName), testoutput.Source("namespaces/rq.yaml"), core.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
 					)),
 				),
 				NamespaceConfigs: testoutput.NamespaceConfigs(
 					testoutput.NamespaceConfig("", "namespaces/bar", nil,
-						resourceQuotaObject(testoutput.Source("namespaces/rq.yaml"), object.Name(resourcequota.ResourceQuotaObjectName), object.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
+						resourceQuotaObject(testoutput.Source("namespaces/rq.yaml"), core.Name(resourcequota.ResourceQuotaObjectName), core.Labels(resourcequota.NewConfigManagementQuotaLabels())))),
 				Syncs: testoutput.Syncs(kinds.ResourceQuota(), kinds.HierarchicalQuota()),
 			},
-			fake.HierarchyConfigAtPath("system/rq.yaml", fake.HierarchyConfigMeta(object.Name("resourcequota")), fake.HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeHierarchicalQuota)),
-			fake.FileObject(resourceQuotaObject(object.Name("pod-quota")), "namespaces/rq.yaml"),
+			fake.HierarchyConfigAtPath("system/rq.yaml", fake.HierarchyConfigMeta(core.Name("resourcequota")), fake.HierarchyConfigResource(kinds.ResourceQuota(), v1.HierarchyModeHierarchicalQuota)),
+			fake.FileObject(resourceQuotaObject(core.Name("pod-quota")), "namespaces/rq.yaml"),
 			fake.Namespace("namespaces/bar")),
 		parsertest.Success("Namespace with multiple inherited RoleBindings",
 			&namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(
 					testoutput.NamespaceConfig("", "namespaces/foo", nil,
-						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/rb-1.yaml")),
-						fake.RoleBindingObject(object.Name("bob"), testoutput.Source("namespaces/rb-2.yaml"))),
+						fake.RoleBindingObject(core.Name("alice"), testoutput.Source("namespaces/rb-1.yaml")),
+						fake.RoleBindingObject(core.Name("bob"), testoutput.Source("namespaces/rb-2.yaml"))),
 				),
 				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
-			fake.RoleBindingAtPath("namespaces/rb-1.yaml", object.Name("alice")),
-			fake.RoleBindingAtPath("namespaces/rb-2.yaml", object.Name("bob")),
+			fake.RoleBindingAtPath("namespaces/rb-1.yaml", core.Name("alice")),
+			fake.RoleBindingAtPath("namespaces/rb-2.yaml", core.Name("bob")),
 			fake.Namespace("namespaces/foo")),
 		parsertest.Failure("Cluster-scoped objects must not collide",
 			vet.MetadataNameCollisionErrorCode,
-			fake.ClusterRoleAtPath("cluster/cr-1.yaml", object.Name("alice")),
-			fake.ClusterRoleAtPath("cluster/cr-2.yaml", object.Name("alice")),
+			fake.ClusterRoleAtPath("cluster/cr-1.yaml", core.Name("alice")),
+			fake.ClusterRoleAtPath("cluster/cr-2.yaml", core.Name("alice")),
 		),
 		parsertest.Failure("Namespaces must be uniquely named",
 			vet.DuplicateDirectoryNameErrorCode,
@@ -230,7 +229,7 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Failure("Namespace with NamespaceSelector annotation is invalid",
 			vet.IllegalNamespaceAnnotationErrorCode,
-			fake.Namespace("namespaces/bar", object.Annotation(v1.NamespaceSelectorAnnotationKey, "prod")),
+			fake.Namespace("namespaces/bar", core.Annotation(v1.NamespaceSelectorAnnotationKey, "prod")),
 		),
 		parsertest.Failure("NamespaceSelector may not have clusterSelector annotations",
 			vet.NamespaceSelectorMayNotHaveAnnotationCode,
@@ -243,11 +242,11 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Failure("Illegal annotation definition is an error",
 			vet.IllegalAnnotationDefinitionErrorCode,
-			fake.ClusterRole(object.Annotation("configmanagement.gke.io/stuff", "prod")),
+			fake.ClusterRole(core.Annotation("configmanagement.gke.io/stuff", "prod")),
 		),
 		parsertest.Failure("Illegal label definition is an error",
 			vet.IllegalLabelDefinitionErrorCode,
-			fake.ClusterRole(object.Label("configmanagement.gke.io/stuff", "prod")),
+			fake.ClusterRole(core.Label("configmanagement.gke.io/stuff", "prod")),
 		),
 		parsertest.Failure("Illegal object declaration in system/ is an error",
 			vet.IllegalKindInSystemErrorCode,
@@ -261,53 +260,53 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Failure("Name collision in namespace",
 			vet.MetadataNameCollisionErrorCode,
 			fake.Namespace("namespaces/foo"),
-			fake.RoleAtPath("namespaces/foo/role-1.yaml", object.Name("alice")),
-			fake.RoleAtPath("namespaces/foo/role-2.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/foo/role-1.yaml", core.Name("alice")),
+			fake.RoleAtPath("namespaces/foo/role-2.yaml", core.Name("alice")),
 		),
 		parsertest.Success("No name collision if different types",
 			&namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(
 					testoutput.NamespaceConfig("", "namespaces/foo", nil,
-						fake.RoleObject(object.Name("alice"), testoutput.Source("namespaces/foo/role.yaml")),
-						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/rolebinding.yaml")),
+						fake.RoleObject(core.Name("alice"), testoutput.Source("namespaces/foo/role.yaml")),
+						fake.RoleBindingObject(core.Name("alice"), testoutput.Source("namespaces/foo/rolebinding.yaml")),
 					),
 				),
 				Syncs: testoutput.Syncs(kinds.Role(), kinds.RoleBinding()),
 			},
 			fake.Namespace("namespaces/foo"),
-			fake.RoleAtPath("namespaces/foo/role.yaml", object.Name("alice")),
-			fake.RoleBindingAtPath("namespaces/foo/rolebinding.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/foo/role.yaml", core.Name("alice")),
+			fake.RoleBindingAtPath("namespaces/foo/rolebinding.yaml", core.Name("alice")),
 		),
 		parsertest.Failure("Name collision in child node",
 			vet.MetadataNameCollisionErrorCode,
-			fake.RoleAtPath("namespaces/rb-1.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/rb-1.yaml", core.Name("alice")),
 			fake.Namespace("namespaces/foo/bar"),
-			fake.RoleAtPath("namespaces/foo/bar/rb-2.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/foo/bar/rb-2.yaml", core.Name("alice")),
 		),
 		parsertest.Failure("Name collision in grandchild node",
 			vet.MetadataNameCollisionErrorCode,
-			fake.RoleAtPath("namespaces/rb-1.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/rb-1.yaml", core.Name("alice")),
 			fake.Namespace("namespaces/foo/bar/qux"),
-			fake.RoleAtPath("namespaces/foo/bar/qux/rb-2.yaml", object.Name("alice")),
+			fake.RoleAtPath("namespaces/foo/bar/qux/rb-2.yaml", core.Name("alice")),
 		),
 		parsertest.Success("No name collision in sibling nodes",
 			&namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(
 					testoutput.NamespaceConfig("", "namespaces/foo/bar", nil,
-						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/bar/rb-1.yaml"))),
+						fake.RoleBindingObject(core.Name("alice"), testoutput.Source("namespaces/foo/bar/rb-1.yaml"))),
 					testoutput.NamespaceConfig("", "namespaces/foo/qux", nil,
-						fake.RoleBindingObject(object.Name("alice"), testoutput.Source("namespaces/foo/qux/rb-2.yaml"))),
+						fake.RoleBindingObject(core.Name("alice"), testoutput.Source("namespaces/foo/qux/rb-2.yaml"))),
 				),
 				Syncs: testoutput.Syncs(kinds.RoleBinding()),
 			},
 			fake.Namespace("namespaces/foo/bar"),
-			fake.RoleBindingAtPath("namespaces/foo/bar/rb-1.yaml", object.Name("alice")),
+			fake.RoleBindingAtPath("namespaces/foo/bar/rb-1.yaml", core.Name("alice")),
 			fake.Namespace("namespaces/foo/qux"),
-			fake.RoleBindingAtPath("namespaces/foo/qux/rb-2.yaml", object.Name("alice")),
+			fake.RoleBindingAtPath("namespaces/foo/qux/rb-2.yaml", core.Name("alice")),
 		),
 		parsertest.Failure("Empty string name is an error",
 			vet.MissingObjectNameErrorCode,
-			fake.ClusterRole(object.Name(""))),
+			fake.ClusterRole(core.Name(""))),
 		parsertest.Failure("Specifying resourceVersion is an error",
 			syntax.IllegalFieldsInConfigErrorCode,
 			fake.ClusterRole(resourceVersion("999")),
@@ -352,7 +351,7 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Failure("Invalid name for HierarchyConfig",
 			metadata.InvalidMetadataNameErrorCode,
-			fake.HierarchyConfig(fake.HierarchyConfigMeta(object.Name("RBAC"))),
+			fake.HierarchyConfig(fake.HierarchyConfigMeta(core.Name("RBAC"))),
 		),
 		parsertest.Failure("Illegal Namespace in clusterregistry/",
 			vet.IllegalKindInClusterregistryErrorCode,
@@ -363,76 +362,76 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/foo"),
 			fake.FileObject(namespaceSelectorObject("sel", "env", "prod"), "namespaces/foo/ns.yam"),
 		),
-		parsertest.Failure("Resource with OwnerReferences specified",
+		parsertest.Failure("Resource with UID specified",
 			syntax.IllegalFieldsInConfigErrorCode,
-			fake.Namespace("namespaces/foo", object.OwnerReference("owner", "1", kinds.Cluster())),
+			fake.Namespace("namespaces/foo", core.UID("illegal-uid")),
 		),
 	)
 
 	test.RunAll(t)
 }
 
-func resourceQuotaObject(opts ...object.MetaMutator) *corev1.ResourceQuota {
+func resourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	obj := fake.ResourceQuotaObject(opts...)
 	podQ, _ := resource.ParseQuantity("10")
 	obj.Spec.Hard = map[corev1.ResourceName]resource.Quantity{corev1.ResourcePods: podQ}
 	return obj
 }
 
-func namespaceSelector(name, key, value string, opts ...object.MetaMutator) *v1.NamespaceSelector {
+func namespaceSelector(name, key, value string, opts ...core.MetaMutator) *v1.NamespaceSelector {
 	obj := fake.NamespaceSelectorObject(opts...)
 	obj.Name = name
 	obj.Spec.Selector.MatchLabels = map[string]string{key: value}
 	return obj
 }
 
-func namespaceSelectorAnnotation(name string) object.MetaMutator {
-	return object.Annotation(v1.NamespaceSelectorAnnotationKey, name)
+func namespaceSelectorAnnotation(name string) core.MetaMutator {
+	return core.Annotation(v1.NamespaceSelectorAnnotationKey, name)
 }
 
-func inlinedNamespaceSelectorAnnotation(t *testing.T, selector *v1.NamespaceSelector) object.MetaMutator {
+func inlinedNamespaceSelectorAnnotation(t *testing.T, selector *v1.NamespaceSelector) core.MetaMutator {
 	content, err := json.Marshal(selector)
 	if err != nil {
 		t.Error(err)
 	}
-	return object.Annotation(v1.NamespaceSelectorAnnotationKey, string(content))
+	return core.Annotation(v1.NamespaceSelectorAnnotationKey, string(content))
 }
 
-func clusterSelectorAnnotation(value string) object.MetaMutator {
-	return object.Annotation(v1.ClusterSelectorAnnotationKey, value)
+func clusterSelectorAnnotation(value string) core.MetaMutator {
+	return core.Annotation(v1.ClusterSelectorAnnotationKey, value)
 }
 
-func inlinedClusterSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) object.MetaMutator {
+func inlinedClusterSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) core.MetaMutator {
 	content, err := json.Marshal(selector)
 	if err != nil {
 		t.Error(err)
 	}
-	return object.Annotation(v1.ClusterSelectorAnnotationKey, string(content))
+	return core.Annotation(v1.ClusterSelectorAnnotationKey, string(content))
 }
 
-func cluster(name string, opts ...object.MetaMutator) ast.FileObject {
-	mutators := append(opts, object.Name(name))
+func cluster(name string, opts ...core.MetaMutator) ast.FileObject {
+	mutators := append(opts, core.Name(name))
 	return fake.Cluster(mutators...)
 }
 
 func namespaceSelectorObject(name, key, value string) *v1.NamespaceSelector {
-	obj := fake.NamespaceSelectorObject(object.Name(name))
+	obj := fake.NamespaceSelectorObject(core.Name(name))
 	obj.Spec.Selector.MatchLabels = map[string]string{key: value}
 	return obj
 }
 
 func clusterSelectorObject(name, key, value string) *v1.ClusterSelector {
-	obj := fake.ClusterSelectorObject(object.Name(name))
+	obj := fake.ClusterSelectorObject(core.Name(name))
 	obj.Spec.Selector.MatchLabels = map[string]string{key: value}
 	return obj
 }
 
-func inlinedSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) object.MetaMutator {
+func inlinedSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) core.MetaMutator {
 	return inlinedClusterSelectorAnnotation(t, selector)
 }
 
-func resourceVersion(version string) object.MetaMutator {
-	return func(meta metav1.Object) {
+func resourceVersion(version string) core.MetaMutator {
+	return func(meta core.Object) {
 		meta.SetResourceVersion(version)
 	}
 }
@@ -443,7 +442,7 @@ func TestParseClusterSelector(t *testing.T) {
 	devCluster := "cluster-2"
 
 	prodSelectorName := "sel-1"
-	prodLabel := object.Label("environment", "prod")
+	prodLabel := core.Label("environment", "prod")
 	prodSelectorObject := func() *v1.ClusterSelector {
 		return clusterSelectorObject(prodSelectorName, "environment", "prod")
 	}
@@ -451,7 +450,7 @@ func TestParseClusterSelector(t *testing.T) {
 	prodSelectorAnnotationInlined := inlinedSelectorAnnotation(t, prodSelectorObject())
 
 	devSelectorName := "sel-2"
-	devLabel := object.Label("environment", "dev")
+	devLabel := core.Label("environment", "dev")
 	devSelectorObject := func() *v1.ClusterSelector {
 		return clusterSelectorObject(devSelectorName, "environment", "dev")
 	}
@@ -634,12 +633,12 @@ func TestParserVet(t *testing.T) {
 		parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
 			vet.IllegalLabelDefinitionErrorCode,
 			fake.HierarchyConfigAtPath("system/hc.yaml",
-				fake.HierarchyConfigMeta(object.Label("configmanagement.gke.io/illegal-label", "true"))),
+				fake.HierarchyConfigMeta(core.Label("configmanagement.gke.io/illegal-label", "true"))),
 		),
 		parsertest.Failure("Objects in non-namespaces/ with an invalid annotation is an error",
 			vet.IllegalAnnotationDefinitionErrorCode,
 			fake.HierarchyConfigAtPath("system/hc.yaml",
-				fake.HierarchyConfigMeta(object.Annotation("configmanagement.gke.io/illegal-annotation", "true"))),
+				fake.HierarchyConfigMeta(core.Annotation("configmanagement.gke.io/illegal-annotation", "true"))),
 		),
 	)
 

@@ -22,5 +22,5 @@ var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownClu
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
 	return objectHasUnknownClusterSelector.WithResources(resource).Errorf(
 		"Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
-		resource.Name(), v1.ClusterSelectorAnnotationKey, annotation)
+		resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation)
 }

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -25,33 +25,33 @@ func TestAnnotationValidator(t *testing.T) {
 		),
 		asttest.Pass("one legal annotation",
 			fake.Role(
-				object.Annotation(legalAnnotation, "")),
+				core.Annotation(legalAnnotation, "")),
 		),
 		asttest.Fail("one illegal annotation",
 			fake.Role(
-				object.Annotation(illegalAnnotation, "")),
+				core.Annotation(illegalAnnotation, "")),
 		),
 		asttest.Fail("two illegal annotations",
 			fake.Role(
-				object.Annotation(illegalAnnotation, ""),
-				object.Annotation(illegalAnnotation2, "")),
+				core.Annotation(illegalAnnotation, ""),
+				core.Annotation(illegalAnnotation2, "")),
 		),
 		asttest.Fail("one legal and one illegal annotation",
 			fake.Role(
-				object.Annotation(legalAnnotation, ""),
-				object.Annotation(illegalAnnotation, "")),
+				core.Annotation(legalAnnotation, ""),
+				core.Annotation(illegalAnnotation, "")),
 		),
 		asttest.Pass("namespaceselector annotation",
 			fake.Role(
-				object.Annotation(v1.NamespaceSelectorAnnotationKey, "")),
+				core.Annotation(v1.NamespaceSelectorAnnotationKey, "")),
 		),
 		asttest.Pass("clusterselector annotation",
 			fake.Role(
-				object.Annotation(v1.ClusterSelectorAnnotationKey, "")),
+				core.Annotation(v1.ClusterSelectorAnnotationKey, "")),
 		),
 		asttest.Pass("management annotation",
 			fake.Role(
-				object.Annotation(v1.ResourceManagementKey, "")),
+				core.Annotation(v1.ResourceManagementKey, "")),
 		),
 	)
 
@@ -67,17 +67,17 @@ func TestNewManagedAnnotationValidator(t *testing.T) {
 		),
 		asttest.Pass("disabled management passes",
 			fake.Role(
-				object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
 			),
 		),
 		asttest.Fail("enabled management fails",
 			fake.Role(
-				object.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 			),
 		),
 		asttest.Fail("invalid management fails",
 			fake.Role(
-				object.Annotation(v1.ResourceManagementKey, "invalid"),
+				core.Annotation(v1.ResourceManagementKey, "invalid"),
 			),
 		),
 	)

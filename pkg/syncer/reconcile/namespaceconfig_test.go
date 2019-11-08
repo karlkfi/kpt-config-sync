@@ -9,8 +9,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
@@ -23,14 +23,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...object.MetaMutator) *appsv1.Deployment {
+func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...core.MetaMutator) *appsv1.Deployment {
 	mutators := append(opts, syncertesting.Herrings...)
 	result := fake.DeploymentObject(mutators...)
 	result.Spec.Strategy.Type = deploymentStrategy
 	return result
 }
 
-func namespace(name string, opts ...object.MetaMutator) *corev1.Namespace {
+func namespace(name string, opts ...core.MetaMutator) *corev1.Namespace {
 	result := fake.NamespaceObject(name, opts...)
 	fmt.Println(result.Annotations)
 	return result
@@ -49,7 +49,7 @@ func namespaceSyncError(err v1.ConfigManagementError) fake.NamespaceConfigMutato
 	}
 }
 
-var managedQuotaLabels = object.Label(v1.ConfigManagementQuotaKey, v1.ConfigManagementQuotaValue)
+var managedQuotaLabels = core.Label(v1.ConfigManagementQuotaKey, v1.ConfigManagementQuotaValue)
 
 var (
 	eng                = "eng"
@@ -427,7 +427,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 	}{
 		{
 			name: "default namespace is not deleted when namespace config is removed",
-			namespace: namespace("default", object.Annotations(
+			namespace: namespace("default", core.Annotations(
 				map[string]string{
 					v1.ClusterNameAnnotationKey:       "cluster-name",
 					v1.ClusterSelectorAnnotationKey:   "some-selector",
@@ -438,7 +438,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 					"some-user-annotation":            "some-annotation-value",
 				},
 			),
-				object.Labels(
+				core.Labels(
 					map[string]string{
 						v1.ConfigManagementQuotaKey:  "some-quota",
 						v1.ConfigManagementSystemKey: "not-used",
@@ -452,25 +452,25 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				syncertesting.MarkForDeletion(),
 			),
 			wantNamespaceUpdate: namespace("default",
-				object.Annotation("some-user-annotation", "some-annotation-value"),
-				object.Label(v1.ConfigManagementSystemKey, "not-used"),
-				object.Label("some-user-label", "some-label-value"),
+				core.Annotation("some-user-annotation", "some-annotation-value"),
+				core.Label(v1.ConfigManagementSystemKey, "not-used"),
+				core.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
-					object.Namespace("default"),
+					core.Namespace("default"),
 					syncertesting.ManagementEnabled,
-					object.Name("my-deployment")),
+					core.Name("my-deployment")),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					object.Namespace("default"),
-					object.Name("your-deployment")),
+					core.Namespace("default"),
+					core.Name("your-deployment")),
 			},
 			wantDelete: deployment(
 				appsv1.RecreateDeploymentStrategyType,
-				object.Namespace("default"),
+				core.Namespace("default"),
 				syncertesting.ManagementEnabled,
-				object.Name("my-deployment")),
+				core.Name("my-deployment")),
 			wantEvent: &syncertesting.Event{
 				Kind:    corev1.EventTypeNormal,
 				Reason:  "ReconcileComplete",
@@ -480,7 +480,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "kube-system namespace is not deleted when namespace config is removed",
-			namespace: namespace("kube-system", object.Annotations(
+			namespace: namespace("kube-system", core.Annotations(
 				map[string]string{
 					v1.ClusterNameAnnotationKey:       "cluster-name",
 					v1.ClusterSelectorAnnotationKey:   "some-selector",
@@ -491,7 +491,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 					"some-user-annotation":            "some-annotation-value",
 				},
 			),
-				object.Labels(
+				core.Labels(
 					map[string]string{
 						v1.ConfigManagementQuotaKey:  "some-quota",
 						v1.ConfigManagementSystemKey: "not-used",
@@ -505,25 +505,25 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				syncertesting.MarkForDeletion(),
 			),
 			wantNamespaceUpdate: namespace("kube-system",
-				object.Annotation("some-user-annotation", "some-annotation-value"),
-				object.Label(v1.ConfigManagementSystemKey, "not-used"),
-				object.Label("some-user-label", "some-label-value"),
+				core.Annotation("some-user-annotation", "some-annotation-value"),
+				core.Label(v1.ConfigManagementSystemKey, "not-used"),
+				core.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
-					object.Namespace("kube-system"),
+					core.Namespace("kube-system"),
 					syncertesting.ManagementEnabled,
-					object.Name("my-deployment")),
+					core.Name("my-deployment")),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					object.Namespace("kube-system"),
-					object.Name("your-deployment")),
+					core.Namespace("kube-system"),
+					core.Name("your-deployment")),
 			},
 			wantDelete: deployment(
 				appsv1.RecreateDeploymentStrategyType,
-				object.Namespace("kube-system"),
+				core.Namespace("kube-system"),
 				syncertesting.ManagementEnabled,
-				object.Name("my-deployment")),
+				core.Name("my-deployment")),
 			wantEvent: &syncertesting.Event{
 				Kind:    corev1.EventTypeNormal,
 				Reason:  "ReconcileComplete",
@@ -582,7 +582,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 func unmanaged(o *corev1.Namespace) *corev1.Namespace {
 	r := o.DeepCopy()
-	object.RemoveAnnotations(r, v1.ResourceManagementKey)
-	object.RemoveLabels(r, v1.ManagedByKey)
+	core.RemoveAnnotations(r, v1.ResourceManagementKey)
+	core.RemoveLabels(r, v1.ManagedByKey)
 	return r
 }

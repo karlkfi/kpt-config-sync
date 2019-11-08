@@ -4,17 +4,15 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
-	runtime.Object
+	core.Object
 	// Path is the path this object has relative to Nomos Root, if known.
 	cmpath.Path
 }
@@ -23,36 +21,20 @@ var _ id.Resource = &FileObject{}
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
-func NewFileObject(object runtime.Object, source cmpath.Path) FileObject {
+func NewFileObject(object core.Object, source cmpath.Path) FileObject {
 	return FileObject{Object: object, Path: source}
 }
 
 // ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
 // path parsed from its annotations.
-func ParseFileObject(object runtime.Object) *FileObject {
-	mo := object.(metav1.Object)
-	srcPath := cmpath.FromSlash(mo.GetAnnotations()[v1.SourcePathAnnotationKey])
-	return &FileObject{Object: object, Path: srcPath}
+func ParseFileObject(o core.Object) *FileObject {
+	srcPath := cmpath.FromSlash(o.GetAnnotations()[v1.SourcePathAnnotationKey])
+	return &FileObject{Object: o, Path: srcPath}
 }
 
-// MetaObject converts the underlying object to a metav1.Object
-func (o *FileObject) MetaObject() metav1.Object {
-	return o.Object.(metav1.Object)
-}
-
-// GroupVersionKind unambiguously defines the kind of object.
-func (o *FileObject) GroupVersionKind() schema.GroupVersionKind {
-	return o.GetObjectKind().GroupVersionKind()
-}
-
-// Name returns the user-defined name of the object.
-func (o *FileObject) Name() string {
-	return o.MetaObject().GetName()
-}
-
-// Namespace returns the namespace of the object, or empty string if there is none.
-func (o *FileObject) Namespace() string {
-	return o.MetaObject().GetNamespace()
+// DeepCopy returns a deep copy of the FileObject.
+func (o *FileObject) DeepCopy() FileObject {
+	return FileObject{Object: core.DeepCopy(o.Object), Path: o.Path}
 }
 
 // Root represents a hierarchy of declared configs, settings for how those configs will be
@@ -104,11 +86,6 @@ func (o *SystemObject) Accept(visitor Visitor) *SystemObject {
 	return visitor.VisitSystemObject(o)
 }
 
-// DeepCopy creates a deep copy of the object
-func (o *SystemObject) DeepCopy() *SystemObject {
-	return &SystemObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
-}
-
 // ClusterRegistryObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A ClusterRegistryObject represents a cluster scoped resource from the cluster directory.
@@ -124,11 +101,6 @@ func (o *ClusterRegistryObject) Accept(visitor Visitor) *ClusterRegistryObject {
 	return visitor.VisitClusterRegistryObject(o)
 }
 
-// DeepCopy creates a deep copy of the object
-func (o *ClusterRegistryObject) DeepCopy() *ClusterRegistryObject {
-	return &ClusterRegistryObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
-}
-
 // ClusterObject extends FileObject to implement Visitable for cluster scoped objects.
 //
 // A ClusterObject represents a cluster scoped resource from the cluster directory.
@@ -142,11 +114,6 @@ func (o *ClusterObject) Accept(visitor Visitor) *ClusterObject {
 		return nil
 	}
 	return visitor.VisitClusterObject(o)
-}
-
-// DeepCopy creates a deep copy of the object
-func (o *ClusterObject) DeepCopy() *ClusterObject {
-	return &ClusterObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }
 
 // TreeNode is analogous to a directory in the config hierarchy.
@@ -233,9 +200,4 @@ func (o *NamespaceObject) Accept(visitor Visitor) *NamespaceObject {
 		return nil
 	}
 	return visitor.VisitObject(o)
-}
-
-// DeepCopy creates a deep copy of the object
-func (o *NamespaceObject) DeepCopy() *NamespaceObject {
-	return &NamespaceObject{FileObject{Object: o.DeepCopyObject(), Path: o.Path}}
 }

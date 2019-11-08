@@ -2,15 +2,15 @@ package testoutput
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 )
 
 // Source annotates the object as being declared in a specific source file.
-func Source(path string) object.MetaMutator {
-	return object.Annotation(v1.SourcePathAnnotationKey, path)
+func Source(path string) core.MetaMutator {
+	return core.Annotation(v1.SourcePathAnnotationKey, path)
 }
 
 // InCluster annotates the object as being in a specific cluster.
-func InCluster(clusterName string) object.MetaMutator {
-	return object.Annotation(v1.ClusterNameAnnotationKey, clusterName)
+func InCluster(clusterName string) core.MetaMutator {
+	return core.Annotation(v1.ClusterNameAnnotationKey, clusterName)
 }

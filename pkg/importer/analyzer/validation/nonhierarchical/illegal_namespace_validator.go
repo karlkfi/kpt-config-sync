@@ -27,10 +27,10 @@ func illegalNamespace(resource id.Resource) status.Error {
 
 // IllegalNamespaceValidator forbids declaring resources in the ControllerNamespace.
 var IllegalNamespaceValidator = perObjectValidator(func(object ast.FileObject) status.Error {
-	if object.Namespace() == configmanagement.ControllerNamespace {
+	if object.GetNamespace() == configmanagement.ControllerNamespace {
 		return objectInIllegalNamespace(&object)
 	}
-	if object.GroupVersionKind() == kinds.Namespace() && object.Name() == configmanagement.ControllerNamespace {
+	if object.GroupVersionKind() == kinds.Namespace() && object.GetName() == configmanagement.ControllerNamespace {
 		return illegalNamespace(&object)
 	}
 	return nil

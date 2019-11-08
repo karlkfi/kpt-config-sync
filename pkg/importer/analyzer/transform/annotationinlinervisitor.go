@@ -5,12 +5,12 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -122,12 +122,11 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 	glog.V(5).Infof("VisitObject(): ENTER")
 	defer glog.V(6).Infof("VisitObject(): EXIT")
 	newObject := v.Copying.VisitObject(o)
-	m := newObject.MetaObject()
-	v.errs = status.Append(v.errs, status.UndocumentedWrapf(v.nsTransformer.transform(m),
-		"failed to inline annotation for object %q", m.GetName()))
-	v.errs = status.Append(v.errs, status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(m),
-		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	setPopulatedAnnotation(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	v.errs = status.Append(v.errs, status.UndocumentedWrapf(v.nsTransformer.transform(newObject),
+		"failed to inline annotation for object %q", newObject.GetName()))
+	v.errs = status.Append(v.errs, status.UndocumentedWrapf(v.clusterSelectorTransformer.transform(newObject),
+		"failed to inline cluster selector annotations for object %q", newObject.GetName()))
+	setPopulatedAnnotation(newObject, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }
 
@@ -135,19 +134,18 @@ func (v *AnnotationInlinerVisitor) VisitObject(o *ast.NamespaceObject) *ast.Name
 func (v *AnnotationInlinerVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	glog.V(5).Infof("VisitClusterObject(): ENTER")
 	defer glog.V(6).Infof("VisitClusterObject(): EXIT")
-	newObject := o.DeepCopy()
-	m := newObject.MetaObject()
-	v.errs = status.Append(v.errs, status.InternalWrapf(v.clusterSelectorTransformer.transform(m),
-		"failed to inline cluster selector annotations for object %q", m.GetName()))
-	setPopulatedAnnotation(m, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
+	newObject := v.Copying.VisitClusterObject(o)
+	v.errs = status.Append(v.errs, status.InternalWrapf(v.clusterSelectorTransformer.transform(newObject),
+		"failed to inline cluster selector annotations for object %q", newObject.GetName()))
+	setPopulatedAnnotation(newObject, v1.ClusterNameAnnotationKey, v.selectors.ClusterName())
 	return newObject
 }
 
 // setPopulatedAnnotation is like object.SetAnnotation, but only populates the annotation if value
 // is not the empty string.
-func setPopulatedAnnotation(obj object.Annotated, annotation, value string) {
+func setPopulatedAnnotation(obj core.Annotated, annotation, value string) {
 	if value == "" {
 		return
 	}
-	object.SetAnnotation(obj, annotation, value)
+	core.SetAnnotation(obj, annotation, value)
 }

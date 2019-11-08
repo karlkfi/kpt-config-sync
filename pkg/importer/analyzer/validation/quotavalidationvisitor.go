@@ -34,7 +34,7 @@ func (v *QuotaValidator) Error() status.MultiError {
 
 // VisitObject implements Visitor
 func (v *QuotaValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	if o.GetObjectKind().GroupVersionKind() == kinds.ResourceQuota() {
+	if o.GroupVersionKind() == kinds.ResourceQuota() {
 		quota := *o.FileObject.Object.(*corev1.ResourceQuota)
 		// Scope-related fields aren't supported by the merge so error pre-emptively if set.
 		if quota.Spec.Scopes != nil {

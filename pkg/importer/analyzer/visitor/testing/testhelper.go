@@ -3,6 +3,7 @@ package testing
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
@@ -19,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -41,7 +41,7 @@ var (
 )
 
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
-func ObjectSets(runtimeObjs ...runtime.Object) []*ast.NamespaceObject {
+func ObjectSets(runtimeObjs ...core.Object) []*ast.NamespaceObject {
 	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.NamespaceObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}
@@ -59,7 +59,7 @@ func FileObjectSets(runtimeObjs ...ast.FileObject) []*ast.NamespaceObject {
 }
 
 // ClusterObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func ClusterObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterObject {
+func ClusterObjectSets(runtimeObjs ...core.Object) []*ast.ClusterObject {
 	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}
@@ -68,7 +68,7 @@ func ClusterObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterObject {
 }
 
 // ClusterRegistryObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func ClusterRegistryObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterRegistryObject {
+func ClusterRegistryObjectSets(runtimeObjs ...core.Object) []*ast.ClusterRegistryObject {
 	astObjs := make([]*ast.ClusterRegistryObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterRegistryObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}
@@ -77,7 +77,7 @@ func ClusterRegistryObjectSets(runtimeObjs ...runtime.Object) []*ast.ClusterRegi
 }
 
 // SystemObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func SystemObjectSets(runtimeObjs ...runtime.Object) []*ast.SystemObject {
+func SystemObjectSets(runtimeObjs ...core.Object) []*ast.SystemObject {
 	astObjs := make([]*ast.SystemObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.SystemObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}

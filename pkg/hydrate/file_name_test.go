@@ -6,21 +6,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/fake"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func cluster(name string) object.MetaMutator {
-	return object.Annotation(v1.ClusterNameAnnotationKey, name)
+func cluster(name string) core.MetaMutator {
+	return core.Annotation(v1.ClusterNameAnnotationKey, name)
 }
 
 func TestToFileObjects(t *testing.T) {
 	testCases := []struct {
 		name     string
-		objects  []runtime.Object
+		objects  []core.Object
 		expected []ast.FileObject
 	}{
 		{
@@ -28,43 +27,43 @@ func TestToFileObjects(t *testing.T) {
 		},
 		{
 			name: "namespaced role works",
-			objects: []runtime.Object{
-				fake.RoleObject(object.Name("alice"), object.Namespace("prod"), cluster("na-1")),
+			objects: []core.Object{
+				fake.RoleObject(core.Name("alice"), core.Namespace("prod"), cluster("na-1")),
 			},
 			expected: []ast.FileObject{
-				fake.FileObject(fake.RoleObject(object.Name("alice"), object.Namespace("prod"), cluster("na-1")), "na-1/prod/role_alice.yaml"),
+				fake.FileObject(fake.RoleObject(core.Name("alice"), core.Namespace("prod"), cluster("na-1")), "na-1/prod/role_alice.yaml"),
 			},
 		},
 		{
 			name: "non-namespaced clusterrolebinding works",
-			objects: []runtime.Object{
-				fake.ClusterRoleBindingObject(object.Name("alice"), cluster("eu-2")),
+			objects: []core.Object{
+				fake.ClusterRoleBindingObject(core.Name("alice"), cluster("eu-2")),
 			},
 			expected: []ast.FileObject{
-				fake.FileObject(fake.ClusterRoleBindingObject(object.Name("alice"), cluster("eu-2")), "eu-2/clusterrolebinding_alice.yaml"),
+				fake.FileObject(fake.ClusterRoleBindingObject(core.Name("alice"), cluster("eu-2")), "eu-2/clusterrolebinding_alice.yaml"),
 			},
 		},
 		{
 			name: "conflict resolved",
-			objects: []runtime.Object{
+			objects: []core.Object{
 				fake.UnstructuredObject(schema.GroupVersionKind{
 					Group: "rbac",
 					Kind:  "ClusterRole",
-				}, object.Name("alice")),
+				}, core.Name("alice")),
 				fake.UnstructuredObject(schema.GroupVersionKind{
 					Group: "oauth",
 					Kind:  "ClusterRole",
-				}, object.Name("alice")),
+				}, core.Name("alice")),
 			},
 			expected: []ast.FileObject{
 				fake.UnstructuredAtPath(schema.GroupVersionKind{
 					Group: "rbac",
 					Kind:  "ClusterRole",
-				}, "defaultcluster/clusterrole.rbac_alice.yaml", object.Name("alice")),
+				}, "defaultcluster/clusterrole.rbac_alice.yaml", core.Name("alice")),
 				fake.UnstructuredAtPath(schema.GroupVersionKind{
 					Group: "oauth",
 					Kind:  "ClusterRole",
-				}, "defaultcluster/clusterrole.oauth_alice.yaml", object.Name("alice")),
+				}, "defaultcluster/clusterrole.oauth_alice.yaml", core.Name("alice")),
 			},
 		},
 	}

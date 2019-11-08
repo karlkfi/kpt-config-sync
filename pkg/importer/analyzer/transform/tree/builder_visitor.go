@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // BuilderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
@@ -54,9 +53,8 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		switch o := object.Object.(type) {
 		case *corev1.Namespace:
 			n.Type = node.Namespace
-			metaObj := object.Object.(metav1.Object)
-			n.Labels = metaObj.GetLabels()
-			n.Annotations = metaObj.GetAnnotations()
+			n.Labels = o.GetLabels()
+			n.Annotations = o.GetAnnotations()
 		case *v1.NamespaceSelector:
 			if n.Selectors == nil {
 				n.Selectors = make(map[string]*v1.NamespaceSelector)
@@ -81,5 +79,5 @@ func lessFileObject(i, j ast.FileObject) bool {
 	if igvk != jgvk {
 		return igvk < jgvk
 	}
-	return i.Name() < j.Name()
+	return i.GetName() < j.GetName()
 }

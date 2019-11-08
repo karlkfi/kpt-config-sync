@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
@@ -61,13 +61,13 @@ func TestRawParser_Parse(t *testing.T) {
 		{
 			name: "preserves Namespace",
 			objects: []ast.FileObject{
-				fake.Role(object.Namespace("foo")),
-				fake.RoleBinding(object.Namespace("bar")),
+				fake.Role(core.Namespace("foo")),
+				fake.RoleBinding(core.Namespace("bar")),
 			},
 			expected: func() *namespaceconfig.AllConfigs {
 				result := namespaceconfig.NewAllConfigs(importToken, loadTime)
-				result.AddNamespaceResource("foo", fake.Role(object.Namespace("foo")).Object)
-				result.AddNamespaceResource("bar", fake.RoleBinding(object.Namespace("bar")).Object)
+				result.AddNamespaceResource("foo", fake.Role(core.Namespace("foo")).Object)
+				result.AddNamespaceResource("bar", fake.RoleBinding(core.Namespace("bar")).Object)
 				result.AddSync(*v1.NewSync(kinds.Role().GroupKind()))
 				result.AddSync(*v1.NewSync(kinds.RoleBinding().GroupKind()))
 				return result
@@ -106,8 +106,8 @@ func TestRawParser_ParseErrors(t *testing.T) {
 		{
 			name: "duplicate objects",
 			objects: []ast.FileObject{
-				fake.Role(object.Name("alice"), object.Namespace("shipping")),
-				fake.Role(object.Name("alice"), object.Namespace("shipping")),
+				fake.Role(core.Name("alice"), core.Namespace("shipping")),
+				fake.Role(core.Name("alice"), core.Namespace("shipping")),
 			},
 			expectedErrorCode: vet.MetadataNameCollisionErrorCode,
 		},

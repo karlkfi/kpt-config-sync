@@ -7,18 +7,16 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/object"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func withSourceAnnotation(o runtime.Object, annotation string) runtime.Object {
-	object.SetAnnotation(o.(metav1.Object), v1.SourcePathAnnotationKey, annotation)
+func withSourceAnnotation(o core.Object, annotation string) core.Object {
+	core.SetAnnotation(o, v1.SourcePathAnnotationKey, annotation)
 	return o
 }
 
@@ -83,7 +81,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 							},
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
-									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
 							},
 						},
 					},
@@ -142,9 +140,9 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 							},
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
-									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
 								{FileObject: fake.RoleAtPath("namespaces/bar/rb.yaml",
-									object.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/rb.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/rb.yaml"))},
 							},
 						},
 					},

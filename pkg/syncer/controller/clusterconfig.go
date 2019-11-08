@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
@@ -12,7 +13,6 @@ import (
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"

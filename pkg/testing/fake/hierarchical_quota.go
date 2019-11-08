@@ -2,8 +2,8 @@ package fake
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/resourcequota"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -35,7 +35,7 @@ func HierarchicalQuotaNode(name string, nodeType v1.HierarchyNodeType, rq *corev
 func HierarchicalQuotaObject(opts ...HierarchicalQuotaMutator) *v1.HierarchicalQuota {
 	result := &v1.HierarchicalQuota{TypeMeta: toTypeMeta(kinds.HierarchicalQuota())}
 	defaultMutate(result)
-	mutate(result, object.Name(resourcequota.ResourceQuotaHierarchyName))
+	mutate(result, core.Name(resourcequota.ResourceQuotaHierarchyName))
 	for _, opt := range opts {
 		opt(result)
 	}

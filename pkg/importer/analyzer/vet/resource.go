@@ -32,13 +32,13 @@ func (r resourceID) Dir() cmpath.Path {
 	return cmpath.FromSlash(r.source).Dir()
 }
 
-// Name implements Resource.
-func (r resourceID) Name() string {
+// GetName implements Resource.
+func (r resourceID) GetName() string {
 	return r.name
 }
 
-// Namespace implements Resource.
-func (r resourceID) Namespace() string {
+// GetNamespace implements Resource.
+func (r resourceID) GetNamespace() string {
 	return r.namespace
 }
 

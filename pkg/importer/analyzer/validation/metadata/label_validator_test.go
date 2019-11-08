@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/vet"
-	"github.com/google/nomos/pkg/object"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -25,29 +25,29 @@ func TestLabelValidator(t *testing.T) {
 		),
 		asttest.Pass("one legal label",
 			fake.Role(
-				object.Label(legalLabel, "")),
+				core.Label(legalLabel, "")),
 		),
 		asttest.Fail("one illegal label",
 			fake.Role(
-				object.Label(illegalLabel, "")),
+				core.Label(illegalLabel, "")),
 		),
 		asttest.Fail("two illegal labels",
 			fake.Role(
-				object.Label(illegalLabel, ""),
-				object.Label(illegalLabel2, "")),
+				core.Label(illegalLabel, ""),
+				core.Label(illegalLabel2, "")),
 		),
 		asttest.Fail("one legal and one illegal label",
 			fake.Role(
-				object.Label(legalLabel, ""),
-				object.Label(illegalLabel, "")),
+				core.Label(legalLabel, ""),
+				core.Label(illegalLabel, "")),
 		),
 		asttest.Fail("namespaceselector label",
 			fake.Role(
-				object.Label(v1.NamespaceSelectorAnnotationKey, "")),
+				core.Label(v1.NamespaceSelectorAnnotationKey, "")),
 		),
 		asttest.Fail("clusterselector label",
 			fake.Role(
-				object.Label(v1.ClusterSelectorAnnotationKey, "")),
+				core.Label(v1.ClusterSelectorAnnotationKey, "")),
 		),
 	)
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -41,16 +42,16 @@ type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
 
 // update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
 // so no there is no need to worry about mutating the argument when implementing an Update function.
-type update func(runtime.Object) (runtime.Object, error)
+type update func(core.Object) (core.Object, error)
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Error {
-	description, kind := resourceInfo(obj)
+func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
+	description := getResourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 
 	start := time.Now()
 	err := c.Client.Create(ctx, obj)
-	c.recordLatency(start, "create", kind, metrics.StatusLabel(err))
+	c.recordLatency(start, "create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
@@ -61,16 +62,16 @@ func (c *Client) Create(ctx context.Context, obj runtime.Object) status.Error {
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
 // This automatically sets the propagation policy to always be "Background".
-func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
-	description, kind := resourceInfo(obj)
-	_, namespacedName := metaNamespacedName(obj)
+func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOptionFunc) error {
+	description := getResourceInfo(obj)
+	namespacedName := getNamespacedName(obj)
 
 	if err := c.Client.Get(ctx, namespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object is already deleted
 			return nil
 		}
-		if isFinalizing(obj.(metav1.Object)) {
+		if isFinalizing(obj) {
 			glog.V(3).Infof("Delete skipped, resource is finalizing %s", description)
 			return nil
 		}
@@ -90,39 +91,39 @@ func (c *Client) Delete(ctx context.Context, obj runtime.Object, opts ...client.
 		err = errors.Wrapf(err, "delete failed for %s", description)
 	}
 
-	c.recordLatency(start, "delete", kind, metrics.StatusLabel(err))
+	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 	return nil
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj runtime.Object, updateFn update) (runtime.Object, status.Error) {
+func (c *Client) Update(ctx context.Context, obj core.Object, updateFn update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj runtime.Object, updateFn update) (runtime.Object, status.Error) {
+func (c *Client) UpdateStatus(ctx context.Context, obj core.Object, updateFn update) (runtime.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
 // update updates the given obj in the Kubernetes cluster using clientUpdateFn and records prometheus
 // metrics. In the event of a conflicting update, it will retry.
 // This operation always involves retrieving the resource from API Server before actually updating it.
-func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn update,
+func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 	clientUpdateFn clientUpdateFn) (runtime.Object, status.Error) {
 	// We only want to modify the argument after successfully making an update to API Server.
-	workingObj := obj.DeepCopyObject()
-	description, kind := resourceInfo(workingObj)
-	_, namespacedName := metaNamespacedName(workingObj)
+	workingObj := core.DeepCopy(obj)
+	description := getResourceInfo(workingObj)
+	namespacedName := getNamespacedName(workingObj)
 
 	var lastErr error
-	var oldObj runtime.Object
+	var oldObj core.Object
 
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
 			return nil, status.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 		oldV := resourceVersion(workingObj)
-		newObj, err := updateFn(workingObj.DeepCopyObject())
+		newObj, err := updateFn(core.DeepCopy(workingObj))
 		if err != nil {
 			if IsNoUpdateNeeded(err) {
 				return newObj, nil
@@ -141,7 +142,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn update
 
 		start := time.Now()
 		err = clientUpdateFn(ctx, newObj)
-		c.recordLatency(start, "update", kind, metrics.StatusLabel(err))
+		c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
 		if err == nil {
 			newV := resourceVersion(newObj)
@@ -156,8 +157,7 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn update
 
 		if glog.V(3) {
 			glog.Warningf("error in clientUpdateFn(...) for %q: %v", namespacedName, err)
-			// Skip the expensive copy if we're not going to use it.
-			oldObj = workingObj.DeepCopyObject()
+			oldObj = workingObj
 		}
 		if !apierrors.IsConflict(err) {
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
@@ -169,9 +169,9 @@ func (c *Client) update(ctx context.Context, obj runtime.Object, updateFn update
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.
 // This operation always involves retrieving the resource from API Server before actually creating or updating it.
-func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
-	description, kind := resourceInfo(obj)
-	_, namespacedName := metaNamespacedName(obj)
+func (c *Client) Upsert(ctx context.Context, obj core.Object) error {
+	description := getResourceInfo(obj)
+	namespacedName := getNamespacedName(obj)
 	if err := c.Client.Get(ctx, namespacedName, obj.DeepCopyObject()); err != nil {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
@@ -181,7 +181,7 @@ func (c *Client) Upsert(ctx context.Context, obj runtime.Object) error {
 
 	start := time.Now()
 	err := c.Client.Update(ctx, obj)
-	c.recordLatency(start, "update", kind, metrics.StatusLabel(err))
+	c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
 	if err != nil {
 		return errors.Wrapf(err, "upsert failed for %s", description)
@@ -197,27 +197,26 @@ func (c *Client) recordLatency(start time.Time, lvs ...string) {
 	c.latencyMetric.WithLabelValues(lvs...).Observe(time.Since(start).Seconds())
 }
 
-// resourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its Kind.
-func resourceInfo(obj runtime.Object) (description string, kind string) {
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	kind = gvk.Kind
-
-	_, n := metaNamespacedName(obj)
-	description = fmt.Sprintf("%q, %q", gvk, n)
-	return
+// getResourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its Kind.
+func getResourceInfo(obj core.Object) string {
+	gvk := obj.GroupVersionKind()
+	namespacedName := getNamespacedName(obj)
+	return fmt.Sprintf("%q, %q", gvk, namespacedName)
 }
 
-func resourceVersion(obj runtime.Object) string {
-	m, _ := metaNamespacedName(obj)
-	return m.GetResourceVersion()
+func getNamespacedName(obj core.Object) types.NamespacedName {
+	return types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
 }
 
-func metaNamespacedName(obj runtime.Object) (metav1.Object, types.NamespacedName) {
-	m := obj.(metav1.Object)
-	return m, types.NamespacedName{Namespace: m.GetNamespace(), Name: m.GetName()}
+func resourceVersion(obj core.Object) string {
+	return obj.GetResourceVersion()
+}
+
+type hasDeletionTimestamp interface {
+	GetDeletionTimestamp() *metav1.Time
 }
 
 // isFinalizing returns true if the object is finalizing.
-func isFinalizing(m metav1.Object) bool {
-	return m.GetDeletionTimestamp() != nil
+func isFinalizing(o core.Object) bool {
+	return o.(hasDeletionTimestamp).GetDeletionTimestamp() != nil
 }

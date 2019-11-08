@@ -6,16 +6,14 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/object"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
 // cluster-scoped runtime.Objects.
-func ClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
+func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 	config := fake.ClusterConfigObject()
 	for _, o := range objects {
 		config.AddResource(o)
@@ -24,7 +22,7 @@ func ClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
 }
 
 // CRDClusterConfig generates a valid ClusterConfig which holds the list of CRDs in the repo.
-func CRDClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
+func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 	config := fake.CRDClusterConfigObject()
 	for _, o := range objects {
 		config.AddResource(o)
@@ -34,14 +32,14 @@ func CRDClusterConfig(objects ...runtime.Object) *v1.ClusterConfig {
 
 // NamespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
 // hydrated runtime.Objects for that Namespace.
-func NamespaceConfig(clusterName, dir string, opt object.MetaMutator, objects ...runtime.Object) v1.NamespaceConfig {
+func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...core.Object) v1.NamespaceConfig {
 	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(Source(path.Join(dir, "namespace.yaml"))))
 	if clusterName != "" {
 		InCluster(clusterName)(config)
 	}
 	config.Name = cmpath.FromSlash(dir).Base()
 	for _, o := range objects {
-		o.(metav1.Object).SetNamespace(config.Name)
+		o.SetNamespace(config.Name)
 		config.AddResource(o)
 	}
 	if opt != nil {

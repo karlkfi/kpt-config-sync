@@ -16,10 +16,10 @@ const MultipleSingletonsErrorCode = "1030"
 func init() {
 	rq1 := resourceQuota()
 	rq1.Path = cmpath.FromSlash("namespaces/foo/rq1.yaml")
-	rq1.MetaObject().SetName("quota-1")
+	rq1.SetName("quota-1")
 	rq2 := resourceQuota()
 	rq2.Path = cmpath.FromSlash("namespaces/foo/rq2.yaml")
-	rq2.MetaObject().SetName("quota-2")
+	rq2.SetName("quota-2")
 	status.AddExamples(MultipleSingletonsErrorCode, MultipleSingletonsError(
 		rq1, rq2,
 	))

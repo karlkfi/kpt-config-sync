@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -16,7 +17,6 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -150,7 +150,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, ss) {
-			updateFn := func(obj runtime.Object) (runtime.Object, error) {
+			updateFn := func(obj core.Object) (core.Object, error) {
 				s := obj.(*v1.Sync)
 				s.Status = ss
 				return s, nil

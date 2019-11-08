@@ -37,8 +37,8 @@ func CheckDuplicates(objects []id.Resource, errorType duplicateError) status.Mul
 		gknn := groupKindNamespaceName{
 			group:     o.GroupVersionKind().Group,
 			kind:      o.GroupVersionKind().Kind,
-			namespace: o.Namespace(),
-			name:      o.Name(),
+			namespace: o.GetNamespace(),
+			name:      o.GetName(),
 		}
 		duplicateMap[gknn] = append(duplicateMap[gknn], o)
 	}

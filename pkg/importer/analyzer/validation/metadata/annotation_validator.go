@@ -33,7 +33,7 @@ func NewAnnotationValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
 			var errors []string
-			for a := range o.MetaObject().GetAnnotations() {
+			for a := range o.GetAnnotations() {
 				if !isInputAnnotation(a) && hasConfigManagementPrefix(a) {
 					errors = append(errors, a)
 				}
@@ -55,7 +55,7 @@ func NewManagedAnnotationValidator() ast.Visitor {
 
 // ValidManagementAnnotation returns an Error if the user-specified Managment annotation is invalid.
 func ValidManagementAnnotation(o ast.FileObject) status.Error {
-	value, found := o.MetaObject().GetAnnotations()[v1.ResourceManagementKey]
+	value, found := o.GetAnnotations()[v1.ResourceManagementKey]
 	if found && (value != v1.ResourceManagementDisabled) {
 		return vet.IllegalManagementAnnotationError(&o, value)
 	}
