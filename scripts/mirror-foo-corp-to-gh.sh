@@ -52,6 +52,7 @@ fi
 function cleanup() {
   rm -rf "$REPO"
 }
+
 if [[ "$REPO" == "" ]]; then
   REPO=$(mktemp -d /tmp/foo-corp-example-XXXXX)
   trap cleanup EXIT
@@ -62,10 +63,8 @@ if ! git -C "$REPO" checkout -t "origin/$REPO_VERSION" &> /dev/null; then
   git -C "$REPO" checkout -B "$REPO_VERSION"
 fi
 
-EXAMPLE="$(dirname "$0")/../examples/foo-corp-example"
-cp "$EXAMPLE/README.md" "$REPO/README.md"
-rsync -av --delete "$EXAMPLE/docs" "$REPO"
-rsync -av --delete "$EXAMPLE/foo-corp" "$REPO"
+EXAMPLE="$(dirname "$0")/../examples/foo-corp-example/"
+rsync -rv --delete --exclude '.git' --exclude 'OWNERS.nomos' "$EXAMPLE" "$REPO"
 git -C "$REPO" add .
 git -C "$REPO" commit -m "$COMMIT_MESSAGE"
 git -C "$REPO" push origin "HEAD:$REPO_VERSION"

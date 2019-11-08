@@ -15,7 +15,7 @@ your cluster configuration to point to the URL of your forked repository.
 For more information on Anthos Config Management, please reference the
 [Google Cloud Platform documentation][2].
 
-## Examples and Guides
+## Examples
 
 ### [Foo-Corp](foo-corp/)
 
@@ -30,9 +30,5 @@ A simple example to generalize how to define and enforce configuration
 
 Configure policy to apply only to resources in specific regions
 
-### [Validating configs in CI/CD](docs/how-to-validate-ci-cd)
-
-Guide on validating configuration changes with Cloud Build
-
 [1]: https://cloud.google.com/anthos-config-management/
-[2]: https://cloud.google.com/anthos-config-management/docs
+[2]: https://cloud.google.com/anthos-config-management/docs/overview
