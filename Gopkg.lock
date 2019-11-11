@@ -965,7 +965,7 @@
   revision = "411b2483e5034420675ebcdd4a55fc76fe5e55cf"
 
 [[projects]]
-  digest = "1:1809fcdbdcde013b9388b01227e6789324ef1d070f52f1ae808cc89579dd5bb0"
+  digest = "1:c50cdcc0d99b48c3c157113067a87cb49d6cd748dc383891e70ab7fa6e4b1e7f"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/apis/autoscaling",
@@ -976,7 +976,6 @@
     "pkg/apis/extensions",
     "pkg/apis/networking",
     "pkg/apis/policy",
-    "pkg/apis/rbac",
     "pkg/features",
     "pkg/kubeapiserver/admission/util",
     "pkg/quota",
@@ -1107,7 +1106,6 @@
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1",
     "k8s.io/kube-openapi/pkg/util/proto",
-    "k8s.io/kubernetes/pkg/apis/rbac",
     "k8s.io/kubernetes/pkg/quota",
     "k8s.io/kubernetes/pkg/quota/generic",
     "k8s.io/kubernetes/pkg/quota/install",

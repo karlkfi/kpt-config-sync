@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,6 +30,6 @@ func (d *FakeDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
 }
 
 // DecodeResources returns fake data.
-func (d *FakeDecoder) DecodeResources(_ []nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *FakeDecoder) DecodeResources(_ []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	return d.data, nil
 }

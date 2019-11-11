@@ -1,7 +1,7 @@
 package fake
 
 import (
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
@@ -9,18 +9,18 @@ import (
 )
 
 // RepoMutator modifies a Repo.
-type RepoMutator func(repo *nomosv1.Repo)
+type RepoMutator func(repo *v1.Repo)
 
 // RepoVersion sets the Spec.Version of a Repo.
 func RepoVersion(version string) RepoMutator {
-	return func(f *nomosv1.Repo) {
+	return func(f *v1.Repo) {
 		f.Spec.Version = version
 	}
 }
 
 // RepoObject returns an initialized Repo.
-func RepoObject(opts ...RepoMutator) *nomosv1.Repo {
-	result := &nomosv1.Repo{TypeMeta: toTypeMeta(kinds.Repo())}
+func RepoObject(opts ...RepoMutator) *v1.Repo {
+	result := &v1.Repo{TypeMeta: toTypeMeta(kinds.Repo())}
 	defaultMutate(result)
 	mutate(result, core.Name("repo"))
 	RepoVersion(repo.CurrentVersion)(result)

@@ -40,7 +40,8 @@ var invalidAnnotationValueErrorBase = status.NewErrorBuilder(InvalidAnnotationVa
 func invalidAnnotationValueError(resource id.Resource, keys []string) status.Error {
 	return invalidAnnotationValueErrorBase.WithResources(resource).Errorf(
 		"Values in metadata.annotations MUST be strings. "+
-			"To fix, add quotes around the values. "+
-			`Non-string values for:\n\nmetadata.annotations.%s `,
+			`To fix, add quotes around the values. Non-string values for:
+
+metadata.annotations.%s `,
 		strings.Join(keys, "\nmetadata.annotations."))
 }

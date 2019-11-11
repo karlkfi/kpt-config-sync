@@ -9,31 +9,31 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/davecgh/go-spew/spew"
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 func TestDecodeResources(t *testing.T) {
 	testCases := []struct {
 		name            string
-		genericResource []nomosv1.GenericResources
+		genericResource []v1.GenericResources
 		want            map[schema.GroupVersionKind][]*unstructured.Unstructured
 	}{
 		{
 			name: "no resource",
-			genericResource: []nomosv1.GenericResources{
+			genericResource: []v1.GenericResources{
 				{
 					Kind:     "ObjectTest",
-					Versions: []nomosv1.GenericVersionResources{},
+					Versions: []v1.GenericVersionResources{},
 				},
 			},
 			want: map[schema.GroupVersionKind][]*unstructured.Unstructured{},
 		},
 		{
 			name: "one resource",
-			genericResource: []nomosv1.GenericResources{
+			genericResource: []v1.GenericResources{
 				{
 					Kind: "ObjectTest",
-					Versions: []nomosv1.GenericVersionResources{{
+					Versions: []v1.GenericVersionResources{{
 						Version: "v1test",
 						Objects: []runtime.RawExtension{{
 							Raw: []byte(`{"kind":"ObjectTest","apiVersion":"v1test"}`),
@@ -54,10 +54,10 @@ func TestDecodeResources(t *testing.T) {
 		},
 		{
 			name: "one resource that is already an Object",
-			genericResource: []nomosv1.GenericResources{
+			genericResource: []v1.GenericResources{
 				{
 					Kind: "ObjectTest",
-					Versions: []nomosv1.GenericVersionResources{{
+					Versions: []v1.GenericVersionResources{{
 						Version: "v1test",
 						Objects: []runtime.RawExtension{{
 							Object: &unstructured.Unstructured{
@@ -83,10 +83,10 @@ func TestDecodeResources(t *testing.T) {
 		},
 		{
 			name: "multiple resources",
-			genericResource: []nomosv1.GenericResources{
+			genericResource: []v1.GenericResources{
 				{
 					Kind: "ObjectTest",
-					Versions: []nomosv1.GenericVersionResources{{
+					Versions: []v1.GenericVersionResources{{
 						Version: "v1test",
 						Objects: []runtime.RawExtension{{
 							Raw: []byte(`{"kind":"ObjectTest","apiVersion":"v1test"}`),
@@ -96,7 +96,7 @@ func TestDecodeResources(t *testing.T) {
 				{
 					Group: "foo.com",
 					Kind:  "Bar",
-					Versions: []nomosv1.GenericVersionResources{{
+					Versions: []v1.GenericVersionResources{{
 						Version: "v1",
 						Objects: []runtime.RawExtension{
 							{

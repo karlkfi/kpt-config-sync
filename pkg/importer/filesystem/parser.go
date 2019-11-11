@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -285,19 +284,4 @@ func (p *Parser) discoveryClient(crds ...*v1beta1.CustomResourceDefinition) (dis
 	// Always make sure we're getting the freshest data.
 	discoveryClient.Invalidate()
 	return discoveryClient, nil
-}
-
-// asDefaultVersionedOrOriginal returns the object as a Go object in the external form if possible (matching the
-// group version kind of the mapping if provided, a best guess based on serialization if not provided, or obj if it cannot be converted.
-func asDefaultVersionedOrOriginal(obj runtime.Object, mapping *meta.RESTMapping) runtime.Object {
-	converter := runtime.ObjectConvertor(scheme.Scheme)
-	groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
-	if mapping != nil {
-		groupVersioner = mapping.GroupVersionKind.GroupVersion()
-	}
-
-	if cObj, err := converter.ConvertToVersion(obj, groupVersioner); err == nil {
-		return cObj
-	}
-	return obj
 }

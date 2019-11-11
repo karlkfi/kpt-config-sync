@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/syncer/scheme"
 
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,7 +20,7 @@ type Decoder interface {
 	// DecodeResources reads the bytes in the RawExtensions representing k8s
 	// resources and returns a slice of all the resources grouped by their
 	// respective GroupVersionKind.
-	DecodeResources(genericResources []nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
+	DecodeResources(genericResources []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error)
 	// UpdateScheme updates the scheme of the underlying decoder, so it can decode the given GroupVersionKinds.
 	UpdateScheme(gvks map[schema.GroupVersionKind]bool)
 }
@@ -50,7 +50,7 @@ func (d *GenericResourceDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]b
 }
 
 // DecodeResources implements Decoder.
-func (d *GenericResourceDecoder) DecodeResources(genericResources []nomosv1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *GenericResourceDecoder) DecodeResources(genericResources []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	us := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, gr := range genericResources {
 		for _, v := range gr.Versions {

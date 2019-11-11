@@ -24,7 +24,11 @@ func NamespaceObject(name string, opts ...core.MetaMutator) *v1.Namespace {
 //   namespacesDir to determine valid default metadata.Name.
 func Namespace(dir string, opts ...core.MetaMutator) ast.FileObject {
 	relative := cmpath.FromSlash(dir).Join("namespace.yaml")
-	name := relative.Dir().Base()
+	return NamespaceAtPath(relative.SlashPath(), opts...)
+}
 
-	return FileObject(NamespaceObject(name, opts...), relative.SlashPath())
+// NamespaceAtPath returns a Namespace at exactly the passed path.
+func NamespaceAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+	name := cmpath.FromSlash(path).Dir().Base()
+	return FileObject(NamespaceObject(name, opts...), path)
 }

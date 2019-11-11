@@ -9,12 +9,24 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Tests that don't make sense without literally writing to a hard disk.
@@ -59,11 +71,28 @@ metadata:
 `, name)
 }
 
+// Because Go makes taking the reference of the output of a function difficult.
+func pointer(o ast.FileObject) *ast.FileObject {
+	return &o
+}
+
+var specHardPods core.MetaMutator = func(o core.Object) {
+	rq, ok := o.(*corev1.ResourceQuota)
+	if !ok {
+		panic(fmt.Sprintf("expected ResourceQuota, got %+v", o))
+	}
+	if rq.Spec.Hard == nil {
+		rq.Spec.Hard = map[corev1.ResourceName]resource.Quantity{}
+	}
+	rq.Spec.Hard["pods"] = resource.MustParse("10")
+}
+
 // TestFilesystemReader tests reading from the file system.
 func TestFilesystemReader(t *testing.T) {
 	tests := []struct {
 		testName           string
 		testFiles          fstesting.FileContentMap
+		expectObject       *ast.FileObject
 		expectedErrorCodes []string
 	}{
 		{
@@ -76,13 +105,14 @@ func TestFilesystemReader(t *testing.T) {
 		{
 			testName: "Namespace dir with YAML Namespace",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/ns.yaml": aNamespace("bar"),
+				"namespaces/bar/namespace.yaml": aNamespace("bar"),
 			},
+			expectObject: pointer(fake.Namespace("namespaces/bar")),
 		},
 		{
 			testName: "Namespace dir with JSON Namespace",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/ns.json": `
+				"namespaces/bar/namespace.json": `
 {
   "apiVersion": "v1",
   "kind": "Namespace",
@@ -92,6 +122,7 @@ func TestFilesystemReader(t *testing.T) {
 }
 `,
 			},
+			expectObject: pointer(fake.NamespaceAtPath("namespaces/bar/namespace.json")),
 		},
 		{
 			testName: "Namespaces dir with ignored file",
@@ -102,15 +133,16 @@ func TestFilesystemReader(t *testing.T) {
 		{
 			testName: "Namespace dir with 2 ignored files",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/ns.yaml": aNamespace("bar"),
-				"namespaces/bar/ignore":  "",
-				"namespaces/bar/ignore2": "blah blah blah",
+				"namespaces/bar/namespace.yaml": aNamespace("bar"),
+				"namespaces/bar/ignore":         "",
+				"namespaces/bar/ignore2":        "blah blah blah",
 			},
+			expectObject: pointer(fake.Namespace("namespaces/bar")),
 		},
 		{
-			testName: "Namespace dir with Namespace with labels/annotations",
+			testName: "Namespace with labels/annotations",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/ns.yaml": `
+				"namespaces/bar/namespace.yaml": `
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -121,6 +153,7 @@ metadata:
     audit: "true"
 `,
 			},
+			expectObject: pointer(fake.Namespace("namespaces/bar", core.Label("env", "prod"), core.Annotation("audit", "true"))),
 		},
 		{
 			testName: "custom resource w/o a CRD applied",
@@ -144,7 +177,7 @@ metadata:
 		{
 			testName: "Namespaces dir with single ResourceQuota single file",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/combo.yaml": aNamespace("bar") + "\n---\n" + `
+				"namespaces/bar/rq.yaml": `
 kind: ResourceQuota
 apiVersion: v1
 metadata:
@@ -154,11 +187,11 @@ spec:
     pods: "10"
 `,
 			},
+			expectObject: pointer(ast.NewFileObject(fake.ResourceQuotaObject(specHardPods, core.Name("pod-quota")), cmpath.FromSlash("namespaces/bar/rq.yaml"))),
 		},
 		{
 			testName: "Namespace dir with Custom Resource",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/ns.yaml": aNamespace("bar"),
 				"namespaces/bar/philo.yaml": `
 apiVersion: employees/v1alpha1
 kind: Engineer
@@ -168,6 +201,18 @@ spec:
   cafePreference: 3
 `,
 			},
+			expectObject: pointer(ast.NewFileObject(&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "employees/v1alpha1",
+					"kind":       "Engineer",
+					"metadata": map[string]interface{}{
+						"name": "philo",
+					},
+					"spec": map[string]interface{}{
+						"cafePreference": int64(3),
+					},
+				},
+			}, cmpath.FromSlash("namespaces/bar/philo.yaml"))),
 		},
 		{
 			testName: "HierarchyConfig with multiple Kinds",
@@ -183,6 +228,8 @@ spec:
     kinds: [ "Role", "RoleBinding" ]
 `,
 			},
+			expectObject: pointer(fake.HierarchyConfigAtPath("system/config.yaml", core.Name("config"),
+				fake.HierarchyConfigResource(v1.HierarchyModeDefault, kinds.Role().GroupVersion(), kinds.Role().Kind, kinds.RoleBinding().Kind))),
 		},
 		{
 			testName: "metadata.annotations with number value",
@@ -201,7 +248,7 @@ metadata:
 		{
 			testName: "metadata.annotations with quoted number value",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/backend/ns.yaml": `
+				"namespaces/backend/namespace.yaml": `
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -210,6 +257,7 @@ metadata:
     number: "0000"
 `,
 			},
+			expectObject: pointer(fake.Namespace("namespaces/backend", core.Annotation("number", "0000"))),
 		},
 		{
 			testName: "metadata.annotations with boolean value",
@@ -228,7 +276,7 @@ metadata:
 		{
 			testName: "metadata.annotations with quoted boolean value",
 			testFiles: fstesting.FileContentMap{
-				"namespaces/backend/ns.yaml": `
+				"namespaces/backend/namespace.yaml": `
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -237,6 +285,57 @@ metadata:
     boolean: "true"
 `,
 			},
+			expectObject: pointer(fake.Namespace("namespaces/backend", core.Annotation("boolean", "true"))),
+		},
+		{
+			testName: "parses nested List",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/foo/list.yaml": `
+kind: List
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: List
+  items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: foo
+`,
+			},
+			expectObject: pointer(fake.NamespaceAtPath("namespaces/foo/list.yaml")),
+		},
+		{
+			testName: "parses specialized List",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/foo/list.yaml": `
+kind: RoleList
+apiVersion: rbac.authorization.k8s.io/v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: my-role
+`,
+			},
+			expectObject: pointer(fake.RoleAtPath("namespaces/foo/list.yaml", core.Name("my-role"))),
+		},
+		{
+			testName: "illegal field in list-embedded resource",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/foo/list.yaml": `
+kind: NamespaceList
+apiVersion: v1
+items:
+- kind: Namespace
+  apiVersion: v1
+  metadata:
+    name: foo
+  status:
+    phase: active
+`,
+			},
+			expectedErrorCodes: []string{syntax.IllegalFieldsInConfigErrorCode},
 		},
 	}
 	for _, tc := range tests {
@@ -269,9 +368,23 @@ metadata:
 			r := &filesystem.FileReader{
 				ClientGetter: f,
 			}
-			_, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false)
+			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
+
+			if tc.expectObject == nil {
+				if len(actual) > 0 {
+					t.Fatal("unexpected object")
+				}
+				return
+			}
+
+			if len(actual) == 0 {
+				t.Fatal("expected object")
+			}
+			if diff := cmp.Diff(*tc.expectObject, actual[0], cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
+				t.Fatal(diff)
+			}
 		})
 	}
 }

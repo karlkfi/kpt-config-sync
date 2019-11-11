@@ -3,25 +3,24 @@ package fake
 import (
 	"strings"
 
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
-	"k8s.io/kubernetes/pkg/apis/rbac"
 )
 
 // NamespaceSelectorObject returns an initialized NamespaceSelector.
-func NamespaceSelectorObject(opts ...core.MetaMutator) *nomosv1.NamespaceSelector {
-	result := &nomosv1.NamespaceSelector{
+func NamespaceSelectorObject(opts ...core.MetaMutator) *v1.NamespaceSelector {
+	result := &v1.NamespaceSelector{
 		TypeMeta: toTypeMeta(kinds.NamespaceSelector()),
 	}
 	defaultMutate(result)
@@ -50,15 +49,15 @@ func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 }
 
 // RoleBindingObject initializes a RoleBinding.
-func RoleBindingObject(opts ...core.MetaMutator) *rbacv1alpha1.RoleBinding {
-	obj := &rbacv1alpha1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}
+func RoleBindingObject(opts ...core.MetaMutator) *rbacv1.RoleBinding {
+	obj := &rbacv1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
 	return obj
 }
 
-// RoleBinding returns an RBAC RoleBinding.
+// RoleBinding returns an rbacv1 RoleBinding.
 func RoleBinding(opts ...core.MetaMutator) ast.FileObject {
 	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)
 }
@@ -68,14 +67,14 @@ func RoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(RoleBindingObject(opts...), path)
 }
 
-// ClusterRole returns an RBAC ClusterRole at the specified path.
+// ClusterRole returns an rbacv1 ClusterRole at the specified path.
 func ClusterRole(opts ...core.MetaMutator) ast.FileObject {
 	return ClusterRoleAtPath("cluster/cr.yaml", opts...)
 }
 
 // ClusterRoleBindingAtPath returns a ClusterRoleBinding at the specified path.
 func ClusterRoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	obj := &rbacv1alpha1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
+	obj := &rbacv1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
@@ -83,8 +82,8 @@ func ClusterRoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObj
 }
 
 // ClusterRoleBindingObject initializes a ClusterRoleBinding.
-func ClusterRoleBindingObject(opts ...core.MetaMutator) *rbacv1alpha1.ClusterRoleBinding {
-	obj := &rbacv1alpha1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
+func ClusterRoleBindingObject(opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
+	obj := &rbacv1.ClusterRoleBinding{TypeMeta: toTypeMeta(kinds.ClusterRoleBinding())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
@@ -98,7 +97,7 @@ func ClusterRoleBinding(opts ...core.MetaMutator) ast.FileObject {
 
 // ClusterRoleAtPath returns a ClusterRole at the specified path.
 func ClusterRoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	obj := &rbacv1alpha1.ClusterRole{TypeMeta: toTypeMeta(kinds.ClusterRole())}
+	obj := &rbacv1.ClusterRole{TypeMeta: toTypeMeta(kinds.ClusterRole())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
@@ -106,8 +105,8 @@ func ClusterRoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 }
 
 // ClusterSelectorObject initializes a ClusterSelector object.
-func ClusterSelectorObject(opts ...core.MetaMutator) *nomosv1.ClusterSelector {
-	obj := &nomosv1.ClusterSelector{TypeMeta: toTypeMeta(kinds.ClusterSelector())}
+func ClusterSelectorObject(opts ...core.MetaMutator) *v1.ClusterSelector {
+	obj := &v1.ClusterSelector{TypeMeta: toTypeMeta(kinds.ClusterSelector())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
@@ -170,7 +169,7 @@ func CustomResourceDefinition(opts ...core.MetaMutator) ast.FileObject {
 func AnvilAtPath(path string) ast.FileObject {
 	obj := &v1beta1.CustomResourceDefinition{
 		TypeMeta: toTypeMeta(kinds.Anvil()),
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "anvil",
 		},
 	}
@@ -180,10 +179,10 @@ func AnvilAtPath(path string) ast.FileObject {
 }
 
 // SyncObject returns a Sync configured for a particular
-func SyncObject(gk schema.GroupKind, opts ...core.MetaMutator) *nomosv1.Sync {
-	obj := &nomosv1.Sync{TypeMeta: toTypeMeta(kinds.Sync())}
+func SyncObject(gk schema.GroupKind, opts ...core.MetaMutator) *v1.Sync {
+	obj := &v1.Sync{TypeMeta: toTypeMeta(kinds.Sync())}
 	obj.Name = strings.ToLower(gk.String())
-	obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers, nomosv1.SyncFinalizer)
+	obj.ObjectMeta.Finalizers = append(obj.ObjectMeta.Finalizers, v1.SyncFinalizer)
 	obj.Spec.Group = gk.Group
 	obj.Spec.Kind = gk.Kind
 
@@ -215,8 +214,8 @@ func ReplicaSet(opts ...core.MetaMutator) ast.FileObject {
 }
 
 // RoleObject initializes a Role.
-func RoleObject(opts ...core.MetaMutator) *rbac.Role {
-	obj := &rbac.Role{TypeMeta: toTypeMeta(kinds.Role())}
+func RoleObject(opts ...core.MetaMutator) *rbacv1.Role {
+	obj := &rbacv1.Role{TypeMeta: toTypeMeta(kinds.Role())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
@@ -247,8 +246,8 @@ func ConfigMapAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ConfigMapObject(opts...), path)
 }
 
-func toTypeMeta(gvk schema.GroupVersionKind) v1.TypeMeta {
-	return v1.TypeMeta{
+func toTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {
+	return metav1.TypeMeta{
 		APIVersion: gvk.GroupVersion().String(),
 		Kind:       gvk.Kind,
 	}

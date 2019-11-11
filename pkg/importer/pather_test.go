@@ -32,7 +32,7 @@ func TestPatherSingleObject(t *testing.T) {
 		},
 		{
 			name:     configmanagement.HierarchyConfigKind,
-			object:   fake.HierarchyConfig(fake.HierarchyConfigMeta(core.Name("hc"))),
+			object:   fake.HierarchyConfig(core.Name("hc")),
 			expected: cmpath.FromSlash(repo.SystemDir).Join(strings.ToLower(kinds.HierarchyConfig().Kind) + "_hc.yaml"),
 		},
 		{

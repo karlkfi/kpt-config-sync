@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/syncer/metrics"
 
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -54,7 +54,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 	mapValidNamespaceConfigs := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(validNamespaceConfigs),
 	}
-	if err = pnc.Watch(&source.Kind{Type: &nomosv1.NamespaceConfig{}}, mapValidNamespaceConfigs); err != nil {
+	if err = pnc.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, mapValidNamespaceConfigs); err != nil {
 		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", namespaceConfigControllerName)
 	}
 	// Namespaces have the same name as their corresponding NamespaceConfig.
