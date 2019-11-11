@@ -2,8 +2,8 @@ package vet
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/rbac/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -12,12 +12,12 @@ import (
 
 func deprecatedDeployment() *ast.FileObject {
 	o := ast.NewFileObject(
-		&v1alpha1.ClusterRole{
-			TypeMeta: v1.TypeMeta{
+		&rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: "extensions/v1beta1",
 				Kind:       kinds.Deployment().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "deployment",
 			},
 		},
@@ -28,12 +28,12 @@ func deprecatedDeployment() *ast.FileObject {
 
 func customResourceDefinition() *ast.FileObject {
 	o := ast.NewFileObject(
-		&v1alpha1.ClusterRole{
-			TypeMeta: v1.TypeMeta{
+		&rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.CustomResourceDefinition().GroupVersion().String(),
 				Kind:       kinds.CustomResourceDefinition().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "customResourceDefinition",
 			},
 		},
@@ -44,12 +44,12 @@ func customResourceDefinition() *ast.FileObject {
 
 func clusterRole() *ast.FileObject {
 	o := ast.NewFileObject(
-		&v1alpha1.ClusterRole{
-			TypeMeta: v1.TypeMeta{
+		&rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.ClusterRole().GroupVersion().String(),
 				Kind:       kinds.ClusterRole().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "clusterRole",
 			},
 		},
@@ -60,12 +60,12 @@ func clusterRole() *ast.FileObject {
 
 func role() *ast.FileObject {
 	o := ast.NewFileObject(
-		&v1alpha1.Role{
-			TypeMeta: v1.TypeMeta{
+		&rbacv1.Role{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.Role().GroupVersion().String(),
 				Kind:       kinds.Role().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "role",
 			},
 		},
@@ -77,11 +77,11 @@ func role() *ast.FileObject {
 func resourceQuota() *ast.FileObject {
 	o := ast.NewFileObject(
 		&corev1.ResourceQuota{
-			TypeMeta: v1.TypeMeta{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.ResourceQuota().GroupVersion().String(),
 				Kind:       kinds.ResourceQuota().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "resourceQuota",
 			},
 		},
@@ -93,11 +93,11 @@ func resourceQuota() *ast.FileObject {
 func namespace(path cmpath.Path) *ast.FileObject {
 	o := ast.NewFileObject(
 		&corev1.Namespace{
-			TypeMeta: v1.TypeMeta{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.Namespace().GroupVersion().String(),
 				Kind:       kinds.Namespace().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: path.Dir().Base(),
 			},
 		},
@@ -109,11 +109,11 @@ func namespace(path cmpath.Path) *ast.FileObject {
 func hierarchyConfig() *ast.FileObject {
 	o := ast.NewFileObject(
 		&corev1.Namespace{
-			TypeMeta: v1.TypeMeta{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.HierarchyConfig().GroupVersion().String(),
 				Kind:       kinds.HierarchyConfig().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "hierarchyconfig",
 			},
 		},

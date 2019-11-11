@@ -8,8 +8,8 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"k8s.io/api/rbac/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // InvalidAnnotationValueErrorCode is the error code for when a value in
@@ -18,12 +18,12 @@ const InvalidAnnotationValueErrorCode = "1054"
 
 func init() {
 	o := ast.NewFileObject(
-		&v1alpha1.Role{
-			TypeMeta: v1.TypeMeta{
+		&rbacv1.Role{
+			TypeMeta: metav1.TypeMeta{
 				APIVersion: kinds.Role().GroupVersion().String(),
 				Kind:       kinds.Role().Kind,
 			},
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "role",
 			},
 		},
