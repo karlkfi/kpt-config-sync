@@ -5,20 +5,20 @@ import (
 	"os"
 	"sort"
 
-	_ "github.com/google/nomos/pkg/importer/analyzer/vet" // required for vet errors
-	_ "github.com/google/nomos/pkg/importer/filesystem"   // required for fileystem errors
-	_ "github.com/google/nomos/pkg/importer/id"           // required for id errors
+	"github.com/google/nomos/cmd/nomoserrors/examples"
 	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "nomoserrors",
-	Short: "List all error codes and examples",
+	Short: "List all error codes and exampleErrors",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		printErrorCodes()
-		printErrors()
+		examples := examples.Generate()
+
+		printErrorCodes(examples)
+		printErrors(examples)
 	},
 }
 
@@ -29,9 +29,9 @@ func main() {
 	}
 }
 
-func sortedErrors() []status.Error {
+func sortedErrors(e map[string][]status.Error) []status.Error {
 	var allErrs []status.Error
-	for _, errs := range status.Registry() {
+	for _, errs := range e {
 		allErrs = append(allErrs, errs...)
 	}
 	sort.Slice(allErrs, func(i, j int) bool {
@@ -40,23 +40,17 @@ func sortedErrors() []status.Error {
 	return allErrs
 }
 
-func printErrorCodes() {
+func printErrorCodes(e map[string][]status.Error) {
 	fmt.Println("=== USED ERROR CODES ===")
-	var codes []string
-	for code := range status.Registry() {
-		codes = append(codes, code)
-	}
-
-	sort.Strings(codes)
-	for _, code := range codes {
+	for _, code := range status.CodeRegistry() {
 		fmt.Println(code)
 	}
 	fmt.Println()
 }
 
-func printErrors() {
+func printErrors(e map[string][]status.Error) {
 	fmt.Println("=== SAMPLE ERRORS ===")
-	for _, err := range sortedErrors() {
+	for _, err := range sortedErrors(e) {
 		fmt.Println(err.Error())
 		fmt.Println()
 	}

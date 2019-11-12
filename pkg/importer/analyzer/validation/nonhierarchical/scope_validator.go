@@ -13,7 +13,8 @@ const IllegalNamespaceOnClusterScopedResourceErrorCode = "1052"
 
 var illegalNamespaceOnClusterScopedResourceErrorBuilder = status.NewErrorBuilder(IllegalNamespaceOnClusterScopedResourceErrorCode)
 
-func illegalNamespaceOnClusterScopedResourceError(resource id.Resource) status.Error {
+// IllegalNamespaceOnClusterScopedResourceError reports that a cluster-scoped resource MUST NOT declare metadata.namespace.
+func IllegalNamespaceOnClusterScopedResourceError(resource id.Resource) status.Error {
 	return illegalNamespaceOnClusterScopedResourceErrorBuilder.WithResources(resource).
 		New("cluster-scoped resources MUST NOT declare metadata.namespace")
 }
@@ -24,7 +25,9 @@ const MissingNamespaceOnNamespacedResourceErrorCode = "1053"
 
 var missingNamespaceOnNamespacedResourceErrorBuilder = status.NewErrorBuilder(MissingNamespaceOnNamespacedResourceErrorCode)
 
-func missingNamespaceOnNamespacedResourceError(resource id.Resource) status.Error {
+// MissingNamespaceOnNamespacedResourceError reports a namespace-scoped resource MUST declare metadata.namespace.
+// when parsing in non-hierarchical mode.
+func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.WithResources(resource).
 		New("namespace-scoped resource MUST declare metadata.namespace")
 }
@@ -36,11 +39,11 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 		switch scoper.GetScope(o.GroupVersionKind().GroupKind()) {
 		case discovery.ClusterScope:
 			if o.GetNamespace() != "" {
-				return illegalNamespaceOnClusterScopedResourceError(&o)
+				return IllegalNamespaceOnClusterScopedResourceError(&o)
 			}
 		case discovery.NamespaceScope:
 			if o.GetNamespace() == "" {
-				return missingNamespaceOnNamespacedResourceError(&o)
+				return MissingNamespaceOnNamespacedResourceError(&o)
 			}
 		case discovery.UnknownScope:
 			// Should be impossible to reach normally as an earlier validation should handle these cases.

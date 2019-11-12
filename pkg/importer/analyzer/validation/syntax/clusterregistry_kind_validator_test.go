@@ -3,7 +3,6 @@ package syntax
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -11,7 +10,7 @@ import (
 func TestClusterregistryKindValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
 		Validator: NewClusterRegistryKindValidator,
-		ErrorCode: vet.IllegalKindInClusterregistryErrorCode,
+		ErrorCode: IllegalKindInClusterregistryErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "ClusterSelector allowed",

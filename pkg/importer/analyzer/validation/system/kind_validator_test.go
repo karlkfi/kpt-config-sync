@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -12,7 +11,7 @@ import (
 func TestKindValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
 		Validator: system.NewKindValidator,
-		ErrorCode: vet.IllegalKindInSystemErrorCode,
+		ErrorCode: system.IllegalKindInSystemErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:   "Repo passes",

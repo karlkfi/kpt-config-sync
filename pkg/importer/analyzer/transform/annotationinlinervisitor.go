@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	sel "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
 )
@@ -98,7 +97,7 @@ func (v *AnnotationInlinerVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode 
 		}
 		if _, err := sel.AsPopulatedSelector(&s.Spec.Selector); err != nil {
 			// TODO(b/122739070) This should already be validated in parser.
-			v.errs = status.Append(v.errs, vet.InvalidSelectorError(s.Name, err))
+			v.errs = status.Append(v.errs, sel.InvalidSelectorError(s.Name, err))
 			continue
 		}
 		content, err := json.Marshal(s)

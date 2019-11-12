@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -16,7 +15,7 @@ func TestKindValidator(t *testing.T) {
 		return NewHierarchyConfigKindValidator()
 	}
 	test := asttest.Validator(v,
-		vet.UnsupportedResourceInHierarchyConfigErrorCode,
+		UnsupportedResourceInHierarchyConfigErrorCode,
 
 		asttest.Pass("RoleBinding supported",
 			fake.HierarchyConfig(

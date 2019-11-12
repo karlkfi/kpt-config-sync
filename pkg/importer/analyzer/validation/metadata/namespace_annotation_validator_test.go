@@ -6,7 +6,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
@@ -33,7 +32,7 @@ func fakeAnnotatedNamespace(annotations ...string) ast.FileObject {
 func TestNamespaceAnnotationValidator(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
 		Validator: NewNamespaceAnnotationValidator,
-		ErrorCode: vet.IllegalNamespaceAnnotationErrorCode,
+		ErrorCode: IllegalNamespaceAnnotationErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:   "empty annotations",
@@ -44,16 +43,16 @@ func TestNamespaceAnnotationValidator(t *testing.T) {
 				Object: fakeAnnotatedNamespace("legal"),
 			},
 			{
-				Name:       "namespaceselector annotation on Namespace",
+				Name:       "namespace-selector annotation on Namespace",
 				Object:     fakeAnnotatedNamespace(v1.NamespaceSelectorAnnotationKey),
 				ShouldFail: true,
 			},
 			{
-				Name:   "namespaceselector annotation on Role",
+				Name:   "namespace-selector annotation on Role",
 				Object: fakeAnnotatedRole(v1.NamespaceSelectorAnnotationKey),
 			},
 			{
-				Name:       "legal and namespaceselector annotations on Namespace",
+				Name:       "legal and namespace-selector annotations on Namespace",
 				Object:     fakeAnnotatedNamespace("legal", v1.NamespaceSelectorAnnotationKey),
 				ShouldFail: true,
 			},

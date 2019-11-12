@@ -3,13 +3,13 @@ package filesystem
 import (
 	"time"
 
+	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -125,7 +125,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 			}
 			result.AddNamespaceResource(namespace, f.Object)
 		case utildiscovery.UnknownScope:
-			errs = status.Append(errs, vet.UnknownObjectError(&f))
+			errs = status.Append(errs, validation.UnknownObjectError(&f))
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	sels "github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -41,7 +41,7 @@ func NewForCluster(
 		selector, err := sels.AsPopulatedSelector(&s.Spec.Selector)
 		if err != nil {
 			// TODO(b/120229144): Impossible to get here.
-			errs = status.Append(errs, vet.InvalidSelectorError(sn, err))
+			errs = status.Append(errs, sels.InvalidSelectorError(sn, err))
 			continue
 		}
 		for _, c := range clusters {
@@ -73,7 +73,7 @@ func (c ForCluster) ValidateObject(o *ast.FileObject) status.MultiError {
 		return nil
 	}
 	if !c.selectorNames[a] {
-		return vet.ObjectHasUnknownClusterSelector(o, a)
+		return ObjectHasUnknownClusterSelector(o, a)
 	}
 	return nil
 }
@@ -92,4 +92,16 @@ func (c ForCluster) MapToClusters(o core.Annotated) []string {
 	}
 	cs.Sort()
 	return cs
+}
+
+// ObjectHasUnknownClusterSelectorCode is the error code for ObjectHasUnknownClusterSelector
+const ObjectHasUnknownClusterSelectorCode = "1013"
+
+var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownClusterSelectorCode)
+
+// ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
+func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
+	return objectHasUnknownClusterSelector.WithResources(resource).Errorf(
+		"Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
+		resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation)
 }

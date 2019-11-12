@@ -8,24 +8,16 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 )
 
-// InvalidCRDNameErrorCode is the error code for invalidCRDNameError.
+// InvalidCRDNameErrorCode is the error code for InvalidCRDNameError.
 const InvalidCRDNameErrorCode = "1048"
-
-func init() {
-	crd := fake.CustomResourceDefinition()
-	status.AddExamples(InvalidCRDNameErrorCode, invalidCRDNameError(
-		&crd,
-	))
-}
 
 var invalidCRDNameErrorBuilder = status.NewErrorBuilder(InvalidCRDNameErrorCode)
 
-// invalidCRDNameError reports a CRD with an invalid name in the repo.
-func invalidCRDNameError(resource id.Resource) status.Error {
+// InvalidCRDNameError reports a CRD with an invalid name in the repo.
+func InvalidCRDNameError(resource id.Resource) status.Error {
 	return invalidCRDNameErrorBuilder.WithResources(resource).Errorf(
 		"The CustomResourceDefinition has an invalid name. To fix, change the name to `spec.names.plural+\".\"+spec.group`.")
 }
@@ -50,7 +42,7 @@ func ValidateCRDName(o ast.FileObject) status.Error {
 
 	expectedName := fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
 	if crd.Name != expectedName {
-		return invalidCRDNameError(&o)
+		return InvalidCRDNameError(&o)
 	}
 
 	return nil

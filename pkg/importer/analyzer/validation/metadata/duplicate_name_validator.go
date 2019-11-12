@@ -1,9 +1,11 @@
 package metadata
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -62,7 +64,7 @@ func (v *duplicateNameValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiE
 		resources[i] = object
 	}
 
-	return CheckDuplicates(resources, vet.NamespaceMetadataNameCollisionError)
+	return CheckDuplicates(resources, NamespaceMetadataNameCollisionError)
 }
 
 // ValidateCluster ensures the Cluster config contains no duplicates.
@@ -72,5 +74,26 @@ func (v *duplicateNameValidator) ValidateCluster(c []*ast.ClusterObject) status.
 		resources[i] = object
 	}
 
-	return CheckDuplicates(resources, vet.ClusterMetadataNameCollisionError)
+	return CheckDuplicates(resources, ClusterMetadataNameCollisionError)
+}
+
+// NameCollisionErrorCode is the error code for ObjectNameCollisionError
+const NameCollisionErrorCode = "1029"
+
+// NameCollisionErrorBuilder is
+var NameCollisionErrorBuilder = status.NewErrorBuilder(NameCollisionErrorCode)
+
+// NamespaceMetadataNameCollisionError reports that multiple namespace-scoped objects of the same Kind and
+// namespace have the same metadata name
+func NamespaceMetadataNameCollisionError(resources ...id.Resource) status.Error {
+	return NameCollisionErrorBuilder.WithResources(resources...).Errorf(
+		fmt.Sprintf("Namespace configs of the same Kind MUST have unique names if they also have the same %[1]s or parent %[2]s(s):",
+			node.Namespace, strings.ToLower(string(node.AbstractNamespace))))
+}
+
+// ClusterMetadataNameCollisionError reports that multiple cluster-scoped objects of the same Kind and
+// namespace have the same metadata name
+func ClusterMetadataNameCollisionError(resources ...id.Resource) status.Error {
+	return NameCollisionErrorBuilder.WithResources(resources...).New(
+		"Cluster configs of the same Kind MUST have unique names")
 }

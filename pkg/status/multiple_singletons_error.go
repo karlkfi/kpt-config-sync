@@ -7,10 +7,6 @@ import (
 // MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
 const MultipleSingletonsErrorCode = "2012"
 
-func init() {
-	AddExamples(MultipleSingletonsErrorCode, MultipleSingletonsError())
-}
-
 var multipleSingletonsError = NewErrorBuilder(MultipleSingletonsErrorCode)
 
 // MultipleSingletonsError reports that multiple singleton resources were found on the cluster.

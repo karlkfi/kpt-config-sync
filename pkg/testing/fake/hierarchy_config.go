@@ -31,13 +31,17 @@ func HierarchyConfig(opts ...core.MetaMutator) ast.FileObject {
 	return HierarchyConfigAtPath("system/hc.yaml", opts...)
 }
 
-// HierarchyConfigAtPath returns a HierarchyConfig at the specified path.
-func HierarchyConfigAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+// HierarchyConfigObject initializes a HierarchyConfig.
+func HierarchyConfigObject(opts ...core.MetaMutator) *v1.HierarchyConfig {
 	result := &v1.HierarchyConfig{TypeMeta: toTypeMeta(kinds.HierarchyConfig())}
 	defaultMutate(result)
 	for _, opt := range opts {
 		opt(result)
 	}
+	return result
+}
 
-	return FileObject(result, path)
+// HierarchyConfigAtPath returns a HierarchyConfig at the specified path.
+func HierarchyConfigAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(HierarchyConfigObject(opts...), path)
 }

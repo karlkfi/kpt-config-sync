@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -13,7 +12,7 @@ import (
 func TestUniqueNamespaceValidator(t *testing.T) {
 	test := visitortesting.ObjectsValidatorTest{
 		Validator: func() ast.Visitor { return NewSingletonResourceValidator(kinds.Namespace()) },
-		ErrorCode: vet.MultipleSingletonsErrorCode,
+		ErrorCode: MultipleSingletonsErrorCode,
 		TestCases: []visitortesting.ObjectsValidatorTestCase{
 			{
 				Name: "empty",

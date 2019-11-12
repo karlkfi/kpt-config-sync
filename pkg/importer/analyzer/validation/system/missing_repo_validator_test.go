@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -13,7 +12,7 @@ import (
 func TestMissingRepoValidator(t *testing.T) {
 	test := vt.ObjectsValidatorTest{
 		Validator: system.NewMissingRepoValidator,
-		ErrorCode: vet.MissingRepoErrorCode,
+		ErrorCode: system.MissingRepoErrorCode,
 		TestCases: []vt.ObjectsValidatorTestCase{
 			{
 				Name:       "No repo fails",

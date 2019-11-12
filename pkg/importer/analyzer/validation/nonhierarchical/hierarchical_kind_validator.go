@@ -12,7 +12,8 @@ const IllegalHierarchicalKindErrorCode = "1032"
 
 var illegalHierarchicalKindError = status.NewErrorBuilder(IllegalHierarchicalKindErrorCode)
 
-func illegalHierarchicalKind(resource id.Resource) status.Error {
+// IllegalHierarchicalKind reports that a type is not permitted if hierarchical parsing is disabled.
+func IllegalHierarchicalKind(resource id.Resource) status.Error {
 	return illegalHierarchicalKindError.WithResources(resource).Errorf(
 		"Configs in API Group %q must not be declared if hierarchical parsing is disabled", configmanagement.GroupName,
 	)
@@ -23,7 +24,7 @@ func illegalHierarchicalKind(resource id.Resource) status.Error {
 // The Nomos Hierarchy has been disabled, using any Nomos type is illegal.
 var IllegalHierarchicalKindValidator = perObjectValidator(func(object ast.FileObject) status.Error {
 	if object.GroupVersionKind().Group == configmanagement.GroupName {
-		return illegalHierarchicalKind(&object)
+		return IllegalHierarchicalKind(&object)
 	}
 	return nil
 })

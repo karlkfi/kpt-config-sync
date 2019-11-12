@@ -5,15 +5,10 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/pkg/errors"
 )
 
 // ResourceErrorCode is the error code for a generic ResourceError.
 const ResourceErrorCode = "2010"
-
-func init() {
-	AddExamples(ResourceErrorCode, resourceError(errors.New("resource error")))
-}
 
 // ResourceError defines a status error related to one or more k8s resources.
 type ResourceError interface {

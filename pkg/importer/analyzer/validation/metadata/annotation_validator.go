@@ -1,12 +1,14 @@
 package metadata
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -39,7 +41,7 @@ func NewAnnotationValidator() ast.Visitor {
 				}
 			}
 			if errors != nil {
-				return vet.IllegalAnnotationDefinitionError(&o, errors)
+				return IllegalAnnotationDefinitionError(&o, errors)
 			}
 			return nil
 		})
@@ -57,7 +59,38 @@ func NewManagedAnnotationValidator() ast.Visitor {
 func ValidManagementAnnotation(o ast.FileObject) status.Error {
 	value, found := o.GetAnnotations()[v1.ResourceManagementKey]
 	if found && (value != v1.ResourceManagementDisabled) {
-		return vet.IllegalManagementAnnotationError(&o, value)
+		return IllegalManagementAnnotationError(&o, value)
 	}
 	return nil
+}
+
+// IllegalManagementAnnotationErrorCode is the error code for IllegalManagementAnnotationError.
+const IllegalManagementAnnotationErrorCode = "1005"
+
+var illegalManagementAnnotationError = status.NewErrorBuilder(IllegalManagementAnnotationErrorCode)
+
+// IllegalManagementAnnotationError represents an illegal management annotation value.
+// Error implements error.
+func IllegalManagementAnnotationError(resource id.Resource, value string) status.Error {
+	return illegalManagementAnnotationError.WithResources(resource).Errorf("Config has invalid management annotation %s=%s. Must be %s or unset.",
+		v1.ResourceManagementKey, value, v1.ResourceManagementDisabled)
+}
+
+// IllegalAnnotationDefinitionErrorCode is the error code for IllegalAnnotationDefinitionError
+const IllegalAnnotationDefinitionErrorCode = "1010"
+
+var illegalAnnotationDefinitionError = status.NewErrorBuilder(IllegalAnnotationDefinitionErrorCode)
+
+// IllegalAnnotationDefinitionError represents a set of illegal annotation definitions.
+func IllegalAnnotationDefinitionError(resource id.Resource, annotations []string) status.Error {
+	sort.Strings(annotations) // ensure deterministic annotation order
+	annotations2 := make([]string, len(annotations))
+	for i, annotation := range annotations {
+		annotations2[i] = fmt.Sprintf("%q", annotation)
+	}
+	a := strings.Join(annotations2, ", ")
+	return illegalAnnotationDefinitionError.WithResources(resource).Errorf(
+		"Configs MUST NOT declare unsupported annotations starting with %q. "+
+			"The config has invalid annotations: %s",
+		v1.ConfigManagementPrefix, a)
 }

@@ -220,7 +220,7 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 		}
 	}
 	if invalidKeys != nil {
-		return invalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidKeys)
+		return InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidKeys)
 	}
 	return nil
 }

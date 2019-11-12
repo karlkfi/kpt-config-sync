@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
@@ -24,7 +23,7 @@ func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
 func TestNameExistenceValidation(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
 		Validator: NewNameValidator,
-		ErrorCode: vet.MissingObjectNameErrorCode,
+		ErrorCode: MissingObjectNameErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:       "empty name",
@@ -68,7 +67,7 @@ func TestCrdNameValidation(t *testing.T) {
 func TestTopLevelNamespaceValidation(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
 		Validator: NewNameValidator,
-		ErrorCode: vet.IllegalTopLevelNamespaceErrorCode,
+		ErrorCode: IllegalTopLevelNamespaceErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:       "illegal top level Namespace",

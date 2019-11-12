@@ -4,8 +4,8 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -38,7 +38,7 @@ func validate(n *ast.TreeNode, requiresNamespaceDescendant bool) (bool, status.M
 				// We've found another problematic abstract namespace leaf node below the one requiring a namespace descendant.
 				// That descendant node supersedes the ancestor. So, return an error for the descendant and omit any ancestor
 				// error.
-				errs = status.Append(errs, vet.UnsyncableResourcesInLeaf(n))
+				errs = status.Append(errs, UnsyncableResourcesInLeaf(n))
 				return true, errs
 			}
 			// No valid descendant. Propagate this up to the problematic ancestor.
@@ -59,7 +59,7 @@ func validate(n *ast.TreeNode, requiresNamespaceDescendant bool) (bool, status.M
 
 		// We didn't find any descendants with a Namespace. Generate an error and ensure any problematic ancestors don't
 		// also generate an error.
-		errs = status.Append(errs, vet.UnsyncableResourcesInNonLeaf(n))
+		errs = status.Append(errs, UnsyncableResourcesInNonLeaf(n))
 		return true, errs
 	}
 
@@ -78,4 +78,28 @@ func hasSyncableObjects(n *ast.TreeNode) bool {
 		}
 	}
 	return false
+}
+
+// UnsyncableResourcesErrorCode is the error code for UnsyncableResourcesError
+const UnsyncableResourcesErrorCode = "1044"
+
+var unsyncableResourcesError = status.NewErrorBuilder(UnsyncableResourcesErrorCode)
+
+// UnsyncableResourcesInLeaf reports that a leaf node has resources but is not a Namespace.
+func UnsyncableResourcesInLeaf(dir id.TreeNode) status.Error {
+	return unsyncableResourcesError.WithPaths(dir).Errorf(
+		"An %[1]s directory with configs MUST have at least one %[2]s subdirectory. "+
+			"To fix, do one of the following: add a %[2]s directory below %[3]q, "+
+			"add a Namespace config to %[3]q, "+
+			"or remove the configs in %[3]q:", node.AbstractNamespace, node.Namespace, dir.Name())
+}
+
+// UnsyncableResourcesInNonLeaf reports that a node has resources and descendants, but none of its
+// descendants are Namespaces.
+func UnsyncableResourcesInNonLeaf(dir id.TreeNode) status.Error {
+	return unsyncableResourcesError.WithPaths(dir).Errorf(
+		"An %[1]s directory with configs MUST have at least one %[2]s subdirectory. "+
+			"To fix, do one of the following: add a %[2]s directory below %[3]q, "+
+			"convert a directory below to a %[2]s directory, "+
+			"or remove the configs in %[3]q:", node.AbstractNamespace, node.Namespace, dir.Name())
 }

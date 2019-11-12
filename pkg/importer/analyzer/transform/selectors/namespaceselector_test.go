@@ -7,7 +7,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors/seltest"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -54,7 +53,7 @@ func TestIsConfigApplicableToNamespacenfigApplicableToNamespace(t *testing.T) {
 		{
 			testName: "Unmarshallable",
 			config:   createConfigAnnotation("{"),
-			errors:   []string{vet.InvalidSelectorErrorCode},
+			errors:   []string{InvalidSelectorErrorCode},
 		},
 	}
 

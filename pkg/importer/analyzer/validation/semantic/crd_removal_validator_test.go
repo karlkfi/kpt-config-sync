@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/asttest"
@@ -28,7 +27,7 @@ func CRDInfo(crdInfo *clusterconfig.CRDInfo) ast.BuildOpt {
 
 func TestKnownResourceValidatorWithoutPendingRemovals(t *testing.T) {
 	test := asttest.Validator(NewCRDRemovalValidator,
-		vet.UnsupportedCRDRemovalErrorCode,
+		UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("no CRD pending delete for corresponding namespace-scoped Custom Resource",
 			fake.CustomResourceDefinition(),
 			fake.AnvilAtPath("namespaces/anvil.yaml"),
@@ -49,7 +48,7 @@ func TestKnownResourceValidatorWithPendingRemovals(t *testing.T) {
 	})
 
 	test := asttest.Validator(NewCRDRemovalValidator,
-		vet.UnsupportedCRDRemovalErrorCode,
+		UnsupportedCRDRemovalErrorCode,
 		asttest.Pass("CRD pending delete, but no corresponding Custom Resource"),
 		asttest.Fail("CRD pending delete for corresponding namespace-scoped Custom Resource",
 			fake.AnvilAtPath("namespaces/anvil.yaml"),

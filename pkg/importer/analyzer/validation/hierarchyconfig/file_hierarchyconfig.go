@@ -25,14 +25,14 @@ func (c FileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
 	for _, resource := range c.Spec.Resources {
 		if len(resource.Kinds) == 0 {
 			result = append(result, FileGroupKindHierarchyConfig{
-				groupKind:     schema.GroupKind{Group: resource.Group},
+				GK:            schema.GroupKind{Group: resource.Group},
 				HierarchyMode: resource.HierarchyMode,
 				Resource:      c.Resource,
 			})
 		} else {
 			for _, kind := range resource.Kinds {
 				result = append(result, FileGroupKindHierarchyConfig{
-					groupKind:     schema.GroupKind{Group: resource.Group, Kind: kind},
+					GK:            schema.GroupKind{Group: resource.Group, Kind: kind},
 					HierarchyMode: resource.HierarchyMode,
 					Resource:      c.Resource,
 				})
@@ -44,8 +44,8 @@ func (c FileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
 
 // FileGroupKindHierarchyConfig Identifies a Group/Kind definition in a HierarchyConfig.
 type FileGroupKindHierarchyConfig struct {
-	// groupKind is the Group/Kind which the HierarchyConfig defined.
-	groupKind schema.GroupKind
+	// GK is the Group/Kind which the HierarchyConfig defined.
+	GK schema.GroupKind
 	// HierarchyMode is the hierarchy mode which the HierarchyConfig defined for the Kind.
 	HierarchyMode v1.HierarchyModeType
 	// Resource is the source file defining the HierarchyConfig.
@@ -56,5 +56,5 @@ var _ id.HierarchyConfig = FileGroupKindHierarchyConfig{}
 
 // GroupKind implements vet.HierarchyConfig
 func (s FileGroupKindHierarchyConfig) GroupKind() schema.GroupKind {
-	return s.groupKind
+	return s.GK
 }

@@ -1,6 +1,8 @@
 package asttesting
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -13,26 +15,34 @@ import (
 //
 // gvk is the GroupVersionKind the FileObject will pretend to be.
 // path is the desired slash path relative to nomos root.
-func NewFakeFileObject(gvk schema.GroupVersionKind, path string) ast.FileObject {
+func NewFakeFileObject(gvk schema.GroupVersionKind, path string, mutators ...core.MetaMutator) ast.FileObject {
 	return ast.FileObject{
-		Object: NewFakeObject(gvk),
+		Object: NewFakeObject(gvk, mutators...),
 		Path:   cmpath.FromSlash(path),
 	}
 }
 
 // NewFakeObject returns a fake runtime.Object for testing.
 // This is for when the only things you care about are the Kind and Metadata.
-func NewFakeObject(gvk schema.GroupVersionKind) *FakeObject {
-	return &FakeObject{
-		ObjectMeta: &v1.ObjectMeta{},
+func NewFakeObject(gvk schema.GroupVersionKind, mutators ...core.MetaMutator) *FakeObject {
+	result := &FakeObject{
+		ObjectMeta: &v1.ObjectMeta{
+			Name: strings.ToLower(gvk.Kind),
+		},
 		TypeMeta: &v1.TypeMeta{
 			Kind:       gvk.Kind,
 			APIVersion: gvk.GroupVersion().String(),
 		},
 	}
+
+	for _, m := range mutators {
+		m(result)
+	}
+
+	return result
 }
 
-// FakeObject implements a bare bones version of runtime.Object for testing.
+// FakeObject implements a bare bones version of runtime.Object for testing and documentation.
 type FakeObject struct {
 	*v1.ObjectMeta
 	*v1.TypeMeta

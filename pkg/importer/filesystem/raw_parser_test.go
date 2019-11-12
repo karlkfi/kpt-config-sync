@@ -8,7 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -109,7 +109,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 				fake.Role(core.Name("alice"), core.Namespace("shipping")),
 				fake.Role(core.Name("alice"), core.Namespace("shipping")),
 			},
-			expectedErrorCode: vet.MetadataNameCollisionErrorCode,
+			expectedErrorCode: metadata.NameCollisionErrorCode,
 		},
 	}
 

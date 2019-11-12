@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
@@ -41,7 +40,7 @@ func crd(path, name string, gvk schema.GroupVersionKind) ast.FileObject {
 func TestDisallowedCRDsValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
 		Validator: NewDisallowedCRDValidator,
-		ErrorCode: vet.UnsupportedObjectErrorCode,
+		ErrorCode: UnsupportedObjectErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name:       "clusterconfig CRD",

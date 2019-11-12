@@ -3,7 +3,6 @@ package syntax
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/api/extensions/v1beta1"
@@ -12,7 +11,7 @@ import (
 func TestDeprecatedGroupKindValidator(t *testing.T) {
 	test := vt.ObjectValidatorTest{
 		Validator: NewDeprecatedGroupKindValidator,
-		ErrorCode: vet.DeprecatedGroupKindErrorCode,
+		ErrorCode: DeprecatedGroupKindErrorCode,
 		TestCases: []vt.ObjectValidatorTestCase{
 			{
 				Name: "deprecated deployment",

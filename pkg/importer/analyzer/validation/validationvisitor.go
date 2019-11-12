@@ -1,15 +1,18 @@
 package validation
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -71,7 +74,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		// If len == 1, this is a child of namespaces/ and so it cannot be the child of a Namespace directory.
 		// We check for the two cases above elsewhere, so adding errors here adds noise and incorrect advice.
 		if parent := v.nodes[len(v.nodes)-1]; parent.Type == node.Namespace {
-			v.errs = status.Append(v.errs, vet.IllegalNamespaceSubdirectoryError(n, parent))
+			v.errs = status.Append(v.errs, IllegalNamespaceSubdirectoryError(n, parent))
 		}
 	}
 	for _, s := range n.Selectors {
@@ -90,7 +93,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelector) {
 	if a := s.GetAnnotations(); a != nil {
 		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
-			v.errs = status.Append(v.errs, vet.NamespaceSelectorMayNotHaveAnnotation(s))
+			v.errs = status.Append(v.errs, NamespaceSelectorMayNotHaveAnnotation(s))
 		}
 	}
 }
@@ -112,7 +115,7 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	if n.Type == node.AbstractNamespace {
 		spec, found := v.inheritanceSpecs[gvk.GroupKind()]
 		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
-			v.errs = status.Append(v.errs, vet.IllegalAbstractNamespaceObjectKindError(o))
+			v.errs = status.Append(v.errs, IllegalAbstractNamespaceObjectKindError(o))
 		}
 	}
 
@@ -121,4 +124,44 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 	}
 
 	return v.Base.VisitObject(o)
+}
+
+// IllegalNamespaceSubdirectoryErrorCode is the error code for IllegalNamespaceSubdirectoryError
+const IllegalNamespaceSubdirectoryErrorCode = "1003"
+
+var illegalNamespaceSubdirectoryError = status.NewErrorBuilder(IllegalNamespaceSubdirectoryErrorCode)
+
+// IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
+func IllegalNamespaceSubdirectoryError(child, parent id.TreeNode) status.Error {
+	// TODO: We don't really need the parent node since it can be inferred from the Child.
+	return illegalNamespaceSubdirectoryError.WithPaths(child, parent).Errorf("A %[1]s directory MUST NOT have subdirectories. "+
+		"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
+		"%[3]s",
+		node.Namespace, child.Name(), id.PrintTreeNode(child), parent.Name())
+}
+
+// IllegalAbstractNamespaceObjectKindErrorCode is the error code for IllegalAbstractNamespaceObjectKindError
+const IllegalAbstractNamespaceObjectKindErrorCode = "1007"
+
+var illegalAbstractNamespaceObjectKindError = status.NewErrorBuilder(IllegalAbstractNamespaceObjectKindErrorCode)
+
+// IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
+// TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
+func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error {
+	return illegalAbstractNamespaceObjectKindError.Errorf(
+		"Config `%[3]s` illegally declared in an %[1]s directory. "+
+			"Move this config to a %[2]s directory:",
+		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.GetName())
+}
+
+// NamespaceSelectorMayNotHaveAnnotationCode is the error code for NamespaceSelectorMayNotHaveAnnotation
+const NamespaceSelectorMayNotHaveAnnotationCode = "1012"
+
+var namespaceSelectorMayNotHaveAnnotation = status.NewErrorBuilder(NamespaceSelectorMayNotHaveAnnotationCode)
+
+// NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
+// an annotation that is not allowed.
+func NamespaceSelectorMayNotHaveAnnotation(object core.Object) status.Error {
+	// TODO(willbeason): Print information about the object so it can actually be found.
+	return namespaceSelectorMayNotHaveAnnotation.Errorf("The NamespaceSelector config %q MUST NOT have ClusterSelector annotation", object.GetName())
 }

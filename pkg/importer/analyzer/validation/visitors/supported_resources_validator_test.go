@@ -3,10 +3,10 @@ package visitors
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
 )
@@ -17,7 +17,7 @@ func TestSupportedClusterResourcesValidator(t *testing.T) {
 	}
 	test := visitortesting.ObjectValidatorTest{
 		Validator: newSupportedClusterResourcesValidator,
-		ErrorCode: vet.UnsupportedObjectErrorCode,
+		ErrorCode: syntax.UnsupportedObjectErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:   "clusterrole Object",

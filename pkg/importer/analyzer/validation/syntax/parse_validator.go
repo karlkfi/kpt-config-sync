@@ -2,8 +2,8 @@ package syntax
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,9 +28,21 @@ func NewParseValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
 		if _, ok := o.Object.(*unstructured.Unstructured); ok {
 			if requiredTypedStructs[o.GroupVersionKind()] {
-				return vet.ObjectParseError(&o)
+				return ObjectParseError(&o)
 			}
 		}
 		return nil
 	})
+}
+
+// ObjectParseErrorCode is the code for ObjectParseError.
+const ObjectParseErrorCode = "1006"
+
+var objectParseError = status.NewErrorBuilder(ObjectParseErrorCode)
+
+// ObjectParseError reports that an object of known type did not match its definition, and so it was
+// read in as an *unstructured.Unstructured.
+func ObjectParseError(resource id.Resource) status.Error {
+	return objectParseError.WithResources(resource).Errorf(
+		"The following config is not parseable as a %v:", resource.GroupVersionKind())
 }

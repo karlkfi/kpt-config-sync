@@ -2,6 +2,7 @@ package status
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -42,13 +43,15 @@ type Causer interface {
 // registered is a map from error codes to instances of the types they represent.
 // Entries set to true are reserved and MUST NOT be reused.
 var registered = map[string]bool{
+	"1015": true,
+	"1018": true,
+	"1022": true,
 	"1023": true,
 	"1025": true,
+	"1026": true,
+	"1035": true,
+	"1049": true,
 }
-
-// examples is a map of examples of each error type. For documentation purposes, i.e. for use
-// in the internal-only nomoserrors command.
-var examples = make(map[string][]Error)
 
 // format formats error messages consistently.
 //
@@ -92,16 +95,6 @@ func nextCandidate(code string) (int, error) {
 	panic("unreachable code")
 }
 
-// AddExamples adds examples for a specific error code for use in documentation. For example, via
-// the internal-only `nomoserrors` command.
-func AddExamples(code string, errs ...Error) {
-	for _, err := range errs {
-		// Ensures example errors can be displayed.
-		_ = err.Error()
-	}
-	examples[code] = append(examples[code], errs...)
-}
-
 // Register marks the passed error code as used. err is a sample value of Error
 // for this code.
 func register(code string) {
@@ -115,13 +108,15 @@ func register(code string) {
 	registered[code] = true
 }
 
-// Registry returns a copy of the error registry.
-func Registry() map[string][]Error {
-	result := make(map[string][]Error)
-	for code, errs := range examples {
-		result[code] = append(result[code], errs...)
+// CodeRegistry returns a sorted list of currently registered error codes.
+func CodeRegistry() []string {
+	var codes []string
+	for code := range registered {
+		codes = append(codes, code)
 	}
-	return result
+	sort.Strings(codes)
+
+	return codes
 }
 
 // toErrorResource converts a Resource into a v1.ErrorResource.

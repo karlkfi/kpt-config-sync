@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -12,7 +11,7 @@ import (
 func TestNamespaceValidator(t *testing.T) {
 	test := asttest.Validator(
 		NewNamespaceValidator,
-		vet.IllegalMetadataNamespaceDeclarationErrorCode,
+		IllegalMetadataNamespaceDeclarationErrorCode,
 		asttest.Pass("no metadata.namespace",
 			fake.RoleAtPath("namespaces/foo/role.yaml", core.Namespace("")),
 		),

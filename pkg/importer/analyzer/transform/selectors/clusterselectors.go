@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -81,7 +80,7 @@ func NewClusterSelectors(
 		name := cs.ObjectMeta.Name
 		s, err := AsPopulatedSelector(&cs.Spec.Selector)
 		if err != nil {
-			return nil, vet.InvalidSelectorError(name, err)
+			return nil, InvalidSelectorError(name, err)
 		}
 		if IsSelected(cc.cluster.ObjectMeta.Labels, s) {
 			cc.selectors[name] = cs

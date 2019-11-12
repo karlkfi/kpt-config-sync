@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	testing2 "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/repo"
@@ -15,7 +14,7 @@ const notAllowedRepoVersion = "0.0.0"
 func TestRepoVersionValidator(t *testing.T) {
 	test := testing2.ObjectValidatorTest{
 		Validator: system.NewRepoVersionValidator,
-		ErrorCode: vet.UnsupportedRepoSpecVersionCode,
+		ErrorCode: system.UnsupportedRepoSpecVersionCode,
 		TestCases: []testing2.ObjectValidatorTestCase{
 			{
 				Name:   "Hierarhcy Config is fine",

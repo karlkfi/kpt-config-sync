@@ -1,10 +1,10 @@
 package nonhierarchical
 
 import (
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -20,7 +20,7 @@ func validNamespace(o ast.FileObject) status.Error {
 	// capital letters.
 	errs := validation.IsDNS1123Label(o.GetNamespace())
 	if errs != nil {
-		return vet.InvalidNamespaceError(&o, errs)
+		return syntax.InvalidNamespaceError(&o, errs)
 	}
 	return nil
 }

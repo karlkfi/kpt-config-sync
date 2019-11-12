@@ -6,7 +6,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -88,17 +87,17 @@ var testcases = []quotaValidationVisitorTestCase{
 	{
 		name:  "set Scopes",
 		input: makeTree(makeQuota(true, false)),
-		error: []string{vet.IllegalResourceQuotaFieldErrorCode},
+		error: []string{IllegalResourceQuotaFieldErrorCode},
 	},
 	{
 		name:  "set ScopeSelector",
 		input: makeTree(makeQuota(false, true)),
-		error: []string{vet.IllegalResourceQuotaFieldErrorCode},
+		error: []string{IllegalResourceQuotaFieldErrorCode},
 	},
 	{
 		name:  "set Scopes and ScopeSelector",
 		input: makeTree(makeQuota(true, true)),
-		error: []string{vet.IllegalResourceQuotaFieldErrorCode, vet.IllegalResourceQuotaFieldErrorCode},
+		error: []string{IllegalResourceQuotaFieldErrorCode, IllegalResourceQuotaFieldErrorCode},
 	},
 }
 

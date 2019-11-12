@@ -48,6 +48,11 @@ func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	return obj
 }
 
+// ResourceQuota initializes a FileObject with a ResourceQuota.
+func ResourceQuota(opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(ResourceQuotaObject(opts...), "namespaces/foo/rq.yaml")
+}
+
 // RoleBindingObject initializes a RoleBinding.
 func RoleBindingObject(opts ...core.MetaMutator) *rbacv1.RoleBinding {
 	obj := &rbacv1.RoleBinding{TypeMeta: toTypeMeta(kinds.RoleBinding())}

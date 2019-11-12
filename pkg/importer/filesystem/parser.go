@@ -16,7 +16,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -266,10 +265,10 @@ func ValidateInstallation(client genericclioptions.RESTClientGetter) status.Mult
 	_, rErr := discoveryClient.ServerResourcesForGroupVersion(gv)
 	if rErr != nil {
 		if apierrors.IsNotFound(rErr) {
-			return vet.ConfigManagementNotInstalledError(
+			return ConfigManagementNotInstalledError(
 				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv))
 		}
-		return vet.ConfigManagementNotInstalledError(rErr)
+		return ConfigManagementNotInstalledError(rErr)
 	}
 	return nil
 }

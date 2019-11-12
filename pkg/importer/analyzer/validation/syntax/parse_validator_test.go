@@ -3,7 +3,6 @@ package syntax
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -11,7 +10,7 @@ import (
 
 func TestParseValidator(t *testing.T) {
 	test := asttest.Validator(NewParseValidator,
-		vet.ObjectParseErrorCode,
+		ObjectParseErrorCode,
 		asttest.Pass("cluster",
 			fake.Cluster(),
 		),

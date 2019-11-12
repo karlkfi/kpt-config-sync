@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -12,7 +11,7 @@ import (
 
 func TestDuplicateNameValidator(t *testing.T) {
 	test := asttest.Validator(NewDuplicateNameValidator,
-		vet.MetadataNameCollisionErrorCode,
+		NameCollisionErrorCode,
 
 		asttest.Pass("no objects passes"),
 		asttest.Pass("one object passes",

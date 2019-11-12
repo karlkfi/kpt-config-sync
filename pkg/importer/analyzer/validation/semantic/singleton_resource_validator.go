@@ -2,9 +2,9 @@ package semantic
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -20,8 +20,27 @@ func NewSingletonResourceValidator(gvk schema.GroupVersionKind) *visitor.Validat
 			}
 		}
 		if len(duplicates) > 1 {
-			return vet.MultipleSingletonsError(duplicates...)
+			return MultipleSingletonsError(duplicates...)
 		}
 		return nil
 	})
+}
+
+// TODO(ekitson): Replace usage of this error with id.MultipleSingletonsError instead
+
+// MultipleSingletonsErrorCode is the error code for MultipleSingletonsError
+const MultipleSingletonsErrorCode = "1030"
+
+var multipleSingletonsError = status.NewErrorBuilder(MultipleSingletonsErrorCode)
+
+// MultipleSingletonsError reports that multiple singletons are defined in the same directory.
+func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
+	var gvk schema.GroupVersionKind
+	if len(duplicates) > 0 {
+		gvk = duplicates[0].GroupVersionKind()
+	}
+
+	return multipleSingletonsError.WithResources(duplicates...).Errorf(
+		"A directory may declare at most one %[1]q Resource:",
+		kinds.ResourceString(gvk))
 }

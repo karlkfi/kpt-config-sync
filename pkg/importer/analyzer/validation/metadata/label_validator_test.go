@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -18,7 +17,7 @@ const (
 
 func TestLabelValidator(t *testing.T) {
 	test := asttest.Validator(NewLabelValidator,
-		vet.IllegalLabelDefinitionErrorCode,
+		IllegalLabelDefinitionErrorCode,
 
 		asttest.Pass("no labels",
 			fake.Role(),

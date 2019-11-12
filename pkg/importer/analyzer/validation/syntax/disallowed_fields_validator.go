@@ -6,18 +6,11 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IllegalFieldsInConfigErrorCode is the error code for IllegalFieldsInConfigError
 const IllegalFieldsInConfigErrorCode = "1045"
-
-func init() {
-	replicaSet := fake.ReplicaSet()
-	status.AddExamples(IllegalFieldsInConfigErrorCode,
-		IllegalFieldsInConfigError(&replicaSet, id.OwnerReference))
-}
 
 // NewDisallowedFieldsValidator validates that imported objects do not contain disallowed fields.
 func NewDisallowedFieldsValidator() *visitor.ValidatorVisitor {

@@ -1,17 +1,12 @@
-package vet
+package filesystem
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/status"
-	"github.com/pkg/errors"
 )
 
 // ConfigManagementNotInstalledErrorCode is the error code for ConfigManagementNotInstalledError
 const ConfigManagementNotInstalledErrorCode = "1016"
-
-func init() {
-	status.AddExamples(ConfigManagementNotInstalledErrorCode, ConfigManagementNotInstalledError(errors.New("cluster doesn't have required CRD")))
-}
 
 var configManagementNotInstalledError = status.NewErrorBuilder(ConfigManagementNotInstalledErrorCode)
 

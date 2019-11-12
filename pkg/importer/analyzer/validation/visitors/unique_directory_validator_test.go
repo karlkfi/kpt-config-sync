@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -12,7 +11,7 @@ import (
 func TestUniqueDirectoryValidator(t *testing.T) {
 	test := visitortesting.ObjectsValidatorTest{
 		Validator: NewUniqueDirectoryValidator,
-		ErrorCode: vet.DuplicateDirectoryNameErrorCode,
+		ErrorCode: DuplicateDirectoryNameErrorCode,
 		TestCases: []visitortesting.ObjectsValidatorTestCase{
 			{
 				Name: "empty",

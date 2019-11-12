@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -18,7 +17,7 @@ const (
 
 func TestAnnotationValidator(t *testing.T) {
 	test := asttest.Validator(NewAnnotationValidator,
-		vet.IllegalAnnotationDefinitionErrorCode,
+		IllegalAnnotationDefinitionErrorCode,
 
 		asttest.Pass("no annotations",
 			fake.Role(),
@@ -60,7 +59,7 @@ func TestAnnotationValidator(t *testing.T) {
 
 func TestNewManagedAnnotationValidator(t *testing.T) {
 	test := asttest.Validator(NewManagedAnnotationValidator,
-		vet.IllegalManagementAnnotationErrorCode,
+		IllegalManagementAnnotationErrorCode,
 
 		asttest.Pass("no management annotation",
 			fake.Role(),

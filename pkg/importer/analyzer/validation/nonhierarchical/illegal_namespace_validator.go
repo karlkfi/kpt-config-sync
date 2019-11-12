@@ -13,13 +13,15 @@ const IllegalNamespaceErrorCode = "1034"
 
 var illegalNamespaceError = status.NewErrorBuilder(IllegalNamespaceErrorCode)
 
-func objectInIllegalNamespace(resource id.Resource) status.Error {
+// ObjectInIllegalNamespace reports that an object has been declared in an illegal Namespace.
+func ObjectInIllegalNamespace(resource id.Resource) status.Error {
 	return illegalNamespaceError.WithResources(resource).Errorf(
 		"Configs must not be declared in the %q namespace", configmanagement.ControllerNamespace,
 	)
 }
 
-func illegalNamespace(resource id.Resource) status.Error {
+// IllegalNamespace reports that the config-management-system Namespace MUST NOT be declared.
+func IllegalNamespace(resource id.Resource) status.Error {
 	return illegalNamespaceError.WithResources(resource).Errorf(
 		"The %q Namespace must not be declared", configmanagement.ControllerNamespace,
 	)
@@ -28,10 +30,10 @@ func illegalNamespace(resource id.Resource) status.Error {
 // IllegalNamespaceValidator forbids declaring resources in the ControllerNamespace.
 var IllegalNamespaceValidator = perObjectValidator(func(object ast.FileObject) status.Error {
 	if object.GetNamespace() == configmanagement.ControllerNamespace {
-		return objectInIllegalNamespace(&object)
+		return ObjectInIllegalNamespace(&object)
 	}
 	if object.GroupVersionKind() == kinds.Namespace() && object.GetName() == configmanagement.ControllerNamespace {
-		return illegalNamespace(&object)
+		return IllegalNamespace(&object)
 	}
 	return nil
 })

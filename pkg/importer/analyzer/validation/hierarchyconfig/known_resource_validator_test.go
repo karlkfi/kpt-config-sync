@@ -8,7 +8,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -61,7 +60,7 @@ func TestKnownResourceValidatorUnknown(t *testing.T) {
 	}
 
 	test := asttest.Validator(NewKnownResourceValidator,
-		vet.UnknownResourceInHierarchyConfigErrorCode,
+		UnknownResourceInHierarchyConfigErrorCode,
 
 		asttest.Fail("ResourceQuota throws error if not known",
 			fake.HierarchyConfig(
@@ -86,7 +85,7 @@ func TestKnownResourceValidatorScope(t *testing.T) {
 	}
 
 	test := asttest.Validator(NewKnownResourceValidator,
-		vet.ClusterScopedResourceInHierarchyConfigErrorCode,
+		ClusterScopedResourceInHierarchyConfigErrorCode,
 		asttest.Fail("ClusterRoleBinding is cluster scoped",
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.ClusterRoleBinding())),

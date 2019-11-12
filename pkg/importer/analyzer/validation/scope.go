@@ -1,9 +1,11 @@
 package validation
 
 import (
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -48,9 +50,9 @@ func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 
 	switch p.scoper.GetScope(gk) {
 	case discovery.NamespaceScope:
-		p.errs = status.Append(p.errs, vet.IllegalKindInClusterError(o))
+		p.errs = status.Append(p.errs, IllegalKindInClusterError(o))
 	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, vet.UnknownObjectError(&o.FileObject))
+		p.errs = status.Append(p.errs, UnknownObjectError(&o.FileObject))
 	}
 
 	return o
@@ -62,10 +64,34 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 
 	switch p.scoper.GetScope(gk) {
 	case discovery.ClusterScope:
-		p.errs = status.Append(p.errs, vet.IllegalKindInNamespacesError(o))
+		p.errs = status.Append(p.errs, syntax.IllegalKindInNamespacesError(o))
 	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, vet.UnknownObjectError(&o.FileObject))
+		p.errs = status.Append(p.errs, UnknownObjectError(&o.FileObject))
 	}
 
 	return o
+}
+
+// UnknownObjectErrorCode is the error code for UnknownObjectError
+const UnknownObjectErrorCode = "1021" // Impossible to create consistent example.
+
+var unknownObjectError = status.NewErrorBuilder(UnknownObjectErrorCode)
+
+// UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
+func UnknownObjectError(resource id.Resource) status.Error {
+	return unknownObjectError.WithResources(resource).New(
+		"No CustomResourceDefinition is defined for the resource in the cluster. " +
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.")
+}
+
+// IllegalKindInClusterErrorCode is the error code for IllegalKindInClusterError
+const IllegalKindInClusterErrorCode = "1039"
+
+var illegalKindInClusterError = status.NewErrorBuilder(IllegalKindInClusterErrorCode)
+
+// IllegalKindInClusterError reports that an object has been illegally defined in cluster/
+func IllegalKindInClusterError(resource id.Resource) status.Error {
+	return illegalKindInClusterError.WithResources(resource).Errorf(
+		"Namespace-scoped configs of the below Kind must not be declared in `%s`/:",
+		repo.ClusterDir)
 }

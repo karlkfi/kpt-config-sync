@@ -4,8 +4,8 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,7 +32,7 @@ func ValidateKinds(config FileGroupKindHierarchyConfig) status.MultiError {
 	if AllowedInHierarchyConfigs(config.GroupKind()) {
 		return nil
 	}
-	return vet.UnsupportedResourceInHierarchyConfigError(config)
+	return UnsupportedResourceInHierarchyConfigError(config)
 }
 
 // AllowedInHierarchyConfigs returns true if the passed GroupKind is allowed to be declared in HierarchyConfigs.
@@ -48,4 +48,17 @@ func unsupportedHierarchyConfigResources() map[schema.GroupKind]bool {
 	}
 
 	return m
+}
+
+// UnsupportedResourceInHierarchyConfigErrorCode is the error code for UnsupportedResourceInHierarchyConfigError
+const UnsupportedResourceInHierarchyConfigErrorCode = "1041"
+
+var unsupportedResourceInHierarchyConfigError = status.NewErrorBuilder(UnsupportedResourceInHierarchyConfigErrorCode)
+
+// UnsupportedResourceInHierarchyConfigError reports that config management is unsupported for a Resource defined in a HierarchyConfig.
+func UnsupportedResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
+	gk := config.GroupKind()
+	return unsupportedResourceInHierarchyConfigError.WithResources(config).Errorf(
+		"The %q APIResource MUST NOT be declared in a HierarchyConfig:",
+		gk.String())
 }

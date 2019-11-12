@@ -3,10 +3,11 @@ package syntax
 import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -44,7 +45,7 @@ func NewNamespaceKindValidator() *visitor.ValidatorVisitor {
 }
 
 func illegalObject(r *ast.NamespaceObject) status.Error {
-	return vet.IllegalKindInNamespacesError(r)
+	return IllegalKindInNamespacesError(r)
 }
 
 var (
@@ -67,4 +68,16 @@ func checkForbiddenGVK(o *ast.NamespaceObject, disallowed map[schema.GroupKind]b
 		return illegalObject(o)
 	}
 	return nil
+}
+
+// IllegalKindInNamespacesErrorCode is the error code for IllegalKindInNamespacesError
+const IllegalKindInNamespacesErrorCode = "1038"
+
+var illegalKindInNamespacesError = status.NewErrorBuilder(IllegalKindInNamespacesErrorCode)
+
+// IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/
+func IllegalKindInNamespacesError(resource id.Resource) status.Error {
+	return illegalKindInNamespacesError.WithResources(resource).Errorf(
+		"Configs of the below Kind may not be declared in `%s`/:",
+		repo.NamespacesDir)
 }

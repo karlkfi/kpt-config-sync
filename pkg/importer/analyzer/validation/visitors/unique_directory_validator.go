@@ -3,7 +3,6 @@ package visitors
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/vet"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -31,8 +30,19 @@ func validateUniqueDirectories(nodes []*ast.TreeNode) status.MultiError {
 	var errs status.MultiError
 	for _, dirs := range names {
 		if len(dirs) > 1 {
-			errs = status.Append(errs, vet.DuplicateDirectoryNameError(dirs...))
+			errs = status.Append(errs, DuplicateDirectoryNameError(dirs...))
 		}
 	}
 	return errs
+}
+
+// DuplicateDirectoryNameErrorCode is the error code for DuplicateDirectoryNameError
+const DuplicateDirectoryNameErrorCode = "1002"
+
+var duplicateDirectoryNameError = status.NewErrorBuilder(DuplicateDirectoryNameErrorCode)
+
+// DuplicateDirectoryNameError represents an illegal duplication of directory names.
+func DuplicateDirectoryNameError(dirs ...id.Path) status.Error {
+	return duplicateDirectoryNameError.WithPaths(dirs...).New(
+		"Directory names MUST be unique. Rename one of these directories:")
 }
