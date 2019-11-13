@@ -4,22 +4,32 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/google/nomos/cmd/nomoserrors/examples"
 	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
 )
 
+var idFlag string
+
 var rootCmd = &cobra.Command{
 	Use:   "nomoserrors",
-	Short: "List all error codes and exampleErrors",
+	Short: "List all error codes and example errors",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		examples := examples.Generate()
 
-		printErrorCodes(examples)
-		printErrors(examples)
+		if idFlag == "" {
+			printErrorCodes()
+		}
+		idFlag = strings.TrimPrefix(idFlag, "KNV")
+		printErrors(idFlag, examples)
 	},
+}
+
+func init() {
+	rootCmd.Flags().StringVar(&idFlag, "id", "", "if set, only print errors for the passed ID")
 }
 
 func main() {
@@ -40,7 +50,7 @@ func sortedErrors(e map[string][]status.Error) []status.Error {
 	return allErrs
 }
 
-func printErrorCodes(e map[string][]status.Error) {
+func printErrorCodes() {
 	fmt.Println("=== USED ERROR CODES ===")
 	for _, code := range status.CodeRegistry() {
 		fmt.Println(code)
@@ -48,10 +58,14 @@ func printErrorCodes(e map[string][]status.Error) {
 	fmt.Println()
 }
 
-func printErrors(e map[string][]status.Error) {
+func printErrors(id string, e map[string][]status.Error) {
 	fmt.Println("=== SAMPLE ERRORS ===")
+	fmt.Println()
 	for _, err := range sortedErrors(e) {
-		fmt.Println(err.Error())
-		fmt.Println()
+		if id == "" || err.Code() == id {
+			fmt.Println(err.Error())
+			fmt.Println()
+			fmt.Println()
+		}
 	}
 }

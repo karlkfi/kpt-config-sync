@@ -3,24 +3,17 @@ package syntax
 import (
 	"testing"
 
-	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestDirectoryNameValidator_Pass(t *testing.T) {
-	test := vt.ObjectValidatorTest{
-		Validator: NewDirectoryNameValidator,
-		TestCases: []vt.ObjectValidatorTestCase{
-			{
-				Name:   "foo",
-				Object: fake.RoleAtPath("namespaces/foo/role.yaml"),
-			},
-			{
-				Name:   "foo1",
-				Object: fake.RoleAtPath("namespaces/foo1/role.yaml"),
-			},
-		},
-	}
+	test := asttest.Validator(NewDirectoryNameValidator,
+		InvalidDirectoryNameErrorCode,
+		asttest.Pass("valid name", fake.Namespace("namespaces/foo")),
+		asttest.Fail("invalid name", fake.Namespace("namespaces/...")),
+		asttest.Fail("controller namespace", fake.Namespace("namespaces/"+configmanagement.ControllerNamespace)))
 
 	test.RunAll(t)
 }

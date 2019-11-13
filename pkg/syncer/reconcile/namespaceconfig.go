@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
@@ -16,7 +17,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,16 +29,12 @@ import (
 
 const reconcileTimeout = time.Minute * 5
 
-var (
-	_ reconcile.Reconciler = &NamespaceConfigReconciler{}
-
-	// reservedNamespaceConfig is a dummy namespace config used to represent the config content of
-	// non-removable namespaces (like "default") when the corresponding NamespaceConfig is deleted
-	// from the repo. Instead of deleting the namespace and its resources, we apply a change that
-	// removes all managed resources from the namespace, but does not attempt to delete the namespace.
-	// TODO(filmil): See if there is an easy way to hide this nil object.
-	reservedNamespaceConfig = &v1.NamespaceConfig{}
-)
+// reservedNamespaceConfig is a dummy namespace config used to represent the config content of
+// non-removable namespaces (like "default") when the corresponding NamespaceConfig is deleted
+// from the repo. Instead of deleting the namespace and its resources, we apply a change that
+// removes all managed resources from the namespace, but does not attempt to delete the namespace.
+// TODO(filmil): See if there is an easy way to hide this nil object.
+var reservedNamespaceConfig = &v1.NamespaceConfig{}
 
 // NamespaceConfigReconciler reconciles a NamespaceConfig object.
 type NamespaceConfigReconciler struct {
@@ -52,6 +48,8 @@ type NamespaceConfigReconciler struct {
 	// A cancelable ambient context for all reconciler operations.
 	ctx context.Context
 }
+
+var _ reconcile.Reconciler = &NamespaceConfigReconciler{}
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
 func NewNamespaceConfigReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
@@ -75,7 +73,7 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 
 	name := request.Name
 	glog.Infof("Reconciling NamespaceConfig: %q", name)
-	if namespaceutil.IsReserved(name) {
+	if configmanagement.IsControllerNamespace(name) {
 		glog.Errorf("Trying to reconcile a NamespaceConfig corresponding to a reserved namespace: %q", name)
 		// We don't return an error, because we should never be reconciling these NamespaceConfigs in the first place.
 		return reconcile.Result{}, nil
@@ -159,7 +157,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	switch diff.Type() {
 	case differ.Create:
 		if err := r.createNamespace(ctx, config); err != nil {
-			syncErrs = append(syncErrs, NewSyncError(config, err))
+			syncErrs = append(syncErrs, newSyncError(config, err))
 
 			if err2 := r.setNamespaceConfigStatus(ctx, config, syncErrs); err2 != nil {
 				glog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
@@ -170,12 +168,12 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 
 	case differ.Update:
 		if err := r.updateNamespace(ctx, config); err != nil {
-			syncErrs = append(syncErrs, NewSyncError(config, err))
+			syncErrs = append(syncErrs, newSyncError(config, err))
 		}
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Delete:
-		if namespaceutil.IsManageableSystem(name) {
+		if isManageableSystemNamespace(name) {
 			return r.deleteManageableSystem(ctx, ns, config, syncErrs)
 		}
 		return r.deleteNamespace(ctx, ns)
@@ -281,7 +279,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from NamespaceConfig controller for %q", gvk))
-			syncErrs = append(syncErrs, NewSyncError(config, err))
+			syncErrs = append(syncErrs, newSyncError(config, err))
 			continue
 		}
 
@@ -339,8 +337,8 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 	return err
 }
 
-// NewSyncError returns a ConfigManagementError corresponding to the given NamespaceConfig and error
-func NewSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementError {
+// newSyncError returns a ConfigManagementError corresponding to the given NamespaceConfig and error
+func newSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementError {
 	e := v1.ErrorResource{
 		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
 		ResourceName:      config.GetName(),
@@ -365,7 +363,7 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 	for k, v := range namespaceConfig.Labels {
 		core.SetLabel(namespace, k, v)
 	}
-	if !namespaceutil.IsSystem(namespace.GetName()) {
+	if !isSystemNamespace(namespace.GetName()) {
 		// Mark the namespace as supporting the management of hierarchical quota.
 		// But don't interfere with system namespaces, since that could lock us
 		// out of the cluster.

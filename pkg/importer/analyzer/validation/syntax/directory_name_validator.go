@@ -3,37 +3,35 @@ package syntax
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/namespaceutil"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 // NewDirectoryNameValidator validates that directory names are valid and not reserved.
-func NewDirectoryNameValidator() *visitor.ValidatorVisitor {
+func NewDirectoryNameValidator() ast.Visitor {
 	return visitor.NewTreeNodeValidator(
 		func(n *ast.TreeNode) status.MultiError {
 			name := n.Base()
-			if namespaceutil.IsInvalid(name) {
+			if isInvalid(name) {
 				return InvalidDirectoryNameError(n.Path)
-			} else if namespaceutil.IsReserved(name) {
+			}
+			if configmanagement.IsControllerNamespace(name) {
 				return ReservedDirectoryNameError(n.Path)
 			}
 			return nil
 		})
 }
 
-// ReservedDirectoryNameErrorCode is the error code for ReservedDirectoryNameError
-const ReservedDirectoryNameErrorCode = "1001"
-
-var reservedDirectoryNameError = status.NewErrorBuilder(ReservedDirectoryNameErrorCode)
-
-// ReservedDirectoryNameError represents an illegal usage of a reserved name.
-func ReservedDirectoryNameError(dir id.Path) status.Error {
-	return reservedDirectoryNameError.Errorf("Directories MUST NOT have reserved namespace names. Rename or remove %q:",
-		dir.OSPath())
+// isInvalid returns true if Kubernetes does not allow Namespaces with the name "name".
+func isInvalid(name string) bool {
+	// IsDNS1123Label is misleading as the Kubernetes requirements are more stringent than the specification.
+	errs := validation.IsDNS1123Label(name)
+	return len(errs) != 0
 }
 
 // InvalidDirectoryNameErrorCode is the error code for InvalidDirectoryNameError
@@ -41,11 +39,23 @@ const InvalidDirectoryNameErrorCode = "1028"
 
 var invalidDirectoryNameError = status.NewErrorBuilder(InvalidDirectoryNameErrorCode)
 
+// ReservedDirectoryNameError represents an illegal usage of a reserved name.
+func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
+	// TODO(willbeason): Consider moving to Namespace validation instead.
+	//  Strictly speaking, having a directory named "config-management-system" doesn't necessarily mean there are
+	//  any resources declared in that Namespace. That would make this error message clearer.
+	return invalidDirectoryNameError.WithPaths(dir).
+		Errorf("%s repositories MUST NOT declare configs in the %s Namespace. Rename or remove the %q directory.",
+			configmanagement.ProductName, configmanagement.ControllerNamespace, dir.Base())
+}
+
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 func InvalidDirectoryNameError(dir cmpath.Path) status.Error {
 	return invalidDirectoryNameError.WithPaths(dir).Errorf(
-		"Directory names must have fewer than 64 characters, consist of lower case alphanumeric characters or '-', and must "+
-			"start and end with an alphanumeric character. Rename or remove the %q directory:", dir.Base())
+		`Directory names MUST be valid Kubernetes Namespace names. Rename %q so that it:
+1. has a length of 63 characters or fewer;
+2. consists only of lowercase letters (a-z), digits (0-9), and hyphen '-'; and
+3. begins and ends with a lowercase letter or digit.`, dir.Base())
 }
 
 // InvalidNamespaceError reports using an illegal Namespace.

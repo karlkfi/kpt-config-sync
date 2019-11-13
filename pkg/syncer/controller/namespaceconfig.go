@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/syncer/metrics"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -10,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/google/nomos/pkg/util/namespaceutil"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,8 +88,8 @@ func validNamespaceConfigs(o handler.MapObject) []reconcile.Request {
 }
 
 func reconcileRequests(ns string) []reconcile.Request {
-	if namespaceutil.IsReserved(ns) {
-		// Ignore changes to resources outside a namespace Nomos can manage.
+	if configmanagement.IsControllerNamespace(ns) {
+		// Ignore changes to the ACM Controller Namespace.
 		return nil
 	}
 	return []reconcile.Request{{

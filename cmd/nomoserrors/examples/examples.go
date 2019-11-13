@@ -40,8 +40,7 @@ func Generate() map[string][]status.Error {
 	// 1000
 	result.add(status.InternalError.New("we made a mistake"))
 
-	// 1001
-	result.add(syntax.ReservedDirectoryNameError(path("namespaces/kube-system")))
+	// 1001 is Deprecated.
 
 	// 1002
 	result.add(visitors.DuplicateDirectoryNameError(path("namespaces/foo/qux"), path("namespaces/bar/qux")))
@@ -121,6 +120,7 @@ func Generate() map[string][]status.Error {
 	result.add(system.UnsupportedRepoSpecVersion(fake.Repo(fake.RepoVersion("")), "0.0.0"))
 
 	// 1028
+	result.add(syntax.ReservedDirectoryNameError(cmpath.FromSlash("namespaces/" + configmanagement.ControllerNamespace)))
 	result.add(syntax.InvalidDirectoryNameError(cmpath.FromSlash("namespaces/ABC")))
 
 	// 1029
