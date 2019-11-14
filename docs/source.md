@@ -129,7 +129,7 @@ For added confidence, run:
 go mod tidy
 ```
 
-Which will ignore our symlinks report on the health of our dependencies.
+Which will delete any unused dependencies and update the go.mod accordingly.
 
 ## Updating license metadata
 
