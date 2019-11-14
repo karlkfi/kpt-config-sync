@@ -170,7 +170,6 @@ function clean_up_test_resources() {
 }
 
 function clean_up() {
-
   echo "++++ Cleaning up environment"
 
   declare -a waitpids
@@ -333,7 +332,7 @@ flags:
   default: ".*"
 - name: "gcp-prober-cred"
   type: string
-  help: "If set, the supplied credentials file will be used to set up teh identity of the test runner. Otherwise defaults to whatever user is the current default in gcloud and kubectl config."
+  help: "If set, the supplied credentials file will be used to set up the identity of the test runner. Otherwise defaults to whatever user is the current default in gcloud and kubectl config."
 - name: "gcp-cluster-name"
   type: string
   help: "The name of the GCP cluster to use for testing.  This is used to obtain cluster credentials at the start of the installation process"

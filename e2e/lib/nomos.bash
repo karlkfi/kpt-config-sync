@@ -164,7 +164,9 @@ function nomos::repo_synced() {
   local sourceError=false
   local importError=false
   local syncError=false
-  while (( 0 < $# )); do
+  local tokenOverride=""
+
+  while (( "$#" )); do
     local arg="${1:-}"
     shift
     case "$arg" in
@@ -176,6 +178,10 @@ function nomos::repo_synced() {
         ;;
       --syncError)
         syncError=true
+        ;;
+      --tokenOverride)
+        tokenOverride=${1}
+        shift
         ;;
       *)
         args+=("$arg")
@@ -189,7 +195,11 @@ function nomos::repo_synced() {
   fi
 
   local token
-  token="$(git::hash)"
+  if [ -n "${tokenOverride}" ]; then
+    token="${tokenOverride}"
+  else
+    token="$(git::hash)"
+  fi
 
   local output
   # This fixes a race condition for when the repo object is deleted from git SOT
@@ -261,4 +271,3 @@ function nomos::repo_synced() {
     return 1
   fi
 }
-
