@@ -23,16 +23,6 @@ func NewRootValidator(validate func(g *ast.Root) status.MultiError) *ValidatorVi
 	return NewValidator(&rootValidator{validate: validate})
 }
 
-// NewTreeNodesValidator returns a ValidatorVisitor which validates all TreeNodes with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewTreeNodesValidator(validate func(ns []*ast.TreeNode) status.MultiError) *ValidatorVisitor {
-	var nodes []*ast.TreeNode
-	validateRoot := func(g *ast.Root) status.MultiError {
-		return validate(nodes)
-	}
-	return NewRootValidator(validateRoot).WithPrerequisites(newNodeCollector(&nodes))
-}
-
 // systemValidator validates System.
 type systemValidator struct {
 	ValidatorBase

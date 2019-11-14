@@ -14,7 +14,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/visitors"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -188,7 +187,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.ClusterRoleAtPath("cluster/cr-2.yaml", core.Name("alice")),
 		),
 		parsertest.Failure("Namespaces must be uniquely named",
-			visitors.DuplicateDirectoryNameErrorCode,
+			metadata.NameCollisionErrorCode,
 			fake.Namespace("namespaces/foo/bar"),
 			fake.Namespace("namespaces/qux/bar"),
 		),

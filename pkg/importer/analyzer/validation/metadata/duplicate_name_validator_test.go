@@ -66,6 +66,9 @@ func TestDuplicateNameValidator(t *testing.T) {
 				"cluster/clusterrole.yaml", core.Name("clusterrole")),
 			fake.ClusterRoleAtPath("cluster/clusterrole.yaml",
 				core.Name("clusterrole"))),
+		asttest.Fail("two colliding Namespaces",
+			fake.Namespace("namespaces/foo/qux"),
+			fake.Namespace("namespaces/bar/qux")),
 	)
 
 	test.RunAll(t)

@@ -2,7 +2,7 @@ package reconcile
 
 import "strings"
 
-var systemPrefix = "kube-"
+const systemPrefix = "kube-"
 
 // isSystemNamespace returns true if the namespace name denotes a Kubernetes system namespace
 func isSystemNamespace(ns string) bool {

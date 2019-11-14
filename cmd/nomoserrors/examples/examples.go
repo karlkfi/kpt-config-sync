@@ -18,7 +18,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/visitors"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -42,8 +41,7 @@ func Generate() map[string][]status.Error {
 
 	// 1001 is Deprecated.
 
-	// 1002
-	result.add(visitors.DuplicateDirectoryNameError(path("namespaces/foo/qux"), path("namespaces/bar/qux")))
+	// 1002 is Deprecated.
 
 	// 1003
 	result.add(validation.IllegalNamespaceSubdirectoryError(node("namespace/foo/bar"), node("namespaces/foo")))
@@ -124,8 +122,20 @@ func Generate() map[string][]status.Error {
 	result.add(syntax.InvalidDirectoryNameError(cmpath.FromSlash("namespaces/ABC")))
 
 	// 1029
-	result.add(metadata.NamespaceMetadataNameCollisionError(fake.Role(), fake.Role()))
-	result.add(metadata.ClusterMetadataNameCollisionError(fake.ClusterRole(), fake.ClusterRole()))
+	result.add(metadata.NamespaceCollisionError("qux",
+		fake.Namespace("namespaces/foo/qux"),
+		fake.Namespace("namespaces/bar/qux")))
+	result.add(metadata.NamespaceMetadataNameCollisionError(kinds.Role().GroupKind(),
+		"backend", "admin",
+		fake.RoleAtPath("namespaces/backend/admin-1.yaml", core.Namespace("backend"), core.Name("admin")),
+		fake.RoleAtPath("namespaces/backend/admin-2.yaml", core.Namespace("backend"), core.Name("admin")),
+		fake.RoleAtPath("namespaces/backend/admin-3.yaml", core.Namespace("backend"), core.Name("admin")),
+	))
+	result.add(metadata.ClusterMetadataNameCollisionError(kinds.ClusterRole().GroupKind(),
+		"cluster-admin",
+		fake.ClusterRoleAtPath("cluster/admin-1.yaml", core.Name("cluster-admin")),
+		fake.ClusterRoleAtPath("cluster/admin-2.yaml", core.Name("cluster-admin")),
+	))
 
 	// 1030
 	result.add(semantic.MultipleSingletonsError(fake.Namespace("namespaces/foo"), fake.Namespace("namespaces/foo")))

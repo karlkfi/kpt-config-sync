@@ -43,6 +43,8 @@ type Causer interface {
 // registered is a map from error codes to instances of the types they represent.
 // Entries set to true are reserved and MUST NOT be reused.
 var registered = map[string]bool{
+	"1001": true,
+	"1002": true,
 	"1015": true,
 	"1018": true,
 	"1022": true,
