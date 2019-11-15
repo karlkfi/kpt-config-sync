@@ -17,7 +17,7 @@ func NewDirectoryNameValidator() ast.Visitor {
 	return visitor.NewTreeNodeValidator(
 		func(n *ast.TreeNode) status.MultiError {
 			name := n.Base()
-			if isInvalid(name) {
+			if !isValid(name) {
 				return InvalidDirectoryNameError(n.Path)
 			}
 			if configmanagement.IsControllerNamespace(name) {
@@ -27,11 +27,11 @@ func NewDirectoryNameValidator() ast.Visitor {
 		})
 }
 
-// isInvalid returns true if Kubernetes does not allow Namespaces with the name "name".
-func isInvalid(name string) bool {
+// isValid returns true if Kubernetes allows Namespaces with the name "name".
+func isValid(name string) bool {
 	// IsDNS1123Label is misleading as the Kubernetes requirements are more stringent than the specification.
 	errs := validation.IsDNS1123Label(name)
-	return len(errs) != 0
+	return len(errs) == 0
 }
 
 // InvalidDirectoryNameErrorCode is the error code for InvalidDirectoryNameError
