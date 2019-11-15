@@ -157,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	var syncErrs []v1.ConfigManagementError
 	actualInstances, err := r.cache.UnstructuredList(gvk, "")
 	if err != nil {
-		mErr = status.Append(mErr, status.APIServerWrapf(err, "failed to list from config controller for %q", gvk))
+		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
 		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig,
 			r.now, syncErrs...))

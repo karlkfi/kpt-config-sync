@@ -27,7 +27,7 @@ func (p Root) Join(rel Path) Relative {
 func (p Root) Rel(targPath Path) (Relative, status.Error) {
 	relPath, err := filepath.Rel(p.path, targPath.OSPath())
 	if err != nil {
-		return Relative{}, status.PathWrapf(err, p.path, targPath.SlashPath())
+		return Relative{}, status.PathWrapError(err, p.path, targPath.SlashPath())
 	}
 	return Relative{path: FromOS(relPath), root: p}, nil
 }
@@ -67,7 +67,7 @@ func makeCleanAbsolute(path string) (string, status.Error) {
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return "", status.PathWrapf(err, path)
+		return "", status.PathWrapError(err, path)
 	}
 	return filepath.Clean(absPath), nil
 }

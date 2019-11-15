@@ -42,8 +42,9 @@ func IllegalLabelDefinitionError(resource id.Resource, labels []string) status.E
 		labels2[i] = fmt.Sprintf("%q", label)
 	}
 	l := strings.Join(labels2, ", ")
-	return illegalLabelDefinitionError.WithResources(resource).Errorf(
-		"Resources MUST NOT declare labels starting with %q. "+
+	return illegalLabelDefinitionError.
+		Sprintf("Resources MUST NOT declare labels starting with %q. "+
 			"Below Resource declares these offending labels: %s",
-		v1.ConfigManagementPrefix, l)
+			v1.ConfigManagementPrefix, l).
+		BuildWithResources(resource)
 }

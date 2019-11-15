@@ -23,15 +23,15 @@ func (c *fakeDiscoveryClient) ServerResources() ([]*v1.APIResourceList, error) {
 }
 
 func (c *fakeDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*v1.APIResourceList, error) {
-	return nil, status.InternalError.New("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func (c *fakeDiscoveryClient) ServerPreferredResources() ([]*v1.APIResourceList, error) {
-	return nil, status.InternalError.New("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func (c *fakeDiscoveryClient) ServerPreferredNamespacedResources() ([]*v1.APIResourceList, error) {
-	return nil, status.InternalError.New("fakeDiscoveryClient only defines ServerResources()")
+	return nil, status.InternalError("fakeDiscoveryClient only defines ServerResources()")
 }
 
 func newFakeDiscoveryClient(resources []*v1.APIResourceList) discovery.ServerResourcesInterface {
@@ -101,7 +101,7 @@ type failGetServerResourcesDiscoveryClient struct {
 }
 
 func (c *failGetServerResourcesDiscoveryClient) ServerResources() ([]*v1.APIResourceList, error) {
-	return nil, status.InternalError.New("expected error")
+	return nil, status.InternalError("expected error")
 }
 
 type invalidServerResourcesDiscoveryClient struct {

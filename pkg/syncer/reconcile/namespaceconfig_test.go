@@ -2,7 +2,6 @@ package reconcile
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -31,9 +30,7 @@ func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...core.M
 }
 
 func namespace(name string, opts ...core.MetaMutator) *corev1.Namespace {
-	result := fake.NamespaceObject(name, opts...)
-	fmt.Println(result.Annotations)
-	return result
+	return fake.NamespaceObject(name, opts...)
 }
 
 func namespaceConfig(name string, state v1.ConfigSyncState, opts ...fake.NamespaceConfigMutator) *v1.NamespaceConfig {

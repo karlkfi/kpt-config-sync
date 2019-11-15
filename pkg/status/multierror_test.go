@@ -6,9 +6,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errFoo = UndocumentedError.New("foo")
-var errBar = APIServerError.New("bar")
-var errBaz = UndocumentedError.New("baz")
+var errFoo = UndocumentedError("foo")
+var errBar = APIServerError(errors.New("bar"), "qux")
+var errBaz = UndocumentedError("baz")
 
 var errFooRaw = errors.New("raw foo")
 var errBarRaw = errors.New("raw bar")
@@ -22,7 +22,7 @@ func TestErrorBuilder(t *testing.T) {
 		{
 			"build golang errors",
 			[]error{errFooRaw, errBarRaw},
-			&multiError{errs: []Error{UndocumentedError(errFooRaw), UndocumentedError(errBarRaw)}},
+			&multiError{errs: []Error{undocumented(errFooRaw), undocumented(errBarRaw)}},
 		},
 		{
 			"build status Errors",
@@ -37,7 +37,7 @@ func TestErrorBuilder(t *testing.T) {
 		{
 			"build mixed errors",
 			[]error{errBaz, nil, errFooRaw},
-			&multiError{errs: []Error{errBaz, UndocumentedError(errFooRaw)}},
+			&multiError{errs: []Error{errBaz, undocumented(errFooRaw)}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -58,57 +58,12 @@ func TestErrorBuilder(t *testing.T) {
 			} else {
 				wantErrorLen := len(tc.want.Errors())
 
-				if errs == nil || len(errs.Errors()) != wantErrorLen {
+				if len(errs.Errors()) != wantErrorLen {
 					t.Errorf("got %d errors; want %d errors", len(errs.Errors()), wantErrorLen)
 				}
 				if errs.Error() != tc.want.Error() {
 					t.Errorf("got %v; want %v", errs, tc.want)
 				}
-			}
-		})
-	}
-}
-
-func TestMultiErrorFrom(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		errors []error
-		want   MultiError
-	}{
-		{
-			name:   "from one error",
-			errors: []error{errFoo},
-			want:   &multiError{errs: []Error{errFoo}},
-		},
-		{
-			name:   "from multiple errors",
-			errors: []error{errFoo, errBar, errBaz},
-			want:   &multiError{errs: []Error{errFoo, errBar, errBaz}},
-		},
-		{
-			name: "from no errors",
-		},
-		{
-			name:   "from nil error",
-			errors: []error{nil},
-		},
-		{
-			name:   "from mixed errors",
-			errors: []error{errFoo, nil, errBar},
-			want:   &multiError{errs: []Error{errFoo, errBar}},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got := From(tc.errors...)
-
-			if tc.want == nil {
-				if got != nil {
-					t.Errorf("got %v; want nil", got)
-				}
-			} else if got == nil {
-				t.Errorf("got nil; want %v", tc.want)
-			} else if got.Error() != tc.want.Error() {
-				t.Errorf("got %v; want %v", got, tc.want)
 			}
 		})
 	}

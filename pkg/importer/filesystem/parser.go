@@ -258,7 +258,7 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 func ValidateInstallation(client genericclioptions.RESTClientGetter) status.MultiError {
 	discoveryClient, err := client.ToDiscoveryClient()
 	if err != nil {
-		return status.From(err)
+		return status.APIServerError(err, "could not get discovery client")
 	}
 
 	gv := v1.SchemeGroupVersion.String()
@@ -276,7 +276,7 @@ func ValidateInstallation(client genericclioptions.RESTClientGetter) status.Mult
 func (p *Parser) discoveryClient(crds ...*v1beta1.CustomResourceDefinition) (discovery.ServerResourcesInterface, error) {
 	discoveryClient, dErr := importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, true, crds...).ToDiscoveryClient()
 	if dErr != nil {
-		p.errors = status.Append(p.errors, status.APIServerWrapf(dErr, "could not get discovery client"))
+		p.errors = status.Append(p.errors, status.APIServerError(dErr, "could not get discovery client"))
 		return nil, p.errors
 	}
 

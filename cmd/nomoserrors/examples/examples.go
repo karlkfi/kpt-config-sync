@@ -37,14 +37,14 @@ func Generate() map[string][]status.Error {
 	result := make(exampleErrors)
 
 	// 1000
-	result.add(status.InternalError.New("we made a mistake"))
+	result.add(status.InternalError("we made a mistake"))
 
 	// 1001 is Deprecated.
 
 	// 1002 is Deprecated.
 
 	// 1003
-	result.add(validation.IllegalNamespaceSubdirectoryError(node("namespace/foo/bar"), node("namespaces/foo")))
+	result.add(validation.IllegalNamespaceSubdirectoryError(node("namespaces/foo/bar"), node("namespaces/foo")))
 
 	// 1004
 	result.add(metadata.IllegalNamespaceAnnotationError(fake.Namespace("namespaces/foo")))
@@ -239,16 +239,16 @@ func Generate() map[string][]status.Error {
 	result.add(filesystem.InvalidAnnotationValueError(fake.Role(), []string{"foo", "bar"}))
 
 	// 2001
-	result.add(status.PathWrapf(errors.New("error creating directory"), "namespaces/foo"))
+	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 
 	// 2002
-	result.add(status.APIServerError.New("problem talking to Kubernetes cluster"))
+	result.add(status.APIServerError(errors.New("problem talking to Kubernetes cluster"), "could not create connection"))
 
 	// 2003
 	result.add(status.OSWrap(errors.New("problem reading file")))
 
 	// 2004
-	result.add(status.SourceError.New("unable to connect to Git repository"))
+	result.add(status.SourceError.Sprint("unable to connect to Git repository").Build())
 
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))
@@ -261,7 +261,7 @@ func Generate() map[string][]status.Error {
 	result.add(status.MultipleSingletonsError(fake.Repo(), fake.Repo()))
 
 	// 9999
-	result.add(status.UndocumentedError.New("error not yet documented"))
+	result.add(status.UndocumentedError("error not yet documented"))
 
 	return result
 }

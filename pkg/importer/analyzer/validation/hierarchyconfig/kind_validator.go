@@ -58,7 +58,8 @@ var unsupportedResourceInHierarchyConfigError = status.NewErrorBuilder(Unsupport
 // UnsupportedResourceInHierarchyConfigError reports that config management is unsupported for a Resource defined in a HierarchyConfig.
 func UnsupportedResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
 	gk := config.GroupKind()
-	return unsupportedResourceInHierarchyConfigError.WithResources(config).Errorf(
-		"The %q APIResource MUST NOT be declared in a HierarchyConfig:",
-		gk.String())
+	return unsupportedResourceInHierarchyConfigError.
+		Sprintf("The %q APIResource MUST NOT be declared in a HierarchyConfig:",
+			gk.String()).
+		BuildWithResources(config)
 }

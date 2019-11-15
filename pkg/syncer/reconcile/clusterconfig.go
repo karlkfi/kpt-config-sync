@@ -100,7 +100,7 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 
 	rErr := r.manageConfigs(ctx, clusterConfig)
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
-	if filtered := filterWithCause(rErr, context.Canceled); filtered != nil {
+	if filtered := filterContextCancelled(rErr); filtered != nil {
 		glog.Errorf("Could not reconcile clusterconfig: %v", filtered)
 	}
 	return rErr
@@ -122,7 +122,7 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, "")
 		if err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from config controller for %q", gvk))
+			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 			continue
 		}
 

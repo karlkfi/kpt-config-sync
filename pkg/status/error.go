@@ -27,12 +27,15 @@ func prefix(code string) string {
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
+	Causer
 	MultiError
 	// ToCME converts the implementor into ConfigManagementError, preserving
 	// structured information.
 	ToCME() v1.ConfigManagementError
 	// Code is the unique identifier of the error to help users find documentation.
 	Code() string
+	// Body is the body of the error to be printed.
+	Body() string
 }
 
 // Causer defines an error with an underlying cause.
@@ -56,22 +59,22 @@ var registered = map[string]bool{
 }
 
 // format formats error messages consistently.
-//
-// err is the underlying error.
-// references is an already formatted list of directories or objects. Empty string for no references.
-// code is the error's documentation id.
-func format(err error, references string, code string) string {
+func format(err Error) string {
 	var sb strings.Builder
-	sb.WriteString(prefix(knv(code)))
-	sb.WriteString(err.Error())
-
-	if references != "" {
-		sb.WriteString("\n\n")
-		sb.WriteString(references)
-	}
-
+	sb.WriteString(prefix(knv(err.Code())))
+	sb.WriteString(err.Body())
 	sb.WriteString("\n\n")
-	sb.WriteString(url(code))
+	sb.WriteString(url(err.Code()))
+	return sb.String()
+}
+
+func formatBody(message, separator, context string) string {
+	var sb strings.Builder
+	sb.WriteString(message)
+	if context != "" {
+		sb.WriteString(separator)
+		sb.WriteString(context)
+	}
 	return sb.String()
 }
 

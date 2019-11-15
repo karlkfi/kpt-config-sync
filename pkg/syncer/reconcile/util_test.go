@@ -13,59 +13,49 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestFilterWithCause(t *testing.T) {
+func TestFilterContextCancelled(t *testing.T) {
 	testCases := []struct {
-		name   string
-		err    error
-		filter error
-		want   error
+		name string
+		err  error
+		want error
 	}{
 		{
-			name: "error with no cause or filter",
+			name: "error with no cause",
 			err:  fmt.Errorf("simple"),
 			want: fmt.Errorf("simple"),
 		},
 		{
-			name: "error with cause and no filter",
-			err:  errors.Wrap(fmt.Errorf("cause"), "outer error"),
-			want: errors.Wrap(fmt.Errorf("cause"), "outer error"),
+			name: "error with cancelled cause",
+			err:  errors.Wrap(context.Canceled, "outer error"),
 		},
 		{
-			name:   "error with cause and filter",
-			err:    errors.Wrap(context.Canceled, "outer error"),
-			filter: context.Canceled,
+			name: "error with other cause",
+			err:  errors.Wrap(errors.New("some cause"), "outer error"),
+			want: errors.Wrap(errors.New("some cause"), "outer error"),
 		},
 		{
-			name: "multiple errors with cause and no filter",
-			err:  status.From(errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
-			want: status.From(errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
+			name: "multiple errors with context cancelled",
+			err:  status.Append(nil, errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
 		},
 
 		{
-			name:   "multiple errors with cause, filter all",
-			err:    status.From(errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
-			filter: context.Canceled,
-		},
-		{
-			name:   "multiple errors with cause, filter some",
-			err:    status.From(errors.Wrap(context.Canceled, "outer error"), fmt.Errorf("another error")),
-			filter: context.Canceled,
-			want:   status.From(fmt.Errorf("another error")),
+			name: "one error with context cancelled, two not",
+			err:  status.Append(nil, errors.Wrap(context.Canceled, "outer error"), errors.Wrap(errors.New("some cause"), "another error"), errors.New("some error")),
+			want: status.Append(nil, errors.Wrap(errors.New("some cause"), "another error"), errors.New("some error")),
 		},
 		{
 			name: "filter nested multi error",
-			err: status.From(
+			err: status.Append(nil,
 				fmt.Errorf("no cause"),
-				status.From(errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
+				status.Append(nil, errors.Wrap(context.Canceled, "outer error"), errors.Wrap(context.Canceled, "another error")),
 			),
-			filter: context.Canceled,
-			want:   status.From(fmt.Errorf("no cause")),
+			want: status.Append(nil, fmt.Errorf("no cause")),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := filterWithCause(tc.err, tc.filter)
+			got := filterContextCancelled(tc.err)
 
 			if got == nil && tc.want == nil {
 				return

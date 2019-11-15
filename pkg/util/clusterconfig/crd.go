@@ -71,17 +71,17 @@ func crds(decoder decode.Decoder, clusterConfig *v1.ClusterConfig) (map[string]*
 
 	gvkrs, err := decoder.DecodeResources(clusterConfig.Spec.Resources)
 	if err != nil {
-		return nil, status.APIServerWrapf(err, "could not deserialize CRD in %s", v1.CRDClusterConfigName)
+		return nil, status.APIServerErrorf(err, "could not deserialize CRD in %s", v1.CRDClusterConfigName)
 	}
 
 	for gvk, rs := range gvkrs {
 		if gvk != kinds.CustomResourceDefinition() {
-			return nil, status.APIServerWrapf(err, "%s contains non-CRD resources: %v", v1.CRDClusterConfigName, gvk)
+			return nil, status.APIServerErrorf(err, "%s contains non-CRD resources: %v", v1.CRDClusterConfigName, gvk)
 		}
 		for _, r := range rs {
 			crd, err := UnstructuredToCRD(r)
 			if err != nil {
-				return nil, status.APIServerWrapf(err, "could not deserialize CRD in %s", v1.CRDClusterConfigName)
+				return nil, status.APIServerErrorf(err, "could not deserialize CRD in %s", v1.CRDClusterConfigName)
 			}
 			crds[crd.Name] = crd
 		}

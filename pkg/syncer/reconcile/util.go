@@ -79,29 +79,29 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 	return err
 }
 
-func filterWithCause(err error, cause error) error {
+func filterContextCancelled(err error) error {
 	if errs, ok := err.(status.MultiError); ok {
 		if len(errs.Errors()) == 1 {
 			err = errs.Errors()[0]
 		} else {
-			return filterMultiErrorWithCause(errs, cause)
+			return filterMultiErrorContextCancelled(errs)
 		}
 	}
 	c := errors.Cause(err)
-	if reflect.DeepEqual(c, cause) {
+	if reflect.DeepEqual(c, context.Canceled) {
 		return nil
 	}
 	// http client errors don't implement causer. The underlying error is in one of the struct's fields.
-	if ue, ok := c.(*url.Error); ok && reflect.DeepEqual(ue.Err, cause) {
+	if ue, ok := c.(*url.Error); ok && reflect.DeepEqual(ue.Err, context.Canceled) {
 		return nil
 	}
 	return err
 }
 
-func filterMultiErrorWithCause(errs status.MultiError, cause error) status.MultiError {
+func filterMultiErrorContextCancelled(errs status.MultiError) status.MultiError {
 	var filtered status.MultiError
 	for _, e := range errs.Errors() {
-		if fe := filterWithCause(e, cause); fe != nil {
+		if fe := filterContextCancelled(e); fe != nil {
 			filtered = status.Append(filtered, fe)
 		}
 	}

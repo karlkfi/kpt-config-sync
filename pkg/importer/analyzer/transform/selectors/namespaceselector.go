@@ -34,5 +34,5 @@ var invalidSelectorError = status.NewErrorBuilder(InvalidSelectorErrorCode)
 
 // InvalidSelectorError reports that a selector is invalid.
 func InvalidSelectorError(name string, cause error) status.Error {
-	return invalidSelectorError.Wrapf(cause, "Selector for %q has validation errors that must be corrected", name)
+	return invalidSelectorError.Sprintf("Selector for %q has validation errors that must be corrected", name).Wrap(cause).Build()
 }

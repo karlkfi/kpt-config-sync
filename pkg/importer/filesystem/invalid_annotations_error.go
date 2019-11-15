@@ -15,10 +15,11 @@ var invalidAnnotationValueErrorBase = status.NewErrorBuilder(InvalidAnnotationVa
 
 // InvalidAnnotationValueError reports that an object has been illegally defined in cluster/
 func InvalidAnnotationValueError(resource id.Resource, keys []string) status.Error {
-	return invalidAnnotationValueErrorBase.WithResources(resource).Errorf(
-		"Values in metadata.annotations MUST be strings. "+
+	return invalidAnnotationValueErrorBase.
+		Sprintf("Values in metadata.annotations MUST be strings. "+
 			`To fix, add quotes around the values. Non-string values for:
 
 metadata.annotations.%s `,
-		strings.Join(keys, "\nmetadata.annotations."))
+			strings.Join(keys, "\nmetadata.annotations.")).
+		BuildWithResources(resource)
 }

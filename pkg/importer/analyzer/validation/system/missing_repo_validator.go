@@ -25,5 +25,7 @@ var missingRepoError = status.NewErrorBuilder(MissingRepoErrorCode)
 
 // MissingRepoError reports that there is no Repo definition in system/
 func MissingRepoError() status.Error {
-	return missingRepoError.WithPaths(cmpath.FromSlash(repo.SystemDir)).Errorf("The %s/ directory must declare a Repo Resource.", repo.SystemDir)
+	return missingRepoError.
+		Sprintf("The %s/ directory must declare a Repo Resource.", repo.SystemDir).
+		BuildWithPaths(cmpath.FromSlash(repo.SystemDir))
 }

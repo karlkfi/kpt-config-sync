@@ -15,8 +15,9 @@ var illegalNamespaceOnClusterScopedResourceErrorBuilder = status.NewErrorBuilder
 
 // IllegalNamespaceOnClusterScopedResourceError reports that a cluster-scoped resource MUST NOT declare metadata.namespace.
 func IllegalNamespaceOnClusterScopedResourceError(resource id.Resource) status.Error {
-	return illegalNamespaceOnClusterScopedResourceErrorBuilder.WithResources(resource).
-		New("cluster-scoped resources MUST NOT declare metadata.namespace")
+	return illegalNamespaceOnClusterScopedResourceErrorBuilder.
+		Sprint("cluster-scoped resources MUST NOT declare metadata.namespace").
+		BuildWithResources(resource)
 }
 
 // MissingNamespaceOnNamespacedResourceErrorCode represents a namespace-scoped resource NOT declaring
@@ -28,8 +29,9 @@ var missingNamespaceOnNamespacedResourceErrorBuilder = status.NewErrorBuilder(Mi
 // MissingNamespaceOnNamespacedResourceError reports a namespace-scoped resource MUST declare metadata.namespace.
 // when parsing in non-hierarchical mode.
 func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Error {
-	return missingNamespaceOnNamespacedResourceErrorBuilder.WithResources(resource).
-		New("namespace-scoped resource MUST declare metadata.namespace")
+	return missingNamespaceOnNamespacedResourceErrorBuilder.
+		Sprint("namespace-scoped resource MUST declare metadata.namespace").
+		BuildWithResources(resource)
 }
 
 // ScopeValidator returns errors for resources with illegal or missing metadata.namespace

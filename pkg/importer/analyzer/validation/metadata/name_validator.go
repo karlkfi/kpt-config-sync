@@ -67,9 +67,10 @@ var illegalTopLevelNamespaceError = status.NewErrorBuilder(IllegalTopLevelNamesp
 // IllegalTopLevelNamespaceError reports that there may not be a Namespace declared directly in namespaces/
 // Error implements error
 func IllegalTopLevelNamespaceError(resource id.Resource) status.Error {
-	return illegalTopLevelNamespaceError.WithResources(resource).Errorf(
-		"%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
-		repo.NamespacesDir, node.Namespace)
+	return illegalTopLevelNamespaceError.
+		Sprintf("%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
+			repo.NamespacesDir, node.Namespace).
+		BuildWithResources(resource)
 }
 
 // InvalidNamespaceNameErrorCode is the error code for InvalidNamespaceNameError
@@ -79,10 +80,11 @@ var invalidNamespaceNameErrorstatus = status.NewErrorBuilder(InvalidNamespaceNam
 
 // InvalidNamespaceNameError reports that a Namespace has an invalid name.
 func InvalidNamespaceNameError(resource id.Resource, expected string) status.Error {
-	return invalidNamespaceNameErrorstatus.WithResources(resource).Errorf(
-		"A %[1]s MUST declare `metadata.name` that matches the name of its directory.\n\n"+
+	return invalidNamespaceNameErrorstatus.
+		Sprintf("A %[1]s MUST declare `metadata.name` that matches the name of its directory.\n\n"+
 			"expected metadata.name: %[2]s",
-		node.Namespace, expected)
+			node.Namespace, expected).
+		BuildWithResources(resource)
 }
 
 // MissingObjectNameErrorCode is the error code for MissingObjectNameError
@@ -92,8 +94,9 @@ var missingObjectNameError = status.NewErrorBuilder(MissingObjectNameErrorCode)
 
 // MissingObjectNameError reports that an object has no name.
 func MissingObjectNameError(resource id.Resource) status.Error {
-	return missingObjectNameError.WithResources(resource).Errorf(
-		"Configs must declare `metadata.name`:")
+	return missingObjectNameError.
+		Sprintf("Configs must declare `metadata.name`:").
+		BuildWithResources(resource)
 }
 
 // InvalidMetadataNameErrorCode is the error code for InvalidMetadataNameError
@@ -103,7 +106,8 @@ var invalidMetadataNameError = status.NewErrorBuilder(InvalidMetadataNameErrorCo
 
 // InvalidMetadataNameError represents the usage of a non-RFC1123 compliant metadata.name
 func InvalidMetadataNameError(resource id.Resource) status.Error {
-	return invalidMetadataNameError.WithResources(resource).Errorf(
-		"Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric " +
-			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:")
+	return invalidMetadataNameError.
+		Sprintf("Configs MUST define a `metadata.name` that is shorter than 254 characters, consists of lower case alphanumeric " +
+			"characters, '-' or '.', and must start and end with an alphanumeric character. Rename or remove the config:").
+		BuildWithResources(resource)
 }

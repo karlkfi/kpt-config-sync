@@ -3,11 +3,23 @@ package status
 // UndocumentedErrorCode is the error code for Undocumented.
 const UndocumentedErrorCode = "9999"
 
+var undocumentedError = NewErrorBuilder(UndocumentedErrorCode)
+
+// UndocumentedWrapf wraps an undocumented error with a formatted message.
+func UndocumentedWrapf(err error, format string, a ...interface{}) Error {
+	return undocumentedError.Sprintf(format, a...).Wrap(err).Build()
+}
+
+// UndocumentedErrorf returns a Undocumented with the string representation of the passed object.
+func UndocumentedErrorf(format string, a ...interface{}) Error {
+	return undocumentedError.Sprintf(format, a...).Build()
+}
+
 // UndocumentedError returns a Undocumented with the string representation of the passed object.
-var UndocumentedError = NewErrorBuilder(UndocumentedErrorCode)
+func UndocumentedError(message string) Error {
+	return undocumentedError.Sprint(message).Build()
+}
 
-// UndocumentedWrapf mimics the old UndocumentedWrapf. Use UndocumentedError.Wrapf instead.
-var UndocumentedWrapf = UndocumentedError.Wrapf
-
-// UndocumentedErrorf mimics the old UndocumentedErrorf. Use UndocumentedError.Errorf instead.
-var UndocumentedErrorf = UndocumentedError.Errorf
+func undocumented(err error) Error {
+	return undocumentedError.Wrap(err).Build()
+}

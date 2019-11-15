@@ -77,7 +77,7 @@ func IllegalHierarchyModeError(
 		allowedStr = append(allowedStr, string(a))
 	}
 	gk := config.GroupKind()
-	return illegalHierarchyModeError.WithResources(config).Errorf(
+	return illegalHierarchyModeError.Sprintf(
 		"HierarchyMode %q is not a valid value for the APIResource %q. Allowed values are [%s].",
-		mode, gk.String(), strings.Join(allowedStr, ","))
+		mode, gk.String(), strings.Join(allowedStr, ",")).BuildWithResources(config)
 }

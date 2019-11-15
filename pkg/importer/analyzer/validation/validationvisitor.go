@@ -134,10 +134,10 @@ var illegalNamespaceSubdirectoryError = status.NewErrorBuilder(IllegalNamespaceS
 // IllegalNamespaceSubdirectoryError represents an illegal child directory of a namespace directory.
 func IllegalNamespaceSubdirectoryError(child, parent id.TreeNode) status.Error {
 	// TODO: We don't really need the parent node since it can be inferred from the Child.
-	return illegalNamespaceSubdirectoryError.WithPaths(child, parent).Errorf("A %[1]s directory MUST NOT have subdirectories. "+
+	return illegalNamespaceSubdirectoryError.Sprintf("A %[1]s directory MUST NOT have subdirectories. "+
 		"Restructure %[4]q so that it does not have subdirectory %[2]q:\n\n"+
 		"%[3]s",
-		node.Namespace, child.Name(), id.PrintTreeNode(child), parent.Name())
+		node.Namespace, child.Name(), id.PrintTreeNode(child), parent.Name()).BuildWithPaths(child, parent)
 }
 
 // IllegalAbstractNamespaceObjectKindErrorCode is the error code for IllegalAbstractNamespaceObjectKindError
@@ -148,10 +148,10 @@ var illegalAbstractNamespaceObjectKindError = status.NewErrorBuilder(IllegalAbst
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 // TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
 func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error {
-	return illegalAbstractNamespaceObjectKindError.Errorf(
+	return illegalAbstractNamespaceObjectKindError.Sprintf(
 		"Config `%[3]s` illegally declared in an %[1]s directory. "+
 			"Move this config to a %[2]s directory:",
-		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.GetName())
+		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.GetName()).Build()
 }
 
 // NamespaceSelectorMayNotHaveAnnotationCode is the error code for NamespaceSelectorMayNotHaveAnnotation
@@ -163,5 +163,5 @@ var namespaceSelectorMayNotHaveAnnotation = status.NewErrorBuilder(NamespaceSele
 // an annotation that is not allowed.
 func NamespaceSelectorMayNotHaveAnnotation(object core.Object) status.Error {
 	// TODO(willbeason): Print information about the object so it can actually be found.
-	return namespaceSelectorMayNotHaveAnnotation.Errorf("The NamespaceSelector config %q MUST NOT have ClusterSelector annotation", object.GetName())
+	return namespaceSelectorMayNotHaveAnnotation.Sprintf("The NamespaceSelector config %q MUST NOT have ClusterSelector annotation", object.GetName()).Build()
 }

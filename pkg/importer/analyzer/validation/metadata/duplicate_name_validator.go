@@ -53,25 +53,28 @@ var nameCollisionErrorBuilder = status.NewErrorBuilder(NameCollisionErrorCode)
 
 // NamespaceCollisionError reports multiple declared Namespaces with the same name.
 func NamespaceCollisionError(name string, duplicates ...id.Resource) status.Error {
-	return nameCollisionErrorBuilder.WithResources(duplicates...).Errorf(
-		"Namespaces MUST have unique names. Found %d Namespaces named %q. Rename or merge the Namespaces to fix:",
-		len(duplicates), name)
+	return nameCollisionErrorBuilder.
+		Sprintf("Namespaces MUST have unique names. Found %d Namespaces named %q. Rename or merge the Namespaces to fix:",
+			len(duplicates), name).
+		BuildWithResources(duplicates...)
 }
 
 // NamespaceMetadataNameCollisionError reports that multiple namespace-scoped objects of the same Kind and
 // namespace have the same metadata name
 func NamespaceMetadataNameCollisionError(gk schema.GroupKind, namespace string, name string, duplicates ...id.Resource) status.Error {
-	return nameCollisionErrorBuilder.WithResources(duplicates...).Errorf(
-		"Namespace-scoped configs of the same Group and Kind MUST have unique names if they are in the same Namespace. "+
+	return nameCollisionErrorBuilder.
+		Sprintf("Namespace-scoped configs of the same Group and Kind MUST have unique names if they are in the same Namespace. "+
 			"Found %d configs of GroupKind %q in Namespace %q named %q. Rename or delete the duplicates to fix:",
-		len(duplicates), gk.String(), namespace, name)
+			len(duplicates), gk.String(), namespace, name).
+		BuildWithResources(duplicates...)
 }
 
 // ClusterMetadataNameCollisionError reports that multiple cluster-scoped objects of the same Kind and
 // namespace have the same metadata name
 func ClusterMetadataNameCollisionError(gk schema.GroupKind, name string, duplicates ...id.Resource) status.Error {
-	return nameCollisionErrorBuilder.WithResources(duplicates...).Errorf(
-		"Cluster-scoped configs of the same Group and Kind MUST have unique names."+
+	return nameCollisionErrorBuilder.
+		Sprintf("Cluster-scoped configs of the same Group and Kind MUST have unique names."+
 			"Found %d configs of GroupKind %q named %q. Rename or delete the duplicates to fix:",
-		len(duplicates), gk.String(), name)
+			len(duplicates), gk.String(), name).
+		BuildWithResources(duplicates...)
 }

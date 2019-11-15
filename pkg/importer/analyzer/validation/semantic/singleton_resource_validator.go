@@ -40,7 +40,7 @@ func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
 		gvk = duplicates[0].GroupVersionKind()
 	}
 
-	return multipleSingletonsError.WithResources(duplicates...).Errorf(
-		"A directory may declare at most one %[1]q Resource:",
-		kinds.ResourceString(gvk))
+	return multipleSingletonsError.
+		Sprintf("A directory may declare at most one %[1]q Resource:", kinds.ResourceString(gvk)).
+		BuildWithResources(duplicates...)
 }

@@ -101,7 +101,8 @@ var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownClu
 
 // ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
-	return objectHasUnknownClusterSelector.WithResources(resource).Errorf(
-		"Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
-		resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation)
+	return objectHasUnknownClusterSelector.
+		Sprintf("Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
+			resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation).
+		BuildWithResources(resource)
 }

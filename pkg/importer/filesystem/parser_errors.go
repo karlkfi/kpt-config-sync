@@ -12,6 +12,9 @@ var configManagementNotInstalledError = status.NewErrorBuilder(ConfigManagementN
 
 // ConfigManagementNotInstalledError reports that Nomos has not been installed properly.
 func ConfigManagementNotInstalledError(err error) status.Error {
-	return configManagementNotInstalledError.Wrapf(err, "%s is not properly installed. Apply a %s config to enable config management.",
-		configmanagement.ProductName, configmanagement.OperatorKind)
+	return configManagementNotInstalledError.
+		Sprintf("%s is not properly installed. Apply a %s config to enable config management.",
+			configmanagement.ProductName, configmanagement.OperatorKind).
+		Wrap(err).
+		Build()
 }

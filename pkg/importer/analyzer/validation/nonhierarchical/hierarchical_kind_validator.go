@@ -14,9 +14,9 @@ var illegalHierarchicalKindError = status.NewErrorBuilder(IllegalHierarchicalKin
 
 // IllegalHierarchicalKind reports that a type is not permitted if hierarchical parsing is disabled.
 func IllegalHierarchicalKind(resource id.Resource) status.Error {
-	return illegalHierarchicalKindError.WithResources(resource).Errorf(
-		"Configs in API Group %q must not be declared if hierarchical parsing is disabled", configmanagement.GroupName,
-	)
+	return illegalHierarchicalKindError.
+		Sprintf("Configs in API Group %q must not be declared if hierarchical parsing is disabled", configmanagement.GroupName).
+		BuildWithResources(resource)
 }
 
 // IllegalHierarchicalKindValidator forbids declaring configmanagement kinds.

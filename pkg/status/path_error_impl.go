@@ -10,15 +10,25 @@ import (
 )
 
 type pathErrorImpl struct {
-	errorImpl errorImpl
-	paths     []id.Path
+	underlying Error
+	paths      []id.Path
 }
 
 var _ PathError = pathErrorImpl{}
 
 // Error implements error.
 func (p pathErrorImpl) Error() string {
-	return format(p.errorImpl.error, formatPaths(p.paths), p.Code())
+	return format(p)
+}
+
+// Code implements Error.
+func (p pathErrorImpl) Code() string {
+	return p.underlying.Code()
+}
+
+// Body implements Error.
+func (p pathErrorImpl) Body() string {
+	return formatBody(p.underlying.Body(), "\n\n", formatPaths(p.paths))
 }
 
 // Errors implements MultiError.
@@ -26,14 +36,14 @@ func (p pathErrorImpl) Errors() []Error {
 	return []Error{p}
 }
 
-// Code implements Error.
-func (p pathErrorImpl) Code() string {
-	return p.errorImpl.Code()
-}
-
 // RelativePaths implements PathError.
 func (p pathErrorImpl) RelativePaths() []id.Path {
 	return p.paths
+}
+
+// Cause implements Causer
+func (p pathErrorImpl) Cause() error {
+	return p.underlying.Cause()
 }
 
 // ToCME implements Error.

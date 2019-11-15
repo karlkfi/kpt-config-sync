@@ -117,19 +117,19 @@ func (d repoDirectoryBuilder) createDir(dir string) {
 	newDir := filepath.Join(d.root.String(), dir)
 	err := os.Mkdir(newDir, os.ModePerm)
 	if err != nil {
-		d.errors = status.Append(d.errors, status.PathWrapf(err, newDir))
+		d.errors = status.Append(d.errors, status.PathWrapError(err, newDir))
 	}
 }
 
 func (d repoDirectoryBuilder) createFile(dir string, path string, contents string) {
 	file, err := os.Create(filepath.Join(d.root.String(), dir, path))
 	if err != nil {
-		d.errors = status.Append(d.errors, status.PathWrapf(err, path))
+		d.errors = status.Append(d.errors, status.PathWrapError(err, path))
 		return
 	}
 	_, err = file.WriteString(contents)
 	if err != nil {
-		d.errors = status.Append(d.errors, status.PathWrapf(err, path))
+		d.errors = status.Append(d.errors, status.PathWrapError(err, path))
 	}
 }
 

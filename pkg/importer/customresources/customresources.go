@@ -34,7 +34,7 @@ func Process(fileObjects []ast.FileObject) (map[schema.GroupKind]*v1beta1.Custom
 
 		crd, err := clusterconfig.AsCRD(cr.Object)
 		if err != nil {
-			errs = status.Append(errs, status.PathWrapf(err, cr.SlashPath()))
+			errs = status.Append(errs, status.PathWrapError(err, cr.SlashPath()))
 			continue
 		}
 		gk := schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}
@@ -54,7 +54,7 @@ func Process(fileObjects []ast.FileObject) (map[schema.GroupKind]*v1beta1.Custom
 
 		crd, err := gatekeeper.ConstraintTemplateCRD(f.Object)
 		if err != nil {
-			errs = status.Append(errs, status.PathWrapf(err, f.SlashPath()))
+			errs = status.Append(errs, status.PathWrapError(err, f.SlashPath()))
 			continue
 		}
 

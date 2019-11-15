@@ -59,8 +59,8 @@ var illegalResourceQuotaFieldError = status.NewErrorBuilder(IllegalResourceQuota
 
 // IllegalResourceQuotaFieldError represents illegal fields set on ResourceQuota objects.
 func IllegalResourceQuotaFieldError(resource id.Resource, field string) status.Error {
-	return illegalResourceQuotaFieldError.WithResources(resource).Errorf(
+	return illegalResourceQuotaFieldError.Sprintf(
 		"A ResourceQuota config MUST NOT set scope when hierarchyMode is set to hierarchicalQuota. "+
 			"Remove illegal field %s from:",
-		field)
+		field).BuildWithResources(resource)
 }

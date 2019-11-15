@@ -27,7 +27,7 @@ func New(client *syncclient.Client) *Client {
 func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	var repoList v1.RepoList
 	if err := c.client.List(ctx, &client.ListOptions{}, &repoList); err != nil {
-		return nil, status.APIServerWrapf(err, "failed to list Repos")
+		return nil, status.APIServerError(err, "failed to list Repos")
 	}
 	if len(repoList.Items) > 1 {
 		resList := make([]id.Resource, len(repoList.Items))

@@ -27,8 +27,8 @@ func (p path) SlashPath() string {
 	return p.slashPath
 }
 
-// PathWrapf returns a PathError wrapping an error one or more relative paths.
-func PathWrapf(err error, slashPaths ...string) Error {
+// PathWrapError returns a PathError wrapping an error one or more relative paths.
+func PathWrapError(err error, slashPaths ...string) Error {
 	if err == nil {
 		return nil
 	}
@@ -36,5 +36,5 @@ func PathWrapf(err error, slashPaths ...string) Error {
 	for i, p := range slashPaths {
 		paths[i] = path{slashPath: p}
 	}
-	return pathError.WithPaths(paths...)(err)
+	return pathError.Wrap(err).BuildWithPaths(paths...)
 }

@@ -62,7 +62,8 @@ var illegalSystemResourcePlacementError = status.NewErrorBuilder(IllegalSystemRe
 
 // IllegalSystemResourcePlacementError reports that a configmanagement.gke.io object has been defined outside of system/
 func IllegalSystemResourcePlacementError(resource id.Resource) status.Error {
-	return illegalSystemResourcePlacementError.WithResources(resource).Errorf(
-		"A config of the below kind MUST NOT be declared outside %[1]s/:",
-		repo.SystemDir)
+	return illegalSystemResourcePlacementError.
+		Sprintf("A config of the below kind MUST NOT be declared outside %[1]s/:",
+			repo.SystemDir).
+		BuildWithResources(resource)
 }

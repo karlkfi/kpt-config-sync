@@ -72,8 +72,10 @@ var illegalManagementAnnotationError = status.NewErrorBuilder(IllegalManagementA
 // IllegalManagementAnnotationError represents an illegal management annotation value.
 // Error implements error.
 func IllegalManagementAnnotationError(resource id.Resource, value string) status.Error {
-	return illegalManagementAnnotationError.WithResources(resource).Errorf("Config has invalid management annotation %s=%s. Must be %s or unset.",
-		v1.ResourceManagementKey, value, v1.ResourceManagementDisabled)
+	return illegalManagementAnnotationError.
+		Sprintf("Config has invalid management annotation %s=%s. Must be %s or unset.",
+			v1.ResourceManagementKey, value, v1.ResourceManagementDisabled).
+		BuildWithResources(resource)
 }
 
 // IllegalAnnotationDefinitionErrorCode is the error code for IllegalAnnotationDefinitionError
@@ -89,8 +91,9 @@ func IllegalAnnotationDefinitionError(resource id.Resource, annotations []string
 		annotations2[i] = fmt.Sprintf("%q", annotation)
 	}
 	a := strings.Join(annotations2, ", ")
-	return illegalAnnotationDefinitionError.WithResources(resource).Errorf(
-		"Configs MUST NOT declare unsupported annotations starting with %q. "+
+	return illegalAnnotationDefinitionError.
+		Sprintf("Configs MUST NOT declare unsupported annotations starting with %q. "+
 			"The config has invalid annotations: %s",
-		v1.ConfigManagementPrefix, a)
+			v1.ConfigManagementPrefix, a).
+		BuildWithResources(resource)
 }

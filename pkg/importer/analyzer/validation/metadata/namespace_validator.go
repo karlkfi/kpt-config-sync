@@ -27,8 +27,8 @@ var illegalMetadataNamespaceDeclarationError = status.NewErrorBuilder(IllegalMet
 
 // IllegalMetadataNamespaceDeclarationError represents illegally declaring metadata.namespace
 func IllegalMetadataNamespaceDeclarationError(resource id.Resource, expectedNamespace string) status.Error {
-	return illegalMetadataNamespaceDeclarationError.WithResources(resource).Errorf(
-		"A config MUST either declare a `metadata.namespace` field exactly matching the directory "+
-			"containing the config, %q, or leave the field blank:",
-		expectedNamespace)
+	return illegalMetadataNamespaceDeclarationError.
+		Sprintf("A config MUST either declare a `metadata.namespace` field exactly matching the directory "+
+			"containing the config, %q, or leave the field blank:", expectedNamespace).
+		BuildWithResources(resource)
 }

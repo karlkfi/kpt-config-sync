@@ -44,22 +44,25 @@ func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
 	// TODO(willbeason): Consider moving to Namespace validation instead.
 	//  Strictly speaking, having a directory named "config-management-system" doesn't necessarily mean there are
 	//  any resources declared in that Namespace. That would make this error message clearer.
-	return invalidDirectoryNameError.WithPaths(dir).
-		Errorf("%s repositories MUST NOT declare configs in the %s Namespace. Rename or remove the %q directory.",
-			configmanagement.ProductName, configmanagement.ControllerNamespace, dir.Base())
+	return invalidDirectoryNameError.
+		Sprintf("%s repositories MUST NOT declare configs in the %s Namespace. Rename or remove the %q directory.",
+			configmanagement.ProductName, configmanagement.ControllerNamespace, dir.Base()).
+		BuildWithPaths(dir)
 }
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 func InvalidDirectoryNameError(dir cmpath.Path) status.Error {
-	return invalidDirectoryNameError.WithPaths(dir).Errorf(
-		`Directory names MUST be valid Kubernetes Namespace names. Rename %q so that it:
+	return invalidDirectoryNameError.
+		Sprintf(`Directory names MUST be valid Kubernetes Namespace names. Rename %q so that it:
 1. has a length of 63 characters or fewer;
 2. consists only of lowercase letters (a-z), digits (0-9), and hyphen '-'; and
-3. begins and ends with a lowercase letter or digit.`, dir.Base())
+3. begins and ends with a lowercase letter or digit.`, dir.Base()).
+		BuildWithPaths(dir)
 }
 
 // InvalidNamespaceError reports using an illegal Namespace.
 func InvalidNamespaceError(o id.Resource, errs []string) status.Error {
-	return invalidDirectoryNameError.WithResources(o).Errorf(
-		"metadata.namespace is invalid:\n\n%s\n", strings.Join(errs, "\n"))
+	return invalidDirectoryNameError.
+		Sprintf("metadata.namespace is invalid:\n\n%s\n", strings.Join(errs, "\n")).
+		BuildWithResources(o)
 }

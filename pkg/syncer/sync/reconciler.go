@@ -157,7 +157,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 			}
 			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
-			mErr = status.Append(mErr, status.APIServerWrapf(err, "could not update sync status"))
+			mErr = status.Append(mErr, status.APIServerError(err, "could not update sync status"))
 		}
 	}
 
@@ -188,7 +188,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 		return err
 	}
 	err := r.client.Upsert(ctx, sync)
-	return status.APIServerWrapf(err, "could not finalize sync pending delete")
+	return status.APIServerError(err, "could not finalize sync pending delete")
 }
 
 func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
@@ -208,14 +208,14 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 	// cache.
 	cl, err := r.clientFactory()
 	if err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to create dynamic client during gc"))
+		errBuilder = status.Append(errBuilder, status.APIServerError(err, "failed to create dynamic client during gc"))
 		return errBuilder
 	}
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not list %s resources", gvk))
+		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not list %s resources", gvk))
 		return errBuilder
 	}
 	for _, u := range ul.Items {
@@ -224,7 +224,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "could not delete %s resource: %v", gvk, u))
+			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not delete %s resource: %v", gvk, u))
 		}
 	}
 	return errBuilder

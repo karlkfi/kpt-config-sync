@@ -86,7 +86,7 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 	metrics.ReconcileDuration.WithLabelValues("namespace", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
-	if filtered := filterWithCause(err, context.Canceled); filtered != nil {
+	if filtered := filterContextCancelled(err); filtered != nil {
 		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, filtered)
 	}
 	return reconcile.Result{}, err
@@ -278,7 +278,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 
 		actualInstances, err := r.cache.UnstructuredList(gvk, name)
 		if err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to list from NamespaceConfig controller for %q", gvk))
+			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from NamespaceConfig controller for %q", gvk))
 			syncErrs = append(syncErrs, newSyncError(config, err))
 			continue
 		}
@@ -295,7 +295,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		}
 	}
 	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs); err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerWrapf(err, "failed to set status for NamespaceConfig %q", name))
+		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", name))
 		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update NamespaceConfig status: %s", err)
 	}

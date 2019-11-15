@@ -85,8 +85,9 @@ var illegalFieldsInConfigErrorBuilder = status.NewErrorBuilder(IllegalFieldsInCo
 
 // IllegalFieldsInConfigError reports that an object has an illegal field set.
 func IllegalFieldsInConfigError(resource id.Resource, field id.DisallowedField) status.Error {
-	return illegalFieldsInConfigErrorBuilder.WithResources(resource).Errorf(
-		"Configs with %[1]q specified are not allowed. "+
+	return illegalFieldsInConfigErrorBuilder.
+		Sprintf("Configs with %[1]q specified are not allowed. "+
 			"To fix, either remove the config or remove the %[1]q field in the config:",
-		field)
+			field).
+		BuildWithResources(resource)
 }

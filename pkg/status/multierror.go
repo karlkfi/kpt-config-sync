@@ -15,15 +15,6 @@ type MultiError interface {
 	Errors() []Error
 }
 
-// From creates a MultiError from one or more errors.
-// If err is nil, returns nil.
-func From(errs ...error) MultiError {
-	if len(errs) == 0 {
-		return Append(nil, nil)
-	}
-	return Append(nil, errs[0], errs[1:]...)
-}
-
 // Extend appends all errors in mm to m.
 func Extend(m MultiError, mm MultiError) MultiError {
 	if mm == nil || len(mm.Errors()) == 0 {
@@ -101,7 +92,7 @@ func (m *multiError) add(err error) {
 	case MultiError:
 		m.errs = append(m.errs, e.Errors()...)
 	default:
-		m.errs = append(m.errs, UndocumentedError(err))
+		m.errs = append(m.errs, undocumented(err))
 	}
 }
 

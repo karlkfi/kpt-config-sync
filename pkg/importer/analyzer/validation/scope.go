@@ -79,9 +79,10 @@ var unknownObjectError = status.NewErrorBuilder(UnknownObjectErrorCode)
 
 // UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
 func UnknownObjectError(resource id.Resource) status.Error {
-	return unknownObjectError.WithResources(resource).New(
-		"No CustomResourceDefinition is defined for the resource in the cluster. " +
-			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.")
+	return unknownObjectError.
+		Sprint("No CustomResourceDefinition is defined for the resource in the cluster. " +
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.").
+		BuildWithResources(resource)
 }
 
 // IllegalKindInClusterErrorCode is the error code for IllegalKindInClusterError
@@ -91,7 +92,7 @@ var illegalKindInClusterError = status.NewErrorBuilder(IllegalKindInClusterError
 
 // IllegalKindInClusterError reports that an object has been illegally defined in cluster/
 func IllegalKindInClusterError(resource id.Resource) status.Error {
-	return illegalKindInClusterError.WithResources(resource).Errorf(
-		"Namespace-scoped configs of the below Kind must not be declared in `%s`/:",
-		repo.ClusterDir)
+	return illegalKindInClusterError.
+		Sprintf("Namespace-scoped configs of the below Kind must not be declared in `%s`/:", repo.ClusterDir).
+		BuildWithResources(resource)
 }

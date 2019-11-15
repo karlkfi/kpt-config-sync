@@ -30,8 +30,9 @@ var illegalNamespaceAnnotationError = status.NewErrorBuilder(IllegalNamespaceAnn
 
 // IllegalNamespaceAnnotationError represents an illegal usage of the namespace selector annotation.
 func IllegalNamespaceAnnotationError(resource id.Resource) status.Error {
-	return illegalNamespaceAnnotationError.WithResources(resource).Errorf(
-		"A %s MUST NOT use the annotation %s. "+
+	return illegalNamespaceAnnotationError.
+		Sprintf("A %s MUST NOT use the annotation %s. "+
 			"Remove metadata.annotations.%[2]s from:",
-		node.Namespace, v1.NamespaceSelectorAnnotationKey)
+			node.Namespace, v1.NamespaceSelectorAnnotationKey).
+		BuildWithResources(resource)
 }

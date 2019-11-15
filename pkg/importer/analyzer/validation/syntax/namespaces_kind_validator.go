@@ -77,7 +77,7 @@ var illegalKindInNamespacesError = status.NewErrorBuilder(IllegalKindInNamespace
 
 // IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/
 func IllegalKindInNamespacesError(resource id.Resource) status.Error {
-	return illegalKindInNamespacesError.WithResources(resource).Errorf(
-		"Configs of the below Kind may not be declared in `%s`/:",
-		repo.NamespacesDir)
+	return illegalKindInNamespacesError.
+		Sprintf("Configs of the below Kind may not be declared in `%s`/:", repo.NamespacesDir).
+		BuildWithResources(resource)
 }

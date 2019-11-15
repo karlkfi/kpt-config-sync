@@ -41,7 +41,8 @@ var unsupportedObjectError = status.NewErrorBuilder(UnsupportedObjectErrorCode)
 
 // UnsupportedObjectError reports than an unsupported object is in the namespaces/ sub-directories or clusters/ directory.
 func UnsupportedObjectError(resource id.Resource) status.Error {
-	return unsupportedObjectError.WithResources(resource).Errorf(
-		"%s cannot configure this resource. To fix, remove this resource from the repo.",
-		configmanagement.ProductName)
+	return unsupportedObjectError.
+		Sprintf("%s cannot configure this resource. To fix, remove this resource from the repo.",
+			configmanagement.ProductName).
+		BuildWithResources(resource)
 }

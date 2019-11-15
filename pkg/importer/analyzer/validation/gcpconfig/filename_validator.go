@@ -42,5 +42,7 @@ var invalidGcpResourceFilenameError = status.NewErrorBuilder(InvalidGcpResourceF
 // InvalidGcpResourceFilenameError reports invalid GCP resource filename.
 func InvalidGcpResourceFilenameError(filepath id.Path) status.Error {
 	// TODO(b/134175210) Need better wording on error message.
-	return invalidGcpResourceFilenameError.WithPaths(filepath).New("Only these file names are supported: gcp-organization.yaml, gcp-folder.yaml, gcp-project.yaml, gcp-iam-policy.yaml, gcp-organization-policy.yaml")
+	return invalidGcpResourceFilenameError.
+		Sprint("Only these file names are supported: gcp-organization.yaml, gcp-folder.yaml, gcp-project.yaml, gcp-iam-policy.yaml, gcp-organization-policy.yaml").
+		BuildWithPaths(filepath)
 }

@@ -43,15 +43,15 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	// Get all known API resources from the server.
 	dc, err := p.clientGetter.ToDiscoveryClient()
 	if err != nil {
-		return nil, status.APIServerWrapf(err, "failed to get discovery client")
+		return nil, status.APIServerError(err, "failed to get discovery client")
 	}
 	apiResources, err := dc.ServerResources()
 	if err != nil {
-		return nil, status.APIServerWrapf(err, "failed to get server resources")
+		return nil, status.APIServerError(err, "failed to get server resources")
 	}
 	apiInfo, err := utildiscovery.NewAPIInfo(apiResources)
 	if err != nil {
-		return nil, status.APIServerWrapf(err, "discovery failed for server resources")
+		return nil, status.APIServerError(err, "discovery failed for server resources")
 	}
 
 	// Read any CRDs in the directory so the parser is aware of them.
@@ -64,7 +64,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	// an object is namespace or cluster scoped.
 	scoper, err := utildiscovery.NewAPIInfo(apiResources)
 	if err != nil {
-		return nil, status.From(err)
+		return nil, status.APIServerError(err, "error getting APIResources from Kubernetes cluster")
 	}
 	scoper.AddCustomResources(crds...)
 
@@ -74,12 +74,13 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		return nil, errs
 	}
 
-	crdInfo, err := clusterconfig.NewCRDInfo(
+	var crdErr status.Error
+	crdInfo, crdErr := clusterconfig.NewCRDInfo(
 		decode.NewGenericResourceDecoder(scheme.Scheme),
 		&v1.ClusterConfig{},
 		crds)
-	if err != nil {
-		return nil, status.From(err)
+	if crdErr != nil {
+		return nil, crdErr
 	}
 
 	var validators = []nonhierarchical.Validator{

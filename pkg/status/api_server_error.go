@@ -4,7 +4,14 @@ package status
 const APIServerErrorCode = "2002"
 
 // APIServerError represents an error returned by the APIServer.
-var APIServerError = NewErrorBuilder(APIServerErrorCode)
+var apiServerError = NewErrorBuilder(APIServerErrorCode).Sprint("APIServer error")
 
-// APIServerWrapf mimics the old APIServerWrap. To be deprecated.
-var APIServerWrapf = APIServerError.Wrapf
+// APIServerError wraps an error returned by the APIServer.
+func APIServerError(err error, message string) Error {
+	return apiServerError.Sprint(message).Wrap(err).Build()
+}
+
+// APIServerErrorf wraps an error returned by the APIServer with a formatted message.
+func APIServerErrorf(err error, format string, a ...interface{}) Error {
+	return apiServerError.Sprintf(format, a...).Wrap(err).Build()
+}

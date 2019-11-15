@@ -1,9 +1,6 @@
 package status
 
 import (
-	"sort"
-	"strings"
-
 	"github.com/google/nomos/pkg/importer/id"
 )
 
@@ -16,17 +13,6 @@ type ResourceError interface {
 	Resources() []id.Resource
 }
 
-// formatResources returns a formatted string containing all Resources in the ResourceError.
-func formatResources(resources []id.Resource) string {
-	resStrs := make([]string, len(resources))
-	for i, res := range resources {
-		resStrs[i] = id.PrintResource(res)
-	}
-	// Sort to ensure deterministic resource printing order.
-	sort.Strings(resStrs)
-	return strings.Join(resStrs, "\n\n")
-}
-
 // resourceError almost always results from an API server call involving one or more resources.
 var resourceError = NewErrorBuilder(ResourceErrorCode)
 
@@ -35,5 +21,5 @@ func ResourceWrap(err error, msg string, resources ...id.Resource) Error {
 	if err == nil {
 		return nil
 	}
-	return resourceError.WithResources(resources...).Wrap(err, msg)
+	return resourceError.Sprint(msg).Wrap(err).BuildWithResources(resources...)
 }

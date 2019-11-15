@@ -43,6 +43,7 @@ var objectParseError = status.NewErrorBuilder(ObjectParseErrorCode)
 // ObjectParseError reports that an object of known type did not match its definition, and so it was
 // read in as an *unstructured.Unstructured.
 func ObjectParseError(resource id.Resource) status.Error {
-	return objectParseError.WithResources(resource).Errorf(
-		"The following config is not parseable as a %v:", resource.GroupVersionKind())
+	return objectParseError.
+		Sprintf("The following config is not parseable as a %v:", resource.GroupVersionKind()).
+		BuildWithResources(resource)
 }

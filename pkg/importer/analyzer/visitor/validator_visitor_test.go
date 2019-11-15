@@ -10,7 +10,7 @@ import (
 )
 
 func testError() status.MultiError {
-	return status.UndocumentedError.New("error")
+	return status.UndocumentedError("error")
 }
 
 func fakeObject() ast.FileObject {

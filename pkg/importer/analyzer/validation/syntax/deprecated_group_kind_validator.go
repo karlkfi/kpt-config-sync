@@ -39,7 +39,8 @@ var deprecatedGroupKindError = status.NewErrorBuilder(DeprecatedGroupKindErrorCo
 // DeprecatedGroupKindError reports usage of a deprecated version of a specific Group/Kind.
 func DeprecatedGroupKindError(resource id.Resource, expected schema.GroupVersionKind) status.Error {
 	apiVersion, kind := expected.ToAPIVersionAndKind()
-	return deprecatedGroupKindError.WithResources(resource).Errorf(
-		"The config is using an unsupported Group and Kind. To fix, set the apiVersion to %q and kind to %q.",
-		apiVersion, kind)
+	return deprecatedGroupKindError.
+		Sprintf("The config is using an unsupported Group and Kind. To fix, set the apiVersion to %q and kind to %q.",
+			apiVersion, kind).
+		BuildWithResources(resource)
 }

@@ -67,10 +67,11 @@ var unknownResourceInHierarchyConfigError = status.NewErrorBuilder(UnknownResour
 // the cluster.
 func UnknownResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
 	gk := config.GroupKind()
-	return unknownResourceInHierarchyConfigError.WithResources(config).Errorf(
-		"This HierarchyConfig defines the APIResource %q which does not exist on cluster. "+
+	return unknownResourceInHierarchyConfigError.
+		Sprintf("This HierarchyConfig defines the APIResource %q which does not exist on cluster. "+
 			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.",
-		gk.String())
+			gk.String()).
+		BuildWithResources(config)
 }
 
 // ClusterScopedResourceInHierarchyConfigErrorCode is the error code for ClusterScopedResourceInHierarchyConfigError
@@ -83,8 +84,9 @@ var clusterScopedResourceInHierarchyConfigError = status.NewErrorBuilder(Cluster
 // manner
 func ClusterScopedResourceInHierarchyConfigError(config id.HierarchyConfig, scope discovery.ObjectScope) status.Error {
 	gk := config.GroupKind()
-	return clusterScopedResourceInHierarchyConfigError.WithResources(config).Errorf(
-		"This HierarchyConfig references the APIResource %q which has %s scope. "+
+	return clusterScopedResourceInHierarchyConfigError.
+		Sprintf("This HierarchyConfig references the APIResource %q which has %s scope. "+
 			"Cluster scoped objects are not permitted in HierarchyConfig.",
-		gk.String(), scope)
+			gk.String(), scope).
+		BuildWithResources(config)
 }

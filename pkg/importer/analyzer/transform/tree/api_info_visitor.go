@@ -33,13 +33,13 @@ func NewAPIInfoBuilderVisitor(client discovery.ServerResourcesInterface, ephemer
 func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	resources, discoveryErr := v.client.ServerResources()
 	if discoveryErr != nil {
-		v.errs = status.Append(v.errs, status.APIServerWrapf(discoveryErr, "failed to get server resources"))
+		v.errs = status.Append(v.errs, status.APIServerError(discoveryErr, "failed to get server resources"))
 	}
 
 	resources = append(resources, v.ephemeralResources...)
 	apiInfo, err := utildiscovery.NewAPIInfo(resources)
 	if err != nil {
-		v.errs = status.Append(v.errs, status.APIServerWrapf(err, "discovery failed for server resources"))
+		v.errs = status.Append(v.errs, status.APIServerError(err, "discovery failed for server resources"))
 	}
 
 	crdMap, errs := customresources.ProcessClusterObjects(r.ClusterObjects)

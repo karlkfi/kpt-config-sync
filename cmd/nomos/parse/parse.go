@@ -24,7 +24,7 @@ const timeout = time.Second * 15
 // NewParser constructs a Parser from ParserOpt.
 func NewParser(parserOpt filesystem.ParserOpt) (*filesystem.Parser, error) {
 	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
-		return nil, status.InternalError.New("No root path specified.")
+		return nil, status.InternalError("No root path specified.")
 	}
 
 	return filesystem.NewParser(importer.DefaultCLIOptions, parserOpt), nil

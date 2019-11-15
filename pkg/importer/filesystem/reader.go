@@ -41,7 +41,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
-		return nil, status.PathWrapf(err, dir.AbsoluteOSPath())
+		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
 	}
 
 	// We do this visitor length check because Builder returns an untyped error if passed an empty
@@ -50,7 +50,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 	visitors, err := resource.ExpandPathsToFileVisitors(
 		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, nil)
 	if err != nil {
-		return nil, status.PathWrapf(err, dir.AbsoluteOSPath())
+		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
 	}
 
 	var errs status.MultiError
@@ -66,7 +66,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 			Do()
 		fileInfos, err := result.Infos()
 		if err != nil {
-			return nil, status.APIServerWrapf(err, "failed to get resource infos")
+			return nil, status.APIServerError(err, "failed to get resource infos")
 		}
 		for _, info := range fileInfos {
 			//Assign relative path since that's what we actually need.
@@ -195,7 +195,7 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 	content := u.UnstructuredContent()
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
 	if !hasMetadata {
-		return status.UndocumentedError.New("All persistent Kubernetes objects MUST define metadata.")
+		return status.UndocumentedError("All persistent Kubernetes objects MUST define metadata.")
 	}
 
 	annotations, hasAnnotations := metadata["annotations"]
@@ -209,7 +209,7 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 		// We don't expect this error to be thrown since the parser before it would
 		// already return an error. Thus, creating a type just for this case would
 		// be overkill.
-		return status.UndocumentedError.New("metadata.annotations must be a map")
+		return status.UndocumentedError("metadata.annotations must be a map")
 	}
 
 	var invalidKeys []string

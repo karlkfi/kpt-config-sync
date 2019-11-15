@@ -30,7 +30,7 @@ var illegalKindInClusterregistryError = status.NewErrorBuilder(IllegalKindInClus
 
 // IllegalKindInClusterregistryError reports that an object has been illegally defined in clusterregistry/
 func IllegalKindInClusterregistryError(resource id.Resource) status.Error {
-	return illegalKindInClusterregistryError.WithResources(resource).Errorf(
-		"Configs of the below Kind may not be declared in `%s`/:",
-		repo.ClusterRegistryDir)
+	return illegalKindInClusterregistryError.
+		Sprintf("Configs of the below Kind may not be declared in `%s`/:", repo.ClusterRegistryDir).
+		BuildWithResources(resource)
 }

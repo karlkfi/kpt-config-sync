@@ -30,7 +30,7 @@ var illegalKindInSystemError = status.NewErrorBuilder(IllegalKindInSystemErrorCo
 
 // IllegalKindInSystemError reports that an object has been illegally defined in system/
 func IllegalKindInSystemError(resource id.Resource) status.Error {
-	return illegalKindInSystemError.WithResources(resource).Errorf(
-		"Configs of this Kind may not be declared in the `%s/` directory of the repo:",
-		repo.SystemDir)
+	return illegalKindInSystemError.
+		Sprintf("Configs of this Kind may not be declared in the `%s/` directory of the repo:", repo.SystemDir).
+		BuildWithResources(resource)
 }
