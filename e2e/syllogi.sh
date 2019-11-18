@@ -25,7 +25,7 @@ function install() {
     -n=config-management-system --from-file=ssh="$TEST_DIR/id_rsa.nomos" || true
 
   # Install Nomos
-  kubectl apply -f "${TEST_DIR}/operator-config-syllogi.yaml"
+  kubectl apply -f "${TEST_DIR}/manifests/operator-config-syllogi.yaml"
 
   echo "Waiting for Nomos to come up"
   wait::for -s -t 180 -- install::nomos_running

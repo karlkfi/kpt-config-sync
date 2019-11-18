@@ -69,10 +69,10 @@ function install() {
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
     if ${stable_channel}; then
       echo "++++++ Applying Nomos using stable channel"
-      kubectl apply -f "${TEST_DIR}/operator-config-git-stable.yaml"
+      kubectl apply -f "${TEST_DIR}/manifests/operator-config-git-stable.yaml"
     else
       echo "++++++ Applying Nomos using dev channel"
-      kubectl apply -f "${TEST_DIR}/operator-config-git.yaml"
+      kubectl apply -f "${TEST_DIR}/manifests/operator-config-git.yaml"
     fi
     echo "++++++ Waiting for config-management-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running

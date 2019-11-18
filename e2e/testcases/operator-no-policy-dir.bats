@@ -17,13 +17,13 @@ setup() {
 
 teardown() {
   setup::git::remove_all acme
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git.yaml"
+  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git.yaml"
   setup::common_teardown
 }
 
 
 @test "${FILE_NAME}: Absence of cluster, namespaces, systems directories at POLICY_DIR yields a missing repo error" {
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-no-policy-dir.yaml"
+  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-no-policy-dir.yaml"
 
   # Verify that the application of the operator config yields the correct error code
   wait::for -t 60 -o "KNV1017" -- kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
@@ -34,7 +34,7 @@ teardown() {
 @test "${FILE_NAME}: Confirm that config-management-operator starts correctly with POLICY_DIR unset" {
   setup::git::add_contents_to_root acme
 
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../operator-config-git-no-policy-dir.yaml"
+  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-no-policy-dir.yaml"
 
   setup::git::remove_folder acme
 
