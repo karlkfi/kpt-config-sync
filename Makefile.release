@@ -68,7 +68,7 @@ READ_ACCESS_LIST ?= \
 	group:gke-on-prem-docs-readers-external@googlegroups.com:legacyObjectReader \
 	group:gke-hub-eap-users-external@google.com:legacyObjectReader \
 	group:kpm-external@google.com:legacyObjectReader \
-	group:cft-ci-robots@test.infra.cft.tips \
+	group:cft-ci-robots@test.infra.cft.tips:legacyObjectReader \
 	domain:anthosworkshop.com:legacyObjectReader \
 	domain:qwiklabs.net:legacyObjectReader \
 	domain:google.com:legacyObjectReader \
