@@ -7,8 +7,8 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-// NewNamespaceValidator validates the value of metadata.namespace
-func NewNamespaceValidator() ast.Visitor {
+// NewMetadataNamespaceDirectoryValidator validates the value of metadata.namespace
+func NewMetadataNamespaceDirectoryValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(
 		func(o ast.FileObject) status.MultiError {
 			expected := o.Dir().Base()

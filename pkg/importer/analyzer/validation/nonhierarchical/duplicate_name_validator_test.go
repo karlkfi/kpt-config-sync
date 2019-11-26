@@ -10,16 +10,30 @@ import (
 )
 
 func TestDuplicateNameValidator(t *testing.T) {
-	// Primary logic tested in pkg/importer/analyzer/validation/metadata/duplicate_name_validator_test.go.
-	// No need to fully duplicate here.
 	testCases := []nht.ValidatorTestCase{
-		nht.Pass("two non-duplicate objects",
+		nht.Pass("two objects with different names",
 			fake.Role(core.Name("alice"), core.Namespace("shipping")),
 			fake.Role(core.Name("bob"), core.Namespace("shipping")),
+		),
+		nht.Pass("two objects with different namespaces",
+			fake.Role(core.Name("alice"), core.Namespace("shipping")),
+			fake.Role(core.Name("alice"), core.Namespace("production")),
+		),
+		nht.Pass("two objects with different kinds",
+			fake.Role(core.Name("alice"), core.Namespace("shipping")),
+			fake.RoleBinding(core.Name("alice"), core.Namespace("shipping")),
 		),
 		nht.Fail("two duplicate objects",
 			fake.Role(core.Name("alice"), core.Namespace("shipping")),
 			fake.Role(core.Name("alice"), core.Namespace("shipping")),
+		),
+		nht.Fail("duplicate cluster-scoped objects",
+			fake.ClusterRole(core.Name("alice")),
+			fake.ClusterRole(core.Name("alice")),
+		),
+		nht.Pass("cluster-scoped objects with different names",
+			fake.ClusterRole(core.Name("alice")),
+			fake.ClusterRole(core.Name("bob")),
 		),
 	}
 

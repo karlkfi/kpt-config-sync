@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -99,7 +99,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 				fake.Role(core.Name("alice"), core.Namespace("shipping")),
 				fake.Role(core.Name("alice"), core.Namespace("shipping")),
 			},
-			expectedErrorCode: metadata.NameCollisionErrorCode,
+			expectedErrorCode: nonhierarchical.NameCollisionErrorCode,
 		},
 	}
 

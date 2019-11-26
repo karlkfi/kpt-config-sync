@@ -3,7 +3,6 @@ package syntax
 import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,13 +10,6 @@ import (
 
 // IllegalFieldsInConfigErrorCode is the error code for IllegalFieldsInConfigError
 const IllegalFieldsInConfigErrorCode = "1045"
-
-// NewDisallowedFieldsValidator validates that imported objects do not contain disallowed fields.
-func NewDisallowedFieldsValidator() *visitor.ValidatorVisitor {
-	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		return DisallowFields(o)
-	})
-}
 
 type hasSelfLink interface {
 	GetSelfLink() string

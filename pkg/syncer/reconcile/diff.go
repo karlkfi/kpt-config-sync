@@ -6,7 +6,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +43,7 @@ func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 }
 
 func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unstructured.Unstructured) {
-	err := metadata.IllegalManagementAnnotationError(
+	err := nonhierarchical.IllegalManagementAnnotationError(
 		ast.ParseFileObject(declared),
 		declared.GetAnnotations()[v1.ResourceManagementKey],
 	)

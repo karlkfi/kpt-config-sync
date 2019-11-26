@@ -3,7 +3,7 @@ package visitors
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/status"
 )
@@ -13,7 +13,7 @@ import (
 func NewSupportedClusterResourcesValidator() *visitor.ValidatorVisitor {
 	ensureSupported := func(o *ast.ClusterObject) status.MultiError {
 		if !hierarchyconfig.AllowedInHierarchyConfigs(o.GroupVersionKind().GroupKind()) {
-			return syntax.UnsupportedObjectError(o)
+			return nonhierarchical.UnsupportedObjectError(o)
 		}
 		return nil
 	}

@@ -56,30 +56,3 @@ func TestAnnotationValidator(t *testing.T) {
 
 	test.RunAll(t)
 }
-
-func TestNewManagedAnnotationValidator(t *testing.T) {
-	test := asttest.Validator(NewManagedAnnotationValidator,
-		IllegalManagementAnnotationErrorCode,
-
-		asttest.Pass("no management annotation",
-			fake.Role(),
-		),
-		asttest.Pass("disabled management passes",
-			fake.Role(
-				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
-			),
-		),
-		asttest.Fail("enabled management fails",
-			fake.Role(
-				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-			),
-		),
-		asttest.Fail("invalid management fails",
-			fake.Role(
-				core.Annotation(v1.ResourceManagementKey, "invalid"),
-			),
-		),
-	)
-
-	test.RunAll(t)
-}

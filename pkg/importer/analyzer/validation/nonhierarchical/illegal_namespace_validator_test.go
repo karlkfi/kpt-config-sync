@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
-func TestNamespaceValidator(t *testing.T) {
+func TestIllegalNamespaceValidator(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Cluster scoped object",
 			fake.ClusterRole(),

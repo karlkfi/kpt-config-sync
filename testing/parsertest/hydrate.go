@@ -137,7 +137,7 @@ func (pt Test) RunAll(t *testing.T) {
 
 			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
 
-			r := parser.HydrateRoot(visitors, tc.ClusterName)
+			r, fileObjects := parser.HydrateRootAndFlatten(visitors, tc.ClusterName)
 
 			if tc.Errors != nil || parser.Errors() != nil {
 				vettesting.ExpectErrors(tc.Errors, parser.Errors(), t)
@@ -164,7 +164,7 @@ func (pt Test) RunAll(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				actual, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, r.Flatten())
+				actual, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, fileObjects)
 				if errs != nil {
 					t.Fatal(errs)
 				}

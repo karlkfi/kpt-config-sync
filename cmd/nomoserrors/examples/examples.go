@@ -50,7 +50,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.IllegalNamespaceAnnotationError(fake.Namespace("namespaces/foo")))
 
 	// 1005
-	result.add(metadata.IllegalManagementAnnotationError(fake.Role(), "invalid"))
+	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
 
 	// 1006
 	result.add(syntax.ObjectParseError(fake.Role()))
@@ -122,16 +122,16 @@ func Generate() map[string][]status.Error {
 	result.add(syntax.InvalidDirectoryNameError(cmpath.FromSlash("namespaces/ABC")))
 
 	// 1029
-	result.add(metadata.NamespaceCollisionError("qux",
+	result.add(nonhierarchical.NamespaceCollisionError("qux",
 		fake.Namespace("namespaces/foo/qux"),
 		fake.Namespace("namespaces/bar/qux")))
-	result.add(metadata.NamespaceMetadataNameCollisionError(kinds.Role().GroupKind(),
+	result.add(nonhierarchical.NamespaceMetadataNameCollisionError(kinds.Role().GroupKind(),
 		"backend", "admin",
 		fake.RoleAtPath("namespaces/backend/admin-1.yaml", core.Namespace("backend"), core.Name("admin")),
 		fake.RoleAtPath("namespaces/backend/admin-2.yaml", core.Namespace("backend"), core.Name("admin")),
 		fake.RoleAtPath("namespaces/backend/admin-3.yaml", core.Namespace("backend"), core.Name("admin")),
 	))
-	result.add(metadata.ClusterMetadataNameCollisionError(kinds.ClusterRole().GroupKind(),
+	result.add(nonhierarchical.ClusterMetadataNameCollisionError(kinds.ClusterRole().GroupKind(),
 		"cluster-admin",
 		fake.ClusterRoleAtPath("cluster/admin-1.yaml", core.Name("cluster-admin")),
 		fake.ClusterRoleAtPath("cluster/admin-2.yaml", core.Name("cluster-admin")),
@@ -141,7 +141,7 @@ func Generate() map[string][]status.Error {
 	result.add(semantic.MultipleSingletonsError(fake.Namespace("namespaces/foo"), fake.Namespace("namespaces/foo")))
 
 	// 1031
-	result.add(metadata.MissingObjectNameError(fake.Role(core.Name(""))))
+	result.add(nonhierarchical.MissingObjectNameError(fake.Role(core.Name(""))))
 
 	// 1032
 	result.add(nonhierarchical.IllegalHierarchicalKind(fake.Repo()))
@@ -157,7 +157,7 @@ func Generate() map[string][]status.Error {
 	// 1035 is Deprecated.
 
 	// 1036
-	result.add(metadata.InvalidMetadataNameError(fake.Role(core.Name("ABC"))))
+	result.add(nonhierarchical.InvalidMetadataNameError(fake.Role(core.Name("ABC"))))
 
 	// 1037
 	result.add(syntax.IllegalKindInClusterregistryError(fake.RoleAtPath("clusterregistry/role.yaml")))
@@ -194,7 +194,7 @@ func Generate() map[string][]status.Error {
 	}))
 
 	// 1043
-	result.add(syntax.UnsupportedObjectError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinition()))
 
 	// 1044
 	result.add(semantic.UnsyncableResourcesInLeaf(node("namespaces/foo")))
@@ -214,7 +214,7 @@ func Generate() map[string][]status.Error {
 	result.add(semantic.UnsupportedCRDRemovalError(fake.CustomResourceDefinition()))
 
 	// 1048
-	result.add(syntax.InvalidCRDNameError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinition()))
 
 	// 1049 is Deprecated.
 

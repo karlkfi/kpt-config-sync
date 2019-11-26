@@ -80,16 +80,10 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		return nil, crdErr
 	}
 
+	errs = status.Append(errs, standardValidation(fileObjects))
+
 	var validators = []nonhierarchical.Validator{
-		nonhierarchical.DuplicateNameValidator,
 		nonhierarchical.IllegalHierarchicalKindValidator,
-		nonhierarchical.IllegalNamespaceValidator,
-		nonhierarchical.DisallowedFieldsValidator,
-		nonhierarchical.NameValidator,
-		nonhierarchical.NamespaceValidator,
-		nonhierarchical.ManagementAnnotationValidator,
-		nonhierarchical.CRDNameValidator,
-		nonhierarchical.IllegalCRDValidator,
 		nonhierarchical.CRDRemovalValidator(crdInfo),
 		nonhierarchical.ScopeValidator(apiInfo),
 	}

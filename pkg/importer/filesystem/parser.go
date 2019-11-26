@@ -115,13 +115,19 @@ func (p *Parser) GenerateVisitors(
 	return visitors
 }
 
-// HydrateRoot hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) HydrateRoot(visitors []ast.Visitor, clusterName string) *ast.Root {
+// HydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
+func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) (*ast.Root, []ast.FileObject) {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
 
-	return p.runVisitors(astRoot, visitors)
+	root := p.runVisitors(astRoot, visitors)
+
+	fileObjects := root.Flatten()
+	errs := standardValidation(fileObjects)
+	p.errors = status.Append(p.errors, errs)
+
+	return root, fileObjects
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
@@ -157,7 +163,8 @@ func (p *Parser) Parse(
 
 	visitors := p.GenerateVisitors(flatRoot, currentConfigs, crds)
 
-	r := p.HydrateRoot(visitors, clusterName)
+	// Required messiness because of how scoping logic is currently implemented.
+	r, fileObjects := p.HydrateRootAndFlatten(visitors, clusterName)
 	if p.errors != nil {
 		return nil, p.errors
 	}
@@ -166,7 +173,8 @@ func (p *Parser) Parse(
 	if err != nil {
 		return nil, err
 	}
-	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, r.Flatten())
+
+	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
 	if glog.V(8) {
 		// REALLY useful when debugging.
 		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))

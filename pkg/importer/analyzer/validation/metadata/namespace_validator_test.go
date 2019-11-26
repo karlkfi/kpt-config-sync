@@ -10,7 +10,7 @@ import (
 
 func TestNamespaceValidator(t *testing.T) {
 	test := asttest.Validator(
-		NewNamespaceValidator,
+		NewMetadataNamespaceDirectoryValidator,
 		IllegalMetadataNamespaceDeclarationErrorCode,
 		asttest.Pass("no metadata.namespace",
 			fake.RoleAtPath("namespaces/foo/role.yaml", core.Namespace("")),

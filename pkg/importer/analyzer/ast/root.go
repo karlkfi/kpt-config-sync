@@ -37,6 +37,9 @@ func (r *Root) Accept(visitor Visitor) *Root {
 // Flatten returns a list of all materialized objects in the Root.
 // It returns all objects that we would actually sync to a cluster.
 func (r *Root) Flatten() []FileObject {
+	if r == nil {
+		return nil
+	}
 	var result []FileObject
 
 	for _, o := range r.ClusterObjects {

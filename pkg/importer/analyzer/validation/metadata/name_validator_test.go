@@ -20,53 +20,9 @@ func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
 	)
 }
 
-func TestNameExistenceValidation(t *testing.T) {
-	test := visitortesting.ObjectValidatorTest{
-		Validator: NewNameValidator,
-		ErrorCode: MissingObjectNameErrorCode,
-		TestCases: []visitortesting.ObjectValidatorTestCase{
-			{
-				Name:       "empty name",
-				Object:     fakeNamedObject(kinds.Role(), ""),
-				ShouldFail: true,
-			},
-			{
-				Name:   "legal name",
-				Object: fakeNamedObject(kinds.Role(), "name"),
-			},
-		},
-	}
-
-	test.RunAll(t)
-}
-
-func TestCrdNameValidation(t *testing.T) {
-	test := visitortesting.ObjectValidatorTest{
-		Validator: NewNameValidator,
-		ErrorCode: InvalidMetadataNameErrorCode,
-		TestCases: []visitortesting.ObjectValidatorTestCase{
-			{
-				Name:       "illegal crd name",
-				Object:     fakeNamedObject(kinds.Cluster(), "Name"),
-				ShouldFail: true,
-			},
-			{
-				Name:   "legal crd name",
-				Object: fakeNamedObject(kinds.Cluster(), "name"),
-			},
-			{
-				Name:   "non crd with illegal crd name",
-				Object: fakeNamedObject(kinds.ResourceQuota(), "Name"),
-			},
-		},
-	}
-
-	test.RunAll(t)
-}
-
 func TestTopLevelNamespaceValidation(t *testing.T) {
 	test := visitortesting.ObjectValidatorTest{
-		Validator: NewNameValidator,
+		Validator: NewNamespaceDirectoryNameValidator,
 		ErrorCode: IllegalTopLevelNamespaceErrorCode,
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{

@@ -1,13 +1,10 @@
 package syntax
 
 import (
-	"strings"
-
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
@@ -58,11 +55,4 @@ func InvalidDirectoryNameError(dir cmpath.Path) status.Error {
 2. consists only of lowercase letters (a-z), digits (0-9), and hyphen '-'; and
 3. begins and ends with a lowercase letter or digit.`, dir.Base()).
 		BuildWithPaths(dir)
-}
-
-// InvalidNamespaceError reports using an illegal Namespace.
-func InvalidNamespaceError(o id.Resource, errs []string) status.Error {
-	return invalidDirectoryNameError.
-		Sprintf("metadata.namespace is invalid:\n\n%s\n", strings.Join(errs, "\n")).
-		BuildWithResources(o)
 }

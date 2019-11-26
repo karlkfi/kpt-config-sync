@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -37,6 +38,11 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Sc
 
 	var errs status.MultiError
 	for _, f := range fileObjects {
+		if transform.IsEphemeral(f.GroupVersionKind()) {
+			// Do not materialize NamespaceSelectors.
+			continue
+		}
+
 		if f.GroupVersionKind() == kinds.Namespace() {
 			// Namespace is a snowflake.
 			// This preserves the ordering behavior of kubectl apply -f. This means what is in the
