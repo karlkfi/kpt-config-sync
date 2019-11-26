@@ -192,18 +192,13 @@ func (t *TestHelper) CRD() *v1beta1.CustomResourceDefinition {
 
 // EmptyRoot returns an empty Root.
 func (t *TestHelper) EmptyRoot() *ast.Root {
-	return &ast.Root{
-		ImportToken: t.ImportToken,
-		LoadTime:    t.ImportTime,
-	}
+	return &ast.Root{}
 }
 
 // ClusterConfigs returns a Root with only cluster configs.
 func (t *TestHelper) ClusterConfigs() *ast.Root {
 	return &ast.Root{
 		ClusterObjects: t.AcmeCluster(),
-		ImportToken:    t.ImportToken,
-		LoadTime:       t.ImportTime,
 	}
 }
 
@@ -213,8 +208,6 @@ func (t *TestHelper) CRDClusterConfig() *ast.Root {
 		ClusterObjects: ClusterObjectSets(
 			t.CRD(),
 		),
-		ImportToken: t.ImportToken,
-		LoadTime:    t.ImportTime,
 	}
 }
 
@@ -458,9 +451,7 @@ func (t *TestHelper) System() []*ast.SystemObject {
 // NamespaceConfigs returns a Root with an example hierarchy.
 func (t *TestHelper) NamespaceConfigs() *ast.Root {
 	return &ast.Root{
-		Tree:        t.acmeTree(),
-		ImportToken: t.ImportToken,
-		LoadTime:    t.ImportTime,
+		Tree: t.acmeTree(),
 	}
 }
 
@@ -471,7 +462,5 @@ func (t *TestHelper) AcmeRoot() *ast.Root {
 		SystemObjects:          t.System(),
 		ClusterObjects:         t.AcmeCluster(),
 		Tree:                   t.acmeTree(),
-		ImportToken:            t.ImportToken,
-		LoadTime:               t.ImportTime,
 	}
 }

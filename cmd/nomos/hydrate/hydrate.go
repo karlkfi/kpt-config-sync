@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -87,7 +86,7 @@ clusters.`,
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
+		hydrate.ForEachCluster(parser, "", metav1.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

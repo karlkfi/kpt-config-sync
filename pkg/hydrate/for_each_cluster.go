@@ -1,12 +1,11 @@
 package hydrate
 
 import (
-	"time"
-
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -19,7 +18,7 @@ const (
 func ForEachCluster(
 	p filesystem.ConfigParser,
 	importToken string,
-	loadTime time.Time,
+	loadTime metav1.Time,
 	f func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.

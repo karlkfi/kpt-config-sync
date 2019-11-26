@@ -25,7 +25,7 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			expected: &ast.Root{},
 		},
 		{
-			name:    "namespace returns empty",
+			name:    "keeps Namespace",
 			objects: []ast.FileObject{fake.Namespace("namespaces/bar")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
@@ -35,6 +35,11 @@ func TestEphemeralResourceRemover(t *testing.T) {
 						{
 							Path: cmpath.FromSlash("namespaces/bar"),
 							Type: node.Namespace,
+							Objects: []*ast.NamespaceObject{
+								{
+									FileObject: fake.Namespace("namespaces/bar"),
+								},
+							},
 						},
 					},
 				},
@@ -60,16 +65,22 @@ func TestEphemeralResourceRemover(t *testing.T) {
 		},
 		{
 			name:    "only non-ephemeral",
-			objects: []ast.FileObject{fake.Namespace("namespaces/bar"), fake.RoleAtPath("namespaces/bar/role.yaml")},
+			objects: []ast.FileObject{fake.NamespaceSelectorAtPath("namespaces/bar/nss.yaml", core.Name("")), fake.Namespace("namespaces/bar"), fake.RoleAtPath("namespaces/bar/role.yaml")},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
 					Path: cmpath.FromSlash("namespaces"),
 					Type: node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path:    cmpath.FromSlash("namespaces/bar"),
-							Type:    node.Namespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/bar/role.yaml")}},
+							Path: cmpath.FromSlash("namespaces/bar"),
+							Type: node.Namespace,
+							Selectors: map[string]*v1.NamespaceSelector{
+								"": fake.NamespaceSelectorObject(core.Name("")),
+							},
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.Namespace("namespaces/bar")},
+								{FileObject: fake.RoleAtPath("namespaces/bar/role.yaml")},
+							},
 						},
 					},
 				},
@@ -97,18 +108,18 @@ func TestEphemeralResourceRemover(t *testing.T) {
 			},
 		},
 		{
-			name:     "namespace in System returns empty",
-			objects:  []ast.FileObject{fake.Namespace("system")},
+			name:     "namespaceselector in System returns empty",
+			objects:  []ast.FileObject{fake.NamespaceSelectorAtPath("system/nss.yaml")},
 			expected: &ast.Root{},
 		},
 		{
-			name:     "namespace in ClusterRegistry returns empty",
-			objects:  []ast.FileObject{fake.Namespace("clusterregistry")},
+			name:     "namespaceselector in ClusterRegistry returns empty",
+			objects:  []ast.FileObject{fake.NamespaceSelectorAtPath("clusterregistry/nss.yaml")},
 			expected: &ast.Root{},
 		},
 		{
-			name:     "namespace in Cluster returns empty",
-			objects:  []ast.FileObject{fake.Namespace("cluster")},
+			name:     "namespaceselector in Cluster returns empty",
+			objects:  []ast.FileObject{fake.NamespaceSelectorAtPath("cluster/nss.yaml")},
 			expected: &ast.Root{},
 		},
 	}

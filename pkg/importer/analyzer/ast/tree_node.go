@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 )
 
 // TreeNode is analogous to a directory in the config hierarchy.
@@ -76,4 +77,28 @@ func (n *TreeNode) GetAnnotations() map[string]string {
 // SetAnnotations replaces the annotations on the tree node with the supplied ones.
 func (n *TreeNode) SetAnnotations(a map[string]string) {
 	n.Annotations = a
+}
+
+// flatten returns the list of materialized FileObjects contained in this
+// TreeNode. Specifically, it returns either
+// 1) the list of Objects if this is a Namespace node, or
+// 2) the concatenated list of all objects returned by calling flatten on all of
+// its children.
+func (n *TreeNode) flatten() []FileObject {
+	if n.Type == node.Namespace {
+		result := make([]FileObject, len(n.Objects))
+		for i, o := range n.Objects {
+			if o.GroupVersionKind() != kinds.Namespace() {
+				o.SetNamespace(n.Name())
+			}
+			result[i] = o.FileObject
+		}
+		return result
+	}
+
+	var result []FileObject
+	for _, child := range n.Children {
+		result = append(result, child.flatten()...)
+	}
+	return result
 }

@@ -3,7 +3,6 @@ package vet
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -16,7 +15,9 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -63,7 +64,7 @@ returns a non-zero error code if any issues are found.
 		}
 
 		encounteredError := false
-		hydrate.ForEachCluster(parser, "", time.Time{}, func(clusterName string, _ *namespaceconfig.AllConfigs, err status.MultiError) {
+		hydrate.ForEachCluster(parser, "", metav1.Time{}, func(clusterName string, _ *namespaceconfig.AllConfigs, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

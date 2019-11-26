@@ -1,18 +1,12 @@
 package ast
 
 import (
-	"time"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 // Root represents a hierarchy of declared configs, settings for how those configs will be
 // interpreted, and information regarding where those configs came from.
 type Root struct {
-	// ImportToken is the token for context
-	ImportToken string
-	LoadTime    time.Time // Time at which the context was generated
-
 	// ClusterName is the name of the Cluster to generate the policy hierarchy for. Determines which
 	// ClusterSelectors are active.
 	ClusterName string
@@ -33,9 +27,25 @@ type Root struct {
 }
 
 // Accept invokes VisitRoot on the visitor.
-func (c *Root) Accept(visitor Visitor) *Root {
-	if c == nil {
+func (r *Root) Accept(visitor Visitor) *Root {
+	if r == nil {
 		return nil
 	}
-	return visitor.VisitRoot(c)
+	return visitor.VisitRoot(r)
+}
+
+// Flatten returns a list of all materialized objects in the Root.
+// It returns all objects that we would actually sync to a cluster.
+func (r *Root) Flatten() []FileObject {
+	var result []FileObject
+
+	for _, o := range r.ClusterObjects {
+		result = append(result, o.FileObject)
+	}
+
+	if r.Tree != nil {
+		result = append(result, r.Tree.flatten()...)
+	}
+
+	return result
 }

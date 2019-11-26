@@ -3,27 +3,25 @@
 package filesystem
 
 import (
-	"time"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -118,21 +116,12 @@ func (p *Parser) GenerateVisitors(
 }
 
 // HydrateRoot hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) HydrateRoot(
-	visitors []ast.Visitor,
-	importToken string,
-	loadTime time.Time,
-	clusterName string,
-) *ast.Root {
+func (p *Parser) HydrateRoot(visitors []ast.Visitor, clusterName string) *ast.Root {
 	astRoot := &ast.Root{
-		ImportToken: importToken,
-		LoadTime:    loadTime,
 		ClusterName: clusterName,
 	}
 
-	p.runVisitors(astRoot, visitors)
-
-	return astRoot
+	return p.runVisitors(astRoot, visitors)
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
@@ -145,7 +134,7 @@ func (p *Parser) HydrateRoot(
 func (p *Parser) Parse(
 	importToken string,
 	currentConfigs *namespaceconfig.AllConfigs,
-	loadTime time.Time,
+	loadTime metav1.Time,
 	clusterName string,
 ) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
@@ -167,33 +156,36 @@ func (p *Parser) Parse(
 	}
 
 	visitors := p.GenerateVisitors(flatRoot, currentConfigs, crds)
-	outputVisitor := backend.NewOutputVisitor()
-	visitors = append(visitors, outputVisitor)
 
-	p.HydrateRoot(visitors, importToken, loadTime, clusterName)
+	r := p.HydrateRoot(visitors, clusterName)
 	if p.errors != nil {
 		return nil, p.errors
 	}
 
-	configs := outputVisitor.AllConfigs()
+	scoper, err := utildiscovery.GetScoper(r)
+	if err != nil {
+		return nil, err
+	}
+	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, r.Flatten())
 	if glog.V(8) {
 		// REALLY useful when debugging.
 		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
 	}
-	return configs, nil
+	return configs, errs
 }
 
-func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) {
+func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 	for _, visitor := range visitors {
 		if p.errors != nil && visitor.RequiresValidState() {
-			return
+			return nil
 		}
 		root = root.Accept(visitor)
 		p.errors = status.Append(p.errors, visitor.Error())
 		if visitor.Fatal() {
-			return
+			return nil
 		}
 	}
+	return root
 }
 
 func (p *Parser) readSystemResources() []ast.FileObject {

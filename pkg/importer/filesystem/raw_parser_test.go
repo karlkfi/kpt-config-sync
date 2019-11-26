@@ -2,10 +2,8 @@ package filesystem_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
@@ -13,17 +11,18 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/google/nomos/testing/testoutput"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	importToken = visitortesting.ImportToken
-	loadTime    = time.Time{}
+	loadTime    = metav1.Time{}
 )
 
 type fakeReader struct {
@@ -44,19 +43,14 @@ func TestRawParser_Parse(t *testing.T) {
 	}{
 		{
 			name:     "empty returns empty",
-			expected: namespaceconfig.NewAllConfigs(importToken, loadTime),
+			expected: testoutput.NewAllConfigs(t),
 		},
 		{
 			name: "cluster-scoped object",
 			objects: []ast.FileObject{
 				fake.ClusterRole(),
 			},
-			expected: func() *namespaceconfig.AllConfigs {
-				result := namespaceconfig.NewAllConfigs(importToken, loadTime)
-				result.AddClusterResource(fake.ClusterRole().Object)
-				result.AddSync(*v1.NewSync(kinds.ClusterRole().GroupKind()))
-				return result
-			}(),
+			expected: testoutput.NewAllConfigs(t, fake.ClusterRole()),
 		},
 		{
 			name: "preserves Namespace",
@@ -64,14 +58,10 @@ func TestRawParser_Parse(t *testing.T) {
 				fake.Role(core.Namespace("foo")),
 				fake.RoleBinding(core.Namespace("bar")),
 			},
-			expected: func() *namespaceconfig.AllConfigs {
-				result := namespaceconfig.NewAllConfigs(importToken, loadTime)
-				result.AddNamespaceResource("foo", fake.Role(core.Namespace("foo")).Object)
-				result.AddNamespaceResource("bar", fake.RoleBinding(core.Namespace("bar")).Object)
-				result.AddSync(*v1.NewSync(kinds.Role().GroupKind()))
-				result.AddSync(*v1.NewSync(kinds.RoleBinding().GroupKind()))
-				return result
-			}(),
+			expected: testoutput.NewAllConfigs(t,
+				fake.Role(core.Namespace("foo")),
+				fake.RoleBinding(core.Namespace("bar")),
+			),
 		},
 	}
 

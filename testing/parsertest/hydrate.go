@@ -2,21 +2,22 @@ package parsertest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/backend"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
+	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TestCase represents a test case that runs AST hydration on a set of already-parsed files.
@@ -135,10 +136,8 @@ func (pt Test) RunAll(t *testing.T) {
 			flatRoot := treetesting.BuildFlatTree(t, objects...)
 
 			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
-			outputVisitor := backend.NewOutputVisitor()
-			visitors = append(visitors, outputVisitor)
 
-			parser.HydrateRoot(visitors, "", time.Time{}, tc.ClusterName)
+			r := parser.HydrateRoot(visitors, tc.ClusterName)
 
 			if tc.Errors != nil || parser.Errors() != nil {
 				vettesting.ExpectErrors(tc.Errors, parser.Errors(), t)
@@ -160,7 +159,16 @@ func (pt Test) RunAll(t *testing.T) {
 					tc.Expected.NamespaceConfigs = map[string]v1.NamespaceConfig{}
 				}
 
-				actual := outputVisitor.AllConfigs()
+
+				scoper, err := discovery.GetScoper(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				actual, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, r.Flatten())
+				if errs != nil {
+					t.Fatal(errs)
+				}
+
 				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
 					t.Fatalf(diff)
 				}

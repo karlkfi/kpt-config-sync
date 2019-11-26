@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -64,7 +65,9 @@ func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 
 	switch p.scoper.GetScope(gk) {
 	case discovery.ClusterScope:
-		p.errs = status.Append(p.errs, syntax.IllegalKindInNamespacesError(o))
+		if o.GroupVersionKind() != kinds.Namespace() {
+			p.errs = status.Append(p.errs, syntax.IllegalKindInNamespacesError(o))
+		}
 	case discovery.UnknownScope:
 		p.errs = status.Append(p.errs, UnknownObjectError(&o.FileObject))
 	}

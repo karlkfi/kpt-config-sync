@@ -1,9 +1,6 @@
 package filesystem
 
 import (
-	"time"
-
-	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -11,12 +8,12 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -39,7 +36,7 @@ func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime time.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
+func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime metav1.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	// Get all known API resources from the server.
 	dc, err := p.clientGetter.ToDiscoveryClient()
 	if err != nil {
@@ -103,34 +100,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		return nil, errs
 	}
 
-	result := namespaceconfig.NewAllConfigs(importToken, loadTime)
-	for _, f := range fileObjects {
-		if f.GroupVersionKind() == kinds.Namespace() {
-			// Namespace is a snowflake.
-			// This preserves the ordering behavior of kubectl apply -f. This means what is in the
-			// alphabetically-last file wins.
-			result.AddNamespaceConfig(f.GetName(), f.GetAnnotations(), f.GetLabels())
-			continue
-		}
-
-		result.AddSync(*v1.NewSync(f.GroupVersionKind().GroupKind()))
-		switch scoper.GetScope(f.GroupVersionKind().GroupKind()) {
-		case utildiscovery.ClusterScope:
-			result.AddClusterResource(f.Object)
-		case utildiscovery.NamespaceScope:
-			namespace := f.GetNamespace()
-			if namespace == "" {
-				// Empty string/non-declared metadata.namespace automatically maps to "default", so this
-				// ensures we maintain these in a single NamespaceConfig entry.
-				namespace = "default"
-			}
-			result.AddNamespaceResource(namespace, f.Object)
-		case utildiscovery.UnknownScope:
-			errs = status.Append(errs, validation.UnknownObjectError(&f))
-		}
-	}
-
-	return result, errs
+	return namespaceconfig.NewAllConfigs(importToken, loadTime, apiInfo, fileObjects)
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

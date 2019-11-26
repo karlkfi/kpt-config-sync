@@ -5,18 +5,18 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const timeout = time.Second * 15
@@ -54,7 +54,7 @@ func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig
 	if cErr != nil {
 		return nil, cErr
 	}
-	resources, mErr := p.Parse("", policies, time.Time{}, clusterName)
+	resources, mErr := p.Parse("", policies, metav1.Time{}, clusterName)
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

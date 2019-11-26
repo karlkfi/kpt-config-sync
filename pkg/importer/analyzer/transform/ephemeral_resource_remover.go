@@ -20,7 +20,6 @@ type namespacedKind bool
 
 func ephemeralKinds() map[schema.GroupVersionKind]namespacedKind {
 	return map[schema.GroupVersionKind]namespacedKind{
-		kinds.Namespace():         true,
 		kinds.NamespaceSelector(): true,
 	}
 }
