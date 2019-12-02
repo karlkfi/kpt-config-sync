@@ -9,7 +9,7 @@ import (
 
 // CRDRemovalValidator ensures the repo doesn't declare resources which use now-nonexistent CRDs.
 func CRDRemovalValidator(crdInfo *clusterconfig.CRDInfo) Validator {
-	return perObjectValidator(func(o ast.FileObject) status.Error {
+	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		return semantic.CheckCRDPendingRemoval(crdInfo, o)
 	})
 }

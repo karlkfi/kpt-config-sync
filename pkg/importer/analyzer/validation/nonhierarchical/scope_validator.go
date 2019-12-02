@@ -37,7 +37,7 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 // ScopeValidator returns errors for resources with illegal or missing metadata.namespace
 // declarations.
 func ScopeValidator(scoper discovery.Scoper) Validator {
-	return perObjectValidator(func(o ast.FileObject) status.Error {
+	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		switch scoper.GetScope(o.GroupVersionKind().GroupKind()) {
 		case discovery.ClusterScope:
 			if o.GetNamespace() != "" {

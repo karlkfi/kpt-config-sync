@@ -11,7 +11,7 @@ import (
 )
 
 // NamespaceValidator validates the metadata.namespace field on resources.
-var NamespaceValidator = perObjectValidator(validNamespace)
+var NamespaceValidator = PerObjectValidator(validNamespace)
 
 func validNamespace(o ast.FileObject) status.Error {
 	if o.GetNamespace() == "" {

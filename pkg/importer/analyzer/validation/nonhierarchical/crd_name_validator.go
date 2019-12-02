@@ -11,7 +11,7 @@ import (
 )
 
 // CRDNameValidator validates that CRDs have the expected metadata.name.
-var CRDNameValidator = perObjectValidator(validateCRDName)
+var CRDNameValidator = PerObjectValidator(validateCRDName)
 
 // InvalidCRDNameErrorCode is the error code for InvalidCRDNameError.
 const InvalidCRDNameErrorCode = "1048"

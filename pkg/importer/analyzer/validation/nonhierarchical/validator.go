@@ -22,7 +22,8 @@ func (v validator) Validate(objects []ast.FileObject) status.MultiError {
 
 var _ Validator = validator{}
 
-func perObjectValidator(fn func(o ast.FileObject) status.Error) Validator {
+// PerObjectValidator returns a Validator that validates each objects independently.
+func PerObjectValidator(fn func(o ast.FileObject) status.Error) Validator {
 	return validator{
 		validate: func(objects []ast.FileObject) status.MultiError {
 			var err status.MultiError

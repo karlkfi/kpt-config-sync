@@ -8,6 +8,6 @@ import (
 
 // DisallowedFieldsValidator adapts syntax.DisallowedFieldsValidator logic for non-hierarchical file
 // structures.
-var DisallowedFieldsValidator = perObjectValidator(func(o ast.FileObject) status.Error {
+var DisallowedFieldsValidator = PerObjectValidator(func(o ast.FileObject) status.Error {
 	return syntax.DisallowFields(o)
 })

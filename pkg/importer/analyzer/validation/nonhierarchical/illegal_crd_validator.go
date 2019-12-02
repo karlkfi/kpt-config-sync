@@ -11,7 +11,7 @@ import (
 )
 
 // IllegalCRDValidator forbids CRDs declaring Nomos types.
-var IllegalCRDValidator = perObjectValidator(IllegalCRD)
+var IllegalCRDValidator = PerObjectValidator(IllegalCRD)
 
 // IllegalCRD returns an error if o is a CRD of a Nomos type.
 func IllegalCRD(o ast.FileObject) status.Error {

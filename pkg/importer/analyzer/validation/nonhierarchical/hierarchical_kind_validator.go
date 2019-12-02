@@ -22,7 +22,7 @@ func IllegalHierarchicalKind(resource id.Resource) status.Error {
 // IllegalHierarchicalKindValidator forbids declaring configmanagement kinds.
 //
 // The Nomos Hierarchy has been disabled, using any Nomos type is illegal.
-var IllegalHierarchicalKindValidator = perObjectValidator(func(object ast.FileObject) status.Error {
+var IllegalHierarchicalKindValidator = PerObjectValidator(func(object ast.FileObject) status.Error {
 	if object.GroupVersionKind().Group == configmanagement.GroupName {
 		return IllegalHierarchicalKind(&object)
 	}

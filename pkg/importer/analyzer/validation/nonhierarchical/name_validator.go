@@ -8,7 +8,7 @@ import (
 )
 
 // NameValidator adapts metadata.NameValidator logic for non-hierarchical file structures.
-var NameValidator = perObjectValidator(validName)
+var NameValidator = PerObjectValidator(validName)
 
 // validName returns a MultiError if the object has an invalid metadata.name, or nil otherwise.
 func validName(o ast.FileObject) status.Error {
