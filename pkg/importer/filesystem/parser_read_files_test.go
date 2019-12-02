@@ -26,12 +26,29 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/restmapper"
 )
 
 // Tests that don't make sense without literally writing to a hard disk.
 // Or, ones that (for now) would require their own CL just to refactor to not require writing to a
 // hard disk.
+
+var engineerResource = &restmapper.APIGroupResources{
+	Group: metav1.APIGroup{
+		Name: "employees",
+		Versions: []metav1.GroupVersionForDiscovery{
+			{Version: "v1alpha1"},
+		},
+		PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
+	},
+	VersionedResources: map[string][]metav1.APIResource{
+		"v1alpha1": {
+			{Name: "engineers", Namespaced: true, Kind: "Engineer"},
+		},
+	},
+}
 
 type testDir struct {
 	rootDir string
@@ -352,7 +369,7 @@ items:
 				d.createTestFile(k, v, t)
 			}
 
-			f := fstesting.NewTestClientGetter(t)
+			f := fstesting.NewTestClientGetter(t, engineerResource)
 			defer func() {
 				if err := f.Cleanup(); err != nil {
 					t.Fatal(errors.Wrap(err, "could not clean up"))

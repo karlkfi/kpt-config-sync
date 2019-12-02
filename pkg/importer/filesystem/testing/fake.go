@@ -118,11 +118,14 @@ type TestClientGetter struct {
 
 // NewTestClientGetter returns a new test RESTClientGetter that has mappings for test and provided resources.
 func NewTestClientGetter(t *testing.T, extraResources ...*restmapper.APIGroupResources) *TestClientGetter {
-	return NewStubbedClientGetter(t, NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))))
+	return NewStubbedClientGetter(t,
+		NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
+		extraResources...,
+	)
 }
 
 // NewStubbedClientGetter returns a new test RESTClientGetter which uses the provided DiscoveryClient.
-func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscoveryInterface) *TestClientGetter {
+func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscoveryInterface, extraResources ...*restmapper.APIGroupResources) *TestClientGetter {
 	// specify an optionalClientConfig to explicitly use in testing
 	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig(t)
@@ -130,7 +133,7 @@ func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscov
 	cg := &FakeRESTClientGetter{
 		Config:          config,
 		DiscoveryClient: discoveryClient,
-		RestMapper:      RestMapper(),
+		RestMapper:      RestMapper(extraResources),
 	}
 	return &TestClientGetter{
 		RESTClientGetter: cg,
@@ -222,8 +225,8 @@ func (f *TestClientGetter) DiscoveryClient() (discovery.CachedDiscoveryInterface
 }
 
 // RestMapper returns a RESTMapper.
-func RestMapper() meta.RESTMapper {
-	return restmapper.NewDiscoveryRESTMapper(TestDynamicResources())
+func RestMapper(extraResources []*restmapper.APIGroupResources) meta.RESTMapper {
+	return restmapper.NewDiscoveryRESTMapper(TestDynamicResources(extraResources...))
 }
 
 // TestAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources
@@ -460,22 +463,9 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 				},
 			},
 		},
-		{
-			Group: metav1.APIGroup{
-				Name: "employees",
-				Versions: []metav1.GroupVersionForDiscovery{
-					{Version: "v1alpha1"},
-				},
-				PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
-			},
-			VersionedResources: map[string][]metav1.APIResource{
-				"v1alpha1": {
-					{Name: "engineers", Namespaced: true, Kind: "Engineer"},
-				},
-			},
-		},
 	}...,
 	)
 	r = append(r, extraResources...)
+
 	return r
 }

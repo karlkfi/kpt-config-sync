@@ -22,7 +22,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/restmapper"
 )
+
+var engineerGVK = schema.GroupVersionKind{
+	Group:   "employees",
+	Version: "v1alpha1",
+	Kind:    "Engineer",
+}
 
 func engineerCRD(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	obj := fake.CustomResourceDefinitionObject(opts...)
@@ -96,6 +104,24 @@ func TestParserVetErrors(t *testing.T) {
 					"cluster/engineer-crd.yaml"),
 			),
 			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
+		),
+		parsertest.Success("Engineer CustomResourceDefinition and CustomResource",
+			testoutput.NewAllConfigsWithCRDs(t, []*restmapper.APIGroupResources{engineerResource},
+				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
+					"cluster/engineer-crd.yaml"),
+				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
+				fake.FileObject(fake.UnstructuredObject(engineerGVK,
+					core.Namespace("bar"), testoutput.Source("namespaces/bar/engineer.yaml"),
+				), "namespaces/bar/engineer.yaml"),
+			),
+			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
+			fake.Namespace("namespaces/bar"),
+			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
+		),
+		parsertest.Failure("Engineer CustomResource without CRD",
+			validation.UnknownObjectErrorCode,
+			fake.Namespace("namespaces/bar"),
+			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
 		parsertest.Success("Valid to have Abstract Namespace with both Namespace and Abstract Namespace children",
 			testoutput.NewAllConfigs(t,

@@ -14,21 +14,31 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"k8s.io/client-go/restmapper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// NewAllConfigs is a convenience method for tests to convert FileObjects to an AllConfigs.
+// Assumes only standard Kubernetes and Nomos types.
 func NewAllConfigs(t *testing.T, fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
-	result, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, testScoper(t), fileObjects)
+	return NewAllConfigsWithCRDs(t, nil, fileObjects...)
+}
+
+// NewAllConfigsWithCRDs is a convenience method for tests to convert FileObject to an AllConfigs,
+// allowing specifying CRDs.
+func NewAllConfigsWithCRDs(t *testing.T, extraResources []*restmapper.APIGroupResources, fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
+	scoper := testScoper(t, extraResources...)
+	result, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, fileObjects)
 	if errs != nil {
 		t.Fatal(errs)
 	}
 	return result
 }
 
-func testScoper(t *testing.T) discovery.Scoper {
-	result, err := discovery.NewAPIInfo(fstesting.TestAPIResourceList(fstesting.TestDynamicResources()))
+func testScoper(t *testing.T, extraResources ...*restmapper.APIGroupResources) discovery.Scoper {
+	result, err := discovery.NewAPIInfo(fstesting.TestAPIResourceList(fstesting.TestDynamicResources(extraResources...)))
 	if err != nil {
 		t.Fatal(err)
 	}
