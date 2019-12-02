@@ -13,7 +13,7 @@ var errBaz = UndocumentedError("baz")
 var errFooRaw = errors.New("raw foo")
 var errBarRaw = errors.New("raw bar")
 
-func TestErrorBuilder(t *testing.T) {
+func TestAppend(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		errors []error
@@ -38,6 +38,11 @@ func TestErrorBuilder(t *testing.T) {
 			"build mixed errors",
 			[]error{errBaz, nil, errFooRaw},
 			&multiError{errs: []Error{errBaz, undocumented(errFooRaw)}},
+		},
+		{
+			"combine MultiErrors",
+			[]error{&multiError{[]Error{errFoo, errBar}}, &multiError{[]Error{errBaz}}},
+			&multiError{[]Error{errFoo, errBar, errBaz}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

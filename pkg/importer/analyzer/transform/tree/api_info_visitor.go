@@ -44,7 +44,7 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 
 	crdMap, errs := customresources.ProcessClusterObjects(r.ClusterObjects)
 	if errs != nil {
-		v.errs = status.Extend(v.errs, errs)
+		v.errs = status.Append(v.errs, errs)
 	}
 
 	for _, crd := range crdMap {

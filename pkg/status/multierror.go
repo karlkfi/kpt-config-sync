@@ -15,22 +15,13 @@ type MultiError interface {
 	Errors() []Error
 }
 
-// Extend appends all errors in mm to m.
-func Extend(m MultiError, mm MultiError) MultiError {
-	if mm == nil || len(mm.Errors()) == 0 {
-		return m
-	}
-	for _, err := range mm.Errors() {
-		mm = Append(mm, err)
-	}
-	return mm
-}
-
 // Append adds one or more errors to an existing MultiError.
 // If m, err, and errs are nil, returns nil.
 //
 // Requires at least one error to be passed explicitly to prevent developer mistakes.
-// There is no valid reason to call Append with exactly one argument. Use From instead.
+// There is no valid reason to call Append with exactly one argument.
+//
+// If err is a MultiError, appends all contained errors.
 func Append(m MultiError, err error, errs ...error) MultiError {
 	result := &multiError{}
 
@@ -85,12 +76,12 @@ func (m *multiError) add(err error) {
 		// No error to add if nil.
 	case Error:
 		m.errs = append(m.errs, e)
+	case MultiError:
+		m.errs = append(m.errs, e.Errors()...)
 	case utilerrors.Aggregate:
 		for _, er := range e.Errors() {
 			m.add(er)
 		}
-	case MultiError:
-		m.errs = append(m.errs, e.Errors()...)
 	default:
 		m.errs = append(m.errs, undocumented(err))
 	}
