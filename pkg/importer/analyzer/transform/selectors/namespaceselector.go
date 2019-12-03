@@ -5,6 +5,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -33,6 +34,20 @@ const InvalidSelectorErrorCode = "1014" // TODO: Must refactor to use properly
 var invalidSelectorError = status.NewErrorBuilder(InvalidSelectorErrorCode)
 
 // InvalidSelectorError reports that a selector is invalid.
+// To be deleted later.
 func InvalidSelectorError(name string, cause error) status.Error {
 	return invalidSelectorError.Sprintf("Selector for %q has validation errors that must be corrected", name).Wrap(cause).Build()
+}
+
+// InvalidSelectorError2 reports that a ClusterSelector or NamespaceSelector is
+// invalid.
+// To be renamed in refactoring that removes above error.
+func InvalidSelectorError2(selector id.Resource, cause error) status.Error {
+	return invalidSelectorError.Sprintf("%s has validation errors that must be corrected", selector.GroupVersionKind().Kind).Wrap(cause).BuildWithResources(selector)
+}
+
+// EmptySelectorError reports that a ClusterSelector or NamespaceSelector is
+// invalid because it is empty.
+func EmptySelectorError(selector id.Resource) status.Error {
+	return invalidSelectorError.Sprintf("%s has validation errors that must be corrected", selector.GroupVersionKind().Kind).BuildWithResources(selector)
 }

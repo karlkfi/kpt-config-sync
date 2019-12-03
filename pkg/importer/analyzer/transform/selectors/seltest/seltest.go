@@ -41,11 +41,3 @@ func Selector(name string, selector metav1.LabelSelector) v1.ClusterSelector {
 		},
 	}
 }
-
-// Annotated creates a general annotated object for test.
-func Annotated(a map[string]string) *metav1.ObjectMeta {
-	return &metav1.ObjectMeta{
-		Name:        "obj",
-		Annotations: a,
-	}
-}

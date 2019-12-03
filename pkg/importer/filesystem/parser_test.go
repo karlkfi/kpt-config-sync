@@ -7,8 +7,8 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -401,14 +401,6 @@ func clusterSelectorAnnotation(value string) core.MetaMutator {
 	return core.Annotation(v1.ClusterSelectorAnnotationKey, value)
 }
 
-func inlinedClusterSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) core.MetaMutator {
-	content, err := json.Marshal(selector)
-	if err != nil {
-		t.Error(err)
-	}
-	return core.Annotation(v1.ClusterSelectorAnnotationKey, string(content))
-}
-
 func cluster(name string, opts ...core.MetaMutator) ast.FileObject {
 	mutators := append(opts, core.Name(name))
 	return fake.Cluster(mutators...)
@@ -424,10 +416,6 @@ func clusterSelectorObject(name, key, value string) *v1.ClusterSelector {
 	obj := fake.ClusterSelectorObject(core.Name(name))
 	obj.Spec.Selector.MatchLabels = map[string]string{key: value}
 	return obj
-}
-
-func inlinedSelectorAnnotation(t *testing.T, selector *v1.ClusterSelector) core.MetaMutator {
-	return inlinedClusterSelectorAnnotation(t, selector)
 }
 
 func resourceVersion(version string) core.MetaMutator {
@@ -447,7 +435,6 @@ func TestParseClusterSelector(t *testing.T) {
 		return clusterSelectorObject(prodSelectorName, "environment", "prod")
 	}
 	prodSelectorAnnotation := clusterSelectorAnnotation(prodSelectorName)
-	prodSelectorAnnotationInlined := inlinedSelectorAnnotation(t, prodSelectorObject())
 
 	devSelectorName := "sel-2"
 	devLabel := core.Label("environment", "dev")
@@ -455,7 +442,6 @@ func TestParseClusterSelector(t *testing.T) {
 		return clusterSelectorObject(devSelectorName, "environment", "dev")
 	}
 	devSelectorAnnotation := clusterSelectorAnnotation(devSelectorName)
-	devSelectorAnnotationInlined := inlinedSelectorAnnotation(t, devSelectorObject())
 
 	test := parsertest.VetTest(
 		parsertest.Success("Resource without selector always exists 1",
@@ -491,7 +477,7 @@ func TestParseClusterSelector(t *testing.T) {
 				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
-					prodSelectorAnnotationInlined, testoutput.Source("namespaces/bar/rolebinding.yaml")),
+					prodSelectorAnnotation, testoutput.Source("namespaces/bar/rolebinding.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
@@ -514,7 +500,7 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Namespace selected",
 			testoutput.NewAllConfigs(t,
-				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), prodSelectorAnnotationInlined,
+				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), prodSelectorAnnotation,
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/bar/rolebinding.yaml")),
@@ -537,7 +523,7 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Success("Cluster resource selected",
 			testoutput.NewAllConfigs(t,
-				fake.ClusterRoleBinding(prodSelectorAnnotationInlined, testoutput.InCluster(prodCluster),
+				fake.ClusterRoleBinding(prodSelectorAnnotation, testoutput.InCluster(prodCluster),
 					testoutput.Source("cluster/crb.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
@@ -558,7 +544,7 @@ func TestParseClusterSelector(t *testing.T) {
 			testoutput.NewAllConfigs(t,
 				fake.Namespace("namespaces/foo/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/foo/bar/namespace.yaml")),
-				fake.ConfigMapAtPath("", core.Namespace("bar"), prodSelectorAnnotationInlined,
+				fake.ConfigMapAtPath("", core.Namespace("bar"), prodSelectorAnnotation,
 					testoutput.InCluster(prodCluster), testoutput.Source("namespaces/foo/configmap.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
@@ -574,7 +560,7 @@ func TestParseClusterSelector(t *testing.T) {
 			testoutput.NewAllConfigs(t,
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
-				fake.RoleBinding(core.Namespace("bar"), devSelectorAnnotationInlined,
+				fake.RoleBinding(core.Namespace("bar"), devSelectorAnnotation,
 					testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding-2.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
@@ -588,12 +574,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Failure(
 			"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
-			coverage.ObjectHasUnknownClusterSelectorCode,
+			selectors.ObjectHasUnknownClusterSelectorCode,
 			fake.Namespace("namespaces/foo", clusterSelectorAnnotation("does-not-exist")),
 		),
 		parsertest.Failure(
 			"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
-			coverage.ObjectHasUnknownClusterSelectorCode,
+			selectors.ObjectHasUnknownClusterSelectorCode,
 			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
 		),
 		parsertest.Success("A subdir of cluster/ is ok",

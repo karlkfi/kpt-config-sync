@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
@@ -119,16 +120,25 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 	root := p.runVisitors(astRoot, visitors)
 
 	fileObjects := root.Flatten()
+	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	fileObjects = transform.RemoveEphemeralResources(fileObjects)
+
 	errs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, errs)
 
 	crds, err := customresources.GetCRDs(fileObjects)
 	if err != nil {
+		// We couldn't read the CRDs, so we can't continue without showing a lot of
+		// bogus errors to the user.
 		p.errors = status.Append(p.errors, err)
+		return nil
 	}
 	scoper := p.getScoper(crds...)
 	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
+
+	p.errors = status.Append(p.errors, csErr)
+	fileObjects = selectors.AnnotateClusterName(clusterName, fileObjects)
 
 	return fileObjects
 }

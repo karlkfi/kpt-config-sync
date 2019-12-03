@@ -5,7 +5,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
@@ -29,7 +28,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 	specs := toInheritanceSpecs(configs)
 	return []ast.Visitor{
 		&mustSucceed{Visitor: syntax.NewParseValidator()},
-		selectors.NewClusterSelectorAdder(),
 		system.NewRepoVersionValidator(),
 		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
@@ -52,7 +50,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		semantic.NewAbstractResourceValidator(),
 		semantic.NewCRDRemovalValidator(),
 		transform.NewPathAnnotationVisitor(),
-		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),
 	}

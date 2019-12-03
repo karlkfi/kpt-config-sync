@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -72,7 +71,7 @@ func Generate() map[string][]status.Error {
 	result.add(validation.NamespaceSelectorMayNotHaveAnnotation(fake.NamespaceSelector()))
 
 	// 1013
-	result.add(coverage.ObjectHasUnknownClusterSelector(fake.Role(), "undeclared-selector"))
+	result.add(selectors.ObjectHasUnknownClusterSelector(fake.Role(), "undeclared-selector"))
 
 	// 1014
 	result.add(selectors.InvalidSelectorError("foo-selector", errors.New("some parse error")))

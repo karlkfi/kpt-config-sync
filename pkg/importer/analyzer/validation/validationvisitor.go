@@ -8,8 +8,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/coverage"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
@@ -25,7 +23,6 @@ type InputValidator struct {
 	*visitor.Base
 	errs             status.MultiError
 	nodes            []*ast.TreeNode
-	coverage         *coverage.ForCluster
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
 
@@ -51,18 +48,6 @@ func NewInputValidator(specs map[schema.GroupKind]*transform.InheritanceSpec) *I
 // Error returns any errors encountered during processing
 func (v *InputValidator) Error() status.MultiError {
 	return v.errs
-}
-
-// VisitRoot gets the clusters and selectors stored in Root.Data and constructs coverage if vet is
-// enabled.
-func (v *InputValidator) VisitRoot(r *ast.Root) *ast.Root {
-	clusters, err := selectors.GetClusters(r)
-	v.errs = status.Append(v.errs, err)
-	sels, err := selectors.GetSelectors(r)
-	v.errs = status.Append(v.errs, err)
-	v.coverage, v.errs = coverage.NewForCluster(clusters, sels)
-
-	return v.Base.VisitRoot(r)
 }
 
 // VisitTreeNode implements Visitor
@@ -98,14 +83,6 @@ func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelect
 	}
 }
 
-// VisitClusterObject implements Visitor
-func (v *InputValidator) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	if v.coverage != nil {
-		v.errs = status.Append(v.errs, v.coverage.ValidateObject(&o.FileObject))
-	}
-	return v.Base.VisitClusterObject(o)
-}
-
 // VisitObject implements Visitor
 func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	// TODO: Move each individual check here to its own Visitor.
@@ -117,10 +94,6 @@ func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObjec
 		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
 			v.errs = status.Append(v.errs, IllegalAbstractNamespaceObjectKindError(o))
 		}
-	}
-
-	if v.coverage != nil {
-		v.errs = status.Append(v.errs, v.coverage.ValidateObject(&o.FileObject))
 	}
 
 	return v.Base.VisitObject(o)

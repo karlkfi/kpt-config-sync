@@ -15,7 +15,7 @@ func ExpectErrors(expected []string, err error, t *testing.T) {
 	if diff := cmp.Diff(toMap(expected), actual); diff != "" {
 		// All of expected, err and diff are needed to debug this error message
 		// effectively when it happens.
-		t.Errorf("expected:\n%v\nactual:\n%v\ndiff:\n%v", expected, err, diff)
+		t.Fatalf("expected:\n%v\nactual:\n%v\ndiff:\n%v", expected, err, diff)
 	}
 }
 

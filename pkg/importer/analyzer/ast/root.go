@@ -46,6 +46,10 @@ func (r *Root) Flatten() []FileObject {
 		result = append(result, o.FileObject)
 	}
 
+	for _, o := range r.ClusterRegistryObjects {
+		result = append(result, o.FileObject)
+	}
+
 	if r.Tree != nil {
 		result = append(result, r.Tree.flatten()...)
 	}
