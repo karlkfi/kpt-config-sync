@@ -7,10 +7,12 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
+	"github.com/google/nomos/pkg/importer/analyzer/validation"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
+	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -24,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -101,10 +102,6 @@ func (p *Parser) GenerateVisitors(
 	p.errors = status.Append(p.errors, err)
 	visitors = append(visitors, tree.NewCRDClusterConfigInfoVisitor(crdInfo))
 
-	discoveryClient, dErr := p.discoveryClient(crds...)
-	p.errors = status.Append(p.errors, dErr)
-	visitors = append(visitors, tree.NewAPIInfoBuilderVisitor(discoveryClient, transform.EphemeralResources()))
-
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
 	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs)...)
 
@@ -114,7 +111,7 @@ func (p *Parser) GenerateVisitors(
 }
 
 // HydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) (*ast.Root, []ast.FileObject) {
+func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -125,7 +122,15 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 	errs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, errs)
 
-	return root, fileObjects
+	crds, err := customresources.GetCRDs(fileObjects)
+	if err != nil {
+		p.errors = status.Append(p.errors, err)
+	}
+	scoper := p.getScoper(crds...)
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
+	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
+
+	return fileObjects
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
@@ -160,24 +165,34 @@ func (p *Parser) Parse(
 	}
 
 	visitors := p.GenerateVisitors(flatRoot, currentConfigs, crds)
-
-	// Required messiness because of how scoping logic is currently implemented.
-	r, fileObjects := p.HydrateRootAndFlatten(visitors, clusterName)
 	if p.errors != nil {
 		return nil, p.errors
 	}
-
-	scoper, err := utildiscovery.GetScoper(r)
-	if err != nil {
-		return nil, err
+	fileObjects := p.HydrateRootAndFlatten(visitors, clusterName)
+	if p.errors != nil {
+		return nil, p.errors
 	}
-
+	scoper := p.getScoper(crds...)
 	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
 	if glog.V(8) {
 		// REALLY useful when debugging.
 		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
 	}
 	return configs, errs
+}
+
+func (p *Parser) getScoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
+	lists, discoveryErr := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
+	if discoveryErr != nil {
+		p.errors = status.Append(p.errors, discoveryErr)
+		return nil
+	}
+	scoper, err := utildiscovery.NewScoperFromServerResources(lists, utildiscovery.ScopesFromCRDs(crds...)...)
+	if err != nil {
+		p.errors = status.Append(p.errors, err)
+		return nil
+	}
+	return scoper
 }
 
 func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
@@ -249,16 +264,4 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 		}
 	}
 	return specs
-}
-
-func (p *Parser) discoveryClient(crds ...*v1beta1.CustomResourceDefinition) (discovery.ServerResourcesInterface, error) {
-	discoveryClient, dErr := importer.NewFilesystemCRDAwareClientGetter(p.clientGetter, true, crds...).ToDiscoveryClient()
-	if dErr != nil {
-		p.errors = status.Append(p.errors, status.APIServerError(dErr, "could not get discovery client"))
-		return nil, p.errors
-	}
-
-	// Always make sure we're getting the freshest data.
-	discoveryClient.Invalidate()
-	return discoveryClient, nil
 }

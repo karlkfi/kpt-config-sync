@@ -14,5 +14,5 @@ func readCRDs(r Reader, dir cmpath.Relative) ([]*v1beta1.CustomResourceDefinitio
 		return nil, errs
 	}
 
-	return customresources.Process(fileObjects)
+	return customresources.GetCRDs(fileObjects)
 }

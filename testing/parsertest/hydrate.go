@@ -10,11 +10,11 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
+	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,7 +137,11 @@ func (pt Test) RunAll(t *testing.T) {
 
 			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
 
-			r, fileObjects := parser.HydrateRootAndFlatten(visitors, tc.ClusterName)
+			fileObjects := parser.HydrateRootAndFlatten(visitors, tc.ClusterName)
+			crds, err := customresources.GetCRDs(fileObjects)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			if tc.Errors != nil || parser.Errors() != nil {
 				vettesting.ExpectErrors(tc.Errors, parser.Errors(), t)
@@ -159,14 +163,10 @@ func (pt Test) RunAll(t *testing.T) {
 					tc.Expected.NamespaceConfigs = map[string]v1.NamespaceConfig{}
 				}
 
-
-				scoper, err := discovery.GetScoper(r)
-				if err != nil {
-					t.Fatal(err)
-				}
+				scoper := fstesting.Scoper(crds...)
 				actual, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, fileObjects)
 				if errs != nil {
-					t.Fatal(errs)
+					t.Fatal(errors.Wrap(errs, "unexpected error writing AllConfigs"))
 				}
 
 				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {

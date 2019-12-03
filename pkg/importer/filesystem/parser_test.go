@@ -23,7 +23,6 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/restmapper"
 )
 
 var engineerGVK = schema.GroupVersionKind{
@@ -106,7 +105,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
 		),
 		parsertest.Success("Engineer CustomResourceDefinition and CustomResource",
-			testoutput.NewAllConfigsWithCRDs(t, []*restmapper.APIGroupResources{engineerResource},
+			testoutput.NewAllConfigsWithCRDs(t, []*v1beta1.CustomResourceDefinition{engineerCRD()},
 				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
@@ -282,7 +281,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.NamespaceSelector(clusterSelectorAnnotation("prod-cluster")),
 		),
 		parsertest.Failure("Namespace-scoped object in cluster/ dir",
-			validation.IllegalKindInClusterErrorCode,
+			validation.IncorrectTopLevelDirectoryErrorCode,
 			fake.RoleBindingAtPath("cluster/rb.yaml"),
 		),
 		parsertest.Failure("Illegal annotation definition is an error",
@@ -368,7 +367,6 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Failures("HierarchyConfig contains a CRD",
 			[]string{
 				hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
-				hierarchyconfig.ClusterScopedResourceInHierarchyConfigErrorCode,
 			},
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.NamespaceConfig().GroupVersion(), kinds.NamespaceConfig().Kind)),
@@ -376,7 +374,6 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Failures("HierarchyConfig contains a Namespace",
 			[]string{
 				hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
-				hierarchyconfig.ClusterScopedResourceInHierarchyConfigErrorCode,
 			},
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.NamespaceConfig().GroupVersion(), kinds.NamespaceConfig().Kind)),
@@ -384,14 +381,14 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Failures("HierarchyConfig contains a NamespaceConfig",
 			[]string{
 				hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
-				hierarchyconfig.ClusterScopedResourceInHierarchyConfigErrorCode},
+			},
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.NamespaceConfig().GroupVersion(), kinds.NamespaceConfig().Kind)),
 		),
 		parsertest.Failures("HierarchyConfig contains a Sync",
 			[]string{
 				hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
-				hierarchyconfig.ClusterScopedResourceInHierarchyConfigErrorCode},
+			},
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.Sync().GroupVersion(), kinds.Sync().Kind)),
 		),

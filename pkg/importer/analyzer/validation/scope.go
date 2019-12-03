@@ -3,76 +3,60 @@ package validation
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Scope runs after all transforms have completed.  This will verify that the final state of
-// the tree meets various conditions before we set it on the API server.
-type Scope struct {
-	*visitor.Base
-	errs   status.MultiError
-	scoper discovery.Scoper
+// NewTopLevelDirectoryValidator ensures Namespaces and namespace-scoped objects are in namespaces/,
+// and cluster-scoped objects are in cluster/.
+//
+// Returns an UnknownObjectError if unable to determine which top-level directory
+// the resource should live. This happens when the resource is neither present
+// on the APIServer nor has a CRD defined.
+func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Validator {
+	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
+		return validateTopLevelDirectory(scoper, o)
+	})
 }
 
-var _ ast.Visitor = &Scope{}
+func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status.Error {
+	gvk := o.GroupVersionKind()
+	scope := scoper.GetScope(gvk.GroupKind())
+	topLevelDir := o.Path.Split()[0]
 
-// NewScope returns a validator that checks if objects are in the correct scope in terms of namespace
-// vs cluster.
-// resourceLists is the list of supported types from the discovery client.
-func NewScope() *Scope {
-	pv := &Scope{
-		Base: visitor.NewBase(),
-	}
-	pv.SetImpl(pv)
-	return pv
-}
-
-// Error returns any errors encountered during processing
-func (p *Scope) Error() status.MultiError {
-	return p.errs
-}
-
-// VisitRoot implement ast.Visitor.
-func (p *Scope) VisitRoot(r *ast.Root) *ast.Root {
-	var err error
-	p.scoper, err = discovery.GetScoper(r)
-	p.errs = status.Append(p.errs, err)
-	return p.Base.VisitRoot(r)
-}
-
-// VisitClusterObject implements Visitor
-func (p *Scope) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
-	gk := o.GroupVersionKind().GroupKind()
-
-	switch p.scoper.GetScope(gk) {
-	case discovery.NamespaceScope:
-		p.errs = status.Append(p.errs, IllegalKindInClusterError(o))
-	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, UnknownObjectError(&o.FileObject))
+	if isIgnored(gvk) {
+		return nil
 	}
 
-	return o
-}
-
-// VisitObject implements Visitor
-func (p *Scope) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
-	gk := o.GroupVersionKind().GroupKind()
-
-	switch p.scoper.GetScope(gk) {
-	case discovery.ClusterScope:
-		if o.GroupVersionKind() != kinds.Namespace() {
-			p.errs = status.Append(p.errs, syntax.IllegalKindInNamespacesError(o))
+	if isClusterScopedAllowedInNamespaces(gvk) || scope == discovery.NamespaceScope {
+		// Only Namespace-scoped object and Namespaces are in the namespaces/ directory.
+		if topLevelDir != repo.NamespacesDir {
+			return ShouldBeInNamespacesError(topLevelDir, o)
 		}
-	case discovery.UnknownScope:
-		p.errs = status.Append(p.errs, UnknownObjectError(&o.FileObject))
+		return nil
 	}
 
-	return o
+	if scope == discovery.ClusterScope {
+		if topLevelDir != repo.ClusterDir {
+			return ShouldBeInClusterError(topLevelDir, o)
+		}
+		return nil
+	}
+
+	return UnknownObjectError(o)
+}
+
+func isClusterScopedAllowedInNamespaces(gvk schema.GroupVersionKind) bool {
+	return gvk == kinds.Namespace() ||
+		gvk == kinds.NamespaceSelector()
+}
+
+func isIgnored(gvk schema.GroupVersionKind) bool {
+	return gvk == kinds.HierarchicalQuota()
 }
 
 // UnknownObjectErrorCode is the error code for UnknownObjectError
@@ -88,14 +72,23 @@ func UnknownObjectError(resource id.Resource) status.Error {
 		BuildWithResources(resource)
 }
 
-// IllegalKindInClusterErrorCode is the error code for IllegalKindInClusterError
-const IllegalKindInClusterErrorCode = "1039"
+// IncorrectTopLevelDirectoryErrorCode is the error code for IllegalKindInClusterError
+const IncorrectTopLevelDirectoryErrorCode = "1039"
 
-var illegalKindInClusterError = status.NewErrorBuilder(IllegalKindInClusterErrorCode)
+var incorrectTopLevelDirectoryErrorBuilder = status.NewErrorBuilder(IncorrectTopLevelDirectoryErrorCode)
 
-// IllegalKindInClusterError reports that an object has been illegally defined in cluster/
-func IllegalKindInClusterError(resource id.Resource) status.Error {
-	return illegalKindInClusterError.
-		Sprintf("Namespace-scoped configs of the below Kind must not be declared in `%s`/:", repo.ClusterDir).
+// ShouldBeInNamespacesError reports that an object belongs in namespaces/.
+func ShouldBeInNamespacesError(dir string, resource id.Resource) status.Error {
+	return incorrectTopLevelDirectoryErrorBuilder.
+		Sprintf("Namespace-scoped and Namespace configs MUST be declared in `%s/`. "+
+			"To fix, move the %s to `%s/`.", dir, resource.GroupVersionKind().Kind, repo.NamespacesDir).
+		BuildWithResources(resource)
+}
+
+// ShouldBeInClusterError reports that an object belongs in cluster/.
+func ShouldBeInClusterError(dir string, resource id.Resource) status.Error {
+	return incorrectTopLevelDirectoryErrorBuilder.
+		Sprintf("Cluster-scoped configs except Namespaces MUST be declared in `%s/`. "+
+			"To fix, move the %s to `%s/`.", dir, resource.GroupVersionKind().Kind, repo.ClusterDir).
 		BuildWithResources(resource)
 }

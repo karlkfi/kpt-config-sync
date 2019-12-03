@@ -16,6 +16,7 @@ func TestScopeValidator(t *testing.T) {
 		kinds.Role().GroupKind():        discovery.NamespaceScope,
 		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
 	}
+
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Namespace-scoped object with metadata.namespace",
 			fake.Role(core.Namespace("backend")),
@@ -36,5 +37,6 @@ func TestScopeValidator(t *testing.T) {
 			fake.NamespaceSelector(core.Namespace("")),
 		),
 	}
+
 	nht.RunAll(t, nonhierarchical.ScopeValidator(scoper), testCases)
 }

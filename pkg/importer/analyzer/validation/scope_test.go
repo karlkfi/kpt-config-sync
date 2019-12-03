@@ -3,86 +3,37 @@ package validation_test
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
-
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
-	vt "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	ft "github.com/google/nomos/pkg/importer/filesystem/testing"
+	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-func withPath(o core.Object, path string) ast.FileObject {
-	return ast.NewFileObject(o, cmpath.FromSlash(path))
-}
-
-func withScope(t *testing.T, r *ast.Root) *ast.Root {
-	scoper, err := discovery.NewScoperFromServerResources(ft.TestAPIResourceList(ft.TestDynamicResources()))
-	if err != nil {
-		t.Error("testdata error")
-	}
-	err = discovery.AddScoper(r, scoper)
-	if err != nil {
-		t.Error(err)
-	}
-	return r
-}
-
 func TestScope(t *testing.T) {
-	var scopeTestcases = vt.MutatingVisitorTestcases{
-		VisitorCtor: func() ast.Visitor {
-			return validation.NewScope()
-		},
-		Options: func() []cmp.Option {
-			return []cmp.Option{
-				cmp.AllowUnexported(ast.FileObject{}),
-			}
-		},
-		Testcases: []vt.MutatingVisitorTestcase{
-			{
-				Name:       "empty",
-				Input:      withScope(t, vt.Helper.EmptyRoot()),
-				ExpectNoop: true,
-			},
-			{
-				Name:       "acme",
-				Input:      withScope(t, vt.Helper.AcmeRoot()),
-				ExpectNoop: true,
-			},
-			{
-				Name:      "cluster resource at namespace scope",
-				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "namespaces/cr.yaml"))),
-				ExpectErr: true,
-			},
-			{
-				Name:       "cluster resource at cluster scope",
-				Input:      withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.NomosAdminClusterRole(), "cluster/cr.yaml"))),
-				ExpectNoop: true,
-			},
-			{
-				Name:      "namespace resource at cluster scope",
-				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "cluster/cr.yaml"))),
-				ExpectErr: true,
-			},
-			{
-				Name:       "namespace resource at namespace scope",
-				Input:      withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.AdminRoleBinding(), "namespaces/cr.yaml"))),
-				ExpectNoop: true,
-			},
-			{
-				Name:      "unknown namespace resource",
-				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "namespaces/cr.yaml"))),
-				ExpectErr: true,
-			},
-			{
-				Name:      "unknown cluster resource",
-				Input:     withScope(t, treetesting.BuildTree(t, withPath(vt.Helper.UnknownResource(), "cluster/cr.yaml"))),
-				ExpectErr: true,
-			},
-		},
+	scoper := discovery.Scoper{
+		kinds.Role().GroupKind():        discovery.NamespaceScope,
+		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
 	}
-	t.Run("scope", scopeTestcases.Run)
+
+	testCases := []nht.ValidatorTestCase{
+		nht.Pass("Role in namespaces/",
+			fake.RoleAtPath("namespaces/role.yaml")),
+		nht.Fail("Role in cluster/",
+			fake.RoleAtPath("cluster/role.yaml")),
+		nht.Fail("ClusterRole in namespaces/",
+			fake.ClusterRoleAtPath("namespaces/clusterrole.yaml")),
+		nht.Pass("ClusterRole in cluster/",
+			fake.ClusterRoleAtPath("cluster/clusterrole.yaml")),
+		nht.Pass("Namespace in namespaces/",
+			fake.NamespaceAtPath("namespaces/namespace.yaml")),
+		nht.Fail("Namespace in cluster/",
+			fake.NamespaceAtPath("cluster/namespace.yaml")),
+		nht.Fail("unknown object in namespaces/",
+			fake.AnvilAtPath("namespaces/anvil.yaml")),
+		nht.Fail("unknown in cluster/",
+			fake.AnvilAtPath("cluster/anvil.yaml")),
+	}
+
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper), testCases)
 }

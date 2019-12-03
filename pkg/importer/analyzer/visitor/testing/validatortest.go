@@ -42,12 +42,7 @@ func (vt *ObjectValidatorTest) RunAll(t *testing.T) {
 			t.Helper()
 
 			validator := vt.Validator()
-			var root *ast.Root
-			if tc.APIInfo != nil {
-				root = treetesting.BuildTreeWithAPIInfo(t, tc.APIInfo, tc.Object)
-			} else {
-				root = treetesting.BuildTree(t, tc.Object)
-			}
+			root := treetesting.BuildTree(t, tc.Object)
 			root.Accept(validator)
 
 			if tc.ShouldFail {

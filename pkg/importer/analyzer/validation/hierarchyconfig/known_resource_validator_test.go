@@ -3,94 +3,51 @@ package hierarchyconfig
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
-
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/testing/asttest"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	rbac "k8s.io/api/rbac/v1alpha1"
 )
 
-type apiInfoOption func([]*metav1.APIResourceList) []*metav1.APIResourceList
+func hierarchyConfig(hcrs ...v1.HierarchyConfigResource) ast.FileObject {
+	hc := fake.HierarchyConfigObject()
+	hc.Spec.Resources = hcrs
 
-func apiResource(known schema.GroupVersionKind, namespaced bool) apiInfoOption {
-	return func(list []*metav1.APIResourceList) []*metav1.APIResourceList {
-		return append(list, &metav1.APIResourceList{
-			GroupVersion: known.GroupVersion().String(),
-			APIResources: []metav1.APIResource{
-				{
-					Kind:       known.Kind,
-					Namespaced: namespaced,
-				},
-			},
-		})
+	return fake.FileObject(hc, "system/hc.yaml")
+}
+
+func resource(group string, kinds ...string) v1.HierarchyConfigResource {
+	return v1.HierarchyConfigResource{
+		Group: group,
+		Kinds: kinds,
 	}
 }
 
-func toAPIInfo(opts ...apiInfoOption) (discovery.Scoper, error) {
-	var resources []*metav1.APIResourceList
-	for _, o := range opts {
-		resources = o(resources)
-	}
-	return discovery.NewScoperFromServerResources(resources)
-}
-
-// APIInfo adds an APIInfo to the AST.
-func APIInfo(apiInfo discovery.Scoper) ast.BuildOpt {
-	return func(root *ast.Root) status.MultiError {
-		if apiInfo == nil {
-			return nil
-		}
-		discovery.AddScoper(root, apiInfo)
-		return nil
-	}
-}
-
-func TestKnownResourceValidatorUnknown(t *testing.T) {
-	apiInfo, err := toAPIInfo(
-		apiResource(kinds.RoleBinding(), true),
-		apiResource(kinds.ClusterRoleBinding(), false),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error forming APIInfo: %v", err)
+func TestHierarchyConfigScopeValidator(t *testing.T) {
+	scoper := discovery.Scoper{
+		kinds.Role().GroupKind():        discovery.NamespaceScope,
+		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
 	}
 
-	test := asttest.Validator(NewKnownResourceValidator,
-		UnknownResourceInHierarchyConfigErrorCode,
-
-		asttest.Fail("ResourceQuota throws error if not known",
-			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.ResourceQuota())),
+	testCases := []nht.ValidatorTestCase{
+		nht.Pass("no resources", hierarchyConfig()),
+		nht.Pass("empty HierarchyConfig", hierarchyConfig()),
+		nht.Pass("namespace-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.Role().Kind)),
 		),
-		asttest.Pass("RoleBinding valid if known",
-			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.RoleBinding())),
+		nht.Fail("cluster-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.ClusterRole().Kind)),
 		),
-	).With(APIInfo(apiInfo))
-
-	test.RunAll(t)
-}
-
-func TestKnownResourceValidatorScope(t *testing.T) {
-	apiInfo, err := toAPIInfo(
-		apiResource(kinds.RoleBinding(), true),
-		apiResource(kinds.ClusterRoleBinding(), false),
-	)
-	if err != nil {
-		t.Fatalf("unexpected error forming APIInfo: %v", err)
+		nht.Fail("cluster and namespace-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.ClusterRole().Kind, kinds.Role().Kind)),
+		),
+		nht.Fail("unknown resource",
+			hierarchyConfig(resource("unknown", "UnknownType")),
+		),
 	}
 
-	test := asttest.Validator(NewKnownResourceValidator,
-		ClusterScopedResourceInHierarchyConfigErrorCode,
-		asttest.Fail("ClusterRoleBinding is cluster scoped",
-			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.ClusterRoleBinding())),
-		),
-	).With(APIInfo(apiInfo))
-
-	test.RunAll(t)
+	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper), testCases)
 }

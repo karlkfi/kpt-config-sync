@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
-	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // BuildTree creates and populates an ast.Root with the provided objects.
@@ -39,19 +38,6 @@ func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
 	}
 
 	return result
-}
-
-// BuildTreeWithAPIInfo builds the tree and sets the APIInfo in the root node.
-func BuildTreeWithAPIInfo(t *testing.T, apiInfo discovery.Scoper, objects ...ast.FileObject) *ast.Root {
-	t.Helper()
-
-	root := &ast.Root{}
-	err := discovery.AddScoper(root, apiInfo)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return buildTree(t, root, objects...)
 }
 
 func buildTree(t *testing.T, root *ast.Root, objects ...ast.FileObject) *ast.Root {

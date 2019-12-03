@@ -24,7 +24,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -166,7 +165,8 @@ func Generate() map[string][]status.Error {
 	result.add(syntax.IllegalKindInNamespacesError(fake.ClusterRoleAtPath("namespaces/foo/cr.yaml")))
 
 	// 1039
-	result.add(validation.IllegalKindInClusterError(fake.RoleAtPath("cluster/role.yaml")))
+	result.add(validation.ShouldBeInNamespacesError("cluster", fake.RoleAtPath("cluster/role.yaml")))
+	result.add(validation.ShouldBeInClusterError("namespaces", fake.ClusterRoleAtPath("namespaces/clusterrole.yaml")))
 
 	// 1040
 	result.add(hierarchyconfig.UnknownResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
@@ -208,7 +208,7 @@ func Generate() map[string][]status.Error {
 		GK:            kinds.ClusterRole().GroupKind(),
 		HierarchyMode: v1.HierarchyModeDefault,
 		Resource:      fake.HierarchyConfig(),
-	}, discovery.ClusterScope))
+	}))
 
 	// 1047
 	result.add(semantic.UnsupportedCRDRemovalError(fake.CustomResourceDefinition()))

@@ -2,31 +2,10 @@ package discovery
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-type scoperKey struct{}
-
-// AddScoper returns a copy of the Extension with the APIInfo set.
-// The value is only accessible with GetScoper.
-func AddScoper(r *ast.Root, scoper Scoper) status.Error {
-	var err status.Error
-	r.Data, err = ast.Add(r.Data, scoperKey{}, scoper)
-	return err
-}
-
-// GetScoper gets the APIInfo from the Extension.
-func GetScoper(r *ast.Root) (Scoper, status.Error) {
-	result, err := ast.Get(r.Data, scoperKey{})
-	if err != nil {
-		return nil, err
-	}
-	return result.(Scoper), nil
-}
 
 // APIInfo caches whether APIResources are Namespaced and which are synced.
 type APIInfo struct {

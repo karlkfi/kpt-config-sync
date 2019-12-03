@@ -12,9 +12,8 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"k8s.io/client-go/restmapper"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,21 +27,13 @@ func NewAllConfigs(t *testing.T, fileObjects ...ast.FileObject) *namespaceconfig
 
 // NewAllConfigsWithCRDs is a convenience method for tests to convert FileObject to an AllConfigs,
 // allowing specifying CRDs.
-func NewAllConfigsWithCRDs(t *testing.T, extraResources []*restmapper.APIGroupResources, fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
-	scoper := testScoper(t, extraResources...)
+func NewAllConfigsWithCRDs(t *testing.T, crds []*v1beta1.CustomResourceDefinition, fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
+	scoper := fstesting.Scoper(crds...)
 	result, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, fileObjects)
 	if errs != nil {
 		t.Fatal(errs)
 	}
 	return result
-}
-
-func testScoper(t *testing.T, extraResources ...*restmapper.APIGroupResources) discovery.Scoper {
-	scoper, err := discovery.NewScoperFromServerResources(fstesting.TestAPIResourceList(fstesting.TestDynamicResources(extraResources...)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return scoper
 }
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated

@@ -36,7 +36,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
 		hierarchyconfig.NewHierarchyConfigKindValidator(),
-		hierarchyconfig.NewKnownResourceValidator(),
 		hierarchyconfig.NewInheritanceValidator(),
 		visitors.NewSupportedClusterResourcesValidator(),
 		syntax.NewClusterRegistryKindValidator(),
@@ -54,7 +53,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		semantic.NewAbstractResourceValidator(),
 		semantic.NewCRDRemovalValidator(),
 		transform.NewPathAnnotationVisitor(),
-		validation.NewScope(),
 		transform.NewClusterSelectorVisitor(), // Filter out unneeded parts of the tree
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),

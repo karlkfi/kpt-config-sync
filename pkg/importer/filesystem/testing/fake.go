@@ -14,7 +14,13 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/status"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
+	appsv1 "k8s.io/api/apps/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,6 +33,9 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/kubernetes/pkg/apis/autoscaling"
+	"k8s.io/kubernetes/pkg/apis/core"
+	"k8s.io/kubernetes/pkg/apis/policy"
 )
 
 // FakeRESTClientGetter implements RESTClientGetter.
@@ -120,12 +129,12 @@ type TestClientGetter struct {
 func NewTestClientGetter(t *testing.T, extraResources ...*restmapper.APIGroupResources) *TestClientGetter {
 	return NewStubbedClientGetter(t,
 		NewFakeCachedDiscoveryClient(TestAPIResourceList(TestDynamicResources(extraResources...))),
-		extraResources...,
+		extraResources,
 	)
 }
 
 // NewStubbedClientGetter returns a new test RESTClientGetter which uses the provided DiscoveryClient.
-func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscoveryInterface, extraResources ...*restmapper.APIGroupResources) *TestClientGetter {
+func NewStubbedClientGetter(t *testing.T, discoveryClient discovery.CachedDiscoveryInterface, extraResources []*restmapper.APIGroupResources) *TestClientGetter {
 	// specify an optionalClientConfig to explicitly use in testing
 	// to avoid polluting an existing user Config.
 	config, configFile := defaultFakeClientConfig(t)
@@ -266,7 +275,6 @@ func testK8SResources() []*restmapper.APIGroupResources {
 					{Name: "nodes", Namespaced: false, Kind: "Node"},
 					{Name: "secrets", Namespaced: true, Kind: "Secret"},
 					{Name: "configmaps", Namespaced: true, Kind: "ConfigMap"},
-					{Name: "namespacedtype", Namespaced: true, Kind: "NamespacedType"},
 					{Name: "namespaces", Namespaced: false, Kind: "Namespace"},
 					{Name: "resourcequotas", Namespaced: true, Kind: "ResourceQuota"},
 				},
@@ -414,6 +422,94 @@ func testK8SResources() []*restmapper.APIGroupResources {
 	}
 }
 
+// Scoper returns a utildiscovery.Scoper with resources commonly used in testing.
+//
+// This includes many core Kubernetes types, as well as the internal Nomos types.
+// Feel free to add new types as necessary.
+func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
+	var gkss []utildiscovery.GroupKindScope
+	coreScopes := scopedKinds(core.GroupName, map[string]utildiscovery.ObjectScope{
+		"Pod":                   utildiscovery.NamespaceScope,
+		"Service":               utildiscovery.NamespaceScope,
+		"ReplicationController": utildiscovery.NamespaceScope,
+		"ComponentStatus":       utildiscovery.ClusterScope,
+		"Node":                  utildiscovery.ClusterScope,
+		"Secret":                utildiscovery.NamespaceScope,
+		"ConfigMap":             utildiscovery.NamespaceScope,
+		"Namespace":             utildiscovery.ClusterScope,
+		"ResourceQuota":         utildiscovery.NamespaceScope,
+	})
+	gkss = append(gkss, coreScopes...)
+
+	apiExtensionsScopes := scopedKinds(apiextensionsv1beta1.GroupName, map[string]utildiscovery.ObjectScope{
+		"CustomResourceDefinition": utildiscovery.ClusterScope,
+	})
+	gkss = append(gkss, apiExtensionsScopes...)
+
+	policyScopes := scopedKinds(policy.GroupName, map[string]utildiscovery.ObjectScope{
+		"PodSecurityPolicy": utildiscovery.ClusterScope,
+	})
+	gkss = append(gkss, policyScopes...)
+
+	appsScopes := scopedKinds(appsv1.GroupName, map[string]utildiscovery.ObjectScope{
+		"Deployment": utildiscovery.NamespaceScope,
+		"ReplicaSet": utildiscovery.NamespaceScope,
+	})
+	gkss = append(gkss, appsScopes...)
+
+	autoscalingScopes := scopedKinds(autoscaling.GroupName, map[string]utildiscovery.ObjectScope{
+		"HorizontalPodAutoscaler": utildiscovery.NamespaceScope,
+	})
+	gkss = append(gkss, autoscalingScopes...)
+
+	storageScopes := scopedKinds(storagev1beta1.GroupName, map[string]utildiscovery.ObjectScope{
+		"StorageClass": utildiscovery.ClusterScope,
+	})
+	gkss = append(gkss, storageScopes...)
+
+	rbacScopes := scopedKinds(rbacv1.GroupName, map[string]utildiscovery.ObjectScope{
+		"Role":               utildiscovery.NamespaceScope,
+		"RoleBinding":        utildiscovery.NamespaceScope,
+		"ClusterRole":        utildiscovery.ClusterScope,
+		"ClusterRoleBinding": utildiscovery.ClusterScope,
+	})
+	gkss = append(gkss, rbacScopes...)
+
+	nomosScopes := scopedKinds(configmanagement.GroupName, map[string]utildiscovery.ObjectScope{
+		"ClusterSelector":   utildiscovery.ClusterScope,
+		"NamespaceSelector": utildiscovery.ClusterScope,
+		"Repo":              utildiscovery.ClusterScope,
+		"Sync":              utildiscovery.ClusterScope,
+		"HierarchyConfig":   utildiscovery.ClusterScope,
+		"NamespaceConfig":   utildiscovery.ClusterScope,
+		"HierarchicalQuota": utildiscovery.ClusterScope,
+	})
+	gkss = append(gkss, nomosScopes...)
+
+	gkss = append(gkss, utildiscovery.ScopesFromCRDs(crds...)...)
+
+	result := utildiscovery.Scoper{}
+
+	for _, gks := range gkss {
+		result[gks.GroupKind] = gks.Scope
+	}
+	return result
+}
+
+func scopedKinds(group string, kindScope map[string]utildiscovery.ObjectScope) []utildiscovery.GroupKindScope {
+	var result []utildiscovery.GroupKindScope
+	for kind, scope := range kindScope {
+		result = append(result, utildiscovery.GroupKindScope{
+			GroupKind: schema.GroupKind{
+				Group: group,
+				Kind:  kind,
+			},
+			Scope: scope,
+		})
+	}
+	return result
+}
+
 // TestDynamicResources returns API Resources for both standard K8S resources
 // and Nomos resources.
 func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*restmapper.APIGroupResources {
@@ -466,6 +562,5 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 	}...,
 	)
 	r = append(r, extraResources...)
-
 	return r
 }

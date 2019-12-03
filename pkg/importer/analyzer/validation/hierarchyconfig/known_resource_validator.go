@@ -5,57 +5,38 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-// KnownResourceValidator validates that HierarchyConfig resources can be looked up using Discovery API.
-type KnownResourceValidator struct {
-	*visitor.ValidatorBase
-	scoper discovery.Scoper
+// NewHierarchyConfigScopeValidator returns a Validator that complains if a passed
+// HierarchyConfig includes types that are not Namespace-scoped.
+func NewHierarchyConfigScopeValidator(scoper discovery.Scoper) nonhierarchical.Validator {
+	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
+		if hc, isHierarchyConfig := o.Object.(*v1.HierarchyConfig); isHierarchyConfig {
+			return validateHierarchyConfigScopes(scoper, NewFileHierarchyConfig(hc, o))
+		}
+		return nil
+	})
 }
 
-// NewKnownResourceValidator returns a new KnownResourceValidator.
-func NewKnownResourceValidator() ast.Visitor {
-	return visitor.NewValidator(&KnownResourceValidator{})
-}
-
-// ValidateRoot implement ast.Visitor.
-func (k *KnownResourceValidator) ValidateRoot(r *ast.Root) status.MultiError {
-	var err status.Error
-	k.scoper, err = discovery.GetScoper(r)
-	return err
-}
-
-// ValidateSystemObject implements Visitor.
-func (k *KnownResourceValidator) ValidateSystemObject(o *ast.SystemObject) status.MultiError {
-	var errs status.MultiError
-	switch h := o.Object.(type) {
-	case *v1.HierarchyConfig:
-		for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
-			if err := k.validateGroupKind(gkc); err != nil {
-				errs = status.Append(errs, err)
-			}
+func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConfig) status.Error {
+	for _, gkc := range hc.flatten() {
+		scope := scoper.GetScope(gkc.GK)
+		switch scope {
+		case discovery.NamespaceScope:
+			// The expected case.
+		case discovery.ClusterScope:
+			return ClusterScopedResourceInHierarchyConfigError(gkc)
+		case discovery.UnknownScope:
+			return UnknownResourceInHierarchyConfigError(gkc)
+		default:
+			panic(fmt.Sprintf("programmer error: scope %s should not occur", scope))
 		}
 	}
-	return errs
-}
-
-// validateGroupKind validates a group kind for both existing in the API discovery as well as
-// being at namespace scope.
-func (k *KnownResourceValidator) validateGroupKind(gkc FileGroupKindHierarchyConfig) status.Error {
-	switch scope := k.scoper.GetScope(gkc.GroupKind()); scope {
-	case discovery.UnknownScope:
-		return UnknownResourceInHierarchyConfigError(gkc)
-	case discovery.NamespaceScope:
-		return nil
-	case discovery.ClusterScope:
-		return ClusterScopedResourceInHierarchyConfigError(gkc, scope)
-	default:
-		panic(fmt.Sprintf("programmer error: case %s should not occur", scope))
-	}
+	return nil
 }
 
 // UnknownResourceInHierarchyConfigErrorCode is the error code for UnknownResourceInHierarchyConfigError
@@ -68,7 +49,7 @@ var unknownResourceInHierarchyConfigError = status.NewErrorBuilder(UnknownResour
 func UnknownResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
 	gk := config.GroupKind()
 	return unknownResourceInHierarchyConfigError.
-		Sprintf("This HierarchyConfig defines the APIResource %q which does not exist on cluster. "+
+		Sprintf("This HierarchyConfig defines the APIResource %q which does not have a CustomResourceDefinition on the cluster. "+
 			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.",
 			gk.String()).
 		BuildWithResources(config)
@@ -82,11 +63,11 @@ var clusterScopedResourceInHierarchyConfigError = status.NewErrorBuilder(Cluster
 // ClusterScopedResourceInHierarchyConfigError reports that a Resource defined in a HierarchyConfig
 // has Cluster scope which means it's not feasible to interpret the resource in a hierarchical
 // manner
-func ClusterScopedResourceInHierarchyConfigError(config id.HierarchyConfig, scope discovery.ObjectScope) status.Error {
+func ClusterScopedResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
 	gk := config.GroupKind()
 	return clusterScopedResourceInHierarchyConfigError.
-		Sprintf("This HierarchyConfig references the APIResource %q which has %s scope. "+
+		Sprintf("This HierarchyConfig references the APIResource %q which has Cluster scope. "+
 			"Cluster scoped objects are not permitted in HierarchyConfig.",
-			gk.String(), scope).
+			gk.String()).
 		BuildWithResources(config)
 }
