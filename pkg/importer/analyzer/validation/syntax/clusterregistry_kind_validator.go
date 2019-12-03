@@ -1,25 +1,23 @@
 package syntax
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
 // NewClusterRegistryKindValidator ensures only the allowed set of types appear in clusterregistry/
 func NewClusterRegistryKindValidator() *visitor.ValidatorVisitor {
 	return visitor.NewClusterRegistryObjectValidator(func(object *ast.ClusterRegistryObject) status.MultiError {
-		switch object.Object.(type) {
-		case *v1.ClusterSelector:
-		case *clusterregistry.Cluster:
-		default:
-			return IllegalKindInClusterregistryError(object)
+		gvk := object.GroupVersionKind()
+		if gvk == kinds.ClusterSelector() || gvk == kinds.Cluster() {
+			// Only ClusterSelectors and Clusters are allowed in clusterregistry/.
+			return nil
 		}
-		return nil
+		return IllegalKindInClusterregistryError(object)
 	})
 }
 

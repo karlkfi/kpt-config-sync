@@ -72,9 +72,13 @@ func Generate() map[string][]status.Error {
 
 	// 1013
 	result.add(selectors.ObjectHasUnknownClusterSelector(fake.Role(), "undeclared-selector"))
+	result.add(selectors.ObjectHasUnknownNamespaceSelector(fake.Role(), "undeclared-selector"))
+	result.add(selectors.ObjectNotInNamespaceSelectorSubdirectory(
+		fake.RoleAtPath("namespaces/foo/role.yaml"),
+		fake.NamespaceSelectorAtPath("namespaces/bar/selector.yaml")))
 
 	// 1014
-	result.add(selectors.InvalidSelectorError("foo-selector", errors.New("some parse error")))
+	result.add(selectors.InvalidSelectorError(fake.NamespaceSelector(), errors.New("some parse error")))
 
 	// 1015 is Deprecated.
 

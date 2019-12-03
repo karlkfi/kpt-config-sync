@@ -1,7 +1,6 @@
 package namespaceconfig
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -64,7 +63,6 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Sc
 			}
 			result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
 		case discovery.UnknownScope:
-			spew.Dump(f.GroupVersionKind())
 			errs = status.Append(errs, validation.UnknownObjectError(f))
 		}
 	}

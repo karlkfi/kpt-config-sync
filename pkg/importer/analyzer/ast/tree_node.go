@@ -1,7 +1,6 @@
 package ast
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -15,15 +14,10 @@ type TreeNode struct {
 	cmpath.Path
 
 	// The type of the HierarchyNode
-	Type   node.Type
-	Labels map[string]string
+	Type node.Type
 
 	// Objects from the directory
 	Objects []*NamespaceObject
-
-	// Selectors is a map of name to NamespaceSelector objects found at this node.
-	// One or more Objects may have an annotation referring to these NamespaceSelectors by name.
-	Selectors map[string]*v1.NamespaceSelector
 
 	// children of the directory
 	Children []*TreeNode
@@ -45,7 +39,6 @@ func (n *TreeNode) Accept(visitor Visitor) *TreeNode {
 // Annotations.
 func (n *TreeNode) PartialCopy() *TreeNode {
 	nn := *n
-	copyMapInto(n.Labels, &nn.Labels)
 	// Not sure if Selectors should be copied the same way.
 	return &nn
 }
@@ -53,16 +46,6 @@ func (n *TreeNode) PartialCopy() *TreeNode {
 // Name returns the name of the lowest-level directory in this node's path.
 func (n *TreeNode) Name() string {
 	return n.Base()
-}
-
-func copyMapInto(from map[string]string, to *map[string]string) {
-	if from == nil {
-		return
-	}
-	*to = make(map[string]string)
-	for k, v := range from {
-		(*to)[k] = v
-	}
 }
 
 // flatten returns the list of materialized FileObjects contained in this

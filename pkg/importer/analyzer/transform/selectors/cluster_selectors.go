@@ -205,7 +205,7 @@ var _ id.Resource = selectorFileObject{}
 func asSelectorFileObject(o ast.FileObject, labelSelector metav1.LabelSelector) (selectorFileObject, status.Error) {
 	selector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
-		return selectorFileObject{}, InvalidSelectorError2(o, err)
+		return selectorFileObject{}, InvalidSelectorError(o, err)
 	}
 	if selector.Empty() {
 		return selectorFileObject{}, EmptySelectorError(o)
@@ -241,15 +241,10 @@ func (s selectorFileObject) selects(o core.Object) bool {
 	return s.Matches(labels.Set(o.GetLabels()))
 }
 
-// ObjectHasUnknownSelectorCode is the error code for ObjectHasUnknownClusterSelector
-const ObjectHasUnknownSelectorCode = "1013"
-
-var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownSelectorCode)
-
 // ObjectHasUnknownClusterSelector reports that `resource`'s cluster-selector annotation
 // references a ClusterSelector that does not exist.
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
-	return objectHasUnknownClusterSelector.
+	return objectHasUnknownSelector.
 		Sprintf("Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
 			resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation).
 		BuildWithResources(resource)

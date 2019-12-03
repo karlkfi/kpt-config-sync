@@ -49,8 +49,7 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		semantic.NewAbstractResourceValidator(),
 		semantic.NewCRDRemovalValidator(),
 		transform.NewPathAnnotationVisitor(),
-		transform.NewAnnotationInlinerVisitor(),
-		transform.NewInheritanceVisitor(specs),
+		transform.NewInheritanceVisitor(),
 	}
 }
 

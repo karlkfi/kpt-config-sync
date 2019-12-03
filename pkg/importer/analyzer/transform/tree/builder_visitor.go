@@ -3,13 +3,11 @@ package tree
 import (
 	"sort"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/google/nomos/pkg/kinds"
 )
 
 // BuilderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
@@ -50,15 +48,8 @@ func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 // VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
 func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	for _, object := range v.objects[n.Path] {
-		switch o := object.Object.(type) {
-		case *corev1.Namespace:
+		if object.GroupVersionKind() == kinds.Namespace() {
 			n.Type = node.Namespace
-			n.Labels = o.GetLabels()
-		case *v1.NamespaceSelector:
-			if n.Selectors == nil {
-				n.Selectors = make(map[string]*v1.NamespaceSelector)
-			}
-			n.Selectors[o.Name] = o
 		}
 		n.Objects = append(n.Objects, &ast.NamespaceObject{FileObject: object})
 	}

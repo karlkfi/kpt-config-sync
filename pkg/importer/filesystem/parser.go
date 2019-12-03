@@ -5,7 +5,7 @@ package filesystem
 import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -161,6 +161,16 @@ func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjec
 	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
 	if csErr != nil {
 		return nil, csErr
+	}
+
+	nsuErr := validation.NamespaceSelectorUniqueness.Validate(fileObjects)
+	if nsuErr != nil {
+		return nil, nsuErr
+	}
+
+	fileObjects, nsErr := selectors.ResolveHierarchicalNamespaceSelectors(fileObjects)
+	if nsErr != nil {
+		return nil, nsErr
 	}
 
 	return transform.RemoveEphemeralResources(fileObjects), nil

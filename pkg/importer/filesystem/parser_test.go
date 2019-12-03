@@ -1,7 +1,6 @@
 package filesystem_test
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -16,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
@@ -144,7 +142,7 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Success("NamespaceSelector",
 			testoutput.NewAllConfigs(t,
 				fake.RoleBindingAtPath("namespaces/bar/rb.yaml", core.Name("sre"),
-					inlinedNamespaceSelectorAnnotation(t, namespaceSelector("sre-supported", "env", "prod")),
+					namespaceSelectorAnnotation("sre-supported"),
 					core.Namespace("prod-ns"),
 					testoutput.Source("namespaces/bar/rb.yaml"),
 				),
@@ -236,11 +234,11 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/foo bar"),
 		),
 		parsertest.Failure("Namespace with NamespaceSelector annotation is invalid",
-			status.UndocumentedErrorCode,
+			nonhierarchical.IllegalSelectorAnnotationErrorCode,
 			fake.Namespace("namespaces/bar", core.Annotation(v1.NamespaceSelectorAnnotationKey, "prod")),
 		),
 		parsertest.Failure("NamespaceSelector may not have clusterSelector annotations",
-			selectors.InvalidSelectorErrorCode,
+			nonhierarchical.IllegalSelectorAnnotationErrorCode,
 			fake.FileObject(clusterSelectorObject("prod-cluster", "env", "prod"),
 				"clusterregistry/cs.yaml"),
 			fake.NamespaceSelector(clusterSelectorAnnotation("prod-cluster")),
@@ -390,14 +388,6 @@ func namespaceSelector(name, key, value string, opts ...core.MetaMutator) *v1.Na
 
 func namespaceSelectorAnnotation(name string) core.MetaMutator {
 	return core.Annotation(v1.NamespaceSelectorAnnotationKey, name)
-}
-
-func inlinedNamespaceSelectorAnnotation(t *testing.T, selector *v1.NamespaceSelector) core.MetaMutator {
-	content, err := json.Marshal(selector)
-	if err != nil {
-		t.Error(err)
-	}
-	return core.Annotation(v1.NamespaceSelectorAnnotationKey, string(content))
 }
 
 func clusterSelectorAnnotation(value string) core.MetaMutator {
