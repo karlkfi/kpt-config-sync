@@ -13,7 +13,7 @@ import (
 
 // ProcessClusterObjects will process all the given cluster objects into the
 // list of all CRDs that will result
-func ProcessClusterObjects(clusterObjects []*ast.ClusterObject) (map[schema.GroupKind]*v1beta1.CustomResourceDefinition, status.MultiError) {
+func ProcessClusterObjects(clusterObjects []*ast.ClusterObject) ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 	fileObjects := make([]ast.FileObject, len(clusterObjects))
 	for idx := range clusterObjects {
 		fileObjects[idx] = clusterObjects[idx].FileObject
@@ -24,7 +24,7 @@ func ProcessClusterObjects(clusterObjects []*ast.ClusterObject) (map[schema.Grou
 // Process will process all given objects into the resulting list of CRDs.
 // This has special handling for gatekeeper ConstraintTemplates since the
 // gatekeeper controller will create a CRD on apply of the ConstraintTemplate.
-func Process(fileObjects []ast.FileObject) (map[schema.GroupKind]*v1beta1.CustomResourceDefinition, status.MultiError) {
+func Process(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 	var errs status.MultiError
 	crdMap := map[schema.GroupKind]*v1beta1.CustomResourceDefinition{}
 	for _, cr := range fileObjects {
@@ -66,5 +66,10 @@ func Process(fileObjects []ast.FileObject) (map[schema.GroupKind]*v1beta1.Custom
 		}
 		crdMap[gk] = crd
 	}
-	return crdMap, errs
+
+	var result []*v1beta1.CustomResourceDefinition
+	for _, crd := range crdMap {
+		result = append(result, crd)
+	}
+	return result, errs
 }

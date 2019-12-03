@@ -38,12 +38,12 @@ func newFakeDiscoveryClient(resources []*v1.APIResourceList) discovery.ServerRes
 	return &fakeDiscoveryClient{resources: resources}
 }
 
-func ToAPIInfo(t *testing.T, resources []*v1.APIResourceList) utildiscovery.Scoper {
-	result, err := utildiscovery.NewAPIInfo(resources)
+func ToScoper(t *testing.T, resources []*v1.APIResourceList) utildiscovery.Scoper {
+	scoper, err := utildiscovery.NewScoperFromServerResources(resources)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return result
+	return scoper
 }
 
 func roleResourceList() []*v1.APIResourceList {
@@ -69,12 +69,12 @@ func TestAPIInfoVisitor(t *testing.T) {
 	}{
 		{
 			name:     "no server resources returns ephemeral resources",
-			expected: ToAPIInfo(t, transform.EphemeralResources()),
+			expected: ToScoper(t, transform.EphemeralResources()),
 		},
 		{
 			name:      "server resource adds to ephemeral resources",
 			resources: roleResourceList(),
-			expected:  ToAPIInfo(t, append(roleResourceList(), transform.EphemeralResources()...)),
+			expected:  ToScoper(t, append(roleResourceList(), transform.EphemeralResources()...)),
 		},
 	}
 

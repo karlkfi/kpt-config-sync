@@ -3,8 +3,6 @@ package nonhierarchical_test
 import (
 	"testing"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
@@ -13,21 +11,11 @@ import (
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-type fakeScoper struct{}
-
-var _ discovery.Scoper = fakeScoper{}
-
-func (s fakeScoper) GetScope(gk schema.GroupKind) discovery.ObjectScope {
-	switch gk {
-	case kinds.Role().GroupKind():
-		return discovery.NamespaceScope
-	case kinds.ClusterRole().GroupKind():
-		return discovery.ClusterScope
-	}
-	return discovery.UnknownScope
-}
-
 func TestScopeValidator(t *testing.T) {
+	scoper := discovery.Scoper{
+		kinds.Role().GroupKind():        discovery.NamespaceScope,
+		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
+	}
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Namespace-scoped object with metadata.namespace",
 			fake.Role(core.Namespace("backend")),
@@ -48,6 +36,5 @@ func TestScopeValidator(t *testing.T) {
 			fake.NamespaceSelector(core.Namespace("")),
 		),
 	}
-
-	nht.RunAll(t, nonhierarchical.ScopeValidator(fakeScoper{}), testCases)
+	nht.RunAll(t, nonhierarchical.ScopeValidator(scoper), testCases)
 }

@@ -38,11 +38,11 @@ func NewAllConfigsWithCRDs(t *testing.T, extraResources []*restmapper.APIGroupRe
 }
 
 func testScoper(t *testing.T, extraResources ...*restmapper.APIGroupResources) discovery.Scoper {
-	result, err := discovery.NewAPIInfo(fstesting.TestAPIResourceList(fstesting.TestDynamicResources(extraResources...)))
+	scoper, err := discovery.NewScoperFromServerResources(fstesting.TestAPIResourceList(fstesting.TestDynamicResources(extraResources...)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return result
+	return scoper
 }
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated

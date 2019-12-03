@@ -20,11 +20,11 @@ func withPath(o core.Object, path string) ast.FileObject {
 }
 
 func withScope(t *testing.T, r *ast.Root) *ast.Root {
-	apiInfos, err := discovery.NewAPIInfo(ft.TestAPIResourceList(ft.TestDynamicResources()))
+	scoper, err := discovery.NewScoperFromServerResources(ft.TestAPIResourceList(ft.TestDynamicResources()))
 	if err != nil {
 		t.Error("testdata error")
 	}
-	err = discovery.AddScoper(r, apiInfos)
+	err = discovery.AddScoper(r, scoper)
 	if err != nil {
 		t.Error(err)
 	}

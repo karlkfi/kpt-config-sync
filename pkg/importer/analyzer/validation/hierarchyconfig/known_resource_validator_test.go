@@ -36,7 +36,7 @@ func toAPIInfo(opts ...apiInfoOption) (discovery.Scoper, error) {
 	for _, o := range opts {
 		resources = o(resources)
 	}
-	return discovery.NewAPIInfo(resources)
+	return discovery.NewScoperFromServerResources(resources)
 }
 
 // APIInfo adds an APIInfo to the AST.

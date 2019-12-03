@@ -118,6 +118,10 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	if err != nil {
 		return err
 	}
+	scoper, err := utildiscovery.NewScoperFromServerResources(sr)
+	if err != nil {
+		return err
+	}
 
 	eventTriggeredRestart := restartSubManager(request.Name)
 	source := "sync"
@@ -126,7 +130,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		source = request.Namespace
 	}
 
-	attemptedRestart, err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), apirs, eventTriggeredRestart)
+	attemptedRestart, err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), scoper, eventTriggeredRestart)
 	if attemptedRestart {
 		metrics.ControllerRestarts.WithLabelValues(source).Inc()
 	}

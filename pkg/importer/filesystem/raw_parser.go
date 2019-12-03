@@ -46,7 +46,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	if err != nil {
 		return nil, status.APIServerError(err, "failed to get server resources")
 	}
-	apiInfo, err := utildiscovery.NewAPIInfo(apiResources)
+	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
 	if err != nil {
 		return nil, status.APIServerError(err, "discovery failed for server resources")
 	}
@@ -59,10 +59,6 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 
 	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
 	// an object is namespace or cluster scoped.
-	scoper, err := utildiscovery.NewAPIInfo(apiResources)
-	if err != nil {
-		return nil, status.APIServerError(err, "error getting APIResources from Kubernetes cluster")
-	}
 	scoper.AddCustomResources(crds...)
 
 	// Read all manifests and extract them into FileObjects.
@@ -85,7 +81,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	var validators = []nonhierarchical.Validator{
 		nonhierarchical.IllegalHierarchicalKindValidator,
 		nonhierarchical.CRDRemovalValidator(crdInfo),
-		nonhierarchical.ScopeValidator(apiInfo),
+		nonhierarchical.ScopeValidator(scoper),
 	}
 	for _, v := range validators {
 		errs = status.Append(errs, v.Validate(fileObjects))
@@ -94,7 +90,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 		return nil, errs
 	}
 
-	return namespaceconfig.NewAllConfigs(importToken, loadTime, apiInfo, fileObjects)
+	return namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

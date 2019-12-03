@@ -37,21 +37,19 @@ func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	}
 
 	resources = append(resources, v.ephemeralResources...)
-	apiInfo, err := utildiscovery.NewAPIInfo(resources)
+	scoper, err := utildiscovery.NewScoperFromServerResources(resources)
 	if err != nil {
-		v.errs = status.Append(v.errs, status.APIServerError(err, "discovery failed for server resources"))
+		v.errs = status.Append(v.errs, status.APIServerError(err, "failed to parse server resources"))
+		return r
 	}
 
-	crdMap, errs := customresources.ProcessClusterObjects(r.ClusterObjects)
+	crds, errs := customresources.ProcessClusterObjects(r.ClusterObjects)
 	if errs != nil {
 		v.errs = status.Append(v.errs, errs)
 	}
+	scoper.AddCustomResources(crds...)
 
-	for _, crd := range crdMap {
-		apiInfo.AddCustomResources(crd)
-	}
-
-	v.errs = status.Append(v.errs, utildiscovery.AddScoper(r, apiInfo))
+	v.errs = status.Append(v.errs, utildiscovery.AddScoper(r, scoper))
 	return r
 }
 

@@ -14,14 +14,5 @@ func readCRDs(r Reader, dir cmpath.Relative) ([]*v1beta1.CustomResourceDefinitio
 		return nil, errs
 	}
 
-	crdGks, errs := customresources.Process(fileObjects)
-	if errs != nil {
-		return nil, errs
-	}
-
-	var crds []*v1beta1.CustomResourceDefinition
-	for _, crd := range crdGks {
-		crds = append(crds, crd)
-	}
-	return crds, nil
+	return customresources.Process(fileObjects)
 }
