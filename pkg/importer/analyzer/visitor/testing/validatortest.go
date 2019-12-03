@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/util/discovery"
 )
 
 // ObjectValidatorTestCase defines an individual FileObject to validate with the validator, and
@@ -16,7 +15,6 @@ type ObjectValidatorTestCase struct {
 	Name       string
 	ShouldFail bool
 	Object     ast.FileObject
-	APIInfo    discovery.Scoper
 }
 
 // ObjectValidatorTest defines a Validator which is initialized and run on each of the provided test

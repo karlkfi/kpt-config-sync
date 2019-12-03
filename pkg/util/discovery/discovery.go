@@ -1,35 +1,32 @@
 package discovery
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// APIInfo caches whether APIResources are Namespaced and which are synced.
-type APIInfo struct {
-	// groupVersionKinds holds the set of known GroupVersionKinds
-	groupVersionKinds map[schema.GroupVersionKind]bool
-}
+// APIInfo caches the GroupVersionKinds available on the cluster.
+type APIInfo map[schema.GroupVersionKind]bool
 
-// NewAPIInfo returns a new APIInfo object
-func NewAPIInfo(resourceLists []*metav1.APIResourceList) (*APIInfo, error) {
-	result := &APIInfo{
-		groupVersionKinds: map[schema.GroupVersionKind]bool{},
+// NewAPIInfo constructs an APIInfo from resources retrieved from a DiscoveryClient, and
+// a set of additional resources with known scopes.
+//
+// Note that this EXCLUDES types defined in CRDs, but are not on the APIServer.
+// This is because trying to sync CRs for a CRD that is not yet available to the
+// cluster is an error.
+func NewAPIInfo(resourceLists []*metav1.APIResourceList) (APIInfo, status.MultiError) {
+	gvks, errs := toGVKs(resourceLists...)
+	if errs != nil {
+		return nil, errs
 	}
 
-	for _, resourceList := range resourceLists {
-		groupVersion, err := schema.ParseGroupVersion(resourceList.GroupVersion)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse discovery APIResourceList")
-		}
-		for _, resource := range resourceList.APIResources {
-			gvk := groupVersion.WithKind(resource.Kind)
-			result.groupVersionKinds[gvk] = true
-		}
+	result := APIInfo{}
+	for _, gvk := range gvks {
+		result[gvk] = true
 	}
-
 	return result, nil
 }
 
@@ -42,10 +39,27 @@ func (a *APIInfo) GroupVersionKinds(syncs ...*v1.Sync) map[schema.GroupVersionKi
 	}
 
 	syncedGvks := make(map[schema.GroupVersionKind]bool, len(syncs))
-	for gvk := range a.groupVersionKinds {
+	for gvk := range *a {
 		if syncedGks[gvk.GroupKind()] {
 			syncedGvks[gvk] = true
 		}
 	}
 	return syncedGvks
+}
+
+func toGVKs(lists ...*metav1.APIResourceList) ([]schema.GroupVersionKind, status.MultiError) {
+	var result []schema.GroupVersionKind
+	var errs status.MultiError
+	for _, list := range lists {
+		groupVersion, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			errs = status.Append(errs, errors.Wrapf(err, "discovery client returned invalid GroupVersion: %q", list.GroupVersion))
+			continue
+		}
+		for _, resource := range list.APIResources {
+			result = append(result, groupVersion.WithKind(resource.Kind))
+		}
+	}
+
+	return result, errs
 }
