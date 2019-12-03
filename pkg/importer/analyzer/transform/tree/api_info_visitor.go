@@ -31,9 +31,10 @@ func NewAPIInfoBuilderVisitor(client discovery.ServerResourcesInterface, ephemer
 
 // VisitRoot adds APIInfo to Root Extensions.
 func (v *APIInfoBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
-	resources, discoveryErr := v.client.ServerResources()
+	resources, discoveryErr := utildiscovery.GetResources(v.client)
 	if discoveryErr != nil {
-		v.errs = status.Append(v.errs, status.APIServerError(discoveryErr, "failed to get server resources"))
+		v.errs = status.Append(v.errs, discoveryErr)
+		return r
 	}
 
 	resources = append(resources, v.ephemeralResources...)

@@ -17,9 +17,7 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -251,26 +249,6 @@ func toInheritanceSpecs(configs []*v1.HierarchyConfig) map[schema.GroupKind]*tra
 		}
 	}
 	return specs
-}
-
-// ValidateInstallation checks to see if Nomos is installed properly.
-// TODO(b/123598820): Server-side validation for this check.
-func ValidateInstallation(client genericclioptions.RESTClientGetter) status.MultiError {
-	discoveryClient, err := client.ToDiscoveryClient()
-	if err != nil {
-		return status.APIServerError(err, "could not get discovery client")
-	}
-
-	gv := v1.SchemeGroupVersion.String()
-	_, rErr := discoveryClient.ServerResourcesForGroupVersion(gv)
-	if rErr != nil {
-		if apierrors.IsNotFound(rErr) {
-			return ConfigManagementNotInstalledError(
-				errors.Errorf("no resources exist on cluster with apiVersion: %s", gv))
-		}
-		return ConfigManagementNotInstalledError(rErr)
-	}
-	return nil
 }
 
 func (p *Parser) discoveryClient(crds ...*v1beta1.CustomResourceDefinition) (discovery.ServerResourcesInterface, error) {

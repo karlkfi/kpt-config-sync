@@ -38,13 +38,9 @@ func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
 func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime metav1.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	// Get all known API resources from the server.
-	dc, err := p.clientGetter.ToDiscoveryClient()
+	apiResources, err := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
 	if err != nil {
-		return nil, status.APIServerError(err, "failed to get discovery client")
-	}
-	apiResources, err := dc.ServerResources()
-	if err != nil {
-		return nil, status.APIServerError(err, "failed to get server resources")
+		return nil, err
 	}
 	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
 	if err != nil {

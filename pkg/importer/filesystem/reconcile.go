@@ -207,9 +207,9 @@ func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs
 // updateDecoderWithAPIResources uses the discovery API and the set of existing
 // syncs on cluster to update the set of resource types the Decoder is able to decode.
 func (c *Reconciler) updateDecoderWithAPIResources(syncMaps ...map[string]v1.Sync) error {
-	resources, discoveryErr := c.discoveryClient.ServerResources()
+	resources, discoveryErr := utildiscovery.GetResources(c.discoveryClient)
 	if discoveryErr != nil {
-		return errors.Wrap(discoveryErr, "failed to get server resources")
+		return discoveryErr
 	}
 
 	// We need to populate the scheme with the latest resources on cluster in order to decode GenericResources in

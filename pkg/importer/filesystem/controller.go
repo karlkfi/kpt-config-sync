@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -27,6 +30,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 )
 
 const (
@@ -102,6 +106,38 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	return watchFileSystem(c, pollPeriod)
+}
+
+// ValidateInstallation checks to see if Nomos is installed on a server,
+// given a client that returns a CachedDiscoveryInterface.
+// TODO(b/123598820): Server-side validation for this check.
+func ValidateInstallation(client utildiscovery.ClientGetter) status.MultiError {
+	lists, err := utildiscovery.GetResourcesFromClientGetter(client)
+	if err != nil {
+		return status.APIServerError(err, "could not get discovery client")
+	}
+	scoper, apiErr := utildiscovery.NewScoperFromServerResources(lists)
+	if apiErr != nil {
+		return apiErr
+	}
+	return validateInstallation(scoper)
+}
+
+// validateInstallation checks to see if Nomos is installed by checking that
+// the ConfigManagement type exists and is correctly cluster-scoped.
+func validateInstallation(scoper utildiscovery.Scoper) status.MultiError {
+	configManagementScope := scoper.GetScope(kinds.ConfigManagement().GroupKind())
+	switch configManagementScope {
+	case utildiscovery.ClusterScope:
+		return nil
+	case utildiscovery.NamespaceScope:
+		return ConfigManagementNotInstalledError(
+			errors.Errorf("corrupt %s installation: ConfigManagement type has wrong scope. Reinstall to fix.",
+				configmanagement.ProductName))
+	default:
+		return ConfigManagementNotInstalledError(errors.Errorf("%s is not installed. Install to fix.",
+			configmanagement.ProductName))
+	}
 }
 
 // watchFileSystem issues a reconcile.Request after every pollPeriod.

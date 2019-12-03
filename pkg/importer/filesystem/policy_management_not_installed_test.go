@@ -3,38 +3,44 @@ package filesystem
 import (
 	"testing"
 
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
-	"github.com/pkg/errors"
-	"k8s.io/client-go/discovery"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/util/discovery"
 )
 
 func TestPolicyManagementNotInstalled(t *testing.T) {
 	testCases := []struct {
 		name       string
-		resources  discovery.CachedDiscoveryInterface
+		scoper     discovery.Scoper
 		shouldFail bool
 	}{
 		{
-			name:      "success adds no error",
-			resources: fstesting.NewFakeCachedDiscoveryClient(fstesting.TestAPIResourceList(fstesting.TestDynamicResources())),
+			name: "ACM installed",
+			scoper: discovery.Scoper{
+				kinds.Role().GroupKind():             discovery.NamespaceScope,
+				kinds.ConfigManagement().GroupKind(): discovery.ClusterScope,
+			},
 		},
 		{
-			name:       "fail adds error",
-			resources:  fstesting.NewFakeCachedDiscoveryClient(nil),
+			name: "ACM not installed",
+			scoper: discovery.Scoper{
+				kinds.Role().GroupKind(): discovery.NamespaceScope,
+			},
+			shouldFail: true,
+		},
+		{
+			name: "ACM corrupt installation",
+			scoper: discovery.Scoper{
+				kinds.Role().GroupKind():             discovery.NamespaceScope,
+				kinds.ConfigManagement().GroupKind(): discovery.NamespaceScope,
+			},
 			shouldFail: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := fstesting.NewStubbedClientGetter(t, tc.resources)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
 
-			eb := ValidateInstallation(f)
+			eb := validateInstallation(tc.scoper)
 
 			if tc.shouldFail {
 				if eb == nil {

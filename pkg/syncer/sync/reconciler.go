@@ -110,9 +110,9 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		}
 	}
 
-	sr, err := r.discoveryClient.ServerResources()
+	sr, err := utildiscovery.GetResources(r.discoveryClient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get api groups")
+		return err
 	}
 	apirs, err := utildiscovery.NewAPIInfo(sr)
 	if err != nil {
