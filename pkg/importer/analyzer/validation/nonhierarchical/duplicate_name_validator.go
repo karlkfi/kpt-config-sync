@@ -45,12 +45,22 @@ func NamespaceMetadataNameCollisionError(gk schema.GroupKind, namespace string, 
 }
 
 // ClusterMetadataNameCollisionError reports that multiple cluster-scoped objects of the same Kind and
-// namespace have the same metadata name
+// namespace have the same metadata.name.
 func ClusterMetadataNameCollisionError(gk schema.GroupKind, name string, duplicates ...id.Resource) status.Error {
 	return nameCollisionErrorBuilder.
-		Sprintf("Cluster-scoped configs of the same Group and Kind MUST have unique names."+
+		Sprintf("Cluster-scoped configs of the same Group and Kind MUST have unique names. "+
 			"Found %d configs of GroupKind %q named %q. Rename or delete the duplicates to fix:",
 			len(duplicates), gk.String(), name).
+		BuildWithResources(duplicates...)
+}
+
+// SelectorMetadataNameCollisionError reports that multiple ClusterSelectors or NamespaceSelectors
+// have the same metadata.name.
+func SelectorMetadataNameCollisionError(kind string, name string, duplicates ...id.Resource) status.Error {
+	return nameCollisionErrorBuilder.
+		Sprintf("%ss MUST have globally-unique names. "+
+			"Found %d %ss named %q. Rename or delete the duplicates to fix:",
+			kind, len(duplicates), kind, name).
 		BuildWithResources(duplicates...)
 }
 

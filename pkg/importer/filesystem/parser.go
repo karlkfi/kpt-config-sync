@@ -120,7 +120,16 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 	root := p.runVisitors(astRoot, visitors)
 
 	fileObjects := root.Flatten()
+
+	p.errors = status.Append(p.errors, validation.ClusterSelectorUniqueness.Validate(fileObjects))
 	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	p.errors = status.Append(p.errors, csErr)
+	// TODO(b/145676672): Uncomment the below once non-hierarchical NamespaceSelector logic is implemented.
+	//p.errors = status.Append(p.errors, validation.NamespaceSelectorUniqueness.Validate(fileObjects))
+	// // For each NamespaceSelector, calculate which Namespaces it is active/inactive for.
+	//nsStates := getNamespaceSelectorStatePerNamespace(fileObjects)
+	//fileObjects, nsErr := selectors.ResolveNamespaceSelectors(fileObjects, nsStates)
+	//p.errors = status.Append(p.errors, nsErr)
 	fileObjects = transform.RemoveEphemeralResources(fileObjects)
 
 	errs := standardValidation(fileObjects)
@@ -137,7 +146,6 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
 
-	p.errors = status.Append(p.errors, csErr)
 	fileObjects = selectors.AnnotateClusterName(clusterName, fileObjects)
 
 	return fileObjects
