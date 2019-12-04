@@ -4,8 +4,10 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,7 +30,9 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status
 	scope := scoper.GetScope(gvk.GroupKind())
 	topLevelDir := o.Path.Split()[0]
 
-	if isIgnored(gvk) {
+	// ResourceQuotas generated as part of a HierarchicalQuota have their filepath
+	// set to empty string, so they would otherwise fail the validation.
+	if isIgnored(gvk) || isGeneratedResourceQuota(o) {
 		return nil
 	}
 
@@ -48,6 +52,18 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status
 	}
 
 	return UnknownObjectError(o)
+}
+
+// isGeneratedResourceQuota returns true if o is a ResourceQuota that we
+// generated as part of a HierarchicalQuota.
+func isGeneratedResourceQuota(o ast.FileObject) bool {
+	if o.GroupVersionKind() != kinds.ResourceQuota() {
+		return false
+	}
+	if o.GetName() != resourcequota.ResourceQuotaObjectName {
+		return false
+	}
+	return o.Path == cmpath.FromSlash("")
 }
 
 func isClusterScopedAllowedInNamespaces(gvk schema.GroupVersionKind) bool {
@@ -81,7 +97,7 @@ var incorrectTopLevelDirectoryErrorBuilder = status.NewErrorBuilder(IncorrectTop
 func ShouldBeInNamespacesError(dir string, resource id.Resource) status.Error {
 	return incorrectTopLevelDirectoryErrorBuilder.
 		Sprintf("Namespace-scoped and Namespace configs MUST be declared in `%s/`. "+
-			"To fix, move the %s to `%s/`.", dir, resource.GroupVersionKind().Kind, repo.NamespacesDir).
+			"To fix, move the %s to `%s/`.", repo.NamespacesDir, resource.GroupVersionKind().Kind, repo.NamespacesDir).
 		BuildWithResources(resource)
 }
 
@@ -89,6 +105,6 @@ func ShouldBeInNamespacesError(dir string, resource id.Resource) status.Error {
 func ShouldBeInClusterError(dir string, resource id.Resource) status.Error {
 	return incorrectTopLevelDirectoryErrorBuilder.
 		Sprintf("Cluster-scoped configs except Namespaces MUST be declared in `%s/`. "+
-			"To fix, move the %s to `%s/`.", dir, resource.GroupVersionKind().Kind, repo.ClusterDir).
+			"To fix, move the %s to `%s/`.", repo.ClusterDir, resource.GroupVersionKind().Kind, repo.ClusterDir).
 		BuildWithResources(resource)
 }
