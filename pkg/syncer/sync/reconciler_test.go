@@ -142,7 +142,7 @@ func TestReconcile(t *testing.T) {
 
 			mockCache.EXPECT().
 				List(gomock.Any(), gomock.Any(), gomock.Any()).
-				SetArg(2, tc.actualSyncs)
+				SetArg(1, tc.actualSyncs)
 
 			mockDiscovery.EXPECT().
 				ServerResources().Return(
@@ -191,7 +191,7 @@ func TestReconcile(t *testing.T) {
 					Update(gomock.Any(), gomock.Eq(&wantUpdateList.update))
 
 				mockClient.EXPECT().
-					List(gomock.Any(), gomock.Eq(&client.ListOptions{}), gomock.Eq(&wantUpdateList.list))
+					List(gomock.Any(), gomock.Eq(&wantUpdateList.list), gomock.Eq(&client.ListOptions{}))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)

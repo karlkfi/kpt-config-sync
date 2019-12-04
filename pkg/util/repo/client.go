@@ -26,7 +26,7 @@ func New(client *syncclient.Client) *Client {
 // GetOrCreateRepo returns the Repo resource for the cluster or creates if it does not yet exist.
 func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	var repoList v1.RepoList
-	if err := c.client.List(ctx, &client.ListOptions{}, &repoList); err != nil {
+	if err := c.client.List(ctx, &repoList, &client.ListOptions{}); err != nil {
 		return nil, status.APIServerError(err, "failed to list Repos")
 	}
 	if len(repoList.Items) > 1 {

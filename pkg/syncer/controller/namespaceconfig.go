@@ -41,7 +41,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 			genericClient,
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			&CancelFilteringRecorder{mgr.GetRecorder(namespaceConfigControllerName)},
+			&CancelFilteringRecorder{mgr.GetEventRecorderFor(namespaceConfigControllerName)},
 			decoder,
 			metav1.Now,
 			extractGVKs(resourceTypes),

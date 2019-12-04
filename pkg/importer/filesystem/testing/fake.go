@@ -9,6 +9,9 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -17,9 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/kubernetes/pkg/apis/autoscaling"
-	"k8s.io/kubernetes/pkg/apis/core"
-	"k8s.io/kubernetes/pkg/apis/policy"
 )
 
 // NewTestClientGetter returns a new test RESTClientGetter that has mappings for test and provided resources.
@@ -267,7 +267,7 @@ func testK8SResources() []*restmapper.APIGroupResources {
 // Feel free to add new types as necessary.
 func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	var gkss []utildiscovery.GroupKindScope
-	coreScopes := scopedKinds(core.GroupName, map[string]utildiscovery.ObjectScope{
+	coreScopes := scopedKinds(corev1.GroupName, map[string]utildiscovery.ObjectScope{
 		"Pod":                   utildiscovery.NamespaceScope,
 		"Service":               utildiscovery.NamespaceScope,
 		"ReplicationController": utildiscovery.NamespaceScope,
@@ -285,7 +285,7 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	})
 	gkss = append(gkss, apiExtensionsScopes...)
 
-	policyScopes := scopedKinds(policy.GroupName, map[string]utildiscovery.ObjectScope{
+	policyScopes := scopedKinds(policyv1beta1.GroupName, map[string]utildiscovery.ObjectScope{
 		"PodSecurityPolicy": utildiscovery.ClusterScope,
 	})
 	gkss = append(gkss, policyScopes...)
@@ -296,7 +296,7 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	})
 	gkss = append(gkss, appsScopes...)
 
-	autoscalingScopes := scopedKinds(autoscaling.GroupName, map[string]utildiscovery.ObjectScope{
+	autoscalingScopes := scopedKinds(autoscalingv1.GroupName, map[string]utildiscovery.ObjectScope{
 		"HorizontalPodAutoscaler": utildiscovery.NamespaceScope,
 	})
 	gkss = append(gkss, autoscalingScopes...)

@@ -38,7 +38,7 @@ func New(client client.Client, latencyMetric *prometheus.HistogramVec) *Client {
 }
 
 // clientUpdateFn is a Client function signature for updating an entire resource or a resource's status.
-type clientUpdateFn func(ctx context.Context, obj runtime.Object) error
+type clientUpdateFn func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
 
 // update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
 // so no there is no need to worry about mutating the argument when implementing an Update function.
@@ -62,7 +62,7 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
 // This automatically sets the propagation policy to always be "Background".
-func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOptionFunc) error {
+func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOption) error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
 

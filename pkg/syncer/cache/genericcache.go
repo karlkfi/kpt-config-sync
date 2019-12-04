@@ -2,12 +2,14 @@
 package cache
 
 import (
+	"context"
+	"strings"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenericCache extends Cache to better handle fetching objects as Unstructured types.
@@ -21,7 +23,8 @@ type GenericCache interface {
 	// the type of the resource you wanted to list. We always want to return
 	// Unstructureds when listing resources on the cluster, whether it's a native
 	// or custom resource.
-	UnstructuredList(gvk schema.GroupVersionKind, namespace string) ([]*unstructured.Unstructured, error)
+	UnstructuredList(ctx context.Context, gvk schema.GroupVersionKind,
+		namespace string) ([]*unstructured.Unstructured, error)
 }
 
 // GenericResourceCache implements GenericCache.
@@ -35,41 +38,32 @@ func NewGenericResourceCache(cache cache.Cache) *GenericResourceCache {
 }
 
 // UnstructuredList implements GenericCache.
-func (c *GenericResourceCache) UnstructuredList(gvk schema.GroupVersionKind,
+func (c *GenericResourceCache) UnstructuredList(ctx context.Context, gvk schema.GroupVersionKind,
 	namespace string) ([]*unstructured.Unstructured, error) {
-	informer, err := c.GetInformerForKind(gvk)
-	if err != nil {
-		return nil, errors.Wrapf(err, "no informer for %s in the cache", gvk)
+	if !strings.HasSuffix(gvk.Kind, "List") {
+		gvk.Kind = gvk.Kind + "List"
 	}
 
-	indexer := informer.GetIndexer()
-	var objs []interface{}
+	ul := &unstructured.UnstructuredList{}
+	ul.SetGroupVersionKind(gvk)
 	if namespace == "" {
-		objs = indexer.List()
+		err := c.List(ctx, ul)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Error while fetching Unstructured List for GVK %v", gvk)
+		}
 	} else {
-		objs, err = indexer.ByIndex(toolscache.NamespaceIndex, namespace)
+		err := c.List(ctx, ul, client.InNamespace(namespace))
 		if err != nil {
 			return nil, errors.Wrapf(err, "No namespace index for %s in in the cache", gvk)
 		}
 	}
 
-	var us []*unstructured.Unstructured
-	for _, obj := range objs {
-		if u, ok := obj.(*unstructured.Unstructured); ok {
-			// Object is registered as Unstructured; no conversion is needed.
-			us = append(us, u)
-			continue
-		}
-
-		content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-		if err != nil {
-			// All resources the Syncer syncs need to be convertible to Unstructured.
-			panic(errors.Wrapf(err, "cannot convert %s to Unstructured object", gvk))
-		}
-		u := &unstructured.Unstructured{Object: content}
-		u.SetGroupVersionKind(gvk)
-
-		us = append(us, u)
+	// The existing API uses arrays of pointers to Unstructureds; Items is actual structs
+	// we oblige and convert here for the return array.
+	var uls []*unstructured.Unstructured
+	for i := 0; i < len(ul.Items); i++ {
+		uls = append(uls, &ul.Items[i])
 	}
-	return us, nil
+
+	return uls, nil
 }

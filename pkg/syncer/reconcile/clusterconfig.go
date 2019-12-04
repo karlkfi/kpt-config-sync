@@ -120,7 +120,7 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 			SyncedAt(decl, config.Spec.Token)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(gvk, "")
+		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, "")
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 			continue

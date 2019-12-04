@@ -335,7 +335,7 @@ func TestParserVetErrors(t *testing.T) {
 				kinds.NamespaceConfig().GroupVersion(), kinds.NamespaceConfig().Kind)),
 		),
 		parsertest.Failure("HierarchyConfig contains a Namespace",
-				hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
+			hierarchyconfig.UnsupportedResourceInHierarchyConfigErrorCode,
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.NamespaceConfig().GroupVersion(), kinds.NamespaceConfig().Kind)),
 		),

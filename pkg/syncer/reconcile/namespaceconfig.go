@@ -276,7 +276,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 			core.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(gvk, name)
+		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, name)
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from NamespaceConfig controller for %q", gvk))
 			syncErrs = append(syncErrs, newSyncError(config, err))

@@ -69,7 +69,7 @@ fi
 
 # This should match the APIMachinery version that exists in the vendor
 # directory.
-tag="kubernetes-1.12.3"
+tag="kubernetes-1.16.3"
 echo "Checking out codegen at tag ${tag}"
 checkout=(
   git

@@ -155,7 +155,7 @@ func (tm *TestMocks) ExpectNamespaceClientGet(namespace *corev1.Namespace) {
 // ExpectCacheList stubs the Objects being fetched from the Cache and verifies we request them.
 func (tm *TestMocks) ExpectCacheList(gvk schema.GroupVersionKind, namespace string, obj ...runtime.Object) {
 	tm.MockCache.EXPECT().
-		UnstructuredList(Eq(tm.t, gvk), Eq(tm.t, namespace)).
+		UnstructuredList(anyContext, Eq(tm.t, gvk), Eq(tm.t, namespace)).
 		Return(ToUnstructuredList(tm.t, Converter, obj...), nil)
 }
 

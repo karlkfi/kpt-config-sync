@@ -1,4 +1,41 @@
+# v0.5.4
+
+Released on June 13, 2019. We are [looking for
+sponsors!](https://github.com/golang/dep/issues/2165)
+
+- Fix an error in the TOML example for the Gopkg.toml documentation.
+  ([#2174][2174])
+
+- Fix error when cleaning up git submodules with newer versions of git. Thanks
+  @geearu for the fix. ([#2168][2168], [#2176][2176])
+
+[2168]: https://github.com/golang/dep/pull/2168
+[2174]: https://github.com/golang/dep/pull/2174
+[2176]: https://github.com/golang/dep/pull/2176
+
+# v0.5.3
+
+Released on May 13, 2019
+
+0.5.2 was released without a "v" prefix on the tag. The contents of this release
+are identical to 0.5.2.
+
+# 0.5.2
+
+Released on May 8, 2019
+
+IMPROVEMENTS:
+
+* Dep will read a netrc file now, which should allow you to authenticate against
+  Gitlab and other private repositories that require basic auth. ([#2155][2155])
+
+* Ignore "mod" VCS type in parseMetaGoImports ([#2152][2152])
+
+* Use correct filename for ARM releases.
+
 # v0.5.1
+
+Released on February 16, 2019
 
 IMPROVEMENTS:
 

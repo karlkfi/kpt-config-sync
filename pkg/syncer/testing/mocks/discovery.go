@@ -139,3 +139,17 @@ func (m *MockDiscoveryInterface) ServerVersion() (*version.Info, error) {
 func (mr *MockDiscoveryInterfaceMockRecorder) ServerVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServerVersion", reflect.TypeOf((*MockDiscoveryInterface)(nil).ServerVersion))
 }
+
+// ServerGroupsAndResources mocks base method
+func (m *MockDiscoveryInterface) ServerGroupsAndResources() ([]*v1.APIGroup, []*v1.APIResourceList, error) {
+	ret := m.ctrl.Call(m, "ServerGroupsAndResources")
+	ret0, _ := ret[0].([]*v1.APIGroup)
+	ret1, _ := ret[1].([]*v1.APIResourceList)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ServerGroupsAndResources indicates and expected call of ServerGroupsAndResources
+func (mr *MockDiscoveryInterfaceMockRecorder) ServerGroupsAndResources() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServerGroupsAndResources", reflect.TypeOf((*MockDiscoveryInterface)(nil).ServerGroupsAndResources))
+}

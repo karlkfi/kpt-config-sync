@@ -65,7 +65,11 @@ func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, scoper disco
 	ctx := m.context()
 
 	var err error
-	m.Manager, err = manager.New(rest.CopyConfig(m.baseCfg), manager.Options{})
+	// MetricsBindAddress 0 disables default metrics for the manager
+	// If metrics are enabled, every time the subManger restarts it tries to bind to the metrics port
+	// but fails because restarting does not unbind the port.
+	// Instead of disabling these metrics, we could figure out a way to unbind the port on restart.
+	m.Manager, err = manager.New(rest.CopyConfig(m.baseCfg), manager.Options{MetricsBindAddress: "0"})
 	if err != nil {
 		return true, errors.Wrap(err, "could not create the Manager for SubManager")
 	}

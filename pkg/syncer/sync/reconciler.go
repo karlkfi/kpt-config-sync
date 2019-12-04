@@ -57,7 +57,11 @@ func NewMetaReconciler(
 	clientFactory ClientFactory,
 	now func() metav1.Time,
 	errCh chan error) (*MetaReconciler, error) {
-	sm, err := manager.New(rest.CopyConfig(mgr.GetConfig()), manager.Options{})
+	// MetricsBindAddress 0 disables default metrics for the manager
+	// If metrics are enabled, every time the subManger restarts it tries to bind to the metrics port
+	// but fails because restarting does not unbind the port.
+	// Instead of disabling these metrics, we could figure out a way to unbind the port on restart.
+	sm, err := manager.New(rest.CopyConfig(mgr.GetConfig()), manager.Options{MetricsBindAddress: "0"})
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +97,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
 	syncs := &v1.SyncList{}
-	err := r.cache.List(ctx, &client.ListOptions{}, syncs)
+	err := r.cache.List(ctx, syncs, &client.ListOptions{})
 	if err != nil {
 		panic(errors.Wrap(err, "could not list all Syncs"))
 	}
@@ -218,7 +222,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
-	if err := cl.List(ctx, &client.ListOptions{}, ul); err != nil {
+	if err := cl.List(ctx, ul, &client.ListOptions{}); err != nil {
 		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not list %s resources", gvk))
 		return errBuilder
 	}

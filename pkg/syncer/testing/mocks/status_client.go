@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockStatusWriter is a mock of StatusWriter interface
@@ -36,13 +37,35 @@ func (m *MockStatusWriter) EXPECT() *MockStatusWriterMockRecorder {
 }
 
 // Update mocks base method
-func (m *MockStatusWriter) Update(arg0 context.Context, arg1 runtime.Object) error {
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+func (m *MockStatusWriter) Update(arg0 context.Context, arg1 runtime.Object, arg2 ...client.UpdateOption) error {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update
-func (mr *MockStatusWriterMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStatusWriter)(nil).Update), arg0, arg1)
+func (mr *MockStatusWriterMockRecorder) Update(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStatusWriter)(nil).Update), varargs...)
+}
+
+// Update mocks base method
+func (m *MockStatusWriter) Patch(arg0 context.Context, arg1 runtime.Object, arg2 client.Patch, arg3 ...client.PatchOption) error {
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Patch", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update
+func (mr *MockStatusWriterMockRecorder) Patch(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockStatusWriter)(nil).Patch), varargs...)
 }

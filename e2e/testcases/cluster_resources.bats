@@ -106,6 +106,10 @@ function check_cluster_scoped_resource() {
 @test "${FILE_NAME}: Local kubectl apply to clusterroles gets reverted" {
   local clusterrole_name
   clusterrole_name="e2e-test-clusterrole"
+
+  debug::log "Ensure the clusterrole does not already exist"
+  wait::for -f -t 10 -- kubectl get clusterrole ${clusterrole_name}
+
   debug::log "Add initial clusterrole"
   git::add ${YAML_DIR}/clusterrole-modify.yaml acme/cluster/clusterrole.yaml
   git::commit -m "Adds an initial clusterrole"

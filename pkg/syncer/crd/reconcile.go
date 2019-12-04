@@ -5,11 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/metrics"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
@@ -18,14 +13,18 @@ import (
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -100,7 +99,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *Reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
 	crdList := &v1beta1.CustomResourceDefinitionList{}
-	if err := r.client.List(ctx, &client.ListOptions{}, crdList); err != nil {
+	if err := r.client.List(ctx, crdList, &client.ListOptions{}); err != nil {
 		return nil, err
 	}
 	return crdList.Items, nil
@@ -155,7 +154,8 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	}
 
 	var syncErrs []v1.ConfigManagementError
-	actualInstances, err := r.cache.UnstructuredList(gvk, "")
+	actualInstances, err := r.cache.UnstructuredList(ctx, gvk, "")
+	//r.cache.List()
 	if err != nil {
 		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))

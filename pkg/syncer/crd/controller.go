@@ -37,7 +37,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 		resourceClient,
 		applier,
 		syncercache.NewGenericResourceCache(mgr.GetCache()),
-		mgr.GetRecorder(crdControllerName),
+		mgr.GetEventRecorderFor(crdControllerName),
 		decode.NewGenericResourceDecoder(mgr.GetScheme()),
 		metav1.Now,
 		signal,

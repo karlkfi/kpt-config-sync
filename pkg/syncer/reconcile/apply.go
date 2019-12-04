@@ -168,7 +168,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 
 	name, resourceDescription := nameDescription(intendedState)
 	start := time.Now()
-	_, err = resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
+	_, err = resourceClient.Patch(name, patchType, patch, metav1.PatchOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
 

@@ -20,34 +20,35 @@
 # this version.  Versions should match across packages.
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.3"
+  version = "kubernetes-1.16.3"
+
+[[constraint]]
+  name = "sigs.k8s.io/controller-runtime"
+  version = "v0.4.0"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.3"
+  version = "kubernetes-1.16.3"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.3"
+  version = "kubernetes-1.16.3"
+
+# Pin the version of a k8s package to ensure that libraries are migrated to
+# this version.  Versions should match across packages.
+[[constraint]]
+  name = "k8s.io/cli-runtime"
+  version = "kubernetes-1.16.3"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.12.3"
-
-# If this version is not fixed, dep solver will resolve to an incompatible
-# version.  Pin the version of a k8s package to ensure that libraries are
-# migrated to this version.  Versions should match across packages.  Note that
-# while the other k8s packages are versioned with "kubernetes-vVERSION", this
-# one is just "vVERSION".
-[[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "v1.12.3"
+  version = "kubernetes-1.16.3"
 
 # Required for vendoring apimachinery
 [[override]]
@@ -90,13 +91,6 @@ version="v1.4.7"
 [[constraint]]
   revision = "97aa668b73e764ccdd786bc3ccd2edffe621150e"
   name = "github.com/google/go-cmp"
-
-# TODO(fmil): There are newer releases available.
-# We use prometheus.NewTimer which was introduced after last official release
-# "v0.8.0"
-[[override]]
-  name = "github.com/prometheus/client_golang"
-  version = "v0.9.0-pre1"
 
 # Markdown processor.
 # TODO(fmil): Why is the version pinned?

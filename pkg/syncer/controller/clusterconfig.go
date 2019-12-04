@@ -39,7 +39,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 			client.New(mgr.GetClient(), metrics.APICallDuration),
 			applier,
 			syncercache.NewGenericResourceCache(mgr.GetCache()),
-			&CancelFilteringRecorder{mgr.GetRecorder(clusterConfigControllerName)},
+			&CancelFilteringRecorder{mgr.GetEventRecorderFor(clusterConfigControllerName)},
 			decoder,
 			metav1.Now,
 			extractGVKs(resourceTypes),

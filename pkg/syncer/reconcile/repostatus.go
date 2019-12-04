@@ -114,11 +114,11 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 func (r *RepoStatus) buildState(ctx context.Context, importToken string) (*syncState, error) {
 	opts := client.ListOptions{}
 	ccList := &v1.ClusterConfigList{}
-	if err := r.client.List(ctx, &opts, ccList); err != nil {
+	if err := r.client.List(ctx, ccList, &opts); err != nil {
 		return nil, errors.Wrapf(err, "listing ClusterConfigs")
 	}
 	ncList := &v1.NamespaceConfigList{}
-	if err := r.client.List(ctx, &opts, ncList); err != nil {
+	if err := r.client.List(ctx, ncList, &opts); err != nil {
 		return nil, errors.Wrapf(err, "listing NamespaceConfigs")
 	}
 	return r.processConfigs(ccList, ncList, importToken), nil

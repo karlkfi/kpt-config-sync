@@ -17,7 +17,7 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 
 	// NamespaceConfigs
 	namespaceConfigs := &v1.NamespaceConfigList{}
-	if err := cache.List(ctx, &client.ListOptions{}, namespaceConfigs); err != nil {
+	if err := cache.List(ctx, namespaceConfigs, &client.ListOptions{}); err != nil {
 		return nil, errors.Wrap(err, "failed to list NamespaceConfigs")
 	}
 	for _, n := range namespaceConfigs.Items {
@@ -38,7 +38,7 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 // DecorateWithClusterConfigs updates AllPolices with all the ClusterConfigs from APIServer.
 func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, policies *AllConfigs) error {
 	clusterConfigs := &v1.ClusterConfigList{}
-	if err := cache.List(ctx, &client.ListOptions{}, clusterConfigs); err != nil {
+	if err := cache.List(ctx, clusterConfigs, &client.ListOptions{}); err != nil {
 		return errors.Wrap(err, "failed to list ClusterConfigs")
 	}
 
@@ -59,7 +59,7 @@ func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, polici
 // the cache.
 func ListSyncs(ctx context.Context, cache cache.Cache) (map[string]v1.Sync, error) {
 	syncs := &v1.SyncList{}
-	if err := cache.List(ctx, &client.ListOptions{}, syncs); err != nil {
+	if err := cache.List(ctx, syncs, &client.ListOptions{}); err != nil {
 		return nil, errors.Wrap(err, "failed to list Syncs")
 	}
 

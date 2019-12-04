@@ -281,9 +281,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 			tm.ExpectUpdate(tc.expectUpdate)
 			tm.ExpectDelete(tc.expectDelete)
 
-			call := tm.MockClient.EXPECT().List(gomock.Any(), gomock.Any(), &v1beta1.CustomResourceDefinitionList{}).Return(nil)
+			call := tm.MockClient.EXPECT().List(gomock.Any(), &v1beta1.CustomResourceDefinitionList{}, gomock.Any()).Return(nil)
 			if len(tc.listCrds) != 0 {
-				call.SetArg(2, crdList(tc.listCrds))
+				call.SetArg(1, crdList(tc.listCrds))
 			}
 
 			tm.ExpectClusterClientGet(clusterCfg)
