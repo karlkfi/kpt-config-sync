@@ -40,7 +40,11 @@ type Reconciler struct {
 	decoder         decode.Decoder
 	repoClient      *repo.Client
 	cache           cache.Cache
-	currentDir      string
+	// appliedGitDir is set to the resolved symlink for the repo once apply has
+	// succeeded in order to prevent reprocessing.  On error, this is set to empty
+	// string so the importer will retry indefinitely to attempt to recover from
+	// an error state.
+	appliedGitDir string
 }
 
 // NewReconciler returns a new Reconciler.
@@ -104,14 +108,14 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return c.dirError(ctx, startTime, err)
 	}
 
-	if request.Name == pollFilesystem {
-		// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
-		if c.currentDir == absGitDir {
-			glog.V(4).Info("no new changes, nothing to do.")
-			return reconcile.Result{}, nil
-		}
+	// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
+	if request.Name == pollFilesystem && c.appliedGitDir == absGitDir {
+		glog.V(4).Info("no new changes, nothing to do.")
+		return reconcile.Result{}, nil
 	}
 	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absGitDir, c.gitDir)
+	// Unset applied git dir, only set this on complete import success.
+	c.appliedGitDir = ""
 
 	// Parse the commit hash from the new directory to use as an import token.
 	token, err := git.CommitHash(absGitDir)
@@ -167,7 +171,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	c.currentDir = absGitDir
+	c.appliedGitDir = absGitDir
 	importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)

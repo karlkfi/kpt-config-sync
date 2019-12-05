@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -42,7 +43,21 @@ func GetResources(discoveryClient ServerResourcer) ([]*metav1.APIResourceList, s
 	}
 	resourceLists, discoveryErr := discoveryClient.ServerResources()
 	if discoveryErr != nil {
-		return nil, status.APIServerError(discoveryErr, "failed to get server resources")
+		// Apparently the ServerResources batches a bunch of discovery requests calls
+		// and the author decided that it's perfectly reasonable to return an error
+		// for failure on any of those calls (despite some succeeding), so we
+		// check for this specific error then ignore it while logging a warning.
+		// It's not clear how we should handle this error since there's not a good
+		// way to determine if we really needed the discovery info from that one
+		// group that failed and something is going horribly wrong, or if someone
+		// decided to have fun with adding broken APIServices.  In any case, this is
+		// Kubernetes so we are going to continue onward in the name of eventual
+		// consistency, tally-ho!
+		if discovery.IsGroupDiscoveryFailedError(discoveryErr) {
+			glog.Warningf("failed to discover some APIGroups: %s", discoveryErr)
+		} else {
+			return nil, status.APIServerError(discoveryErr, "failed to get server resources")
+		}
 	}
 	return resourceLists, nil
 }
