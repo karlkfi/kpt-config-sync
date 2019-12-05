@@ -1,0 +1,30 @@
+# Nomos policy controller PSP
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: configmanagement.gke.io:policy-controller-psp
+rules:
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  resourceNames:
+  - acm-psp
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: configmanagement.gke.io:policy-controller-psp
+  labels:
+    configmanagement.gke.io/system: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: configmanagement.gke.io:policy-controller-psp
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: gatekeeper-system
