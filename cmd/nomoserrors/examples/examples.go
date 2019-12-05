@@ -11,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/coverage"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/gcpconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -221,8 +220,7 @@ func Generate() map[string][]status.Error {
 			Kind:    kinds.Deployment().Kind,
 		}, "namespaces/deployment.yaml"), kinds.Deployment()))
 
-	// 1051
-	result.add(gcpconfig.InvalidGcpResourceFilenameError(path("namespaces/file.yaml")))
+	// 1051 is Deprecated.
 
 	// 1052
 	result.add(nonhierarchical.IllegalNamespaceOnClusterScopedResourceError(fake.ClusterRole(core.Namespace("foo"))))

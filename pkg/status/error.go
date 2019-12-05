@@ -57,6 +57,7 @@ var registered = map[string]bool{
 	"1026": true,
 	"1035": true,
 	"1049": true,
+	"1051": true,
 }
 
 // format formats error messages consistently.

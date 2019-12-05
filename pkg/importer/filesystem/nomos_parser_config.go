@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/gcpconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
@@ -75,28 +74,4 @@ func (m mustSucceed) Fatal() bool {
 // NamespacesDir implements ParserConfig
 func (n NomosVisitorProvider) NamespacesDir() string {
 	return repo.NamespacesDir
-}
-
-// BespinVisitorProvider is used when bespin is enabled to handle the bespin
-// specific parts.
-type BespinVisitorProvider struct{}
-
-// Visitors implements ParserConfig
-func (b BespinVisitorProvider) Visitors(
-	configs []*v1.HierarchyConfig,
-	vet bool) []ast.Visitor {
-
-	return []ast.Visitor{
-		gcpconfig.NewFilenameValidator(),
-	}
-}
-
-// SyncResources implements ParserConfig.
-func (b BespinVisitorProvider) SyncResources() []*v1.Sync {
-	return nil
-}
-
-// NamespacesDir implements ParserConfig.
-func (b BespinVisitorProvider) NamespacesDir() string {
-	return "hierarchy"
 }
