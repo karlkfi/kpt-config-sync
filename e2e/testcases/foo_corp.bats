@@ -67,7 +67,7 @@ FOOCORP_NAMESPACES=(
   resource::check -n shipping-dev rolebinding pod-creators -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-dev rolebinding job-creators -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-dev -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n shipping-dev resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n shipping-dev resourcequota quota -a "configmanagement.gke.io/managed=enabled"
 
   # shipping-staging
   resource::check_count -n shipping-staging -r role -c 0
@@ -75,7 +75,7 @@ FOOCORP_NAMESPACES=(
   resource::check -n shipping-staging rolebinding viewers -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-staging rolebinding pod-creators -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-staging -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n shipping-staging resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n shipping-staging resourcequota quota -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-staging -r fulfillmentcenter -c 1 -a "configmanagement.gke.io/managed=enabled"
 
   # shipping-prod
@@ -85,7 +85,7 @@ FOOCORP_NAMESPACES=(
   resource::check -n shipping-prod rolebinding pod-creators -a "configmanagement.gke.io/managed=enabled"
   resource::check -n shipping-prod rolebinding sre-admin -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-prod -r resourcequota -c 1 -a "configmanagement.gke.io/managed=enabled"
-  resource::check -n shipping-prod resourcequota config-management-resource-quota -a "configmanagement.gke.io/managed=enabled"
+  resource::check -n shipping-prod resourcequota quota -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n shipping-prod -r fulfillmentcenter -c 1 -a "configmanagement.gke.io/managed=enabled"
 
   setup::git::remove_all acme
