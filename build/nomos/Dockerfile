@@ -12,18 +12,10 @@ WORKDIR /opt/nomos/bin
 COPY git-importer git-importer
 COPY monitor monitor
 COPY nomos nomos
-COPY resourcequota-admission-controller resourcequota-admission-controller
 COPY syncer syncer
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
-
-# Required by admission controllers.
-EXPOSE 443
-
-# Set capabilities on nomos binaries. Note that we have to do this here rather than in a Pod spec
-# due to https://github.com/kubernetes/kubernetes/issues/56374.
-RUN setcap cap_net_bind_service+eip resourcequota-admission-controller
 
 # Set up a HOME directory for non-root user
 RUN mkdir -p /nomos

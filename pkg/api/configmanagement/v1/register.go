@@ -29,8 +29,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterConfig{},
 		&ClusterConfigList{},
 		&ClusterSelector{},
-		&HierarchicalQuota{},
-		&HierarchicalQuotaList{},
 		&NamespaceSelector{},
 		&NamespaceSelectorList{},
 		&Repo{},

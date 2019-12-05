@@ -148,12 +148,6 @@ or create RoleBindings subject to
 [privilege escalation prevention](https://kubernetes.io/docs/admin/authorization/rbac/#privilege-escalation-prevention-and-bootstrapping)
 in Kubernetes.
 
-#### ResourceQuota inheritance
-
-Like `RoleBindings`, `ResourceQuotas` may also appear in Abstract Namespaces.
-`ResourceQuota` inheritance has some unique behaviors, described fully in
-[Hierarchical ResourceQuota](rq.md).
-
 #### Custom Resources
 
 CSP Configuration Management does not handle syncing

@@ -52,8 +52,7 @@ The role has been instantiated in all descendant namespaces.
 
 ## Modes
 
-`hierarchyMode` can take the following values: `inherit`, `hierarchicalQuota`,
-or `none`. It can also be omitted.
+`hierarchyMode` can take the following values: `inherit`, `none`. It can also be omitted.
 
 ### Inherit mode
 
@@ -65,16 +64,6 @@ behavior if `hierarchyMode` is unspecified.
 
 Just as in default `RoleBinding` inheritance, conflicts are avoided by
 disallowing duplicates in the same ancestry.
-
-### hierarchicalQuota mode
-
-`hierarchyMode: hierarchicalQuota` is only allowed for `ResourceQuota`, and it
-matches the default behavior described in [Hierarchical ResourceQuota](rq.md).
-If `hierarchyMode` is omitted, `ResourceQuota` still follows that same behavior.
-So, `hieararchicalQuota` isn't strictly necessary, but you may choose to set it
-to make the behavior explicit.
-
-`ResourceQuota` may also use `inherit` or `none` modes.
 
 ### None mode
 
@@ -91,6 +80,5 @@ for different resource types:
 
 Resource      | Default value     | Allowed values
 ------------- | ----------------- | --------------------------------
-ResourceQuota | hierarchicalQuota | hierarchicalQuota, inherit, none
 RoleBinding   | inherit           | inherit, none
 others        | none              | inherit, none

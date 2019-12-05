@@ -23,7 +23,7 @@ type InheritanceSpec struct {
 	Mode v1.HierarchyModeType
 }
 
-// InheritanceVisitor aggregates hierarchical quota.
+// InheritanceVisitor aggregates hierarchical objects.
 type InheritanceVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying

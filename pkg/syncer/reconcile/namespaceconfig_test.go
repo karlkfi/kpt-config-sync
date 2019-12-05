@@ -46,11 +46,9 @@ func namespaceSyncError(err v1.ConfigManagementError) fake.NamespaceConfigMutato
 	}
 }
 
-var managedQuotaLabels = core.Label(v1.ConfigManagementQuotaKey, v1.ConfigManagementQuotaValue)
-
 var (
 	eng                = "eng"
-	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, managedQuotaLabels, syncertesting.TokenAnnotation)
+	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation)
 	unmanagedNamespace = namespace(eng)
 
 	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token))
@@ -244,7 +242,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 		{
 			name:                "clean up unmanaged namespace with namespaceconfig",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
-			namespace:           namespace("eng", managedQuotaLabels, syncertesting.ManagementEnabled),
+			namespace:           namespace("eng", syncertesting.ManagementEnabled),
 			wantNamespaceUpdate: namespace("eng"),
 			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
 				namespaceSyncError(v1.ConfigManagementError{
@@ -259,13 +257,8 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			wantEvent: &syncertesting.Event{
 				Kind:   corev1.EventTypeWarning,
 				Reason: "UnmanagedNamespace",
-				Obj:    namespace("eng", managedQuotaLabels, syncertesting.ManagementEnabled),
+				Obj:    namespace("eng", syncertesting.ManagementEnabled),
 			},
-		},
-		{
-			name:                "clean up unmanaged namespace without namespaceconfig",
-			namespace:           namespace("eng", managedQuotaLabels),
-			wantNamespaceUpdate: namespace("eng"),
 		},
 		{
 			name:            "unmanaged namespace has resources synced but status error",
@@ -437,9 +430,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 				core.Labels(
 					map[string]string{
-						v1.ConfigManagementQuotaKey:  "some-quota",
-						v1.ConfigManagementSystemKey: "not-used",
-						"some-user-label":            "some-label-value",
+						"some-user-label": "some-label-value",
 					},
 				),
 			),
@@ -450,7 +441,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 			wantNamespaceUpdate: namespace("default",
 				core.Annotation("some-user-annotation", "some-annotation-value"),
-				core.Label(v1.ConfigManagementSystemKey, "not-used"),
 				core.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{
@@ -490,9 +480,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 				core.Labels(
 					map[string]string{
-						v1.ConfigManagementQuotaKey:  "some-quota",
-						v1.ConfigManagementSystemKey: "not-used",
-						"some-user-label":            "some-label-value",
+						"some-user-label": "some-label-value",
 					},
 				),
 			),
@@ -503,7 +491,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			),
 			wantNamespaceUpdate: namespace("kube-system",
 				core.Annotation("some-user-annotation", "some-annotation-value"),
-				core.Label(v1.ConfigManagementSystemKey, "not-used"),
 				core.Label("some-user-label", "some-label-value"),
 			),
 			actual: []runtime.Object{

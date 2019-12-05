@@ -43,13 +43,6 @@ A controller (currently packaged as a single binary) that consumes the canonical
 representation of the hierarchy produced by policy-importer and performs CRUD on
 namespaces and [sync-enabled](system_config.md#Sync) resources.
 
-## resourcequota-admission-controller
-
-A ValidatingAdmissionWebhook that enforces hierarchical quota policies which
-provides hierarchical quota on top of the existing ResourceQuota admission
-controller. This is an optional component if the user chooses not to use
-[hierarchical Resource Quota feature](rq.md).
-
 ## monitor
 
 A controller that watches the ClusterConfig and all NamespaceConfigs as they get

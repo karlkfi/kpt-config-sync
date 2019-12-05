@@ -4,10 +4,8 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,12 +28,6 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status
 	scope := scoper.GetScope(gvk.GroupKind())
 	topLevelDir := o.Path.Split()[0]
 
-	// ResourceQuotas generated as part of a HierarchicalQuota have their filepath
-	// set to empty string, so they would otherwise fail the validation.
-	if isIgnored(gvk) || isGeneratedResourceQuota(o) {
-		return nil
-	}
-
 	if isClusterScopedAllowedInNamespaces(gvk) || scope == discovery.NamespaceScope {
 		// Only Namespace-scoped object and Namespaces are in the namespaces/ directory.
 		if topLevelDir != repo.NamespacesDir {
@@ -54,25 +46,9 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status
 	return UnknownObjectError(o)
 }
 
-// isGeneratedResourceQuota returns true if o is a ResourceQuota that we
-// generated as part of a HierarchicalQuota.
-func isGeneratedResourceQuota(o ast.FileObject) bool {
-	if o.GroupVersionKind() != kinds.ResourceQuota() {
-		return false
-	}
-	if o.GetName() != resourcequota.ResourceQuotaObjectName {
-		return false
-	}
-	return o.Path == cmpath.FromSlash("")
-}
-
 func isClusterScopedAllowedInNamespaces(gvk schema.GroupVersionKind) bool {
 	return gvk == kinds.Namespace() ||
 		gvk == kinds.NamespaceSelector()
-}
-
-func isIgnored(gvk schema.GroupVersionKind) bool {
-	return gvk == kinds.HierarchicalQuota()
 }
 
 // UnknownObjectErrorCode is the error code for UnknownObjectError

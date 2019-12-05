@@ -28,7 +28,7 @@ type NomosVisitorProvider struct {
 func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
-	v := []ast.Visitor{
+	return []ast.Visitor{
 		&mustSucceed{Visitor: syntax.NewParseValidator()},
 		selectors.NewClusterSelectorAdder(),
 		system.NewRepoVersionValidator(),
@@ -57,11 +57,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		transform.NewAnnotationInlinerVisitor(),
 		transform.NewInheritanceVisitor(specs),
 	}
-	if spec, found := specs[kinds.ResourceQuota().GroupKind()]; found && spec.Mode == v1.HierarchyModeHierarchicalQuota {
-		v = append(v, validation.NewQuotaValidator())
-		v = append(v, transform.NewQuotaVisitor())
-	}
-	return v
 }
 
 // mustSucceed wraps a Visitor, allowing NomosVisitorProvider to specify whether a visitor should

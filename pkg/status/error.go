@@ -48,6 +48,7 @@ type Causer interface {
 var registered = map[string]bool{
 	"1001": true,
 	"1002": true,
+	"1008": true,
 	"1015": true,
 	"1018": true,
 	"1022": true,

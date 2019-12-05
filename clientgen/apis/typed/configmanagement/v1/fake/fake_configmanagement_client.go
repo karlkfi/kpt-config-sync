@@ -20,10 +20,6 @@ func (c *FakeConfigmanagementV1) ClusterSelectors() v1.ClusterSelectorInterface 
 	return &FakeClusterSelectors{c}
 }
 
-func (c *FakeConfigmanagementV1) HierarchicalQuotas() v1.HierarchicalQuotaInterface {
-	return &FakeHierarchicalQuotas{c}
-}
-
 func (c *FakeConfigmanagementV1) HierarchyConfigs() v1.HierarchyConfigInterface {
 	return &FakeHierarchyConfigs{c}
 }

@@ -95,11 +95,6 @@ func TestNamespaceDiffType(t *testing.T) {
 			actual:     fake.NamespaceObject("foo", managementInvalid),
 			expectType: Unmanage,
 		},
-		{
-			name:       "in cluster only, remove quota",
-			actual:     fake.NamespaceObject("foo", core.Label(v1.ConfigManagementQuotaKey, "")),
-			expectType: Unmanage,
-		},
 	}
 
 	for _, tc := range testCases {

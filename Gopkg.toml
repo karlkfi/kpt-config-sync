@@ -37,12 +37,6 @@
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
-  name = "k8s.io/apiserver"
-  version = "kubernetes-1.12.3"
-
-# Pin the version of a k8s package to ensure that libraries are migrated to
-# this version.  Versions should match across packages.
-[[constraint]]
   name = "k8s.io/apiextensions-apiserver"
   version = "kubernetes-1.12.3"
 

@@ -38,7 +38,7 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  wait::for -t 10 -- namespace::check_exists $ns -l "configmanagement.gke.io/quota=true" -a "configmanagement.gke.io/managed=enabled"
+  wait::for -t 10 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
   namespace::check_no_warning $ns
 }
 
@@ -57,7 +57,7 @@ function teardown() {
   namespace::declare $ns
   git::commit
 
-  namespace::check_exists $ns -l "configmanagement.gke.io/quota=true" -a "configmanagement.gke.io/managed=enabled"
+  namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
   namespace::check_no_warning $ns
 }
 
@@ -82,7 +82,7 @@ function teardown() {
   namespace::declare $ns
   git::commit
   wait::for -t 30 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_exists $ns -l "configmanagement.gke.io/quota=true"
+  namespace::check_exists $ns
   namespace::check_exists $ns -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
 
   debug::log "Ensure we added the Nomos-specific labels and annotations"
@@ -94,8 +94,6 @@ function teardown() {
   [[ "${annotationValue}" != "null" ]] || debug::error "source path annotation not added"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
   [[ "${annotationValue}" != "null" ]] || debug::error "sync token annotation not added"
-  labelValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
-  [[ "${labelValue}" != "null" ]] || debug::error "quota annotation not added"
 
   debug::log "Declare management disabled on Namespace and wait for management to be disabled"
   namespace::declare $ns -a "configmanagement.gke.io/managed=disabled"
@@ -112,10 +110,6 @@ function teardown() {
   [[ "${annotationValue}" == "null" ]] || debug::error "source path annotation not removed"
   annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.annotations."configmanagement.gke.io/token"')
   [[ "${annotationValue}" == "null" ]] || debug::error "sync token annotation not removed"
-  annotationValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
-  [[ "${annotationValue}" == "null" ]] || debug::error "quota annotation not removed"
-  labelValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."configmanagement.gke.io/quota"')
-  [[ "${labelValue}" == "null" ]] || debug::error "quota annotation not removed"
   labelValue=$(kubectl get ns $ns -ojson | jq '.metadata.labels."app.kubernetes.io/managed-by"')
   [[ "${labelValue}" == "null" ]] || debug::error "managed-by annotation not removed"
 }

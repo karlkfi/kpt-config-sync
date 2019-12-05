@@ -12,7 +12,6 @@ List all config-management-system pods:
 $ kubectl get deployment -n config-management-system
 NAME                                 DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 git-policy-importer                  1         1         1            1           13d
-resourcequota-admission-controller   1         1         1            1           9d
 syncer                               1         1         1            1           13d
 ```
 
@@ -52,10 +51,6 @@ currently export:
 
 Name                                                 | Type      | Labels                         | Description
 ---------------------------------------------------- | --------- | ------------------------------ | -----------
-nomos_admission_controller_usage                     | Gauge     | app, policyspace, resource     | Policyspace quota usage per resource type
-nomos_admission_controller_duration_seconds          | Histogram | app, namespace, allowed        | Admission duration distributions for apps such as resource quota
-nomos_admission_controller_error_total               | Counter   | app, namespace                 | Total internal errors that occurred when reviewing admission requests
-nomos_admission_controller_violations_total          | Counter   | app, policyspace, resource     | Policyspace quota violations per resource type
 config_management_monitor_policies                               | Gauge     | state                          | Total number of policies (cluster and node) grouped by their sync status; should be similar to config_management_policy_importer_namespace_configs metric
 nomos_monitor_last_import_timestamp                  | Gauge     |                                | Timestamp of the most recent import
 nomos_monitor_last_sync_timestamp                    | Gauge     |                                | Timestamp of the most recent sync

@@ -137,11 +137,11 @@ $ git commit -am "remove quota"
 $ git push origin master
 $ kubectl get resourcequota --all-namespaces -l nomos.dev/managed
 NAMESPACE   NAME                   AGE
-analytics   config-management-resource-quota   26s
-backend     config-management-resource-quota   27s
-frontend    config-management-resource-quota   29s
-new-prj     config-management-resource-quota   26s
-newer-prj   config-management-resource-quota   25s
+analytics   pod-quota   26s
+backend     pod-quota   27s
+frontend    pod-quota   29s
+new-prj     pod-quota   26s
+newer-prj   pod-quota   25s
 ```
 
 If instead we remove all the resources first and then remove the Sync in a

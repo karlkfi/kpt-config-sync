@@ -41,8 +41,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().ClusterConfigs().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("clusterselectors"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().ClusterSelectors().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("hierarchicalquotas"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().HierarchicalQuotas().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("hierarchyconfigs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Configmanagement().V1().HierarchyConfigs().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("namespaceconfigs"):

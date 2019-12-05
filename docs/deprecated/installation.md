@@ -30,7 +30,6 @@ these requirements:
 Requirement                               | kube-apiserver flag
 ----------------------------------------- | -------------------
 Enable RBAC                               | Add `RBAC` to list passed to `--authorization-mode`
-Enable ResourceQuota admission controller | Add `ResourceQuota` to list passed to `--admission-control`
 Enable ValidatingAdmissionWebhook         | Add `ValidatingAdmissionWebhook` to list passed to `--admission-control`
 
 Minimum required Kubernetes Server Version: **1.10**
@@ -186,7 +185,6 @@ In addition, the following top level properties can be specified:
 
 Key                               | Description
 --------------------------------- | -----------
-`enableHierarchicalResourceQuota` | Enables the [Hierarchical Resource Quota Controller](rq.md) that enforces quota set on Abstract Namespaces. Default: false.
 `clusterName`                     | User-defined name for the cluster used by [ClusterSelectors](clusterselectors.md) to group clusters together. Unique in a Nomos installation.
 
 Note: Hierarchical Resource Quota is currently unsupported on GKE On Prem Alpha

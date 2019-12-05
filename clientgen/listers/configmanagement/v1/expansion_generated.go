@@ -10,10 +10,6 @@ type ClusterConfigListerExpansion interface{}
 // ClusterSelectorLister.
 type ClusterSelectorListerExpansion interface{}
 
-// HierarchicalQuotaListerExpansion allows custom methods to be added to
-// HierarchicalQuotaLister.
-type HierarchicalQuotaListerExpansion interface{}
-
 // HierarchyConfigListerExpansion allows custom methods to be added to
 // HierarchyConfigLister.
 type HierarchyConfigListerExpansion interface{}

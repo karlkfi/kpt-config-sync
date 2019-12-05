@@ -13,7 +13,6 @@ type ConfigmanagementV1Interface interface {
 	RESTClient() rest.Interface
 	ClusterConfigsGetter
 	ClusterSelectorsGetter
-	HierarchicalQuotasGetter
 	HierarchyConfigsGetter
 	NamespaceConfigsGetter
 	NamespaceSelectorsGetter
@@ -32,10 +31,6 @@ func (c *ConfigmanagementV1Client) ClusterConfigs() ClusterConfigInterface {
 
 func (c *ConfigmanagementV1Client) ClusterSelectors() ClusterSelectorInterface {
 	return newClusterSelectors(c)
-}
-
-func (c *ConfigmanagementV1Client) HierarchicalQuotas() HierarchicalQuotaInterface {
-	return newHierarchicalQuotas(c)
 }
 
 func (c *ConfigmanagementV1Client) HierarchyConfigs() HierarchyConfigInterface {

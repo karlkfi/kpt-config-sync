@@ -176,15 +176,14 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add /opt/testing/e2e/examples/acme/namespaces/rnd acme/namespaces/rnd/
   git::commit
 
-  wait::for -- kubectl get -n new-prj resourcequota config-management-resource-quota
-  wait::for -- kubectl get -n newer-prj resourcequota config-management-resource-quota
+  wait::for -- kubectl get -n new-prj resourcequota quota
 
   run kubectl create configmap map1 -n new-prj
   assert::contains "created"
-  run kubectl create configmap map2 -n newer-prj
+  run kubectl create configmap map2 -n new-prj
   assert::contains "created"
   run kubectl create configmap map3 -n new-prj
-  assert::contains "exceeded quota in namespaces/rnd"
+  assert::contains "exceeded quota: quota"
   clean_test_configmaps
 }
 

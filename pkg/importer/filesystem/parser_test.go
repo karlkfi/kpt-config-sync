@@ -16,13 +16,11 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -88,13 +86,6 @@ func TestParserVetErrors(t *testing.T) {
 					core.Namespace("bar"),
 				),
 			),
-			fake.Namespace("namespaces/bar"),
-			scopedResourceQuota("namespaces/bar/rq.yaml"),
-		),
-		parsertest.Failures("ResourceQuota with scope and hierarchical quota",
-			[]string{validation.IllegalResourceQuotaFieldErrorCode, validation.IllegalResourceQuotaFieldErrorCode},
-			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeHierarchicalQuota,
-				kinds.ResourceQuota().GroupVersion(), kinds.ResourceQuota().Kind)),
 			fake.Namespace("namespaces/bar"),
 			scopedResourceQuota("namespaces/bar/rq.yaml"),
 		),
@@ -185,77 +176,6 @@ func TestParserVetErrors(t *testing.T) {
 		parsertest.Failure("Namespaces dir with Namespace",
 			metadata.IllegalTopLevelNamespaceErrorCode,
 			fake.Namespace("namespaces")),
-		parsertest.Success("Namespaces dir with ResourceQuota and hierarchical quota inheritance",
-			testoutput.NewAllConfigs(t,
-				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
-				fake.FileObject(resourceQuotaObject(core.Name("config-management-resource-quota"),
-					core.Namespace("bar"),
-					core.Label("nomos-namespace-type", "workload"),
-					testoutput.Source("namespaces/rq.yaml"),
-				), "namespaces/rq.yaml"),
-				fake.FileObject(fake.HierarchicalQuotaObject(
-					fake.HierarchicalQuotaRoot(
-						fake.HierarchicalQuotaNode("namespaces", v1.HierarchyNodeAbstractNamespace,
-							resourceQuotaObject(core.Name("config-management-resource-quota"),
-								testoutput.Source("namespaces/rq.yaml")),
-							fake.HierarchicalQuotaNode("bar", v1.HierarchyNodeNamespace,
-								resourceQuotaObject(core.Name("config-management-resource-quota"),
-									core.Label("nomos-namespace-type", "workload"),
-									testoutput.Source("namespaces/rq.yaml")),
-							),
-						),
-					),
-				), ""),
-			),
-			fake.HierarchyConfigAtPath("system/rq.yaml", core.Name("resourcequota"),
-				fake.HierarchyConfigResource(v1.HierarchyModeHierarchicalQuota,
-					kinds.ResourceQuota().GroupVersion(), kinds.ResourceQuota().Kind)),
-			fake.FileObject(resourceQuotaObject(core.Name("pod-quota")), "namespaces/rq.yaml"),
-			fake.Namespace("namespaces/bar"),
-		),
-		parsertest.Success("Hierarchical ResourceQuota does not return error",
-			testoutput.NewAllConfigs(t,
-				fake.Namespace("namespaces/foo", testoutput.Source("namespaces/foo/namespace.yaml")),
-				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
-				fake.FileObject(resourceQuotaObject(core.Namespace("foo"),
-					core.Name(resourcequota.ResourceQuotaObjectName),
-					core.Labels(resourcequota.ConfigManagementQuotaLabels),
-					testoutput.Source("namespaces/rq.yaml"),
-				), ""),
-				fake.FileObject(resourceQuotaObject(core.Namespace("bar"),
-					core.Name(resourcequota.ResourceQuotaObjectName),
-					core.Labels(resourcequota.ConfigManagementQuotaLabels),
-					testoutput.Source("namespaces/rq.yaml"),
-				), ""),
-				fake.FileObject(fake.HierarchicalQuotaObject(
-					fake.HierarchicalQuotaRoot(
-						fake.HierarchicalQuotaNode("namespaces", v1.HierarchyNodeAbstractNamespace,
-							resourceQuotaObject(
-								core.Name(resourcequota.ResourceQuotaObjectName),
-								testoutput.Source("namespaces/rq.yaml"),
-							),
-							fake.HierarchicalQuotaNode("bar", v1.HierarchyNodeNamespace,
-								resourceQuotaObject(
-									core.Name(resourcequota.ResourceQuotaObjectName),
-									core.Labels(resourcequota.ConfigManagementQuotaLabels),
-									testoutput.Source("namespaces/rq.yaml"),
-								)),
-							fake.HierarchicalQuotaNode("foo", v1.HierarchyNodeNamespace,
-								resourceQuotaObject(
-									core.Name(resourcequota.ResourceQuotaObjectName),
-									core.Labels(resourcequota.ConfigManagementQuotaLabels),
-									testoutput.Source("namespaces/rq.yaml"),
-								)),
-						),
-					),
-				), ""),
-			),
-			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeHierarchicalQuota,
-				kinds.ResourceQuota().GroupVersion(), kinds.ResourceQuota().Kind)),
-			fake.FileObject(resourceQuotaObject(), "namespaces/rq.yaml"),
-			fake.Namespace("namespaces/foo"),
-			fake.Namespace("namespaces/bar"),
-		),
 		parsertest.Success("Namespace with multiple inherited RoleBindings",
 			testoutput.NewAllConfigs(t,
 				fake.Namespace("namespaces/foo", testoutput.Source("namespaces/foo/namespace.yaml")),
@@ -456,13 +376,6 @@ func TestParserVetErrors(t *testing.T) {
 	)
 
 	test.RunAll(t)
-}
-
-func resourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
-	obj := fake.ResourceQuotaObject(opts...)
-	podQ, _ := resource.ParseQuantity("10")
-	obj.Spec.Hard = map[corev1.ResourceName]resource.Quantity{corev1.ResourcePods: podQ}
-	return obj
 }
 
 func namespaceSelector(name, key, value string, opts ...core.MetaMutator) *v1.NamespaceSelector {

@@ -31,9 +31,6 @@ const (
 	// NamespaceSelectorKind is the string constant for the NamespaceSelector GroupVersionKind
 	NamespaceSelectorKind = "NamespaceSelector"
 
-	// HierarchicalQuotaKind is the string constant for the HierarchicalQuota GroupVersionKind
-	HierarchicalQuotaKind = "HierarchicalQuota"
-
 	// NamespaceConfigKind is the string constant for the NamespaceConfig GroupVersionKind
 	NamespaceConfigKind = "NamespaceConfig"
 

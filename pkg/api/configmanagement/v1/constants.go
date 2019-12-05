@@ -55,13 +55,6 @@ const SyncFinalizer = "syncer." + configmanagement.GroupName
 type HierarchyModeType string
 
 const (
-	// HierarchyModeHierarchicalQuota indicates special aggregation behavior for ResourceQuota. With
-	// this option, the config is copied to namespaces, but it is also left in the abstract namespace.
-	// There, the ResourceQuotaAdmissionController uses the value to enforce the ResourceQuota in
-	// aggregate for all descendent namespaces.
-	//
-	// This mode can only be used for ResourceQuota.
-	HierarchyModeHierarchicalQuota = HierarchyModeType("hierarchicalQuota")
 	// HierarchyModeInherit indicates that the resource can appear in abstract namespace directories
 	// and will be inherited by any descendent namespaces. Without this value on the Sync, resources
 	// must not appear in abstract namespaces.
@@ -74,17 +67,3 @@ const (
 	// HierarchyModeDefault is the default value. Default behavior is type-specific.
 	HierarchyModeDefault = HierarchyModeType("")
 )
-
-// HierarchyNodeType represents the types of hierarchical nodes that can exist.
-type HierarchyNodeType string
-
-const (
-	// HierarchyNodeNamespace indicates that the node represents a namespace.
-	HierarchyNodeNamespace = HierarchyNodeType("namespace")
-	// HierarchyNodeAbstractNamespace indicates that the node represents an abstract namespace.
-	HierarchyNodeAbstractNamespace = HierarchyNodeType("abstractNamespace")
-)
-
-// NoParentNamespace is the constant we use (empty string) for indicating that no parent exists
-// for the hierarchy node.  Only one hierarchy node node should have a parent with this value.
-const NoParentNamespace = ""

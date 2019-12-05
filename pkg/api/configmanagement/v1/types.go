@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -334,8 +333,8 @@ type SyncSpec struct {
 	// ClusterRole, Namespace or Deployment.
 	Kind string `json:"kind"`
 	// HierarchyMode specifies how the object is treated when it appears in an abstract namespace.
-	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
-	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
+	// The default is "inherit", meaning objects are inherited from parent abstract namespaces.
+	// If set to "none", the type is not allowed in Abstract Namespaces.
 	// +optional
 	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty"`
 }
@@ -533,58 +532,6 @@ type RepoList struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// HierarchicalQuota holds hierarchical ResourceQuota information.
-type HierarchicalQuota struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// Standard object's metadata. The Name field of the config must match the namespace name.
-	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
-
-	// The actual object definition, per K8S object definition style.
-	// +optional
-	Spec HierarchicalQuotaSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// HierarchicalQuotaList holds a list of HierarchicalQuota resources.
-type HierarchicalQuotaList struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// Standard object's metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	// Items is a list of HierarchicalQuotas.
-	Items []HierarchicalQuota `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-// HierarchicalQuotaSpec holds fields for hierarchical quota definition.
-type HierarchicalQuotaSpec struct {
-	Hierarchy HierarchicalQuotaNode `json:"hierarchy"`
-}
-
-// HierarchicalQuotaNode is an element of a quota hierarchy.
-type HierarchicalQuotaNode struct {
-	// Name is the name of the namespace or abstract namespace
-	// +optional
-	Name string `json:"name,omitempty"`
-
-	// Type is the type of the hierarchical quota node.
-	Type HierarchyNodeType `json:"type,omitempty"`
-	// +optional
-	ResourceQuotaV1 *v1.ResourceQuota `json:"resourceQuotaV1,omitempty"`
-
-	// Children are the child nodes of this node.  This will be populated for abstract namespaces.
-	// +optional
-	Children []HierarchicalQuotaNode `json:"children,omitempty"`
-}
-
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // HierarchyConfig is used for configuring the HierarchyModeType for managed resources.
 type HierarchyConfig struct {
 	metav1.TypeMeta `json:",inline"`
@@ -625,8 +572,8 @@ type HierarchyConfigResource struct {
 	// +optional
 	Kinds []string `json:"kinds,omitempty" protobuf:"bytes,2,rep,name=kinds"`
 	// HierarchyMode specifies how the object is treated when it appears in an abstract namespace.
-	// The default is off, meaning objects cannot appear in an abstract namespace. For RoleBinding,
-	// the default is "inherit". For ResourceQuota, the default is "hierarchicalQuota".
+	// The default is "inherit", meaning objects are inherited from parent abstract namespaces.
+	// If set to "none", the type is not allowed in Abstract Namespaces.
 	// +optional
 	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty" protobuf:"bytes,3,opt,name=hierarchyMode"`
 }

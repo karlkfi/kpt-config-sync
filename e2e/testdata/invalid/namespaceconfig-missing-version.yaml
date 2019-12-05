@@ -14,7 +14,7 @@ spec:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: namespaces/rnd/quota.yaml
           creationTimestamp: null
-          name: config-management-resource-quota
+          name: pod-quota
         spec:
           hard:
             configmaps: "2"

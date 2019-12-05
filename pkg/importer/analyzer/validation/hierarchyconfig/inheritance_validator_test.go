@@ -17,10 +17,6 @@ func TestInheritanceValidator(t *testing.T) {
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.RoleBinding())),
 		),
-		asttest.Fail("inheritance rolebinding quota error",
-			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeHierarchicalQuota, kinds.RoleBinding())),
-		),
 		asttest.Pass("inheritance rolebinding inherit",
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeInherit, kinds.RoleBinding())),
@@ -32,10 +28,6 @@ func TestInheritanceValidator(t *testing.T) {
 		asttest.Pass("inheritance resourcequota default",
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.ResourceQuota())),
-		),
-		asttest.Pass("inheritance resourcequota quota error",
-			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeHierarchicalQuota, kinds.ResourceQuota())),
 		),
 		asttest.Pass("inheritance resourcequota inherit",
 			fake.HierarchyConfig(

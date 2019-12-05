@@ -76,7 +76,7 @@ function get_cluster_name() {
   local magic_pod_count="133"  # Hard-coded in addressed-quota.yaml
   wait::for -o "${magic_pod_count}" -- \
     kubectl get resourcequotas --namespace=frontend \
-    config-management-resource-quota --output='jsonpath={.spec.hard.pods}'
+    pod-quota --output='jsonpath={.spec.hard.pods}'
 }
 
 @test "${FILE_NAME}: ClusterSelector: Object reacts to per-cluster annotations" {

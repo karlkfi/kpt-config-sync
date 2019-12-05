@@ -12,8 +12,6 @@ type Interface interface {
 	ClusterConfigs() ClusterConfigInformer
 	// ClusterSelectors returns a ClusterSelectorInformer.
 	ClusterSelectors() ClusterSelectorInformer
-	// HierarchicalQuotas returns a HierarchicalQuotaInformer.
-	HierarchicalQuotas() HierarchicalQuotaInformer
 	// HierarchyConfigs returns a HierarchyConfigInformer.
 	HierarchyConfigs() HierarchyConfigInformer
 	// NamespaceConfigs returns a NamespaceConfigInformer.
@@ -45,11 +43,6 @@ func (v *version) ClusterConfigs() ClusterConfigInformer {
 // ClusterSelectors returns a ClusterSelectorInformer.
 func (v *version) ClusterSelectors() ClusterSelectorInformer {
 	return &clusterSelectorInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// HierarchicalQuotas returns a HierarchicalQuotaInformer.
-func (v *version) HierarchicalQuotas() HierarchicalQuotaInformer {
-	return &hierarchicalQuotaInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // HierarchyConfigs returns a HierarchyConfigInformer.

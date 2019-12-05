@@ -57,8 +57,7 @@ func Generate() map[string][]status.Error {
 	// 1007
 	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.Role()))
 
-	// 1008
-	result.add(validation.IllegalResourceQuotaFieldError(fake.ResourceQuota(), "scopes"))
+	// 1008 is Deprecated.
 
 	// 1009
 	result.add(metadata.IllegalMetadataNamespaceDeclarationError(
@@ -187,11 +186,7 @@ func Generate() map[string][]status.Error {
 		GK:            kinds.Role().GroupKind(),
 		HierarchyMode: "invalid",
 		Resource:      fake.HierarchyConfig(),
-	}, "invalid", map[v1.HierarchyModeType]bool{
-		v1.HierarchyModeDefault: true,
-		v1.HierarchyModeInherit: true,
-		v1.HierarchyModeNone:    true,
-	}))
+	}, "invalid"))
 
 	// 1043
 	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinition()))

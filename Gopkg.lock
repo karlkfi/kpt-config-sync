@@ -58,17 +58,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:4ddc17aeaa82cb18c5f0a25d7c253a10682f518f4b2558a82869506eec223d76"
-  name = "github.com/docker/distribution"
-  packages = [
-    "digestset",
-    "reference",
-  ]
-  pruneopts = "UT"
-  revision = "2461543d988979529609e8cb6fca9ca190dc48da"
-  version = "v2.7.1"
-
-[[projects]]
   digest = "1:36a5ff9459163d104f2af9776c8db63f3eb4339f527a00a9835c8d562eb116ba"
   name = "github.com/evanphx/json-patch"
   packages = ["."]
@@ -307,14 +296,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
-
-[[projects]]
-  digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
-  name = "github.com/opencontainers/go-digest"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
-  version = "v1.0.0-rc1"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -623,19 +604,18 @@
   version = "kubernetes-1.12.3"
 
 [[projects]]
-  digest = "1:927046c20a717792cc778dcdb0efb026586cb7381d91fa60eeda96a471a18d36"
+  digest = "1:bcf41865cefa5cc791570a8c749f85e0ecc295715f1d36595efbf173cba26250"
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1",
-    "pkg/features",
   ]
   pruneopts = "UT"
   revision = "0cd23ebeb6882bd1cdc2cb15fc7b2d72e8a86a5b"
   version = "kubernetes-1.12.3"
 
 [[projects]]
-  digest = "1:1af461d2062c35069a6f9f159ac7389d1601855bd5956fff36826d8b5a69d99c"
+  digest = "1:779d9e54466dcb7ef4a054c826e5e20858ef67d35f34e35b6d3cc418a06a42ed"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -665,7 +645,6 @@
     "pkg/util/diff",
     "pkg/util/errors",
     "pkg/util/framer",
-    "pkg/util/initialization",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/jsonmergepatch",
@@ -687,27 +666,6 @@
   ]
   pruneopts = "UT"
   revision = "eddba98df674a16931d2d4ba75edc3a389bf633a"
-  version = "kubernetes-1.12.3"
-
-[[projects]]
-  digest = "1:0f466c7d6ead593c71933a06d9b646747033a370e6753708c88f6282fd46d7a8"
-  name = "k8s.io/apiserver"
-  packages = [
-    "pkg/admission",
-    "pkg/apis/apiserver",
-    "pkg/apis/apiserver/v1alpha1",
-    "pkg/apis/audit",
-    "pkg/apis/audit/v1",
-    "pkg/apis/audit/v1alpha1",
-    "pkg/apis/audit/v1beta1",
-    "pkg/audit",
-    "pkg/authentication/user",
-    "pkg/authorization/authorizer",
-    "pkg/features",
-    "pkg/util/feature",
-  ]
-  pruneopts = "UT"
-  revision = "92fdef3a232a23afb9644f6151119b5961b9feab"
   version = "kubernetes-1.12.3"
 
 [[projects]]
@@ -922,36 +880,16 @@
   revision = "411b2483e5034420675ebcdd4a55fc76fe5e55cf"
 
 [[projects]]
-  digest = "1:c50cdcc0d99b48c3c157113067a87cb49d6cd748dc383891e70ab7fa6e4b1e7f"
+  digest = "1:49dd349c75eca32c6aaa54c785fe097cc94dcd3ad5e66ecefafc2d05efbd1c67"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/apis/autoscaling",
     "pkg/apis/core",
-    "pkg/apis/core/helper",
-    "pkg/apis/core/helper/qos",
-    "pkg/apis/core/v1",
-    "pkg/apis/extensions",
-    "pkg/apis/networking",
     "pkg/apis/policy",
-    "pkg/features",
-    "pkg/kubeapiserver/admission/util",
-    "pkg/quota",
-    "pkg/quota/evaluator/core",
-    "pkg/quota/generic",
-    "pkg/quota/install",
-    "pkg/util/parsers",
   ]
   pruneopts = "UT"
   revision = "a89f8c11a5f4f132503edbc4918c98518fd504e3"
   version = "v1.12.8"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f8ae6e0da72b154967c7e6b7566486fc0337ac0d5d0362db67f9c31323a03c28"
-  name = "k8s.io/utils"
-  packages = ["pointer"]
-  pruneopts = "UT"
-  revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
   digest = "1:424b7bee192fdf5b693242782e5ea1de7cf268e043a3da5e068088b312cf9646"
@@ -1005,15 +943,15 @@
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "gopkg.in/yaml.v2",
-    "k8s.io/api/admission/v1beta1",
-    "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
-    "k8s.io/api/authentication/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
     "k8s.io/api/networking/v1",
     "k8s.io/api/policy/v1beta1",
     "k8s.io/api/rbac/v1",
+    "k8s.io/api/rbac/v1alpha1",
+    "k8s.io/api/storage/v1beta1",
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/meta",
@@ -1035,8 +973,6 @@
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/version",
     "k8s.io/apimachinery/pkg/watch",
-    "k8s.io/apiserver/pkg/admission",
-    "k8s.io/apiserver/pkg/authentication/user",
     "k8s.io/cli-runtime/pkg/genericclioptions",
     "k8s.io/cli-runtime/pkg/genericclioptions/printers",
     "k8s.io/cli-runtime/pkg/genericclioptions/resource",
@@ -1062,9 +998,9 @@
     "k8s.io/client-go/util/flowcontrol",
     "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1",
     "k8s.io/kube-openapi/pkg/util/proto",
-    "k8s.io/kubernetes/pkg/quota",
-    "k8s.io/kubernetes/pkg/quota/generic",
-    "k8s.io/kubernetes/pkg/quota/install",
+    "k8s.io/kubernetes/pkg/apis/autoscaling",
+    "k8s.io/kubernetes/pkg/apis/core",
+    "k8s.io/kubernetes/pkg/apis/policy",
     "sigs.k8s.io/controller-runtime/pkg/cache",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/apiutil",

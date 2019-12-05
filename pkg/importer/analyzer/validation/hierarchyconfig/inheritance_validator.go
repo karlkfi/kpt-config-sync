@@ -7,22 +7,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-)
-
-var (
-	resourceQuotaModes = map[v1.HierarchyModeType]bool{
-		v1.HierarchyModeDefault:           true,
-		v1.HierarchyModeHierarchicalQuota: true,
-		v1.HierarchyModeInherit:           true,
-		v1.HierarchyModeNone:              true,
-	}
-	otherTypesModes = map[v1.HierarchyModeType]bool{
-		v1.HierarchyModeDefault: true,
-		v1.HierarchyModeInherit: true,
-		v1.HierarchyModeNone:    true,
-	}
 )
 
 // NewInheritanceValidator returns a visitor that validates the inheritance setting
@@ -44,22 +29,20 @@ func NewInheritanceValidator() ast.Visitor {
 // ValidateInheritance returns an error if the HierarchyModeType is invalid for the GroupKind in the
 // FileGroupKindHierarchyConfig
 func ValidateInheritance(config FileGroupKindHierarchyConfig) status.MultiError {
-	if config.GroupKind() == kinds.ResourceQuota().GroupKind() {
-		return errIfNotAllowed(config, resourceQuotaModes)
-	}
-	return errIfNotAllowed(config, otherTypesModes)
+	return errIfNotAllowed(config)
 }
 
 // errIfNotAllowed returns an error if the kindHierarchyConfig has an inheritance mode which is not allowed for that Kind.
-func errIfNotAllowed(config FileGroupKindHierarchyConfig, allowed map[v1.HierarchyModeType]bool) status.MultiError {
-	if allowed[config.HierarchyMode] {
-		return nil
+func errIfNotAllowed(config FileGroupKindHierarchyConfig) status.MultiError {
+	switch config.HierarchyMode {
+	case v1.HierarchyModeNone:
+	case v1.HierarchyModeInherit:
+	case v1.HierarchyModeDefault:
+	default:
+		return IllegalHierarchyModeError(config, config.HierarchyMode)
 	}
-	return IllegalHierarchyModeError(
-		config,
-		config.HierarchyMode,
-		allowed,
-	)
+
+	return nil
 }
 
 // IllegalHierarchyModeErrorCode is the error code for IllegalHierarchyModeError
@@ -70,12 +53,8 @@ var illegalHierarchyModeError = status.NewErrorBuilder(IllegalHierarchyModeError
 // IllegalHierarchyModeError reports that a HierarchyConfig is defined with a disallowed hierarchyMode.
 func IllegalHierarchyModeError(
 	config id.HierarchyConfig,
-	mode v1.HierarchyModeType,
-	allowed map[v1.HierarchyModeType]bool) status.Error {
-	var allowedStr []string
-	for a := range allowed {
-		allowedStr = append(allowedStr, string(a))
-	}
+	mode v1.HierarchyModeType) status.Error {
+	allowedStr := []string{string(v1.HierarchyModeNone), string(v1.HierarchyModeInherit)}
 	gk := config.GroupKind()
 	return illegalHierarchyModeError.Sprintf(
 		"HierarchyMode %q is not a valid value for the APIResource %q. Allowed values are [%s].",

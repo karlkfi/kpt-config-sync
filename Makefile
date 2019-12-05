@@ -96,8 +96,7 @@ BUILD_MODE ?= debug
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := syncer \
 	git-importer \
-	monitor \
-	resourcequota-admission-controller
+	monitor
 
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos

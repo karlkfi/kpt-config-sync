@@ -3,11 +3,9 @@ package validation_test
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -35,10 +33,6 @@ func TestScope(t *testing.T) {
 			fake.AnvilAtPath("namespaces/anvil.yaml")),
 		nht.Fail("unknown in cluster/",
 			fake.AnvilAtPath("cluster/anvil.yaml")),
-		nht.Pass("generated ResourceQuota",
-			fake.FileObject(
-				fake.ResourceQuotaObject(core.Name(resourcequota.ResourceQuotaObjectName)), ""),
-		),
 	}
 
 	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper), testCases)

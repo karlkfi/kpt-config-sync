@@ -6,8 +6,6 @@ type ClusterConfigExpansion interface{}
 
 type ClusterSelectorExpansion interface{}
 
-type HierarchicalQuotaExpansion interface{}
-
 type HierarchyConfigExpansion interface{}
 
 type NamespaceConfigExpansion interface{}

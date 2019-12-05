@@ -482,7 +482,6 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 		"Sync":              utildiscovery.ClusterScope,
 		"HierarchyConfig":   utildiscovery.ClusterScope,
 		"NamespaceConfig":   utildiscovery.ClusterScope,
-		"HierarchicalQuota": utildiscovery.ClusterScope,
 	})
 	gkss = append(gkss, nomosScopes...)
 
@@ -532,7 +531,6 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 					{Name: "syncs", Namespaced: false, Kind: configmanagement.SyncKind},
 					{Name: "hierarchyconfigs", Namespaced: false, Kind: configmanagement.HierarchyConfigKind},
 					{Name: "namespaceconfigs", Namespaced: false, Kind: configmanagement.NamespaceConfigKind},
-					{Name: "hierarchicalquotas", Namespaced: false, Kind: configmanagement.HierarchicalQuotaKind},
 				},
 				"v1": {
 					{Name: "clusterselectors", Namespaced: false, Kind: configmanagement.ClusterSelectorKind},
@@ -541,7 +539,6 @@ func TestDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 					{Name: "syncs", Namespaced: false, Kind: configmanagement.SyncKind},
 					{Name: "hierarchyconfigs", Namespaced: false, Kind: configmanagement.HierarchyConfigKind},
 					{Name: "namespaceconfigs", Namespaced: false, Kind: configmanagement.NamespaceConfigKind},
-					{Name: "hierarchicalquotas", Namespaced: false, Kind: configmanagement.HierarchicalQuotaKind},
 				},
 			},
 		},

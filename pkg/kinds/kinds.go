@@ -123,11 +123,6 @@ func HierarchyConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.HierarchyConfigKind)
 }
 
-// HierarchicalQuota returns the canonical HierarchyConfig GroupVersionKind
-func HierarchicalQuota() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind(configmanagement.HierarchicalQuotaKind)
-}
-
 // NetworkPolicy returns the canonical NetworkPolicy GroupVersionKind
 func NetworkPolicy() schema.GroupVersionKind {
 	return networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy")

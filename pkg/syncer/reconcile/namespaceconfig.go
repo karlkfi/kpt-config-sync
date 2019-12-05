@@ -363,12 +363,6 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 	for k, v := range namespaceConfig.Labels {
 		core.SetLabel(namespace, k, v)
 	}
-	if !isSystemNamespace(namespace.GetName()) {
-		// Mark the namespace as supporting the management of hierarchical quota.
-		// But don't interfere with system namespaces, since that could lock us
-		// out of the cluster.
-		enableQuota(namespace)
-	}
 
 	namespace.SetAnnotations(nil)
 	for k, v := range namespaceConfig.Annotations {
