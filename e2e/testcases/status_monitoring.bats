@@ -43,7 +43,7 @@ function ensure_error_free_repo () {
 @test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
 
   ensure_error_free_repo
-
+  debug::log "Setting policyDir to acme"
   kubectl patch configmanagement config-management \
     --type=merge \
     --patch '{"spec":{"git":{"policyDir":"acme"}}}'

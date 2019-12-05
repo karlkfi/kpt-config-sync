@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -75,7 +75,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
-	r, err := NewReconciler(clusterName, rootDir, cfgParser, client, dc, mgr.GetCache(), decoder)
+	r, err := NewReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

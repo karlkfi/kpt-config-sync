@@ -10,22 +10,22 @@ func TestCommitHash(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"Valid path",
-			"/repo/rev-abcdef123/my-configs",
-			"abcdef123",
-			false,
-		},
-		{
-			"Valid path nested",
+			"Invalid path nested",
 			"/repo/rev-abcdef123/path/to/my/configs",
-			"abcdef123",
-			false,
+			"",
+			true,
 		},
 		{
 			"Valid path root",
 			"/repo/rev-abcdef123",
 			"abcdef123",
 			false,
+		},
+		{
+			"Pathological (no pun intended) invalid stuff before rev-",
+			"/repo/pathological-dirname-rev-abcdef123",
+			"",
+			true,
 		},
 		{
 			"Invalid path",

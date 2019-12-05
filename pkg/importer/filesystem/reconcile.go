@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -31,7 +32,8 @@ var _ reconcile.Reconciler = &Reconciler{}
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type Reconciler struct {
 	clusterName     string
-	configDir       string
+	gitDir          string
+	policyDir       string
 	parser          ConfigParser
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
@@ -49,14 +51,15 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(clusterName string, configDir string, parser ConfigParser, client *syncerclient.Client,
+func NewReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
 	decoder decode.Decoder) (*Reconciler, error) {
 	repoClient := repo.New(client)
 
 	return &Reconciler{
 		clusterName:     clusterName,
-		configDir:       configDir,
+		gitDir:          gitDir,
+		policyDir:       policyDir,
 		parser:          parser,
 		client:          client,
 		discoveryClient: discoveryClient,
@@ -64,6 +67,16 @@ func NewReconciler(clusterName string, configDir string, parser ConfigParser, cl
 		cache:           cache,
 		decoder:         decoder,
 	}, nil
+}
+
+func (c *Reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
+	glog.Errorf("Failed to resolve config directory: %v", err)
+	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+	sErr := status.SourceError.Sprintf("unable to sync repo: %v\n"+
+		"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
+		err).Build()
+	c.updateSourceStatus(ctx, nil, sErr.ToCME())
+	return reconcile.Result{}, nil
 }
 
 // Reconcile implements Reconciler.
@@ -81,28 +94,27 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	glog.V(4).Infof("Reconciling: %v", request)
 	startTime := time.Now()
 
-	newDir, err := filepath.EvalSymlinks(c.configDir)
+	absGitDir, err := filepath.EvalSymlinks(c.gitDir)
 	if err != nil {
-		glog.Errorf("Failed to resolve config directory: %v", err)
-		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-		sErr := status.SourceError.Sprintf("unable to sync repo: %v\n"+
-			"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
-			err).Build()
-		c.updateSourceStatus(ctx, nil, sErr.ToCME())
-		return reconcile.Result{}, nil
+		return c.dirError(ctx, startTime, err)
+	}
+
+	_, err = os.Stat(filepath.Join(absGitDir, c.policyDir))
+	if err != nil {
+		return c.dirError(ctx, startTime, err)
 	}
 
 	if request.Name == pollFilesystem {
 		// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
-		if c.currentDir == newDir {
+		if c.currentDir == absGitDir {
 			glog.V(4).Info("no new changes, nothing to do.")
 			return reconcile.Result{}, nil
 		}
 	}
-	glog.Infof("Resolved config dir: %s. Polling config dir: %s", newDir, c.configDir)
+	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absGitDir, c.gitDir)
 
 	// Parse the commit hash from the new directory to use as an import token.
-	token, err := git.CommitHash(newDir)
+	token, err := git.CommitHash(absGitDir)
 	if err != nil {
 		glog.Warningf("Invalid format for config directory format: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -155,7 +167,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	c.currentDir = newDir
+	c.currentDir = absGitDir
 	importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
