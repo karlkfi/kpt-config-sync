@@ -27,7 +27,7 @@ type Reader interface {
 	// Read returns the list of FileObjects in the passed directory.
 	//
 	// stubMissing disables the need for CRDs to be present in order to parse unknown objects.
-	Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError)
+	Read(dir cmpath.Relative, stubMissing bool, crds []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError)
 }
 
 // FileReader reads FileObjects from a filesystem.
@@ -37,7 +37,7 @@ type FileReader struct {
 
 var _ Reader = &FileReader{}
 
-func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
@@ -57,7 +57,7 @@ func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds ...*v1beta
 	var fileObjects []ast.FileObject
 	if len(visitors) > 0 {
 		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		builder := r.getBuilder(stubMissing, crds...)
+		builder := r.getBuilder(stubMissing, crds)
 
 		result := builder.
 			Unstructured().
@@ -256,6 +256,6 @@ func (u unstructuredID) GroupVersionKind() schema.GroupVersionKind {
 	return u.Unstructured.GetObjectKind().GroupVersionKind()
 }
 
-func (r *FileReader) getBuilder(stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) *resource.Builder {
-	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(r.ClientGetter, stubMissing, crds...))
+func (r *FileReader) getBuilder(stubMissing bool, crds []*v1beta1.CustomResourceDefinition) *resource.Builder {
+	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(r.ClientGetter, stubMissing, crds))
 }

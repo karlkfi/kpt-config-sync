@@ -55,10 +55,10 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 
 	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
 	// an object is namespace or cluster scoped.
-	scoper.AddCustomResources(crds...)
+	scoper.AddCustomResources(crds)
 
 	// Read all manifests and extract them into FileObjects.
-	fileObjects, errs := p.reader.Read(p.path, false, crds...)
+	fileObjects, errs := p.reader.Read(p.path, false, crds)
 	if errs != nil {
 		return nil, errs
 	}

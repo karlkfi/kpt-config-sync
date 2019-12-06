@@ -5,7 +5,7 @@ package filesystem
 import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -187,7 +187,7 @@ func (p *Parser) getScoper(crds ...*v1beta1.CustomResourceDefinition) utildiscov
 		p.errors = status.Append(p.errors, discoveryErr)
 		return nil
 	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(lists, utildiscovery.ScopesFromCRDs(crds...)...)
+	scoper, err := utildiscovery.NewScoperFromServerResources(lists, utildiscovery.ScopesFromCRDs(crds)...)
 	if err != nil {
 		p.errors = status.Append(p.errors, err)
 		return nil
@@ -210,26 +210,26 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 }
 
 func (p *Parser) readSystemResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false, nil)
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds...)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds)
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readClusterResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), false, crds...)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), false, crds)
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
 func (p *Parser) ReadClusterRegistryResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false, nil)
 	p.errors = status.Append(p.errors, errs)
 	return result
 }

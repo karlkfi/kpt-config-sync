@@ -485,7 +485,7 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	})
 	gkss = append(gkss, nomosScopes...)
 
-	gkss = append(gkss, utildiscovery.ScopesFromCRDs(crds...)...)
+	gkss = append(gkss, utildiscovery.ScopesFromCRDs(crds)...)
 
 	result := utildiscovery.Scoper{}
 

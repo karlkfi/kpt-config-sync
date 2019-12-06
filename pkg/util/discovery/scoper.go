@@ -36,12 +36,12 @@ func (s *Scoper) GetScope(gk schema.GroupKind) ObjectScope {
 
 // AddCustomResources updates Scoper with custom resource metadata from the provided CustomResourceDefinitions.
 // It does not replace anything that already exists in the Scoper.
-func (s *Scoper) AddCustomResources(crds ...*v1beta1.CustomResourceDefinition) {
-	gkss := ScopesFromCRDs(crds...)
-	s.add(gkss...)
+func (s *Scoper) AddCustomResources(crds []*v1beta1.CustomResourceDefinition) {
+	gkss := ScopesFromCRDs(crds)
+	s.add(gkss)
 }
 
-func (s *Scoper) add(gkss ...GroupKindScope) {
+func (s *Scoper) add(gkss []GroupKindScope) {
 	for _, gks := range gkss {
 		// Explicitly do not overwrite scopes as specified on the APIServer.
 		if _, hasGK := (*s)[gks.GroupKind]; hasGK {
@@ -58,7 +58,7 @@ type GroupKindScope struct {
 }
 
 // ScopesFromCRDs extracts the scopes declared in all passed CRDs.
-func ScopesFromCRDs(crds ...*v1beta1.CustomResourceDefinition) []GroupKindScope {
+func ScopesFromCRDs(crds []*v1beta1.CustomResourceDefinition) []GroupKindScope {
 	var result []GroupKindScope
 	for _, crd := range crds {
 		if !isServed(crd) {
@@ -122,7 +122,7 @@ func NewScoperFromServerResources(resourceLists []*metav1.APIResourceList, addit
 	allGKSs = append(allGKSs, additional...)
 
 	scoper := Scoper{}
-	scoper.add(allGKSs...)
+	scoper.add(allGKSs)
 	return scoper, nil
 }
 

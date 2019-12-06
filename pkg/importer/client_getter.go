@@ -24,7 +24,7 @@ type CRDAwareRestMapper struct {
 }
 
 // NewCRDAwareRestMapper returns a new CRDAwareRestMapper.
-func NewCRDAwareRestMapper(delegate apimeta.RESTMapper, stubMissing bool, crds ...*v1beta1.CustomResourceDefinition) apimeta.
+func NewCRDAwareRestMapper(delegate apimeta.RESTMapper, stubMissing bool, crds []*v1beta1.CustomResourceDefinition) apimeta.
 	RESTMapper {
 	return CRDAwareRestMapper{
 		RESTMapper:  delegate,
@@ -119,8 +119,10 @@ type CRDAwareClientGetter struct {
 }
 
 // NewFilesystemCRDAwareClientGetter returns a new CRDAwareClientGetter.
-func NewFilesystemCRDAwareClientGetter(g genericclioptions.RESTClientGetter, stubMissing bool,
-	crds ...*v1beta1.CustomResourceDefinition) CRDAwareClientGetter {
+func NewFilesystemCRDAwareClientGetter(
+	g genericclioptions.RESTClientGetter,
+	stubMissing bool,
+	crds []*v1beta1.CustomResourceDefinition) CRDAwareClientGetter {
 	return CRDAwareClientGetter{
 		RESTClientGetter: g,
 		stubMissing:      stubMissing,
@@ -134,5 +136,5 @@ func (cg CRDAwareClientGetter) ToRESTMapper() (apimeta.RESTMapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewCRDAwareRestMapper(rm, cg.stubMissing, cg.crds...), nil
+	return NewCRDAwareRestMapper(rm, cg.stubMissing, cg.crds), nil
 }

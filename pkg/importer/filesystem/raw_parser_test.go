@@ -31,7 +31,7 @@ type fakeReader struct {
 
 var _ filesystem.Reader = &fakeReader{}
 
-func (r *fakeReader) Read(_ cmpath.Relative, _ bool, _ ...*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
+func (r *fakeReader) Read(_ cmpath.Relative, _ bool, _ []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
 	return r.fileObjects, nil
 }
 

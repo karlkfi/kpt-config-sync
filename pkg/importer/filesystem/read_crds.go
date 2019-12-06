@@ -9,7 +9,7 @@ import (
 
 // readCRDs returns the list of CRDs in a directory.
 func readCRDs(r Reader, dir cmpath.Relative) ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-	fileObjects, errs := r.Read(dir, true)
+	fileObjects, errs := r.Read(dir, true, nil)
 	if errs != nil {
 		return nil, errs
 	}

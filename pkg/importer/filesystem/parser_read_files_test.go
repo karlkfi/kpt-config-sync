@@ -385,7 +385,7 @@ items:
 			r := &filesystem.FileReader{
 				ClientGetter: f,
 			}
-			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false)
+			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false, nil)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 
