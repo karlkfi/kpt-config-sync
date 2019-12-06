@@ -574,12 +574,12 @@ func TestParseClusterSelector(t *testing.T) {
 		).ForCluster(devCluster),
 		parsertest.Failure(
 			"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
-			selectors.ObjectHasUnknownClusterSelectorCode,
+			selectors.ObjectHasUnknownSelectorCode,
 			fake.Namespace("namespaces/foo", clusterSelectorAnnotation("does-not-exist")),
 		),
 		parsertest.Failure(
 			"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
-			selectors.ObjectHasUnknownClusterSelectorCode,
+			selectors.ObjectHasUnknownSelectorCode,
 			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
 		),
 		parsertest.Success("A subdir of cluster/ is ok",

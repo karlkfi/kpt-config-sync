@@ -171,7 +171,7 @@ func TestResolveClusterSelectors(t *testing.T) {
 			objects: []ast.FileObject{
 				fake.Role(withUnknownClusterSelector),
 			},
-			expectedErrors: []string{ObjectHasUnknownClusterSelectorCode},
+			expectedErrors: []string{ObjectHasUnknownSelectorCode},
 		},
 		{
 			testName:    "error if invalid ClusterSelector",

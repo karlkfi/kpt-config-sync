@@ -2,8 +2,8 @@ package selectors
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -15,6 +15,12 @@ import (
 // state represents what we know about whether an object should be synced to the cluster
 // based on the declared ClusterSelectors.
 type state string
+
+// selectorName represents the name of a ClusterSelector or NamespaceSelector.
+type selectorName string
+
+// namespaceName represents the name of a Namespace.
+type namespaceName string
 
 const (
 	// active represents objects that should be synced to the cluster.
@@ -72,7 +78,7 @@ func FilterClusters(objects []ast.FileObject) []clusterregistry.Cluster {
 // ClusterSelectors, or that do not declare ClusterSelectors.
 //
 // Returns an Error if any passed objects reference undeclared ClusterSelectors.
-func resolveClusterSelectors(csStates map[string]state, nsStates map[string]state, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+func resolveClusterSelectors(csStates map[selectorName]state, nsStates map[namespaceName]state, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	var errs status.MultiError
 	for _, object := range objects {
@@ -83,7 +89,7 @@ func resolveClusterSelectors(csStates map[string]state, nsStates map[string]stat
 
 		// Given the active/inactive states of every ClusterSelector and Namespace,
 		// determine whether the object appears on the cluster.
-		objState, err := objectState(csStates, nsStates, object)
+		objState, err := objectClusterSelectorState(csStates, nsStates, object)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
@@ -97,17 +103,19 @@ func resolveClusterSelectors(csStates map[string]state, nsStates map[string]stat
 	return result, errs
 }
 
-// objectState returns the active/inactive state for the object. This is determined by
+// objectClusterSelectorState returns the active/inactive state for the object based on cluster
+// selection. This is determined by
 //
-// 1. If the object declares a ClusterSelector annotation that is inactive, the object is inactive.
+// 1. If the object declares a cluster-selector annotation that is inactive, the object is inactive.
 // 2. If the object declares a metadata.namespace for a Namespace that is inactive, the object is inactive.
 // 3. Otherwise, the object is active.
 //
 // Returns an error if the object references an undeclared ClusterSelector.
-func objectState(csStates map[string]state, nsStates map[string]state, object ast.FileObject) (state, status.Error) {
-	if nsState, nsDefined := nsStates[object.GetNamespace()]; nsDefined {
-		// object is in an inactive Namespace, so it is inactive.
+func objectClusterSelectorState(csStates map[selectorName]state, nsStates map[namespaceName]state, object ast.FileObject) (state, status.Error) {
+	namespace := namespaceName(object.GetNamespace())
+	if nsState, nsDefined := nsStates[namespace]; nsDefined {
 		if nsState == inactive {
+			// object is in an inactive Namespace, so it is inactive.
 			return inactive, nil
 		}
 	}
@@ -118,9 +126,9 @@ func objectState(csStates map[string]state, nsStates map[string]state, object as
 		return active, nil
 	}
 
-	csState, csDefined := csStates[annotation]
+	csState, csDefined := csStates[selectorName(annotation)]
 	if !csDefined {
-		// We require that all objects which declare the ClusterSelector annotation reference
+		// We require that all objects which declare the cluster-selector annotation reference
 		// a ClusterSelector that exists.
 		return unknown, ObjectHasUnknownClusterSelector(object, annotation)
 	}
@@ -131,8 +139,8 @@ func objectState(csStates map[string]state, nsStates map[string]state, object as
 
 // getNamespaceStates returns a map from all defined Namespaces, and whether they are active or
 // inactive on the cluster.
-func getNamespaceStates(csStates map[string]state, objects []ast.FileObject) map[string]state {
-	result := make(map[string]state)
+func getNamespaceStates(csStates map[selectorName]state, objects []ast.FileObject) map[namespaceName]state {
+	result := make(map[namespaceName]state)
 
 	var errs status.MultiError
 	for _, object := range objects {
@@ -141,36 +149,34 @@ func getNamespaceStates(csStates map[string]state, objects []ast.FileObject) map
 			continue
 		}
 
-		nsState, err := objectState(csStates, nil, object)
+		nsState, err := objectClusterSelectorState(csStates, nil, object)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
 		}
-		result[object.GetName()] = nsState
+		result[namespaceName(object.GetName())] = nsState
 	}
 
 	return result
 }
 
 // getClusterSelectorStates returns the names of all active ClusterSelectors.
-func getClusterSelectorStates(cluster *clusterregistry.Cluster, objects []ast.FileObject) (map[string]state, status.MultiError) {
+func getClusterSelectorStates(cluster *clusterregistry.Cluster, objects []ast.FileObject) (map[selectorName]state, status.MultiError) {
 	// ClusterSelectors may only select Clusters with definitions.
-	selectors := filterClusterSelectors(objects)
+	selectors, errs := getClusterSelectors(objects)
+	if errs != nil {
+		return nil, errs
+	}
 
-	result := make(map[string]state)
-	var errs status.MultiError
+	result := make(map[selectorName]state)
 	for _, selector := range selectors {
-		isSelected, err := selects(selector, cluster)
-		if err != nil {
-			errs = status.Append(errs, err)
-			continue
+		selectorState := inactive
+		if cluster != nil && selector.selects(cluster) {
+			// If cluster is nil, all selectors are inactive.
+			selectorState = active
 		}
 
-		if isSelected {
-			result[selector.Name] = active
-		} else {
-			result[selector.Name] = inactive
-		}
+		result[selectorName(selector.GetName())] = selectorState
 	}
 	return result, errs
 }
@@ -185,63 +191,63 @@ func getCluster(clusterName string, clusters []clusterregistry.Cluster) *cluster
 	return nil
 }
 
-// clusterSelectorFileObject is basically a FileObject that can only hold a ClusterSelector.
+// selectorFileObject is basically a FileObject that can only hold a ClusterSelector.
 // This is a convenience struct that extends ClusterSelector to satisfy id.Resource,
 // enabling us to generate good error messages about it.
-type clusterSelectorFileObject struct {
-	cmpath.Path
-	*v1.ClusterSelector
+type selectorFileObject struct {
+	ast.FileObject
+	labels.Selector
 }
 
-// filterClusterSelectors returns the list of ClustersSelectors in the passed array of FileObjects.
-func filterClusterSelectors(objects []ast.FileObject) []clusterSelectorFileObject {
-	var clusterSelectors []clusterSelectorFileObject
-	for _, object := range objects {
-		if o, ok := object.Object.(*v1.ClusterSelector); ok {
-			clusterSelectors = append(clusterSelectors, clusterSelectorFileObject{
-				Path:            object.Path,
-				ClusterSelector: o,
-			})
-		}
-	}
-	return clusterSelectors
-}
+var _ id.Resource = selectorFileObject{}
 
-// Selects returns true if the ClusterSelector selects Cluster.
-// Returns an error if the LabelSelector is invalid.
-func selects(cs clusterSelectorFileObject, cluster *clusterregistry.Cluster) (bool, status.Error) {
-	// Convert selector preemptively, or else we won't show an error for invalid ClusterSelectors
-	// if the Cluster is missing.
-	selector, err := asSelector(cs)
-	if err != nil {
-		return false, err
-	}
-	if cluster == nil {
-		// All ClusterSelectors are inactive if the Cluster definition is missing.
-		return false, nil
-	}
-	return selector.Matches(labels.Set(cluster.Labels)), nil
-}
-
-// asSelector returns a known valid and nonempty label selector.
-func asSelector(cs clusterSelectorFileObject) (labels.Selector, status.Error) {
-	labelSelector := cs.Spec.Selector
+// asSelector returns a known valid and nonempty label selector, or an error otherwise.
+func asSelectorFileObject(o ast.FileObject, labelSelector metav1.LabelSelector) (selectorFileObject, status.Error) {
 	selector, err := metav1.LabelSelectorAsSelector(&labelSelector)
 	if err != nil {
-		return nil, InvalidSelectorError2(cs, err)
+		return selectorFileObject{}, InvalidSelectorError2(o, err)
 	}
 	if selector.Empty() {
-		return nil, EmptySelectorError(cs)
+		return selectorFileObject{}, EmptySelectorError(o)
 	}
-	return selector, nil
+	return selectorFileObject{
+		FileObject: o,
+		Selector:   selector,
+	}, nil
 }
 
-// ObjectHasUnknownClusterSelectorCode is the error code for ObjectHasUnknownClusterSelector
-const ObjectHasUnknownClusterSelectorCode = "1013"
+// getClusterSelectors returns the list of ClustersSelectors in the passed array of FileObjects.
+func getClusterSelectors(objects []ast.FileObject) ([]selectorFileObject, status.MultiError) {
+	var clusterSelectors []selectorFileObject
+	var errs status.MultiError
+	for _, object := range objects {
+		if o, ok := object.Object.(*v1.ClusterSelector); ok {
+			// Convert selector preemptively, or else we won't show an error for invalid ClusterSelectors
+			// if the Cluster is missing.
+			selector, err := asSelectorFileObject(object, o.Spec.Selector)
+			if err != nil {
+				errs = status.Append(errs, err)
+				continue
+			}
+			clusterSelectors = append(clusterSelectors, selector)
+		}
+	}
+	return clusterSelectors, errs
+}
 
-var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownClusterSelectorCode)
+// Selects returns true if the ClusterSelector selects Cluster `cluster`.
+// Returns an error if the LabelSelector is invalid.
+func (s selectorFileObject) selects(o core.Object) bool {
+	return s.Matches(labels.Set(o.GetLabels()))
+}
 
-// ObjectHasUnknownClusterSelector is an error denoting an object that has an unknown annotation.
+// ObjectHasUnknownSelectorCode is the error code for ObjectHasUnknownClusterSelector
+const ObjectHasUnknownSelectorCode = "1013"
+
+var objectHasUnknownClusterSelector = status.NewErrorBuilder(ObjectHasUnknownSelectorCode)
+
+// ObjectHasUnknownClusterSelector reports that `resource`'s cluster-selector annotation
+// references a ClusterSelector that does not exist.
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
 	return objectHasUnknownClusterSelector.
 		Sprintf("Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
