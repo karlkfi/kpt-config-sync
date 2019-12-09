@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
@@ -235,11 +236,11 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/foo bar"),
 		),
 		parsertest.Failure("Namespace with NamespaceSelector annotation is invalid",
-			metadata.IllegalNamespaceAnnotationErrorCode,
+			status.UndocumentedErrorCode,
 			fake.Namespace("namespaces/bar", core.Annotation(v1.NamespaceSelectorAnnotationKey, "prod")),
 		),
 		parsertest.Failure("NamespaceSelector may not have clusterSelector annotations",
-			validation.NamespaceSelectorMayNotHaveAnnotationCode,
+			selectors.InvalidSelectorErrorCode,
 			fake.FileObject(clusterSelectorObject("prod-cluster", "env", "prod"),
 				"clusterregistry/cs.yaml"),
 			fake.NamespaceSelector(clusterSelectorAnnotation("prod-cluster")),

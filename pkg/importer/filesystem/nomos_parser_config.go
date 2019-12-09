@@ -40,7 +40,6 @@ func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visi
 		syntax.NewDisallowSystemObjectsValidator(),
 		syntax.NewDeprecatedGroupKindValidator(),
 		metadata.NewNamespaceDirectoryNameValidator(),
-		metadata.NewNamespaceAnnotationValidator(),
 		metadata.NewMetadataNamespaceDirectoryValidator(),
 		syntax.NewDirectoryNameValidator(),
 		syntax.NewNamespaceKindValidator(),

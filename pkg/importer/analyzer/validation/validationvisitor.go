@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -62,25 +61,12 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 			v.errs = status.Append(v.errs, IllegalNamespaceSubdirectoryError(n, parent))
 		}
 	}
-	for _, s := range n.Selectors {
-		v.checkNamespaceSelectorAnnotations(s)
-	}
 
 	v.nodes = append(v.nodes, n)
 	o := v.Base.VisitTreeNode(n)
 	v.nodes = v.nodes[:len(v.nodes)-1]
 	// Must return non-nil so that visiting may continue to cluster objects.
 	return o
-}
-
-// checkNamespaceSelectorAnnotations ensures that a NamespaceSelector object has no
-// ClusterSelector annotation on it.
-func (v *InputValidator) checkNamespaceSelectorAnnotations(s *v1.NamespaceSelector) {
-	if a := s.GetAnnotations(); a != nil {
-		if _, ok := a[v1.ClusterSelectorAnnotationKey]; ok {
-			v.errs = status.Append(v.errs, NamespaceSelectorMayNotHaveAnnotation(s))
-		}
-	}
 }
 
 // VisitObject implements Visitor
@@ -125,16 +111,4 @@ func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error 
 		"Config `%[3]s` illegally declared in an %[1]s directory. "+
 			"Move this config to a %[2]s directory:",
 		strings.ToLower(string(node.AbstractNamespace)), node.Namespace, resource.GetName()).Build()
-}
-
-// NamespaceSelectorMayNotHaveAnnotationCode is the error code for NamespaceSelectorMayNotHaveAnnotation
-const NamespaceSelectorMayNotHaveAnnotationCode = "1012"
-
-var namespaceSelectorMayNotHaveAnnotation = status.NewErrorBuilder(NamespaceSelectorMayNotHaveAnnotationCode)
-
-// NamespaceSelectorMayNotHaveAnnotation reports that a namespace selector has
-// an annotation that is not allowed.
-func NamespaceSelectorMayNotHaveAnnotation(object core.Object) status.Error {
-	// TODO(willbeason): Print information about the object so it can actually be found.
-	return namespaceSelectorMayNotHaveAnnotation.Sprintf("The NamespaceSelector config %q MUST NOT have ClusterSelector annotation", object.GetName()).Build()
 }

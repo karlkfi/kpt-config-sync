@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -120,20 +121,6 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 
 	fileObjects := root.Flatten()
 
-	p.errors = status.Append(p.errors, validation.ClusterSelectorUniqueness.Validate(fileObjects))
-	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
-	p.errors = status.Append(p.errors, csErr)
-	// TODO(b/145676672): Uncomment the below once non-hierarchical NamespaceSelector logic is implemented.
-	//p.errors = status.Append(p.errors, validation.NamespaceSelectorUniqueness.Validate(fileObjects))
-	// // For each NamespaceSelector, calculate which Namespaces it is active/inactive for.
-	//nsStates := getNamespaceSelectorStatePerNamespace(fileObjects)
-	//fileObjects, nsErr := selectors.ResolveNamespaceSelectors(fileObjects, nsStates)
-	//p.errors = status.Append(p.errors, nsErr)
-	fileObjects = transform.RemoveEphemeralResources(fileObjects)
-
-	errs := standardValidation(fileObjects)
-	p.errors = status.Append(p.errors, errs)
-
 	crds, err := customresources.GetCRDs(fileObjects)
 	if err != nil {
 		// We couldn't read the CRDs, so we can't continue without showing a lot of
@@ -142,12 +129,41 @@ func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 	scoper := p.getScoper(crds...)
+	fileObjects, selErr := resolveSelectors(scoper, clusterName, fileObjects)
+	if selErr != nil {
+		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
+		p.errors = status.Append(p.errors, selErr)
+		return nil
+	}
+
 	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
+
+	stdErrs := standardValidation(fileObjects)
+	p.errors = status.Append(p.errors, stdErrs)
 
 	fileObjects = selectors.AnnotateClusterName(clusterName, fileObjects)
 
 	return fileObjects
+}
+
+func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper).Validate(fileObjects)
+	if annErr != nil {
+		return nil, annErr
+	}
+
+	csuErr := validation.ClusterSelectorUniqueness.Validate(fileObjects)
+	if csuErr != nil {
+		return nil, csuErr
+	}
+
+	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	if csErr != nil {
+		return nil, csErr
+	}
+
+	return transform.RemoveEphemeralResources(fileObjects), nil
 }
 
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.

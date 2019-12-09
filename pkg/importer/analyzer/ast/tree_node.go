@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 )
 
 // TreeNode is analogous to a directory in the config hierarchy.
@@ -70,20 +71,38 @@ func copyMapInto(from map[string]string, to *map[string]string) {
 // 2) the concatenated list of all objects returned by calling flatten on all of
 // its children.
 func (n *TreeNode) flatten() []FileObject {
-	if n.Type == node.Namespace {
-		result := make([]FileObject, len(n.Objects))
-		for i, o := range n.Objects {
-			if o.GroupVersionKind() != kinds.Namespace() {
-				o.SetNamespace(n.Name())
-			}
-			result[i] = o.FileObject
-		}
-		return result
+	switch n.Type {
+	case node.Namespace:
+		return n.flattenNamespace()
+	case node.AbstractNamespace:
+		return n.flattenAbstractNamespace()
+	default:
+		panic(status.InternalErrorf("invalid node type: %q", string(n.Type)))
 	}
+}
 
+func (n *TreeNode) flattenNamespace() []FileObject {
 	var result []FileObject
+	for _, o := range n.Objects {
+		if o.GroupVersionKind() != kinds.Namespace() {
+			o.SetNamespace(n.Name())
+		}
+		result = append(result, o.FileObject)
+	}
+	return result
+}
+
+func (n *TreeNode) flattenAbstractNamespace() []FileObject {
+	var result []FileObject
+
+	for _, o := range n.Objects {
+		if o.GroupVersionKind() == kinds.NamespaceSelector() {
+			result = append(result, o.FileObject)
+		}
+	}
 	for _, child := range n.Children {
 		result = append(result, child.flatten()...)
 	}
+
 	return result
 }

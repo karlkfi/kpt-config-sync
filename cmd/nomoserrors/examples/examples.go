@@ -44,7 +44,8 @@ func Generate() map[string][]status.Error {
 	result.add(validation.IllegalNamespaceSubdirectoryError(node("namespaces/foo/bar"), node("namespaces/foo")))
 
 	// 1004
-	result.add(metadata.IllegalNamespaceAnnotationError(fake.Namespace("namespaces/foo")))
+	result.add(nonhierarchical.IllegalNamespaceSelectorAnnotationError(fake.Namespace("namespaces/foo")))
+	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster()))
 
 	// 1005
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
@@ -67,8 +68,7 @@ func Generate() map[string][]status.Error {
 	// 1011
 	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "-label"}))
 
-	// 1012
-	result.add(validation.NamespaceSelectorMayNotHaveAnnotation(fake.NamespaceSelector()))
+	// 1012 is Deprecated.
 
 	// 1013
 	result.add(selectors.ObjectHasUnknownClusterSelector(fake.Role(), "undeclared-selector"))
