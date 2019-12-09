@@ -14,22 +14,23 @@ func TestScoper_GetScope(t *testing.T) {
 		name      string
 		scoper    Scoper
 		groupKind schema.GroupKind
-		expected  ObjectScope
+		expected  IsNamespaced
+		expectErr bool
 	}{
 		{
 			name:      "nil scoper returns Unknown",
 			groupKind: kinds.Role().GroupKind(),
-			expected:  UnknownScope,
+			expectErr: true,
 		},
 		{
 			name:      "missing GroupKind returns unknown",
-			scoper:    map[schema.GroupKind]ObjectScope{},
+			scoper:    map[schema.GroupKind]IsNamespaced{},
 			groupKind: kinds.Role().GroupKind(),
-			expected:  UnknownScope,
+			expectErr: true,
 		},
 		{
 			name: "NamespaceScope returns NamespaceScope",
-			scoper: map[schema.GroupKind]ObjectScope{
+			scoper: map[schema.GroupKind]IsNamespaced{
 				kinds.Role().GroupKind(): NamespaceScope,
 			},
 			groupKind: kinds.Role().GroupKind(),
@@ -37,7 +38,7 @@ func TestScoper_GetScope(t *testing.T) {
 		},
 		{
 			name: "ClusterScope returns ClusterScope",
-			scoper: map[schema.GroupKind]ObjectScope{
+			scoper: map[schema.GroupKind]IsNamespaced{
 				kinds.Role().GroupKind(): ClusterScope,
 			},
 			groupKind: kinds.Role().GroupKind(),
@@ -47,7 +48,17 @@ func TestScoper_GetScope(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := tc.scoper.GetScope(tc.groupKind)
+			actual, err := tc.scoper.GetGroupKindScope(tc.groupKind)
+
+			if tc.expectErr || err != nil {
+				if !tc.expectErr {
+					t.Fatal("unexpected error", err)
+				}
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
 
 			if diff := cmp.Diff(tc.expected, actual); diff != "" {
 				t.Fatal(diff)

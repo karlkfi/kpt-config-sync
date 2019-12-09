@@ -21,13 +21,11 @@ func Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 	return []ast.Visitor{
 		&mustSucceed{Visitor: syntax.NewParseValidator()},
 		system.NewRepoVersionValidator(),
-		system.NewKindValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
 		hierarchyconfig.NewHierarchyConfigKindValidator(),
 		hierarchyconfig.NewInheritanceValidator(),
 		visitors.NewSupportedClusterResourcesValidator(),
-		syntax.NewClusterRegistryKindValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewDisallowSystemObjectsValidator(),
 		syntax.NewDeprecatedGroupKindValidator(),

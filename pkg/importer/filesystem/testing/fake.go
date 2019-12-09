@@ -267,7 +267,7 @@ func testK8SResources() []*restmapper.APIGroupResources {
 // Feel free to add new types as necessary.
 func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	var gkss []utildiscovery.GroupKindScope
-	coreScopes := scopedKinds(corev1.GroupName, map[string]utildiscovery.ObjectScope{
+	coreScopes := scopedKinds(corev1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"Pod":                   utildiscovery.NamespaceScope,
 		"Service":               utildiscovery.NamespaceScope,
 		"ReplicationController": utildiscovery.NamespaceScope,
@@ -280,33 +280,33 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	})
 	gkss = append(gkss, coreScopes...)
 
-	apiExtensionsScopes := scopedKinds(apiextensionsv1beta1.GroupName, map[string]utildiscovery.ObjectScope{
+	apiExtensionsScopes := scopedKinds(apiextensionsv1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"CustomResourceDefinition": utildiscovery.ClusterScope,
 	})
 	gkss = append(gkss, apiExtensionsScopes...)
 
-	policyScopes := scopedKinds(policyv1beta1.GroupName, map[string]utildiscovery.ObjectScope{
+	policyScopes := scopedKinds(policyv1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"PodSecurityPolicy": utildiscovery.ClusterScope,
 	})
 	gkss = append(gkss, policyScopes...)
 
-	appsScopes := scopedKinds(appsv1.GroupName, map[string]utildiscovery.ObjectScope{
+	appsScopes := scopedKinds(appsv1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"Deployment": utildiscovery.NamespaceScope,
 		"ReplicaSet": utildiscovery.NamespaceScope,
 	})
 	gkss = append(gkss, appsScopes...)
 
-	autoscalingScopes := scopedKinds(autoscalingv1.GroupName, map[string]utildiscovery.ObjectScope{
+	autoscalingScopes := scopedKinds(autoscalingv1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"HorizontalPodAutoscaler": utildiscovery.NamespaceScope,
 	})
 	gkss = append(gkss, autoscalingScopes...)
 
-	storageScopes := scopedKinds(storagev1beta1.GroupName, map[string]utildiscovery.ObjectScope{
+	storageScopes := scopedKinds(storagev1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"StorageClass": utildiscovery.ClusterScope,
 	})
 	gkss = append(gkss, storageScopes...)
 
-	rbacScopes := scopedKinds(rbacv1.GroupName, map[string]utildiscovery.ObjectScope{
+	rbacScopes := scopedKinds(rbacv1.GroupName, map[string]utildiscovery.IsNamespaced{
 		"Role":               utildiscovery.NamespaceScope,
 		"RoleBinding":        utildiscovery.NamespaceScope,
 		"ClusterRole":        utildiscovery.ClusterScope,
@@ -314,7 +314,7 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	})
 	gkss = append(gkss, rbacScopes...)
 
-	nomosScopes := scopedKinds(configmanagement.GroupName, map[string]utildiscovery.ObjectScope{
+	nomosScopes := scopedKinds(configmanagement.GroupName, map[string]utildiscovery.IsNamespaced{
 		"ClusterSelector":   utildiscovery.ClusterScope,
 		"NamespaceSelector": utildiscovery.ClusterScope,
 		"Repo":              utildiscovery.ClusterScope,
@@ -329,12 +329,12 @@ func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	result := utildiscovery.Scoper{}
 
 	for _, gks := range gkss {
-		result[gks.GroupKind] = gks.Scope
+		result[gks.GroupKind] = gks.IsNamespaced
 	}
 	return result
 }
 
-func scopedKinds(group string, kindScope map[string]utildiscovery.ObjectScope) []utildiscovery.GroupKindScope {
+func scopedKinds(group string, kindScope map[string]utildiscovery.IsNamespaced) []utildiscovery.GroupKindScope {
 	var result []utildiscovery.GroupKindScope
 	for kind, scope := range kindScope {
 		result = append(result, utildiscovery.GroupKindScope{
@@ -342,7 +342,7 @@ func scopedKinds(group string, kindScope map[string]utildiscovery.ObjectScope) [
 				Group: group,
 				Kind:  kind,
 			},
-			Scope: scope,
+			IsNamespaced: scope,
 		})
 	}
 	return result

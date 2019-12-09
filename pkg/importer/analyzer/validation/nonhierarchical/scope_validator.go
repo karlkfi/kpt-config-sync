@@ -38,19 +38,21 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 // declarations.
 func ScopeValidator(scoper discovery.Scoper) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
-		switch scoper.GetScope(o.GroupVersionKind().GroupKind()) {
-		case discovery.ClusterScope:
-			if o.GetNamespace() != "" {
-				return IllegalNamespaceOnClusterScopedResourceError(&o)
-			}
-		case discovery.NamespaceScope:
+		isNamespaced, err := scoper.GetObjectScope(o)
+		if err != nil {
+			return err
+		}
+
+		if isNamespaced {
 			if o.GetNamespace() == "" {
 				return MissingNamespaceOnNamespacedResourceError(&o)
 			}
-		case discovery.UnknownScope:
-			// Should be impossible to reach normally as an earlier validation should handle these cases.
-			return status.InternalErrorf("type not registered on API server %q", o.GroupVersionKind().String())
+		} else {
+			if o.GetNamespace() != "" {
+				return IllegalNamespaceOnClusterScopedResourceError(&o)
+			}
 		}
+
 		return nil
 	})
 }

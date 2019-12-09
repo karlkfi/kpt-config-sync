@@ -66,13 +66,16 @@ func ResourceScopes(gvks map[schema.GroupVersionKind]bool, scheme *runtime.Schem
 			// CRDs are handled in the CRD controller and shouldn't be handled in any of SubManager's controllers.
 			continue
 		}
-		switch scoper.GetScope(gvk.GroupKind()) {
-		case discovery.NamespaceScope:
+
+		isNamespaced, err := scoper.GetGroupKindScope(gvk.GroupKind())
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if isNamespaced {
 			namespace[gvk] = obj
-		case discovery.ClusterScope:
+		} else {
 			cluster[gvk] = obj
-		case discovery.UnknownScope:
-			return nil, nil, errors.Errorf("Could not determine resource scope for %s", gvk)
 		}
 	}
 	return namespace, cluster, nil

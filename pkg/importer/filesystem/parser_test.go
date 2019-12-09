@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
 	corev1 "k8s.io/api/core/v1"
@@ -109,7 +110,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
 		parsertest.Failure("Engineer CustomResource without CRD",
-			validation.UnknownObjectErrorCode,
+			discovery.UnknownKindErrorCode,
 			fake.Namespace("namespaces/bar"),
 			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
@@ -256,7 +257,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.ClusterRole(core.Label("configmanagement.gke.io/stuff", "prod")),
 		),
 		parsertest.Failure("Illegal object declaration in system/ is an error",
-			system.IllegalKindInSystemErrorCode,
+			validation.IncorrectTopLevelDirectoryErrorCode,
 			fake.RoleAtPath("system/role.yaml"),
 		),
 		parsertest.Failure("Duplicate Repo definitions is an error",
@@ -362,7 +363,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.ClusterRole(core.Name("a:b")),
 		),
 		parsertest.Failure("Illegal Namespace in clusterregistry/",
-			syntax.IllegalKindInClusterregistryErrorCode,
+			validation.IncorrectTopLevelDirectoryErrorCode,
 			fake.Namespace("clusterregistry"),
 		),
 		parsertest.Failure("Illegal NamespaceSelector in Namespace directory.",

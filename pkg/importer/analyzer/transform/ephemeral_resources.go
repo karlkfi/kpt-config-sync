@@ -9,7 +9,9 @@ import (
 // IsEphemeral returns true if the type should not be synced to the cluster.
 func IsEphemeral(gvk schema.GroupVersionKind) bool {
 	return gvk == kinds.NamespaceSelector() ||
-		gvk == kinds.Sync()
+		gvk == kinds.Sync() ||
+		gvk == kinds.Repo() ||
+		gvk == kinds.HierarchyConfig()
 }
 
 // RemoveEphemeralResources removes resources that were needed before for

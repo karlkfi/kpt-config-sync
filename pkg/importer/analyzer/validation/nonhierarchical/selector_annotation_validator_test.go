@@ -16,9 +16,13 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 	scoper := discovery.Scoper{
 		kinds.Role().GroupKind():        discovery.NamespaceScope,
 		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
-		// The logic doesn't make a special case for Namespaces, so we have to let the Scoper know
-		// Namespaces are cluster-scoped.
-		kinds.Namespace().GroupKind(): discovery.ClusterScope,
+
+		// The logic doesn't make a special case for these types, but this is the scope
+		// the APIServer will report.
+		kinds.Namespace().GroupKind():         discovery.ClusterScope,
+		kinds.Cluster().GroupKind():           discovery.ClusterScope,
+		kinds.ClusterSelector().GroupKind():   discovery.ClusterScope,
+		kinds.NamespaceSelector().GroupKind(): discovery.ClusterScope,
 	}
 
 	clusterSelectorAnnotation := core.Annotation(v1.ClusterSelectorAnnotationKey, "prod-selector")

@@ -1,8 +1,6 @@
 package hierarchyconfig
 
 import (
-	"fmt"
-
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -24,16 +22,13 @@ func NewHierarchyConfigScopeValidator(scoper discovery.Scoper) nonhierarchical.V
 
 func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConfig) status.Error {
 	for _, gkc := range hc.flatten() {
-		scope := scoper.GetScope(gkc.GK)
-		switch scope {
-		case discovery.NamespaceScope:
-			// The expected case.
-		case discovery.ClusterScope:
+		isNamespaced, err := scoper.GetGroupKindScope(gkc.GK)
+		if err != nil {
+			return err
+		}
+
+		if !isNamespaced {
 			return ClusterScopedResourceInHierarchyConfigError(gkc)
-		case discovery.UnknownScope:
-			return UnknownResourceInHierarchyConfigError(gkc)
-		default:
-			panic(fmt.Sprintf("programmer error: scope %s should not occur", scope))
 		}
 	}
 	return nil

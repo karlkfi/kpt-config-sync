@@ -10,7 +10,7 @@ import (
 // types defined. Use this instead of building a Scoper from the response to an
 // APIServer when one is unavailable.
 func CoreScoper() Scoper {
-	return map[schema.GroupKind]ObjectScope{
+	return map[schema.GroupKind]IsNamespaced{
 		schema.GroupKind{Group: "", Kind: "ConfigMap"}: NamespaceScope,
 		schema.GroupKind{Group: "", Kind: "Endpoints"}: NamespaceScope,
 		schema.GroupKind{Group: "", Kind: "Event"}: NamespaceScope,

@@ -35,8 +35,13 @@ func validateClusterSelectorAnnotation(o ast.FileObject) status.Error {
 }
 
 func validateNamespaceSelectorAnnotation(scoper discovery.Scoper, o ast.FileObject) status.Error {
-	// Namespace-scoped objects may declare the namespace-selector annotation.
-	if scoper.GetScope(o.GroupVersionKind().GroupKind()) == discovery.NamespaceScope {
+	scope, err := scoper.GetObjectScope(o)
+	if err != nil {
+		return err
+	}
+
+	if scope == discovery.NamespaceScope {
+		// Namespace-scoped objects may declare the namespace-selector annotation.
 		return nil
 	}
 	if _, hasAnnotation := o.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]; hasAnnotation {
@@ -57,7 +62,7 @@ func IllegalClusterSelectorAnnotationError(resource id.Resource) status.Error {
 	return illegalSelectorAnnotationError.
 		Sprintf("%ss may not be cluster-selected, and so MUST NOT declare the annotation %s. "+
 			"To fix, remove metadata.annotations.%s from:",
-			resource.GroupVersionKind().Kind, v1.ClusterSelectorAnnotationKey).
+			resource.GroupVersionKind().Kind, v1.ClusterSelectorAnnotationKey, v1.ClusterSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
 
@@ -67,6 +72,6 @@ func IllegalNamespaceSelectorAnnotationError(resource id.Resource) status.Error 
 	return illegalSelectorAnnotationError.
 		Sprintf("Cluster-scoped objects may not be namespace-selected, and so MUST NOT declare the annotation %s. "+
 			"To fix, remove metadata.annotations.%s from:",
-			v1.NamespaceSelectorAnnotationKey).
+			v1.NamespaceSelectorAnnotationKey, v1.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }

@@ -11,10 +11,39 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var topLevelDirectoryOverrides = map[schema.GroupVersionKind]string{
+	kinds.Repo():            repo.SystemDir,
+	kinds.HierarchyConfig(): repo.SystemDir,
+
+	kinds.Cluster():         repo.ClusterRegistryDir,
+	kinds.ClusterSelector(): repo.ClusterRegistryDir,
+
+	kinds.Namespace():         repo.NamespacesDir,
+	kinds.NamespaceSelector(): repo.NamespacesDir,
+}
+
+// expectedTopLevelDir returns the top-level directory we expect this object to be in,
+// or an error if we were unable to determine in which one it belongs.
+func expectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, status.Error) {
+	gvk := o.GroupVersionKind()
+	if override, hasOverride := topLevelDirectoryOverrides[gvk]; hasOverride {
+		return override, nil
+	}
+
+	isNamespaced, err := scoper.GetObjectScope(o)
+	if err != nil {
+		return "", err
+	}
+	if isNamespaced {
+		return repo.NamespacesDir, nil
+	}
+	return repo.ClusterDir, nil
+}
+
 // NewTopLevelDirectoryValidator ensures Namespaces and namespace-scoped objects are in namespaces/,
 // and cluster-scoped objects are in cluster/.
 //
-// Returns an UnknownObjectError if unable to determine which top-level directory
+// Returns an UnknownObjectKindError if unable to determine which top-level directory
 // the resource should live. This happens when the resource is neither present
 // on the APIServer nor has a CRD defined.
 func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Validator {
@@ -24,44 +53,28 @@ func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Vali
 }
 
 func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status.Error {
-	gvk := o.GroupVersionKind()
-	scope := scoper.GetScope(gvk.GroupKind())
-	topLevelDir := o.Path.Split()[0]
+	expectedTopLevelDir, err := expectedTopLevelDir(scoper, o)
+	if err != nil {
+		return err
+	}
 
-	if isClusterScopedAllowedInNamespaces(gvk) || scope == discovery.NamespaceScope {
-		// Only Namespace-scoped object and Namespaces are in the namespaces/ directory.
-		if topLevelDir != repo.NamespacesDir {
-			return ShouldBeInNamespacesError(topLevelDir, o)
-		}
+	actualTopLevelDir := o.Path.Split()[0]
+	if actualTopLevelDir == expectedTopLevelDir {
 		return nil
 	}
 
-	if scope == discovery.ClusterScope {
-		if topLevelDir != repo.ClusterDir {
-			return ShouldBeInClusterError(topLevelDir, o)
-		}
-		return nil
+	switch expectedTopLevelDir {
+	case repo.SystemDir:
+		return ShouldBeInSystemError(o)
+	case repo.ClusterRegistryDir:
+		return ShouldBeInClusterRegistryError(o)
+	case repo.ClusterDir:
+		return ShouldBeInClusterError(o)
+	case repo.NamespacesDir:
+		return ShouldBeInNamespacesError(o)
+	default:
+		return status.InternalErrorf("unhandled top level directory: %q", expectedTopLevelDir)
 	}
-
-	return UnknownObjectError(o)
-}
-
-func isClusterScopedAllowedInNamespaces(gvk schema.GroupVersionKind) bool {
-	return gvk == kinds.Namespace() ||
-		gvk == kinds.NamespaceSelector()
-}
-
-// UnknownObjectErrorCode is the error code for UnknownObjectError
-const UnknownObjectErrorCode = "1021" // Impossible to create consistent example.
-
-var unknownObjectError = status.NewErrorBuilder(UnknownObjectErrorCode)
-
-// UnknownObjectError reports that an object declared in the repo does not have a definition in the cluster.
-func UnknownObjectError(resource id.Resource) status.Error {
-	return unknownObjectError.
-		Sprint("No CustomResourceDefinition is defined for the resource in the cluster. " +
-			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.").
-		BuildWithResources(resource)
 }
 
 // IncorrectTopLevelDirectoryErrorCode is the error code for IllegalKindInClusterError
@@ -69,18 +82,34 @@ const IncorrectTopLevelDirectoryErrorCode = "1039"
 
 var incorrectTopLevelDirectoryErrorBuilder = status.NewErrorBuilder(IncorrectTopLevelDirectoryErrorCode)
 
-// ShouldBeInNamespacesError reports that an object belongs in namespaces/.
-func ShouldBeInNamespacesError(dir string, resource id.Resource) status.Error {
+// ShouldBeInSystemError reports that an object belongs in system/.
+func ShouldBeInSystemError(resource id.Resource) status.Error {
 	return incorrectTopLevelDirectoryErrorBuilder.
-		Sprintf("Namespace-scoped and Namespace configs MUST be declared in `%s/`. "+
-			"To fix, move the %s to `%s/`.", repo.NamespacesDir, resource.GroupVersionKind().Kind, repo.NamespacesDir).
+		Sprintf("Repo and HierarchyConfig configs MUST be declared in `%s/`. "+
+			"To fix, move the %s to `%s/`.", repo.SystemDir, resource.GroupVersionKind().Kind, repo.SystemDir).
+		BuildWithResources(resource)
+}
+
+// ShouldBeInClusterRegistryError reports that an object belongs in clusterregistry/.
+func ShouldBeInClusterRegistryError(resource id.Resource) status.Error {
+	return incorrectTopLevelDirectoryErrorBuilder.
+		Sprintf("Cluster and ClusterSelector configs MUST be declared in `%s/`. "+
+			"To fix, move the %s to `%s/`.", repo.ClusterRegistryDir, resource.GroupVersionKind().Kind, repo.ClusterRegistryDir).
 		BuildWithResources(resource)
 }
 
 // ShouldBeInClusterError reports that an object belongs in cluster/.
-func ShouldBeInClusterError(dir string, resource id.Resource) status.Error {
+func ShouldBeInClusterError(resource id.Resource) status.Error {
 	return incorrectTopLevelDirectoryErrorBuilder.
 		Sprintf("Cluster-scoped configs except Namespaces MUST be declared in `%s/`. "+
 			"To fix, move the %s to `%s/`.", repo.ClusterDir, resource.GroupVersionKind().Kind, repo.ClusterDir).
+		BuildWithResources(resource)
+}
+
+// ShouldBeInNamespacesError reports that an object belongs in namespaces/.
+func ShouldBeInNamespacesError(resource id.Resource) status.Error {
+	return incorrectTopLevelDirectoryErrorBuilder.
+		Sprintf("Namespace-scoped and Namespace configs MUST be declared in `%s/`. "+
+			"To fix, move the %s to `%s/`.", repo.NamespacesDir, resource.GroupVersionKind().Kind, repo.NamespacesDir).
 		BuildWithResources(resource)
 }

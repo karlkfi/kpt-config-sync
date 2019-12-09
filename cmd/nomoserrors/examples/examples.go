@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -97,7 +98,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.InvalidNamespaceNameError(fake.Namespace("namespaces/foo", core.Name("")), "foo"))
 
 	// 1021
-	result.add(validation.UnknownObjectError(asttesting.NewFakeFileObject(schema.GroupVersionKind{
+	result.add(discovery.UnknownObjectKindError(asttesting.NewFakeFileObject(schema.GroupVersionKind{
 		Group:   "com.me",
 		Version: "v1",
 		Kind:    "Engineer",
@@ -107,8 +108,7 @@ func Generate() map[string][]status.Error {
 
 	// 1023 is Deprecated.
 
-	// 1024
-	result.add(system.IllegalKindInSystemError(fake.RoleAtPath("system/role.yaml")))
+	// 1024 is Deprecated.
 
 	// 1025 is Deprecated.
 
@@ -159,15 +159,16 @@ func Generate() map[string][]status.Error {
 	// 1036
 	result.add(nonhierarchical.InvalidMetadataNameError(fake.Role(core.Name("ABC"))))
 
-	// 1037
-	result.add(syntax.IllegalKindInClusterregistryError(fake.RoleAtPath("clusterregistry/role.yaml")))
+	// 1037 is Deprecated.
 
 	// 1038
 	result.add(syntax.IllegalKindInNamespacesError(fake.ClusterRoleAtPath("namespaces/foo/cr.yaml")))
 
 	// 1039
-	result.add(validation.ShouldBeInNamespacesError("cluster", fake.RoleAtPath("cluster/role.yaml")))
-	result.add(validation.ShouldBeInClusterError("namespaces", fake.ClusterRoleAtPath("namespaces/clusterrole.yaml")))
+	result.add(validation.ShouldBeInSystemError(fake.RepoAtPath("namespaces/repo.yaml")))
+	result.add(validation.ShouldBeInClusterRegistryError(fake.ClusterAtPath("namespaces/cluster.yaml")))
+	result.add(validation.ShouldBeInClusterError(fake.ClusterRoleAtPath("namespaces/clusterrole.yaml")))
+	result.add(validation.ShouldBeInNamespacesError(fake.RoleAtPath("cluster/role.yaml")))
 
 	// 1040
 	result.add(hierarchyconfig.UnknownResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{

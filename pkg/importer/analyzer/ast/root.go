@@ -42,6 +42,10 @@ func (r *Root) Flatten() []FileObject {
 	}
 	var result []FileObject
 
+	for _, o := range r.SystemObjects {
+		result = append(result, o.FileObject)
+	}
+
 	for _, o := range r.ClusterObjects {
 		result = append(result, o.FileObject)
 	}

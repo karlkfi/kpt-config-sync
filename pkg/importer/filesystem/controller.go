@@ -126,18 +126,19 @@ func ValidateInstallation(client utildiscovery.ClientGetter) status.MultiError {
 // validateInstallation checks to see if Nomos is installed by checking that
 // the ConfigManagement type exists and is correctly cluster-scoped.
 func validateInstallation(scoper utildiscovery.Scoper) status.MultiError {
-	configManagementScope := scoper.GetScope(kinds.ConfigManagement().GroupKind())
-	switch configManagementScope {
-	case utildiscovery.ClusterScope:
-		return nil
-	case utildiscovery.NamespaceScope:
-		return ConfigManagementNotInstalledError(
-			errors.Errorf("corrupt %s installation: ConfigManagement type has wrong scope. Reinstall to fix.",
-				configmanagement.ProductName))
-	default:
+	isNamespaced, err := scoper.GetGroupKindScope(kinds.ConfigManagement().GroupKind())
+	if err != nil {
 		return ConfigManagementNotInstalledError(errors.Errorf("%s is not installed. Install to fix.",
 			configmanagement.ProductName))
 	}
+
+	if isNamespaced {
+		return ConfigManagementNotInstalledError(
+			errors.Errorf("corrupt %s installation: ConfigManagement type has wrong scope. Reinstall to fix.",
+				configmanagement.ProductName))
+	}
+
+	return nil
 }
 
 // watchFileSystem issues a reconcile.Request after every pollPeriod.

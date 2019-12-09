@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -8,30 +9,40 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// ObjectScope is the return type for APIInfo.GetScope
-type ObjectScope string
+// IsNamespaced is true if the type is Namespaced, false otherwise.
+type IsNamespaced bool
 
 const (
 	// ClusterScope is an object scoped to the cluster
-	ClusterScope = ObjectScope("cluster")
+	ClusterScope = IsNamespaced(false)
 	// NamespaceScope is an object scoped to namespace
-	NamespaceScope = ObjectScope("namespace")
-	// UnknownScope is returned if the object does not exist in APIInfo
-	UnknownScope = ObjectScope("unknown")
+	NamespaceScope = IsNamespaced(true)
 )
 
-// Scoper wraps a map from GroupKinds to ObjectScope.
-type Scoper map[schema.GroupKind]ObjectScope
+// Scoper wraps a map from GroupKinds to IsNamespaced.
+type Scoper map[schema.GroupKind]IsNamespaced
 
-// GetScope implements Scoper
-func (s *Scoper) GetScope(gk schema.GroupKind) ObjectScope {
+// GetObjectScope implements Scoper
+func (s *Scoper) GetObjectScope(o id.Resource) (IsNamespaced, status.Error) {
 	if s == nil {
-		return UnknownScope
+		return false, status.InternalError("missing Scoper")
+	}
+	if scope, hasScope := (*s)[o.GroupVersionKind().GroupKind()]; hasScope {
+		return scope, nil
+	}
+	return false, UnknownObjectKindError(o)
+}
+
+// GetGroupKindScope returns whether the type is namespace-scoped or cluster-scoped.
+// Returns an error if the GroupKind is unknown to the cluster.
+func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (IsNamespaced, status.Error) {
+	if s == nil {
+		return false, status.InternalError("missing Scoper")
 	}
 	if scope, hasScope := (*s)[gk]; hasScope {
-		return scope
+		return scope, nil
 	}
-	return UnknownScope
+	return false, UnknownGroupKindError(gk)
 }
 
 // AddCustomResources updates Scoper with custom resource metadata from the provided CustomResourceDefinitions.
@@ -47,14 +58,14 @@ func (s *Scoper) add(gkss []GroupKindScope) {
 		if _, hasGK := (*s)[gks.GroupKind]; hasGK {
 			continue
 		}
-		(*s)[gks.GroupKind] = gks.Scope
+		(*s)[gks.GroupKind] = gks.IsNamespaced
 	}
 }
 
 // GroupKindScope is a Kubernetes type, and whether it is Namespaced.
 type GroupKindScope struct {
 	schema.GroupKind
-	Scope ObjectScope
+	IsNamespaced
 }
 
 // ScopesFromCRDs extracts the scopes declared in all passed CRDs.
@@ -96,8 +107,8 @@ func scopeFromCRD(crd *v1beta1.CustomResourceDefinition) GroupKindScope {
 	}
 
 	return GroupKindScope{
-		GroupKind: gk,
-		Scope:     scope,
+		GroupKind:    gk,
+		IsNamespaced: scope,
 	}
 }
 
@@ -141,16 +152,34 @@ func toGKSs(lists ...*metav1.APIResourceList) ([]GroupKindScope, error) {
 				Group: groupVersion.Group,
 				Kind:  resource.Kind,
 			}
-			scope := ClusterScope
-			if resource.Namespaced {
-				scope = NamespaceScope
-			}
 			result = append(result, GroupKindScope{
-				GroupKind: gk,
-				Scope:     scope,
+				GroupKind:    gk,
+				IsNamespaced: IsNamespaced(resource.Namespaced),
 			})
 		}
 	}
 
 	return result, nil
+}
+
+// UnknownKindErrorCode is the error code for UnknownObjectKindError
+const UnknownKindErrorCode = "1021" // Impossible to create consistent example.
+
+var unknownKindError = status.NewErrorBuilder(UnknownKindErrorCode)
+
+// UnknownObjectKindError reports that an object declared in the repo does not have a definition in the cluster.
+func UnknownObjectKindError(resource id.Resource) status.Error {
+	return unknownKindError.
+		Sprintf("No CustomResourceDefinition is defined for the type %q in the cluster. "+
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.",
+			resource.GroupVersionKind().GroupKind()).
+		BuildWithResources(resource)
+}
+
+// UnknownGroupKindError reports that a GroupKind is not defined on the cluster, so we can't sync it.
+func UnknownGroupKindError(gk schema.GroupKind) status.Error {
+	return unknownKindError.
+		Sprintf("No CustomResourceDefinition is defined for the type %q in the cluster. "+
+			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.", gk).
+		Build()
 }
