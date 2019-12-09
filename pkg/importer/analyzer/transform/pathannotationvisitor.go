@@ -5,7 +5,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
-	"github.com/google/nomos/pkg/kinds"
 )
 
 // PathAnnotationVisitor sets "configmanagement.gke.io/source-path" annotation on objects.
@@ -23,22 +22,6 @@ func NewPathAnnotationVisitor() *PathAnnotationVisitor {
 	}
 	v.SetImpl(v)
 	return v
-}
-
-// VisitTreeNode implements Visitor
-func (v *PathAnnotationVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	newNode := v.Copying.VisitTreeNode(n)
-	// Annotate the TreeNode with the location of the Namespace. Otherwise we lose
-	// the base path.
-	for _, o := range n.Objects {
-		// Since this is a Namespace node, we know there is exactly one Namespace
-		// for a valid tree. We validate that property elsewhere.
-		if o.GroupVersionKind() == kinds.Namespace() {
-			core.SetAnnotation(newNode, v1.SourcePathAnnotationKey, o.SlashPath())
-			break
-		}
-	}
-	return newNode
 }
 
 // VisitClusterObject implements Visitor

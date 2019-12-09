@@ -54,7 +54,6 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 		case *corev1.Namespace:
 			n.Type = node.Namespace
 			n.Labels = o.GetLabels()
-			n.Annotations = o.GetAnnotations()
 		case *v1.NamespaceSelector:
 			if n.Selectors == nil {
 				n.Selectors = make(map[string]*v1.NamespaceSelector)

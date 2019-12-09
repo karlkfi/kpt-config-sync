@@ -391,10 +391,9 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 		),
 		Children: []*ast.TreeNode{
 			{
-				Type:        node.Namespace,
-				Path:        cmpath.FromSlash("namespaces/frontend"),
-				Labels:      map[string]string{"environment": "prod"},
-				Annotations: map[string]string{"has-waffles": "true"},
+				Type:   node.Namespace,
+				Path:   cmpath.FromSlash("namespaces/frontend"),
+				Labels: map[string]string{"environment": "prod"},
 				Objects: ObjectSets(
 					t.PodReaderRoleBinding(),
 					t.PodReaderRole(),
@@ -402,10 +401,9 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 				),
 			},
 			{
-				Type:        node.Namespace,
-				Path:        cmpath.FromSlash("namespaces/frontend-test"),
-				Labels:      map[string]string{"environment": "test"},
-				Annotations: map[string]string{"has-waffles": "false"},
+				Type:   node.Namespace,
+				Path:   cmpath.FromSlash("namespaces/frontend-test"),
+				Labels: map[string]string{"environment": "test"},
 				Objects: ObjectSets(
 					t.DeploymentReaderRoleBinding(),
 					t.DeploymentReaderRole(),

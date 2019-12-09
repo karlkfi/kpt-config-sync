@@ -14,9 +14,8 @@ type TreeNode struct {
 	cmpath.Path
 
 	// The type of the HierarchyNode
-	Type        node.Type
-	Labels      map[string]string
-	Annotations map[string]string
+	Type   node.Type
+	Labels map[string]string
 
 	// Objects from the directory
 	Objects []*NamespaceObject
@@ -24,9 +23,6 @@ type TreeNode struct {
 	// Selectors is a map of name to NamespaceSelector objects found at this node.
 	// One or more Objects may have an annotation referring to these NamespaceSelectors by name.
 	Selectors map[string]*v1.NamespaceSelector
-
-	// Extension holds visitor specific data.
-	Data *Extension
 
 	// children of the directory
 	Children []*TreeNode
@@ -48,7 +44,6 @@ func (n *TreeNode) Accept(visitor Visitor) *TreeNode {
 // Annotations.
 func (n *TreeNode) PartialCopy() *TreeNode {
 	nn := *n
-	copyMapInto(n.Annotations, &nn.Annotations)
 	copyMapInto(n.Labels, &nn.Labels)
 	// Not sure if Selectors should be copied the same way.
 	return &nn
@@ -67,16 +62,6 @@ func copyMapInto(from map[string]string, to *map[string]string) {
 	for k, v := range from {
 		(*to)[k] = v
 	}
-}
-
-// GetAnnotations returns the annotations from n.  They are mutable if not nil.
-func (n *TreeNode) GetAnnotations() map[string]string {
-	return n.Annotations
-}
-
-// SetAnnotations replaces the annotations on the tree node with the supplied ones.
-func (n *TreeNode) SetAnnotations(a map[string]string) {
-	n.Annotations = a
 }
 
 // flatten returns the list of materialized FileObjects contained in this

@@ -76,9 +76,6 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 						{
 							Type: node.Namespace,
 							Path: cmpath.FromSlash("namespaces/bar"),
-							Annotations: map[string]string{
-								v1.SourcePathAnnotationKey: "namespaces/bar/namespace.yaml",
-							},
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
 									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
@@ -135,9 +132,6 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 						{
 							Type: node.Namespace,
 							Path: cmpath.FromSlash("namespaces/bar"),
-							Annotations: map[string]string{
-								v1.SourcePathAnnotationKey: "namespaces/bar/namespace.yaml",
-							},
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
 									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
@@ -153,9 +147,8 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "preserve annotations",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        node.Namespace,
-					Path:        cmpath.FromSlash("namespaces"),
-					Annotations: map[string]string{"color": "orange"},
+					Type: node.Namespace,
+					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(adminRoleBindingWithAnnotation(), cmpath.FromSlash("acme/admin.yaml")),
 					),
@@ -163,9 +156,8 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type:        node.Namespace,
-					Path:        cmpath.FromSlash("namespaces"),
-					Annotations: map[string]string{"color": "orange"},
+					Type: node.Namespace,
+					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.FileObjectSets(
 						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
 					),
