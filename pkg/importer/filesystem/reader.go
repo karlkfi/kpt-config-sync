@@ -2,20 +2,17 @@ package filesystem
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -27,68 +24,57 @@ type Reader interface {
 	// Read returns the list of FileObjects in the passed directory.
 	//
 	// stubMissing disables the need for CRDs to be present in order to parse unknown objects.
-	Read(dir cmpath.Relative, stubMissing bool, crds []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError)
+	Read(dir cmpath.Relative) ([]ast.FileObject, status.MultiError)
 }
 
 // FileReader reads FileObjects from a filesystem.
-type FileReader struct {
-	ClientGetter genericclioptions.RESTClientGetter
-}
+type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
-func (r *FileReader) Read(dir cmpath.Relative, stubMissing bool, crds []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) Read(dir cmpath.Relative) ([]ast.FileObject, status.MultiError) {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
 		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
 	}
 
-	// We do this visitor length check because Builder returns an untyped error if passed an empty
-	// directory. There is no way via the library to disable it, so this logic is effectively copy-
-	// pasted out.
-	visitors, err := resource.ExpandPathsToFileVisitors(
-		nil, dir.AbsoluteOSPath(), true, resource.FileExtensions, nil)
-	if err != nil {
-		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
-	}
-
 	var errs status.MultiError
 	var fileObjects []ast.FileObject
-	if len(visitors) > 0 {
-		options := &resource.FilenameOptions{Recursive: true, Filenames: []string{dir.AbsoluteOSPath()}}
-		builder := r.getBuilder(stubMissing, crds)
+	walkErr := filepath.Walk(dir.AbsoluteOSPath(), func(path string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			// This is a directory, continue.
+			return nil
+		}
 
-		result := builder.
-			Unstructured().
-			ContinueOnError().
-			FilenameParam(false, options).
-			Do()
-		fileInfos, err := result.Infos()
+		// Read the file to a list of unstructured objects.
+		unstructureds, err := parseFile(path)
 		if err != nil {
-			return nil, status.APIServerError(err, "failed to get resource infos")
+			errs = status.Append(errs, status.PathWrapError(err, path))
+			return nil
 		}
-		for _, info := range fileInfos {
-			//Assign relative path since that's what we actually need.
-			source, err := dir.Root().Rel(cmpath.FromOS(info.Source))
+
+		// Assign relative path since that's what we actually need.
+		source, relErr := dir.Root().Rel(cmpath.FromOS(path))
+		if relErr != nil {
+			// We couldn't get the relative path from the repository root. Something is very wrong.
+			errs = status.Append(errs, relErr)
+		}
+
+		for _, u := range unstructureds {
+			newFileObjects, err := toFileObjects(u, source.Path())
 			if err != nil {
-				// We couldn't get the relative path from the repository root. Something is very wrong.
 				errs = status.Append(errs, err)
-				continue
 			}
-
-			unstructured, isUnstructured := info.Object.(runtime.Unstructured)
-			if !isUnstructured {
-				// Everything should still be Unstructured at this point.
-				errs = status.Append(errs, status.InternalErrorf("converted %s from runtime.Unstructured too soon", info.Object.GetObjectKind().GroupVersionKind().String()))
-				continue
-			}
-
-			newObjs, newErrs := toFileObjects(unstructured, source.Path())
-			errs = status.Append(errs, newErrs)
-			fileObjects = append(fileObjects, newObjs...)
+			fileObjects = append(fileObjects, newFileObjects...)
 		}
+
+		return nil
+	})
+	if walkErr != nil {
+		return nil, status.PathWrapError(walkErr, dir.AbsoluteOSPath())
 	}
+
 	return fileObjects, errs
 }
 
@@ -254,8 +240,4 @@ func (u unstructuredID) GetName() string {
 // GroupVersionKind implements id.Resource.
 func (u unstructuredID) GroupVersionKind() schema.GroupVersionKind {
 	return u.Unstructured.GetObjectKind().GroupVersionKind()
-}
-
-func (r *FileReader) getBuilder(stubMissing bool, crds []*v1beta1.CustomResourceDefinition) *resource.Builder {
-	return resource.NewBuilder(importer.NewFilesystemCRDAwareClientGetter(r.ClientGetter, stubMissing, crds))
 }

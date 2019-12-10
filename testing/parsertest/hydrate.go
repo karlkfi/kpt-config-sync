@@ -106,12 +106,7 @@ func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
 func NewParser(t *testing.T) *filesystem.Parser {
 	t.Helper()
 
-	f := fstesting.NewTestClientGetter(t)
-	defer func() {
-		if err := f.Cleanup(); err != nil {
-			t.Fatal(errors.Wrap(err, "could not clean up"))
-		}
-	}()
+	f := fstesting.NewTestClientGetter()
 
 	return filesystem.NewParser(
 		f,

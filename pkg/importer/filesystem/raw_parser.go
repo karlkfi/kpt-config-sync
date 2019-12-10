@@ -1,7 +1,7 @@
 package filesystem
 
 import (
-	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"github.com/google/nomos/pkg/importer/customresources"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -21,13 +21,13 @@ import (
 type RawParser struct {
 	path         cmpath.Relative
 	reader       Reader
-	clientGetter genericclioptions.RESTClientGetter
+	clientGetter utildiscovery.ClientGetter
 }
 
 var _ ConfigParser = &RawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.RESTClientGetter) *RawParser {
+func NewRawParser(path cmpath.Relative, reader Reader, client utildiscovery.ClientGetter) *RawParser {
 	return &RawParser{
 		path:         path,
 		reader:       reader,
@@ -37,29 +37,15 @@ func NewRawParser(path cmpath.Relative, reader Reader, client genericclioptions.
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
 func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime metav1.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
-	// Get all known API resources from the server.
-	apiResources, err := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
-	if err != nil {
-		return nil, err
-	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
-	if err != nil {
-		return nil, status.APIServerError(err, "discovery failed for server resources")
-	}
-
-	// Read any CRDs in the directory so the parser is aware of them.
-	crds, errs := readCRDs(p.reader, p.path)
+	// Read all manifests and extract them into FileObjects.
+	fileObjects, errs := p.reader.Read(p.path)
 	if errs != nil {
 		return nil, errs
 	}
 
-	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
-	// an object is namespace or cluster scoped.
-	scoper.AddCustomResources(crds)
-
-	// Read all manifests and extract them into FileObjects.
-	fileObjects, errs := p.reader.Read(p.path, false, crds)
-	if errs != nil {
+	crds, crdErrs := customresources.GetCRDs(fileObjects)
+	if crdErrs != nil {
+		errs = status.Append(errs, crdErrs)
 		return nil, errs
 	}
 
@@ -71,9 +57,21 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	if crdErr != nil {
 		return nil, crdErr
 	}
-
 	errs = status.Append(errs, standardValidation(fileObjects))
 
+	// Get all known API resources from the server.
+	apiResources, err := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
+	if err != nil {
+		return nil, err
+	}
+	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
+	if err != nil {
+		return nil, status.APIServerError(err, "discovery failed for server resources")
+	}
+
+	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
+	// an object is namespace or cluster scoped.
+	scoper.AddCustomResources(crds)
 	var validators = []nonhierarchical.Validator{
 		nonhierarchical.IllegalHierarchicalKindValidator,
 		nonhierarchical.CRDRemovalValidator(crdInfo),

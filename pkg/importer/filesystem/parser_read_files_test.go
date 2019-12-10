@@ -23,32 +23,14 @@ import (
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/restmapper"
 )
 
 // Tests that don't make sense without literally writing to a hard disk.
 // Or, ones that (for now) would require their own CL just to refactor to not require writing to a
 // hard disk.
-
-var engineerResource = &restmapper.APIGroupResources{
-	Group: metav1.APIGroup{
-		Name: "employees",
-		Versions: []metav1.GroupVersionForDiscovery{
-			{Version: "v1alpha1"},
-		},
-		PreferredVersion: metav1.GroupVersionForDiscovery{Version: "v1alpha1"},
-	},
-	VersionedResources: map[string][]metav1.APIResource{
-		"v1alpha1": {
-			{Name: "engineers", Namespaced: true, Kind: "Engineer"},
-		},
-	},
-}
 
 type testDir struct {
 	rootDir string
@@ -117,7 +99,7 @@ func TestFilesystemReader(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
-			expectedErrorCodes: []string{status.APIServerErrorCode},
+			expectedErrorCodes: []string{status.PathErrorCode},
 		},
 		{
 			testName: "Namespace dir with YAML Namespace",
@@ -171,19 +153,6 @@ metadata:
 `,
 			},
 			expectObject: pointer(fake.Namespace("namespaces/bar", core.Label("env", "prod"), core.Annotation("audit", "true"))),
-		},
-		{
-			testName: "custom resource w/o a CRD applied",
-			testFiles: fstesting.FileContentMap{
-				"namespaces/bar/undefined.yaml": `
-kind: Undefined
-apiVersion: non.existent
-metadata:
-  name: undefined
-`,
-				"namespaces/bar/ns.yaml": aNamespace("bar"),
-			},
-			expectedErrorCodes: []string{status.APIServerErrorCode},
 		},
 		{
 			testName: "Abstract Namespace dir with ignored file",
@@ -369,23 +338,14 @@ items:
 				d.createTestFile(k, v, t)
 			}
 
-			f := fstesting.NewTestClientGetter(t, engineerResource)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
-
 			var err error
 			rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
 			if err != nil {
 				t.Error(err)
 			}
 
-			r := &filesystem.FileReader{
-				ClientGetter: f,
-			}
-			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")), false, nil)
+			r := &filesystem.FileReader{}
+			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")))
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 

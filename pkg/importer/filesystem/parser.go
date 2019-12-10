@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
@@ -42,7 +41,7 @@ func init() {
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
 	opts         ParserOpt
-	clientGetter genericclioptions.RESTClientGetter
+	clientGetter utildiscovery.ClientGetter
 	reader       Reader
 	errors       status.MultiError
 }
@@ -59,10 +58,10 @@ type ParserOpt struct {
 }
 
 // NewParser creates a new Parser using the specified RESTClientGetter and parser options.
-func NewParser(c genericclioptions.RESTClientGetter, opts ParserOpt) *Parser {
+func NewParser(c utildiscovery.ClientGetter, opts ParserOpt) *Parser {
 	p := &Parser{
 		clientGetter: c,
-		reader:       &FileReader{ClientGetter: c},
+		reader:       &FileReader{},
 		opts:         opts,
 	}
 	return p
@@ -75,12 +74,12 @@ func (p *Parser) Errors() status.MultiError {
 
 // ReadObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) ReadObjects(crds []*v1beta1.CustomResourceDefinition) *ast.FlatRoot {
+func (p *Parser) ReadObjects() *ast.FlatRoot {
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(),
 		ClusterRegistryObjects: p.ReadClusterRegistryResources(),
-		ClusterObjects:         p.readClusterResources(crds...),
-		NamespaceObjects:       p.readNamespaceResources(crds...),
+		ClusterObjects:         p.readClusterResources(),
+		NamespaceObjects:       p.readNamespaceResources(),
 	}
 }
 
@@ -166,18 +165,9 @@ func (p *Parser) Parse(
 ) (*namespaceconfig.AllConfigs, status.MultiError) {
 	p.errors = nil
 
-	// We need to retrieve the CRDs in the repo so we can also use them for resource discovery,
-	// if we haven't yet added the CRDs to the cluster.
-	crds, cErr := readCRDs(p.reader, p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)))
-	if cErr != nil {
-		p.errors = status.Append(p.errors, cErr)
-		return nil, p.errors
-	}
-	if p.errors != nil {
-		return nil, p.errors
-	}
-
-	flatRoot := p.ReadObjects(crds)
+	flatRoot := p.ReadObjects()
+	crds, err := customresources.GetCRDs(flatRoot.ClusterObjects)
+	p.errors = status.Append(p.errors, err)
 	if p.errors != nil {
 		return nil, p.errors
 	}
@@ -228,26 +218,26 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 }
 
 func (p *Parser) readSystemResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)), false, nil)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())), false, crds)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readClusterResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)), false, crds)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
 func (p *Parser) ReadClusterRegistryResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)), false, nil)
+	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }

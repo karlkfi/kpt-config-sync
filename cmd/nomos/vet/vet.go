@@ -53,7 +53,7 @@ returns a non-zero error code if any issues are found.
 
 		var parser filesystem.ConfigParser
 		if disableHierarchy {
-			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{ClientGetter: importer.DefaultCLIOptions}, importer.DefaultCLIOptions)
+			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{}, importer.DefaultCLIOptions)
 		} else {
 			opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
 			var err error

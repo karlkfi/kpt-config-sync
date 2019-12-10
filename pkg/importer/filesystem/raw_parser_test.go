@@ -15,8 +15,6 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
-	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,7 +29,7 @@ type fakeReader struct {
 
 var _ filesystem.Reader = &fakeReader{}
 
-func (r *fakeReader) Read(_ cmpath.Relative, _ bool, _ []*v1beta1.CustomResourceDefinition) ([]ast.FileObject, status.MultiError) {
+func (r *fakeReader) Read(_ cmpath.Relative) ([]ast.FileObject, status.MultiError) {
 	return r.fileObjects, nil
 }
 
@@ -67,12 +65,7 @@ func TestRawParser_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := fstesting.NewTestClientGetter(t)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
+			f := fstesting.NewTestClientGetter()
 
 			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, f)
 			result, err := p.Parse(importToken, nil, loadTime, "")
@@ -105,12 +98,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := fstesting.NewTestClientGetter(t)
-			defer func() {
-				if err := f.Cleanup(); err != nil {
-					t.Fatal(errors.Wrap(err, "could not clean up"))
-				}
-			}()
+			f := fstesting.NewTestClientGetter()
 
 			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, f)
 

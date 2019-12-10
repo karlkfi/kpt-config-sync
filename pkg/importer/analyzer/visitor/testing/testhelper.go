@@ -95,14 +95,6 @@ type TestHelper struct {
 	ImportTime  time.Time
 }
 
-// NewTestHelper returns a TestHelper with default import token and time.
-func NewTestHelper() *TestHelper {
-	return &TestHelper{
-		ImportToken: ImportToken,
-		ImportTime:  ImportTime.Time,
-	}
-}
-
 // NomosAdminClusterRole returns a ClusterRole for testing.
 func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
