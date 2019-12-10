@@ -35,7 +35,7 @@ metadata:
 						},
 					},
 				}},
-		},		{
+		}, {
 			name: "one document with triple-dash in a string",
 			contents: `apiVersion: v1
 kind: Namespace
