@@ -4,7 +4,9 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/rest"
 )
 
 // NameValidator adapts metadata.NameValidator logic for non-hierarchical file structures.
@@ -17,10 +19,17 @@ func validName(o ast.FileObject) status.Error {
 		return MissingObjectNameError(&o)
 	}
 
-	errs := validation.IsDNS1123Subdomain(o.GetName())
+	var errs []string
+	if o.GroupVersionKind().Group == rbacv1.SchemeGroupVersion.Group {
+		// The Kubernetes APIServer makes an exception on the metadata.name requirements for RBAC types.
+		errs = rest.IsValidPathSegmentName(o.GetName())
+	} else {
+		errs = validation.IsDNS1123Subdomain(o.GetName())
+	}
 	if errs != nil {
 		return InvalidMetadataNameError(&o)
 	}
+
 	return nil
 }
 

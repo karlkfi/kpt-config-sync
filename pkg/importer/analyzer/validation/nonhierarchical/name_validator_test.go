@@ -11,9 +11,12 @@ import (
 
 func TestNameValidation(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
-		nht.Pass("with name", fake.Role(core.Name("foo"))),
-		nht.Fail("with empty name", fake.Role(core.Name(""))),
-		nht.Fail("with invalid name", fake.Role(core.Name("Foo"))),
+		nht.Pass("with name", fake.ResourceQuota(core.Name("foo"))),
+		nht.Fail("with empty name", fake.ResourceQuota(core.Name(""))),
+		nht.Fail("with invalid name", fake.ResourceQuota(core.Name("Foo"))),
+		// rbac types have hard-coded different rules than all other Kubernetes types.
+		nht.Pass("rbac with capital letters and colon", fake.Role(core.Name("A:B"))),
+		nht.Fail("rbac with forward slash", fake.Role(core.Name("a/b"))),
 	}
 
 	nht.RunAll(t, nonhierarchical.NameValidator, testCases)
