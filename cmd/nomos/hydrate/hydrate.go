@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -77,11 +76,16 @@ clusters.`,
 
 		parser := parse.NewParser(rootPath)
 
-		var allObjects []core.Object
+		syncedCRDs, err := parse.GetSyncedCRDs()
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
+
+		var allObjects []ast.FileObject
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, "", metav1.Time{}, func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError) {
+		hydrate.ForEachCluster(parser, syncedCRDs, true, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {
@@ -102,11 +106,11 @@ clusters.`,
 				return
 			}
 
-			allObjects = append(allObjects, hydrate.Flatten(configs)...)
+			allObjects = append(allObjects, fileObjects...)
 		})
 
 		multiCluster := numClusters > 1
-		fileObjects := hydrate.ToFileObjects(extension, multiCluster, allObjects...)
+		fileObjects := hydrate.GenerateUniqueFileNames(extension, multiCluster, allObjects...)
 		if flat {
 			printFlatOutput(fileObjects)
 		} else {

@@ -114,6 +114,17 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/bar"),
 			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
+		parsertest.Success("Engineer CustomResource without CRD with APIServer disabled",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
+				fake.FileObject(fake.UnstructuredObject(engineerGVK,
+					core.Namespace("bar"),
+					testoutput.Source("namespaces/bar/engineer.yaml")),
+					"namespaces/bar/engineer.yaml"),
+			),
+			fake.Namespace("namespaces/bar"),
+			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
+		).DisableAPIServerChecks(),
 		parsertest.Success("Valid to have Abstract Namespace with both Namespace and Abstract Namespace children",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar/foo", testoutput.Source("namespaces/bar/foo/namespace.yaml")),

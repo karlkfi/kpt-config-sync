@@ -11,24 +11,23 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 )
 
-// ToFileObjects sets a default file path for each object, guaranteed to be unique for a collection
-// of runtime.Objects which do not collide (group/kind/namespace/name duplication)
-func ToFileObjects(extension string, multiCluster bool, objects ...core.Object) []ast.FileObject {
-	result := make([]ast.FileObject, len(objects))
+// GenerateUniqueFileNames sets a default file path for each object, guaranteed to be unique for a collection
+// of ast.FileObjects which do not collide (group/kind/namespace/name duplication)
+func GenerateUniqueFileNames(extension string, multiCluster bool, objects ...ast.FileObject) []ast.FileObject {
 	duplicates := make(map[string]int, len(objects))
-	for i, obj := range objects {
-		fo := ast.NewFileObject(obj, cmpath.FromSlash(filename(extension, obj, multiCluster, false)))
-		result[i] = fo
-		duplicates[fo.SlashPath()]++
+	for i := range objects {
+		p := cmpath.FromSlash(filename(extension, objects[i], multiCluster, false))
+		objects[i].Path = p
+		duplicates[p.SlashPath()]++
 	}
 
-	for i, obj := range result {
+	for i, obj := range objects {
 		if duplicates[obj.SlashPath()] > 1 {
-			result[i] = ast.NewFileObject(obj.Object, cmpath.FromSlash(filename(extension, obj.Object, multiCluster, true)))
+			objects[i] = ast.NewFileObject(obj.Object, cmpath.FromSlash(filename(extension, obj.Object, multiCluster, true)))
 		}
 	}
 
-	return result
+	return objects
 }
 
 func filename(extension string, o core.Object, includeCluster bool, includeGroup bool) string {

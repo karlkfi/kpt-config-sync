@@ -47,11 +47,20 @@ type TestCase struct {
 
 	// ClusterName is the name of the cluster this test case is for.
 	ClusterName string
+
+	// Serverless is whether to ignore APIServer checks.
+	Serverless bool
 }
 
 // ForCluster modifies this TestCase to be applied to a specific cluster.
 func (tc TestCase) ForCluster(clusterName string) TestCase {
 	tc.ClusterName = clusterName
+	return tc
+}
+
+// DisableAPIServerChecks disables throwing errors when APIServer checks fail.
+func (tc TestCase) DisableAPIServerChecks() TestCase {
+	tc.Serverless = true
 	return tc
 }
 
@@ -187,7 +196,7 @@ func (pt Test) RunAll(t *testing.T) {
 			}
 			parser := newTestParser(t, objects, tc.SyncedCRDs)
 
-			fileObjects, errs := parser.Parse(tc.SyncedCRDs, tc.ClusterName)
+			fileObjects, errs := parser.Parse(tc.SyncedCRDs, tc.ClusterName, !tc.Serverless)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

@@ -4,61 +4,46 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const timeout = time.Second * 15
 
-// NewParser constructs a Parser from ParserOpt.
+// NewParser returns a new default-initialized Parser for the CLI.
 func NewParser(root cmpath.Root) *filesystem.Parser {
 	return filesystem.NewParser(root, &filesystem.FileReader{}, importer.DefaultCLIOptions)
 }
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(clusterName string, root cmpath.Root) (*namespaceconfig.AllConfigs, error) {
+func Parse(clusterName string, root cmpath.Root, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
 	p := NewParser(root)
-
-	config, err := restconfig.NewRestConfig()
-	if err != nil {
-		glog.Fatalf("Failed to create rest config: %+v", err)
-	}
 
 	if err := filesystem.ValidateInstallation(importer.DefaultCLIOptions); err != nil {
 		return nil, errors.Wrap(err, "Found issues")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	currentConfigs, cErr := clusterConfigs(ctx, config)
+	syncedCRDs, cErr := GetSyncedCRDs()
 	if cErr != nil {
 		return nil, cErr
 	}
-	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
-	syncedCRDs, crdErr := clusterconfig.GetCRDs(decoder, currentConfigs.ClusterConfig)
-	if crdErr != nil {
-		// We were unable to parse the CRDs from the current ClusterConfig, so bail out.
-		// TODO(b/146139870): Make error message more user-friendly when this happens.
-		return nil, crdErr
-	}
 
-	fileObjects, mErr := p.Parse(syncedCRDs, clusterName)
+	fileObjects, mErr := p.Parse(syncedCRDs, clusterName, enableAPIServerChecks)
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}
@@ -66,25 +51,46 @@ func Parse(clusterName string, root cmpath.Root) (*namespaceconfig.AllConfigs, e
 	return namespaceconfig.NewAllConfigs("", metav1.Time{}, fileObjects), nil
 }
 
-// clusterConfigs returns an AllPolicies with only the ClusterConfigs populated.
-func clusterConfigs(ctx context.Context, config *rest.Config) (*namespaceconfig.AllConfigs, error) {
+// GetSyncedCRDs returns the CRDs synced to the cluster in the current context.
+//
+// Times out after 15 seconds.
+func GetSyncedCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	config, err := restconfig.NewRestConfig()
+	if err != nil {
+		return nil, status.APIServerError(err, "Failed to create rest config: %+v")
+	}
+
 	mapper, err := apiutil.NewDiscoveryRESTMapper(config)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create mapper")
+		return nil, status.APIServerError(err, "failed to create mapper")
 	}
 
 	s := runtime.NewScheme()
 	if sErr := v1.AddToScheme(s); sErr != nil {
-		return nil, errors.Wrap(sErr, "could not add configmanagement types to scheme")
+		return nil, status.APIServerError(sErr, "could not add configmanagement types to scheme")
 	}
 	c, cErr := client.New(config, client.Options{
 		Scheme: s,
 		Mapper: mapper,
 	})
 	if cErr != nil {
-		return nil, errors.Wrapf(cErr, "failed to create client")
+		return nil, status.APIServerError(cErr, "failed to create client")
 	}
 	configs := &namespaceconfig.AllConfigs{}
-	err = namespaceconfig.DecorateWithClusterConfigs(ctx, c, configs)
-	return configs, err
+	decorateErr := namespaceconfig.DecorateWithClusterConfigs(ctx, c, configs)
+	if decorateErr != nil {
+		return nil, decorateErr
+	}
+
+	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
+	syncedCRDs, crdErr := clusterconfig.GetCRDs(decoder, configs.ClusterConfig)
+	if crdErr != nil {
+		// We were unable to parse the CRDs from the current ClusterConfig, so bail out.
+		// TODO(b/146139870): Make error message more user-friendly when this happens.
+		return nil, crdErr
+	}
+	return syncedCRDs, nil
 }

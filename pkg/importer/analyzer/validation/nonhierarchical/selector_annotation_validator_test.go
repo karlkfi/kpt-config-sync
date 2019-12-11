@@ -164,6 +164,12 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		nht.Fail("NamespaceSelector with namespace-selector",
 			fake.NamespaceSelector(namespaceSelectorAnnotation),
 		),
+		nht.Fail("CRD with cluster-selector",
+			fake.CustomResourceDefinition(clusterSelectorAnnotation),
+		),
+		nht.Fail("CRD with namespace-selector",
+			fake.CustomResourceDefinition(namespaceSelectorAnnotation),
+		),
 		// unknown types
 		nht.Pass("Unknown with cluster-selector",
 			fake.AnvilAtPath("", clusterSelectorAnnotation),

@@ -81,7 +81,7 @@ func TestRawParser_Parse(t *testing.T) {
 			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
 			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
-			fileObjects, err := p.Parse(tc.syncedCRDs, "")
+			fileObjects, err := p.Parse(nil, "", true)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
 				t.Fatal(err)
@@ -125,7 +125,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 
 			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
 
-			_, err := p.Parse(tc.syncedCRDs, "")
+			_, err := p.Parse(tc.syncedCRDs, "", true)
 			if err == nil {
 				t.Fatal("expected error")
 			}

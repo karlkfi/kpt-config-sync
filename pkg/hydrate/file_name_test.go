@@ -19,7 +19,7 @@ func cluster(name string) core.MetaMutator {
 func TestToFileObjects(t *testing.T) {
 	testCases := []struct {
 		name     string
-		objects  []core.Object
+		objects  []ast.FileObject
 		expected []ast.FileObject
 	}{
 		{
@@ -27,8 +27,8 @@ func TestToFileObjects(t *testing.T) {
 		},
 		{
 			name: "namespaced role works",
-			objects: []core.Object{
-				fake.RoleObject(core.Name("alice"), core.Namespace("prod"), cluster("na-1")),
+			objects: []ast.FileObject{
+				fake.Role(core.Name("alice"), core.Namespace("prod"), cluster("na-1")),
 			},
 			expected: []ast.FileObject{
 				fake.FileObject(fake.RoleObject(core.Name("alice"), core.Namespace("prod"), cluster("na-1")), "na-1/prod/role_alice.yaml"),
@@ -36,8 +36,8 @@ func TestToFileObjects(t *testing.T) {
 		},
 		{
 			name: "non-namespaced clusterrolebinding works",
-			objects: []core.Object{
-				fake.ClusterRoleBindingObject(core.Name("alice"), cluster("eu-2")),
+			objects: []ast.FileObject{
+				fake.ClusterRoleBinding(core.Name("alice"), cluster("eu-2")),
 			},
 			expected: []ast.FileObject{
 				fake.FileObject(fake.ClusterRoleBindingObject(core.Name("alice"), cluster("eu-2")), "eu-2/clusterrolebinding_alice.yaml"),
@@ -45,12 +45,12 @@ func TestToFileObjects(t *testing.T) {
 		},
 		{
 			name: "conflict resolved",
-			objects: []core.Object{
-				fake.UnstructuredObject(schema.GroupVersionKind{
+			objects: []ast.FileObject{
+				fake.Unstructured(schema.GroupVersionKind{
 					Group: "rbac",
 					Kind:  "ClusterRole",
 				}, core.Name("alice")),
-				fake.UnstructuredObject(schema.GroupVersionKind{
+				fake.Unstructured(schema.GroupVersionKind{
 					Group: "oauth",
 					Kind:  "ClusterRole",
 				}, core.Name("alice")),
@@ -70,7 +70,7 @@ func TestToFileObjects(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := ToFileObjects("yaml", true, tc.objects...)
+			actual := GenerateUniqueFileNames("yaml", true, tc.objects...)
 			if diff := cmp.Diff(tc.expected, actual, cmpopts.EquateEmpty(), cmpopts.SortSlices(func(x, y ast.FileObject) bool {
 				return x.SlashPath() < y.SlashPath()
 			})); diff != "" {

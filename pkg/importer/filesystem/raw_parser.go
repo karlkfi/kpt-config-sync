@@ -30,7 +30,7 @@ func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGe
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, _ string) ([]ast.FileObject, status.MultiError) {
+func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, _ string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {

@@ -61,7 +61,10 @@ func forbidsSelectors(o ast.FileObject) bool {
 	// Cluster, ClusterSelector, and NamespaceSelector aren't necessarily defined on the APIServer,
 	// and we should verify they don't have the NamespaceSelector annotation.
 	gvk := o.GroupVersionKind()
-	return gvk == kinds.Cluster() || gvk == kinds.ClusterSelector() || gvk == kinds.NamespaceSelector()
+	return gvk == kinds.Cluster() ||
+		gvk == kinds.ClusterSelector() ||
+		gvk == kinds.NamespaceSelector() ||
+		gvk == kinds.CustomResourceDefinition()
 }
 
 // IllegalSelectorAnnotationErrorCode is the error code for IllegalNamespaceAnnotationError

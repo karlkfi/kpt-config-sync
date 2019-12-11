@@ -66,6 +66,7 @@ func NewParser(root cmpath.Root, reader Reader, c utildiscovery.ClientGetter) *P
 func (p *Parser) Parse(
 	syncedCRDs []*v1beta1.CustomResourceDefinition,
 	clusterName string,
+	enableAPIServerChecks bool,
 ) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
 
@@ -80,7 +81,8 @@ func (p *Parser) Parse(
 	if p.errors != nil {
 		return nil, p.errors
 	}
-	fileObjects := p.hydrateRootAndFlatten(visitors, syncedCRDs, clusterName)
+	fileObjects := p.hydrateRootAndFlatten(visitors, syncedCRDs, clusterName, enableAPIServerChecks)
+
 	return fileObjects, p.errors
 }
 
@@ -113,7 +115,7 @@ func (p *Parser) generateVisitors(
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -129,8 +131,13 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 		p.errors = status.Append(p.errors, err)
 		return nil
 	}
-	scoper := p.getScoper(declaredCRDs...)
-	fileObjects, selErr := resolveSelectors(scoper, clusterName, fileObjects)
+
+	scoper := p.getScoper(enableAPIServerChecks, declaredCRDs...)
+	if p.errors != nil {
+		return nil
+	}
+
+	fileObjects, selErr := resolveSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
 	if selErr != nil {
 		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
 		p.errors = status.Append(p.errors, selErr)
@@ -138,8 +145,8 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 	}
 
 	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, true).Validate(fileObjects))
-	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, true).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
+	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, stdErrs)
@@ -149,8 +156,8 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 	return fileObjects
 }
 
-func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
-	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
+func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject, ignoreUnknown bool) ([]ast.FileObject, status.MultiError) {
+	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, ignoreUnknown).Validate(fileObjects)
 	if annErr != nil {
 		return nil, annErr
 	}
@@ -178,7 +185,13 @@ func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjec
 	return transform.RemoveEphemeralResources(fileObjects), nil
 }
 
-func (p *Parser) getScoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
+func (p *Parser) getScoper(useAPIServer bool, crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
+	if !useAPIServer {
+		scoper := utildiscovery.CoreScoper()
+		scoper.AddCustomResources(crds)
+		return scoper
+	}
+
 	lists, discoveryErr := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
 	if discoveryErr != nil {
 		p.errors = status.Append(p.errors, discoveryErr)

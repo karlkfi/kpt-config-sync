@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,10 +37,10 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 }
 
 // DecorateWithClusterConfigs updates AllPolices with all the ClusterConfigs from APIServer.
-func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, policies *AllConfigs) error {
+func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, policies *AllConfigs) status.MultiError {
 	clusterConfigs := &v1.ClusterConfigList{}
 	if err := cache.List(ctx, clusterConfigs, &client.ListOptions{}); err != nil {
-		return errors.Wrap(err, "failed to list ClusterConfigs")
+		return status.APIServerError(err, "failed to list ClusterConfigs")
 	}
 
 	for _, c := range clusterConfigs.Items {
@@ -49,7 +50,7 @@ func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, polici
 		case v1.CRDClusterConfigName:
 			policies.CRDClusterConfig = c.DeepCopy()
 		default:
-			return errors.Errorf("found an invalid ClusterConfig: %s", n)
+			return status.UndocumentedErrorf("found an invalid ClusterConfig: %s", n)
 		}
 	}
 	return nil

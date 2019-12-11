@@ -10,19 +10,21 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	disableHierarchyFlag = "disable-hierarchy"
+	disableHierarchy     bool
 
-	disableHierarchy bool
+	skipAPIServerFlag = "no-api-server-check"
+	skipAPIServer     bool
 )
 
 func init() {
@@ -31,6 +33,9 @@ func init() {
 	Cmd.Flags().BoolVar(&disableHierarchy, disableHierarchyFlag, false,
 		fmt.Sprintf("If true, validate as a %s Repo.\n"+
 			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
+	Cmd.Flags().BoolVar(&skipAPIServer, skipAPIServerFlag, false,
+		fmt.Sprint("If true, do not use the APIServer to validate whether Custom Resources "+
+			"are namespace-scoped or cluster-scoped."))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -57,28 +62,51 @@ returns a non-zero error code if any issues are found.
 			parser = parse.NewParser(rootPath)
 		}
 
-		encounteredError := false
-		hydrate.ForEachCluster(parser, "", metav1.Time{}, func(clusterName string, _ *namespaceconfig.AllConfigs, err status.MultiError) {
-			clusterEnabled := flags.AllClusters()
-			for _, cluster := range flags.Clusters {
-				if clusterName == cluster {
-					clusterEnabled = true
+		var syncedCRDs []*v1beta1.CustomResourceDefinition
+		if !skipAPIServer {
+			var errs status.MultiError
+			syncedCRDs, errs = parse.GetSyncedCRDs()
+			if errs != nil {
+				if len(errs.Errors()) == 1 && errs.Errors()[0].Code() == status.APIServerErrorCode {
+					util.PrintErrOrDie(errors.Wrapf(errs, "did you mean to run with --%s?", skipAPIServerFlag))
+				} else {
+					util.PrintErrAndDie(errs)
 				}
 			}
-			if !clusterEnabled {
-				return
-			}
+		}
 
-			if err != nil {
-				if clusterName == "" {
-					clusterName = parse.UnregisteredCluster
-				}
-				util.PrintErrOrDie(errors.Wrapf(err, "errors for Cluster %q", clusterName))
-				encounteredError = true
-			}
-		})
+		encounteredError := false
+		hydrate.ForEachCluster(parser, syncedCRDs, !skipAPIServer, vetCluster(&encounteredError))
+
 		if encounteredError {
 			os.Exit(1)
 		}
 	},
+}
+
+func vetCluster(encounteredError *bool) func(clusterName string, fileObjects []ast.FileObject, errs status.MultiError) {
+	return func(clusterName string, _ []ast.FileObject, errs status.MultiError) {
+		clusterEnabled := flags.AllClusters()
+		for _, cluster := range flags.Clusters {
+			if clusterName == cluster {
+				clusterEnabled = true
+			}
+		}
+		if !clusterEnabled {
+			return
+		}
+
+		if errs != nil {
+			if len(errs.Errors()) == 1 && errs.Errors()[0].Code() == status.APIServerErrorCode {
+				util.PrintErrOrDie(errors.Wrapf(errs, "did you mean to run with --%s?", skipAPIServerFlag))
+				return
+			}
+
+			if clusterName == "" {
+				clusterName = parse.UnregisteredCluster
+			}
+			util.PrintErrOrDie(errors.Wrapf(errs, "errors for Cluster %q", clusterName))
+			*encounteredError = true
+		}
+	}
 }

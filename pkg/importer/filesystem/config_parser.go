@@ -9,7 +9,7 @@ import (
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
 // configs from a filesystem.
 type ConfigParser interface {
-	Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string) ([]ast.FileObject, status.MultiError)
+	Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
 	ReadClusterRegistryResources() []ast.FileObject
