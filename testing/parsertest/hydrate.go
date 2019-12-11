@@ -6,17 +6,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,7 +53,6 @@ func (tc TestCase) ForCluster(clusterName string) TestCase {
 // VetTest performs the sensible defaults for testing most parser vetting and hydrating behavior.
 func VetTest(testCases ...TestCase) Test {
 	return Test{
-		NewParser: NewParser,
 		DefaultObjects: func() []ast.FileObject {
 			return []ast.FileObject{
 				fake.Repo(),
@@ -102,17 +102,29 @@ func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
 	}
 }
 
-// NewParser generates a default Parser
-func NewParser(t *testing.T) *filesystem.Parser {
-	t.Helper()
+// fakeParserReader is a map from a path relative to a repo root to the objects
+// contained in that directory for the test.
+type fakeParserReader map[cmpath.Relative][]ast.FileObject
 
+// Read implements Reader.
+func (r fakeParserReader) Read(path cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
+	return r[path.(cmpath.Relative)], nil
+}
+
+// newTestParser creates a parser that processes the passed FileObjects.
+func newTestParser(t *testing.T, objects []ast.FileObject) *filesystem.Parser {
 	f := fstesting.NewTestClientGetter()
 
-	return filesystem.NewParser(
-		f,
-		filesystem.ParserOpt{
-			Extension: &filesystem.NomosVisitorProvider{},
-		})
+	root := cmpath.Root{}
+	flatRoot := treetesting.BuildFlatTree(t, objects...)
+	reader := fakeParserReader{
+		root.Join(cmpath.FromSlash(repo.SystemDir)):          flatRoot.SystemObjects,
+		root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)): flatRoot.ClusterRegistryObjects,
+		root.Join(cmpath.FromSlash(repo.ClusterDir)):         flatRoot.ClusterObjects,
+		root.Join(cmpath.FromSlash(repo.NamespacesDir)):      flatRoot.NamespaceObjects,
+	}
+
+	return filesystem.NewParser(root, reader, f)
 }
 
 // RunAll runs each unit test.
@@ -121,52 +133,40 @@ func (pt Test) RunAll(t *testing.T) {
 
 	for _, tc := range pt.TestCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			parser := pt.NewParser(t)
-
-			var objects []ast.FileObject
+			objects := tc.Objects
 			if pt.DefaultObjects != nil {
-				objects = append(objects, pt.DefaultObjects()...)
+				// Add default objects, if they are defined for this test suite.
+				objects = append(pt.DefaultObjects(), objects...)
 			}
-			objects = append(objects, tc.Objects...)
-			flatRoot := treetesting.BuildFlatTree(t, objects...)
+			parser := newTestParser(t, objects)
 
-			visitors := parser.GenerateVisitors(flatRoot, &namespaceconfig.AllConfigs{}, nil)
+			actual, errs := parser.Parse(visitortesting.ImportToken, &namespaceconfig.AllConfigs{}, metav1.Time{}, tc.ClusterName)
 
-			fileObjects := parser.HydrateRootAndFlatten(visitors, tc.ClusterName)
-			crds, err := customresources.GetCRDs(fileObjects)
-			if err != nil {
-				t.Fatal(err)
+			if tc.Errors != nil || errs != nil {
+				// We either expected an error, or experienced an unexpected error.
+				vettesting.ExpectErrors(tc.Errors, errs, t)
+				return
 			}
 
-			if tc.Errors != nil || parser.Errors() != nil {
-				vettesting.ExpectErrors(tc.Errors, parser.Errors(), t)
-			} else {
-				if tc.Expected == nil {
-					// Make error messages for expected successes more helpful when writing tests.
-					tc.Expected = &namespaceconfig.AllConfigs{}
-				}
-				if tc.Expected.ClusterConfig == nil {
-					// Assume a default empty and valid ClusterConfig if none specified.
-					tc.Expected.ClusterConfig = fake.ClusterConfigObject()
-				}
-				if tc.Expected.CRDClusterConfig == nil {
-					// Assume a default empty and valid CRDClusterConfig if none specified.
-					tc.Expected.CRDClusterConfig = fake.CRDClusterConfigObject()
-				}
-				if tc.Expected.NamespaceConfigs == nil {
-					// Make NamespaceConfig errors more helpful when writing tests.
-					tc.Expected.NamespaceConfigs = map[string]v1.NamespaceConfig{}
-				}
+			if tc.Expected == nil {
+				// Make error messages for expected successes more helpful when writing tests.
+				tc.Expected = &namespaceconfig.AllConfigs{}
+			}
+			if tc.Expected.ClusterConfig == nil {
+				// Assume a default empty and valid ClusterConfig if none specified.
+				tc.Expected.ClusterConfig = fake.ClusterConfigObject()
+			}
+			if tc.Expected.CRDClusterConfig == nil {
+				// Assume a default empty and valid CRDClusterConfig if none specified.
+				tc.Expected.CRDClusterConfig = fake.CRDClusterConfigObject()
+			}
+			if tc.Expected.NamespaceConfigs == nil {
+				// Make NamespaceConfig errors more helpful when writing tests.
+				tc.Expected.NamespaceConfigs = map[string]v1.NamespaceConfig{}
+			}
 
-				scoper := fstesting.Scoper(crds...)
-				actual, errs := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, scoper, fileObjects)
-				if errs != nil {
-					t.Fatal(errors.Wrap(errs, "unexpected error writing AllConfigs"))
-				}
-
-				if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
-					t.Fatalf(diff)
-				}
+			if diff := cmp.Diff(tc.Expected, actual, cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
+				t.Fatalf(diff)
 			}
 		})
 	}

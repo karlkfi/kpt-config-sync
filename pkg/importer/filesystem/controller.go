@@ -69,9 +69,9 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	var cfgParser ConfigParser
 	if hierarchyDisabled {
 		// Nomos hierarchy is disabled, so use the RawParser.
-		cfgParser = NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &FileReader{}, importer.DefaultCLIOptions)
+		cfgParser = NewRawParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
 	} else {
-		cfgParser = NewParser(importer.DefaultCLIOptions, ParserOpt{Extension: &NomosVisitorProvider{}, RootPath: rootPath})
+		cfgParser = NewParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())

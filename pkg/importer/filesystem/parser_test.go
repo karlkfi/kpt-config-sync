@@ -62,7 +62,6 @@ func scopedResourceQuota(path string, opts ...core.MetaMutator) ast.FileObject {
 
 func TestParseRepo(t *testing.T) {
 	test := parsertest.Test{
-		NewParser: parsertest.NewParser,
 		TestCases: []parsertest.TestCase{
 			parsertest.Failure("missing repo",
 				system.MissingRepoErrorCode),

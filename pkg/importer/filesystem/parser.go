@@ -41,7 +41,7 @@ func init() {
 
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
-	opts         ParserOpt
+	root         cmpath.Root
 	clientGetter utildiscovery.ClientGetter
 	reader       Reader
 	errors       status.MultiError
@@ -49,33 +49,57 @@ type Parser struct {
 
 var _ ConfigParser = &Parser{}
 
-// ParserOpt has often customizes the behavior of Parser.Parse.
-type ParserOpt struct {
-	// Extension is the ParserConfig object that the parser will consume for configuring various
-	// aspects of the execution (see ParserConfig).
-	Extension ParserConfig
-	// RootPath is the file path to parse as GRoot.
-	RootPath cmpath.Root
-}
-
 // NewParser creates a new Parser using the specified RESTClientGetter and parser options.
-func NewParser(c utildiscovery.ClientGetter, opts ParserOpt) *Parser {
-	p := &Parser{
+func NewParser(root cmpath.Root, reader Reader, c utildiscovery.ClientGetter) *Parser {
+	return &Parser{
+		root:         root,
 		clientGetter: c,
-		reader:       &FileReader{},
-		opts:         opts,
+		reader:       reader,
 	}
-	return p
 }
 
-// Errors returns the errors the Parser has encountered so far.
-func (p *Parser) Errors() status.MultiError {
-	return p.errors
+// Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
+// Resources are read from the following directories:
+//
+// * system/ (flat, required)
+// * cluster/ (flat, optional)
+// * clusterregistry/ (flat, optional)
+// * namespaces/ (recursive, optional)
+func (p *Parser) Parse(
+	importToken string,
+	currentConfigs *namespaceconfig.AllConfigs,
+	loadTime metav1.Time,
+	clusterName string,
+) (*namespaceconfig.AllConfigs, status.MultiError) {
+	p.errors = nil
+
+	flatRoot := p.readObjects()
+	crds, err := customresources.GetCRDs(flatRoot.ClusterObjects)
+	p.errors = status.Append(p.errors, err)
+	if p.errors != nil {
+		return nil, p.errors
+	}
+
+	visitors := p.generateVisitors(flatRoot, currentConfigs, crds)
+	if p.errors != nil {
+		return nil, p.errors
+	}
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName)
+	if p.errors != nil {
+		return nil, p.errors
+	}
+	scoper := p.getScoper(crds...)
+	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
+	if glog.V(8) {
+		// REALLY useful when debugging.
+		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
+	}
+	return configs, errs
 }
 
-// ReadObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
+// readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) ReadObjects() *ast.FlatRoot {
+func (p *Parser) readObjects() *ast.FlatRoot {
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(),
 		ClusterRegistryObjects: p.ReadClusterRegistryResources(),
@@ -84,8 +108,8 @@ func (p *Parser) ReadObjects() *ast.FlatRoot {
 	}
 }
 
-// GenerateVisitors creates the Visitors to use to hydrate and validate the root.
-func (p *Parser) GenerateVisitors(
+// generateVisitors creates the Visitors to use to hydrate and validate the root.
+func (p *Parser) generateVisitors(
 	flatRoot *ast.FlatRoot,
 	currentConfigs *namespaceconfig.AllConfigs,
 	crds []*v1beta1.CustomResourceDefinition,
@@ -104,15 +128,15 @@ func (p *Parser) GenerateVisitors(
 	visitors = append(visitors, tree.NewCRDClusterConfigInfoVisitor(crdInfo))
 
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
-	visitors = append(visitors, p.opts.Extension.Visitors(hierarchyConfigs)...)
+	visitors = append(visitors, Visitors(hierarchyConfigs)...)
 
 	visitors = append(visitors, transform.NewSyncGenerator())
 
 	return visitors
 }
 
-// HydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) HydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) []ast.FileObject {
+// hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -176,45 +200,6 @@ func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjec
 	return transform.RemoveEphemeralResources(fileObjects), nil
 }
 
-// Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
-// Resources are read from the following directories:
-//
-// * system/ (flat, required)
-// * cluster/ (flat, optional)
-// * clusterregistry/ (flat, optional)
-// * namespaces/ (recursive, optional)
-func (p *Parser) Parse(
-	importToken string,
-	currentConfigs *namespaceconfig.AllConfigs,
-	loadTime metav1.Time,
-	clusterName string,
-) (*namespaceconfig.AllConfigs, status.MultiError) {
-	p.errors = nil
-
-	flatRoot := p.ReadObjects()
-	crds, err := customresources.GetCRDs(flatRoot.ClusterObjects)
-	p.errors = status.Append(p.errors, err)
-	if p.errors != nil {
-		return nil, p.errors
-	}
-
-	visitors := p.GenerateVisitors(flatRoot, currentConfigs, crds)
-	if p.errors != nil {
-		return nil, p.errors
-	}
-	fileObjects := p.HydrateRootAndFlatten(visitors, clusterName)
-	if p.errors != nil {
-		return nil, p.errors
-	}
-	scoper := p.getScoper(crds...)
-	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
-	if glog.V(8) {
-		// REALLY useful when debugging.
-		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
-	}
-	return configs, errs
-}
-
 func (p *Parser) getScoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
 	lists, discoveryErr := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
 	if discoveryErr != nil {
@@ -244,26 +229,26 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 }
 
 func (p *Parser) readSystemResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.SystemDir)))
+	result, errs := p.reader.Read(p.root.Join(cmpath.FromSlash(repo.SystemDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readNamespaceResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(p.opts.Extension.NamespacesDir())))
+	result, errs := p.reader.Read(p.root.Join(cmpath.FromSlash(repo.NamespacesDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 func (p *Parser) readClusterResources(crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterDir)))
+	result, errs := p.reader.Read(p.root.Join(cmpath.FromSlash(repo.ClusterDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
 func (p *Parser) ReadClusterRegistryResources() []ast.FileObject {
-	result, errs := p.reader.Read(p.opts.RootPath.Join(cmpath.FromSlash(repo.ClusterRegistryDir)))
+	result, errs := p.reader.Read(p.root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }

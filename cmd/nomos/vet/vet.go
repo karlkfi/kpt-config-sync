@@ -11,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
@@ -53,14 +52,9 @@ returns a non-zero error code if any issues are found.
 
 		var parser filesystem.ConfigParser
 		if disableHierarchy {
-			parser = filesystem.NewRawParser(rootPath.Join(cmpath.FromSlash(".")), &filesystem.FileReader{}, importer.DefaultCLIOptions)
+			parser = filesystem.NewRawParser(rootPath, &filesystem.FileReader{}, importer.DefaultCLIOptions)
 		} else {
-			opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
-			var err error
-			parser, err = parse.NewParser(opts)
-			if err != nil {
-				util.PrintErrAndDie(err)
-			}
+			parser = parse.NewParser(rootPath)
 		}
 
 		encounteredError := false

@@ -19,7 +19,7 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type RawParser struct {
-	path         cmpath.Relative
+	root         cmpath.Root
 	reader       Reader
 	clientGetter utildiscovery.ClientGetter
 }
@@ -27,9 +27,9 @@ type RawParser struct {
 var _ ConfigParser = &RawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(path cmpath.Relative, reader Reader, client utildiscovery.ClientGetter) *RawParser {
+func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGetter) *RawParser {
 	return &RawParser{
-		path:         path,
+		root:         path,
 		reader:       reader,
 		clientGetter: client,
 	}
@@ -38,7 +38,7 @@ func NewRawParser(path cmpath.Relative, reader Reader, client utildiscovery.Clie
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
 func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime metav1.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
-	fileObjects, errs := p.reader.Read(p.path)
+	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {
 		return nil, errs
 	}

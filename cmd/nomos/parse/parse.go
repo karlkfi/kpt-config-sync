@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,21 +22,14 @@ import (
 const timeout = time.Second * 15
 
 // NewParser constructs a Parser from ParserOpt.
-func NewParser(parserOpt filesystem.ParserOpt) (*filesystem.Parser, error) {
-	if parserOpt.RootPath.Equal(filesystem.ParserOpt{}.RootPath) {
-		return nil, status.InternalError("No root path specified.")
-	}
-
-	return filesystem.NewParser(importer.DefaultCLIOptions, parserOpt), nil
+func NewParser(root cmpath.Root) *filesystem.Parser {
+	return filesystem.NewParser(root, &filesystem.FileReader{}, importer.DefaultCLIOptions)
 }
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(clusterName string, parserOpt filesystem.ParserOpt) (*namespaceconfig.AllConfigs, error) {
-	p, err := NewParser(parserOpt)
-	if err != nil {
-		return nil, err
-	}
+func Parse(clusterName string, root cmpath.Root) (*namespaceconfig.AllConfigs, error) {
+	p := NewParser(root)
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {

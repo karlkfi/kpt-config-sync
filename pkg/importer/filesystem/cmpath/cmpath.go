@@ -11,11 +11,23 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
+// RootedPath represents a path that references a repository root, and can
+// be transformed into an absolute OS-specific path.
+type RootedPath interface {
+	Root() Root
+	AbsoluteOSPath() string
+}
+
 // Root is a path to a directory holding a Nomos repository.
 // Robust to changes in the working directory.
 type Root struct {
 	// The underlying absolute OS-specific path to the Nomos repository.
 	path string
+}
+
+// Root implements RootedPath.
+func (p Root) Root() Root {
+	return p
 }
 
 // Join joins a path element to the existing Root, returning a Relative.
@@ -30,6 +42,11 @@ func (p Root) Rel(targPath Path) (Relative, status.Error) {
 		return Relative{}, status.PathWrapError(err, p.path, targPath.SlashPath())
 	}
 	return Relative{path: FromOS(relPath), root: p}, nil
+}
+
+// AbsoluteOSPath implements RootedPath.
+func (p Root) AbsoluteOSPath() string {
+	return p.path
 }
 
 // NewRoot creates a new Root.

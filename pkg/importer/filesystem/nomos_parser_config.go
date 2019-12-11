@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
@@ -15,15 +14,8 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 )
 
-var _ ParserConfig = NomosVisitorProvider{}
-
-// NomosVisitorProvider is the default visitor provider.  It handles
-// plain vanilla nomos configs.
-type NomosVisitorProvider struct {
-}
-
 // Visitors implements ParserConfig
-func (n NomosVisitorProvider) Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
+func Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	return []ast.Visitor{
@@ -64,9 +56,4 @@ var _ ast.Visitor = &mustSucceed{}
 // Fatal returns true if the Visitor encountered any errors.
 func (m mustSucceed) Fatal() bool {
 	return m.Error() != nil
-}
-
-// NamespacesDir implements ParserConfig
-func (n NomosVisitorProvider) NamespacesDir() string {
-	return repo.NamespacesDir
 }

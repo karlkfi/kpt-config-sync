@@ -23,8 +23,10 @@ import (
 type Reader interface {
 	// Read returns the list of FileObjects in the passed directory.
 	//
-	// stubMissing disables the need for CRDs to be present in order to parse unknown objects.
-	Read(dir cmpath.Relative) ([]ast.FileObject, status.MultiError)
+	// dir is either a repository root directory, or a path relative to one.
+	// Returned fileObjects have their path set to be relative to the repository
+	// root.
+	Read(dir cmpath.RootedPath) ([]ast.FileObject, status.MultiError)
 }
 
 // FileReader reads FileObjects from a filesystem.
@@ -32,7 +34,8 @@ type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
-func (r *FileReader) Read(dir cmpath.Relative) ([]ast.FileObject, status.MultiError) {
+// Read implements Reader.
+func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {

@@ -23,14 +23,12 @@ var (
 	loadTime    = metav1.Time{}
 )
 
-type fakeReader struct {
-	fileObjects []ast.FileObject
-}
+type fakeReader []ast.FileObject
 
 var _ filesystem.Reader = &fakeReader{}
 
-func (r *fakeReader) Read(_ cmpath.Relative) ([]ast.FileObject, status.MultiError) {
-	return r.fileObjects, nil
+func (r fakeReader) Read(_ cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
+	return r, nil
 }
 
 func TestRawParser_Parse(t *testing.T) {
@@ -67,7 +65,7 @@ func TestRawParser_Parse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter()
 
-			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, f)
+			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
 			result, err := p.Parse(importToken, nil, loadTime, "")
 			if err != nil {
 				t.Fatal(err)
@@ -100,7 +98,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter()
 
-			p := filesystem.NewRawParser(cmpath.Relative{}, &fakeReader{fileObjects: tc.objects}, f)
+			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
 
 			_, err := p.Parse(importToken, nil, loadTime, "")
 			if err == nil {

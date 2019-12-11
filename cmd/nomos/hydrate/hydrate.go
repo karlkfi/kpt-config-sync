@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
@@ -76,11 +75,7 @@ clusters.`,
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
 
-		opts := filesystem.ParserOpt{Extension: &filesystem.NomosVisitorProvider{}, RootPath: rootPath}
-		parser, err := parse.NewParser(opts)
-		if err != nil {
-			util.PrintErrAndDie(err)
-		}
+		parser := parse.NewParser(rootPath)
 
 		var allObjects []core.Object
 
@@ -120,10 +115,6 @@ clusters.`,
 
 		if encounteredError {
 			os.Exit(1)
-		}
-
-		if err != nil {
-			util.PrintErrAndDie(err)
 		}
 	},
 }
