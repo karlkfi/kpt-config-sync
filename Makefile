@@ -165,6 +165,7 @@ $(OUTPUT_DIR):
 include Makefile.build
 include Makefile.docs
 include Makefile.e2e
+include Makefile.gen
 include Makefile.installer
 include Makefile.operator
 
@@ -202,11 +203,6 @@ lint-bash:
 
 lint-license: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
-
-.PHONY: clientgen
-clientgen:
-	@echo "+++ Generating clientgen directory"
-	./scripts/generate-clientset.sh
 
 # Print the value of a variable
 print-%:
