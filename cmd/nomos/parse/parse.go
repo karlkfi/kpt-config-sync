@@ -47,12 +47,12 @@ func Parse(clusterName string, root cmpath.Root) (*namespaceconfig.AllConfigs, e
 	if cErr != nil {
 		return nil, cErr
 	}
-	resources, mErr := p.Parse("", policies, metav1.Time{}, clusterName)
+	fileObjects, mErr := p.Parse(policies, clusterName)
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}
 
-	return resources, nil
+	return namespaceconfig.NewAllConfigs("", metav1.Time{}, fileObjects), nil
 }
 
 // clusterConfigs returns an AllPolicies with only the ClusterConfigs populated.

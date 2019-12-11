@@ -77,7 +77,7 @@ func TestParseRepo(t *testing.T) {
 func TestParserVetErrors(t *testing.T) {
 	test := parsertest.VetTest(
 		parsertest.Success("ResourceQuota with scope and normal quota",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
 				scopedResourceQuota("namespaces/bar/rq.yaml",
 					testoutput.Source("namespaces/bar/rq.yaml"),
@@ -88,14 +88,14 @@ func TestParserVetErrors(t *testing.T) {
 			scopedResourceQuota("namespaces/bar/rq.yaml"),
 		),
 		parsertest.Success("Engineer CustomResourceDefinition",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 			),
 			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
 		),
 		parsertest.Success("Engineer CustomResourceDefinition and CustomResource",
-			testoutput.NewAllConfigsWithCRDs(t, []*v1beta1.CustomResourceDefinition{engineerCRD()},
+			testoutput.NewAllConfigs(
 				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
@@ -113,7 +113,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
 		parsertest.Success("Valid to have Abstract Namespace with both Namespace and Abstract Namespace children",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar/foo", testoutput.Source("namespaces/bar/foo/namespace.yaml")),
 				fake.Namespace("namespaces/bar/qux/lym", testoutput.Source("namespaces/bar/qux/lym/namespace.yaml")),
 			),
@@ -139,7 +139,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/bar"),
 		),
 		parsertest.Success("NamespaceSelector",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.RoleBindingAtPath("namespaces/bar/rb.yaml", core.Name("sre"),
 					namespaceSelectorAnnotation("sre-supported"),
 					core.Namespace("prod-ns"),
@@ -162,10 +162,10 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/bar/test-ns", core.Label("env", "test")),
 		),
 		parsertest.Success("minimal repo",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 		),
 		parsertest.Success("Multiple resources with HierarchyConfigs",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.ResourceQuota().GroupVersion(), kinds.ResourceQuota().Kind)),
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
@@ -175,7 +175,7 @@ func TestParserVetErrors(t *testing.T) {
 			metadata.IllegalTopLevelNamespaceErrorCode,
 			fake.Namespace("namespaces")),
 		parsertest.Success("Namespace with multiple inherited RoleBindings",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo", testoutput.Source("namespaces/foo/namespace.yaml")),
 				fake.RoleBinding(core.Name("alice"), core.Namespace("foo"),
 					testoutput.Source("namespaces/rb-1.yaml")),
@@ -196,13 +196,13 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/qux/bar"),
 		),
 		parsertest.Success("Two abstract Namespace dirs with non-unique names are allowed.",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo/foo/bar", testoutput.Source("namespaces/foo/foo/bar/namespace.yaml")),
 			),
 			fake.Namespace("namespaces/foo/foo/bar"),
 		),
 		parsertest.Success("An abstract namespace and a leaf namespace may share a name",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar/foo", testoutput.Source("namespaces/bar/foo/namespace.yaml")),
 				fake.Namespace("namespaces/foo/bar", testoutput.Source("namespaces/foo/bar/namespace.yaml")),
 			),
@@ -210,20 +210,20 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/foo/bar"),
 		),
 		parsertest.Success("kube-* is a system dir but is allowed",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/kube-something",
 					testoutput.Source("namespaces/kube-something/namespace.yaml")),
 			),
 			fake.Namespace("namespaces/kube-something"),
 		),
 		parsertest.Success("kube-system is a system dir but is allowed",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/kube-system", testoutput.Source("namespaces/kube-system/namespace.yaml")),
 			),
 			fake.Namespace("namespaces/kube-system"),
 		),
 		parsertest.Success("Default namespace is allowed",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/default", testoutput.Source("namespaces/default/namespace.yaml")),
 			),
 			fake.Namespace("namespaces/default"),
@@ -270,7 +270,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.RoleAtPath("namespaces/foo/role-2.yaml", core.Name("alice")),
 		),
 		parsertest.Success("No name collision if different types",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo", testoutput.Source("namespaces/foo/namespace.yaml")),
 				fake.Role(core.Name("alice"), core.Namespace("foo"),
 					testoutput.Source("namespaces/foo/role.yaml")),
@@ -294,7 +294,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.RoleAtPath("namespaces/foo/bar/qux/rb-2.yaml", core.Name("alice")),
 		),
 		parsertest.Success("No name collision in sibling nodes",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo/bar", testoutput.Source("namespaces/foo/bar/namespace.yaml")),
 				fake.RoleBinding(core.Name("alice"), core.Namespace("bar"),
 					testoutput.Source("namespaces/foo/bar/rb-1.yaml")),
@@ -357,7 +357,7 @@ func TestParserVetErrors(t *testing.T) {
 			fake.ClusterRole(core.Name("a/b")),
 		),
 		parsertest.Success("Valid name for Role",
-			testoutput.NewAllConfigs(t, fake.ClusterRole(core.Name("a:b"), testoutput.Source("cluster/cr.yaml"))),
+			testoutput.NewAllConfigs(fake.ClusterRole(core.Name("a:b"), testoutput.Source("cluster/cr.yaml"))),
 			fake.ClusterRole(core.Name("a:b")),
 		),
 		parsertest.Failure("Illegal Namespace in clusterregistry/",
@@ -437,7 +437,7 @@ func TestParseClusterSelector(t *testing.T) {
 
 	test := parsertest.VetTest(
 		parsertest.Success("Resource without selector always exists 1",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
@@ -451,7 +451,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(prodCluster),
 		parsertest.Success("Resource without selector always exists 2",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(devCluster),
@@ -465,7 +465,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(devCluster),
 		parsertest.Success("Namespace resource selected",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
@@ -479,7 +479,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
 		).ForCluster(prodCluster),
 		parsertest.Success("Namespace resource not selected",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 			),
@@ -491,7 +491,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
 		).ForCluster(devCluster),
 		parsertest.Success("Namespace selected",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), prodSelectorAnnotation,
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
@@ -505,7 +505,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(prodCluster),
 		parsertest.Success("Namespace not selected",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
@@ -514,7 +514,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(devCluster),
 		parsertest.Success("Cluster resource selected",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.ClusterRoleBinding(prodSelectorAnnotation, testoutput.InCluster(prodCluster),
 					testoutput.Source("cluster/crb.yaml")),
 			),
@@ -525,7 +525,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.ClusterRoleBinding(prodSelectorAnnotation),
 		).ForCluster(prodCluster),
 		parsertest.Success("Cluster resource not selected",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
@@ -533,7 +533,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.ClusterRoleBinding(prodSelectorAnnotation),
 		).ForCluster(devCluster),
 		parsertest.Success("Abstract Namespace resource selected",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/foo/bar/namespace.yaml")),
 				fake.ConfigMapAtPath("", core.Namespace("bar"), prodSelectorAnnotation,
@@ -549,7 +549,7 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.ConfigMapAtPath("namespaces/foo/configmap.yaml", prodSelectorAnnotation),
 		).ForCluster(prodCluster),
 		parsertest.Success("Colliding resources selected to different clusters may coexist",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.RoleBinding(core.Namespace("bar"), devSelectorAnnotation,
@@ -575,12 +575,12 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
 		),
 		parsertest.Success("A subdir of cluster/ is ok",
-			testoutput.NewAllConfigs(t,
+			testoutput.NewAllConfigs(
 				fake.ClusterRoleBinding(testoutput.Source("cluster/foo/crb.yaml")),
 			),
 			fake.ClusterRoleBindingAtPath("cluster/foo/crb.yaml")),
 		parsertest.Success("A subdir of clusterregistry/ is ok",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")))
 
 	test.RunAll(t)
@@ -589,7 +589,7 @@ func TestParseClusterSelector(t *testing.T) {
 func TestParserVet(t *testing.T) {
 	test := parsertest.VetTest(
 		parsertest.Success("A subdir of system/ is ok",
-			testoutput.NewAllConfigs(t),
+			testoutput.NewAllConfigs(),
 			fake.HierarchyConfigAtPath("system/sub/hc.yaml")),
 		parsertest.Failure("Objects in non-namespaces/ with an invalid label is an error",
 			metadata.IllegalLabelDefinitionErrorCode,

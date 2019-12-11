@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -36,7 +35,7 @@ func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGe
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.AllConfigs, loadTime metav1.Time, _ string) (*namespaceconfig.AllConfigs, status.MultiError) {
+func (p *RawParser) Parse(currentConfigs *namespaceconfig.AllConfigs, _ string) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {
@@ -80,11 +79,7 @@ func (p *RawParser) Parse(importToken string, currentConfigs *namespaceconfig.Al
 	for _, v := range validators {
 		errs = status.Append(errs, v.Validate(fileObjects))
 	}
-	if errs != nil {
-		return nil, errs
-	}
-
-	return namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
+	return fileObjects, errs
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

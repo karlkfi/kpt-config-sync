@@ -39,14 +39,14 @@ func TestRawParser_Parse(t *testing.T) {
 	}{
 		{
 			name:     "empty returns empty",
-			expected: testoutput.NewAllConfigs(t),
+			expected: testoutput.NewAllConfigs(),
 		},
 		{
 			name: "cluster-scoped object",
 			objects: []ast.FileObject{
 				fake.ClusterRole(),
 			},
-			expected: testoutput.NewAllConfigs(t, fake.ClusterRole()),
+			expected: testoutput.NewAllConfigs(fake.ClusterRole()),
 		},
 		{
 			name: "preserves Namespace",
@@ -54,7 +54,7 @@ func TestRawParser_Parse(t *testing.T) {
 				fake.Role(core.Namespace("foo")),
 				fake.RoleBinding(core.Namespace("bar")),
 			},
-			expected: testoutput.NewAllConfigs(t,
+			expected: testoutput.NewAllConfigs(
 				fake.Role(core.Namespace("foo")),
 				fake.RoleBinding(core.Namespace("bar")),
 			),
@@ -66,7 +66,8 @@ func TestRawParser_Parse(t *testing.T) {
 			f := fstesting.NewTestClientGetter()
 
 			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
-			result, err := p.Parse(importToken, nil, loadTime, "")
+			fileObjects, err := p.Parse(nil, "")
+			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -100,7 +101,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 
 			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
 
-			_, err := p.Parse(importToken, nil, loadTime, "")
+			_, err := p.Parse(nil, "")
 			if err == nil {
 				t.Fatal("expected error")
 			}

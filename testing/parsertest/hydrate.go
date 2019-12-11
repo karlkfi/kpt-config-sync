@@ -140,7 +140,8 @@ func (pt Test) RunAll(t *testing.T) {
 			}
 			parser := newTestParser(t, objects)
 
-			actual, errs := parser.Parse(visitortesting.ImportToken, &namespaceconfig.AllConfigs{}, metav1.Time{}, tc.ClusterName)
+			fileObjects, errs := parser.Parse(&namespaceconfig.AllConfigs{}, tc.ClusterName)
+			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {
 				// We either expected an error, or experienced an unexpected error.

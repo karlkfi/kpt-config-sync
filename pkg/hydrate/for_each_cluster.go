@@ -22,14 +22,16 @@ func ForEachCluster(
 	f func(clusterName string, configs *namespaceconfig.AllConfigs, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultConfigs, err := p.Parse(importToken, &namespaceconfig.AllConfigs{}, loadTime, defaultCluster)
+	defaultFileObjects, err := p.Parse(&namespaceconfig.AllConfigs{}, defaultCluster)
+	defaultConfigs := namespaceconfig.NewAllConfigs(importToken, loadTime, defaultFileObjects)
 	f(defaultCluster, defaultConfigs, err)
 
 	clusterRegistry := p.ReadClusterRegistryResources()
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		configs, err2 := p.Parse(importToken, &namespaceconfig.AllConfigs{}, loadTime, cluster.Name)
+		fileObjects, err2 := p.Parse(&namespaceconfig.AllConfigs{}, cluster.Name)
+		configs := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 		f(cluster.Name, configs, err2)
 	}
 }

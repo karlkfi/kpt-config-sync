@@ -3,7 +3,6 @@
 package filesystem
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
@@ -22,7 +21,6 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,11 +64,9 @@ func NewParser(root cmpath.Root, reader Reader, c utildiscovery.ClientGetter) *P
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(
-	importToken string,
 	currentConfigs *namespaceconfig.AllConfigs,
-	loadTime metav1.Time,
 	clusterName string,
-) (*namespaceconfig.AllConfigs, status.MultiError) {
+) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects()
@@ -85,16 +81,7 @@ func (p *Parser) Parse(
 		return nil, p.errors
 	}
 	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName)
-	if p.errors != nil {
-		return nil, p.errors
-	}
-	scoper := p.getScoper(crds...)
-	configs, errs := namespaceconfig.NewAllConfigs(importToken, loadTime, scoper, fileObjects)
-	if glog.V(8) {
-		// REALLY useful when debugging.
-		glog.Warningf("AllConfigs: %v", spew.Sdump(configs))
-	}
-	return configs, errs
+	return fileObjects, p.errors
 }
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in

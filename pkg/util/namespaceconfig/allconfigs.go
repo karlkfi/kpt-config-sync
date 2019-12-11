@@ -5,11 +5,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
-	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,7 +23,7 @@ type AllConfigs struct {
 }
 
 // NewAllConfigs initializes a default empty AllConfigs.
-func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Scoper, fileObjects []ast.FileObject) (*AllConfigs, status.MultiError) {
+func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.FileObject) *AllConfigs {
 	result := &AllConfigs{
 		NamespaceConfigs: map[string]v1.NamespaceConfig{},
 		ClusterConfig:    v1.NewClusterConfig(importToken, loadTime),
@@ -35,7 +31,6 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Sc
 		Syncs:            map[string]v1.Sync{},
 	}
 
-	var errs status.MultiError
 	for _, f := range fileObjects {
 		if transform.IsEphemeral(f.GroupVersionKind()) {
 			// Do not materialize NamespaceSelectors.
@@ -51,10 +46,9 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Sc
 		}
 
 		result.addSync(*v1.NewSync(f.GroupVersionKind().GroupKind()))
-		switch scoper.GetScope(f.GroupVersionKind().GroupKind()) {
-		case discovery.ClusterScope:
-			result.addClusterResource(f.Object)
-		case discovery.NamespaceScope:
+
+		isNamespaced := f.GetNamespace() != ""
+		if isNamespaced {
 			namespace := f.GetNamespace()
 			if namespace == "" {
 				// Empty string/non-declared metadata.namespace automatically maps to "default", so this
@@ -62,12 +56,12 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, scoper discovery.Sc
 				namespace = "default"
 			}
 			result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
-		case discovery.UnknownScope:
-			errs = status.Append(errs, validation.UnknownObjectError(f))
+		} else {
+			result.addClusterResource(f.Object)
 		}
 	}
 
-	return result, errs
+	return result
 }
 
 // addClusterResource adds a cluster-scoped resource to the AllConfigs.
