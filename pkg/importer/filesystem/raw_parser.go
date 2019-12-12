@@ -2,6 +2,9 @@ package filesystem
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/transform"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -30,38 +33,38 @@ func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGe
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, _ string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
+func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {
 		return nil, errs
 	}
 
-	declaredCrds, crdErrs := customresources.GetCRDs(fileObjects)
+	declaredCRDs, crdErrs := customresources.GetCRDs(fileObjects)
 	if crdErrs != nil {
-		errs = status.Append(errs, crdErrs)
-		return nil, errs
+		return nil, crdErrs
+	}
+
+	scoper, scoperErr := getScoper(p.clientGetter, declaredCRDs)
+	if scoperErr != nil {
+		return nil, scoperErr
+	}
+
+	scopeErrs := nonhierarchical.ScopeValidator(scoper).Validate(fileObjects)
+	if scopeErrs != nil {
+		// Don't try to resolve selectors if scopes are incorrect.
+		return nil, scopeErrs
+	}
+	fileObjects, selErr := resolveFlatSelectors(scoper, clusterName, fileObjects)
+	if selErr != nil {
+		return nil, selErr
 	}
 
 	errs = status.Append(errs, standardValidation(fileObjects))
 
-	// Get all known API resources from the server.
-	apiResources, err := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
-	if err != nil {
-		return nil, err
-	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
-	if err != nil {
-		return nil, status.APIServerError(err, "discovery failed for server resources")
-	}
-	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
-	// an object is namespace or cluster scoped.
-	scoper.AddCustomResources(declaredCrds)
-
 	var validators = []nonhierarchical.Validator{
 		nonhierarchical.IllegalHierarchicalKindValidator,
-		nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCrds),
-		nonhierarchical.ScopeValidator(scoper),
+		nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs),
 	}
 	for _, v := range validators {
 		errs = status.Append(errs, v.Validate(fileObjects))
@@ -69,8 +72,54 @@ func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, _ stri
 	return fileObjects, errs
 }
 
+func getScoper(clientGetter utildiscovery.ClientGetter, crds []*v1beta1.CustomResourceDefinition) (utildiscovery.Scoper, status.MultiError) {
+	// Get all known API resources from the server.
+	apiResources, err := utildiscovery.GetResourcesFromClientGetter(clientGetter)
+	if err != nil {
+		return nil, err
+	}
+	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
+	if err != nil {
+		return nil, status.APIServerError(err, "discovery failed for server resources")
+	}
+
+	scoper.AddCustomResources(crds)
+	return scoper, nil
+}
+
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
 func (p *RawParser) ReadClusterRegistryResources() []ast.FileObject {
 	return nil
+}
+
+func resolveFlatSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
+	if annErr != nil {
+		return nil, annErr
+	}
+
+	fileObjects = nonhierarchical.CopyAbstractResources(fileObjects)
+
+	csuErr := validation.ClusterSelectorUniqueness.Validate(fileObjects)
+	if csuErr != nil {
+		return nil, csuErr
+	}
+
+	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	if csErr != nil {
+		return nil, csErr
+	}
+
+	nsuErr := validation.NamespaceSelectorUniqueness.Validate(fileObjects)
+	if nsuErr != nil {
+		return nil, nsuErr
+	}
+
+	fileObjects, nsErr := selectors.ResolveFlatNamespaceSelectors(fileObjects)
+	if nsErr != nil {
+		return nil, nsErr
+	}
+
+	return transform.RemoveEphemeralResources(fileObjects), nil
 }

@@ -1,6 +1,7 @@
 package nonhierarchical
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
@@ -26,11 +27,21 @@ const MissingNamespaceOnNamespacedResourceErrorCode = "1053"
 
 var missingNamespaceOnNamespacedResourceErrorBuilder = status.NewErrorBuilder(MissingNamespaceOnNamespacedResourceErrorCode)
 
+// NamespaceAndSelectorResourceError reports that a namespace-scoped resource illegally declares both metadata.namespace
+// and has the namespace-selector annotation.
+func NamespaceAndSelectorResourceError(resource id.Resource) status.Error {
+	return missingNamespaceOnNamespacedResourceErrorBuilder.
+		Sprintf("namespace-scoped resources MUST NOT declare both metadata.namespace and "+
+			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).
+		BuildWithResources(resource)
+}
+
 // MissingNamespaceOnNamespacedResourceError reports a namespace-scoped resource MUST declare metadata.namespace.
 // when parsing in non-hierarchical mode.
 func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.
-		Sprint("namespace-scoped resource MUST declare metadata.namespace").
+		Sprintf("namespace-scoped resources MUST either declare either metadata.namespace or "+
+			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
 
@@ -44,7 +55,15 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 		}
 
 		if isNamespaced {
-			if o.GetNamespace() == "" {
+			// namespace-scoped resources must declare either metadata.namespace or the
+			// NamespaceSelector annotation when in nonhierarchical mode.
+			hasNamespace := o.GetNamespace() != ""
+			_, hasNamespaceSelector := o.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+
+			if hasNamespace && hasNamespaceSelector {
+				return NamespaceAndSelectorResourceError(o)
+			}
+			if !hasNamespace && !hasNamespaceSelector {
 				return MissingNamespaceOnNamespacedResourceError(&o)
 			}
 		} else {

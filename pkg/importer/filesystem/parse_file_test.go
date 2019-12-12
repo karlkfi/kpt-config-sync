@@ -23,7 +23,7 @@ func TestParseYAMLFile(t *testing.T) {
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  name: shipping
+  testName: shipping
 `,
 			expected: []*unstructured.Unstructured{
 				{
@@ -31,7 +31,7 @@ metadata:
 						"apiVersion": "v1",
 						"kind":       "Namespace",
 						"metadata": map[string]interface{}{
-							"name": "shipping",
+							"testName": "shipping",
 						},
 					},
 				}},
@@ -40,7 +40,7 @@ metadata:
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  name: shipping
+  testName: shipping
   labels:
     "a": "---"
 `,
@@ -50,7 +50,7 @@ metadata:
 						"apiVersion": "v1",
 						"kind":       "Namespace",
 						"metadata": map[string]interface{}{
-							"name": "shipping",
+							"testName": "shipping",
 							"labels": map[string]interface{}{
 								"a": "---",
 							},
@@ -63,12 +63,12 @@ metadata:
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  name: shipping
+  testName: shipping
 ---
 apiVersion: rbac/v1
 kind: Role
 metadata:
-  name: admin
+  testName: admin
   namespace: shipping
 rules:
 - apiGroups: [rbac]
@@ -80,7 +80,7 @@ rules:
 						"apiVersion": "v1",
 						"kind":       "Namespace",
 						"metadata": map[string]interface{}{
-							"name": "shipping",
+							"testName": "shipping",
 						},
 					},
 				},
@@ -89,7 +89,7 @@ rules:
 						"apiVersion": "rbac/v1",
 						"kind":       "Role",
 						"metadata": map[string]interface{}{
-							"name":      "admin",
+							"testName":  "admin",
 							"namespace": "shipping",
 						},
 						"rules": []interface{}{
@@ -139,7 +139,7 @@ func TestParseJsonFile(t *testing.T) {
   "apiVersion": "rbac/v1",
   "kind": "Role",
   "metadata": {
-    "name": "admin",
+    "testName": "admin",
     "namespace": "shipping"
   },
   "rules": [
@@ -156,7 +156,7 @@ func TestParseJsonFile(t *testing.T) {
 						"apiVersion": "rbac/v1",
 						"kind":       "Role",
 						"metadata": map[string]interface{}{
-							"name":      "admin",
+							"testName":  "admin",
 							"namespace": "shipping",
 						},
 						"rules": []interface{}{

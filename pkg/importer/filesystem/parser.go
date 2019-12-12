@@ -133,11 +133,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 	}
 
 	scoper := p.getScoper(enableAPIServerChecks, declaredCRDs...)
-	if p.errors != nil {
-		return nil
-	}
-
-	fileObjects, selErr := resolveSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
+	fileObjects, selErr := resolveHierarchicalSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
 	if selErr != nil {
 		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
 		p.errors = status.Append(p.errors, selErr)
@@ -156,8 +152,8 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 	return fileObjects
 }
 
-func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject, ignoreUnknown bool) ([]ast.FileObject, status.MultiError) {
-	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, ignoreUnknown).Validate(fileObjects)
+func resolveHierarchicalSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
+	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, enableAPIServerChecks).Validate(fileObjects)
 	if annErr != nil {
 		return nil, annErr
 	}
