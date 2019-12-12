@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kubectl
+package util
 
 import (
 	"k8s.io/api/core/v1"
@@ -116,9 +116,9 @@ func GetModifiedConfiguration(obj runtime.Object, annotate bool, codec runtime.E
 	return modified, nil
 }
 
-// UpdateApplyAnnotation calls CreateApplyAnnotation if the last applied
+// updateApplyAnnotation calls CreateApplyAnnotation if the last applied
 // configuration annotation is already present. Otherwise, it does nothing.
-func UpdateApplyAnnotation(obj runtime.Object, codec runtime.Encoder) error {
+func updateApplyAnnotation(obj runtime.Object, codec runtime.Encoder) error {
 	if original, err := GetOriginalConfiguration(obj); err != nil || len(original) <= 0 {
 		return err
 	}
@@ -135,11 +135,12 @@ func CreateApplyAnnotation(obj runtime.Object, codec runtime.Encoder) error {
 	return setOriginalConfiguration(obj, modified)
 }
 
-// Create the annotation used by kubectl apply only when createAnnotation is true
+// CreateOrUpdateAnnotation creates the annotation used by
+// kubectl apply only when createAnnotation is true
 // Otherwise, only update the annotation when it already exists
 func CreateOrUpdateAnnotation(createAnnotation bool, obj runtime.Object, codec runtime.Encoder) error {
 	if createAnnotation {
 		return CreateApplyAnnotation(obj, codec)
 	}
-	return UpdateApplyAnnotation(obj, codec)
+	return updateApplyAnnotation(obj, codec)
 }

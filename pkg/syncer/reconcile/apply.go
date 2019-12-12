@@ -10,8 +10,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/third_party/k8s.io/kubernetes/pkg/kubectl"
-	"github.com/google/nomos/third_party/k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -24,6 +22,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubectl/pkg/util"
+	"k8s.io/kubectl/pkg/util/openapi"
 )
 
 // Applier updates a resource from its current state to its intended state using apply operations.
@@ -103,7 +103,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 
 // create creates the resource with the last-applied annotation set.
 func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
-	if err := kubectl.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
+	if err := util.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
 		return errors.Wrap(err, "could not generate apply annotation")
 	}
 
@@ -125,7 +125,7 @@ func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 }
 
 // apply updates a resource using the same approach as running `kubectl apply`.
-// The implementation here has been mostly extracted from the apply command: k8s.io/kubernetes/pkg/kubectl/cmd/apply.go
+// The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
 func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, error) {
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
@@ -134,13 +134,13 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	}
 
 	// Retrieve the last applied configuration of the object from the annotation.
-	previous, oErr := kubectl.GetOriginalConfiguration(currentState)
+	previous, oErr := util.GetOriginalConfiguration(currentState)
 	if oErr != nil {
 		return false, errors.Errorf("could not retrieve original configuration from %v", currentState)
 	}
 
 	// Serialize the modified configuration of the object, populating the last applied annotation as well.
-	modified, mErr := kubectl.GetModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
+	modified, mErr := util.GetModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
 	if mErr != nil {
 		return false, errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}
