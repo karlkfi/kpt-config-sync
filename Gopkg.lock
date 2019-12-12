@@ -749,7 +749,7 @@
   version = "kubernetes-1.16.3"
 
 [[projects]]
-  digest = "1:8b28d3a1470747089e97c4997f2d5635f7bf5df4020f84a99075f712ad5b6091"
+  digest = "1:d16e853d3009301be886ff2b2595ca2a58054895649d32f7529c8b7fa0547cd4"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -931,7 +931,6 @@
     "plugin/pkg/client/auth/exec",
     "plugin/pkg/client/auth/gcp",
     "rest",
-    "rest/fake",
     "rest/watch",
     "restmapper",
     "testing",
@@ -1129,9 +1128,7 @@
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/cli-runtime/pkg/genericclioptions",
     "k8s.io/cli-runtime/pkg/printers",
-    "k8s.io/cli-runtime/pkg/resource",
     "k8s.io/client-go/discovery",
-    "k8s.io/client-go/discovery/cached/disk",
     "k8s.io/client-go/discovery/fake",
     "k8s.io/client-go/dynamic",
     "k8s.io/client-go/dynamic/fake",
@@ -1143,7 +1140,6 @@
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/plugin/pkg/client/auth/gcp",
     "k8s.io/client-go/rest",
-    "k8s.io/client-go/rest/fake",
     "k8s.io/client-go/restmapper",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/cache",
