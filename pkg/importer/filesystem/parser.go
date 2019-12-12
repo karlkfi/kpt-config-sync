@@ -16,10 +16,7 @@ import (
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,12 +56,15 @@ func NewParser(root cmpath.Root, reader Reader, c utildiscovery.ClientGetter) *P
 // Parse parses file tree rooted at root and builds policy CRDs from supported Kubernetes policy resources.
 // Resources are read from the following directories:
 //
+// syncedCRDs is the set of CRDs currently on the cluster.
+// clusterName is the spec.clusterName of the cluster's ConfigManagement.
+//
 // * system/ (flat, required)
 // * cluster/ (flat, optional)
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(
-	currentConfigs *namespaceconfig.AllConfigs,
+	syncedCRDs []*v1beta1.CustomResourceDefinition,
 	clusterName string,
 ) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
@@ -76,11 +76,11 @@ func (p *Parser) Parse(
 		return nil, p.errors
 	}
 
-	visitors := p.generateVisitors(flatRoot, currentConfigs, crds)
+	visitors := p.generateVisitors(flatRoot, crds)
 	if p.errors != nil {
 		return nil, p.errors
 	}
-	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName)
+	fileObjects := p.hydrateRootAndFlatten(visitors, syncedCRDs, clusterName)
 	return fileObjects, p.errors
 }
 
@@ -98,7 +98,6 @@ func (p *Parser) readObjects() *ast.FlatRoot {
 // generateVisitors creates the Visitors to use to hydrate and validate the root.
 func (p *Parser) generateVisitors(
 	flatRoot *ast.FlatRoot,
-	currentConfigs *namespaceconfig.AllConfigs,
 	crds []*v1beta1.CustomResourceDefinition,
 ) []ast.Visitor {
 	visitors := []ast.Visitor{
@@ -107,23 +106,14 @@ func (p *Parser) generateVisitors(
 		tree.NewClusterRegistryBuilderVisitor(flatRoot.ClusterRegistryObjects),
 		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
 	}
-	crdInfo, err := clusterconfig.NewCRDInfo(
-		decode.NewGenericResourceDecoder(scheme.Scheme),
-		currentConfigs.CRDClusterConfig,
-		crds)
-	p.errors = status.Append(p.errors, err)
-	visitors = append(visitors, tree.NewCRDClusterConfigInfoVisitor(crdInfo))
-
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
 	visitors = append(visitors, Visitors(hierarchyConfigs)...)
-
 	visitors = append(visitors, transform.NewSyncGenerator())
-
 	return visitors
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -132,14 +122,14 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 
 	fileObjects := root.Flatten()
 
-	crds, err := customresources.GetCRDs(fileObjects)
+	declaredCRDs, err := customresources.GetCRDs(fileObjects)
 	if err != nil {
 		// We couldn't read the CRDs, so we can't continue without showing a lot of
 		// bogus errors to the user.
 		p.errors = status.Append(p.errors, err)
 		return nil
 	}
-	scoper := p.getScoper(crds...)
+	scoper := p.getScoper(declaredCRDs...)
 	fileObjects, selErr := resolveSelectors(scoper, clusterName, fileObjects)
 	if selErr != nil {
 		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
@@ -147,6 +137,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 
+	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
 	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
 

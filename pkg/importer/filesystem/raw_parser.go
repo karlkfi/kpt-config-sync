@@ -1,18 +1,13 @@
 package filesystem
 
 import (
-	"github.com/google/nomos/pkg/importer/customresources"
-	"k8s.io/client-go/kubernetes/scheme"
-
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/decode"
-	"github.com/google/nomos/pkg/util/clusterconfig"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -35,27 +30,19 @@ func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGe
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(currentConfigs *namespaceconfig.AllConfigs, _ string) ([]ast.FileObject, status.MultiError) {
+func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, _ string) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {
 		return nil, errs
 	}
 
-	crds, crdErrs := customresources.GetCRDs(fileObjects)
+	declaredCrds, crdErrs := customresources.GetCRDs(fileObjects)
 	if crdErrs != nil {
 		errs = status.Append(errs, crdErrs)
 		return nil, errs
 	}
 
-	var crdErr status.Error
-	crdInfo, crdErr := clusterconfig.NewCRDInfo(
-		decode.NewGenericResourceDecoder(scheme.Scheme),
-		&v1.ClusterConfig{},
-		crds)
-	if crdErr != nil {
-		return nil, crdErr
-	}
 	errs = status.Append(errs, standardValidation(fileObjects))
 
 	// Get all known API resources from the server.
@@ -67,13 +54,13 @@ func (p *RawParser) Parse(currentConfigs *namespaceconfig.AllConfigs, _ string) 
 	if err != nil {
 		return nil, status.APIServerError(err, "discovery failed for server resources")
 	}
-
 	// Combine server-side API resources and declared CRDs into the scoper that can determine whether
 	// an object is namespace or cluster scoped.
-	scoper.AddCustomResources(crds)
+	scoper.AddCustomResources(declaredCrds)
+
 	var validators = []nonhierarchical.Validator{
 		nonhierarchical.IllegalHierarchicalKindValidator,
-		nonhierarchical.CRDRemovalValidator(crdInfo),
+		nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCrds),
 		nonhierarchical.ScopeValidator(scoper),
 	}
 	for _, v := range validators {

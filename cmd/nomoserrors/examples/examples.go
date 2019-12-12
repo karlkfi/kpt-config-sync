@@ -208,7 +208,7 @@ func Generate() map[string][]status.Error {
 	}))
 
 	// 1047
-	result.add(semantic.UnsupportedCRDRemovalError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.UnsupportedCRDRemovalError(fake.CustomResourceDefinition()))
 
 	// 1048
 	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinition()))

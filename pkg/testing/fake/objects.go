@@ -171,7 +171,7 @@ func CustomResourceDefinition(opts ...core.MetaMutator) ast.FileObject {
 }
 
 // AnvilAtPath returns an Anvil Custom Resource.
-func AnvilAtPath(path string) ast.FileObject {
+func AnvilAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	obj := &v1beta1.CustomResourceDefinition{
 		TypeMeta: toTypeMeta(kinds.Anvil()),
 		ObjectMeta: metav1.ObjectMeta{
@@ -179,6 +179,7 @@ func AnvilAtPath(path string) ast.FileObject {
 		},
 	}
 	defaultMutate(obj)
+	mutate(obj, opts...)
 
 	return FileObject(obj, path)
 }

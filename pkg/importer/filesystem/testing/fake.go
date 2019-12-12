@@ -23,7 +23,7 @@ import (
 )
 
 // NewTestClientGetter returns a new test RESTClientGetter that has mappings for test and provided resources.
-func NewTestClientGetter(extraResources ...*restmapper.APIGroupResources) utildiscovery.ClientGetter {
+func NewTestClientGetter(extraResources []*restmapper.APIGroupResources) utildiscovery.ClientGetter {
 	return &fakeRESTClientGetter{newFakeCachedDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))}
 }
 

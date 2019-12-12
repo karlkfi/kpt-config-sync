@@ -39,7 +39,6 @@ func Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 		metadata.NewLabelValidator(),
 		validation.NewInputValidator(specs),
 		semantic.NewAbstractResourceValidator(),
-		semantic.NewCRDRemovalValidator(),
 		transform.NewPathAnnotationVisitor(),
 		transform.NewInheritanceVisitor(),
 	}

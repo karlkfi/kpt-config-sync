@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/importer/git"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -142,8 +144,16 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
+	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
+	syncedCRDs, crdErr := clusterconfig.GetCRDs(decoder, currentConfigs.ClusterConfig)
+	if crdErr != nil {
+		// We were unable to parse the CRDs from the current ClusterConfig, so bail out.
+		// TODO(b/146139870): Make error message more user-friendly when this happens.
+		return reconcile.Result{}, crdErr
+	}
+
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredFileObjects, mErr := c.parser.Parse(currentConfigs, c.clusterName)
+	desiredFileObjects, mErr := c.parser.Parse(syncedCRDs, c.clusterName)
 	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", mErr)

@@ -10,10 +10,13 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/syncer/decode"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -43,11 +46,19 @@ func Parse(clusterName string, root cmpath.Root) (*namespaceconfig.AllConfigs, e
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	policies, cErr := clusterConfigs(ctx, config)
+	currentConfigs, cErr := clusterConfigs(ctx, config)
 	if cErr != nil {
 		return nil, cErr
 	}
-	fileObjects, mErr := p.Parse(policies, clusterName)
+	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
+	syncedCRDs, crdErr := clusterconfig.GetCRDs(decoder, currentConfigs.ClusterConfig)
+	if crdErr != nil {
+		// We were unable to parse the CRDs from the current ClusterConfig, so bail out.
+		// TODO(b/146139870): Make error message more user-friendly when this happens.
+		return nil, crdErr
+	}
+
+	fileObjects, mErr := p.Parse(syncedCRDs, clusterName)
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

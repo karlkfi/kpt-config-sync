@@ -1,6 +1,7 @@
 package filesystem_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -581,7 +582,8 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.ClusterRoleBindingAtPath("cluster/foo/crb.yaml")),
 		parsertest.Success("A subdir of clusterregistry/ is ok",
 			testoutput.NewAllConfigs(),
-			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")))
+			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")),
+	)
 
 	test.RunAll(t)
 }
@@ -604,4 +606,49 @@ func TestParserVet(t *testing.T) {
 	)
 
 	test.RunAll(t)
+}
+
+func TestParserVetCRDs(t *testing.T) {
+	test := parsertest.VetTest(
+		parsertest.TestCase{
+			Name: "error on illegal CRD removal",
+			Objects: []ast.FileObject{
+				fake.AnvilAtPath("cluster/anvil.yaml"),
+			},
+			SyncedCRDs: []*v1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
+			Errors:     []string{nonhierarchical.UnsupportedCRDRemovalErrorCode},
+		},
+		parsertest.TestCase{
+			Name: "ok to have synced CRD",
+			Objects: []ast.FileObject{
+				fake.FileObject(fakeCRD(kinds.Anvil()), "cluster/anvil-crd.yaml"),
+				fake.AnvilAtPath("cluster/anvil.yaml"),
+			},
+			SyncedCRDs: []*v1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
+			Expected: testoutput.NewAllConfigs(
+				fake.AnvilAtPath("cluster/anvil.yaml", testoutput.Source("cluster/anvil.yaml")),
+				fake.FileObject(fakeCRD(kinds.Anvil(), testoutput.Source("cluster/anvil-crd.yaml")), "cluster/anvil-crd.yaml"),
+			),
+		},
+	)
+
+	test.RunAll(t)
+}
+
+func fakeCRD(gvk schema.GroupVersionKind, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
+	o := fake.CustomResourceDefinitionObject()
+	o.Spec.Names.Plural = strings.ToLower(gvk.Kind) + "s"
+	o.SetName(o.Spec.Names.Plural + "." + gvk.Group)
+	o.Spec.Group = gvk.Group
+	o.Spec.Names.Kind = gvk.Kind
+	o.Spec.Versions = append(o.Spec.Versions,
+		v1beta1.CustomResourceDefinitionVersion{Name: gvk.Version, Served: true},
+	)
+	o.Spec.Scope = v1beta1.ClusterScoped
+
+	for _, opt := range opts {
+		opt(o)
+	}
+
+	return o
 }

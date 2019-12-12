@@ -18,7 +18,9 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/restmapper"
 )
 
 // TestCase represents a test case that runs AST hydration on a set of already-parsed files.
@@ -39,6 +41,9 @@ type TestCase struct {
 
 	// Errors is the errors the test case expects, if any.
 	Errors []string
+
+	// SyncedCRDs is the set of CRDs currently synced by ACM to the cluster.
+	SyncedCRDs []*v1beta1.CustomResourceDefinition
 
 	// ClusterName is the name of the cluster this test case is for.
 	ClusterName string
@@ -111,9 +116,51 @@ func (r fakeParserReader) Read(path cmpath.RootedPath) ([]ast.FileObject, status
 	return r[path.(cmpath.Relative)], nil
 }
 
+// CRDsToAPIGroupResources converts a list of CRDs to the corresponding APIGroupResources the
+// server would return.
+//
+// As-is assumes each CRD is a different APIGroup. Don't bother fixing unless you need to test
+// a case where you need to sync multiple CRDs for the same APIGroup.
+func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restmapper.APIGroupResources {
+	var result []*restmapper.APIGroupResources
+	for _, syncedCRD := range crds {
+		extraResource := &restmapper.APIGroupResources{
+			Group: metav1.APIGroup{
+				Name: syncedCRD.Spec.Group,
+				PreferredVersion: metav1.GroupVersionForDiscovery{
+					GroupVersion: syncedCRD.Spec.Group + "/" + syncedCRD.Spec.Versions[0].Name,
+				},
+			},
+		}
+
+		extraResource.VersionedResources = make(map[string][]metav1.APIResource)
+		for _, version := range syncedCRD.Spec.Versions {
+			extraResource.Group.Versions = append(extraResource.Group.Versions,
+				metav1.GroupVersionForDiscovery{
+					GroupVersion: syncedCRD.Spec.Group + "/" + version.Name,
+					Version:      version.Name,
+				},
+			)
+			extraResource.VersionedResources[version.Name] = []metav1.APIResource{
+				{
+					Name: syncedCRD.Spec.Names.Plural,
+					SingularName: syncedCRD.Spec.Names.Singular,
+					Namespaced: !(syncedCRD.Spec.Scope == v1beta1.ClusterScoped),
+					Group: syncedCRD.Spec.Group,
+					Version: version.Name,
+					Kind: syncedCRD.Spec.Names.Kind,
+				},
+			}
+		}
+
+		result = append(result, extraResource)
+	}
+	return result
+}
+
 // newTestParser creates a parser that processes the passed FileObjects.
-func newTestParser(t *testing.T, objects []ast.FileObject) *filesystem.Parser {
-	f := fstesting.NewTestClientGetter()
+func newTestParser(t *testing.T, objects []ast.FileObject, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
+	f := fstesting.NewTestClientGetter(CRDsToAPIGroupResources(syncedCRDs))
 
 	root := cmpath.Root{}
 	flatRoot := treetesting.BuildFlatTree(t, objects...)
@@ -138,9 +185,9 @@ func (pt Test) RunAll(t *testing.T) {
 				// Add default objects, if they are defined for this test suite.
 				objects = append(pt.DefaultObjects(), objects...)
 			}
-			parser := newTestParser(t, objects)
+			parser := newTestParser(t, objects, tc.SyncedCRDs)
 
-			fileObjects, errs := parser.Parse(&namespaceconfig.AllConfigs{}, tc.ClusterName)
+			fileObjects, errs := parser.Parse(tc.SyncedCRDs, tc.ClusterName)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {
