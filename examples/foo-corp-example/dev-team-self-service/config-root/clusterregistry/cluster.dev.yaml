@@ -1,7 +1,0 @@
-# applies dev environment label to dev cluster
-kind: Cluster
-apiVersion: clusterregistry.k8s.io/v1alpha1
-metadata:
-  name: dev
-  labels:
-    environment: dev
