@@ -27,10 +27,7 @@ func resource(group string, kinds ...string) v1.HierarchyConfigResource {
 }
 
 func TestHierarchyConfigScopeValidator(t *testing.T) {
-	scoper := discovery.Scoper{
-		kinds.Role().GroupKind():        discovery.NamespaceScope,
-		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
-	}
+	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("no resources", hierarchyConfig()),
@@ -49,5 +46,28 @@ func TestHierarchyConfigScopeValidator(t *testing.T) {
 		),
 	}
 
-	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper), testCases)
+	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper, true), testCases)
+}
+
+func TestHierarchyConfigScopeValidatorServerless(t *testing.T) {
+	scoper := discovery.CoreScoper()
+
+	testCases := []nht.ValidatorTestCase{
+		nht.Pass("no resources", hierarchyConfig()),
+		nht.Pass("empty HierarchyConfig", hierarchyConfig()),
+		nht.Pass("namespace-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.Role().Kind)),
+		),
+		nht.Fail("cluster-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.ClusterRole().Kind)),
+		),
+		nht.Fail("cluster and namespace-scoped resource",
+			hierarchyConfig(resource(rbac.GroupName, kinds.ClusterRole().Kind, kinds.Role().Kind)),
+		),
+		nht.Pass("unknown resource",
+			hierarchyConfig(resource("unknown", "UnknownType")),
+		),
+	}
+
+	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper, false), testCases)
 }

@@ -1,6 +1,7 @@
 package nonhierarchical
 
 import (
+	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
@@ -11,22 +12,21 @@ import (
 
 // NewSelectorAnnotationValidator ensures objects do not declare invalid namespace-selector
 // and cluster-selector annotations.
-func NewSelectorAnnotationValidator(scoper discovery.Scoper) Validator {
+func NewSelectorAnnotationValidator(scoper discovery.Scoper, errorOnUnknown bool) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		csErr := validateClusterSelectorAnnotation(o)
 		if csErr != nil {
 			return csErr
 		}
-		return validateNamespaceSelectorAnnotation(scoper, o)
+		return validateNamespaceSelectorAnnotation(scoper, o, errorOnUnknown)
 	})
 }
 
 func validateClusterSelectorAnnotation(o ast.FileObject) status.Error {
-	gvk := o.GroupVersionKind()
-	// All types except Cluster, ClusterSelector, and NamespaceSelector may declare the cluster-selector annotation.
-	if gvk != kinds.Cluster() && gvk != kinds.ClusterSelector() && gvk != kinds.NamespaceSelector() {
+	if !forbidsSelectors(o) {
 		return nil
 	}
+
 	if _, hasAnnotation := o.GetAnnotations()[v1.ClusterSelectorAnnotationKey]; hasAnnotation {
 		// This is a Cluster, ClusterSelector, or NamespaceSelector, and it defines the cluster-selector annotation.
 		return IllegalClusterSelectorAnnotationError(o)
@@ -34,21 +34,34 @@ func validateClusterSelectorAnnotation(o ast.FileObject) status.Error {
 	return nil
 }
 
-func validateNamespaceSelectorAnnotation(scoper discovery.Scoper, o ast.FileObject) status.Error {
-	scope, err := scoper.GetObjectScope(o)
-	if err != nil {
-		return err
+func validateNamespaceSelectorAnnotation(scoper discovery.Scoper, o ast.FileObject, errOnUnknown bool) status.Error {
+	// Namespace-scoped objects may declare the namespace-selector annotation.
+	if !forbidsSelectors(o) {
+		isNamespaced, err := scoper.GetObjectScope(o)
+		if err != nil {
+			if errOnUnknown {
+				return err
+			}
+			glog.V(6).Infof("ignored error due to --no-api-server-check: %s", err)
+			return nil
+		}
+		if isNamespaced == discovery.NamespaceScope {
+			return nil
+		}
 	}
 
-	if scope == discovery.NamespaceScope {
-		// Namespace-scoped objects may declare the namespace-selector annotation.
-		return nil
-	}
 	if _, hasAnnotation := o.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]; hasAnnotation {
 		// This is cluster-scoped, and it defines the namespace-selector annotation.
 		return IllegalNamespaceSelectorAnnotationError(o)
 	}
 	return nil
+}
+
+func forbidsSelectors(o ast.FileObject) bool {
+	// Cluster, ClusterSelector, and NamespaceSelector aren't necessarily defined on the APIServer,
+	// and we should verify they don't have the NamespaceSelector annotation.
+	gvk := o.GroupVersionKind()
+	return gvk == kinds.Cluster() || gvk == kinds.ClusterSelector() || gvk == kinds.NamespaceSelector()
 }
 
 // IllegalSelectorAnnotationErrorCode is the error code for IllegalNamespaceAnnotationError

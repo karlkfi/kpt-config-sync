@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -22,9 +23,9 @@ var topLevelDirectoryOverrides = map[schema.GroupVersionKind]string{
 	kinds.NamespaceSelector(): repo.NamespacesDir,
 }
 
-// expectedTopLevelDir returns the top-level directory we expect this object to be in,
+// getExpectedTopLevelDir returns the top-level directory we expect this object to be in,
 // or an error if we were unable to determine in which one it belongs.
-func expectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, status.Error) {
+func getExpectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, status.Error) {
 	gvk := o.GroupVersionKind()
 	if override, hasOverride := topLevelDirectoryOverrides[gvk]; hasOverride {
 		return override, nil
@@ -46,20 +47,23 @@ func expectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, status
 // Returns an UnknownObjectKindError if unable to determine which top-level directory
 // the resource should live. This happens when the resource is neither present
 // on the APIServer nor has a CRD defined.
-func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Validator {
+func NewTopLevelDirectoryValidator(scoper discovery.Scoper, errorOnUnknown bool) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
-		return validateTopLevelDirectory(scoper, o)
+		return validateTopLevelDirectory(scoper, o, errorOnUnknown)
 	})
 }
 
-func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status.Error {
-	expectedTopLevelDir, err := expectedTopLevelDir(scoper, o)
+func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject, errOnUnknown bool) status.Error {
+	expectedTopLevelDir, err := getExpectedTopLevelDir(scoper, o)
 	if err != nil {
-		return err
+		if errOnUnknown {
+			return err
+		}
+		glog.V(6).Infof("ignored error due to --no-api-server-check: %s", err)
+		return nil
 	}
 
-	actualTopLevelDir := o.Path.Split()[0]
-	if actualTopLevelDir == expectedTopLevelDir {
+	if o.Path.Split()[0] == expectedTopLevelDir {
 		return nil
 	}
 

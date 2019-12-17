@@ -1,6 +1,7 @@
 package hierarchyconfig
 
 import (
+	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -11,20 +12,24 @@ import (
 
 // NewHierarchyConfigScopeValidator returns a Validator that complains if a passed
 // HierarchyConfig includes types that are not Namespace-scoped.
-func NewHierarchyConfigScopeValidator(scoper discovery.Scoper) nonhierarchical.Validator {
+func NewHierarchyConfigScopeValidator(scoper discovery.Scoper, errorOnUnknown bool) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
 		if hc, isHierarchyConfig := o.Object.(*v1.HierarchyConfig); isHierarchyConfig {
-			return validateHierarchyConfigScopes(scoper, NewFileHierarchyConfig(hc, o))
+			return validateHierarchyConfigScopes(scoper, NewFileHierarchyConfig(hc, o), errorOnUnknown)
 		}
 		return nil
 	})
 }
 
-func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConfig) status.Error {
+func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConfig, errOnUnknown bool) status.Error {
 	for _, gkc := range hc.flatten() {
 		isNamespaced, err := scoper.GetGroupKindScope(gkc.GK)
 		if err != nil {
-			return err
+			if errOnUnknown {
+				return err
+			}
+			glog.V(6).Infof("ignored error due to --no-api-server-check: %s", err)
+			return nil
 		}
 
 		if !isNamespaced {
@@ -32,22 +37,6 @@ func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConf
 		}
 	}
 	return nil
-}
-
-// UnknownResourceInHierarchyConfigErrorCode is the error code for UnknownResourceInHierarchyConfigError
-const UnknownResourceInHierarchyConfigErrorCode = "1040"
-
-var unknownResourceInHierarchyConfigError = status.NewErrorBuilder(UnknownResourceInHierarchyConfigErrorCode)
-
-// UnknownResourceInHierarchyConfigError reports that a Resource defined in a HierarchyConfig does not have a definition in
-// the cluster.
-func UnknownResourceInHierarchyConfigError(config id.HierarchyConfig) status.Error {
-	gk := config.GroupKind()
-	return unknownResourceInHierarchyConfigError.
-		Sprintf("This HierarchyConfig defines the APIResource %q which does not have a CustomResourceDefinition on the cluster. "+
-			"Ensure the Group and Kind are spelled correctly and any required CRD exists on the cluster.",
-			gk.String()).
-		BuildWithResources(config)
 }
 
 // ClusterScopedResourceInHierarchyConfigErrorCode is the error code for ClusterScopedResourceInHierarchyConfigError

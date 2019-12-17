@@ -138,8 +138,8 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 	}
 
 	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
-	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, true).Validate(fileObjects))
+	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, true).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, stdErrs)
@@ -150,7 +150,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 }
 
 func resolveSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
-	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper).Validate(fileObjects)
+	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
 	if annErr != nil {
 		return nil, annErr
 	}

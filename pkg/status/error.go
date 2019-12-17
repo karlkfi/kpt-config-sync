@@ -59,6 +59,7 @@ var registered = map[string]bool{
 	"1026": true,
 	"1035": true,
 	"1037": true,
+	"1040": true,
 	"1049": true,
 	"1051": true,
 }

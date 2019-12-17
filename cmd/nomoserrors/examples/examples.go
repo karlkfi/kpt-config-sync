@@ -170,12 +170,7 @@ func Generate() map[string][]status.Error {
 	result.add(validation.ShouldBeInClusterError(fake.ClusterRoleAtPath("namespaces/clusterrole.yaml")))
 	result.add(validation.ShouldBeInNamespacesError(fake.RoleAtPath("cluster/role.yaml")))
 
-	// 1040
-	result.add(hierarchyconfig.UnknownResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
-		GK:            kinds.Anvil().GroupKind(),
-		HierarchyMode: v1.HierarchyModeDefault,
-		Resource:      fake.HierarchyConfig(),
-	}))
+	// 1040 is Deprecated.
 
 	// 1041
 	result.add(hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
