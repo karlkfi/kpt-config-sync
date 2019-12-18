@@ -28,7 +28,7 @@ import (
 // - An object references a NamespaceSelector that does not exist.
 // - An object references a NamespaceSelector in a non-parent directory.
 func ResolveHierarchicalNamespaceSelectors(objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
-	nssStates, errs := getHierarchicalNamespaceSelectorStates(objects)
+	nssStates, errs := getNamespaceSelectorStates(objects)
 	errs = status.Append(errs, validateHierarchicalSelectorReferences(objects))
 	if errs != nil {
 		// Either a NamespaceSelector was invalid or the Selector references were wrong,
@@ -39,46 +39,32 @@ func ResolveHierarchicalNamespaceSelectors(objects []ast.FileObject) ([]ast.File
 	return resolveNamespaceSelectors(nssStates, objects)
 }
 
-// getHierarchicalNamespaceSelectorStates returns a map from each defined NamespaceSelector name
-// to a map from each Namespace in a child directory of the NamespaceSelector's directory.
+// getNamespaceSelectorStates returns a map from each defined NamespaceSelector name
+// to a map from each Namespace to whether the NamespaceSelector is active.
 //
 // This cache means we don't have to resolve Namespace-selection for every object, just once per
 // Namespace.
-func getHierarchicalNamespaceSelectorStates(objects []ast.FileObject) (map[selectorName]map[namespaceName]state, status.MultiError) {
+func getNamespaceSelectorStates(objects []ast.FileObject) (map[selectorName]map[namespaceName]state, status.MultiError) {
 	selectors, errs := getNamespaceSelectors(objects)
 	if errs != nil {
-		// Problem parsing NamespaceSelectors, son don't try to continue.
 		return nil, errs
 	}
 	namespaces := filterNamespaces(objects)
 
 	nssStates := make(map[selectorName]map[namespaceName]state)
 	for _, selector := range selectors {
-		// Get the directory of the NamespaceSelector. We need a record of all Namespaces
-		// in child directories of this directory.
-		selectorDir := selector.Path.Dir().SlashPath()
-
 		// Make a map to record whether this NamespaceSelector selects each Namespace.
 		namespaceStates := make(map[namespaceName]state)
 		for _, namespace := range namespaces {
-			namespacePath := namespace.SlashPath()
-			if !strings.HasPrefix(namespacePath, selectorDir) {
-				// This NamespaceSelector does not apply to this Namespace as it does not
-				// appear in any of its AbstractNamespace parents.
-				continue
-			}
-
 			if selector.Matches(labels.Set(namespace.GetLabels())) {
 				namespaceStates[namespaceName(namespace.GetName())] = active
 			} else {
 				namespaceStates[namespaceName(namespace.GetName())] = inactive
 			}
 		}
-
 		nssStates[selectorName(selector.GetName())] = namespaceStates
 	}
-
-	return nssStates, errs
+	return nssStates, nil
 }
 
 // getNamespaceSelectors returns the list of NamespaceSelectors in the passed array of FileObjects.
