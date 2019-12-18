@@ -114,7 +114,8 @@ echo "Generating APIs"
   --input="${INPUT_APIS}" \
   --clientset-name="apis" \
   --output-base="${OUTPUT_BASE}" \
-  --clientset-path "${OUTPUT_CLIENT}"
+  --clientset-path "${OUTPUT_CLIENT}" \
+  --go-header-file="hack/boilerplate.txt"
 
 informer_inputs=""
 for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
@@ -132,6 +133,7 @@ echo "informer"
   --listers-package="${OUTPUT_CLIENT}/listers" \
   --output-base="$GOWORK/src" \
   --output-package="${OUTPUT_CLIENT}/informer" \
+  --go-header-file="hack/boilerplate.txt" \
   --single-directory
 
 echo "deepcopy"
@@ -140,14 +142,16 @@ echo "deepcopy"
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-file-base="types.generated" \
-  --output-base="${OUTPUT_BASE}"
+  --output-base="${OUTPUT_BASE}" \
+  --go-header-file="hack/boilerplate.txt"
 
 echo "lister"
 "${GOBASE}/bin/lister-gen" \
   ${LOGGING_FLAGS} \
   --input-dirs="${informer_inputs}" \
   --output-base="$GOWORK/src" \
-  --output-package="${OUTPUT_CLIENT}/listers"
+  --output-package="${OUTPUT_CLIENT}/listers" \
+  --go-header-file="hack/boilerplate.txt"
 
 if $GEN_PROTO; then
   for api in $(echo "${INPUT_APIS}" | tr ',' ' '); do
