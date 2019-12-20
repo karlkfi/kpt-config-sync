@@ -160,7 +160,7 @@ func (f *DeltaFIFO) KeyOf(obj interface{}) (string, error) {
 	return f.keyFunc(obj)
 }
 
-// HasSynced returns true if an Add/Update/Delete/AddIfNotPresent are called first,
+// Return true if an Add/Update/Delete/AddIfNotPresent are called first,
 // or an Update called first but the first batch of items inserted by Replace() has been popped
 func (f *DeltaFIFO) HasSynced() bool {
 	f.lock.Lock()
@@ -295,12 +295,26 @@ func isDeletionDup(a, b *Delta) *Delta {
 	return b
 }
 
+// willObjectBeDeletedLocked returns true only if the last delta for the
+// given object is Delete. Caller must lock first.
+func (f *DeltaFIFO) willObjectBeDeletedLocked(id string) bool {
+	deltas := f.items[id]
+	return len(deltas) > 0 && deltas[len(deltas)-1].Type == Deleted
+}
+
 // queueActionLocked appends to the delta list for the object.
 // Caller must lock first.
 func (f *DeltaFIFO) queueActionLocked(actionType DeltaType, obj interface{}) error {
 	id, err := f.KeyOf(obj)
 	if err != nil {
 		return KeyError{obj, err}
+	}
+
+	// If object is supposed to be deleted (last event is Deleted),
+	// then we should ignore Sync events, because it would result in
+	// recreation of this object.
+	if actionType == Sync && f.willObjectBeDeletedLocked(id) {
+		return nil
 	}
 
 	newDeltas := append(f.items[id], Delta{actionType, obj})
@@ -375,7 +389,7 @@ func (f *DeltaFIFO) GetByKey(key string) (item interface{}, exists bool, err err
 	return d, exists, nil
 }
 
-// IsClosed checks if the queue is closed
+// Checks if the queue is closed
 func (f *DeltaFIFO) IsClosed() bool {
 	f.closedLock.Lock()
 	defer f.closedLock.Unlock()
@@ -403,7 +417,7 @@ func (f *DeltaFIFO) Pop(process PopProcessFunc) (interface{}, error) {
 			// When Close() is called, the f.closed is set and the condition is broadcasted.
 			// Which causes this loop to continue and return from the Pop().
 			if f.IsClosed() {
-				return nil, ErrFIFOClosed
+				return nil, FIFOClosedError
 			}
 
 			f.cond.Wait()
@@ -452,7 +466,6 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 
 	if f.knownObjects == nil {
 		// Do deletion detection against our own list.
-		queuedDeletions := 0
 		for k, oldItem := range f.items {
 			if keys.Has(k) {
 				continue
@@ -461,7 +474,6 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 			if n := oldItem.Newest(); n != nil {
 				deletedObj = n.Object
 			}
-			queuedDeletions++
 			if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
 				return err
 			}
@@ -469,9 +481,7 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 
 		if !f.populated {
 			f.populated = true
-			// While there shouldn't be any queued deletions in the initial
-			// population of the queue, it's better to be on the safe side.
-			f.initialPopulationCount = len(list) + queuedDeletions
+			f.initialPopulationCount = len(list)
 		}
 
 		return nil
@@ -579,7 +589,6 @@ type KeyGetter interface {
 // DeltaType is the type of a change (addition, deletion, etc)
 type DeltaType string
 
-// Change type definition
 const (
 	Added   DeltaType = "Added"
 	Updated DeltaType = "Updated"

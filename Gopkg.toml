@@ -20,7 +20,7 @@
 # this version.  Versions should match across packages.
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.16.3"
+  version = "kubernetes-1.13.12"
 
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
@@ -30,25 +30,25 @@
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.16.3"
+  version = "kubernetes-1.13.12"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.16.3"
+  version = "kubernetes-1.13.12"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/cli-runtime"
-  version = "kubernetes-1.16.3"
+  version = "kubernetes-1.13.12"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
 [[constraint]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.16.3"
+  version = "kubernetes-1.13.12"
 
 # Pin the version of a k8s package to ensure that libraries are migrated to
 # this version.  Versions should match across packages.
