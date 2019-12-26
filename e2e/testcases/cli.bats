@@ -72,9 +72,7 @@ teardown() {
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=syncer"
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=monitor"
 
-  # This flag is so that this test can run while the feature is being developed incrementally
-  # It will be removed when the feature is ready to be exposed in a release
-  BUG_REPORT=enabled "${NOMOS_BIN}" bugreport
+  "${NOMOS_BIN}" bugreport
 
   # check that zip exists
   BUG_REPORT_ZIP_NAME=$(get_bug_report_file_name)

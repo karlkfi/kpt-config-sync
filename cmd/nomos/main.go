@@ -30,15 +30,7 @@ func init() {
 	rootCmd.AddCommand(vet.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 	rootCmd.AddCommand(status.Cmd)
-
-	// bugreport is not ready for release, but tests are written
-	// It is important that the tests continue to run in CI to prevent drift
-	//
-	// This code can be removed once bugreport is ready for public consumption
-	env := os.Getenv("BUG_REPORT")
-	if len(env) > 0 && env == "enabled" {
-		rootCmd.AddCommand(bugreport.Cmd)
-	}
+	rootCmd.AddCommand(bugreport.Cmd)
 }
 
 func init() {
