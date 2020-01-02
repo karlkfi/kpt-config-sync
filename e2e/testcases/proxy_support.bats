@@ -19,6 +19,7 @@ teardown() {
 }
 
 @test "${FILE_NAME}: Successfully syncs through a proxy" {
+  skip "Proxy e2e test temporarily disabled until operator changes are rolled out and available to CI"
   kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-proxy-enabled.yaml"
 
   token="$(get_token_at_HEAD)"
