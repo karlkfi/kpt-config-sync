@@ -54,7 +54,7 @@ spec:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
           - configMapRef:
-              name: disable-hierarchy
+              name: source-format
               optional: true
         resources:
           requests:

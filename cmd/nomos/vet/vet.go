@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	// TODO(b/147098697): Make identical to sourceFormat directive.
 	disableHierarchyFlag = "disable-hierarchy"
 	disableHierarchy     bool
 

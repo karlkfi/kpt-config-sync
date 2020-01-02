@@ -7,7 +7,7 @@ spec:
   channel: dev
   enableAggregateNamespaceQuotas: true
   clusterName: e2e-test-cluster
-  DisableHierarchy: true
+  sourceFormat: unstructured
   git:
     syncRepo: git@test-git-server.config-management-system-test:/git-server/repos/sot.git
     syncBranch: master

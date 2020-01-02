@@ -3,7 +3,6 @@ package filesystem
 import (
 	"os"
 	"path"
-	"strconv"
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -64,11 +63,11 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 		return errors.Wrapf(err, "failed to create discoveryclient")
 	}
 
-	// If HIERARCHY_DISABLED is invalid, assume disabled.
-	hierarchyDisabled, _ := strconv.ParseBool(os.Getenv("HIERARCHY_DISABLED"))
+	// If SOURCE_FORMAT is invalid, assume hierarchy.
+	sourceFormat := os.Getenv("SOURCE_FORMAT")
 	var cfgParser ConfigParser
-	if hierarchyDisabled {
-		// Nomos hierarchy is disabled, so use the RawParser.
+	if sourceFormat == "unstructured" {
+		// sourceFormat is unstructured, so use the RawParser.
 		cfgParser = NewRawParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
 	} else {
 		cfgParser = NewParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
