@@ -13,6 +13,7 @@ COPY git-importer git-importer
 COPY monitor monitor
 COPY nomos nomos
 COPY syncer syncer
+COPY gcenode-askpass-sidecar gcenode-askpass-sidecar
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
