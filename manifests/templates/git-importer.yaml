@@ -51,8 +51,6 @@ spec:
             readOnly: true
         envFrom:
           - configMapRef:
-              name: git-importer
-          - configMapRef:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
           - configMapRef:
