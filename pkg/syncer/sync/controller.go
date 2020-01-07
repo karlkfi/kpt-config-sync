@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +31,6 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 		return errors.Wrapf(err, "failed to create discoveryclient")
 	}
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
-	startErrCh := make(chan error)
 	clientFactory := func() (client.Client, error) {
 		cfg := mgr.GetConfig()
 		mapper, err2 := apiutil.NewDiscoveryRESTMapper(cfg)
@@ -44,7 +42,7 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 			Mapper: mapper,
 		})
 	}
-	reconciler, err := NewMetaReconciler(mgr, dc, clientFactory, metav1.Now, startErrCh)
+	reconciler, err := NewMetaReconciler(mgr, dc, clientFactory, metav1.Now)
 	if err != nil {
 		return errors.Wrapf(err, "could not create %q reconciler", syncControllerName)
 	}
@@ -69,23 +67,11 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", syncControllerName)
 	}
 
-	// Create a watch for errors when starting the subManager and force a reconciliation.
+	// Create a watch for forced restarts from other controllers like the CRD controller.
 	managerRestartSource := &source.Channel{Source: rc.Channel()}
 	if err = c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", syncControllerName)
 	}
-
-	go func() {
-		for {
-			startErr := <-startErrCh
-			if startErr != nil {
-				// subManager could not successfully start, so we must force it to restart next reconcile.
-				glog.Errorf("Error starting NamespaceConfig / ClusterConfig controllers, restarting: %v", startErr)
-				// Signal the SubManager to restart.
-				rc.Restart("retry")
-			}
-		}
-	}()
 
 	return nil
 }

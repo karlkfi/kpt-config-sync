@@ -7,6 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
@@ -133,6 +134,7 @@ func TestReconcile(t *testing.T) {
 				client:          syncerclient.New(mockClient, metrics.APICallDuration),
 				cache:           mockCache,
 				discoveryClient: mockDiscovery,
+				builder:         syncermanager.NewSyncAwareBuilder(),
 				subManager:      mockManager,
 				clientFactory: func() (client.Client, error) {
 					return mockClient, nil
@@ -182,7 +184,7 @@ func TestReconcile(t *testing.T) {
 					},
 				}, nil)
 
-			mockManager.EXPECT().Restart(gomock.Any(), gomock.Any(), gomock.Eq(tc.wantForceRestart))
+			mockManager.EXPECT().Restart(gomock.Any(), gomock.Eq(tc.wantForceRestart))
 			for _, wantUpdateList := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().

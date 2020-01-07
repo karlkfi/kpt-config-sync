@@ -3,51 +3,94 @@ package manager
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const restartControllerName = "restartable-manager-controller"
 
 // RestartableManager is a controller manager that can be restarted based on the resources it syncs.
 type RestartableManager interface {
-	// Restart restarts the Manager and all the controllers it manages. The given schema.
-	// GroupVersionKinds will be added to the scheme.
+	// Restart restarts the Manager and all the controllers it manages to watch the given GroupVersionKinds.
 	// Returns if a restart actually happened and if there were any errors while doing it.
-	Restart(gvks map[schema.GroupVersionKind]bool, scoper discovery.Scoper, force bool) (bool, error)
+	Restart(gvks map[schema.GroupVersionKind]bool, force bool) (bool, error)
 }
 
-var _ RestartableManager = &SubManager{}
+var _ RestartableManager = &subManager{}
 
-// SubManager is a manager.Manager that is managed by a higher-level controller.
-type SubManager struct {
-	manager.Manager
-	// controllerBuilder builds and initializes controllers for this Manager.
-	controllerBuilder ControllerBuilder
+// subManager is a manager.Manager that is managed by a higher-level controller.
+type subManager struct {
+	mgr manager.Manager
+	// builder builds and initializes controllers for this Manager.
+	builder ControllerBuilder
 	// baseCfg is rest.Config that has no watched resources added to the scheme.
 	baseCfg *rest.Config
 	// cancel is a cancellation function for ctx. May be nil if ctx is unavailable
 	cancel context.CancelFunc
-	// errCh gets errors that come up when starting the SubManager
-	errCh chan error
+	// errCh gets errors that come up when starting the subManager
+	errCh chan event.GenericEvent
+	// watching is a map of GVKs that the manager is currently watching
+	watching map[schema.GroupVersionKind]bool
 }
 
-// NewSubManager returns a new SubManager
-func NewSubManager(mgr manager.Manager, controllerBuilder ControllerBuilder, errCh chan error) *SubManager {
-	r := &SubManager{
-		Manager:           mgr,
-		controllerBuilder: controllerBuilder,
-		baseCfg:           rest.CopyConfig(mgr.GetConfig()),
-		errCh:             errCh,
+// NewManager returns a new RestartableManager
+func NewManager(mgr manager.Manager, builder ControllerBuilder) (RestartableManager, error) {
+	sm, err := newManager(mgr.GetConfig())
+	if err != nil {
+		return nil, err
 	}
-	return r
+
+	errCh := make(chan event.GenericEvent)
+	r := &subManager{
+		mgr:     sm,
+		builder: builder,
+		baseCfg: rest.CopyConfig(mgr.GetConfig()),
+		errCh:   errCh,
+	}
+
+	// Configure a controller strictly for restarting the underlying manager if it fails to Start.
+	c, err := controller.New(restartControllerName, mgr, controller.Options{
+		Reconciler: r,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not create %q", restartControllerName)
+	}
+
+	// Create a watch for errors when starting the subManager and force it to retry.
+	managerRestartSource := &source.Channel{Source: errCh}
+	if err := c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", restartControllerName)
+	}
+
+	return r, nil
+}
+
+func newManager(cfg *rest.Config) (manager.Manager, error) {
+	// MetricsBindAddress 0 disables default metrics for the manager
+	// If metrics are enabled, every time the subManger restarts it tries to bind to the metrics port
+	// but fails because restarting does not unbind the port.
+	// Instead of disabling these metrics, we could figure out a way to unbind the port on restart.
+	opts := manager.Options{MetricsBindAddress: "0"}
+	mgr, err := manager.New(rest.CopyConfig(cfg), opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create the manager for RestartableManager")
+	}
+	return mgr, nil
 }
 
 // context returns a new cancellable context.Context. If a context.Context was previously generated, it cancels it.
-func (m *SubManager) context() context.Context {
+func (m *subManager) context() context.Context {
 	if m.cancel != nil {
 		m.cancel()
 		glog.Info("Stopping SubManager")
@@ -57,35 +100,42 @@ func (m *SubManager) context() context.Context {
 	return ctx
 }
 
+func (m *subManager) needsRestart(toWatch map[schema.GroupVersionKind]bool) bool {
+	return !reflect.DeepEqual(m.watching, toWatch)
+}
+
 // Restart implements RestartableManager.
-func (m *SubManager) Restart(gvks map[schema.GroupVersionKind]bool, scoper discovery.Scoper, force bool) (bool, error) {
-	if !force && !m.controllerBuilder.NeedsRestart(gvks) {
+func (m *subManager) Restart(gvks map[schema.GroupVersionKind]bool, force bool) (bool, error) {
+	if !force && !m.needsRestart(gvks) {
 		return false, nil
 	}
 	ctx := m.context()
 
-	var err error
-	// MetricsBindAddress 0 disables default metrics for the manager
-	// If metrics are enabled, every time the subManger restarts it tries to bind to the metrics port
-	// but fails because restarting does not unbind the port.
-	// Instead of disabling these metrics, we could figure out a way to unbind the port on restart.
-	m.Manager, err = manager.New(rest.CopyConfig(m.baseCfg), manager.Options{MetricsBindAddress: "0"})
+	sm, err := newManager(m.baseCfg)
 	if err != nil {
-		return true, errors.Wrap(err, "could not create the Manager for SubManager")
+		return true, err
 	}
+	m.mgr = sm
 
-	if err := m.controllerBuilder.UpdateScheme(m.GetScheme(), gvks); err != nil {
-		return true, errors.Wrap(err, "could not update the scheme")
-	}
-	if err := m.controllerBuilder.StartControllers(ctx, m, gvks, scoper); err != nil {
+	if err := m.builder.StartControllers(ctx, m.mgr, gvks); err != nil {
 		return true, errors.Wrap(err, "could not start controllers")
 	}
 
-	go func() {
-		// Propagate errors with starting the SubManager up to the parent controller, so we can restart SubManager.
-		m.errCh <- m.Start(ctx.Done())
-	}()
+	glog.Info("Starting subManager")
+	go func(ctx context.Context) {
+		if err := m.mgr.Start(ctx.Done()); err != nil {
+			// subManager could not successfully start, so we must force it to restart next reconcile.
+			glog.Errorf("Error starting subManager, restarting: %v", err)
+			m.errCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{Namespace: "Restart", Name: "DueToError"}}
+		}
+	}(ctx)
 
-	glog.Info("Starting SubManager")
+	m.watching = gvks
 	return true, nil
+}
+
+// Reconcile will only be called due to an error starting the submanager on a previous Restart.
+func (m *subManager) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
+	_, err := m.Restart(m.watching, true)
+	return reconcile.Result{}, err
 }

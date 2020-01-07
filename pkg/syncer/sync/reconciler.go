@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -33,8 +32,8 @@ var _ reconcile.Reconciler = &MetaReconciler{}
 // ClientFactory is a function used for creating new controller-runtime clients.
 type ClientFactory func() (client.Client, error)
 
-// MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes subManager to stop and start
-// controllers based on the resources that are presently sync-enabled.
+// MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes RestartableManager
+// to stop and start controllers based on the resources that are presently sync-enabled.
 type MetaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
 	client *syncerclient.Client
@@ -43,6 +42,8 @@ type MetaReconciler struct {
 	cache cache.Cache
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
 	discoveryClient discovery.DiscoveryInterface
+	// builder is used to recreate controllers for watched GroupVersionKinds.
+	builder *syncermanager.SyncAwareBuilder
 	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
 	subManager syncermanager.RestartableManager
 	// clientFactory returns a new dynamic client.
@@ -51,17 +52,9 @@ type MetaReconciler struct {
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
-func NewMetaReconciler(
-	mgr manager.Manager,
-	dc discovery.DiscoveryInterface,
-	clientFactory ClientFactory,
-	now func() metav1.Time,
-	errCh chan error) (*MetaReconciler, error) {
-	// MetricsBindAddress 0 disables default metrics for the manager
-	// If metrics are enabled, every time the subManger restarts it tries to bind to the metrics port
-	// but fails because restarting does not unbind the port.
-	// Instead of disabling these metrics, we could figure out a way to unbind the port on restart.
-	sm, err := manager.New(rest.CopyConfig(mgr.GetConfig()), manager.Options{MetricsBindAddress: "0"})
+func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, clientFactory ClientFactory, now func() metav1.Time) (*MetaReconciler, error) {
+	builder := syncermanager.NewSyncAwareBuilder()
+	sm, err := syncermanager.NewManager(mgr, builder)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +63,9 @@ func NewMetaReconciler(
 		client:          syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
 		cache:           mgr.GetCache(),
 		clientFactory:   clientFactory,
-		subManager:      syncermanager.NewSubManager(sm, syncermanager.NewSyncAwareBuilder(), errCh),
 		discoveryClient: dc,
+		builder:         builder,
+		subManager:      sm,
 		now:             now,
 	}, nil
 }
@@ -126,6 +120,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	if err != nil {
 		return err
 	}
+	r.builder.Scoper = scoper
 
 	eventTriggeredRestart := restartSubManager(request.Name)
 	source := "sync"
@@ -134,7 +129,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		source = request.Namespace
 	}
 
-	attemptedRestart, err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), scoper, eventTriggeredRestart)
+	attemptedRestart, err := r.subManager.Restart(apirs.GroupVersionKinds(enabled...), eventTriggeredRestart)
 	if attemptedRestart {
 		metrics.ControllerRestarts.WithLabelValues(source).Inc()
 	}

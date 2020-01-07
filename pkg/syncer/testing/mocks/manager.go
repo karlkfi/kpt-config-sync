@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	discovery "github.com/google/nomos/pkg/util/discovery"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -36,14 +35,14 @@ func (m *MockRestartableManager) EXPECT() *MockRestartableManagerMockRecorder {
 }
 
 // Restart mocks base method
-func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 discovery.Scoper, arg2 bool) (bool, error) {
-	ret := m.ctrl.Call(m, "Restart", arg0, arg1, arg2)
+func (m *MockRestartableManager) Restart(arg0 map[schema.GroupVersionKind]bool, arg1 bool) (bool, error) {
+	ret := m.ctrl.Call(m, "Restart", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Restart indicates an expected call of Restart
-func (mr *MockRestartableManagerMockRecorder) Restart(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartableManager)(nil).Restart), arg0, arg1, arg2)
+func (mr *MockRestartableManagerMockRecorder) Restart(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockRestartableManager)(nil).Restart), arg0, arg1)
 }
