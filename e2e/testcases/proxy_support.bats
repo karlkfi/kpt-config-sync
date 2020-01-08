@@ -20,7 +20,7 @@ teardown() {
 
 @test "${FILE_NAME}: Successfully syncs through a proxy" {
   skip "Proxy e2e test temporarily disabled until operator changes are rolled out and available to CI"
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-proxy-enabled.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-proxy-enabled.yaml"
 
   token="$(get_token_at_HEAD)"
   wait::for -t 60 -- nomos::repo_synced --tokenOverride "${token}"
@@ -46,7 +46,7 @@ get_config_map_name () {
 }
 
 deploy_proxy () {
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/tinyproxy.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/tinyproxy.yaml"
 }
 
 remove_proxy () {

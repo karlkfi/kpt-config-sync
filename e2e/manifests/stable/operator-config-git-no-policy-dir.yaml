@@ -1,11 +1,14 @@
-# no channel is default stable
+#
+#  Note the absence of the POLICY_DIR field.  This is to engage Nomos' default behavior
+#  of searching for the cluster, namespaces, and systems directories at the git repository's
+#  root directory.
+#
 apiVersion: configmanagement.gke.io/v1
 kind: ConfigManagement
 metadata:
   name: config-management
   namespace: config-management-system
 spec:
-  channel: stable
   enableAggregateNamespaceQuotas: true
   clusterName: e2e-test-cluster
   git:
@@ -13,4 +16,3 @@ spec:
     syncBranch: master
     syncWait: 1
     secretType: ssh
-    policyDir: acme

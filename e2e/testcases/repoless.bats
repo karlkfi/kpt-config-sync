@@ -20,7 +20,7 @@ teardown() {
 }
 
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-repoless-repo.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-repo.yaml"
   setup::git::initialize
   setup::git::init repoless
 
@@ -33,11 +33,11 @@ teardown() {
   resource::check role pod-reader-default -n default
 
   # Repair the state
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
 }
 
 @test "${FILE_NAME}: Syncs correctly with only roles" {
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git-repoless-no-ns.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-ns.yaml"
   setup::git::initialize
   setup::git::init repoless-no-ns
 
@@ -50,5 +50,5 @@ teardown() {
   resource::check role pod-reader-default -n default
 
   # Repair the state
-  kubectl apply -f "${BATS_TEST_DIRNAME}/../manifests/operator-config-git.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
 }
