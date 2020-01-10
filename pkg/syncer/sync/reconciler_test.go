@@ -7,10 +7,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
+	utilmocks "github.com/google/nomos/pkg/util/testing/mocks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -128,13 +128,13 @@ func TestReconcile(t *testing.T) {
 			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
 			mockCache := mocks.NewMockCache(mockCtrl)
 			mockDiscovery := mocks.NewMockDiscoveryInterface(mockCtrl)
-			mockManager := mocks.NewMockRestartableManager(mockCtrl)
+			mockManager := utilmocks.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
 				client:          syncerclient.New(mockClient, metrics.APICallDuration),
 				cache:           mockCache,
 				discoveryClient: mockDiscovery,
-				builder:         syncermanager.NewSyncAwareBuilder(),
+				builder:         newSyncAwareBuilder(),
 				subManager:      mockManager,
 				clientFactory: func() (client.Client, error) {
 					return mockClient, nil

@@ -11,9 +11,9 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
-	syncermanager "github.com/google/nomos/pkg/syncer/manager"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/util/watch"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,9 +43,9 @@ type MetaReconciler struct {
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
 	discoveryClient discovery.DiscoveryInterface
 	// builder is used to recreate controllers for watched GroupVersionKinds.
-	builder *syncermanager.SyncAwareBuilder
+	builder *syncAwareBuilder
 	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
-	subManager syncermanager.RestartableManager
+	subManager watch.RestartableManager
 	// clientFactory returns a new dynamic client.
 	clientFactory ClientFactory
 	now           func() metav1.Time
@@ -53,8 +53,8 @@ type MetaReconciler struct {
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
 func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, clientFactory ClientFactory, now func() metav1.Time) (*MetaReconciler, error) {
-	builder := syncermanager.NewSyncAwareBuilder()
-	sm, err := syncermanager.NewManager(mgr, builder)
+	builder := newSyncAwareBuilder()
+	sm, err := watch.NewManager(mgr, builder)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	if err != nil {
 		return err
 	}
-	r.builder.Scoper = scoper
+	r.builder.scoper = scoper
 
 	eventTriggeredRestart := restartSubManager(request.Name)
 	source := "sync"

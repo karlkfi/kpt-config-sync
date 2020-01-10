@@ -1,5 +1,5 @@
-// Package manager includes controller managers.
-package manager
+// Package watch includes a RestartableManager for dynamically watching resources.
+package watch
 
 import (
 	"context"
