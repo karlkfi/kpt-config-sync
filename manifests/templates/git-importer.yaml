@@ -85,6 +85,18 @@ spec:
         envFrom:
           - configMapRef:
               name: git-importer
+        # This section should be removed for all SecretType values *except* "token"
+        env:
+        - name: GIT_SYNC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: git-creds
+        - name: GIT_SYNC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: git-creds
       volumes:
       - name: repo
       - name: git-creds
