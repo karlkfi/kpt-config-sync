@@ -14,6 +14,9 @@ const (
 
 	// clusterFlag is the flag name for the Clusters below.
 	clustersFlag = "clusters"
+
+	// SkipAPIServerFlag is the flag name for SkipAPIServer below.
+	SkipAPIServerFlag = "no-api-server-check"
 )
 
 var (
@@ -29,6 +32,9 @@ var (
 
 	// Validate determines whether to use a schema to validate the input
 	Validate bool
+
+	// SkipAPIServer directs whether to try to contact the API Server for checks.
+	SkipAPIServer bool
 )
 
 // AddContexts adds the --contexts flag.
@@ -47,6 +53,12 @@ func AddClusters(cmd *cobra.Command) {
 func AddPath(cmd *cobra.Command) {
 	cmd.Flags().Var(&Path, pathFlag,
 		`Root directory to use as a Anthos Configuration Management repository.`)
+}
+
+// AddSkipAPIServerCheck adds the --no-api-server-check flag.
+func AddSkipAPIServerCheck(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&SkipAPIServer, SkipAPIServerFlag, false,
+		"If true, disables talking to the API Server for discovery.")
 }
 
 // AllClusters returns true if all clusters should be processed.

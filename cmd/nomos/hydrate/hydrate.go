@@ -33,6 +33,7 @@ var (
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
+	flags.AddSkipAPIServerCheck(Cmd)
 
 	Cmd.Flags().BoolVar(&flat, "flat", false,
 		`If enabled, print all output to a single file`)
@@ -80,7 +81,7 @@ clusters.`,
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, true, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

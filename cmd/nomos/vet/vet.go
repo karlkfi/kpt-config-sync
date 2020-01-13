@@ -21,20 +21,15 @@ var (
 	// TODO(b/147098697): Make identical to sourceFormat directive.
 	disableHierarchyFlag = "disable-hierarchy"
 	disableHierarchy     bool
-
-	skipAPIServerFlag = "no-api-server-check"
-	skipAPIServer     bool
 )
 
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
+	flags.AddSkipAPIServerCheck(Cmd)
 	Cmd.Flags().BoolVar(&disableHierarchy, disableHierarchyFlag, false,
 		fmt.Sprintf("If true, validate as a %s Repo.\n"+
 			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
-	Cmd.Flags().BoolVar(&skipAPIServer, skipAPIServerFlag, false,
-		fmt.Sprint("If true, do not use the APIServer to validate whether Custom Resources "+
-			"are namespace-scoped or cluster-scoped for unknown types."))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -62,7 +57,7 @@ returns a non-zero error code if any issues are found.
 		}
 
 		encounteredError := false
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !skipAPIServer, vetCluster(&encounteredError))
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, vetCluster(&encounteredError))
 
 		if encounteredError {
 			os.Exit(1)
@@ -84,7 +79,7 @@ func vetCluster(encounteredError *bool) func(clusterName string, fileObjects []a
 
 		if errs != nil {
 			if len(errs.Errors()) == 1 && errs.Errors()[0].Code() == status.APIServerErrorCode {
-				util.PrintErrOrDie(errors.Wrapf(errs, "did you mean to run with --%s?", skipAPIServerFlag))
+				util.PrintErrOrDie(errors.Wrapf(errs, "did you mean to run with --%s?", flags.SkipAPIServerFlag))
 				return
 			}
 
