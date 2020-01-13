@@ -6,10 +6,16 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
+// GetSyncedCRDs is a callback that can be used to list the CRDs on a cluster.
+// Only called if the parsing logic actually requires it, i.e. if a repository
+// declares a non-base Kubernetes type, doesn't have a CRD for it, and the
+// caller has not disabled API Server checks.
+type GetSyncedCRDs func() ([]*v1beta1.CustomResourceDefinition, status.MultiError)
+
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
 // configs from a filesystem.
 type ConfigParser interface {
-	Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError)
+	Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs) ([]ast.FileObject, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
 	ReadClusterRegistryResources() []ast.FileObject

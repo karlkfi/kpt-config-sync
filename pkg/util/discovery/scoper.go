@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -45,6 +46,20 @@ func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (IsNamespaced, status.Er
 	return false, UnknownGroupKindError(gk)
 }
 
+// HasScopesFor returns true if the Scoper knows the scopes for every type in the
+// passed slice of FileObjects.
+//
+// While this could be made more general, it requests a slice of FileObjects
+// as this is a convenience method.
+func (s *Scoper) HasScopesFor(objects []ast.FileObject) bool {
+	for _, o := range objects {
+		if _, exists := (*s)[o.GroupVersionKind().GroupKind()]; !exists {
+			return false
+		}
+	}
+	return true
+}
+
 // AddCustomResources updates Scoper with custom resource metadata from the provided CustomResourceDefinitions.
 // It does not replace anything that already exists in the Scoper.
 func (s *Scoper) AddCustomResources(crds []*v1beta1.CustomResourceDefinition) {
@@ -54,7 +69,7 @@ func (s *Scoper) AddCustomResources(crds []*v1beta1.CustomResourceDefinition) {
 
 func (s *Scoper) add(gkss []GroupKindScope) {
 	for _, gks := range gkss {
-		// Explicitly do not overwrite scopes as specified on the APIServer.
+		// Explicitly do not overwrite scopes that have already been added.
 		if _, hasGK := (*s)[gks.GroupKind]; hasGK {
 			continue
 		}
@@ -112,11 +127,11 @@ func scopeFromCRD(crd *v1beta1.CustomResourceDefinition) GroupKindScope {
 	}
 }
 
-// NewScoperFromServerResources constructs a Scoper from a set of APIResourcesLists,
-// and additional types for which the scope is known, e.g. CustomResourceDefinitions.
-//
-// The scopes in `additional` overwrite the server-side declared scopes.
-func NewScoperFromServerResources(resourceLists []*metav1.APIResourceList, additional ...GroupKindScope) (Scoper, status.MultiError) {
+// AddAPIResourceLists adds APIResourceLists retrieved from an API Server to
+// the Scoper, taking care to not overwrite explicitly-defined or
+// implicitly-known scopes.
+func (s *Scoper) AddAPIResourceLists(resourceLists []*metav1.APIResourceList) status.MultiError {
+	// Collect all of the server-declared scopes.
 	var errs status.MultiError
 	var allGKSs []GroupKindScope
 	for _, list := range resourceLists {
@@ -127,14 +142,20 @@ func NewScoperFromServerResources(resourceLists []*metav1.APIResourceList, addit
 		}
 		allGKSs = append(allGKSs, gkss...)
 	}
-	if errs != nil {
-		return nil, errs
-	}
-	allGKSs = append(allGKSs, additional...)
 
-	scoper := Scoper{}
-	scoper.add(allGKSs)
-	return scoper, nil
+	// The resource lists contain an invalid GroupVersion. There isn't a clean
+	// way to recover from this.
+	//
+	// This could be more lenient, e.g. if the type we had an error on isn't
+	// actually required, we could ignore it.
+	if errs != nil {
+		return errs
+	}
+
+	// Define scopes for all types on the APIServer for which there are not
+	// already known scopes.
+	s.add(allGKSs)
+	return nil
 }
 
 // toGVKSs flattens an APIResourceList to the set of GVKs and their respective ObjectScopes.

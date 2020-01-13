@@ -108,15 +108,17 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		}
 	}
 
+	scoper := utildiscovery.Scoper{}
 	sr, err := utildiscovery.GetResources(r.discoveryClient)
 	if err != nil {
 		return err
 	}
-	apirs, err := utildiscovery.NewAPIInfo(sr)
+	err = scoper.AddAPIResourceLists(sr)
 	if err != nil {
 		return err
 	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(sr)
+
+	apirs, err := utildiscovery.NewAPIInfo(sr)
 	if err != nil {
 		return err
 	}

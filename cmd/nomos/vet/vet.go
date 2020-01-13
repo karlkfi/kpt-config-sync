@@ -14,8 +14,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +34,7 @@ func init() {
 			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
 	Cmd.Flags().BoolVar(&skipAPIServer, skipAPIServerFlag, false,
 		fmt.Sprint("If true, do not use the APIServer to validate whether Custom Resources "+
-			"are namespace-scoped or cluster-scoped."))
+			"are namespace-scoped or cluster-scoped for unknown types."))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -63,21 +61,8 @@ returns a non-zero error code if any issues are found.
 			parser = parse.NewParser(rootPath)
 		}
 
-		var syncedCRDs []*v1beta1.CustomResourceDefinition
-		if !skipAPIServer {
-			var errs status.MultiError
-			syncedCRDs, errs = parse.GetSyncedCRDs()
-			if errs != nil {
-				if len(errs.Errors()) == 1 && errs.Errors()[0].Code() == status.APIServerErrorCode {
-					util.PrintErrOrDie(errors.Wrapf(errs, "did you mean to run with --%s?", skipAPIServerFlag))
-				} else {
-					util.PrintErrAndDie(errs)
-				}
-			}
-		}
-
 		encounteredError := false
-		hydrate.ForEachCluster(parser, syncedCRDs, !skipAPIServer, vetCluster(&encounteredError))
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !skipAPIServer, vetCluster(&encounteredError))
 
 		if encounteredError {
 			os.Exit(1)

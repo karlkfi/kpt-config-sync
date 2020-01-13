@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -33,7 +32,7 @@ func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGe
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
+func (p *RawParser) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(p.root)
 	if errs != nil {
@@ -45,7 +44,7 @@ func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, cluste
 		return nil, crdErrs
 	}
 
-	scoper, scoperErr := getScoper(p.clientGetter, declaredCRDs)
+	scoper, syncedCRDs, scoperErr := buildScoper(p.clientGetter, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErr != nil {
 		return nil, scoperErr
 	}
@@ -70,21 +69,6 @@ func (p *RawParser) Parse(syncedCRDs []*v1beta1.CustomResourceDefinition, cluste
 		errs = status.Append(errs, v.Validate(fileObjects))
 	}
 	return fileObjects, errs
-}
-
-func getScoper(clientGetter utildiscovery.ClientGetter, crds []*v1beta1.CustomResourceDefinition) (utildiscovery.Scoper, status.MultiError) {
-	// Get all known API resources from the server.
-	apiResources, err := utildiscovery.GetResourcesFromClientGetter(clientGetter)
-	if err != nil {
-		return nil, err
-	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(apiResources)
-	if err != nil {
-		return nil, status.APIServerError(err, "discovery failed for server resources")
-	}
-
-	scoper.AddCustomResources(crds)
-	return scoper, nil
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

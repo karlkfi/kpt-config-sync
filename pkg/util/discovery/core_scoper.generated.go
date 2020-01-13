@@ -60,5 +60,14 @@ func CoreScoper() Scoper {
 		schema.GroupKind{Group: "scheduling.k8s.io", Kind: "PriorityClass"}:                             ClusterScope,
 		schema.GroupKind{Group: "storage.k8s.io", Kind: "StorageClass"}:                                 ClusterScope,
 		schema.GroupKind{Group: "storage.k8s.io", Kind: "VolumeAttachment"}:                             ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "ClusterConfig"}:                       ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "ClusterSelector"}:                     ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "ConfigManagement"}:                    ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "HierarchyConfig"}:                     ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "NamespaceConfig"}:                     ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "NamespaceSelector"}:                   ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "Repo"}:                                ClusterScope,
+		schema.GroupKind{Group: "configmanagement.gke.io", Kind: "Sync"}:                                ClusterScope,
+		schema.GroupKind{Group: "clusterregistry.k8s.io", Kind: "Cluster"}:                              ClusterScope,
 	}
 }

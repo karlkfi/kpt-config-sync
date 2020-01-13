@@ -8,13 +8,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -266,85 +259,8 @@ func testK8SResources() []*restmapper.APIGroupResources {
 // This includes many core Kubernetes types, as well as the internal Nomos types.
 // Feel free to add new types as necessary.
 func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
-	var gkss []utildiscovery.GroupKindScope
-	coreScopes := scopedKinds(corev1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"Pod":                   utildiscovery.NamespaceScope,
-		"Service":               utildiscovery.NamespaceScope,
-		"ReplicationController": utildiscovery.NamespaceScope,
-		"ComponentStatus":       utildiscovery.ClusterScope,
-		"Node":                  utildiscovery.ClusterScope,
-		"Secret":                utildiscovery.NamespaceScope,
-		"ConfigMap":             utildiscovery.NamespaceScope,
-		"Namespace":             utildiscovery.ClusterScope,
-		"ResourceQuota":         utildiscovery.NamespaceScope,
-	})
-	gkss = append(gkss, coreScopes...)
-
-	apiExtensionsScopes := scopedKinds(apiextensionsv1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"CustomResourceDefinition": utildiscovery.ClusterScope,
-	})
-	gkss = append(gkss, apiExtensionsScopes...)
-
-	policyScopes := scopedKinds(policyv1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"PodSecurityPolicy": utildiscovery.ClusterScope,
-	})
-	gkss = append(gkss, policyScopes...)
-
-	appsScopes := scopedKinds(appsv1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"Deployment": utildiscovery.NamespaceScope,
-		"ReplicaSet": utildiscovery.NamespaceScope,
-	})
-	gkss = append(gkss, appsScopes...)
-
-	autoscalingScopes := scopedKinds(autoscalingv1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"HorizontalPodAutoscaler": utildiscovery.NamespaceScope,
-	})
-	gkss = append(gkss, autoscalingScopes...)
-
-	storageScopes := scopedKinds(storagev1beta1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"StorageClass": utildiscovery.ClusterScope,
-	})
-	gkss = append(gkss, storageScopes...)
-
-	rbacScopes := scopedKinds(rbacv1.GroupName, map[string]utildiscovery.IsNamespaced{
-		"Role":               utildiscovery.NamespaceScope,
-		"RoleBinding":        utildiscovery.NamespaceScope,
-		"ClusterRole":        utildiscovery.ClusterScope,
-		"ClusterRoleBinding": utildiscovery.ClusterScope,
-	})
-	gkss = append(gkss, rbacScopes...)
-
-	nomosScopes := scopedKinds(configmanagement.GroupName, map[string]utildiscovery.IsNamespaced{
-		"ClusterSelector":   utildiscovery.ClusterScope,
-		"NamespaceSelector": utildiscovery.ClusterScope,
-		"Repo":              utildiscovery.ClusterScope,
-		"Sync":              utildiscovery.ClusterScope,
-		"HierarchyConfig":   utildiscovery.ClusterScope,
-		"NamespaceConfig":   utildiscovery.ClusterScope,
-	})
-	gkss = append(gkss, nomosScopes...)
-
-	gkss = append(gkss, utildiscovery.ScopesFromCRDs(crds)...)
-
-	result := utildiscovery.Scoper{}
-
-	for _, gks := range gkss {
-		result[gks.GroupKind] = gks.IsNamespaced
-	}
-	return result
-}
-
-func scopedKinds(group string, kindScope map[string]utildiscovery.IsNamespaced) []utildiscovery.GroupKindScope {
-	var result []utildiscovery.GroupKindScope
-	for kind, scope := range kindScope {
-		result = append(result, utildiscovery.GroupKindScope{
-			GroupKind: schema.GroupKind{
-				Group: group,
-				Kind:  kind,
-			},
-			IsNamespaced: scope,
-		})
-	}
+	result := utildiscovery.CoreScoper()
+	result.AddCustomResources(crds)
 	return result
 }
 

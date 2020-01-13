@@ -196,7 +196,11 @@ func (pt Test) RunAll(t *testing.T) {
 			}
 			parser := newTestParser(t, objects, tc.SyncedCRDs)
 
-			fileObjects, errs := parser.Parse(tc.SyncedCRDs, tc.ClusterName, !tc.Serverless)
+			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
+				return tc.SyncedCRDs, nil
+			}
+
+			fileObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

@@ -64,9 +64,9 @@ func NewParser(root cmpath.Root, reader Reader, c utildiscovery.ClientGetter) *P
 // * clusterregistry/ (flat, optional)
 // * namespaces/ (recursive, optional)
 func (p *Parser) Parse(
-	syncedCRDs []*v1beta1.CustomResourceDefinition,
 	clusterName string,
 	enableAPIServerChecks bool,
+	getSyncedCRDs GetSyncedCRDs,
 ) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
 
@@ -81,7 +81,7 @@ func (p *Parser) Parse(
 	if p.errors != nil {
 		return nil, p.errors
 	}
-	fileObjects := p.hydrateRootAndFlatten(visitors, syncedCRDs, clusterName, enableAPIServerChecks)
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs)
 
 	return fileObjects, p.errors
 }
@@ -115,7 +115,7 @@ func (p *Parser) generateVisitors(
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1beta1.CustomResourceDefinition, clusterName string, enableAPIServerChecks bool) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -132,7 +132,15 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 		return nil
 	}
 
-	scoper := p.getScoper(enableAPIServerChecks, declaredCRDs...)
+	// We can't continue with hierarchical logic processing if there is any issue
+	// establishing the scope of all declared resources.
+	scoper, syncedCRDs, scoperErrs := buildScoper(p.clientGetter, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	if scoperErrs != nil {
+		p.errors = status.Append(p.errors, err)
+		return nil
+	}
+	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
+
 	fileObjects, selErr := resolveHierarchicalSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
 	if selErr != nil {
 		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
@@ -140,7 +148,6 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, syncedCRDs []*v1b
 		return nil
 	}
 
-	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
 	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
 
@@ -179,26 +186,6 @@ func resolveHierarchicalSelectors(scoper utildiscovery.Scoper, clusterName strin
 	}
 
 	return transform.RemoveEphemeralResources(fileObjects), nil
-}
-
-func (p *Parser) getScoper(useAPIServer bool, crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
-	if !useAPIServer {
-		scoper := utildiscovery.CoreScoper()
-		scoper.AddCustomResources(crds)
-		return scoper
-	}
-
-	lists, discoveryErr := utildiscovery.GetResourcesFromClientGetter(p.clientGetter)
-	if discoveryErr != nil {
-		p.errors = status.Append(p.errors, discoveryErr)
-		return nil
-	}
-	scoper, err := utildiscovery.NewScoperFromServerResources(lists, utildiscovery.ScopesFromCRDs(crds)...)
-	if err != nil {
-		p.errors = status.Append(p.errors, err)
-		return nil
-	}
-	return scoper
 }
 
 func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {

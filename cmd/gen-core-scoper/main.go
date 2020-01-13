@@ -27,8 +27,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	nomosResources, err := ioutil.ReadFile("cmd/gen-core-scoper/nomos_resources.txt")
+	if err != nil {
+		panic(err)
+	}
+	resources := append(apiResources, nomosResources...)
 
-	lines := strings.Split(string(apiResources), "\n")
+	lines := strings.Split(string(resources), "\n")
 	sb := strings.Builder{}
 	sb.WriteString(prefix)
 	for _, line := range lines {

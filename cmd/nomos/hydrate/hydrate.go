@@ -76,16 +76,11 @@ clusters.`,
 
 		parser := parse.NewParser(rootPath)
 
-		syncedCRDs, err := parse.GetSyncedCRDs()
-		if err != nil {
-			util.PrintErrAndDie(err)
-		}
-
 		var allObjects []ast.FileObject
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, syncedCRDs, true, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, true, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

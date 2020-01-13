@@ -115,8 +115,9 @@ func ValidateInstallation(client utildiscovery.ClientGetter) status.MultiError {
 	if err != nil {
 		return status.APIServerError(err, "could not get discovery client")
 	}
-	scoper, apiErr := utildiscovery.NewScoperFromServerResources(lists)
-	if apiErr != nil {
+
+	scoper := utildiscovery.Scoper{}
+	if apiErr := scoper.AddAPIResourceLists(lists); apiErr != nil {
 		return apiErr
 	}
 	return validateInstallation(scoper)
