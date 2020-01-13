@@ -51,7 +51,7 @@ spec:
             readOnly: true
         envFrom:
           - configMapRef:
-              name: git-importer
+              name: importer
           - configMapRef:
               name: cluster-name
               optional: true  # If cluster naming is not used, this config map will be missing.
@@ -84,7 +84,7 @@ spec:
           runAsUser: 65533 # this is a non-root user declared by git-sync
         envFrom:
           - configMapRef:
-              name: git-importer
+              name: git-sync
         # This section should be removed for all SecretType values *except* "token"
         env:
         - name: GIT_SYNC_USERNAME
