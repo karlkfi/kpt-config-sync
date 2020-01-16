@@ -227,9 +227,15 @@ git-cookies:
 	$(info +++ Configuring gitcookies for Prow)
 	git config http.cookiefile /etc/cookies/cookies
 
+# Create a release of the operator. NOTE: Assumes the nomos-operator repo is pulled alongside the nomos repo and synced
+# to the commit you wish to release.
+release-operator:
+	@cd ../nomos-operator && PROJECT_NAME=config-management-release CHANNEL=head bash scripts/create-release-package.sh
+	@cd ../nomos-operator && PROJECT_NAME=config-management-release CHANNEL=head-cs bash scripts/create-release-package.sh
 
 # Release target used by automated releaser on go/prow.  It keeps building
 # ever-newer release candidates from the HEAD rev of master.
+# Also releases the operator, see release-operator target for documentation.
 #
 # The __internal-* target is split out because the build process must redefine
 # VERSION and IMAGE_TAG to tag the release correctly.
@@ -238,7 +244,8 @@ git-cookies:
 # TODO(filmil): Remove the repetition in this target and the -local one.
 autorelease: \
 	   git-cookies \
-		__internal-autorelease
+		__internal-autorelease \
+		release-operator
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
 # No need to do any work if we didn't commit any changes since last release
@@ -266,7 +273,8 @@ endif
 
 # Same as 'autorelease', except rigged so that it works on a local machine.
 release: \
-		__internal-autorelease-local
+		__internal-autorelease-local \
+		release-operator
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
 # No need to do any work if we didn't commit any changes since last release
