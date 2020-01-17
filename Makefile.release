@@ -56,7 +56,10 @@ VERSION = $(shell git describe --tags --always --dirty)
 NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
 
 # location of nomos-operator in prow
-OPERATOR_DIR_PROW := /home/prow/go/src/github.com/team.googlesource.com/nomos-team/nomos-operator
+# Determined by path_alias in the nomos-team yaml in the test-infra repo. As of this writing,
+# this can be found here:
+# https://gke-internal.googlesource.com/test-infra/+/refs/heads/master/prow/gob/config/team-review.googlesource.com/nomos-team/nomos-operator/team-nomos-team-nomos-operator.yaml#33
+OPERATOR_DIR_PROW := /home/prow/go/src/github.com/google/nomos-operator
 
 # Until we have a real licensing model, we are restricting access to
 # nomos binaries and the operator yaml to a small set of groups and
