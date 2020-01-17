@@ -232,8 +232,8 @@ git-cookies:
 
 # Create a release of the operator. Uses the location of the nomos-operator repo as set in prow.
 release-operator-prow:
-	@cd ${OPERATOR_PROW_DIR} && PROJECT_NAME=config-management-release CHANNEL=head bash scripts/create-release-package.sh
-	@cd ${OPERATOR_PROW_DIR} && PROJECT_NAME=config-management-release CHANNEL=head-cs bash scripts/create-release-package.sh
+	@cd ${OPERATOR_DIR_PROW} && PROJECT_NAME=config-management-release CHANNEL=head bash scripts/create-release-package.sh
+	@cd ${OPERATOR_DIR_PROW} && PROJECT_NAME=config-management-release CHANNEL=head-cs bash scripts/create-release-package.sh
 
 # Create a release of the operator. NOTE: Assumes the nomos-operator repo is pulled alongside the nomos repo and synced
 # to the commit you wish to release.
