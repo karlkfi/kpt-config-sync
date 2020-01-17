@@ -1,6 +1,6 @@
 # Release Overview
 
-CSP Config Management is an on-prem, enterprise security software. As such, we
+Anthos Config Management is an on-prem, enterprise security software. As such, we
 want to make sure that the release process is well-documented and easy to
 follow. At a high level, the oncall performs the following steps to do a
 release:

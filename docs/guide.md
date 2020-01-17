@@ -1,4 +1,4 @@
-# CSP Configuration Management Developer Guide
+# Anthos Config Management Developer Guide
 
 *   [Initial Setup](setup.md)
 *   [Making changes](source.md)
