@@ -22,6 +22,10 @@
   name = "k8s.io/apimachinery"
   version = "kubernetes-1.13.12"
 
+# This constraint is a lie. We're actually using a modified version of v0.4.0,
+# as this is what google3/ uses. This is a transitional state and won't matter
+# once we're in google3. If you run dep ensure, revert any changes it makes
+# to controller-runtime.
 [[constraint]]
   name = "sigs.k8s.io/controller-runtime"
   version = "v0.4.0"
