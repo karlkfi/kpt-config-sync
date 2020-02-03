@@ -66,6 +66,11 @@ var Cmd = &cobra.Command{
 
 			glog.Fatalf("Failed to get clients: %v", err)
 		}
+		if len(clientMap) == 0 {
+			fmt.Print("No clusters found.\n")
+			os.Exit(255)
+		}
+
 		// Use a sorted order of names to avoid shuffling in the output.
 		names := clusterNames(clientMap)
 
