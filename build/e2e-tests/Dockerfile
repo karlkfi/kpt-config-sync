@@ -82,6 +82,7 @@ RUN apt-get update \
   git \
   jq \
   libtap-formatter-junit-perl \
+  net-tools \
   python \
   software-properties-common \
   unzip
