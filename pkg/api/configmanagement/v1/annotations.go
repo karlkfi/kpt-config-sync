@@ -37,6 +37,15 @@ const (
 	// ResourceManagementDisabled is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will not manage content and lifecycle for the given resource.
 	ResourceManagementDisabled = "disabled"
+
+	// The following annotations implement the extended resource status specification.
+
+	// ResourceStatusErrorsKey is the annotation that indicates any errors, encoded as a JSON array.
+	ResourceStatusErrorsKey = "errors"
+
+	// ResourceStatusUnreadyKey is the annotation that indicates reasons why a resource is unready,
+	// encoded as a JSON array.
+	ResourceStatusUnreadyKey = "unready"
 )
 
 // SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.
@@ -48,5 +57,7 @@ func SyncerAnnotations() []string {
 		SourcePathAnnotationKey,
 		SyncTokenAnnotationKey,
 		ResourceManagementKey,
+		ResourceStatusErrorsKey,
+		ResourceStatusUnreadyKey,
 	}
 }
