@@ -52,9 +52,6 @@ OPERATOR_MANIFEST_DIR := $(STAGING_DIR)/operator-manifest
 # Directory used for staging docs.
 DOCS_STAGING_DIR := $(STAGING_DIR)/docs
 
-# Directory used for staging kubectl plugin release.
-KUBECTL_PLUGIN_STAGING_DIR := $(STAGING_DIR)/kubectl-oidc
-
 # Directory that gets mounted into /tmp for build and test containers.
 TEMP_OUTPUT_DIR := $(OUTPUT_DIR)/tmp
 
@@ -154,7 +151,6 @@ $(OUTPUT_DIR):
 	    $(GO_DIR)/std/darwin_amd64_static \
 	    $(GO_DIR)/std/windows_amd64_static \
 		$(STAGING_DIR) \
-		$(KUBECTL_PLUGIN_STAGING_DIR) \
 		$(DOCS_STAGING_DIR) \
 		$(GEN_YAML_DIR) \
 		$(TEMP_OUTPUT_DIR) \

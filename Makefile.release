@@ -193,9 +193,6 @@ upload-release:
 # exclude them via the rsync filter.
 	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
 		$(RELEASE_BUCKET)/$(VERSION)
-	gsutil -m cp -R \
-		$(STAGING_DIR)/kubectl-oidc/kubectl-oidc-plugin.zip  \
-		$(RELEASE_BUCKET)/$(VERSION)
 	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
