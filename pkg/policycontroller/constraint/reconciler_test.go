@@ -1,4 +1,4 @@
-package constrainttemplate
+package constraint
 
 import (
 	"fmt"
@@ -10,108 +10,106 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func TestAnnotateConstraintTemplate(t *testing.T) {
+func TestAnnotateConstraint(t *testing.T) {
 	testCases := []struct {
-		desc               string
-		constraintTemplate unstructured.Unstructured
-		want               map[string]string
+		desc       string
+		constraint unstructured.Unstructured
+		want       map[string]string
 	}{
 		{
-			"ConstraintTemplate not yet created",
-			ct().generation(5).created(false).build(),
+			"Constraint not yet processed",
+			con().generation(5).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["ConstraintTemplate has not been created"]`,
+				nomosv1.ResourceStatusUnreadyKey: `["Constraint has not been processed by PolicyController"]`,
 			},
 		},
 		{
-			"ConstraintTemplate not yet processed",
-			ct().generation(5).created(true).build(),
+			"Constraint not yet enforced",
+			con().generation(5).byPod(5, false).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["ConstraintTemplate has not been processed by PolicyController"]`,
+				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController is not enforcing Constraint"]`,
 			},
 		},
 		{
-			"PolicyController has outdated version of ConstraintTemplate",
-			ct().generation(5).created(true).byPod(4).build(),
+			"PolicyController has outdated version of Constraint",
+			con().generation(5).byPod(4, true).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has two errors",
-			ct().generation(5).created(true).byPod(5, "looks bad", "smells bad too").build(),
+			con().generation(5).byPod(5, true, "looks bad", "smells bad too").build(),
 			map[string]string{
 				nomosv1.ResourceStatusErrorsKey: `["[0] test-code: looks bad","[0] test-code: smells bad too"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has error, but is out of date",
-			ct().generation(5).created(true).byPod(4, "looks bad").build(),
+			con().generation(5).byPod(4, true, "looks bad").build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
-			"ConstraintTemplate is ready",
-			ct().generation(5).created(true).byPod(5).build(),
+			"Constraint is ready",
+			con().generation(5).byPod(5, true).build(),
 			nil,
 		},
 		{
-			"ConstraintTemplate had annotations previously, but is now ready",
-			ct().generation(5).created(true).annotateErrors("looks bad").annotateUnready("not yet").byPod(5).build(),
+			"Constraint had annotations previously, but is now ready",
+			con().generation(5).annotateErrors("looks bad").annotateUnready("not yet").byPod(5, true).build(),
 			map[string]string{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			annotateConstraintTemplate(tc.constraintTemplate)
-			if diff := cmp.Diff(tc.want, tc.constraintTemplate.GetAnnotations()); diff != "" {
+			annotateConstraint(tc.constraint)
+			if diff := cmp.Diff(tc.want, tc.constraint.GetAnnotations()); diff != "" {
 				t.Errorf("Incorrect annotations (-want +got):\n%s", diff)
 			}
 		})
 	}
 }
 
-type ctBuilder struct {
+type conBuilder struct {
 	unstructured.Unstructured
 }
 
-func ct() *ctBuilder {
-	return &ctBuilder{
+func con() *conBuilder {
+	con := &conBuilder{
 		Unstructured: unstructured.Unstructured{
 			Object: map[string]interface{}{},
 		},
 	}
+	con.SetGroupVersionKind(constraintGV.WithKind("TestConstraint"))
+	return con
 }
 
-func (c *ctBuilder) build() unstructured.Unstructured {
+func (c *conBuilder) build() unstructured.Unstructured {
 	return c.Unstructured
 }
 
-func (c *ctBuilder) annotateErrors(msg string) *ctBuilder {
+func (c *conBuilder) annotateErrors(msg string) *conBuilder {
 	core.SetAnnotation(c, nomosv1.ResourceStatusErrorsKey, msg)
 	return c
 }
 
-func (c *ctBuilder) annotateUnready(msg string) *ctBuilder {
+func (c *conBuilder) annotateUnready(msg string) *conBuilder {
 	core.SetAnnotation(c, nomosv1.ResourceStatusUnreadyKey, msg)
 	return c
 }
 
-func (c *ctBuilder) created(cr bool) *ctBuilder {
-	unstructured.SetNestedField(c.Object, cr, "status", "created")
-	return c
-}
-
-func (c *ctBuilder) generation(g int64) *ctBuilder {
+func (c *conBuilder) generation(g int64) *conBuilder {
 	c.SetGeneration(g)
 	return c
 }
 
-func (c *ctBuilder) byPod(generation int64, errMsgs ...string) *ctBuilder {
+func (c *conBuilder) byPod(generation int64, enforced bool, errMsgs ...string) *conBuilder {
 	bps, saveChanges := newByPodStatus(c.Object)
 	unstructured.SetNestedField(bps, generation, "observedGeneration")
+	unstructured.SetNestedField(bps, enforced, "enforced")
 
 	if len(errMsgs) > 0 {
 		var statusErrs []interface{}
