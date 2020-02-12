@@ -26,5 +26,5 @@ roleRef:
   name: configmanagement.gke.io:policy-controller-psp
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: gatekeeper-admin
   namespace: gatekeeper-system
