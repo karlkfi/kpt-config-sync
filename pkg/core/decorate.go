@@ -50,11 +50,17 @@ func SetLabel(obj Labeled, label, value string) {
 	obj.SetLabels(ls)
 }
 
-// RemoveLabels removes the passed list of labels from obj.
-func RemoveLabels(obj Labeled, labels ...string) {
+// RemoveLabels removes labels from the obj that key/value match the passed in map
+func RemoveLabels(obj Labeled, labels map[string]string) {
 	ls := obj.GetLabels()
-	for _, l := range labels {
-		delete(ls, l)
+	for key, val := range labels {
+		if _, ok := ls[key]; !ok {
+			continue
+		}
+
+		if ls[key] == val {
+			delete(ls, key)
+		}
 	}
 	obj.SetLabels(ls)
 }

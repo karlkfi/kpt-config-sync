@@ -31,11 +31,16 @@ func hasNomosMeta(obj core.LabeledAndAnnotated) bool {
 			return true
 		}
 	}
+
 	ls := obj.GetLabels()
-	for _, l := range v1.SyncerLabels() {
-		if _, ok := ls[l]; ok {
+	for key, val := range v1.SyncerLabels() {
+		if _, ok := ls[key]; !ok {
+			continue
+		}
+		if ls[key] == val {
 			return true
 		}
 	}
+
 	return false
 }

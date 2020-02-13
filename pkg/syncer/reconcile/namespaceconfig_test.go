@@ -567,6 +567,10 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 func unmanaged(o *corev1.Namespace) *corev1.Namespace {
 	r := o.DeepCopy()
 	core.RemoveAnnotations(r, v1.ResourceManagementKey)
-	core.RemoveLabels(r, v1.ManagedByKey)
+
+	m := make(map[string]string)
+	m[v1.ManagedByKey] = v1.ManagedByValue
+	core.RemoveLabels(r, m)
+
 	return r
 }

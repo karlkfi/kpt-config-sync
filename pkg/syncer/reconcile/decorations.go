@@ -20,5 +20,5 @@ func EnableManagement(obj core.LabeledAndAnnotated) {
 // The resource is modified in place.
 func removeNomosMeta(obj core.LabeledAndAnnotated) {
 	core.RemoveAnnotations(obj, v1.SyncerAnnotations()...)
-	core.RemoveLabels(obj, v1.SyncerLabels()...)
+	core.RemoveLabels(obj, v1.SyncerLabels())
 }

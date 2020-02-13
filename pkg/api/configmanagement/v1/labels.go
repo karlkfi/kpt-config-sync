@@ -11,8 +11,8 @@ const (
 )
 
 // SyncerLabels returns the set of Nomos labels that the syncer should manage.
-func SyncerLabels() []string {
-	return []string{
-		ManagedByKey,
+func SyncerLabels() map[string]string {
+	return map[string]string{
+		ManagedByKey: ManagedByValue,
 	}
 }

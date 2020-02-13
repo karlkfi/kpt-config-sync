@@ -18,7 +18,7 @@ setup() {
   if (( ${#active[@]} != 0 )); then
     local ns
     for ns in "${active[@]}"; do
-      kubectl delete ns $ns
+      kubectl delete ns "$ns"
     done
   fi
   setup::git::initialize
@@ -144,7 +144,7 @@ function teardown() {
     -a "foo-corp.com/awesome-controller-mixin=green"
 }
 
-@test "sync labels and annotations on kube-system namespace" {
+@test "${FILE_NAME}: sync labels and annotations on kube-system namespace" {
   debug::log "Managing kube-system ns"
   namespace::declare "kube-system" \
     -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
@@ -153,4 +153,11 @@ function teardown() {
 
   debug::log "Checking namespace exists"
   wait::for -o "fuzzy" -- kubectl get ns kube-system -o=jsonpath="{.metadata.labels['foo-corp\.com/awesome-controller-flavour']}"
+}
+
+@test "${FILE_NAME}: do not remove the managed-by label except for configmanagement" {
+  local ns="managed-test"
+  local label="app.kubernetes.io/managed-by=helm"
+  namespace::create $ns -l $label
+  namespace::check_exists $ns -l $label
 }
