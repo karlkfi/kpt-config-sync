@@ -47,6 +47,35 @@ const (
 	Syncing SyncState = "syncing"
 )
 
+// ResourceConditionState represents the states that a ResourceCondition can be in
+type ResourceConditionState string
+
+// IsHealthy returns true if the state indicates there have been no sync errors.
+func (p ResourceConditionState) IsHealthy() bool {
+	return p == ResourceStateHealthy
+}
+
+// IsUnready returns true if the state is unready.
+func (p ResourceConditionState) IsUnready() bool {
+	return p == ResourceStateUnready
+}
+
+// IsError returns true if the state is unready.
+func (p ResourceConditionState) IsError() bool {
+	return p == ResourceStateError
+}
+
+const (
+	// ResourceStateHealthy indicates a resource with no sync errors found
+	ResourceStateHealthy = ResourceConditionState("Healthy")
+
+	// ResourceStateUnready indicates that a resource is currently not ready pending the completion of asynchronous tasks
+	ResourceStateUnready = ResourceConditionState("Unready")
+
+	// ResourceStateError indicates that an error has occurred from which the resource cannot recover
+	ResourceStateError = ResourceConditionState("Error")
+)
+
 // SyncFinalizer is a finalizer handled by Syncer to ensure Sync deletions complete before Importer writes ClusterConfig
 // and NamespaceConfig resources.
 const SyncFinalizer = "syncer." + configmanagement.GroupName

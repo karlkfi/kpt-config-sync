@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,6 +31,12 @@ func fakeClusterConfig(importToken, syncToken string, errs ...v1.ConfigManagemen
 	}
 }
 
+func fakeClusterConfigWithResourceConditions(importToken, syncToken string, resourceConditions []v1.ResourceCondition, errs ...v1.ConfigManagementError) v1.ClusterConfig {
+	nc := fakeClusterConfig(importToken, syncToken, errs...)
+	nc.Status.ResourceConditions = resourceConditions
+	return nc
+}
+
 func fakeNamespaceConfig(name, importToken, syncToken string, errs ...v1.ConfigManagementError) v1.NamespaceConfig {
 	return v1.NamespaceConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -40,10 +46,17 @@ func fakeNamespaceConfig(name, importToken, syncToken string, errs ...v1.ConfigM
 			Token: importToken,
 		},
 		Status: v1.NamespaceConfigStatus{
-			Token:      syncToken,
-			SyncErrors: errs,
+			Token:              syncToken,
+			SyncErrors:         errs,
+			ResourceConditions: nil,
 		},
 	}
+}
+
+func fakeNamespaceConfigWithResourceConditions(name, importToken, syncToken string, resourceConditions []v1.ResourceCondition, errs ...v1.ConfigManagementError) v1.NamespaceConfig {
+	nc := fakeNamespaceConfig(name, importToken, syncToken, errs...)
+	nc.Status.ResourceConditions = resourceConditions
+	return nc
 }
 
 func TestSyncStateBuilding(t *testing.T) {
@@ -151,6 +164,92 @@ func TestSyncStateBuilding(t *testing.T) {
 	}
 }
 
+func TestMergeResourceConditions(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		clCfgList              *v1.ClusterConfigList
+		nsCfgList              *v1.NamespaceConfigList
+		wantResourceConditions []v1.ResourceCondition
+	}{
+		{
+			name: "merge empty resource conditions from configs",
+			clCfgList: &v1.ClusterConfigList{
+				Items: []v1.ClusterConfig{
+					fakeClusterConfigWithResourceConditions(commit2, commit1, nil),
+				},
+			},
+			nsCfgList: &v1.NamespaceConfigList{
+				Items: []v1.NamespaceConfig{
+					fakeNamespaceConfigWithResourceConditions("shipping-dev", commit2, commit1, nil),
+					fakeNamespaceConfigWithResourceConditions("audit", commit3, commit2, nil),
+				},
+			},
+			wantResourceConditions: nil,
+		},
+		{
+			name: "merge resource conditions from cluster and namespace configs",
+			clCfgList: &v1.ClusterConfigList{
+				Items: []v1.ClusterConfig{
+					fakeClusterConfigWithResourceConditions(commit2, commit1, []v1.ResourceCondition{
+						v1.ResourceCondition{
+							GroupVersionKind: "/templates.gatekeeper.sh/v1beta1, Kind=ConstraintTemplate",
+							NamespacedName:   "/my-constraint-template",
+							ResourceState:    v1.ResourceStateUnready,
+							Token:            commit2,
+							UnreadyReasons:   []string{"ConstraintTemplate has not been processed by PolicyController"},
+						},
+					}),
+				},
+			},
+			nsCfgList: &v1.NamespaceConfigList{
+				Items: []v1.NamespaceConfig{
+					fakeNamespaceConfigWithResourceConditions("gatekeeper-system", commit2, commit1, []v1.ResourceCondition{
+						v1.ResourceCondition{
+							GroupVersionKind: "/v1, Kind=Pod",
+							NamespacedName:   "gatekeeper-system/gatekeeper-controller-manager-0",
+							ResourceState:    v1.ResourceStateError,
+							Token:            commit2,
+							Errors:           []string{"CrashLoopBackOff"},
+						},
+					}),
+				},
+			},
+			wantResourceConditions: []v1.ResourceCondition{
+				v1.ResourceCondition{
+					GroupVersionKind: "/templates.gatekeeper.sh/v1beta1, Kind=ConstraintTemplate",
+					NamespacedName:   "/my-constraint-template",
+					ResourceState:    v1.ResourceStateUnready,
+					Token:            commit2,
+					UnreadyReasons:   []string{"ConstraintTemplate has not been processed by PolicyController"},
+				},
+				v1.ResourceCondition{
+					GroupVersionKind: "/v1, Kind=Pod",
+					NamespacedName:   "gatekeeper-system/gatekeeper-controller-manager-0",
+					ResourceState:    v1.ResourceStateError,
+					Token:            commit2,
+					Errors:           []string{"CrashLoopBackOff"},
+				},
+			},
+		},
+	}
+
+	cmpOpts := []cmp.Option{
+		cmp.AllowUnexported(syncState{}),
+		cmp.AllowUnexported(configState{}),
+	}
+	repoStatus := &RepoStatus{}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			syncState := repoStatus.processConfigs(tc.clCfgList, tc.nsCfgList, "")
+
+			if diff := cmp.Diff(tc.wantResourceConditions, syncState.resourceConditions, cmpOpts...); diff != "" {
+				t.Errorf("resourceConditions does not match expectation:\n%v", diff)
+			}
+		})
+	}
+}
+
 func TestSyncStateMerging(t *testing.T) {
 	currentTime := metav1.Now()
 	updatedTime := metav1.Time{Time: time.Unix(123, 456)}
@@ -190,6 +289,7 @@ func TestSyncStateMerging(t *testing.T) {
 					InProgress: []v1.RepoSyncChangeStatus{
 						{Token: commit1},
 					},
+					ResourceConditions: nil,
 				},
 			},
 			want: &v1.RepoStatus{
@@ -207,6 +307,7 @@ func TestSyncStateMerging(t *testing.T) {
 						{Token: commit1},
 						{Token: commit2, Errors: []v1.ConfigManagementError{err1}},
 					},
+					ResourceConditions: nil,
 				},
 			},
 		},
@@ -230,6 +331,7 @@ func TestSyncStateMerging(t *testing.T) {
 					InProgress: []v1.RepoSyncChangeStatus{
 						{Token: commit1},
 					},
+					ResourceConditions: nil,
 				},
 			},
 			want: &v1.RepoStatus{
@@ -241,8 +343,9 @@ func TestSyncStateMerging(t *testing.T) {
 					LastUpdate: currentTime,
 				},
 				Sync: v1.RepoSyncStatus{
-					LatestToken: commit2,
-					LastUpdate:  updatedTime,
+					LatestToken:        commit2,
+					LastUpdate:         updatedTime,
+					ResourceConditions: nil,
 				},
 			},
 		},

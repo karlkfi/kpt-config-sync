@@ -270,6 +270,8 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		return errors.Wrapf(err, "could not process namespaceconfig: %q", config.GetName())
 	}
 
+	config.Status.ResourceConditions = nil
+
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
@@ -281,6 +283,14 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from NamespaceConfig controller for %q", gvk))
 			syncErrs = append(syncErrs, newSyncError(config, err))
 			continue
+		}
+
+		for _, act := range actualInstances {
+			annotations := act.GetAnnotations()
+			if AnnotationsHaveResourceCondition(annotations) {
+				config.Status.ResourceConditions = append(config.Status.ResourceConditions, MakeResourceCondition(*act, config.Spec.Token))
+				config.Status.SyncState = v1.StateStale
+			}
 		}
 
 		allDeclaredVersions := AllVersionNames(grs, gvk.GroupKind())
@@ -329,6 +339,7 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 		} else {
 			newPN.Status.SyncState = v1.StateSynced
 		}
+		newPN.Status.ResourceConditions = config.Status.ResourceConditions
 		newPN.SetGroupVersionKind(kinds.NamespaceConfig())
 		return newPN, nil
 	}

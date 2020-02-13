@@ -73,10 +73,40 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 		} else {
 			newConfig.Status.SyncState = v1.StateSynced
 		}
+
+		newConfig.Status.ResourceConditions = config.Status.ResourceConditions
 		return newConfig, nil
 	}
 	_, err := client.UpdateStatus(ctx, config, updateFn)
 	return err
+}
+
+// AnnotationsHaveResourceCondition checks if the given annotations contain at least one resource condition
+func AnnotationsHaveResourceCondition(annotations map[string]string) bool {
+	if _, ok := annotations[v1.ResourceStatusErrorsKey]; ok {
+		return true
+	}
+	if _, ok := annotations[v1.ResourceStatusUnreadyKey]; ok {
+		return true
+	}
+	return false
+}
+
+// MakeResourceCondition makes a resource condition from an unstructured object and the given config token
+func MakeResourceCondition(obj unstructured.Unstructured, token string) v1.ResourceCondition {
+	resourceCondition := v1.ResourceCondition{ResourceState: v1.ResourceStateHealthy, Token: token}
+	resourceCondition.GroupVersionKind = obj.GroupVersionKind().String()
+	resourceCondition.NamespacedName = fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
+
+	if unready, ok := obj.GetAnnotations()[v1.ResourceStatusUnreadyKey]; ok {
+		resourceCondition.ResourceState = v1.ResourceStateUnready
+		resourceCondition.UnreadyReasons = append(resourceCondition.UnreadyReasons, unready)
+	}
+	if errors, ok := obj.GetAnnotations()[v1.ResourceStatusErrorsKey]; ok {
+		resourceCondition.ResourceState = v1.ResourceStateError
+		resourceCondition.Errors = append(resourceCondition.Errors, errors)
+	}
+	return resourceCondition
 }
 
 func filterContextCancelled(err error) error {

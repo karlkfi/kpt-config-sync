@@ -70,6 +70,10 @@ type ClusterConfigStatus struct {
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
 	SyncState ConfigSyncState `json:"syncState,omitempty"`
+
+	// ResourceConditions contains health status of cluster-scope resources
+	// +optional
+	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -153,6 +157,10 @@ type NamespaceConfigStatus struct {
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
 	SyncState ConfigSyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
+
+	// ResourceConditions contains health status of namespaced resources
+	// +optional
+	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -453,6 +461,20 @@ type RepoSyncStatus struct {
 	// have associated errors.
 	// +optional
 	InProgress []RepoSyncChangeStatus `json:"inProgress,omitempty"`
+
+	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty"`
+}
+
+// ResourceCondition represents the sync status of the resource
+type ResourceCondition struct {
+	GroupVersionKind string                 `json:"groupVersionKind,omitempty"`
+	NamespacedName   string                 `json:"namespacedName,omitempty"`
+	ResourceState    ResourceConditionState `json:"resourceState,omitempty"`
+	Token            string                 `json:"token,omitempty"`
+
+	// These fields match the proposed conditions/annotations for status.
+	UnreadyReasons []string `json:"unreadyReasons,omitempty"`
+	Errors         []string `json:"errors,omitempty"`
 }
 
 // RepoSyncChangeStatus represents the status of a single change being synced in the Repo.

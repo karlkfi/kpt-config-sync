@@ -114,6 +114,8 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 
 	var errBuilder status.MultiError
 	reconcileCount := 0
+	config.Status.ResourceConditions = nil
+
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
@@ -124,6 +126,14 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 			continue
+		}
+
+		for _, act := range actualInstances {
+			annotations := act.GetAnnotations()
+			if AnnotationsHaveResourceCondition(annotations) {
+				config.Status.ResourceConditions = append(config.Status.ResourceConditions, MakeResourceCondition(*act, config.Spec.Token))
+				config.Status.SyncState = v1.StateStale
+			}
 		}
 
 		allDeclaredVersions := AllVersionNames(grs, gvk.GroupKind())

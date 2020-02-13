@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/util/repo"
@@ -26,6 +26,7 @@ type RepoStatus struct {
 	client *syncclient.Client
 	// client is used to perform CRUD operations on the Repo resource
 	rClient *repo.Client
+
 	// now returns the current time.
 	now func() metav1.Time
 }
@@ -39,6 +40,9 @@ type syncState struct {
 	unreconciledCommits map[string][]string
 	// configs is a map of config name to the state of the config being reconciled
 	configs map[string]configState
+
+	//resourceConditions contains health status for all resources synced in namespace and cluster configs
+	resourceConditions []v1.ResourceCondition
 }
 
 // configState represents the current status of a ClusterConfig or NamespaceConfig being reconciled.
@@ -134,9 +138,11 @@ func (r *RepoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.Nam
 
 	for _, cc := range ccList.Items {
 		state.addConfigToCommit(clusterPrefix(cc.Name), cc.Spec.Token, cc.Status.Token, cc.Status.SyncErrors)
+		state.resourceConditions = append(state.resourceConditions, cc.Status.ResourceConditions...)
 	}
 	for _, nc := range ncList.Items {
 		state.addConfigToCommit(namespacePrefix(nc.Name), nc.Spec.Token, nc.Status.Token, nc.Status.SyncErrors)
+		state.resourceConditions = append(state.resourceConditions, nc.Status.ResourceConditions...)
 	}
 
 	return state
@@ -200,6 +206,7 @@ func (s syncState) merge(repoStatus *v1.RepoStatus, now func() metav1.Time) {
 	})
 	repoStatus.Sync.InProgress = inProgress
 	repoStatus.Sync.LastUpdate = now()
+	repoStatus.Sync.ResourceConditions = s.resourceConditions
 }
 
 // clusterPrefix returns the given name prefixed to indicate it is for a ClusterConfig.
