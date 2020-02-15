@@ -2,6 +2,7 @@ package reconcile
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -95,16 +96,31 @@ func AnnotationsHaveResourceCondition(annotations map[string]string) bool {
 // MakeResourceCondition makes a resource condition from an unstructured object and the given config token
 func MakeResourceCondition(obj unstructured.Unstructured, token string) v1.ResourceCondition {
 	resourceCondition := v1.ResourceCondition{ResourceState: v1.ResourceStateHealthy, Token: token}
-	resourceCondition.GroupVersionKind = obj.GroupVersionKind().String()
+	resourceCondition.GroupVersion = obj.GroupVersionKind().GroupVersion().String()
+	resourceCondition.Kind = obj.GroupVersionKind().Kind
 	resourceCondition.NamespacedName = fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
 
-	if unready, ok := obj.GetAnnotations()[v1.ResourceStatusUnreadyKey]; ok {
+	if val, ok := obj.GetAnnotations()[v1.ResourceStatusUnreadyKey]; ok {
 		resourceCondition.ResourceState = v1.ResourceStateUnready
-		resourceCondition.UnreadyReasons = append(resourceCondition.UnreadyReasons, unready)
+		var unready []string
+		err := json.Unmarshal([]byte(val), &unready)
+		if err != nil {
+			glog.Errorf("Invalid resource state unready annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
+			unready = []string{val}
+		}
+
+		resourceCondition.UnreadyReasons = append(resourceCondition.UnreadyReasons, unready...)
 	}
-	if errors, ok := obj.GetAnnotations()[v1.ResourceStatusErrorsKey]; ok {
+	if val, ok := obj.GetAnnotations()[v1.ResourceStatusErrorsKey]; ok {
 		resourceCondition.ResourceState = v1.ResourceStateError
-		resourceCondition.Errors = append(resourceCondition.Errors, errors)
+		var errs []string
+		err := json.Unmarshal([]byte(val), &errs)
+		if err != nil {
+			glog.Errorf("Invalid resource state error annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
+			errs = []string{val}
+		} else {
+			resourceCondition.Errors = append(resourceCondition.Errors, errs...)
+		}
 	}
 	return resourceCondition
 }

@@ -75,16 +75,10 @@ teardown() {
   [[ "${resourceConditions}" == null ]] || debug::error "resourceConditions not empty, got: ${resourceConditions}"
 
   debug::log "Add resource condition error annotation to configmap"
-  run kubectl annotate configmap ${nsresname} -n ${ns} "configmanagement.gke.io/errors=['CrashLoopBackOff']"
-
-  debug::log "Waiting for configmap error annotation to update"
-  wait::for -t 60 -- resource::check -n ${ns} configmap ${nsresname} -a "configmanagement.gke.io/errors=['CrashLoopBackOff']"
+  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/errors=["CrashLoopBackOff"]'
 
   debug::log "Add resource condition error annotation to constrainttemplate"
-  run kubectl annotate constrainttemplate ${clusterresname} "configmanagement.gke.io/errors=['CrashLoopBackOff']"
-
-  debug::log "Waiting for constrainttemplate error annotation to update"
-  wait::for -t 60 -- resource::check constrainttemplate ${clusterresname} -a "configmanagement.gke.io/errors=['CrashLoopBackOff']"
+  run kubectl annotate constrainttemplate ${clusterresname} 'configmanagement.gke.io/errors=["CrashLoopBackOff"]'
 
   debug::log "Check for configmap error resource condition in namespace config"
   nsResourceState=$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[0].ResourceState')
@@ -102,11 +96,8 @@ teardown() {
   repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].ResourceState')
   [[ "${repoResourceState}" != "Error" ]] || debug::error "repo status error resourceState not updated, got: ${repoResourceState}"
 
-  debug::log "Add unready resource condition annotation to configmap"
-  run kubectl annotate configmap ${nsresname} -n ${ns} "configmanagement.gke.io/unready=['ConfigMap is unready']" 
-
-  debug::log "Waiting for unready annotation to update"
-  wait::for -t 60 -- resource::check -n ${ns} configmap ${nsresname} -a "configmanagement.gke.io/unready=['ConfigMap is unready']"
+  debug::log "Add unready resource condition annotations to configmap"
+  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/unready=["ConfigMap is unready", "ConfigMap is not ready"]'
 
   debug::log "Check for configmap error resource condition in namespace config"
   nsResourceState=$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[1].ResourceState')
@@ -117,10 +108,7 @@ teardown() {
   [[ "${repoResourceState}" != "Unready" ]] || debug::error "repo status unready resourceState not updated, got: ${repoResourceState}"
 
   debug::log "Add resource condition unready annotation to constrainttemplate"
-  run kubectl annotate constrainttemplate ${clusterresname} "configmanagement.gke.io/unready=['ConstraintTemplate has not been processed by PolicyController']"
-
-  debug::log "Waiting for unready annotation to update"
-  wait::for -t 60 -- resource::check constrainttemplate ${clusterresname} -a "configmanagement.gke.io/unready=['ConstraintTemplate has not been processed by PolicyController']"
+  run kubectl annotate constrainttemplate ${clusterresname} 'configmanagement.gke.io/unready=["ConstraintTemplate has not been processed by PolicyController"]'
 
   debug::log "Check for constrainttemplate error resource condition in cluster config"
   clusterResourceState=$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[1].ResourceState')

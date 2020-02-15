@@ -467,10 +467,11 @@ type RepoSyncStatus struct {
 
 // ResourceCondition represents the sync status of the resource
 type ResourceCondition struct {
-	GroupVersionKind string                 `json:"groupVersionKind,omitempty"`
-	NamespacedName   string                 `json:"namespacedName,omitempty"`
-	ResourceState    ResourceConditionState `json:"resourceState,omitempty"`
-	Token            string                 `json:"token,omitempty"`
+	GroupVersion   string                 `json:"groupVersion,omitempty"`
+	Kind           string                 `json:"kind,omitempty"`
+	NamespacedName string                 `json:"namespacedName,omitempty"`
+	ResourceState  ResourceConditionState `json:"resourceState,omitempty"`
+	Token          string                 `json:"token,omitempty"`
 
 	// These fields match the proposed conditions/annotations for status.
 	UnreadyReasons []string `json:"unreadyReasons,omitempty"`

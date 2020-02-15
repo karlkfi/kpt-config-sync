@@ -244,9 +244,9 @@ func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, n
 
 	// Print table header.
 	// To prevent column width flickering when Nomos status is in poll mode, we artificially pad
-	// the status column to the length of the longest status (14 characters)
-	fmt.Fprintln(writer, "Current\tContext\tStatus        \tLast Synced Token\tSync Branch")
-	fmt.Fprintln(writer, "-------\t-------\t------        \t-----------------\t-----------")
+	// the sync status column to the length of the longest status (14 characters)
+	fmt.Fprintln(writer, "Current\tContext\tSync Status   \tLast Synced Token\tSync Branch\tResource Status")
+	fmt.Fprintln(writer, "-------\t-------\t-----------   \t-----------------\t-----------\t---------------")
 
 	// Print a summary of all clusters.
 	for _, name := range names {
@@ -347,7 +347,7 @@ func (c *statusClient) clusterStatus(name string) (status string, errs []string)
 	if err == nil && len(repoList.Items) > 0 {
 		repoStatus := repoList.Items[0].Status
 		status = statusRow(name, repoStatus, syncBranch)
-		errs = statusErrors(repoStatus)
+		errs = syncStatusErrors(repoStatus)
 		return
 	}
 
@@ -384,6 +384,40 @@ func (c *statusClient) clusterStatus(name string) (status string, errs []string)
 	return
 }
 
+func getResourceStatus(resourceConditions []v1.ResourceCondition) v1.ResourceConditionState {
+	resourceStatus := v1.ResourceStateHealthy
+
+	for _, resourceCondition := range resourceConditions {
+
+		if resourceCondition.ResourceState.IsError() {
+			return v1.ResourceStateError
+		} else if resourceCondition.ResourceState.IsUnready() {
+			resourceStatus = v1.ResourceStateUnready
+		}
+	}
+
+	return resourceStatus
+}
+
+func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string {
+	if len(resourceConditions) == 0 {
+		return nil
+	}
+
+	var syncErrors []string
+
+	for _, resourceCondition := range resourceConditions {
+		for _, rcError := range resourceCondition.Errors {
+			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tError: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcError))
+		}
+		for _, rcUnready := range resourceCondition.UnreadyReasons {
+			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tUnready: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcUnready))
+		}
+	}
+
+	return syncErrors
+}
+
 // shortName returns a cluster name which has been truncated to the maximum name length.
 func shortName(name string) string {
 	if len(name) <= maxNameLength {
@@ -394,11 +428,11 @@ func shortName(name string) string {
 
 // errorRow returns the given error message formated as a printable row.
 func errorRow(name string, err string) string {
-	return stringForRow(name, err, "", "")
+	return stringForRow(name, err, "", "", "")
 }
 
 // statusRow returns the given RepoStatus and syncBranch formated as a printable row.
-// This consists of (in order) the: Context, Status, Last Synced Token, Sync Branch
+// This consists of (in order) the: Context, Status, Last Synced Token, Sync Branch, Resource Status
 func statusRow(name string, status v1.RepoStatus, syncBranch string) string {
 	token := status.Sync.LatestToken
 	if len(token) == 0 {
@@ -406,16 +440,16 @@ func statusRow(name string, status v1.RepoStatus, syncBranch string) string {
 	} else if len(token) > maxTokenLength {
 		token = token[:maxTokenLength]
 	}
-	return stringForRow(name, getStatus(status), token, syncBranch)
+	return stringForRow(name, getSyncStatus(status), token, syncBranch, getResourceStatus(status.Sync.ResourceConditions))
 }
 
 // naStatusRow returns a printable row for a cluster that is N/A.
 func naStatusRow(name string) string {
-	return stringForRow(name, "N/A", "", "")
+	return stringForRow(name, "N/A", "", "", "")
 }
 
-// getStatus returns the given RepoStatus formatted as a short summary string.
-func getStatus(status v1.RepoStatus) string {
+// getSyncStatus returns the given RepoStatus formatted as a short summary string.
+func getSyncStatus(status v1.RepoStatus) string {
 	if hasErrors(status) {
 		return util.ErrorMsg
 	}
@@ -441,8 +475,8 @@ func hasErrors(status v1.RepoStatus) bool {
 	return false
 }
 
-// statusErrors returns all errors reported in the given RepoStatus as a single array.
-func statusErrors(status v1.RepoStatus) []string {
+// syncStatusErrors returns all errors reported in the given RepoStatus as a single array.
+func syncStatusErrors(status v1.RepoStatus) []string {
 	var errs []string
 	for _, err := range status.Source.Errors {
 		errs = append(errs, err.ErrorMessage)
@@ -455,6 +489,11 @@ func statusErrors(status v1.RepoStatus) []string {
 			errs = append(errs, err.ErrorMessage)
 		}
 	}
+
+	if getResourceStatus(status.Sync.ResourceConditions) != v1.ResourceStateHealthy {
+		errs = append(errs, getResourceStatusErrors(status.Sync.ResourceConditions)...)
+	}
+
 	return errs
 }
 
@@ -462,6 +501,6 @@ func statusErrors(status v1.RepoStatus) []string {
 // the 'Current' column which is prepended prior to printing.
 // Note: It is necessary to include tabs even for columns which are empty, otherwise the formatting
 // of rows below will be misaligned.
-func stringForRow(name string, status string, token string, syncBranch string) string {
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t\n", shortName(name), status, token, syncBranch)
+func stringForRow(name string, syncStatus string, token string, syncBranch string, resourceStatus v1.ResourceConditionState) string {
+	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t\n", shortName(name), syncStatus, token, syncBranch, resourceStatus)
 }
