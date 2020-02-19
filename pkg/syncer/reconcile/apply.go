@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -150,27 +151,29 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 		return false, nil
 	}
 
-	gvk := intendedState.GroupVersionKind()
-	patch, patchType, err := c.calculatePatch(gvk, previous, modified, current)
-	if err != nil {
-		return false, err
-	}
-
-	if string(patch) == "{}" {
-		// Avoid doing a noop patch.
-		return false, nil
-	}
-
-	if err := ctx.Err(); err != nil {
-		// We've already encountered an error, so do not attempt update.
-		return false, status.ResourceWrap(err, "unable to continue updating resources")
-	}
-
 	name, resourceDescription := nameDescription(intendedState)
-	start := time.Now()
-	_, err = resourceClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
-	duration := time.Since(start).Seconds()
-	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
+	gvk := intendedState.GroupVersionKind()
+	var err error
+
+	// Attempt a strategic patch first.
+	patch := c.calculateStrategic(gvk, previous, modified, current)
+	// If patch is nil, it means we don't have access to the schema.
+	if patch != nil {
+		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
+		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
+		// custom resource), so we reset the patch and try again below.
+		if err != nil && apierrors.IsUnsupportedMediaType(err) {
+			patch = nil
+		}
+	}
+
+	// If we weren't able to do a Strategic Merge, we fall back to JSON Merge Patch.
+	if patch == nil {
+		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
+		if err == nil {
+			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
+		}
+	}
 
 	if err != nil {
 		return false, errors.Wrap(err, "could not patch")
@@ -181,30 +184,46 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	return true, nil
 }
 
-// calculatePatch computes a three way strategic merge patch to send to server.
-func (c *clientApplier) calculatePatch(gvk schema.GroupVersionKind, previous, modified, current []byte) ([]byte, types.PatchType, error) {
-	if s := c.openAPIResources.LookupResource(gvk); s != nil {
-		// Try to use schema from OpenAPI Spec. For Kubernetes 1.16 and earlier, the OpenAPI Spec does not include CRDs.
-		// Starting with ~1.17, the OpenAPI Spec will include CRDs so this won't be an issue.
-		patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: s}
-		patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
-		if err == nil {
-			return patch, types.StrategicMergePatchType, nil
-		}
-		glog.Warning(errors.Wrap(err, "could not calculate the patch from OpenAPI spec"))
+func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous, modified, current []byte) []byte {
+	// Try to use schema from OpenAPI Spec if possible.
+	gvkSchema := c.openAPIResources.LookupResource(gvk)
+	if gvkSchema == nil {
+		return nil
 	}
+	patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: gvkSchema}
+	patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
+	if err != nil {
+		glog.Warning(errors.Wrap(err, "could not calculate the patch from OpenAPI spec"))
+		return nil
+	}
+	return patch
+}
 
-	// We weren't able to do a Strategic Merge because either:
-	// 1) the strategic merge patch failed, or
-	// 2) we don't have access to the schema.
-	// So, fall back to JSON Merge Patch.
+func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous, modified, current []byte) ([]byte, error) {
 	preconditions := []mergepatch.PreconditionFunc{
 		mergepatch.RequireKeyUnchanged("apiVersion"),
 		mergepatch.RequireKeyUnchanged("kind"),
 		mergepatch.RequireMetadataKeyUnchanged("name"),
 	}
-	patch, err := jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
-	return patch, types.MergePatchType, err
+	return jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
+}
+
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
+	if string(patch) == "{}" {
+		// Avoid doing a noop patch.
+		return nil
+	}
+
+	if err := ctx.Err(); err != nil {
+		// We've already encountered an error, so do not attempt update.
+		return status.ResourceWrap(err, "unable to continue updating resource")
+	}
+
+	start := time.Now()
+	_, err := resClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
+	duration := time.Since(start).Seconds()
+	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
+	return err
 }
 
 // resource retrieves the plural resource name for the GroupVersionKind.
