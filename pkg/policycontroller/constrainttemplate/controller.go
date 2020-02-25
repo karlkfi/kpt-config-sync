@@ -4,6 +4,8 @@ package constrainttemplate
 import (
 	"context"
 
+	"github.com/golang/glog"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -18,16 +20,23 @@ const (
 )
 
 var (
-	constraintTemplateGK = schema.GroupKind{
+	gk = schema.GroupKind{
 		Group: templatesGroup,
 		Kind:  "ConstraintTemplate",
 	}
 
-	constraintTemplateGVK = constraintTemplateGK.WithVersion("v1beta1")
+	// GVK is the GVK for gatekeeper ConstraintTemplates.
+	GVK = gk.WithVersion("v1beta1")
 )
+
+// MatchesGK returns true if the given CRD defines the gatekeeper ConstraintTemplate.
+func MatchesGK(crd *v1beta1.CustomResourceDefinition) bool {
+	return crd.Spec.Group == templatesGroup && crd.Spec.Names.Kind == gk.Kind
+}
 
 // AddController adds the ConstraintTemplate controller to the given Manager.
 func AddController(ctx context.Context, mgr manager.Manager) error {
+	glog.Info("Adding controller for ConstraintTemplates")
 	r := newReconciler(ctx, mgr.GetClient())
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -40,6 +49,6 @@ func AddController(ctx context.Context, mgr manager.Manager) error {
 
 func emptyConstraintTemplate() unstructured.Unstructured {
 	ct := unstructured.Unstructured{}
-	ct.SetGroupVersionKind(constraintTemplateGVK)
+	ct.SetGroupVersionKind(GVK)
 	return ct
 }

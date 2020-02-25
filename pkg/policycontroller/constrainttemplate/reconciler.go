@@ -36,8 +36,13 @@ func (c *constraintTemplateReconciler) Reconcile(request reconcile.Request) (rec
 	}
 
 	glog.Infof("ConstraintTemplate %q was upserted: %v", request.NamespacedName, ct.Object)
+	patch := client.MergeFrom(ct.DeepCopy())
 	annotateConstraintTemplate(ct)
-	return reconcile.Result{}, nil
+	err := c.client.Patch(c.ctx, &ct, patch)
+	if err != nil {
+		glog.Errorf("Failed to patch annotations for ConstraintTemplate: %v", err)
+	}
+	return reconcile.Result{}, err
 }
 
 // The following structs allow the code to deserialize Gatekeeper types without

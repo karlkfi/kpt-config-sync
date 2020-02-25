@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/policycontroller"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
@@ -48,6 +49,10 @@ func main() {
 	ctx := stoppableContext(mgrStopChannel)
 	if err := controller.AddRepoStatus(ctx, mgr); err != nil {
 		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
+	}
+
+	if err := policycontroller.AddControllers(ctx, mgr); err != nil {
+		glog.Fatalf("Error adding PolicyController controller: %+v", err)
 	}
 
 	// Start the Manager.

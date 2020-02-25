@@ -39,6 +39,7 @@ func AddController(ctx context.Context, mgr manager.Manager, kind string) error 
 	gvk := GVK(kind)
 	r := newReconciler(ctx, mgr.GetClient(), gvk)
 
+	glog.Infof("Adding controller for constraint: %s", gvk)
 	controllerName := controllerPrefix + gvk.String()
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {

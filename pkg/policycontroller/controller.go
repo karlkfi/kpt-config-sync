@@ -5,7 +5,6 @@ package policycontroller
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -14,16 +13,12 @@ import (
 )
 
 const (
-	controllerName = "policycontroller-controller"
+	controllerName = "policycontroller-annotator"
 )
 
-// AddControllers sets up the ConstraintTemplate controller as well as a meta
-// controller which manages the watches on all Constraints.
+// AddControllers sets up a meta controller which manages the watches on all
+// Constraints and ConstraintTemplates.
 func AddControllers(ctx context.Context, mgr manager.Manager) error {
-	if err := constrainttemplate.AddController(ctx, mgr); err != nil {
-		return err
-	}
-
 	r, err := newReconciler(ctx, mgr)
 	if err != nil {
 		return err

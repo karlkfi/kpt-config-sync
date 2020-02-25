@@ -5,6 +5,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policycontroller/constraint"
+	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/util/watch"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,16 +65,27 @@ func (c *crdReconciler) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	// We only need to process CRDs that define a PolicyController Constraint.
-	if !constraint.MatchesGroup(crd) {
+	var establishedGVKs map[schema.GroupVersionKind]bool
+	if constraint.MatchesGroup(crd) {
+		glog.Infof("Encountered constraint CRD %q: %v", request.NamespacedName, crd)
+		// For PolicyController constraints, we can only watch the ones that are
+		// established.
+		kind := crd.Spec.Names.Kind
+		c.crdKinds[request.NamespacedName.String()] = kind
+		c.constraintKinds[kind] = isEstablished(crd)
+		establishedGVKs = c.establishedConstraints()
+	} else if constrainttemplate.MatchesGK(crd) {
+		glog.Infof("Encountered ConstraintTemplate CRD %q: %v", request.NamespacedName, crd)
+		establishedGVKs = c.establishedConstraints()
+		establishedGVKs[constrainttemplate.GVK] = isEstablished(crd)
+	} else {
+		glog.Infof("Ignoring non-gatekeeper CRD %q", request.NamespacedName)
+		// If it's not a constraint CRD or the Gatekeeper ConstraintTemplate CRD, we
+		// don't care about it.
 		return reconcile.Result{}, nil
 	}
 
-	kind := crd.Spec.Names.Kind
-	c.crdKinds[request.NamespacedName.String()] = kind
-	c.constraintKinds[kind] = isEstablished(crd)
-
-	_, err := c.mgr.Restart(c.establishedConstraints(), false)
+	_, err := c.mgr.Restart(establishedGVKs, false)
 	return reconcile.Result{}, err
 }
 

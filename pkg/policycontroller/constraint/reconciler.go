@@ -40,8 +40,13 @@ func (c *constraintReconciler) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	glog.Infof("%s %q was upserted: %v", c.gvk, request.NamespacedName, resource.Object)
+	patch := client.MergeFrom(resource.DeepCopy())
 	annotateConstraint(resource)
-	return reconcile.Result{}, nil
+	err := c.client.Patch(c.ctx, &resource, patch)
+	if err != nil {
+		glog.Errorf("Failed to patch annotations for %s: %v", c.gvk, err)
+	}
+	return reconcile.Result{}, err
 }
 
 // The following structs allow the code to deserialize Gatekeeper constraints.
