@@ -162,7 +162,6 @@ include Makefile.build
 include Makefile.docs
 include Makefile.e2e
 include Makefile.gen
-include Makefile.installer
 include Makefile.operator
 
 # Redeploy a component without rerunning the installer.

@@ -106,9 +106,6 @@ IMAGE_TAG := $(VERSION)
 # Enable optimzations.
 BUILD_MODE ?= release
 
-# RleaseNome Webhook URL
-WEBHOOK := "https://chat.googleapis.com/v1/spaces/AAAABmM05cM/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=1jimDwRyaLMJ7nKELjYGNTJVHYHILzHg5LG8DhRce0M%3D"
-
 # This is the hash of the last release candidate's revision.  No need to run the
 # release process if this has not changed since the last run.
 LAST_RC_GIT_HASH := $(shell git rev-list -n 1 $(LAST_RC))
@@ -271,7 +268,6 @@ __internal-autorelease: \
 		test \
 		ci-test-e2e \
 		push-to-gcr-nomos \
-		kubectl-plugin-staging \
 		upload-release \
 		git-tag-commit \
 		git-tag-upload \
@@ -299,7 +295,6 @@ __internal-autorelease-local: \
 		test \
 		ci-test-e2e-local \
 		push-to-gcr-nomos \
-		kubectl-plugin-staging \
 		upload-release \
 		git-tag-commit \
 		git-tag-upload \
@@ -356,8 +351,6 @@ bless-release:
 			  git log \
 			     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
                  --date=local $(LAST_RELEASE)..$${chosen_release} ; \
-			j="{\"text\":\"$${chosen_rc} was blessed!\"}" ; \
-			curl -s -d "$${j}" -H "Content-Type: application/json; charset=UTF-8" -X POST $(WEBHOOK) > /dev/null ; \
 	'
 
 #############################################################################
