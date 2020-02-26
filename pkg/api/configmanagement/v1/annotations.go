@@ -43,9 +43,9 @@ const (
 	// ResourceStatusErrorsKey is the annotation that indicates any errors, encoded as a JSON array.
 	ResourceStatusErrorsKey = ConfigManagementPrefix + "errors"
 
-	// ResourceStatusUnreadyKey is the annotation that indicates reasons why a resource is unready,
-	// encoded as a JSON array.
-	ResourceStatusUnreadyKey = ConfigManagementPrefix + "unready"
+	// ResourceStatusReconcilingKey is the annotation that indicates reasons why a resource is
+	// reconciling, encoded as a JSON array.
+	ResourceStatusReconcilingKey = ConfigManagementPrefix + "reconciling"
 )
 
 // SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.
@@ -58,6 +58,6 @@ func SyncerAnnotations() []string {
 		SyncTokenAnnotationKey,
 		ResourceManagementKey,
 		ResourceStatusErrorsKey,
-		ResourceStatusUnreadyKey,
+		ResourceStatusReconcilingKey,
 	}
 }

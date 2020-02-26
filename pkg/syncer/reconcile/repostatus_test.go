@@ -192,12 +192,12 @@ func TestMergeResourceConditions(t *testing.T) {
 				Items: []v1.ClusterConfig{
 					fakeClusterConfigWithResourceConditions(commit2, commit1, []v1.ResourceCondition{
 						v1.ResourceCondition{
-							GroupVersion:   "/templates.gatekeeper.sh/v1beta1",
-							Kind:           "ConstraintTemplate",
-							NamespacedName: "/my-constraint-template",
-							ResourceState:  v1.ResourceStateUnready,
-							Token:          commit2,
-							UnreadyReasons: []string{"ConstraintTemplate has not been processed by PolicyController"},
+							GroupVersion:       "/templates.gatekeeper.sh/v1beta1",
+							Kind:               "ConstraintTemplate",
+							NamespacedName:     "/my-constraint-template",
+							ResourceState:      v1.ResourceStateReconciling,
+							Token:              commit2,
+							ReconcilingReasons: []string{"ConstraintTemplate has not been processed by PolicyController"},
 						},
 					}),
 				},
@@ -218,12 +218,12 @@ func TestMergeResourceConditions(t *testing.T) {
 			},
 			wantResourceConditions: []v1.ResourceCondition{
 				v1.ResourceCondition{
-					GroupVersion:   "/templates.gatekeeper.sh/v1beta1",
-					Kind:           "ConstraintTemplate",
-					NamespacedName: "/my-constraint-template",
-					ResourceState:  v1.ResourceStateUnready,
-					Token:          commit2,
-					UnreadyReasons: []string{"ConstraintTemplate has not been processed by PolicyController"},
+					GroupVersion:       "/templates.gatekeeper.sh/v1beta1",
+					Kind:               "ConstraintTemplate",
+					NamespacedName:     "/my-constraint-template",
+					ResourceState:      v1.ResourceStateReconciling,
+					Token:              commit2,
+					ReconcilingReasons: []string{"ConstraintTemplate has not been processed by PolicyController"},
 				},
 				v1.ResourceCondition{
 					GroupVersion:   "/v1",

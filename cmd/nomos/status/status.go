@@ -391,8 +391,8 @@ func getResourceStatus(resourceConditions []v1.ResourceCondition) v1.ResourceCon
 
 		if resourceCondition.ResourceState.IsError() {
 			return v1.ResourceStateError
-		} else if resourceCondition.ResourceState.IsUnready() {
-			resourceStatus = v1.ResourceStateUnready
+		} else if resourceCondition.ResourceState.IsReconciling() {
+			resourceStatus = v1.ResourceStateReconciling
 		}
 	}
 
@@ -410,8 +410,8 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 		for _, rcError := range resourceCondition.Errors {
 			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tError: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcError))
 		}
-		for _, rcUnready := range resourceCondition.UnreadyReasons {
-			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tUnready: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcUnready))
+		for _, rcReconciling := range resourceCondition.ReconcilingReasons {
+			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tReconciling: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcReconciling))
 		}
 	}
 

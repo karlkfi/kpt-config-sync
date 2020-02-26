@@ -83,20 +83,20 @@ func annotateConstraintTemplate(ct unstructured.Unstructured) {
 	}
 
 	if status == nil || !status.Created {
-		util.AnnotateUnready(&ct, "ConstraintTemplate has not been created")
+		util.AnnotateReconciling(&ct, "ConstraintTemplate has not been created")
 		return
 	}
 
 	if len(status.ByPod) == 0 {
-		util.AnnotateUnready(&ct, "ConstraintTemplate has not been processed by PolicyController")
+		util.AnnotateReconciling(&ct, "ConstraintTemplate has not been processed by PolicyController")
 		return
 	}
 
-	var unreadyMsgs []string
+	var reconcilingMsgs []string
 	var errorMsgs []string
 	for _, bps := range status.ByPod {
 		if bps.ObservedGeneration != gen {
-			unreadyMsgs = append(unreadyMsgs, fmt.Sprintf("[%s] PolicyController has an outdated version of ConstraintTemplate", bps.ID))
+			reconcilingMsgs = append(reconcilingMsgs, fmt.Sprintf("[%s] PolicyController has an outdated version of ConstraintTemplate", bps.ID))
 		} else {
 			// We only look for errors if the version is up-to-date.
 			statusErrs := util.FormatErrors(bps.ID, bps.Errors)
@@ -104,8 +104,8 @@ func annotateConstraintTemplate(ct unstructured.Unstructured) {
 		}
 	}
 
-	if len(unreadyMsgs) > 0 {
-		util.AnnotateUnready(&ct, unreadyMsgs...)
+	if len(reconcilingMsgs) > 0 {
+		util.AnnotateReconciling(&ct, reconcilingMsgs...)
 	}
 	if len(errorMsgs) > 0 {
 		util.AnnotateErrors(&ct, errorMsgs...)

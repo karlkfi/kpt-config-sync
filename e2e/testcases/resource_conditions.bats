@@ -91,27 +91,27 @@ teardown() {
   repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].ResourceState')
   [[ "${repoResourceState}" != "Error" ]] || debug::error "repo status error resourceState not updated, got: ${repoResourceState}"
 
-  debug::log "Add unready resource condition annotations to configmap"
-  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/unready=["ConfigMap is unready", "ConfigMap is not ready"]'
+  debug::log "Add reconciling resource condition annotations to configmap"
+  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/reconciling=["ConfigMap is incomplete", "ConfigMap is not ready"]'
 
   debug::log "Check for configmap error resource condition in namespace config"
   nsResourceState=$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[1].ResourceState')
-  [[ "${nsResourceState}" != "Unready" ]] || debug::error "namespace config unready resourceState not updated, got: ${nsResourceState}"
+  [[ "${nsResourceState}" != "Reconciling" ]] || debug::error "namespace config reconciling resourceState not updated, got: ${nsResourceState}"
 
   debug::log "Check for configmap error resource condition in repo status"
   repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[2].ResourceState')
-  [[ "${repoResourceState}" != "Unready" ]] || debug::error "repo status unready resourceState not updated, got: ${repoResourceState}"
+  [[ "${repoResourceState}" != "Reconciling" ]] || debug::error "repo status reconciling resourceState not updated, got: ${repoResourceState}"
 
-  debug::log "Add resource condition unready annotation to clusterrole"
-  run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/unready=["ClusterRole needs... something..."]'
+  debug::log "Add resource condition reconciling annotation to clusterrole"
+  run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/reconciling=["ClusterRole needs... something..."]'
 
-  debug::log "Check for clusterrole error resource condition in cluster config"
+  debug::log "Check for clusterrole reconciling resource condition in cluster config"
   clusterResourceState=$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[1].ResourceState')
-  [[ "${clusterResourceState}" != "Unready" ]] || debug::error "cluster config unready resourceState not updated, got: ${clusterResourceState}"
+  [[ "${clusterResourceState}" != "Reconciling" ]] || debug::error "cluster config reconciling resourceState not updated, got: ${clusterResourceState}"
 
-  debug::log "Check for clusterrole unready resource condition in repo status"
+  debug::log "Check for clusterrole reconciling resource condition in repo status"
   repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[3].ResourceState')
-  [[ "${repoResourceState}" != "Unready" ]] || debug::error "repo status unready resourceState not updated, got: ${repoResourceState}"
+  [[ "${repoResourceState}" != "Reconciling" ]] || debug::error "repo status reconciling resourceState not updated, got: ${repoResourceState}"
 }
 
 @test "constraint template gets status annotations" {
@@ -126,8 +126,8 @@ teardown() {
   debug::log "Waiting for cluster sync to commit $(git::hash)"
   wait::for -t 60 -- nomos::cluster_synced
 
-  debug::log "Waiting for CT to get unready annotation"
-  wait::for -t 60 -- resource::check constrainttemplate ${resname} -a 'configmanagement.gke.io/unready=[\"ConstraintTemplate has not been created\"]'
+  debug::log "Waiting for CT to get reconciling annotation"
+  wait::for -t 60 -- resource::check constrainttemplate ${resname} -a 'configmanagement.gke.io/reconciling=[\"ConstraintTemplate has not been created\"]'
 
   kubectl delete crd constrainttemplates.templates.gatekeeper.sh
 }
@@ -144,8 +144,8 @@ teardown() {
   debug::log "Waiting for cluster sync to commit $(git::hash)"
   wait::for -t 60 -- nomos::cluster_synced
 
-  debug::log "Waiting for constraint to get unready annotation"
-  wait::for -t 60 -- resource::check funpods ${resname} -a 'configmanagement.gke.io/unready=[\"Constraint has not been processed by PolicyController\"]'
+  debug::log "Waiting for constraint to get reconciling annotation"
+  wait::for -t 60 -- resource::check funpods ${resname} -a 'configmanagement.gke.io/reconciling=[\"Constraint has not been processed by PolicyController\"]'
 
   kubectl delete crd funpods.constraints.gatekeeper.sh
 }

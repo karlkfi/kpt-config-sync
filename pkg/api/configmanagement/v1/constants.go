@@ -55,12 +55,12 @@ func (p ResourceConditionState) IsHealthy() bool {
 	return p == ResourceStateHealthy
 }
 
-// IsUnready returns true if the state is unready.
-func (p ResourceConditionState) IsUnready() bool {
-	return p == ResourceStateUnready
+// IsReconciling returns true if the state is reconciling.
+func (p ResourceConditionState) IsReconciling() bool {
+	return p == ResourceStateReconciling
 }
 
-// IsError returns true if the state is unready.
+// IsError returns true if the state is in error.
 func (p ResourceConditionState) IsError() bool {
 	return p == ResourceStateError
 }
@@ -69,10 +69,10 @@ const (
 	// ResourceStateHealthy indicates a resource with no sync errors found
 	ResourceStateHealthy = ResourceConditionState("Healthy")
 
-	// ResourceStateUnready indicates that a resource is currently not ready pending the completion of asynchronous tasks
-	ResourceStateUnready = ResourceConditionState("Unready")
+	// ResourceStateReconciling indicates that a resource is currently being reconciled by a controller
+	ResourceStateReconciling = ResourceConditionState("Reconciling")
 
-	// ResourceStateError indicates that an error has occurred from which the resource cannot recover
+	// ResourceStateError indicates that an error has occurred while reconciling a resource
 	ResourceStateError = ResourceConditionState("Error")
 )
 

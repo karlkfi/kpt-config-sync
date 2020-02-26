@@ -87,7 +87,7 @@ func AnnotationsHaveResourceCondition(annotations map[string]string) bool {
 	if _, ok := annotations[v1.ResourceStatusErrorsKey]; ok {
 		return true
 	}
-	if _, ok := annotations[v1.ResourceStatusUnreadyKey]; ok {
+	if _, ok := annotations[v1.ResourceStatusReconcilingKey]; ok {
 		return true
 	}
 	return false
@@ -100,16 +100,16 @@ func MakeResourceCondition(obj unstructured.Unstructured, token string) v1.Resou
 	resourceCondition.Kind = obj.GroupVersionKind().Kind
 	resourceCondition.NamespacedName = fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
 
-	if val, ok := obj.GetAnnotations()[v1.ResourceStatusUnreadyKey]; ok {
-		resourceCondition.ResourceState = v1.ResourceStateUnready
-		var unready []string
-		err := json.Unmarshal([]byte(val), &unready)
+	if val, ok := obj.GetAnnotations()[v1.ResourceStatusReconcilingKey]; ok {
+		resourceCondition.ResourceState = v1.ResourceStateReconciling
+		var reconciling []string
+		err := json.Unmarshal([]byte(val), &reconciling)
 		if err != nil {
-			glog.Errorf("Invalid resource state unready annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
-			unready = []string{val}
+			glog.Errorf("Invalid resource state reconciling annotation on %v %v %v", resourceCondition.GroupVersion, resourceCondition.Kind, resourceCondition.NamespacedName)
+			reconciling = []string{val}
 		}
 
-		resourceCondition.UnreadyReasons = append(resourceCondition.UnreadyReasons, unready...)
+		resourceCondition.ReconcilingReasons = append(resourceCondition.ReconcilingReasons, reconciling...)
 	}
 	if val, ok := obj.GetAnnotations()[v1.ResourceStatusErrorsKey]; ok {
 		resourceCondition.ResourceState = v1.ResourceStateError

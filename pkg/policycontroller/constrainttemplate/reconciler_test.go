@@ -20,21 +20,21 @@ func TestAnnotateConstraintTemplate(t *testing.T) {
 			"ConstraintTemplate not yet created",
 			ct().generation(5).created(false).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["ConstraintTemplate has not been created"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been created"]`,
 			},
 		},
 		{
 			"ConstraintTemplate not yet processed",
 			ct().generation(5).created(true).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["ConstraintTemplate has not been processed by PolicyController"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been processed by PolicyController"]`,
 			},
 		},
 		{
 			"PolicyController has outdated version of ConstraintTemplate",
 			ct().generation(5).created(true).byPod(4).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestAnnotateConstraintTemplate(t *testing.T) {
 			"ConstraintTemplate has error, but is out of date",
 			ct().generation(5).created(true).byPod(4, "looks bad").build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestAnnotateConstraintTemplate(t *testing.T) {
 		},
 		{
 			"ConstraintTemplate had annotations previously, but is now ready",
-			ct().generation(5).created(true).annotateErrors("looks bad").annotateUnready("not yet").byPod(5).build(),
+			ct().generation(5).created(true).annotateErrors("looks bad").annotateReconciling("not yet").byPod(5).build(),
 			map[string]string{},
 		},
 	}
@@ -94,8 +94,8 @@ func (c *ctBuilder) annotateErrors(msg string) *ctBuilder {
 	return c
 }
 
-func (c *ctBuilder) annotateUnready(msg string) *ctBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusUnreadyKey, msg)
+func (c *ctBuilder) annotateReconciling(msg string) *ctBuilder {
+	core.SetAnnotation(c, nomosv1.ResourceStatusReconcilingKey, msg)
 	return c
 }
 

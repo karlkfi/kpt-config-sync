@@ -88,28 +88,28 @@ func annotateConstraint(con unstructured.Unstructured) {
 	}
 
 	if status == nil || len(status.ByPod) == 0 {
-		util.AnnotateUnready(&con, "Constraint has not been processed by PolicyController")
+		util.AnnotateReconciling(&con, "Constraint has not been processed by PolicyController")
 		return
 	}
 
-	var unreadyMsgs []string
+	var reconcilingMsgs []string
 	var errorMsgs []string
 	for _, bps := range status.ByPod {
 		// We only look for errors/enforcement if the version is up-to-date.
 		if bps.ObservedGeneration != gen {
-			unreadyMsgs = append(unreadyMsgs, fmt.Sprintf("[%s] PolicyController has an outdated version of Constraint", bps.ID))
+			reconcilingMsgs = append(reconcilingMsgs, fmt.Sprintf("[%s] PolicyController has an outdated version of Constraint", bps.ID))
 			continue
 		}
 
 		if !bps.Enforced {
-			unreadyMsgs = append(unreadyMsgs, fmt.Sprintf("[%s] PolicyController is not enforcing Constraint", bps.ID))
+			reconcilingMsgs = append(reconcilingMsgs, fmt.Sprintf("[%s] PolicyController is not enforcing Constraint", bps.ID))
 		}
 		statusErrs := util.FormatErrors(bps.ID, bps.Errors)
 		errorMsgs = append(errorMsgs, statusErrs...)
 	}
 
-	if len(unreadyMsgs) > 0 {
-		util.AnnotateUnready(&con, unreadyMsgs...)
+	if len(reconcilingMsgs) > 0 {
+		util.AnnotateReconciling(&con, reconcilingMsgs...)
 	}
 	if len(errorMsgs) > 0 {
 		util.AnnotateErrors(&con, errorMsgs...)

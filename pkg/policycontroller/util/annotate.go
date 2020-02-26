@@ -12,13 +12,13 @@ func AnnotateErrors(obj *unstructured.Unstructured, msgs ...string) {
 	core.SetAnnotation(obj, nomosv1.ResourceStatusErrorsKey, jsonify(msgs))
 }
 
-// AnnotateUnready sets the unready status annotation to the given unready reasons.
-func AnnotateUnready(obj *unstructured.Unstructured, msgs ...string) {
-	core.SetAnnotation(obj, nomosv1.ResourceStatusUnreadyKey, jsonify(msgs))
+// AnnotateReconciling sets the reconciling status annotation to the given reasons.
+func AnnotateReconciling(obj *unstructured.Unstructured, msgs ...string) {
+	core.SetAnnotation(obj, nomosv1.ResourceStatusReconcilingKey, jsonify(msgs))
 }
 
 // ResetAnnotations removes all status annotations.
 func ResetAnnotations(obj *unstructured.Unstructured) {
-	core.RemoveAnnotations(obj, nomosv1.ResourceStatusUnreadyKey)
+	core.RemoveAnnotations(obj, nomosv1.ResourceStatusReconcilingKey)
 	core.RemoveAnnotations(obj, nomosv1.ResourceStatusErrorsKey)
 }

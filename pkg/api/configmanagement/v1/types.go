@@ -474,8 +474,8 @@ type ResourceCondition struct {
 	Token          string                 `json:"token,omitempty"`
 
 	// These fields match the proposed conditions/annotations for status.
-	UnreadyReasons []string `json:"unreadyReasons,omitempty"`
-	Errors         []string `json:"errors,omitempty"`
+	ReconcilingReasons []string `json:"reconcilingReasons,omitempty"`
+	Errors             []string `json:"errors,omitempty"`
 }
 
 // RepoSyncChangeStatus represents the status of a single change being synced in the Repo.

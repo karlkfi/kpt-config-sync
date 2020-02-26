@@ -20,21 +20,21 @@ func TestAnnotateConstraint(t *testing.T) {
 			"Constraint not yet processed",
 			con().generation(5).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["Constraint has not been processed by PolicyController"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["Constraint has not been processed by PolicyController"]`,
 			},
 		},
 		{
 			"Constraint not yet enforced",
 			con().generation(5).byPod(5, false).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController is not enforcing Constraint"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController is not enforcing Constraint"]`,
 			},
 		},
 		{
 			"PolicyController has outdated version of Constraint",
 			con().generation(5).byPod(4, true).build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of Constraint"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestAnnotateConstraint(t *testing.T) {
 			"ConstraintTemplate has error, but is out of date",
 			con().generation(5).byPod(4, true, "looks bad").build(),
 			map[string]string{
-				nomosv1.ResourceStatusUnreadyKey: `["[0] PolicyController has an outdated version of Constraint"]`,
+				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestAnnotateConstraint(t *testing.T) {
 		},
 		{
 			"Constraint had annotations previously, but is now ready",
-			con().generation(5).annotateErrors("looks bad").annotateUnready("not yet").byPod(5, true).build(),
+			con().generation(5).annotateErrors("looks bad").annotateReconciling("not yet").byPod(5, true).build(),
 			map[string]string{},
 		},
 	}
@@ -96,8 +96,8 @@ func (c *conBuilder) annotateErrors(msg string) *conBuilder {
 	return c
 }
 
-func (c *conBuilder) annotateUnready(msg string) *conBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusUnreadyKey, msg)
+func (c *conBuilder) annotateReconciling(msg string) *conBuilder {
+	core.SetAnnotation(c, nomosv1.ResourceStatusReconcilingKey, msg)
 	return c
 }
 
