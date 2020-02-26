@@ -19,7 +19,7 @@ kind: ClusterRoleBinding
 metadata:
   name: configmanagement.gke.io:policy-controller-psp
   labels:
-    configmanagement.gke.io/system: "true"
+    policycontroller.configmanagement.gke.io: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
