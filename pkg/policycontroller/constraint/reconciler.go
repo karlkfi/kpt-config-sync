@@ -39,7 +39,7 @@ func (c *constraintReconciler) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	glog.Infof("%s %q was upserted: %v", c.gvk, request.NamespacedName, resource.Object)
+	glog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
 	patch := client.MergeFrom(resource.DeepCopy())
 	annotateConstraint(resource)
 	err := c.client.Patch(c.ctx, &resource, patch)

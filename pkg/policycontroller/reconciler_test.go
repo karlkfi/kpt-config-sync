@@ -18,12 +18,18 @@ import (
 
 func TestConstraintGVKs(t *testing.T) {
 	cm := &clientMock{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	thr := &throttler{make(chan map[schema.GroupVersionKind]bool)}
+	go thr.start(ctx, &restartableManagerStub{})
+
 	cr := &crdReconciler{
 		context.Background(),
 		cm,
-		&restartableManagerStub{},
-		map[string]string{},
-		map[string]bool{},
+		thr,
+		map[string]schema.GroupVersionKind{},
+		map[schema.GroupVersionKind]bool{},
 	}
 
 	// Verify the initial empty case

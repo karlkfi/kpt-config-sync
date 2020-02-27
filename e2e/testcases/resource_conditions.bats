@@ -114,7 +114,7 @@ teardown() {
   [[ "${repoResourceState}" != "Reconciling" ]] || debug::error "repo status reconciling resourceState not updated, got: ${repoResourceState}"
 }
 
-@test "constraint template gets status annotations" {
+@test "${FILE_NAME}: constraint template gets status annotations" {
   local resname="k8sname"
 
   debug::log "Adding gatekeeper CT CRD"
@@ -132,7 +132,7 @@ teardown() {
   kubectl delete crd constrainttemplates.templates.gatekeeper.sh
 }
 
-@test "constraint gets status annotations" {
+@test "${FILE_NAME}: constraint gets status annotations" {
   local resname="prod-pod-is-fun"
 
   debug::log "Adding gatekeeper constraint CRD"
@@ -145,7 +145,7 @@ teardown() {
   wait::for -t 60 -- nomos::cluster_synced
 
   debug::log "Waiting for constraint to get reconciling annotation"
-  wait::for -t 60 -- resource::check funpods ${resname} -a 'configmanagement.gke.io/reconciling=[\"Constraint has not been processed by PolicyController\"]'
+  wait::for -t 120 -- resource::check funpods ${resname} -a 'configmanagement.gke.io/reconciling=[\"Constraint has not been processed by PolicyController\"]'
 
   kubectl delete crd funpods.constraints.gatekeeper.sh
 }

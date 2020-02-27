@@ -35,7 +35,7 @@ func (c *constraintTemplateReconciler) Reconcile(request reconcile.Request) (rec
 		return reconcile.Result{}, nil
 	}
 
-	glog.Infof("ConstraintTemplate %q was upserted: %v", request.NamespacedName, ct.Object)
+	glog.Infof("ConstraintTemplate %q was upserted", request.NamespacedName)
 	patch := client.MergeFrom(ct.DeepCopy())
 	annotateConstraintTemplate(ct)
 	err := c.client.Patch(c.ctx, &ct, patch)

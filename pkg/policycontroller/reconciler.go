@@ -2,6 +2,7 @@ package policycontroller
 
 import (
 	"context"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/policycontroller/constraint"
@@ -20,14 +21,14 @@ import (
 type crdReconciler struct {
 	ctx    context.Context
 	client client.Client
-	// mgr is the RestartableManager that responds to changes in what kinds of
-	// Constraints should be watched.
-	mgr watch.RestartableManager
+	// thr is a throttler which limits the frequency of restarts for a
+	// RestartableManager
+	thr *throttler
 	// crdKinds is a map of CRD name to the kind of resource it defines.
-	crdKinds map[string]string
+	crdKinds map[string]schema.GroupVersionKind
 	// constraintKinds is a map of resource kind to boolean indicator if it is
 	// established (aka discovery knows about).
-	constraintKinds map[string]bool
+	constraintKinds map[schema.GroupVersionKind]bool
 }
 
 // newReconciler returns a crdReconciler that able to restart the given Manager
@@ -37,12 +38,16 @@ func newReconciler(ctx context.Context, mgr manager.Manager) (*crdReconciler, er
 	if err != nil {
 		return nil, err
 	}
+
+	thr := &throttler{make(chan map[schema.GroupVersionKind]bool)}
+	go thr.start(ctx, rm)
+
 	return &crdReconciler{
 		ctx,
 		mgr.GetClient(),
-		rm,
-		map[string]string{},
-		map[string]bool{},
+		thr,
+		map[string]schema.GroupVersionKind{},
+		map[schema.GroupVersionKind]bool{},
 	}, nil
 }
 
@@ -61,23 +66,19 @@ func (c *crdReconciler) Reconcile(request reconcile.Request) (reconcile.Result, 
 		glog.Infof("CustomResourceDefinition %q was deleted", request.NamespacedName)
 		if kind, ok := c.crdKinds[request.NamespacedName.String()]; ok {
 			delete(c.constraintKinds, kind)
+			delete(c.crdKinds, request.NamespacedName.String())
+			c.thr.updateGVKs(c.establishedConstraints())
 		}
 		return reconcile.Result{}, nil
 	}
 
-	var establishedGVKs map[schema.GroupVersionKind]bool
-	if constraint.MatchesGroup(crd) {
-		glog.Infof("Encountered constraint CRD %q: %v", request.NamespacedName, crd)
-		// For PolicyController constraints, we can only watch the ones that are
-		// established.
-		kind := crd.Spec.Names.Kind
-		c.crdKinds[request.NamespacedName.String()] = kind
-		c.constraintKinds[kind] = isEstablished(crd)
-		establishedGVKs = c.establishedConstraints()
-	} else if constrainttemplate.MatchesGK(crd) {
-		glog.Infof("Encountered ConstraintTemplate CRD %q: %v", request.NamespacedName, crd)
-		establishedGVKs = c.establishedConstraints()
-		establishedGVKs[constrainttemplate.GVK] = isEstablished(crd)
+	var gvk schema.GroupVersionKind
+	if constrainttemplate.MatchesGK(crd) {
+		glog.Infof("Encountered ConstraintTemplate CRD %q", request.NamespacedName)
+		gvk = constrainttemplate.GVK
+	} else if constraint.MatchesGroup(crd) {
+		glog.Infof("Encountered constraint CRD %q", request.NamespacedName)
+		gvk = constraint.GVK(crd.Spec.Names.Kind)
 	} else {
 		glog.Infof("Ignoring non-gatekeeper CRD %q", request.NamespacedName)
 		// If it's not a constraint CRD or the Gatekeeper ConstraintTemplate CRD, we
@@ -85,8 +86,10 @@ func (c *crdReconciler) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	_, err := c.mgr.Restart(establishedGVKs, false)
-	return reconcile.Result{}, err
+	c.crdKinds[request.NamespacedName.String()] = gvk
+	c.constraintKinds[gvk] = isEstablished(crd)
+	c.thr.updateGVKs(c.establishedConstraints())
+	return reconcile.Result{}, nil
 }
 
 // isEstablished returns true if the given CRD is established on the cluster,
@@ -105,10 +108,44 @@ func isEstablished(crd *v1beta1.CustomResourceDefinition) bool {
 // corresponding CRD which is established on the cluster.
 func (c *crdReconciler) establishedConstraints() map[schema.GroupVersionKind]bool {
 	gvks := map[schema.GroupVersionKind]bool{}
-	for kind, established := range c.constraintKinds {
+	for gvk, established := range c.constraintKinds {
 		if established {
-			gvks[constraint.GVK(kind)] = true
+			gvks[gvk] = true
 		}
 	}
 	return gvks
+}
+
+// throttler limits the frequency of calls to RestartableManager.Restart().
+type throttler struct {
+	input chan map[schema.GroupVersionKind]bool
+}
+
+func (t *throttler) updateGVKs(gvks map[schema.GroupVersionKind]bool) {
+	t.input <- gvks
+}
+
+func (t *throttler) start(ctx context.Context, mgr watch.RestartableManager) {
+	var gvks map[schema.GroupVersionKind]bool
+	var dirty bool
+	ticker := time.NewTicker(3 * time.Second)
+
+	for {
+		select {
+		case gvks = <-t.input:
+			dirty = true
+		case <-ticker.C:
+			if dirty {
+				glog.Infof("Restarting manager with GVKs: %v", gvks)
+				if _, err := mgr.Restart(gvks, false); err != nil {
+					glog.Errorf("Failed to restart submanager: %v", err)
+				} else {
+					dirty = false
+				}
+			}
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
 }
