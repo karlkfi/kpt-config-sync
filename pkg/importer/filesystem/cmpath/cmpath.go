@@ -35,15 +35,6 @@ func (p Root) Join(rel Path) Relative {
 	return Relative{path: rel, root: p}
 }
 
-// Rel breaks the passed target path into a Relative
-func (p Root) Rel(targPath Path) (Relative, status.Error) {
-	relPath, err := filepath.Rel(p.path, targPath.OSPath())
-	if err != nil {
-		return Relative{}, status.PathWrapError(err, p.path, targPath.SlashPath())
-	}
-	return Relative{path: FromOS(relPath), root: p}, nil
-}
-
 // AbsoluteOSPath implements RootedPath.
 func (p Root) AbsoluteOSPath() string {
 	return p.path

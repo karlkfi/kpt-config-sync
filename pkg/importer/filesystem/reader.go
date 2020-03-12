@@ -34,6 +34,19 @@ type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
+func evalSymlinks(dir string) (string, error) {
+	p, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", status.PathWrapError(err, dir)
+	}
+	// Symlinks can be relative paths, so force the path to be absolute.
+	p, err = filepath.Abs(p)
+	if err != nil {
+		return "", status.PathWrapError(err, dir)
+	}
+	return p, nil
+}
+
 // Read implements Reader.
 func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
 	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
@@ -42,9 +55,18 @@ func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.Multi
 		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
 	}
 
+	rootDir, err := evalSymlinks(dir.Root().AbsoluteOSPath())
+	if err != nil {
+		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
+	}
+	p, err := evalSymlinks(dir.AbsoluteOSPath())
+	if err != nil {
+		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
+	}
+
 	var errs status.MultiError
 	var fileObjects []ast.FileObject
-	walkErr := filepath.Walk(dir.AbsoluteOSPath(), func(path string, info os.FileInfo, _ error) error {
+	walkErr := filepath.Walk(p, func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() {
 			// This is a directory, continue.
 			return nil
@@ -58,14 +80,14 @@ func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.Multi
 		}
 
 		// Assign relative path since that's what we actually need.
-		source, relErr := dir.Root().Rel(cmpath.FromOS(path))
+		source, relErr := filepath.Rel(rootDir, path)
 		if relErr != nil {
 			// We couldn't get the relative path from the repository root. Something is very wrong.
 			errs = status.Append(errs, relErr)
 		}
 
 		for _, u := range unstructureds {
-			newFileObjects, err := toFileObjects(u, source.Path())
+			newFileObjects, err := toFileObjects(u, cmpath.FromOS(source))
 			if err != nil {
 				errs = status.Append(errs, err)
 			}

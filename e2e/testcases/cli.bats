@@ -41,6 +41,19 @@ teardown() {
   ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme
 }
 
+@test "${FILE_NAME}: CLI Vet Acme Symlink" {
+  debug::log "Set up invalid repo missing system directory."
+  cp -r /opt/testing/e2e/examples/acme /opt/testing/e2e/examples/acme-symlink
+  rm -rf /opt/testing/e2e/examples/acme-symlink/system
+
+  debug::log "Ensure nomos vet fails."
+  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
+
+  debug::log "Add system/ via symlink. If this passes, symlink resolution works."
+  ln -s /opt/testing/e2e/examples/acme/system /opt/testing/e2e/examples/acme-symlink/system
+  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
+}
+
 @test "${FILE_NAME}: CLI Init" {
   rm -rf "${BATS_TMPDIR}/empty-repo"
   mkdir "${BATS_TMPDIR}/empty-repo"

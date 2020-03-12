@@ -52,3 +52,20 @@ teardown() {
   # Repair the state
   kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
 }
+
+@test "${FILE_NAME}: Syncs correctly with no policy dir set" {
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-policy-dir.yaml"
+  setup::git::initialize
+  setup::git::init repoless
+
+  wait::for -t 60 -- nomos::repo_synced
+
+  resource::check clusterrole repoless-admin
+  resource::check namespace backend
+  resource::check role pod-reader-backend -n backend
+  resource::check namespace default
+  resource::check role pod-reader-default -n default
+
+  # Repair the state
+  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
+}
