@@ -172,7 +172,11 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 			mErr = status.Append(mErr, err)
 			syncErrs = append(syncErrs, err.ToCME())
 		} else if updated {
-			reconcileCount++
+			// TODO(b/152322972): Add unit tests for diff type logic.
+			if diff.Type() != differ.Update {
+				// We don't need to restart if an existing CRD was updated.
+				reconcileCount++
+			}
 		}
 	}
 

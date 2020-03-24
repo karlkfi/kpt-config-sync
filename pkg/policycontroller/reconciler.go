@@ -127,6 +127,7 @@ func (t *throttler) updateGVKs(gvks map[schema.GroupVersionKind]bool) {
 }
 
 func (t *throttler) start(ctx context.Context, mgr watch.RestartableManager) {
+	//TODO(b/152322972): Add unit tests for throttler logic.
 	var lastGVKs map[schema.GroupVersionKind]bool
 	var gvks map[schema.GroupVersionKind]bool
 	var dirty bool

@@ -28,6 +28,7 @@ import (
 )
 
 const noOpPatch = "{}"
+const rmCreationTimestampPatch = "{\"metadata\":{\"creationTimestamp\":null}}"
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
@@ -155,6 +156,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 
 	name, resourceDescription := nameDescription(intendedState)
 	gvk := intendedState.GroupVersionKind()
+	//TODO(b/b152322972): Add unit tests for "updated" logic.
 	var updated bool
 	var err error
 
@@ -216,8 +218,10 @@ func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous
 // Returns (true, nil) if the object was successfully patched.
 // Returns (false, nil) if the patch was a no-op.
 // Returns (false, err) if the patch failed.
+// TODO(b/152322972): Add unit tests for noop logic.
 func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) (bool, error) {
-	if string(patch) == noOpPatch {
+	if p := string(patch); p == noOpPatch || p == rmCreationTimestampPatch {
+		// TODO(b/152312521): Find a more elegant solution for ignoring noop-like patches.
 		// Avoid doing a noop patch.
 		return false, nil
 	}
