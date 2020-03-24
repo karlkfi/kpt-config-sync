@@ -27,7 +27,7 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-const NoOpPatch = "{}"
+const noOpPatch = "{}"
 
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
@@ -217,7 +217,7 @@ func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous
 // Returns (false, nil) if the patch was a no-op.
 // Returns (false, err) if the patch failed.
 func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) (bool, error) {
-	if string(patch) == NoOpPatch {
+	if string(patch) == noOpPatch {
 		// Avoid doing a noop patch.
 		return false, nil
 	}

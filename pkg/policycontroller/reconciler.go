@@ -2,6 +2,7 @@ package policycontroller
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/golang/glog"
@@ -126,6 +127,7 @@ func (t *throttler) updateGVKs(gvks map[schema.GroupVersionKind]bool) {
 }
 
 func (t *throttler) start(ctx context.Context, mgr watch.RestartableManager) {
+	var lastGVKs map[schema.GroupVersionKind]bool
 	var gvks map[schema.GroupVersionKind]bool
 	var dirty bool
 	ticker := time.NewTicker(3 * time.Second)
@@ -133,13 +135,14 @@ func (t *throttler) start(ctx context.Context, mgr watch.RestartableManager) {
 	for {
 		select {
 		case gvks = <-t.input:
-			dirty = true
+			dirty = !reflect.DeepEqual(lastGVKs, gvks)
 		case <-ticker.C:
 			if dirty {
 				glog.Infof("Restarting manager with GVKs: %v", gvks)
 				if _, err := mgr.Restart(gvks, false); err != nil {
 					glog.Errorf("Failed to restart submanager: %v", err)
 				} else {
+					lastGVKs = gvks
 					dirty = false
 				}
 			}
