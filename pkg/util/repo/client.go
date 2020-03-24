@@ -90,7 +90,7 @@ func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo,
 	updateFn := func(obj core.Object) (core.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		if cmp.Equal(repo.Status.Sync, newRepo.Status.Sync) {
-			return nil, syncclient.NoUpdateNeeded()
+			return newRepo, syncclient.NoUpdateNeeded()
 		}
 		newRepo.Status.Sync = repo.Status.Sync
 		return newRepo, nil

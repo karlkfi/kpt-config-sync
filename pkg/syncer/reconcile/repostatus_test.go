@@ -353,6 +353,43 @@ func TestSyncStateMerging(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "merge unchanged state into RepoStatus",
+			state: &syncState{
+				unreconciledCommits: map[string][]string{},
+				configs:             map[string]configState{},
+			},
+			status: &v1.RepoStatus{
+				Source: v1.RepoSourceStatus{
+					Token: commit2,
+				},
+				Import: v1.RepoImportStatus{
+					Token:      commit2,
+					LastUpdate: currentTime,
+				},
+				Sync: v1.RepoSyncStatus{
+					LatestToken:        commit2,
+					LastUpdate:         currentTime,
+					InProgress:         []v1.RepoSyncChangeStatus{},
+					ResourceConditions: nil,
+				},
+			},
+			want: &v1.RepoStatus{
+				Source: v1.RepoSourceStatus{
+					Token: commit2,
+				},
+				Import: v1.RepoImportStatus{
+					Token:      commit2,
+					LastUpdate: currentTime,
+				},
+				Sync: v1.RepoSyncStatus{
+					LatestToken:        commit2,
+					LastUpdate:         currentTime,
+					InProgress:         []v1.RepoSyncChangeStatus{},
+					ResourceConditions: nil,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -2,6 +2,7 @@ package reconcile
 
 import (
 	"context"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -174,12 +175,14 @@ func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs 
 
 // merge updates the given RepoStatus with current configs and commits in the syncState.
 func (s syncState) merge(repoStatus *v1.RepoStatus, now func() metav1.Time) {
+	var updated bool
 	if len(s.unreconciledCommits) == 0 {
 		if len(repoStatus.Source.Errors) > 0 || len(repoStatus.Import.Errors) > 0 {
 			glog.Infof("No unreconciled commits but there are source/import errors. RepoStatus sync token will remain at %q.", repoStatus.Sync.LatestToken)
-		} else {
+		} else if repoStatus.Sync.LatestToken != repoStatus.Import.Token {
 			glog.Infof("All commits are reconciled, updating RepoStatus sync token to %q.", repoStatus.Import.Token)
 			repoStatus.Sync.LatestToken = repoStatus.Import.Token
+			updated = true
 		}
 	} else {
 		glog.Infof("RepoStatus import token at %q, but %d commits are unreconciled. RepoStatus sync token will remain at %q.",
@@ -204,9 +207,22 @@ func (s syncState) merge(repoStatus *v1.RepoStatus, now func() metav1.Time) {
 	sort.Slice(inProgress, func(i, j int) bool {
 		return strings.Compare(inProgress[i].Token, inProgress[j].Token) < 0
 	})
-	repoStatus.Sync.InProgress = inProgress
-	repoStatus.Sync.LastUpdate = now()
-	repoStatus.Sync.ResourceConditions = s.resourceConditions
+
+	nonEmpty := len(repoStatus.Sync.InProgress) > 0 || len(inProgress) > 0
+	if nonEmpty && !reflect.DeepEqual(repoStatus.Sync.InProgress, inProgress) {
+		repoStatus.Sync.InProgress = inProgress
+		updated = true
+	}
+
+	nonEmpty = len(repoStatus.Sync.ResourceConditions) > 0 || len(s.resourceConditions) > 0
+	if nonEmpty && !reflect.DeepEqual(repoStatus.Sync.ResourceConditions, s.resourceConditions) {
+		repoStatus.Sync.ResourceConditions = s.resourceConditions
+		updated = true
+	}
+
+	if updated {
+		repoStatus.Sync.LastUpdate = now()
+	}
 }
 
 // clusterPrefix returns the given name prefixed to indicate it is for a ClusterConfig.
