@@ -27,6 +27,8 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
+const NoOpPatch = "{}"
+
 // Applier updates a resource from its current state to its intended state using apply operations.
 type Applier interface {
 	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
@@ -153,13 +155,14 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 
 	name, resourceDescription := nameDescription(intendedState)
 	gvk := intendedState.GroupVersionKind()
+	var updated bool
 	var err error
 
 	// Attempt a strategic patch first.
 	patch := c.calculateStrategic(gvk, previous, modified, current)
 	// If patch is nil, it means we don't have access to the schema.
 	if patch != nil {
-		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
+		updated, err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
 		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
 		// custom resource), so we reset the patch and try again below.
 		if err != nil && apierrors.IsUnsupportedMediaType(err) {
@@ -171,7 +174,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	if patch == nil {
 		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
 		if err == nil {
-			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
+			updated, err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
@@ -181,7 +184,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	glog.V(1).Infof("Patched %s", resourceDescription)
 	glog.V(3).Infof("Patched with %s", patch)
 
-	return true, nil
+	return updated, nil
 }
 
 func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous, modified, current []byte) []byte {
@@ -208,22 +211,27 @@ func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous
 	return jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
 }
 
-func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
-	if string(patch) == "{}" {
+// attemptPatch patches resClient with the given patch.
+//
+// Returns (true, nil) if the object was successfully patched.
+// Returns (false, nil) if the patch was a no-op.
+// Returns (false, err) if the patch failed.
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) (bool, error) {
+	if string(patch) == NoOpPatch {
 		// Avoid doing a noop patch.
-		return nil
+		return false, nil
 	}
 
 	if err := ctx.Err(); err != nil {
 		// We've already encountered an error, so do not attempt update.
-		return status.ResourceWrap(err, "unable to continue updating resource")
+		return false, status.ResourceWrap(err, "unable to continue updating resource")
 	}
 
 	start := time.Now()
 	_, err := resClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
-	return err
+	return true, err
 }
 
 // resource retrieves the plural resource name for the GroupVersionKind.
