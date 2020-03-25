@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -573,4 +576,106 @@ func unmanaged(o *corev1.Namespace) *corev1.Namespace {
 	core.RemoveLabels(r, m)
 
 	return r
+}
+
+func TestWithNamespaceConfigMeta(t *testing.T) {
+	testCases := []struct {
+		name     string
+		actual   map[string]string
+		declared map[string]string
+		want     map[string]string
+	}{
+		{
+			name: "all empty",
+		},
+		{
+			name:   "preserve actual",
+			actual: map[string]string{"a": "b"},
+			want:   map[string]string{"a": "b"},
+		},
+		{
+			name:     "add declared",
+			declared: map[string]string{"a": "b"},
+			want:     map[string]string{"a": "b"},
+		},
+		{
+			name:     "declared overwrites actual",
+			actual:   map[string]string{"a": "b"},
+			declared: map[string]string{"a": "c"},
+			want:     map[string]string{"a": "c"},
+		},
+		{
+			name:     "merge declared and actual",
+			actual:   map[string]string{"a": "b"},
+			declared: map[string]string{"c": "d"},
+			want:     map[string]string{"a": "b", "c": "d"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name+" annotations", func(t *testing.T) {
+			wantAnnotations := make(map[string]string)
+			for k, v := range tc.want {
+				wantAnnotations[k] = v
+			}
+			wantAnnotations["configmanagement.gke.io/managed"] = "enabled"
+			wantAnnotations["configmanagement.gke.io/token"] = ""
+
+			ns := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: make(map[string]string),
+				},
+			}
+			for k, v := range tc.actual {
+				ns.Annotations[k] = v
+			}
+
+			nsc := v1.NamespaceConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: make(map[string]string),
+				},
+			}
+			for k, v := range tc.declared {
+				nsc.Annotations[k] = v
+			}
+
+			got := withNamespaceConfigMeta(&ns, &nsc).Annotations
+
+			if diff := cmp.Diff(wantAnnotations, got, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf(diff)
+			}
+		})
+
+		t.Run(tc.name+" labels", func(t *testing.T) {
+			wantLabels := make(map[string]string)
+			for k, v := range tc.want {
+				wantLabels[k] = v
+			}
+			wantLabels["app.kubernetes.io/managed-by"] = "configmanagement.gke.io"
+
+			ns := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: make(map[string]string),
+				},
+			}
+			for k, v := range tc.actual {
+				ns.Labels[k] = v
+			}
+
+			nsc := v1.NamespaceConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: make(map[string]string),
+				},
+			}
+			for k, v := range tc.declared {
+				nsc.Labels[k] = v
+			}
+
+			got := withNamespaceConfigMeta(&ns, &nsc).Labels
+
+			if diff := cmp.Diff(wantLabels, got, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf(diff)
+			}
+		})
+	}
 }

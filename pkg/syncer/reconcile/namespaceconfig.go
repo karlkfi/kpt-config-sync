@@ -370,12 +370,10 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace.SetGroupVersionKind(kinds.Namespace())
 
-	namespace.SetLabels(nil)
 	for k, v := range namespaceConfig.Labels {
 		core.SetLabel(namespace, k, v)
 	}
 
-	namespace.SetAnnotations(nil)
 	for k, v := range namespaceConfig.Annotations {
 		core.SetAnnotation(namespace, k, v)
 	}
