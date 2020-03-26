@@ -109,12 +109,12 @@ func (tm *TestMocks) ExpectNamespaceCacheGet(config *v1.NamespaceConfig, namespa
 }
 
 // ExpectNamespaceUpdate verifies the namespace is updated.
-func (tm *TestMocks) ExpectNamespaceUpdate(namespace *corev1.Namespace) {
-	if namespace == nil {
+func (tm *TestMocks) ExpectNamespaceUpdate(intended, actual *unstructured.Unstructured) {
+	if intended == nil || len(intended.Object) == 0 || actual == nil || len(actual.Object) == 0 {
 		return
 	}
-	tm.MockClient.EXPECT().Update(
-		anyContext, EqN(tm.t, "NamespaceUpdate", namespace))
+	tm.MockApplier.EXPECT().Update(
+		anyContext, EqN(tm.t, "NamespaceUpdate", intended), EqN(tm.t, "NamespaceUpdate", actual))
 }
 
 // ExpectNamespaceConfigDelete verifies that the NamespaceConfig is deleted

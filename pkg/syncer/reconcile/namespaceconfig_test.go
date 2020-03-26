@@ -4,10 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -49,10 +47,21 @@ func namespaceSyncError(err v1.ConfigManagementError) fake.NamespaceConfigMutato
 	}
 }
 
+func asUnstructuredT(o runtime.Object, t *testing.T) *unstructured.Unstructured {
+	t.Helper()
+	if o == nil {
+		return nil
+	}
+	u, err := asUnstructured(o)
+	if err != nil {
+		t.Error(err)
+	}
+	return u
+}
+
 var (
-	eng                = "eng"
-	managedNamespace   = namespace(eng, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation)
-	unmanagedNamespace = namespace(eng)
+	eng              = "eng"
+	managedNamespace = namespace(eng, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation)
 
 	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token))
 	namespaceCfgSynced = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
@@ -205,9 +214,8 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			tm.ExpectNamespaceCacheGet(namespaceCfg, managedNamespace)
 
 			tm.ExpectNamespaceConfigClientGet(namespaceCfg)
-			tm.ExpectNamespaceClientGet(unmanagedNamespace)
 
-			tm.ExpectNamespaceUpdate(managedNamespace)
+			tm.ExpectNamespaceUpdate(asUnstructuredT(managedNamespace, t), asUnstructuredT(managedNamespace, t))
 
 			tm.ExpectCacheList(kinds.Deployment(), managedNamespace.Name, tc.actual)
 			tm.ExpectCreate(tc.expectCreate)
@@ -310,12 +318,12 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
 			tm.ExpectNamespaceConfigClientGet(tc.namespaceConfig)
-			if tc.wantNamespaceUpdate != nil {
-				tm.ExpectNamespaceClientGet(tc.namespace)
-			}
 
 			tm.ExpectUpdate(tc.wantUpdate)
-			tm.ExpectNamespaceUpdate(tc.wantNamespaceUpdate)
+
+			if tc.wantNamespaceUpdate != nil {
+				tm.ExpectNamespaceUpdate(asUnstructuredT(tc.wantNamespaceUpdate, t), asUnstructuredT(tc.namespace, t))
+			}
 
 			if tc.namespaceConfig != nil {
 				tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual)
@@ -374,9 +382,8 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
 			tm.ExpectNamespaceConfigClientGet(tc.namespaceConfig)
-			tm.ExpectNamespaceClientGet(unmanaged(tc.namespace))
 
-			tm.ExpectNamespaceUpdate(tc.wantNamespaceUpdate)
+			tm.ExpectNamespaceUpdate(asUnstructuredT(tc.wantNamespaceUpdate, t), asUnstructuredT(tc.namespace, t))
 
 			tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, nil)
 
@@ -540,11 +547,9 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
-			tm.ExpectNamespaceClientGet(tc.namespace)
-
 			tm.ExpectNamespaceConfigClientGet(tc.namespaceConfig)
 
-			tm.ExpectNamespaceUpdate(tc.wantNamespaceUpdate)
+			tm.ExpectNamespaceUpdate(asUnstructuredT(tc.wantNamespaceUpdate, t), asUnstructuredT(tc.namespace, t))
 
 			tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual...)
 			tm.ExpectNamespaceConfigDelete(tc.namespaceConfig)
@@ -562,119 +567,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				})
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
-			}
-		})
-	}
-}
-
-func unmanaged(o *corev1.Namespace) *corev1.Namespace {
-	r := o.DeepCopy()
-	core.RemoveAnnotations(r, v1.ResourceManagementKey)
-
-	m := make(map[string]string)
-	m[v1.ManagedByKey] = v1.ManagedByValue
-	core.RemoveLabels(r, m)
-
-	return r
-}
-
-func TestWithNamespaceConfigMeta(t *testing.T) {
-	testCases := []struct {
-		name     string
-		actual   map[string]string
-		declared map[string]string
-		want     map[string]string
-	}{
-		{
-			name: "all empty",
-		},
-		{
-			name:   "preserve actual",
-			actual: map[string]string{"a": "b"},
-			want:   map[string]string{"a": "b"},
-		},
-		{
-			name:     "add declared",
-			declared: map[string]string{"a": "b"},
-			want:     map[string]string{"a": "b"},
-		},
-		{
-			name:     "declared overwrites actual",
-			actual:   map[string]string{"a": "b"},
-			declared: map[string]string{"a": "c"},
-			want:     map[string]string{"a": "c"},
-		},
-		{
-			name:     "merge declared and actual",
-			actual:   map[string]string{"a": "b"},
-			declared: map[string]string{"c": "d"},
-			want:     map[string]string{"a": "b", "c": "d"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name+" annotations", func(t *testing.T) {
-			wantAnnotations := make(map[string]string)
-			for k, v := range tc.want {
-				wantAnnotations[k] = v
-			}
-			wantAnnotations["configmanagement.gke.io/managed"] = "enabled"
-			wantAnnotations["configmanagement.gke.io/token"] = ""
-
-			ns := corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: make(map[string]string),
-				},
-			}
-			for k, v := range tc.actual {
-				ns.Annotations[k] = v
-			}
-
-			nsc := v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: make(map[string]string),
-				},
-			}
-			for k, v := range tc.declared {
-				nsc.Annotations[k] = v
-			}
-
-			got := withNamespaceConfigMeta(&ns, &nsc).Annotations
-
-			if diff := cmp.Diff(wantAnnotations, got, cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf(diff)
-			}
-		})
-
-		t.Run(tc.name+" labels", func(t *testing.T) {
-			wantLabels := make(map[string]string)
-			for k, v := range tc.want {
-				wantLabels[k] = v
-			}
-			wantLabels["app.kubernetes.io/managed-by"] = "configmanagement.gke.io"
-
-			ns := corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: make(map[string]string),
-				},
-			}
-			for k, v := range tc.actual {
-				ns.Labels[k] = v
-			}
-
-			nsc := v1.NamespaceConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: make(map[string]string),
-				},
-			}
-			for k, v := range tc.declared {
-				nsc.Labels[k] = v
-			}
-
-			got := withNamespaceConfigMeta(&ns, &nsc).Labels
-
-			if diff := cmp.Diff(wantLabels, got, cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf(diff)
 			}
 		})
 	}

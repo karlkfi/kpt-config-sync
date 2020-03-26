@@ -2,6 +2,7 @@ package reconcile
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -21,6 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -111,11 +114,7 @@ func (r *NamespaceConfigReconciler) getNamespaceConfig(
 }
 
 // getNamespace normalizes the state of the namespace and retrieves the current value.
-func (r *NamespaceConfigReconciler) getNamespace(
-	ctx context.Context,
-	name string,
-	syncErrs *[]v1.ConfigManagementError,
-) (*corev1.Namespace, error) {
+func (r *NamespaceConfigReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
 	if err != nil {
@@ -137,10 +136,9 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	ctx context.Context,
 	name string,
 ) error {
-	var syncErrs []v1.ConfigManagementError
 	config := r.getNamespaceConfig(ctx, name)
 
-	ns, nsErr := r.getNamespace(ctx, name, &syncErrs)
+	ns, nsErr := r.getNamespace(ctx, name)
 	if nsErr != nil {
 		return nsErr
 	}
@@ -154,6 +152,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	if glog.V(4) {
 		glog.Warningf("ns:%q: diffType=%v", name, diff.Type())
 	}
+	var syncErrs []v1.ConfigManagementError
 	switch diff.Type() {
 	case differ.Create:
 		if err := r.createNamespace(ctx, config); err != nil {
@@ -167,7 +166,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Update:
-		if err := r.updateNamespace(ctx, config); err != nil {
+		if err := r.updateNamespace(ctx, config, ns); err != nil {
 			syncErrs = append(syncErrs, newSyncError(config, err))
 		}
 		return r.manageConfigs(ctx, name, config, syncErrs)
@@ -235,13 +234,20 @@ func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
 }
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.
-func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, ns *corev1.Namespace) error {
-	_, err := r.client.Update(ctx, ns, func(o core.Object) (core.Object, error) {
-		nso := o.(*corev1.Namespace)
-		nso.GetObjectKind().SetGroupVersionKind(kinds.Namespace())
-		removeNomosMeta(nso)
-		return nso, nil
-	})
+func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, actual *corev1.Namespace) error {
+	intended := actual.DeepCopy()
+	removeNomosMeta(intended)
+
+	uIntended, err := asUnstructured(intended)
+	if err != nil {
+		return err
+	}
+	uActual, err := asUnstructured(actual)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.applier.Update(ctx, uIntended, uActual)
 	return err
 }
 
@@ -364,10 +370,7 @@ func newSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementErro
 }
 
 func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
-	return withNamespaceConfigMeta(&corev1.Namespace{}, namespaceConfig)
-}
-
-func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
+	namespace := &corev1.Namespace{}
 	namespace.SetGroupVersionKind(kinds.Namespace())
 
 	for k, v := range namespaceConfig.Labels {
@@ -385,11 +388,25 @@ func withNamespaceConfigMeta(namespace *corev1.Namespace, namespaceConfig *v1.Na
 	return namespace
 }
 
+func asUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
+	jsn, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+
+	u := unstructured.Unstructured{}
+	err = u.UnmarshalJSON(jsn)
+	return &u, err
+}
+
 func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
 	namespace := asNamespace(namespaceConfig)
-	err := r.client.Create(ctx, namespace)
-	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
+	u, err := asUnstructured(namespace)
+	if err == nil {
+		_, err = r.applier.Create(ctx, u)
+	}
 
+	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
 	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceCreateFailed",
 			"failed to create namespace: %q", err)
@@ -398,17 +415,21 @@ func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
+func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig, actual *corev1.Namespace) error {
 	glog.V(1).Infof("Namespace %q declared in a NamespaceConfig, updating", namespaceConfig.Name)
+	intended := asNamespace(namespaceConfig)
 
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceConfig.Name}}
-	namespace.SetGroupVersionKind(kinds.Namespace())
-	updateFn := func(obj core.Object) (core.Object, error) {
-		return withNamespaceConfigMeta(obj.(*corev1.Namespace), namespaceConfig), nil
+	uActual, err := asUnstructured(actual)
+	if err != nil {
+		return err
+	}
+	uIntended, err := asUnstructured(intended)
+	if err != nil {
+		return err
 	}
 
-	_, err := r.client.Update(ctx, namespace, updateFn)
-	metrics.Operations.WithLabelValues("update", namespace.Kind, metrics.StatusLabel(err)).Inc()
+	_, err = r.applier.Update(ctx, uIntended, uActual)
+	metrics.Operations.WithLabelValues("update", actual.Kind, metrics.StatusLabel(err)).Inc()
 
 	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceUpdateFailed",

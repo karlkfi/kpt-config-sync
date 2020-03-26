@@ -10,6 +10,7 @@ load "../lib/setup"
 load "../lib/wait"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
+YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/namespaces
 
 setup() {
   setup::common
@@ -30,6 +31,31 @@ function teardown() {
   setup::git::remove_all acme
   kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
   setup::common_teardown
+}
+
+@test "${FILE_NAME}: label and annotation lifecycle" {
+  local ns=foo
+  git::add "${YAML_DIR}/foo.yaml" acme/namespaces/foo/foo.yaml
+  git::commit -m "Create foo namespace"
+  wait::for -t 10 -- nomos::ns_synced $ns
+
+  git::update "${YAML_DIR}/foo-with-metadata.yaml" acme/namespaces/foo/foo.yaml
+  git::commit -m "Add label/annotation to foo namespace"
+  wait::for -t 10 -- nomos::ns_synced $ns
+  namespace::check_exists $ns -l "bar=isalabel" -a "bar=isanannotation"
+
+  git::update "${YAML_DIR}/foo-with-metadata-update.yaml" acme/namespaces/foo/foo.yaml
+  git::commit -m "Add label/annotation to foo namespace"
+  wait::for -t 10 -- nomos::ns_synced $ns
+  namespace::check_exists $ns -l "bar=updated-label" -a "bar=updated-annotation"
+
+  git::update "${YAML_DIR}/foo.yaml" acme/namespaces/foo/foo.yaml
+  git::commit -m "Delete label/annotation on foo namespace"
+  wait::for -t 10 -- nomos::ns_synced $ns
+  # check ns exists then check that previous label / annotation values do not exist
+  resource::check ns $ns
+  ! resource::check ns $ns -l "bar=updated-label"
+  ! resource::check ns $ns -a "bar=updated-annotation"
 }
 
 @test "${FILE_NAME}: Namespace has enabled annotation and declared" {

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  labels:
+    bar: isalabel
+  annotations:
+    bar: isanannotation
