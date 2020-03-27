@@ -75,13 +75,10 @@ func (c *crdReconciler) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	var gvk schema.GroupVersionKind
 	if constrainttemplate.MatchesGK(crd) {
-		glog.Infof("Encountered ConstraintTemplate CRD %q", request.NamespacedName)
 		gvk = constrainttemplate.GVK
 	} else if constraint.MatchesGroup(crd) {
-		glog.Infof("Encountered constraint CRD %q", request.NamespacedName)
 		gvk = constraint.GVK(crd.Spec.Names.Kind)
 	} else {
-		glog.Infof("Ignoring non-gatekeeper CRD %q", request.NamespacedName)
 		// If it's not a constraint CRD or the Gatekeeper ConstraintTemplate CRD, we
 		// don't care about it.
 		return reconcile.Result{}, nil

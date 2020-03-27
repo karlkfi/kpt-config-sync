@@ -22,3 +22,11 @@ func ResetAnnotations(obj *unstructured.Unstructured) {
 	core.RemoveAnnotations(obj, nomosv1.ResourceStatusReconcilingKey)
 	core.RemoveAnnotations(obj, nomosv1.ResourceStatusErrorsKey)
 }
+
+// AnnotationsChanged returns true if the status annotations between the two resources.
+func AnnotationsChanged(newObj, oldObj *unstructured.Unstructured) bool {
+	newAnns := newObj.GetAnnotations()
+	oldAnns := oldObj.GetAnnotations()
+	return newAnns[nomosv1.ResourceStatusReconcilingKey] != oldAnns[nomosv1.ResourceStatusReconcilingKey] ||
+		newAnns[nomosv1.ResourceStatusErrorsKey] != oldAnns[nomosv1.ResourceStatusErrorsKey]
+}

@@ -39,9 +39,16 @@ func (c *constraintReconciler) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	glog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
-	patch := client.MergeFrom(resource.DeepCopy())
+	resCopy := resource.DeepCopy()
+	patch := client.MergeFrom(resCopy)
 	annotateConstraint(resource)
+
+	if !util.AnnotationsChanged(&resource, resCopy) {
+		glog.V(3).Infof("%s %q was upserted, but annotations are unchanged", c.gvk, request.NamespacedName)
+		return reconcile.Result{}, nil
+	}
+
+	glog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
 	err := c.client.Patch(c.ctx, &resource, patch)
 	if err != nil {
 		glog.Errorf("Failed to patch annotations for %s: %v", c.gvk, err)
