@@ -1,0 +1,116 @@
+package reconcile
+
+import (
+	"math"
+	"time"
+
+	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+// fightThreshold is the threshold of updates per minute at which we log to Info
+// that the Syncer is fighting over a resource on the API Server with some
+// other process.
+const fightThreshold = 5.0
+
+var fightWarningBuilder = status.NewErrorBuilder("2005")
+
+// fightWarning represents when the Syncer is fighting over a resource with
+// some other process on a Kubernetes cluster.
+func fightWarning(frequency float64, resource id.Resource) status.Error {
+	return fightWarningBuilder.Sprintf("importer excessively updating resource, approximately %d times per minute. "+
+		"This may indicate ACM is fighting with another controller over the resource.", int(frequency)).
+		BuildWithResources(resource)
+}
+
+// fightDetector uses a linear differential equation to estimate the frequency
+// of updates to resources, then logs to glog.Warning when it detects resources
+// needing updates too frequently.
+//
+// Performance characteristics:
+// 1. Current implementation is NOT threadsafe.
+// 2. Current implementation has unbounded memory usage on the order of the
+//   number of objects the Syncer updates through its lifetime.
+// 3. Updating already-tracked resources requires no memory allocations.
+type fightDetector struct {
+	fights map[gknn]*fight
+}
+
+// markUpdated marks that API resource `resource` was updated at time `now`.
+// If the estimated frequency of updates is greater than `fightThreshold`, logs
+// this to glog.Warning.
+//
+// Returns true if the new estimated update frequency is at least `fightThreshold`.
+func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) bool {
+	if d.fights == nil {
+		d.fights = make(map[gknn]*fight)
+	}
+	i := gknn{
+		gk:        resource.GroupVersionKind().GroupKind(),
+		namespace: resource.GetNamespace(),
+		name:      resource.GetName(),
+	}
+
+	if d.fights[i] == nil {
+		d.fights[i] = &fight{}
+	}
+	if frequency := d.fights[i].markUpdated(now); frequency >= fightThreshold {
+		glog.Warning(fightWarning(frequency, resource))
+		return true
+	}
+	return false
+}
+
+// gknn uniquely identifies a resource on the API Server with the resource's
+// Group, Kind, Namespace, and Name.
+type gknn struct {
+	// Recall that two resources identical except for Version are the same
+	// resource.
+	gk              schema.GroupKind
+	namespace, name string
+}
+
+// fight estimates how often a specific API resource is updated by the Syncer.
+type fight struct {
+	// heat is an estimate of the number of times a resource is updated per minute.
+	// It decays exponentially with time when there are no updates to a resource.
+	heat float64
+	// last is the last time the resource was updated.
+	last time.Time
+}
+
+// markUpdated advanced the time on fight to now and increases heat by 1.0.
+// Returns the estimated frequency of updates per minute.
+//
+// Required reading to understand the math:
+// https://www.math24.net/linear-differential-equations-first-order/
+//
+// Specifically, fightDetector uses the below linear differential equation to
+// estimate the number of updates a resource has per minute.
+//
+// y' = -y + k(t)
+//
+// Where `y` is the estimated rate, `k` is the actual (potentially variable)
+// rate of updates, and t is time. If k(t) is a constant, y(t) converges to `k`
+// exponentially. When y and k(t) are approximately equal, y' remains about zero.
+//
+// The implementation below uses an approximation to the above as updates are
+// quantized (there is no such thing as 0.5 of an update).
+func (f *fight) markUpdated(now time.Time) float64 {
+	// How long to let the existing heat decay.
+	d := now.Sub(f.last).Minutes()
+	f.last = now
+	// Don't let d be a negative number of minutes to keep heat from increasing.
+	d = math.Max(0.0, d)
+
+	// Exponential decay of heat. Using e^-d, where d is in minutes makes
+	// heat exactly our estimate of number of updates per minute before this
+	// update.
+	f.heat *= math.Exp(-d)
+
+	// Increment heat by one update. This is our new estimate of updates per minute.
+	f.heat++
+	return f.heat
+}

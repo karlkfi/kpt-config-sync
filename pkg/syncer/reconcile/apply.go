@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -43,6 +44,7 @@ type clientApplier struct {
 	discoveryClient  *discovery.DiscoveryClient
 	openAPIResources openapi.Resources
 	client           *client.Client
+	fights           fightDetector
 }
 
 var _ Applier = &clientApplier{}
@@ -80,6 +82,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
+	c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS("")))
 	return true, nil
 }
 
@@ -90,6 +93,9 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
+	}
+	if updated {
+		c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS("")))
 	}
 	return updated, nil
 }
@@ -102,6 +108,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
 	}
+	c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.FromOS("")))
 	return true, nil
 }
 
