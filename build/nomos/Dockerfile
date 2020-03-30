@@ -1,4 +1,4 @@
-FROM k8s.gcr.io/debian-base:1.0.0
+FROM k8s.gcr.io/debian-base:v1.0.1
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apt-get update && apt-get install -y \
