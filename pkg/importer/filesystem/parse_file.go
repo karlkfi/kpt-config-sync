@@ -28,6 +28,22 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	}
 }
 
+func isEmptyYAMLDocument(document string) bool {
+	lines := strings.Split(document, "\n")
+	for _, line := range lines {
+		if len(strings.TrimSpace(line)) == 0 {
+			// Ignore empty/whitespace-only lines.
+			continue
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			// Ignore comment lines.
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func parseYAMLFile(contents []byte) ([]*unstructured.Unstructured, error) {
 	// We have to manually split documents with the YAML separator since by default
 	// yaml.Unmarshal only unmarshalls the first document, but a file may contain multiple.
@@ -36,7 +52,7 @@ func parseYAMLFile(contents []byte) ([]*unstructured.Unstructured, error) {
 	// A newline followed by triple-dash begins a new YAML document, so this is safe.
 	documents := strings.Split(string(contents), "\n---")
 	for _, document := range documents {
-		if len(strings.TrimLeft(document, " \n")) == 0 {
+		if isEmptyYAMLDocument(document) {
 			// Kubernetes ignores empty documents.
 			continue
 		}

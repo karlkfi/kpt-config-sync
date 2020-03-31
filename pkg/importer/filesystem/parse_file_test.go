@@ -19,6 +19,14 @@ func TestParseYAMLFile(t *testing.T) {
 			name: "empty file",
 		},
 		{
+			name: "empty documents",
+			contents: `
+
+---
+# comment
+`,
+		},
+		{
 			name: "one document",
 			contents: `apiVersion: v1
 kind: Namespace
