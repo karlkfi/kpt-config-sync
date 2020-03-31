@@ -133,6 +133,11 @@ func ConfigMap() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("ConfigMap")
 }
 
+// StatefulSet returns the canonical StatefulSet GroupVersionKind
+func StatefulSet() schema.GroupVersionKind {
+	return appsv1.SchemeGroupVersion.WithKind("StatefulSet")
+}
+
 // ConfigManagement returns the GroupVersionKind for ConfigManagement, an object
 // that does not have other representation than a CRD in the operator library.
 func ConfigManagement() schema.GroupVersionKind {

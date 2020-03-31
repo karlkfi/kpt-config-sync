@@ -18,6 +18,7 @@ var invalidToValidGroupKinds = map[schema.GroupKind]schema.GroupVersionKind{
 	v1beta1.SchemeGroupVersion.WithKind("DaemonSet").GroupKind():         kinds.DaemonSet(),
 	v1beta1.SchemeGroupVersion.WithKind("NetworkPolicy").GroupKind():     kinds.NetworkPolicy(),
 	v1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy").GroupKind(): kinds.PodSecurityPolicy(),
+	v1beta1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():       kinds.StatefulSet(),
 }
 
 // NewDeprecatedGroupKindValidator returns a Visitor that checks for deprecated config GroupKinds.
