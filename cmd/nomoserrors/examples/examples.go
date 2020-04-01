@@ -230,6 +230,9 @@ func Generate() map[string][]status.Error {
 	// 1054
 	result.add(filesystem.InvalidAnnotationValueError(fake.Role(), []string{"foo", "bar"}))
 
+	// 1056
+	result.add(nonhierarchical.ManagedResourceInUnmanagedNamespace("foo", fake.Role()))
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 

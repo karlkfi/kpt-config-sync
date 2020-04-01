@@ -18,6 +18,7 @@ func standardValidation(fileObjects []ast.FileObject) status.MultiError {
 		nonhierarchical.ManagementAnnotationValidator,
 		nonhierarchical.CRDNameValidator,
 		nonhierarchical.IllegalCRDValidator,
+		nonhierarchical.ManagedNamespaceValidator,
 	}
 
 	var errs status.MultiError

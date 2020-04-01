@@ -386,6 +386,11 @@ func TestParserVetErrors(t *testing.T) {
 			syntax.IllegalFieldsInConfigErrorCode,
 			fake.Namespace("namespaces/foo", core.UID("illegal-uid")),
 		),
+		parsertest.Failure("Managed resource in unmanaged Namespace",
+			nonhierarchical.ManagedResourceInUnmanagedNamespaceErrorCode,
+			fake.Namespace("namespaces/foo", core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)),
+			fake.Role(core.Namespace("foo")),
+		),
 	)
 
 	test.RunAll(t)
