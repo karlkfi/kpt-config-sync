@@ -129,6 +129,7 @@ func (o *CreateOptions) AsCreateOptions() *metav1.CreateOptions {
 	}
 
 	o.Raw.DryRun = o.DryRun
+	o.Raw.FieldManager = o.FieldManager
 	return o.Raw
 }
 
@@ -501,6 +502,7 @@ func (o *UpdateOptions) AsUpdateOptions() *metav1.UpdateOptions {
 	}
 
 	o.Raw.DryRun = o.DryRun
+	o.Raw.FieldManager = o.FieldManager
 	return o.Raw
 }
 
@@ -557,7 +559,7 @@ type PatchOptions struct {
 	FieldManager string
 
 	// Raw represents raw PatchOptions, as passed to the API server.
-	Raw *metav1.UpdateOptions
+	Raw *metav1.PatchOptions
 }
 
 // ApplyOptions applies the given patch options on these options,
@@ -569,17 +571,19 @@ func (o *PatchOptions) ApplyOptions(opts []PatchOption) *PatchOptions {
 	return o
 }
 
-// AsPatchOptions returns these options as a metav1.UpdateOptions.
+// AsPatchOptions returns these options as a metav1.PatchOptions.
 // This may mutate the Raw field.
-func (o *PatchOptions) AsPatchOptions() *metav1.UpdateOptions {
+func (o *PatchOptions) AsPatchOptions() *metav1.PatchOptions {
 	if o == nil {
-		return &metav1.UpdateOptions{}
+		return &metav1.PatchOptions{}
 	}
 	if o.Raw == nil {
-		o.Raw = &metav1.UpdateOptions{}
+		o.Raw = &metav1.PatchOptions{}
 	}
 
 	o.Raw.DryRun = o.DryRun
+	o.Raw.Force = o.Force
+	o.Raw.FieldManager = o.FieldManager
 	return o.Raw
 }
 
