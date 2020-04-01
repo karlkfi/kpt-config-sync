@@ -71,6 +71,7 @@ func NewApplier(cfg *rest.Config, client *client.Client) (Applier, error) {
 		discoveryClient:  dc,
 		openAPIResources: oa,
 		client:           client,
+		fights:           newFightDetector(),
 	}, nil
 }
 

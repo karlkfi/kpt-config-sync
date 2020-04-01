@@ -167,7 +167,7 @@ func TestFightDetector(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fd := fightDetector{}
+			fd := newFightDetector()
 
 			now := time.Now()
 			for o, updates := range tc.updates {

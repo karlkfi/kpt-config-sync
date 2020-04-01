@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
@@ -20,6 +21,9 @@ import (
 var (
 	resyncPeriod = flag.Duration(
 		"resync_period", time.Minute, "The resync period for the syncer system")
+	fightDetectionThreshold = flag.Float64(
+		"fight_detection_threshold", 5.0,
+		"The rate of updates per minute to an API Resource at which the Syncer logs warnings about too many updates to the resource.")
 )
 
 func main() {
@@ -27,6 +31,8 @@ func main() {
 	log.Setup()
 
 	go service.ServeMetrics()
+
+	reconcile.SetFightThreshold(*fightDetectionThreshold)
 
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()

@@ -13,7 +13,16 @@ import (
 // fightThreshold is the threshold of updates per minute at which we log to Info
 // that the Syncer is fighting over a resource on the API Server with some
 // other process.
-const fightThreshold = 5.0
+//
+// This value was chosen arbitrarily as updates occurring more frequently are
+// obviously problems, and we don't really care about less frequent updates.
+var fightThreshold = 5.0
+
+// SetFightThreshold updates the maximum allowed rate of updates to a resource
+// per minute before we begin logging warnings to the user.
+func SetFightThreshold(updatesPerMinute float64) {
+	fightThreshold = updatesPerMinute
+}
 
 var fightWarningBuilder = status.NewErrorBuilder("2005")
 
@@ -29,24 +38,35 @@ func fightWarning(frequency float64, resource id.Resource) status.Error {
 // of updates to resources, then logs to glog.Warning when it detects resources
 // needing updates too frequently.
 //
+// Instantiate with newFightDetector().
+//
 // Performance characteristics:
 // 1. Current implementation is NOT threadsafe.
 // 2. Current implementation has unbounded memory usage on the order of the
 //   number of objects the Syncer updates through its lifetime.
-// 3. Updating already-tracked resources requires no memory allocations.
+// 3. Updating an already-tracked resource requires no memory allocations and
+//   take approximately 30ns, ignoring logging time.
 type fightDetector struct {
+	// fights is a record of how much the Syncer is fighting over any given
+	// API resource.
 	fights map[gknn]*fight
+	// lastLogged is when fightDetector last logged about a given API resource.
+	lastLogged map[gknn]time.Time
+}
+
+func newFightDetector() fightDetector {
+	return fightDetector{
+		fights:     make(map[gknn]*fight),
+		lastLogged: make(map[gknn]time.Time),
+	}
 }
 
 // markUpdated marks that API resource `resource` was updated at time `now`.
 // If the estimated frequency of updates is greater than `fightThreshold`, logs
-// this to glog.Warning.
+// this to glog.Warning. The log message appears at most once per minute.
 //
 // Returns true if the new estimated update frequency is at least `fightThreshold`.
 func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) bool {
-	if d.fights == nil {
-		d.fights = make(map[gknn]*fight)
-	}
 	i := gknn{
 		gk:        resource.GroupVersionKind().GroupKind(),
 		namespace: resource.GetNamespace(),
@@ -57,7 +77,10 @@ func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) bool {
 		d.fights[i] = &fight{}
 	}
 	if frequency := d.fights[i].markUpdated(now); frequency >= fightThreshold {
-		glog.Warning(fightWarning(frequency, resource))
+		if now.Sub(d.lastLogged[i]) > time.Minute {
+			glog.Warning(fightWarning(frequency, resource))
+			d.lastLogged[i] = now
+		}
 		return true
 	}
 	return false
