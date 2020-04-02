@@ -4,6 +4,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -31,74 +35,51 @@ func TestParseYAMLFile(t *testing.T) {
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  testName: shipping
+  name: shipping
 `,
 			expected: []*unstructured.Unstructured{
-				{
-					Object: map[string]interface{}{
-						"apiVersion": "v1",
-						"kind":       "Namespace",
-						"metadata": map[string]interface{}{
-							"testName": "shipping",
-						},
-					},
-				}},
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("shipping")),
+			},
 		}, {
 			name: "one document with triple-dash in a string",
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  testName: shipping
+  name: shipping
   labels:
     "a": "---"
 `,
 			expected: []*unstructured.Unstructured{
-				{
-					Object: map[string]interface{}{
-						"apiVersion": "v1",
-						"kind":       "Namespace",
-						"metadata": map[string]interface{}{
-							"testName": "shipping",
-							"labels": map[string]interface{}{
-								"a": "---",
-							},
-						},
-					},
-				}},
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("shipping"), core.Label("a", "---")),
+			},
 		},
 		{
 			name: "two documents",
 			contents: `apiVersion: v1
 kind: Namespace
 metadata:
-  testName: shipping
+  name: shipping
 ---
 apiVersion: rbac/v1
 kind: Role
 metadata:
-  testName: admin
+  name: admin
   namespace: shipping
 rules:
 - apiGroups: [rbac]
   verbs: [all]
 `,
 			expected: []*unstructured.Unstructured{
-				{
-					Object: map[string]interface{}{
-						"apiVersion": "v1",
-						"kind":       "Namespace",
-						"metadata": map[string]interface{}{
-							"testName": "shipping",
-						},
-					},
-				},
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("shipping")),
 				{
 					Object: map[string]interface{}{
 						"apiVersion": "rbac/v1",
 						"kind":       "Role",
 						"metadata": map[string]interface{}{
-							"testName":  "admin",
-							"namespace": "shipping",
+							"name":        "admin",
+							"namespace":   "shipping",
+							"labels":      make(map[string]interface{}),
+							"annotations": make(map[string]interface{}),
 						},
 						"rules": []interface{}{
 							map[string]interface{}{
@@ -108,6 +89,55 @@ rules:
 						},
 					},
 				},
+			},
+		},
+		{
+			name: "begin with document separator",
+			contents: `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo`,
+			expected: []*unstructured.Unstructured{
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("foo")),
+			},
+		},
+		{
+			name: "indented document separator",
+			contents: `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  labels:
+    a: >
+      this
+      ---
+      is not a separator
+`,
+			expected: []*unstructured.Unstructured{
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("foo"),
+					core.Label("a", "this --- is not a separator\n")),
+			},
+		},
+		{
+			name: "ignore after document end indicator",
+			contents: `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+...
+This is a comment and doesn't need to be valid YAML.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bar
+`,
+			expected: []*unstructured.Unstructured{
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("foo")),
+				fake.UnstructuredObject(kinds.Namespace(), core.Name("bar")),
 			},
 		},
 	}
@@ -124,7 +154,15 @@ rules:
 				t.Fatal(errors.Wrap(err, "unexpected error"))
 			}
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			for _, a := range actual {
+				if a.GetLabels() == nil {
+					a.SetLabels(make(map[string]string))
+				}
+				if a.GetAnnotations() == nil {
+					a.SetAnnotations(make(map[string]string))
+				}
+			}
+			if diff := cmp.Diff(tc.expected, actual, cmpopts.EquateEmpty()); diff != "" {
 				t.Fatal(diff)
 			}
 		})
@@ -147,7 +185,7 @@ func TestParseJsonFile(t *testing.T) {
   "apiVersion": "rbac/v1",
   "kind": "Role",
   "metadata": {
-    "testName": "admin",
+    "name": "admin",
     "namespace": "shipping"
   },
   "rules": [
@@ -164,7 +202,7 @@ func TestParseJsonFile(t *testing.T) {
 						"apiVersion": "rbac/v1",
 						"kind":       "Role",
 						"metadata": map[string]interface{}{
-							"testName":  "admin",
+							"name":      "admin",
 							"namespace": "shipping",
 						},
 						"rules": []interface{}{
@@ -192,7 +230,7 @@ func TestParseJsonFile(t *testing.T) {
 				t.Fatal(errors.Wrap(err, "unexpected error"))
 			}
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, cmpopts.EquateEmpty()); diff != "" {
 				t.Fatal(diff)
 			}
 		})

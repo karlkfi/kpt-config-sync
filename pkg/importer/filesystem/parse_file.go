@@ -9,6 +9,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+// yamlWhitespace records the two valid YAML whitespace characters.
+const yamlWhitespace = " \t"
+
 func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	switch filepath.Ext(path) {
 	case ".yml", ".yaml":
@@ -31,12 +34,9 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 func isEmptyYAMLDocument(document string) bool {
 	lines := strings.Split(document, "\n")
 	for _, line := range lines {
-		if len(strings.TrimSpace(line)) == 0 {
-			// Ignore empty/whitespace-only lines.
-			continue
-		}
-		if strings.HasPrefix(strings.TrimSpace(line), "#") {
-			// Ignore comment lines.
+		trimmed := strings.TrimLeft(line, yamlWhitespace)
+		if len(trimmed) == 0 || strings.HasPrefix(trimmed, "#") {
+			// Ignore empty/whitespace-only/comment lines.
 			continue
 		}
 		return false
