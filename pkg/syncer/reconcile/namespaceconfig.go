@@ -184,19 +184,12 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		// Remove defunct labels and annotations.
 		unmanageErr := r.unmanageNamespace(ctx, ns)
 		if unmanageErr != nil {
-			glog.Warningf("Failed to remove quota label and management annotations from namespace: %s", unmanageErr.Error())
+			glog.Warningf("Failed to remove management labels and annotations from namespace: %s", unmanageErr.Error())
 			return unmanageErr
-		}
-		if config != nil {
-			r.warnUnmanaged(ns)
-			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
 		}
 
 		// Return an error if any encountered.
-		if reconcileErr := r.manageConfigs(ctx, name, config, syncErrs); reconcileErr != nil {
-			return reconcileErr
-		}
-		return unmanageErr
+		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Error:
 		value := config.GetAnnotations()[v1.ResourceManagementKey]
@@ -212,25 +205,9 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.NoOp:
-		if ns != nil && config != nil {
-			r.warnUnmanaged(ns)
-			syncErrs = append(syncErrs, cmeForNamespace(ns, unmanagedError()))
-		}
 		return r.manageConfigs(ctx, name, config, syncErrs)
 	}
 	panic(fmt.Sprintf("unhandled diff type: %v", diff.Type()))
-}
-
-func unmanagedError() string {
-	return fmt.Sprintf("Namespace annotated unmanaged (%s=%s) in repo. Must not have %s annotation to manage",
-		v1.ResourceManagementKey, v1.ResourceManagementDisabled, v1.ResourceManagementKey)
-}
-
-func (r *NamespaceConfigReconciler) warnUnmanaged(ns *corev1.Namespace) {
-	glog.Warningf("namespace %q is declared in the source of truth but is unmanaged in cluster", ns.Name)
-	r.recorder.Event(
-		ns, corev1.EventTypeWarning, "UnmanagedNamespace",
-		"namespace is declared in the source of truth but does is unmanaged")
 }
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.

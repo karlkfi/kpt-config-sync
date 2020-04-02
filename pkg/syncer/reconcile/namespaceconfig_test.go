@@ -41,12 +41,6 @@ func namespaceConfig(name string, state v1.ConfigSyncState, opts ...fake.Namespa
 	return result
 }
 
-func namespaceSyncError(err v1.ConfigManagementError) fake.NamespaceConfigMutator {
-	return func(nc *v1.NamespaceConfig) {
-		nc.Status.SyncErrors = append(nc.Status.SyncErrors, err)
-	}
-}
-
 func asUnstructuredT(o runtime.Object, t *testing.T) *unstructured.Unstructured {
 	t.Helper()
 	if o == nil {
@@ -247,55 +241,35 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 		wantStatusUpdate    *v1.NamespaceConfig
 		declared            runtime.Object
 		actual              runtime.Object
-		wantUpdate          *syncertesting.Diff
+		wantDelete          runtime.Object
 		wantEvent           *syncertesting.Event
 	}{
 		{
-			name:                "clean up unmanaged namespace with namespaceconfig",
+			name:                "clean up unmanaged Namespace with namespaceconfig",
 			namespaceConfig:     namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			namespace:           namespace("eng", syncertesting.ManagementEnabled),
 			wantNamespaceUpdate: namespace("eng"),
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
-				namespaceSyncError(v1.ConfigManagementError{
-					ErrorResources: []v1.ErrorResource{
-						{
-							ResourceName: "eng",
-							ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
-						},
-					},
-					ErrorMessage: unmanagedError(),
-				}), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
-			wantEvent: &syncertesting.Event{
-				Kind:   corev1.EventTypeWarning,
-				Reason: "UnmanagedNamespace",
-				Obj:    namespace("eng", syncertesting.ManagementEnabled),
-			},
 		},
 		{
-			name:            "unmanaged namespace has resources synced but status error",
-			namespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			name:            "do nothing to explicitly unmanaged resources",
+			namespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled, core.Label("not", "synced"))),
 			namespace:       namespace("eng"),
-			declared:        deployment(appsv1.RecreateDeploymentStrategyType),
-			actual:          deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.TokenAnnotation),
-			wantStatusUpdate: namespaceConfig("eng", v1.StateError, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken(),
-				namespaceSyncError(v1.ConfigManagementError{
-					ErrorResources: []v1.ErrorResource{
-						{
-							ResourceName: "eng",
-							ResourceGVK:  corev1.SchemeGroupVersion.WithKind("Namespace"),
-						},
-					},
-					ErrorMessage: unmanagedError(),
-				}), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			declared:        deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementDisabled, core.Label("also not", "synced")),
+			actual:          deployment(appsv1.RecreateDeploymentStrategyType),
+		},
+		{
+			name:             "delete resources in unmanaged Namespace",
+			namespaceConfig:  namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			namespace:        namespace("eng"),
+			wantStatusUpdate: namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			actual:           deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			wantEvent: &syncertesting.Event{
-				Kind:   corev1.EventTypeWarning,
-				Reason: "UnmanagedNamespace",
-				Obj:    namespace("eng"),
+				Kind:    corev1.EventTypeNormal,
+				Reason:  "ReconcileComplete",
+				Obj:     namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+				Varargs: true,
 			},
-			wantUpdate: &syncertesting.Diff{
-				Declared: deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
-				Actual:   deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.TokenAnnotation),
-			},
+			wantDelete: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 		},
 	}
 
@@ -311,15 +285,13 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			defer cancel()
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
+			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter))
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
-			tm.ExpectNamespaceConfigClientGet(tc.namespaceConfig)
-
-			tm.ExpectUpdate(tc.wantUpdate)
+			tm.ExpectDelete(tc.wantDelete)
 
 			if tc.wantNamespaceUpdate != nil {
 				tm.ExpectNamespaceUpdate(asUnstructuredT(tc.wantNamespaceUpdate, t), asUnstructuredT(tc.namespace, t))
@@ -330,7 +302,6 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			}
 
 			tm.ExpectEvent(tc.wantEvent)
-			tm.ExpectNamespaceStatusUpdate(tc.wantStatusUpdate)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

@@ -83,7 +83,7 @@ func (tm *TestMocks) ExpectClusterCacheGet(config *v1.ClusterConfig) {
 		return
 	}
 	tm.MockCache.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, EqN(tm.t, "ClusterCacheGet", &v1.ClusterConfig{})).
+		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "ClusterCacheGet", &v1.ClusterConfig{})).
 		SetArg(2, *config)
 }
 
@@ -95,16 +95,16 @@ func (tm *TestMocks) ExpectClusterCacheGet(config *v1.ClusterConfig) {
 func (tm *TestMocks) ExpectNamespaceCacheGet(config *v1.NamespaceConfig, namespace *corev1.Namespace) {
 	if config == nil {
 		tm.MockCache.EXPECT().Get(
-			anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceConfigCacheGet", &v1.NamespaceConfig{})).
+			anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceConfigCacheGet", &v1.NamespaceConfig{})).
 			Return(errors.NewNotFound(schema.GroupResource{}, ""))
 	} else {
 		tm.MockCache.EXPECT().Get(
-			anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceConfigCacheGet",
+			anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceConfigCacheGet",
 				&v1.NamespaceConfig{})).
 			SetArg(2, *config)
 	}
 	tm.MockCache.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceCacheGet", &corev1.Namespace{})).
+		anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceCacheGet", &corev1.Namespace{})).
 		SetArg(2, *namespace)
 }
 
@@ -114,7 +114,7 @@ func (tm *TestMocks) ExpectNamespaceUpdate(intended, actual *unstructured.Unstru
 		return
 	}
 	tm.MockApplier.EXPECT().Update(
-		anyContext, EqN(tm.t, "NamespaceUpdate", intended), EqN(tm.t, "NamespaceUpdate", actual))
+		anyContext, Eq(tm.t, "NamespaceUpdate", intended), Eq(tm.t, "NamespaceUpdate", actual))
 }
 
 // ExpectNamespaceConfigDelete verifies that the NamespaceConfig is deleted
@@ -122,7 +122,7 @@ func (tm *TestMocks) ExpectNamespaceConfigDelete(config *v1.NamespaceConfig) {
 	if config == nil {
 		return
 	}
-	tm.MockClient.EXPECT().Delete(anyContext, Eq(tm.t, config), gomock.Any())
+	tm.MockClient.EXPECT().Delete(anyContext, Eq(tm.t, "NamespaceConfigDelete", config), gomock.Any())
 }
 
 // ExpectClusterClientGet stubs the ClusterConfig being fetched from the Client and verifies we request it.
@@ -131,7 +131,7 @@ func (tm *TestMocks) ExpectClusterClientGet(config *v1.ClusterConfig) {
 		return
 	}
 	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, config))
+		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "ClusterClientGet", config))
 }
 
 // ExpectNamespaceConfigClientGet stubs the NamespaceConfig being fetched from the Client and verifies we request it.
@@ -140,7 +140,7 @@ func (tm *TestMocks) ExpectNamespaceConfigClientGet(config *v1.NamespaceConfig) 
 		return
 	}
 	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, EqN(tm.t, "NamespaceConfigClientGet", config))
+		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "NamespaceConfigClientGet", config))
 }
 
 // ExpectNamespaceClientGet stubs the Namespace being fetched from the Client and verifies we request it.
@@ -149,13 +149,13 @@ func (tm *TestMocks) ExpectNamespaceClientGet(namespace *corev1.Namespace) {
 		return
 	}
 	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: namespace.Name}, EqN(tm.t, "NamespaceClientGet", namespace))
+		anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceClientGet", namespace))
 }
 
 // ExpectCacheList stubs the Objects being fetched from the Cache and verifies we request them.
 func (tm *TestMocks) ExpectCacheList(gvk schema.GroupVersionKind, namespace string, obj ...runtime.Object) {
 	tm.MockCache.EXPECT().
-		UnstructuredList(anyContext, Eq(tm.t, gvk), Eq(tm.t, namespace)).
+		UnstructuredList(anyContext, Eq(tm.t, "ExpectCacheListGVK", gvk), Eq(tm.t, "ExpectCacheListNamespace", namespace)).
 		Return(ToUnstructuredList(tm.t, Converter, obj...), nil)
 }
 
@@ -165,7 +165,7 @@ func (tm *TestMocks) ExpectCreate(obj runtime.Object) {
 		return
 	}
 	tm.MockApplier.EXPECT().
-		Create(anyContext, Eq(tm.t, ToUnstructured(tm.t, Converter, obj))).
+		Create(anyContext, Eq(tm.t, "ExpectCreate", ToUnstructured(tm.t, Converter, obj))).
 		Return(true, nil)
 }
 
@@ -178,7 +178,7 @@ func (tm *TestMocks) ExpectUpdate(d *Diff) {
 	actual := ToUnstructured(tm.t, Converter, d.Actual)
 
 	tm.MockApplier.EXPECT().
-		Update(anyContext, Eq(tm.t, declared), Eq(tm.t, actual)).
+		Update(anyContext, Eq(tm.t, "ExpectUpdateDeclared", declared), Eq(tm.t, "ExpectUpdateActual", actual)).
 		Return(true, nil)
 }
 
@@ -188,7 +188,7 @@ func (tm *TestMocks) ExpectDelete(obj runtime.Object) {
 		return
 	}
 	tm.MockApplier.EXPECT().
-		Delete(anyContext, Eq(tm.t, ToUnstructured(tm.t, Converter, obj))).
+		Delete(anyContext, Eq(tm.t, "ExpectDelete", ToUnstructured(tm.t, Converter, obj))).
 		Return(true, nil)
 }
 
@@ -199,10 +199,14 @@ func (tm *TestMocks) ExpectEvent(event *Event) {
 	}
 	if event.Varargs {
 		tm.MockRecorder.EXPECT().
-			Eventf(Eq(tm.t, event.Obj), Eq(tm.t, event.Kind), Eq(tm.t, event.Reason), anyMessage, anyArgs)
+			Eventf(Eq(tm.t, "ExpectEventVarObj", event.Obj),
+				Eq(tm.t, "ExpectEventVarKind", event.Kind),
+				Eq(tm.t, "ExpectEventVarReason", event.Reason), anyMessage, anyArgs)
 	} else {
 		tm.MockRecorder.EXPECT().
-			Event(Eq(tm.t, event.Obj), Eq(tm.t, event.Kind), Eq(tm.t, event.Reason), anyMessage)
+			Event(Eq(tm.t, "ExpectEventObj", event.Obj),
+				Eq(tm.t, "ExpectEvent", event.Kind),
+				Eq(tm.t, "ExpectEvent", event.Reason), anyMessage)
 	}
 }
 
@@ -212,7 +216,7 @@ func (tm *TestMocks) ExpectRestart(expectRestart bool, source string) {
 		return
 	}
 
-	tm.MockSignal.EXPECT().Restart(Eq(tm.t, source))
+	tm.MockSignal.EXPECT().Restart(Eq(tm.t, "ExpectRestart", source))
 }
 
 // ExpectClusterStatusUpdate verifies we update the ClusterConfig's status.
@@ -222,7 +226,7 @@ func (tm *TestMocks) ExpectClusterStatusUpdate(statusUpdate *v1.ClusterConfig) {
 	}
 	mockStatusClient := mocks.NewMockStatusWriter(tm.MockCtrl)
 	tm.MockClient.EXPECT().Status().Return(mockStatusClient)
-	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, statusUpdate))
+	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, "ExpectClusterStatusUpdate", statusUpdate))
 }
 
 // ExpectNamespaceStatusUpdate verifies we update the NamespaceConfig's status.
@@ -232,7 +236,7 @@ func (tm *TestMocks) ExpectNamespaceStatusUpdate(statusUpdate *v1.NamespaceConfi
 	}
 	mockStatusClient := mocks.NewMockStatusWriter(tm.MockCtrl)
 	tm.MockClient.EXPECT().Status().Return(mockStatusClient)
-	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, statusUpdate))
+	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, "ExpectNamespaceStatusUpdate", statusUpdate))
 }
 
 // ToUnstructured converts the object to an unstructured.Unstructured.
@@ -267,15 +271,12 @@ type cmpDiffMatcher struct {
 	expected interface{}
 }
 
-// Eq creates a matcher that compares to expected and prints a diff in case a
-// mismatch is found.
-func Eq(t *testing.T, expected interface{}) gomock.Matcher {
-	return &cmpDiffMatcher{t: t, expected: expected}
-}
-
-// EqN creates a matcher that compares to expected and prints a diff in case a
-// mismatch is not found.
-func EqN(t *testing.T, name string, expected interface{}) gomock.Matcher {
+// Eq creates a named matcher that compares to expected and prints a diff in
+// case a mismatch is not found. Uses cmpopts.Diff to compute a difference to
+// provide more human-readable diffs.
+//
+// Implicitly assumes empty and nil are equivalent.
+func Eq(t *testing.T, name string, expected interface{}) gomock.Matcher {
 	return &cmpDiffMatcher{t: t, name: name, expected: expected}
 }
 
