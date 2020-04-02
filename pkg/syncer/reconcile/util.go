@@ -55,11 +55,19 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 	return cme
 }
 
+// clusterConfigNeedsUpdate returns true if the given ClusterConfig will need a status update with the other given arguments.
+func clusterConfigNeedsUpdate(config *v1.ClusterConfig, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
+	return !config.Status.SyncState.IsSynced() ||
+		config.Status.Token != config.Spec.Token ||
+		len(errs) > 0 ||
+		len(config.Status.SyncErrors) > 0 ||
+		len(resConditions) > 0 ||
+		len(config.Status.ResourceConditions) > 0
+}
+
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
-func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, now func() metav1.Time,
-	errs ...v1.ConfigManagementError) status.Error {
-	freshSyncToken := config.Status.Token == config.Spec.Token
-	if config.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
+func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+	if !clusterConfigNeedsUpdate(config, errs, rcs) {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
@@ -68,6 +76,7 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 		newConfig := obj.(*v1.ClusterConfig)
 		newConfig.Status.Token = config.Spec.Token
 		newConfig.Status.SyncTime = now()
+		newConfig.Status.ResourceConditions = rcs
 		newConfig.Status.SyncErrors = errs
 		if len(errs) > 0 {
 			newConfig.Status.SyncState = v1.StateError
@@ -75,7 +84,6 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 			newConfig.Status.SyncState = v1.StateSynced
 		}
 
-		newConfig.Status.ResourceConditions = config.Status.ResourceConditions
 		return newConfig, nil
 	}
 	_, err := client.UpdateStatus(ctx, config, updateFn)

@@ -69,6 +69,8 @@ teardown() {
   resourceConditions=$(kubectl get namespaceconfig ${ns} -ojson | jq -c ".status.resourceConditions")
   [[ "${resourceConditions}" == null ]] || debug::error "resourceConditions not empty, got: ${resourceConditions}"
 
+  # Test adding error annotations
+
   debug::log "Add resource condition error annotation to configmap"
   run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/errors=["CrashLoopBackOff"]'
 
@@ -76,42 +78,70 @@ teardown() {
   run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/errors=["CrashLoopBackOff"]'
 
   debug::log "Check for configmap error resource condition in namespace config"
-  nsResourceState=$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[0].ResourceState')
-  [[ "${nsResourceState}" != "Error" ]] || debug::error "namespace config resourceState not updated, got: ${nsResourceState}"
+  wait::for -t 10 -- test '"Error"' == "$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[0].resourceState')"
 
   debug::log "Check for configmap error resource condition in repo status"
-  repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].ResourceState')
-  [[ "${repoResourceState}" != "Error" ]] || debug::error "repo status resourceState not updated, got: ${repoResourceState}"
+  wait::for -t 10 -- test '"Error"' == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].resourceState')"
 
   debug::log "Check for clusterrole error resource condition in cluster config"
-  clusterResourceState=$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[0].ResourceState')
-  [[ "${clusterResourceState}" != "Error" ]] || debug::error "cluster config error resourceState not updated, got: ${clusterResourceState}"
+  wait::for -t 10 -- test '"Error"' == "$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[0].resourceState')"
 
   debug::log "Check for clusterrole error resource condition in repo status"
-  repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].ResourceState')
-  [[ "${repoResourceState}" != "Error" ]] || debug::error "repo status error resourceState not updated, got: ${repoResourceState}"
+  wait::for -t 10 -- test '"Error"' == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[1].resourceState')"
+
+  # Test removing error annotations
+
+  debug::log "Remove resource condition annotations from configmap"
+  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/errors-'
+
+  debug::log "Remove resource condition annotations from clusterrole"
+  run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/errors-'
+
+  debug::log "Check that namespace config does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get namespaceconfig ${ns} -ojson | jq -c ".status.resourceConditions")"
+
+  debug::log "Check that cluster config does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c ".status.resourceConditions")"
+
+  debug::log "Check that repo does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions')"
+
+  # Test adding reconciling annotations
 
   debug::log "Add reconciling resource condition annotations to configmap"
   run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/reconciling=["ConfigMap is incomplete", "ConfigMap is not ready"]'
 
-  debug::log "Check for configmap error resource condition in namespace config"
-  nsResourceState=$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[1].ResourceState')
-  [[ "${nsResourceState}" != "Reconciling" ]] || debug::error "namespace config reconciling resourceState not updated, got: ${nsResourceState}"
-
-  debug::log "Check for configmap error resource condition in repo status"
-  repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[2].ResourceState')
-  [[ "${repoResourceState}" != "Reconciling" ]] || debug::error "repo status reconciling resourceState not updated, got: ${repoResourceState}"
-
   debug::log "Add resource condition reconciling annotation to clusterrole"
   run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/reconciling=["ClusterRole needs... something..."]'
 
+  debug::log "Check for configmap reconciling resource condition in namespace config"
+  wait::for -t 10 -- test '"Reconciling"' == "$(kubectl get namespaceconfig ${ns} -ojson | jq -c '.status.resourceConditions[0].resourceState')"
+
+  debug::log "Check for configmap reconciling resource condition in repo status"
+  wait::for -t 10 -- test '"Reconciling"' == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[0].resourceState')"
+
   debug::log "Check for clusterrole reconciling resource condition in cluster config"
-  clusterResourceState=$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[1].ResourceState')
-  [[ "${clusterResourceState}" != "Reconciling" ]] || debug::error "cluster config reconciling resourceState not updated, got: ${clusterResourceState}"
+  wait::for -t 10 -- test '"Reconciling"' == "$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c '.status.resourceConditions[0].resourceState')"
 
   debug::log "Check for clusterrole reconciling resource condition in repo status"
-  repoResourceState=$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[3].ResourceState')
-  [[ "${repoResourceState}" != "Reconciling" ]] || debug::error "repo status reconciling resourceState not updated, got: ${repoResourceState}"
+  wait::for -t 10 -- test '"Reconciling"' == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions[1].resourceState')"
+
+  # Test removing reconciling annotations
+
+  debug::log "Remove resource condition annotations from configmap"
+  run kubectl annotate configmap ${nsresname} -n ${ns} 'configmanagement.gke.io/reconciling-'
+
+  debug::log "Remove resource condition annotations from clusterrole"
+  run kubectl annotate clusterrole ${clusterresname} 'configmanagement.gke.io/reconciling-'
+
+  debug::log "Check that namespace config does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get namespaceconfig ${ns} -ojson | jq -c ".status.resourceConditions")"
+
+  debug::log "Check that cluster config does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get clusterconfig config-management-cluster-config -ojson | jq -c ".status.resourceConditions")"
+
+  debug::log "Check that repo does not contain resource conditions"
+  wait::for -t 10 -- test null == "$(kubectl get repos.configmanagement.gke.io repo -ojson | jq -c '.status.sync.resourceConditions')"
 }
 
 @test "${FILE_NAME}: constraint template gets status annotations" {

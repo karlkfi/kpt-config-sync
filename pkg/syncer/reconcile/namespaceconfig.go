@@ -157,8 +157,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 	case differ.Create:
 		if err := r.createNamespace(ctx, config); err != nil {
 			syncErrs = append(syncErrs, newSyncError(config, err))
-
-			if err2 := r.setNamespaceConfigStatus(ctx, config, syncErrs); err2 != nil {
+			if err2 := r.setNamespaceConfigStatus(ctx, config, syncErrs, nil); err2 != nil {
 				glog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
 			}
 			return err
@@ -253,7 +252,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		return errors.Wrapf(err, "could not process namespaceconfig: %q", config.GetName())
 	}
 
-	config.Status.ResourceConditions = nil
+	var resConditions []v1.ResourceCondition
 
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
@@ -271,8 +270,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 		for _, act := range actualInstances {
 			annotations := act.GetAnnotations()
 			if AnnotationsHaveResourceCondition(annotations) {
-				config.Status.ResourceConditions = append(config.Status.ResourceConditions, MakeResourceCondition(*act, config.Spec.Token))
-				config.Status.SyncState = v1.StateStale
+				resConditions = append(resConditions, MakeResourceCondition(*act, config.Spec.Token))
 			}
 		}
 
@@ -287,11 +285,13 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 			}
 		}
 	}
-	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs); err != nil {
+
+	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", name))
 		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update NamespaceConfig status: %s", err)
 	}
+
 	if errBuilder == nil && reconcileCount > 0 && len(syncErrs) == 0 {
 		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
 			"NamespaceConfig %q was successfully reconciled: %d changes", name, reconcileCount)
@@ -299,15 +299,22 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 	return errBuilder
 }
 
-// setNamespaceConfigStatus updates the status of the given NamespaceConfig. If the config is nil,
-// it does nothing, and successfully so.
-func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
-	ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError) status.Error {
+// needsUpdate returns true if the given NamespaceConfig will need a status update with the other given arguments.
+func needsUpdate(config *v1.NamespaceConfig, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
 	if config == reservedNamespaceConfig {
-		return nil
+		return false
 	}
-	freshSyncToken := config.Status.Token == config.Spec.Token
-	if config.Status.SyncState.IsSynced() && freshSyncToken && len(errs) == 0 {
+	return !config.Status.SyncState.IsSynced() ||
+		config.Status.Token != config.Spec.Token ||
+		len(errs) > 0 ||
+		len(config.Status.SyncErrors) > 0 ||
+		len(resConditions) > 0 ||
+		len(config.Status.ResourceConditions) > 0
+}
+
+// setNamespaceConfigStatus updates the status of the given NamespaceConfig.
+func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+	if !needsUpdate(config, errs, rcs) {
 		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
@@ -316,13 +323,14 @@ func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(
 		newPN := obj.(*v1.NamespaceConfig)
 		newPN.Status.Token = config.Spec.Token
 		newPN.Status.SyncTime = r.now()
+		newPN.Status.ResourceConditions = rcs
 		newPN.Status.SyncErrors = errs
 		if len(errs) > 0 {
 			newPN.Status.SyncState = v1.StateError
 		} else {
 			newPN.Status.SyncState = v1.StateSynced
 		}
-		newPN.Status.ResourceConditions = config.Status.ResourceConditions
+
 		newPN.SetGroupVersionKind(kinds.NamespaceConfig())
 		return newPN, nil
 	}

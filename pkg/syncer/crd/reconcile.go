@@ -155,12 +155,10 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 
 	var syncErrs []v1.ConfigManagementError
 	actualInstances, err := r.cache.UnstructuredList(ctx, gvk, "")
-	//r.cache.List()
 	if err != nil {
 		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig,
-			r.now, syncErrs...))
+		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil))
 		return mErr
 	}
 
@@ -207,7 +205,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		r.signal.Restart("crd")
 	}
 
-	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs...); err != nil {
+	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, clusterConfig.Status.ResourceConditions); err != nil {
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update ClusterConfig status: %v", err)
 		mErr = status.Append(mErr, err)

@@ -91,7 +91,8 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
-		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, NewConfigManagementError(clusterConfig, err)); err2 != nil {
+		syncErrs := []v1.ConfigManagementError{NewConfigManagementError(clusterConfig, err)}
+		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil); err2 != nil {
 			r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
 				"failed to update cluster config status: %v", err2)
 		}
@@ -113,8 +114,8 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 	}
 
 	var errBuilder status.MultiError
+	var resConditions []v1.ResourceCondition
 	reconcileCount := 0
-	config.Status.ResourceConditions = nil
 
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
@@ -131,8 +132,7 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 		for _, act := range actualInstances {
 			annotations := act.GetAnnotations()
 			if AnnotationsHaveResourceCondition(annotations) {
-				config.Status.ResourceConditions = append(config.Status.ResourceConditions, MakeResourceCondition(*act, config.Spec.Token))
-				config.Status.SyncState = v1.StateStale
+				resConditions = append(resConditions, MakeResourceCondition(*act, config.Spec.Token))
 			}
 		}
 
@@ -168,11 +168,13 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 		return errBuilder
 	}
 
-	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, status.ToCME(errBuilder)...); err != nil {
+	cmErrs := status.ToCME(errBuilder)
+	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, cmErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, err)
 		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
 			"failed to update cluster config status: %v", err)
 	}
+
 	if errBuilder == nil && reconcileCount > 0 {
 		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
 			"cluster config was successfully reconciled: %d changes", reconcileCount)
