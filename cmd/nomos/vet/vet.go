@@ -17,19 +17,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	hierarchyFormat    = "hierarchy"
+	unstructuredFormat = "unstructured"
+)
+
 var (
-	// TODO(b/147098697): Make identical to sourceFormat directive.
-	disableHierarchyFlag = "disable-hierarchy"
-	disableHierarchy     bool
+	sourceFormatFlag = "source-format"
+	sourceFormat     string
 )
 
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
 	flags.AddSkipAPIServerCheck(Cmd)
-	Cmd.Flags().BoolVar(&disableHierarchy, disableHierarchyFlag, false,
-		fmt.Sprintf("If true, validate as a %s Repo.\n"+
-			"If false, validate recursively as a directory of manifests.", configmanagement.ProductName))
+	Cmd.Flags().StringVar(&sourceFormat, sourceFormatFlag, hierarchyFormat,
+		fmt.Sprintf("If %q, validate as a %s repository. If %q, validate as an unstructured repository.",
+			hierarchyFormat, configmanagement.ProductName, unstructuredFormat))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -45,15 +49,18 @@ returns a non-zero error code if any issues are found.
   nomos vet --path=my/directory
   nomos vet --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		rootDir := flags.Path.String()
 		rootPath := util.GetRootOrDie(rootDir)
 
 		var parser filesystem.ConfigParser
-		if disableHierarchy {
-			parser = filesystem.NewRawParser(rootPath, &filesystem.FileReader{}, importer.DefaultCLIOptions)
-		} else {
+		switch sourceFormat {
+		case hierarchyFormat:
 			parser = parse.NewParser(rootPath)
+		case unstructuredFormat:
+			parser = filesystem.NewRawParser(rootPath, &filesystem.FileReader{}, importer.DefaultCLIOptions)
+		default:
+			return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 		}
 
 		encounteredError := false
@@ -62,6 +69,7 @@ returns a non-zero error code if any issues are found.
 		if encounteredError {
 			os.Exit(1)
 		}
+		return nil
 	},
 }
 

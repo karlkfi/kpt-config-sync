@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/google/nomos/cmd/nomos/bugreport"
 	"github.com/google/nomos/cmd/nomos/hydrate"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/status"
+	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/cmd/nomos/version"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -33,20 +33,13 @@ func init() {
 	rootCmd.AddCommand(bugreport.Cmd)
 }
 
-func init() {
-	// TODO: Re-enable --contexts as a global flag once all subcommands handle it.
-	//	pf := rootCmd.PersistentFlags()
-	//	pf.StringSliceVar(&flags.Contexts, flags.ContextsName, nil,
-	//		`Accepts a comma-separated list of contexts to use in multi-cluster commands. Defaults to all contexts. Use "" for no contexts.
-	//`)
-	//	_ = pf.MarkHidden(flags.ContextsName)
-}
-
 func main() {
 	// glog gripes if you don't parse flags before making any logging statements.
-	flag.CommandLine.Parse([]string{}) // nolint:errcheck
+	if err := flag.CommandLine.Parse([]string{}); err != nil {
+		util.PrintErrAndDie(err)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		util.PrintErrAndDie(err)
 	}
 }
