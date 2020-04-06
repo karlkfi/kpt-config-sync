@@ -9,6 +9,7 @@ import (
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	utilmocks "github.com/google/nomos/pkg/util/testing/mocks"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,13 +127,14 @@ func TestReconcile(t *testing.T) {
 
 			mockClient := mocks.NewMockClient(mockCtrl)
 			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
-			mockCache := mocks.NewMockCache(mockCtrl)
+
+			syncsReader := fake.SyncCacheReader(tc.actualSyncs)
 			mockDiscovery := mocks.NewMockDiscoveryInterface(mockCtrl)
 			mockManager := utilmocks.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
 				client:          syncerclient.New(mockClient, metrics.APICallDuration),
-				cache:           mockCache,
+				syncCache:       syncsReader,
 				discoveryClient: mockDiscovery,
 				builder:         newSyncAwareBuilder(),
 				subManager:      mockManager,
@@ -141,10 +143,6 @@ func TestReconcile(t *testing.T) {
 				},
 				now: syncertesting.Now,
 			}
-
-			mockCache.EXPECT().
-				List(gomock.Any(), gomock.Any(), gomock.Any()).
-				SetArg(1, tc.actualSyncs)
 
 			mockDiscovery.EXPECT().
 				ServerResources().Return(
@@ -193,7 +191,7 @@ func TestReconcile(t *testing.T) {
 					Update(gomock.Any(), gomock.Eq(&wantUpdateList.update))
 
 				mockClient.EXPECT().
-					List(gomock.Any(), gomock.Eq(&wantUpdateList.list), gomock.Eq(&client.ListOptions{}))
+					List(gomock.Any(), gomock.Eq(&wantUpdateList.list))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)

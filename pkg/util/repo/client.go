@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Client wraps the syncer Client with functions specific to Repo objects.
@@ -26,7 +25,7 @@ func New(client *syncclient.Client) *Client {
 // GetOrCreateRepo returns the Repo resource for the cluster or creates if it does not yet exist.
 func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	var repoList v1.RepoList
-	if err := c.client.List(ctx, &repoList, &client.ListOptions{}); err != nil {
+	if err := c.client.List(ctx, &repoList); err != nil {
 		return nil, status.APIServerError(err, "failed to list Repos")
 	}
 	if len(repoList.Items) > 1 {

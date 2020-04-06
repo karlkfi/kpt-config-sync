@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -37,9 +36,10 @@ type ClientFactory func() (client.Client, error)
 type MetaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
 	client *syncerclient.Client
-	// cache is a shared cache that is populated by informers in the scheme and used by all controllers / reconcilers in the
-	// manager.
-	cache cache.Cache
+	// syncCache is a shared cache of Syncs on the cluster.
+	// It is populated by informers in the scheme and used by all controllers and
+	// reconcilers in the manager.
+	syncCache client.Reader
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
 	discoveryClient discovery.DiscoveryInterface
 	// builder is used to recreate controllers for watched GroupVersionKinds.
@@ -61,7 +61,7 @@ func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, cli
 
 	return &MetaReconciler{
 		client:          syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
-		cache:           mgr.GetCache(),
+		syncCache:       mgr.GetCache(),
 		clientFactory:   clientFactory,
 		discoveryClient: dc,
 		builder:         builder,
@@ -91,7 +91,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
 	syncs := &v1.SyncList{}
-	err := r.cache.List(ctx, syncs, &client.ListOptions{})
+	err := r.syncCache.List(ctx, syncs)
 	if err != nil {
 		panic(errors.Wrap(err, "could not list all Syncs"))
 	}
@@ -219,7 +219,7 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
-	if err := cl.List(ctx, ul, &client.ListOptions{}); err != nil {
+	if err := cl.List(ctx, ul); err != nil {
 		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not list %s resources", gvk))
 		return errBuilder
 	}

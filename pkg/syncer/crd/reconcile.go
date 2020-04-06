@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -104,7 +103,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *Reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
 	crdList := &v1beta1.CustomResourceDefinitionList{}
-	if err := r.client.List(ctx, crdList, &client.ListOptions{}); err != nil {
+	if err := r.client.List(ctx, crdList); err != nil {
 		return nil, err
 	}
 	return crdList.Items, nil
