@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"k8s.io/cli-runtime/pkg/printers"
+	"k8s.io/cli-runtime/pkg/genericclioptions/printers"
 )
 
 // WriteObject writes a FileObject to a file using the provided ResourcePrinter.
