@@ -88,9 +88,20 @@ function teardown() {
   git::commit
 
   debug::log "CRD on cluster has v2 as stored version"
-  wait::for -t 30 -o "map[name:v2 served:true storage:true]" -- \
-    kubectl get crd anvils.acme.com \
-      --output='jsonpath={.spec.versions[1]}' # v2 is the second element in versions
+  wait::for -t 30 -- nomos::repo_synced
+
+  svname=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[1].name}')
+  if [[ ${svname} != "v2" ]]; then
+    debug::error "Want versions[1].name = v2 but got $svname"
+  fi
+  svserved=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[1].served}')
+  if [[ ${svserved} != "true" ]]; then
+    debug::error "Want versions[1].served = true but got $svserved"
+  fi
+  svstorage=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[1].storage}')
+  if [[ ${svstorage} != "true" ]]; then
+    debug::error "Want versions[1].storage = true but got $svstorage"
+  fi
 
   debug::log "Updating CRD to only support version v2 and update CR to v2"
   git::update "${YAML_DIR}/customresources/anvil-crd-only-v2.yaml" acme/cluster/anvil-crd.yaml
@@ -104,9 +115,20 @@ function teardown() {
       --output='jsonpath={.spec.lbs}'
 
   debug::log "CRD on cluster doesn't serve or store v1 Anvils"
-  wait::for -t 30 -o "map[name:v1 served:false storage:false]" -- \
-    kubectl get crd anvils.acme.com \
-      --output='jsonpath={.spec.versions[0]}' # v1 is the first element in versions
+  wait::for -t 30 -- nomos::repo_synced
+
+  svname=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[0].name}')
+  if [[ ${svname} != "v1" ]]; then
+    debug::error "Want versions[0].name = v1 but got $svname"
+  fi
+  svserved=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[0].served}')
+  if [[ ${svserved} != "false" ]]; then
+    debug::error "Want versions[0].served = false but got $svserved"
+  fi
+  svstorage=$(kubectl get crd anvils.acme.com --output='jsonpath={.spec.versions[0].storage}')
+  if [[ ${svstorage} != "false" ]]; then
+    debug::error "Want versions[0].storage = false but got $svstorage"
+  fi
 
   debug::log "Removing CRD and Custom Resource"
   git::rm acme/cluster/anvil-crd.yaml
@@ -137,9 +159,20 @@ function teardown() {
   git::commit
 
   debug::log "CRD on cluster has v2 as stored version"
-  wait::for -t 30 -o "map[name:v2 served:true storage:true]" -- \
-    kubectl get crd clusteranvils.acme.com \
-      --output='jsonpath={.spec.versions[1]}' # v2 is the second element in versions
+  wait::for -t 30 -- nomos::repo_synced
+
+  svname=$(kubectl get crd clusteranvils.acme.com --output='jsonpath={.spec.versions[1].name}')
+  if [[ ${svname} != "v2" ]]; then
+    debug::error "Want versions[1].name = v2 but got $svname"
+  fi
+  svserved=$(kubectl get crd clusteranvils.acme.com --output='jsonpath={.spec.versions[1].served}')
+  if [[ ${svserved} != "true" ]]; then
+    debug::error "Want versions[1].served = true but got $svserved"
+  fi
+  svstorage=$(kubectl get crd clusteranvils.acme.com --output='jsonpath={.spec.versions[1].storage}')
+  if [[ ${svstorage} != "true" ]]; then
+    debug::error "Want versions[1].storage = true but got $svstorage"
+  fi
 
   debug::log "Removing CRD and Custom Resource"
   git::rm acme/cluster/clusteranvil-crd.yaml
