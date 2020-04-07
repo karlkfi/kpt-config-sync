@@ -1,6 +1,8 @@
 package customresources
 
 import (
+	"sort"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/gatekeeper"
 	"github.com/google/nomos/pkg/kinds"
@@ -18,7 +20,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 	var errs status.MultiError
 	crdMap := map[schema.GroupKind]*v1beta1.CustomResourceDefinition{}
 	for _, cr := range fileObjects {
-		if cr.GroupVersionKind() != kinds.CustomResourceDefinitionV1Beta1() {
+		if cr.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 			continue
 		}
 
@@ -61,5 +63,9 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 	for _, crd := range crdMap {
 		result = append(result, crd)
 	}
+	// Sort to ensure deterministic list order.
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
 	return result, errs
 }
