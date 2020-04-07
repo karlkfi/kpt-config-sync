@@ -66,7 +66,7 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 
 // addClusterResource adds a cluster-scoped resource to the AllConfigs.
 func (c *AllConfigs) addClusterResource(o core.Object) {
-	if o.GroupVersionKind() == kinds.CustomResourceDefinitionV1Beta1() {
+	if o.GroupVersionKind().GroupKind() == kinds.CustomResourceDefinition() {
 		// CRDs end up in their own ClusterConfig.
 		c.CRDClusterConfig.AddResource(o)
 	} else {
