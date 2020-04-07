@@ -171,6 +171,24 @@ func CustomResourceDefinitionV1Beta1(opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(CustomResourceDefinitionV1Beta1Object(opts...), "cluster/crd.yaml")
 }
 
+// CustomResourceDefinitionV1Beta1Unstructured returns a v1Beta1 CRD as an unstructured
+func CustomResourceDefinitionV1Beta1Unstructured(opts ...core.MetaMutator) *unstructured.Unstructured {
+	o := CustomResourceDefinitionV1Beta1Object(opts...)
+	jsn, err := json.Marshal(o)
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	u := &unstructured.Unstructured{}
+	err = json.Unmarshal(jsn, u)
+	u.SetGroupVersionKind(kinds.CustomResourceDefinitionV1Beta1())
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	return u
+}
+
 // ToCustomResourceDefinitionV1Object converts a v1beta1.CustomResourceDefinition
 // to an Unstructured masquerading as a v1.CRD.
 func ToCustomResourceDefinitionV1Object(o *v1beta1.CustomResourceDefinition) *unstructured.Unstructured {

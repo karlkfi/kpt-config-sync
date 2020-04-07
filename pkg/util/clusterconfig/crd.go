@@ -27,7 +27,7 @@ func GetCRDs(decoder decode.Decoder, clusterConfig *v1.ClusterConfig) ([]*v1beta
 
 	crdMap := make(map[string]*v1beta1.CustomResourceDefinition)
 	for gvk, rs := range gvkrs {
-		if gvk != kinds.CustomResourceDefinitionV1Beta1() {
+		if gvk.GroupKind() != kinds.CustomResourceDefinition() {
 			return nil, status.APIServerErrorf(err, "%s contains non-CRD resources: %v", v1.CRDClusterConfigName, gvk)
 		}
 		for _, r := range rs {
