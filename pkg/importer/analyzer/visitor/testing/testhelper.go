@@ -162,7 +162,7 @@ func (t *TestHelper) CRD() *v1beta1.CustomResourceDefinition {
 	return &v1beta1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1beta1.SchemeGroupVersion.String(),
-			Kind:       kinds.CustomResourceDefinition().Kind,
+			Kind:       kinds.CustomResourceDefinitionV1Beta1().Kind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "example",

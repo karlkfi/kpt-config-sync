@@ -5,6 +5,7 @@ package testing
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
@@ -122,7 +123,7 @@ func testK8SResources() []*restmapper.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1beta1": {
-					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
+					{Name: "customresourcedefinitions", Namespaced: false, Kind: kinds.CustomResourceDefinitionKind},
 				},
 			},
 		},
@@ -136,7 +137,7 @@ func testK8SResources() []*restmapper.APIGroupResources {
 			},
 			VersionedResources: map[string][]metav1.APIResource{
 				"v1beta1": {
-					{Name: "customresourcedefinitions", Namespaced: false, Kind: "CustomResourceDefinition"},
+					{Name: "customresourcedefinitions", Namespaced: false, Kind: kinds.CustomResourceDefinitionKind},
 				},
 			},
 		},

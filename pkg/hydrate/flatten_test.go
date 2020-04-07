@@ -30,11 +30,11 @@ func TestFlatten(t *testing.T) {
 			name: "one CRD",
 			configs: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: testoutput.CRDClusterConfig(
-					fake.CustomResourceDefinitionObject(),
+					fake.CustomResourceDefinitionV1Beta1Object(),
 				),
 			},
 			expected: []core.Object{
-				fake.CustomResourceDefinition().Object,
+				fake.CustomResourceDefinitionV1Beta1().Object,
 			},
 		},
 		{
@@ -83,7 +83,7 @@ func TestFlatten(t *testing.T) {
 			name: "one of each",
 			configs: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: testoutput.CRDClusterConfig(
-					fake.CustomResourceDefinitionObject(),
+					fake.CustomResourceDefinitionV1Beta1Object(),
 				),
 				ClusterConfig: testoutput.ClusterConfig(
 					fake.ClusterRoleBindingObject(),
@@ -94,7 +94,7 @@ func TestFlatten(t *testing.T) {
 				)),
 			},
 			expected: []core.Object{
-				fake.CustomResourceDefinitionObject(),
+				fake.CustomResourceDefinitionV1Beta1Object(),
 				fake.ClusterRoleBindingObject(),
 				fake.NamespaceObject("bar"),
 				fake.RoleBindingObject(core.Namespace("bar")),

@@ -64,7 +64,7 @@ func forbidsSelectors(o ast.FileObject) bool {
 	return gvk == kinds.Cluster() ||
 		gvk == kinds.ClusterSelector() ||
 		gvk == kinds.NamespaceSelector() ||
-		gvk == kinds.CustomResourceDefinition()
+		gvk == kinds.CustomResourceDefinitionV1Beta1()
 }
 
 // IllegalSelectorAnnotationErrorCode is the error code for IllegalNamespaceAnnotationError

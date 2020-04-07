@@ -147,7 +147,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		mErr = status.Append(mErr, errors.Wrap(err, "could not decode ClusterConfig"))
 		return mErr
 	}
-	gvk := kinds.CustomResourceDefinition()
+	gvk := kinds.CustomResourceDefinitionV1Beta1()
 	declaredInstances := grs[gvk]
 	for _, decl := range declaredInstances {
 		syncerreconcile.SyncedAt(decl, clusterConfig.Spec.Token)

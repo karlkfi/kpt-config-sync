@@ -50,7 +50,7 @@ func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) 
 
 func customResourceDefinition(version string, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	mutators := append(opts, syncertesting.Herrings...)
-	result := fake.CustomResourceDefinitionObject(mutators...)
+	result := fake.CustomResourceDefinitionV1Beta1Object(mutators...)
 	result.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{Name: version}}
 	return result
 }
@@ -275,7 +275,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds).Items)
 
 			tm.ExpectClusterCacheGet(clusterCfg)
-			tm.ExpectCacheList(kinds.CustomResourceDefinition(), "", tc.actual)
+			tm.ExpectCacheList(kinds.CustomResourceDefinitionV1Beta1(), "", tc.actual)
 
 			tm.ExpectCreate(tc.expectCreate)
 			tm.ExpectUpdate(tc.expectUpdate)

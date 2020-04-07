@@ -32,7 +32,7 @@ var engineerGVK = schema.GroupVersionKind{
 }
 
 func engineerCRD(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
-	obj := fake.CustomResourceDefinitionObject(opts...)
+	obj := fake.CustomResourceDefinitionV1Beta1Object(opts...)
 	obj.Name = "engineers.employees"
 	obj.Spec.Group = "employees"
 	obj.Spec.Scope = v1beta1.NamespaceScoped
@@ -653,7 +653,7 @@ func TestParserVetCRDs(t *testing.T) {
 }
 
 func fakeCRD(gvk schema.GroupVersionKind, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
-	o := fake.CustomResourceDefinitionObject()
+	o := fake.CustomResourceDefinitionV1Beta1Object()
 	o.Spec.Names.Plural = strings.ToLower(gvk.Kind) + "s"
 	o.SetName(o.Spec.Names.Plural + "." + gvk.Group)
 	o.Spec.Group = gvk.Group

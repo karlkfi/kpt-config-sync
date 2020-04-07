@@ -1,6 +1,7 @@
 package fake
 
 import (
+	"encoding/json"
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -153,10 +154,10 @@ func ConfigManagement(path string) ast.FileObject {
 	return ast.NewFileObject(u, cmpath.FromSlash(path))
 }
 
-// CustomResourceDefinitionObject returns an initialized CustomResourceDefinition.
-func CustomResourceDefinitionObject(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
+// CustomResourceDefinitionV1Beta1Object returns an initialized CustomResourceDefinition.
+func CustomResourceDefinitionV1Beta1Object(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	result := &v1beta1.CustomResourceDefinition{
-		TypeMeta: toTypeMeta(kinds.CustomResourceDefinition()),
+		TypeMeta: toTypeMeta(kinds.CustomResourceDefinitionV1Beta1()),
 	}
 	defaultMutate(result)
 	mutate(result, opts...)
@@ -164,10 +165,38 @@ func CustomResourceDefinitionObject(opts ...core.MetaMutator) *v1beta1.CustomRes
 	return result
 }
 
-// CustomResourceDefinition returns a FileObject containing a CustomResourceDefinition at a
-// default path.
-func CustomResourceDefinition(opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(CustomResourceDefinitionObject(opts...), "cluster/crd.yaml")
+// CustomResourceDefinitionV1Beta1 returns a FileObject containing a
+// CustomResourceDefinition at a default path.
+func CustomResourceDefinitionV1Beta1(opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(CustomResourceDefinitionV1Beta1Object(opts...), "cluster/crd.yaml")
+}
+
+// ToCustomResourceDefinitionV1Object converts a v1beta1.CustomResourceDefinition
+// to an Unstructured masquerading as a v1.CRD.
+func ToCustomResourceDefinitionV1Object(o *v1beta1.CustomResourceDefinition) *unstructured.Unstructured {
+	jsn, err := json.Marshal(o)
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	u := &unstructured.Unstructured{}
+	err = json.Unmarshal(jsn, u)
+	u.SetGroupVersionKind(kinds.CustomResourceDefinitionV1())
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	return u
+}
+
+// ToCustomResourceDefinitionV1 converts the type inside a FileObject into an
+// unstructured.Unstructured masquerading as a
+func ToCustomResourceDefinitionV1(o ast.FileObject) ast.FileObject {
+	// This will panic if o.Object isn't a v1beta1.CRD, but this is what we want
+	// and this is test code so it's fine.
+	crd := o.Object.(*v1beta1.CustomResourceDefinition)
+	o.Object = ToCustomResourceDefinitionV1Object(crd)
+	return o
 }
 
 // AnvilAtPath returns an Anvil Custom Resource.

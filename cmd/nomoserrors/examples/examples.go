@@ -187,7 +187,7 @@ func Generate() map[string][]status.Error {
 	}, "invalid"))
 
 	// 1043
-	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinitionV1Beta1()))
 
 	// 1044
 	result.add(semantic.UnsyncableResourcesInLeaf(node("namespaces/foo")))
@@ -204,10 +204,10 @@ func Generate() map[string][]status.Error {
 	}))
 
 	// 1047
-	result.add(nonhierarchical.UnsupportedCRDRemovalError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.UnsupportedCRDRemovalError(fake.CustomResourceDefinitionV1Beta1()))
 
 	// 1048
-	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinition()))
+	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinitionV1Beta1()))
 
 	// 1049 is Deprecated.
 

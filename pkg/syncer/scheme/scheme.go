@@ -67,7 +67,7 @@ func ResourceScopes(
 	namespace := make(map[schema.GroupVersionKind]runtime.Object)
 	cluster := make(map[schema.GroupVersionKind]runtime.Object)
 	for gvk, obj := range rts {
-		if gvk.GroupKind() == kinds.CustomResourceDefinition().GroupKind() {
+		if gvk.GroupKind() == kinds.CustomResourceDefinitionV1Beta1().GroupKind() {
 			// CRDs are handled in the CRD controller and shouldn't be handled in any of SubManager's controllers.
 			continue
 		}

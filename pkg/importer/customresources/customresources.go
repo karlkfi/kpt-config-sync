@@ -18,7 +18,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 	var errs status.MultiError
 	crdMap := map[schema.GroupKind]*v1beta1.CustomResourceDefinition{}
 	for _, cr := range fileObjects {
-		if cr.GroupVersionKind() != kinds.CustomResourceDefinition() {
+		if cr.GroupVersionKind() != kinds.CustomResourceDefinitionV1Beta1() {
 			continue
 		}
 

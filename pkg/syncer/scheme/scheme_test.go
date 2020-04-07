@@ -25,13 +25,13 @@ func TestResourceScopes(t *testing.T) {
 		{
 			name: "Ignore CustomResourceDefinition v1beta1",
 			gvks: map[schema.GroupVersionKind]bool{
-				kinds.CustomResourceDefinition(): true,
+				kinds.CustomResourceDefinitionV1Beta1(): true,
 			},
 		},
 		{
 			name: "Ignore CustomResourceDefinition v1",
 			gvks: map[schema.GroupVersionKind]bool{
-				kinds.CustomResourceDefinition().GroupKind().WithVersion("v1"): true,
+				kinds.CustomResourceDefinitionV1Beta1().GroupKind().WithVersion("v1"): true,
 			},
 		},
 		{
@@ -57,8 +57,8 @@ func TestResourceScopes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := runtime.NewScheme()
-			s.AddKnownTypeWithName(kinds.CustomResourceDefinition(), &v1beta1.CustomResourceDefinition{})
-			s.AddKnownTypeWithName(kinds.CustomResourceDefinition().GroupKind().WithVersion("v1"), &unstructured.Unstructured{})
+			s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1Beta1(), &v1beta1.CustomResourceDefinition{})
+			s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1Beta1().GroupKind().WithVersion("v1"), &unstructured.Unstructured{})
 			err := rbacv1.AddToScheme(s)
 			if err != nil {
 				t.Fatal(err)

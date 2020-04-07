@@ -27,7 +27,7 @@ func InvalidCRDNameError(resource id.Resource) status.Error {
 
 // validateCRDName returns an error
 func validateCRDName(o ast.FileObject) status.Error {
-	if o.GroupVersionKind() != kinds.CustomResourceDefinition() {
+	if o.GroupVersionKind() != kinds.CustomResourceDefinitionV1Beta1() {
 		return nil
 	}
 

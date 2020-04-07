@@ -90,6 +90,6 @@ func ConstraintTemplateCRD(o core.Object) (*v1beta1.CustomResourceDefinition, er
 			},
 		},
 	}
-	crd.SetGroupVersionKind(kinds.CustomResourceDefinition())
+	crd.SetGroupVersionKind(kinds.CustomResourceDefinitionV1Beta1())
 	return crd, nil
 }

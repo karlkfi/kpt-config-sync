@@ -23,7 +23,7 @@ func TestKindValidator(t *testing.T) {
 		),
 		asttest.Pass("CRD supported",
 			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.CustomResourceDefinition())),
+				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.CustomResourceDefinitionV1Beta1())),
 		),
 		asttest.Fail("Namespace not supported",
 			fake.HierarchyConfig(

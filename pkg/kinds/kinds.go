@@ -73,9 +73,25 @@ func Namespace() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Namespace")
 }
 
-// CustomResourceDefinition returns the canonical CustomResourceDefinition GroupVersionKind
-func CustomResourceDefinition() schema.GroupVersionKind {
-	return v1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition")
+// CustomResourceDefinitionKind is the Kind for CustomResourceDefinitions
+const CustomResourceDefinitionKind = "CustomResourceDefinition"
+
+// CustomResourceDefinitionV1Beta1 returns the v1beta1 CustomResourceDefinition GroupVersionKind
+func CustomResourceDefinitionV1Beta1() schema.GroupVersionKind {
+	return CustomResourceDefinition().WithVersion(v1beta1.SchemeGroupVersion.Version)
+}
+
+// CustomResourceDefinitionV1 returns the v1 CustomResourceDefinition GroupVersionKind
+func CustomResourceDefinitionV1() schema.GroupVersionKind {
+	return CustomResourceDefinition().WithVersion("v1")
+}
+
+// CustomResourceDefinition returns the canonical CustomResourceDefinition GroupKind
+func CustomResourceDefinition() schema.GroupKind {
+	return schema.GroupKind{
+		Group: v1beta1.GroupName,
+		Kind:  CustomResourceDefinitionKind,
+	}
 }
 
 // ClusterSelector returns the canonical ClusterSelector GroupVersionKind

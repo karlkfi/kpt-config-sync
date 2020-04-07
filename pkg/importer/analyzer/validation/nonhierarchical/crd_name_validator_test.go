@@ -14,7 +14,7 @@ import (
 )
 
 func crd(name string, gvk schema.GroupVersionKind) ast.FileObject {
-	result := fake.CustomResourceDefinitionObject()
+	result := fake.CustomResourceDefinitionV1Beta1Object()
 	result.Name = name
 	result.Spec.Group = gvk.Group
 	result.Spec.Names = v1beta1.CustomResourceDefinitionNames{
