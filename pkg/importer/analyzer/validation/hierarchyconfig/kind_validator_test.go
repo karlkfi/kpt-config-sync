@@ -3,7 +3,7 @@ package hierarchyconfig
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
@@ -21,9 +21,13 @@ func TestKindValidator(t *testing.T) {
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.RoleBinding())),
 		),
-		asttest.Pass("CRD supported",
+		asttest.Pass("v1Beta1 CRD supported",
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.CustomResourceDefinitionV1Beta1())),
+		),
+		asttest.Pass("v1 CRD supported",
+			fake.HierarchyConfig(
+				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.CustomResourceDefinitionV1())),
 		),
 		asttest.Fail("Namespace not supported",
 			fake.HierarchyConfig(
