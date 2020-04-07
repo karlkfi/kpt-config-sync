@@ -26,12 +26,20 @@ func crd(name string, gvk schema.GroupVersionKind) ast.FileObject {
 
 func TestDisallowedCRDNameValidator(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
-		nht.Pass("valid name",
+		// v1beta1
+		nht.Pass("v1beta1 valid name",
 			crd("anvils.acme.com", kinds.Anvil())),
-		nht.Fail("non plural",
+		nht.Fail("v1beta1 non plural",
 			crd("anvil.acme.com", kinds.Anvil())),
-		nht.Fail("missing group",
+		nht.Fail("v1beta1 missing group",
 			crd("anvils", kinds.Anvil())),
+		// v1
+		nht.Pass("v1 valid name",
+			fake.ToCustomResourceDefinitionV1(crd("anvils.acme.com", kinds.Anvil()))),
+		nht.Fail("v1 non plural",
+			fake.ToCustomResourceDefinitionV1(crd("anvil.acme.com", kinds.Anvil()))),
+		nht.Fail("v1 missing group",
+			fake.ToCustomResourceDefinitionV1(crd("anvils", kinds.Anvil()))),
 	}
 
 	nht.RunAll(t, nonhierarchical.CRDNameValidator, testCases)
