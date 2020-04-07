@@ -43,8 +43,8 @@ teardown() {
   stress::create_many_resources "100"
 }
 
-@test "${FILE_NAME}: Create 1000 resources in a single namespace" {
-  stress::create_many_resources "1000"
+@test "${FILE_NAME}: Create 500 resources in a single namespace" {
+  stress::create_many_resources "500"
 }
 
 @test "${FILE_NAME}: Create 100 resources, slow speed" {
