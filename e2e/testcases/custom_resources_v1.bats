@@ -14,6 +14,8 @@ WATCH_PID=""
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
+MINOR_VERSION="$(kubectl version -ojson | jq -r '.serverVersion.minor[0:2]')"
+
 setup() {
   setup::common
   setup::git::initialize
@@ -35,9 +37,13 @@ function teardown() {
 }
 
 @test "${FILE_NAME}: CRD deleted before repo update" {
+  if (( MINOR_VERSION < 16 )); then
+    skip
+  fi
+
   local resname="e2e-test-anvil"
-  kubectl apply -f "${YAML_DIR}/customresources/anvil-crd.yaml"
-  kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/anvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/clusteranvil-crd.yaml"
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
@@ -60,11 +66,15 @@ function teardown() {
 }
 
 @test "${FILE_NAME}: Sync custom namespace scoped resource" {
+  if (( MINOR_VERSION < 16 )); then
+    skip
+  fi
+
   local resname="e2e-test-anvil"
 
   debug::log "Adding CRDs out of band"
-  kubectl apply -f "${YAML_DIR}/customresources/anvil-crd.yaml"
-  kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/anvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/clusteranvil-crd.yaml"
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
@@ -137,11 +147,15 @@ function teardown() {
 }
 
 @test "${FILE_NAME}: Sync custom cluster scoped resource" {
+  if (( MINOR_VERSION < 16 )); then
+    skip
+  fi
+
   local resname="e2e-test-clusteranvil"
 
   debug::log "Adding CRDs out of band"
-  kubectl apply -f "${YAML_DIR}/customresources/anvil-crd.yaml"
-  kubectl apply -f "${YAML_DIR}/customresources/clusteranvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/anvil-crd.yaml"
+  kubectl apply -f "${YAML_DIR}/customresources/v1_crds/clusteranvil-crd.yaml"
   resource::check crd anvils.acme.com
   resource::check crd clusteranvils.acme.com
 
@@ -206,10 +220,14 @@ function teardown() {
 }
 
 @test "${FILE_NAME}: Sync and update structural custom resource" {
+  if (( MINOR_VERSION < 16 )); then
+    skip
+  fi
+
   local resname="e2e-test-anvil"
 
   debug::log "Adding CRD out of band"
-  run kubectl apply -f "${YAML_DIR}/customresources/anvil-crd-structural.yaml"
+  run kubectl apply -f "${YAML_DIR}/customresources/v1_crds/anvil-crd-structural.yaml"
 
   # shellcheck disable=SC2154
   if [[ "$status" -eq 1 ]]; then
