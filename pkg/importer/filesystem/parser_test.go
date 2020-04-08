@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/testing/testoutput"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -31,7 +32,7 @@ var engineerGVK = schema.GroupVersionKind{
 	Kind:    "Engineer",
 }
 
-func engineerCRD(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
+func engineerCRDV1Beta1(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	obj := fake.CustomResourceDefinitionV1Beta1Object(opts...)
 	obj.Name = "engineers.employees"
 	obj.Spec.Group = "employees"
@@ -49,6 +50,10 @@ func engineerCRD(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 		},
 	}
 	return obj
+}
+
+func engineerCRDV1(opts ...core.MetaMutator) *unstructured.Unstructured {
+	return fake.ToCustomResourceDefinitionV1Object(engineerCRDV1Beta1(opts...))
 }
 
 func scopedResourceQuota(path string, opts ...core.MetaMutator) ast.FileObject {
@@ -89,23 +94,45 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/bar"),
 			scopedResourceQuota("namespaces/bar/rq.yaml"),
 		),
-		parsertest.Success("Engineer CustomResourceDefinition",
+		// v1beta1 CRDs
+		parsertest.Success("Engineer CustomResourceDefinition v1beta1",
 			testoutput.NewAllConfigs(
-				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
+				fake.FileObject(engineerCRDV1Beta1(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 			),
-			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
+			fake.FileObject(engineerCRDV1Beta1(), "cluster/engineer-crd.yaml"),
 		),
-		parsertest.Success("Engineer CustomResourceDefinition and CustomResource",
+		parsertest.Success("Engineer CustomResourceDefinition v1beta1 and CustomResource",
 			testoutput.NewAllConfigs(
-				fake.FileObject(engineerCRD(testoutput.Source("cluster/engineer-crd.yaml")),
+				fake.FileObject(engineerCRDV1Beta1(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
 				fake.FileObject(fake.UnstructuredObject(engineerGVK,
 					core.Namespace("bar"), testoutput.Source("namespaces/bar/engineer.yaml"),
 				), "namespaces/bar/engineer.yaml"),
 			),
-			fake.FileObject(engineerCRD(), "cluster/engineer-crd.yaml"),
+			fake.FileObject(engineerCRDV1Beta1(), "cluster/engineer-crd.yaml"),
+			fake.Namespace("namespaces/bar"),
+			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
+		),
+		// v1 CRDs
+		parsertest.Success("Engineer CustomResourceDefinition v1",
+			testoutput.NewAllConfigs(
+				fake.FileObject(engineerCRDV1(testoutput.Source("cluster/engineer-crd.yaml")),
+					"cluster/engineer-crd.yaml"),
+			),
+			fake.FileObject(engineerCRDV1(), "cluster/engineer-crd.yaml"),
+		),
+		parsertest.Success("Engineer CustomResourceDefinition v1 and CustomResource",
+			testoutput.NewAllConfigs(
+				fake.FileObject(engineerCRDV1(testoutput.Source("cluster/engineer-crd.yaml")),
+					"cluster/engineer-crd.yaml"),
+				fake.Namespace("namespaces/bar", testoutput.Source("namespaces/bar/namespace.yaml")),
+				fake.FileObject(fake.UnstructuredObject(engineerGVK,
+					core.Namespace("bar"), testoutput.Source("namespaces/bar/engineer.yaml"),
+				), "namespaces/bar/engineer.yaml"),
+			),
+			fake.FileObject(engineerCRDV1(), "cluster/engineer-crd.yaml"),
 			fake.Namespace("namespaces/bar"),
 			fake.FileObject(fake.UnstructuredObject(engineerGVK), "namespaces/bar/engineer.yaml"),
 		),
