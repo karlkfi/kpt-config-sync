@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 )
 
-// ValidatorTestCase is a test case for non-hierarchical validatiors.
+// ValidatorTestCase is a test case for non-hierarchical validators.
 type ValidatorTestCase struct {
 	name       string
 	objects    []ast.FileObject
