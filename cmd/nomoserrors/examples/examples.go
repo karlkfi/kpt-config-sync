@@ -188,6 +188,7 @@ func Generate() map[string][]status.Error {
 
 	// 1043
 	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinitionV1Beta1()))
+	result.add(nonhierarchical.UnsupportedObjectError(fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1())))
 
 	// 1044
 	result.add(semantic.UnsyncableResourcesInLeaf(node("namespaces/foo")))
