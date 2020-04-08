@@ -15,7 +15,7 @@ var IllegalCRDValidator = PerObjectValidator(IllegalCRD)
 
 // IllegalCRD returns an error if o is a CRD of a Nomos type.
 func IllegalCRD(o ast.FileObject) status.Error {
-	if o.GroupVersionKind() != kinds.CustomResourceDefinitionV1Beta1() {
+	if o.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 		return nil
 	}
 
