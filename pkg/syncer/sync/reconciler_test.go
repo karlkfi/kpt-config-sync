@@ -12,7 +12,6 @@ import (
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
-	utilmocks "github.com/google/nomos/pkg/util/testing/mocks"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,7 +131,7 @@ func TestReconcile(t *testing.T) {
 			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
 
 			syncsReader := fake.SyncCacheReader(tc.actualSyncs)
-			mockDiscovery := fake.NewDiscoveryClient(
+			discoveryClient := fake.NewDiscoveryClient(
 				kinds.ConfigMap(),
 				kinds.Deployment(),
 				corev1.SchemeGroupVersion.WithKind("Secret"),
@@ -140,21 +139,20 @@ func TestReconcile(t *testing.T) {
 				kinds.Role(),
 				rbacv1beta1.SchemeGroupVersion.WithKind("Role"),
 			)
-			mockManager := utilmocks.NewMockRestartableManager(mockCtrl)
+			restartable := &fake.RestartableManagerRecorder{}
 
 			testReconciler := &MetaReconciler{
 				client:          syncerclient.New(mockClient, metrics.APICallDuration),
 				syncCache:       syncsReader,
-				discoveryClient: mockDiscovery,
+				discoveryClient: discoveryClient,
 				builder:         newSyncAwareBuilder(),
-				subManager:      mockManager,
+				subManager:      restartable,
 				clientFactory: func() (client.Client, error) {
 					return mockClient, nil
 				},
 				now: syncertesting.Now,
 			}
 
-			mockManager.EXPECT().Restart(gomock.Any(), gomock.Eq(tc.wantForceRestart))
 			for _, wantUpdateList := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
 				mockClient.EXPECT().
@@ -179,6 +177,10 @@ func TestReconcile(t *testing.T) {
 			})
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
+			}
+
+			if len(restartable.Restarts) != 1 || restartable.Restarts[0] != tc.wantForceRestart {
+				t.Errorf("got manager.Restarts = %v, want [%t]", restartable.Restarts, tc.wantForceRestart)
 			}
 		})
 	}
