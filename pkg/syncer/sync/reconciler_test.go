@@ -16,6 +16,7 @@ import (
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +129,6 @@ func TestReconcile(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			mockClient := mocks.NewMockClient(mockCtrl)
-			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
 
 			syncsReader := fake.SyncCacheReader(tc.actualSyncs)
 			discoveryClient := fake.NewDiscoveryClient(
@@ -161,14 +161,9 @@ func TestReconcile(t *testing.T) {
 					Update(gomock.Any(), gomock.Eq(&wantUpdateList.update))
 			}
 
-			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)
-			for i := range tc.wantStatusUpdates {
-				// Updates involve first getting the resource from API Server.
-				mockClient.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockStatusClient.EXPECT().
-					Update(gomock.Any(), gomock.Eq(&tc.wantStatusUpdates[i]))
-			}
+			statusWriter := fake.StatusWriterRecorder{}
+			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(&statusWriter)
+			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Times(len(tc.wantStatusUpdates))
 
 			_, err := testReconciler.Reconcile(reconcile.Request{
 				NamespacedName: apimachinerytypes.NamespacedName{
@@ -178,6 +173,12 @@ func TestReconcile(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
+
+			wantStatusUpdates := make([]runtime.Object, len(tc.wantStatusUpdates))
+			for i, o := range tc.wantStatusUpdates {
+				wantStatusUpdates[i] = o.DeepCopyObject()
+			}
+			statusWriter.Check(t, wantStatusUpdates...)
 
 			if len(restartable.Restarts) != 1 || restartable.Restarts[0] != tc.wantForceRestart {
 				t.Errorf("got manager.Restarts = %v, want [%t]", restartable.Restarts, tc.wantForceRestart)

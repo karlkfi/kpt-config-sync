@@ -219,26 +219,6 @@ func (tm *TestMocks) ExpectRestart(expectRestart bool, source string) {
 	tm.MockSignal.EXPECT().Restart(Eq(tm.t, "ExpectRestart", source))
 }
 
-// ExpectClusterStatusUpdate verifies we update the ClusterConfig's status.
-func (tm *TestMocks) ExpectClusterStatusUpdate(statusUpdate *v1.ClusterConfig) {
-	if statusUpdate == nil {
-		return
-	}
-	mockStatusClient := mocks.NewMockStatusWriter(tm.MockCtrl)
-	tm.MockClient.EXPECT().Status().Return(mockStatusClient)
-	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, "ExpectClusterStatusUpdate", statusUpdate))
-}
-
-// ExpectNamespaceStatusUpdate verifies we update the NamespaceConfig's status.
-func (tm *TestMocks) ExpectNamespaceStatusUpdate(statusUpdate *v1.NamespaceConfig) {
-	if statusUpdate == nil {
-		return
-	}
-	mockStatusClient := mocks.NewMockStatusWriter(tm.MockCtrl)
-	tm.MockClient.EXPECT().Status().Return(mockStatusClient)
-	mockStatusClient.EXPECT().Update(anyContext, Eq(tm.t, "ExpectNamespaceStatusUpdate", statusUpdate))
-}
-
 // ToUnstructured converts the object to an unstructured.Unstructured.
 func ToUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
 	if obj == nil {

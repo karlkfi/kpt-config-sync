@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -329,7 +330,8 @@ func (tc crdTestCase) run(t *testing.T) {
 	}
 
 	tm.ExpectClusterClientGet(clusterCfg)
-	tm.ExpectClusterStatusUpdate(tc.expectStatusUpdate)
+	statusWriter := testingfake.StatusWriterRecorder{}
+	tm.MockClient.EXPECT().Status().Return(&statusWriter)
 	tm.ExpectEvent(tc.expectEvent)
 	tm.ExpectEvent(tc.expectEventAux)
 	tm.ExpectRestart(tc.expectRestart, "crd")
@@ -340,6 +342,8 @@ func (tc crdTestCase) run(t *testing.T) {
 				Name: v1.CRDClusterConfigName,
 			},
 		})
+
+	statusWriter.Check(t, tc.expectStatusUpdate)
 	if err != nil {
 		t.Errorf("unexpected reconciliation error: %v", err)
 	}

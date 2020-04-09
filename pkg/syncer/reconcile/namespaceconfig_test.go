@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/syncer/metrics"
+	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/golang/mock/gomock"
@@ -216,7 +217,8 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			tm.ExpectUpdate(tc.expectUpdate)
 			tm.ExpectDelete(tc.expectDelete)
 
-			tm.ExpectNamespaceStatusUpdate(tc.expectStatusUpdate)
+			statusWriter := testingfake.StatusWriterRecorder{}
+			tm.MockClient.EXPECT().Status().Return(&statusWriter)
 			tm.ExpectEvent(tc.expectEvent)
 
 			_, err := testReconciler.Reconcile(
@@ -228,6 +230,8 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
+
+			statusWriter.Check(t, tc.expectStatusUpdate)
 		})
 	}
 }
@@ -358,7 +362,8 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 
 			tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, nil)
 
-			tm.ExpectNamespaceStatusUpdate(tc.wantStatusUpdate)
+			statusWriter := testingfake.StatusWriterRecorder{}
+			tm.MockClient.EXPECT().Status().Return(&statusWriter)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -366,9 +371,12 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 						Name: tc.namespace.Name,
 					},
 				})
+
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
+
+			statusWriter.Check(t, tc.wantStatusUpdate)
 		})
 	}
 }
@@ -386,9 +394,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		wantNamespaceUpdate *corev1.Namespace
 		// The objects that got deleted in the namespace.
 		wantDelete runtime.Object
-		// This is what the NamespaceConfig resource should look like (with
-		// updated Status field) on the cluster.
-		wantStatusUpdate *v1.NamespaceConfig
 		// The events that are expected to be emitted as the result of the
 		// operation.
 		wantEvent *syncertesting.Event
@@ -527,8 +532,6 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			tm.ExpectDelete(tc.wantDelete)
 
 			tm.ExpectEvent(tc.wantEvent)
-
-			tm.ExpectNamespaceStatusUpdate(tc.wantStatusUpdate)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

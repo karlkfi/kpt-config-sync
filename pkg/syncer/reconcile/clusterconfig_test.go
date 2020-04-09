@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -210,7 +211,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm.ExpectDelete(tc.expectDelete)
 
 				tm.ExpectClusterClientGet(clusterCfg)
-				tm.ExpectClusterStatusUpdate(tc.expectStatusUpdate)
+				statusWriter := testingfake.StatusWriterRecorder{}
+				tm.MockClient.EXPECT().Status().Return(&statusWriter)
 				tm.ExpectEvent(tc.expectEvent)
 
 				_, err := testReconciler.Reconcile(
@@ -219,6 +221,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 							Name: v1.ClusterConfigName,
 						},
 					})
+
+				statusWriter.Check(t, tc.expectStatusUpdate)
 				if err != nil {
 					t.Errorf("unexpected reconciliation error: %v", err)
 				}
@@ -277,7 +281,10 @@ func TestInvalidClusterConfig(t *testing.T) {
 			tm.ExpectClusterCacheGet(tc.clusterConfig)
 
 			tm.ExpectClusterClientGet(tc.clusterConfig)
-			tm.ExpectClusterStatusUpdate(tc.wantStatusUpdate)
+
+			statusWriter := testingfake.StatusWriterRecorder{}
+			tm.MockClient.EXPECT().Status().Return(&statusWriter)
+
 			tm.ExpectEvent(tc.wantEvent)
 
 			_, err := testReconciler.Reconcile(
@@ -289,6 +296,8 @@ func TestInvalidClusterConfig(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
+
+			statusWriter.Check(t, tc.wantStatusUpdate)
 		})
 	}
 }
