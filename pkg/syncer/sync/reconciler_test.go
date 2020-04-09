@@ -6,12 +6,15 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	utilmocks "github.com/google/nomos/pkg/util/testing/mocks"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,33 +41,33 @@ func TestReconcile(t *testing.T) {
 			name: "update state for one sync",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("", "Deployment", ""),
+					makeSync(kinds.Deployment().GroupKind(), ""),
 				},
 			},
 			wantStatusUpdates: []v1.Sync{
-				makeSync("", "Deployment", v1.Syncing),
+				makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
 			},
 		},
 		{
 			name: "update state for multiple syncs",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("rbac.authorization.k8s.io", "Role", ""),
-					makeSync("", "Deployment", ""),
-					makeSync("", "ConfigMap", ""),
+					makeSync(kinds.Role().GroupKind(), ""),
+					makeSync(kinds.Deployment().GroupKind(), ""),
+					makeSync(kinds.ConfigMap().GroupKind(), ""),
 				},
 			},
 			wantStatusUpdates: []v1.Sync{
-				makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
-				makeSync("", "Deployment", v1.Syncing),
-				makeSync("", "ConfigMap", v1.Syncing),
+				makeSync(kinds.Role().GroupKind(), v1.Syncing),
+				makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
+				makeSync(kinds.ConfigMap().GroupKind(), v1.Syncing),
 			},
 		},
 		{
 			name: "don't update state for one sync when unnecessary",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("", "Deployment", v1.Syncing),
+					makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
 				},
 			},
 		},
@@ -72,9 +75,9 @@ func TestReconcile(t *testing.T) {
 			name: "don't update state for multiple syncs when unnecessary",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("rbac.authorization.k8s.io", "Role", v1.Syncing),
-					makeSync("", "Deployment", v1.Syncing),
-					makeSync("", "ConfigMap", v1.Syncing),
+					makeSync(kinds.Role().GroupKind(), v1.Syncing),
+					makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
+					makeSync(kinds.ConfigMap().GroupKind(), v1.Syncing),
 				},
 			},
 		},
@@ -82,26 +85,26 @@ func TestReconcile(t *testing.T) {
 			name: "only update syncs with state change",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("", "Secret", v1.Syncing),
-					makeSync("", "Service", v1.Syncing),
-					makeSync("", "Deployment", ""),
+					makeSync(schema.GroupKind{Kind: "Secret"}, v1.Syncing),
+					makeSync(schema.GroupKind{Kind: "Service"}, v1.Syncing),
+					makeSync(kinds.Deployment().GroupKind(), ""),
 				},
 			},
 			wantStatusUpdates: []v1.Sync{
-				makeSync("", "Deployment", v1.Syncing),
+				makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
 			},
 		},
 		{
 			name: "finalize sync that is pending delete",
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					withDeleteTimestamp(withFinalizer(makeSync("", "Deployment", v1.Syncing))),
+					withDeleteTimestamp(withFinalizer(makeSync(kinds.Deployment().GroupKind(), v1.Syncing))),
 				},
 			},
 			wantUpdateList: []updateList{
 				{
-					update: withDeleteTimestamp(makeSync("", "Deployment", v1.Syncing)),
-					list:   unstructuredList(schema.GroupVersionKind{Version: "v1", Kind: "DeploymentList"}),
+					update: withDeleteTimestamp(makeSync(kinds.Deployment().GroupKind(), v1.Syncing)),
+					list:   unstructuredList(kinds.Deployment().GroupVersion().WithKind("DeploymentList")),
 				},
 			},
 		},
@@ -110,11 +113,11 @@ func TestReconcile(t *testing.T) {
 			reconcileRequestName: ForceRestart,
 			actualSyncs: v1.SyncList{
 				Items: []v1.Sync{
-					makeSync("", "Deployment", ""),
+					makeSync(kinds.Deployment().GroupKind(), ""),
 				},
 			},
 			wantStatusUpdates: []v1.Sync{
-				makeSync("", "Deployment", v1.Syncing),
+				makeSync(kinds.Deployment().GroupKind(), v1.Syncing),
 			},
 			wantForceRestart: true,
 		},
@@ -129,7 +132,14 @@ func TestReconcile(t *testing.T) {
 			mockStatusClient := mocks.NewMockStatusWriter(mockCtrl)
 
 			syncsReader := fake.SyncCacheReader(tc.actualSyncs)
-			mockDiscovery := mocks.NewMockDiscoveryInterface(mockCtrl)
+			mockDiscovery := fake.NewDiscoveryClient(
+				kinds.ConfigMap(),
+				kinds.Deployment(),
+				corev1.SchemeGroupVersion.WithKind("Secret"),
+				corev1.SchemeGroupVersion.WithKind("Service"),
+				kinds.Role(),
+				rbacv1beta1.SchemeGroupVersion.WithKind("Role"),
+			)
 			mockManager := utilmocks.NewMockRestartableManager(mockCtrl)
 
 			testReconciler := &MetaReconciler{
@@ -144,44 +154,6 @@ func TestReconcile(t *testing.T) {
 				now: syncertesting.Now,
 			}
 
-			mockDiscovery.EXPECT().
-				ServerResources().Return(
-				[]*metav1.APIResourceList{
-					{
-						GroupVersion: "/v1",
-						APIResources: []metav1.APIResource{
-							{
-								Kind: "ConfigMap",
-							},
-							{
-								Kind: "Deployment",
-							},
-							{
-								Kind: "Secret",
-							},
-							{
-								Kind: "Service",
-							},
-						},
-					},
-					{
-						GroupVersion: "rbac.authorization.k8s.io/v1",
-						APIResources: []metav1.APIResource{
-							{
-								Kind: "Role",
-							},
-						},
-					},
-					{
-						GroupVersion: "rbac.authorization.k8s.io/v1beta1",
-						APIResources: []metav1.APIResource{
-							{
-								Kind: "Role",
-							},
-						},
-					},
-				}, nil)
-
 			mockManager.EXPECT().Restart(gomock.Any(), gomock.Eq(tc.wantForceRestart))
 			for _, wantUpdateList := range tc.wantUpdateList {
 				// Updates involve first getting the resource from API Server.
@@ -189,9 +161,6 @@ func TestReconcile(t *testing.T) {
 					Get(gomock.Any(), gomock.Any(), gomock.Any())
 				mockClient.EXPECT().
 					Update(gomock.Any(), gomock.Eq(&wantUpdateList.update))
-
-				mockClient.EXPECT().
-					List(gomock.Any(), gomock.Eq(&wantUpdateList.list))
 			}
 
 			mockClient.EXPECT().Status().Times(len(tc.wantStatusUpdates)).Return(mockStatusClient)
@@ -215,8 +184,8 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func makeSync(group, kind string, state v1.SyncState) v1.Sync {
-	s := *v1.NewSync(schema.GroupKind{Group: group, Kind: kind})
+func makeSync(gk schema.GroupKind, state v1.SyncState) v1.Sync {
+	s := *v1.NewSync(gk)
 	if state != "" {
 		s.Status = v1.SyncStatus{Status: state}
 	}

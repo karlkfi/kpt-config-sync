@@ -41,7 +41,7 @@ type MetaReconciler struct {
 	// reconcilers in the manager.
 	syncCache client.Reader
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
-	discoveryClient discovery.DiscoveryInterface
+	discoveryClient utildiscovery.ServerResourcer
 	// builder is used to recreate controllers for watched GroupVersionKinds.
 	builder *syncAwareBuilder
 	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
