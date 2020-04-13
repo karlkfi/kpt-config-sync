@@ -96,3 +96,32 @@ const (
 	// HierarchyModeDefault is the default value. Default behavior is type-specific.
 	HierarchyModeDefault = HierarchyModeType("")
 )
+
+// ACM-specific reasons for recorded Kubernetes Events.
+const (
+	// EventReasonReconcileComplete reports that reconcile succeeded.
+	EventReasonReconcileComplete = "ReconcileComplete"
+	// EventReasonCRDChange reports that the set of CRDs available on the cluster
+	// changed.
+	EventReasonCRDChange = "CRDChange"
+	// EventReasonStatusUpdateFailed reports that the Syncer was unable to update
+	// the status fields of ACM resources.
+	EventReasonStatusUpdateFailed = "StatusUpdateFailed"
+	// EventReasonInvalidAnnotation reports that there was an issue syncing due to
+	// an invalid annotation on a resource.
+	EventReasonInvalidAnnotation = "InvalidAnnotation"
+	// EventReasonInvalidClusterConfig reports that there is a ClusterConfig on
+	// the cluster with an unrecognized name.
+	EventReasonInvalidClusterConfig = "InvalidClusterConfig"
+	// EventReasonInvalidManagementAnnotation reports that syncing a specific Namespace
+	// failed due to it having an invalid management annotation.
+	//
+	// TODO(willbeason): Should the reason be "InvalidManagementAnnotation"?
+	EventReasonInvalidManagementAnnotation = "InvalidManagementLabel"
+	// EventReasonNamespaceCreateFailed reports the syncer was unable to sync
+	// a Namespace and its resources due to being unable to create the Namespace.
+	EventReasonNamespaceCreateFailed = "NamespaceCreateFailed"
+	// EventReasonNamespaceUpdateFailed reports that the syncer was unable to
+	// update the resources in a specific Namespace.
+	EventReasonNamespaceUpdateFailed = "NamespaceUpdateFailed"
+)

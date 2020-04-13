@@ -119,7 +119,6 @@ type NamespaceConfig struct {
 // NamespaceConfigSpec contains all the information about a config linkage.
 // +protobuf=true
 type NamespaceConfigSpec struct {
-
 	// Token indicates the version of the NamespaceConfig last imported from the source of truth.
 	// +optional
 	Token string `json:"token,omitempty"`

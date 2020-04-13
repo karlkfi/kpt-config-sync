@@ -61,12 +61,7 @@ var (
 	namespaceCfgSynced = namespaceConfig(eng, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 		syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken())
 
-	managedNamespaceReconcileComplete = &syncertesting.Event{
-		Kind:    corev1.EventTypeNormal,
-		Reason:  "ReconcileComplete",
-		Varargs: true,
-		Obj:     namespaceCfg,
-	}
+	managedNamespaceReconcileComplete = testingfake.NewEvent(namespaceCfg, corev1.EventTypeNormal, v1.EventReasonReconcileComplete)
 )
 
 func TestManagedNamespaceConfigReconcile(t *testing.T) {
@@ -78,14 +73,14 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 		expectUpdate       *syncertesting.Diff
 		expectDelete       runtime.Object
 		expectStatusUpdate *v1.NamespaceConfig
-		expectEvent        *syncertesting.Event
+		wantEvent          *testingfake.Event
 	}{
 		{
 			name:               "create from declared state",
 			declared:           deployment(appsv1.RollingUpdateDeploymentStrategyType),
 			expectCreate:       deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:               "do not create if management disabled",
@@ -96,12 +91,9 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			name:               "do not create if management invalid",
 			declared:           deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent: &syncertesting.Event{
-				Kind:   corev1.EventTypeWarning,
-				Reason: "InvalidAnnotation",
-				Obj: syncertesting.ToUnstructured(t, syncertesting.Converter, deployment(appsv1.RollingUpdateDeploymentStrategyType,
-					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation)),
-			},
+			wantEvent: testingfake.NewEvent(
+				deployment(appsv1.RollingUpdateDeploymentStrategyType),
+				corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
 		},
 		{
 			name:     "update to declared state",
@@ -112,7 +104,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:     "update to declared state even if actual managed unset",
@@ -123,7 +115,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:     "update to declared state even if actual managed invalid",
@@ -134,19 +126,16 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:               "do not update if declared managed invalid",
 			declared:           deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			actual:             deployment(appsv1.RecreateDeploymentStrategyType),
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent: &syncertesting.Event{
-				Kind:   corev1.EventTypeWarning,
-				Reason: "InvalidAnnotation",
-				Obj: syncertesting.ToUnstructured(t, syncertesting.Converter, deployment(appsv1.RollingUpdateDeploymentStrategyType,
-					syncertesting.ManagementInvalid, syncertesting.TokenAnnotation)),
-			},
+			wantEvent: testingfake.NewEvent(
+				deployment(appsv1.RollingUpdateDeploymentStrategyType),
+				corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
 		},
 		{
 			name:     "update to unmanaged",
@@ -157,7 +146,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:               "do not update if unmanaged",
@@ -170,7 +159,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			actual:             deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			expectDelete:       deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementEnabled),
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 		{
 			name:               "do not delete if unmanaged",
@@ -185,7 +174,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				Actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			},
 			expectStatusUpdate: namespaceCfgSynced,
-			expectEvent:        managedNamespaceReconcileComplete,
+			wantEvent:          managedNamespaceReconcileComplete,
 		},
 	}
 
@@ -202,8 +191,9 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
+			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectNamespaceCacheGet(namespaceCfg, managedNamespace)
 
@@ -218,7 +208,6 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 
 			statusWriter := testingfake.StatusWriterRecorder{}
 			tm.MockClient.EXPECT().Status().Return(&statusWriter)
-			tm.ExpectEvent(tc.expectEvent)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -230,6 +219,11 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
 
+			if tc.wantEvent != nil {
+				fakeEventRecorder.Check(t, *tc.wantEvent)
+			} else {
+				fakeEventRecorder.Check(t)
+			}
 			statusWriter.Check(t, tc.expectStatusUpdate)
 		})
 	}
@@ -245,7 +239,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 		declared            runtime.Object
 		actual              runtime.Object
 		wantDelete          runtime.Object
-		wantEvent           *syncertesting.Event
+		wantEvent           *testingfake.Event
 	}{
 		{
 			name:                "clean up unmanaged Namespace with namespaceconfig",
@@ -266,12 +260,8 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			namespace:        namespace("eng"),
 			wantStatusUpdate: namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
 			actual:           deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
-			wantEvent: &syncertesting.Event{
-				Kind:    corev1.EventTypeNormal,
-				Reason:  "ReconcileComplete",
-				Obj:     namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
-				Varargs: true,
-			},
+			wantEvent: testingfake.NewEvent(namespaceConfig("eng", v1.StateSynced),
+				corev1.EventTypeNormal, v1.EventReasonReconcileComplete),
 			wantDelete: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 		},
 	}
@@ -289,8 +279,9 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter))
+			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
@@ -304,8 +295,6 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 				tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual)
 			}
 
-			tm.ExpectEvent(tc.wantEvent)
-
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -314,6 +303,11 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 				})
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
+			}
+			if tc.wantEvent != nil {
+				fakeEventRecorder.Check(t, *tc.wantEvent)
+			} else {
+				fakeEventRecorder.Check(t)
 			}
 		})
 	}
@@ -350,8 +344,9 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
+			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
@@ -375,6 +370,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
 
+			fakeEventRecorder.Check(t)
 			statusWriter.Check(t, tc.wantStatusUpdate)
 		})
 	}
@@ -395,7 +391,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		wantDelete runtime.Object
 		// The events that are expected to be emitted as the result of the
 		// operation.
-		wantEvent *syncertesting.Event
+		wantEvent *testingfake.Event
 		// By default all tests only sync Deployments.
 		// Specify this to override the resources being synced.
 		toSyncOverride schema.GroupVersionKind
@@ -443,12 +439,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				core.Namespace("default"),
 				syncertesting.ManagementEnabled,
 				core.Name("my-deployment")),
-			wantEvent: &syncertesting.Event{
-				Kind:    corev1.EventTypeNormal,
-				Reason:  "ReconcileComplete",
-				Varargs: true,
-				Obj:     &v1.NamespaceConfig{},
-			},
+			wantEvent: testingfake.NewEvent(namespaceConfig("", v1.StateUnknown),
+				corev1.EventTypeNormal, v1.EventReasonReconcileComplete),
 		},
 		{
 			name: "kube-system namespace is not deleted when namespace config is removed",
@@ -493,12 +485,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				core.Namespace("kube-system"),
 				syncertesting.ManagementEnabled,
 				core.Name("my-deployment")),
-			wantEvent: &syncertesting.Event{
-				Kind:    corev1.EventTypeNormal,
-				Reason:  "ReconcileComplete",
-				Varargs: true,
-				Obj:     &v1.NamespaceConfig{},
-			},
+			wantEvent: testingfake.NewEvent(namespaceConfig("", v1.StateUnknown),
+				corev1.EventTypeNormal, v1.EventReasonReconcileComplete),
 		},
 	}
 
@@ -517,8 +505,9 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
+			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
 
@@ -530,14 +519,17 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			tm.ExpectNamespaceConfigDelete(tc.namespaceConfig)
 			tm.ExpectDelete(tc.wantDelete)
 
-			tm.ExpectEvent(tc.wantEvent)
-
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name: tc.namespace.Name,
 					},
 				})
+			if tc.wantEvent != nil {
+				fakeEventRecorder.Check(t, *tc.wantEvent)
+			} else {
+				fakeEventRecorder.Check(t)
+			}
 			if err != nil {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}

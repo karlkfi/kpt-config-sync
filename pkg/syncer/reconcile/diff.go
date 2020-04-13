@@ -48,5 +48,5 @@ func warnInvalidAnnotationResource(recorder record.EventRecorder, declared *unst
 		declared.GetAnnotations()[v1.ResourceManagementKey],
 	)
 	glog.Warning(err)
-	recorder.Event(declared, corev1.EventTypeWarning, "InvalidAnnotation", err.Error())
+	recorder.Event(declared, corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation, err.Error())
 }

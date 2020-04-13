@@ -37,7 +37,12 @@ const reconcileTimeout = time.Minute * 5
 // from the repo. Instead of deleting the namespace and its resources, we apply a change that
 // removes all managed resources from the namespace, but does not attempt to delete the namespace.
 // TODO(filmil): See if there is an easy way to hide this nil object.
-var reservedNamespaceConfig = &v1.NamespaceConfig{}
+var reservedNamespaceConfig = &v1.NamespaceConfig{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       kinds.NamespaceConfig().Kind,
+		APIVersion: kinds.NamespaceConfig().GroupVersion().String(),
+	},
+}
 
 // NamespaceConfigReconciler reconciles a NamespaceConfig object.
 type NamespaceConfigReconciler struct {
@@ -196,7 +201,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 		r.recorder.Eventf(
 			config,
 			corev1.EventTypeWarning,
-			"InvalidManagementLabel",
+			v1.EventReasonInvalidManagementAnnotation,
 			"Namespace %q has invalid management annotation %q",
 			name, value,
 		)
@@ -288,12 +293,12 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 
 	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", name))
-		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
+		r.recorder.Eventf(config, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update NamespaceConfig status: %s", err)
 	}
 
 	if errBuilder == nil && reconcileCount > 0 && len(syncErrs) == 0 {
-		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
+		r.recorder.Eventf(config, corev1.EventTypeNormal, v1.EventReasonReconcileComplete,
 			"NamespaceConfig %q was successfully reconciled: %d changes", name, reconcileCount)
 	}
 	return errBuilder
@@ -393,7 +398,7 @@ func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 
 	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
 	if err != nil {
-		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceCreateFailed",
+		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, v1.EventReasonNamespaceCreateFailed,
 			"failed to create namespace: %q", err)
 		return errors.Wrapf(err, "failed to create namespace %q", namespaceConfig.Name)
 	}
@@ -417,7 +422,7 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 	metrics.Operations.WithLabelValues("update", actual.Kind, metrics.StatusLabel(err)).Inc()
 
 	if err != nil {
-		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, "NamespaceUpdateFailed",
+		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, v1.EventReasonNamespaceUpdateFailed,
 			"failed to update namespace: %q", err)
 		return errors.Wrapf(err, "failed to update namespace %q", namespaceConfig.Name)
 	}

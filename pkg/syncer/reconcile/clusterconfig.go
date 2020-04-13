@@ -87,13 +87,13 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 
 	if name.Name != v1.ClusterConfigName {
 		err := errors.Errorf("ClusterConfig resource has invalid name %q. To fix, delete the ClusterConfig.", name.Name)
-		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "InvalidClusterConfig", err.Error())
+		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonInvalidClusterConfig, err.Error())
 		glog.Warning(err)
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
 		syncErrs := []v1.ConfigManagementError{NewConfigManagementError(clusterConfig, err)}
 		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil); err2 != nil {
-			r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
+			r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 				"failed to update cluster config status: %v", err2)
 		}
 		return nil
@@ -171,12 +171,12 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 	cmErrs := status.ToCME(errBuilder)
 	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, cmErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, err)
-		r.recorder.Eventf(config, corev1.EventTypeWarning, "StatusUpdateFailed",
+		r.recorder.Eventf(config, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update cluster config status: %v", err)
 	}
 
 	if errBuilder == nil && reconcileCount > 0 {
-		r.recorder.Eventf(config, corev1.EventTypeNormal, "ReconcileComplete",
+		r.recorder.Eventf(config, corev1.EventTypeNormal, v1.EventReasonReconcileComplete,
 			"cluster config was successfully reconciled: %d changes", reconcileCount)
 	}
 	return errBuilder

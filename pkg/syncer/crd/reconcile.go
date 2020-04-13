@@ -226,7 +226,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	if reconcileCount > 0 {
 		needRestart = true
 		// We've updated CRDs on the cluster; restart the NamespaceConfig and ClusterConfig controllers.
-		r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, "ReconcileComplete",
+		r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, v1.EventReasonReconcileComplete,
 			"crd cluster config was successfully reconciled: %d changes", reconcileCount)
 		glog.Info("Triggering restart due to repo CRD change")
 	}
@@ -238,7 +238,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		allCrds := r.toCrdSet(crdList)
 		if !reflect.DeepEqual(r.allCrds, allCrds) {
 			needRestart = true
-			r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, "CRDChange",
+			r.recorder.Eventf(clusterConfig, corev1.EventTypeNormal, v1.EventReasonCRDChange,
 				"crds changed on the cluster restarting syncer controllers")
 			glog.Info("Triggering restart due to external CRD change")
 		}
@@ -250,7 +250,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	}
 
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, clusterConfig.Status.ResourceConditions); err != nil {
-		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, "StatusUpdateFailed",
+		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update ClusterConfig status: %v", err)
 		mErr = status.Append(mErr, err)
 	}

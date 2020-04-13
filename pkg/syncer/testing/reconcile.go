@@ -27,8 +27,6 @@ const Token = "b38239ea8f58eaed17af6734bd6a025eeafccda1"
 
 var (
 	anyContext = gomock.Any()
-	anyMessage = gomock.Any()
-	anyArgs    = gomock.Any()
 
 	// Converter is an unstructured.Unstructured converter used for testing.
 	Converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
@@ -55,26 +53,24 @@ var (
 // NewTestMocks returns a new TestMocks.
 func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
 	return TestMocks{
-		t:            t,
-		MockCtrl:     mockCtrl,
-		MockClient:   mocks.NewMockClient(mockCtrl),
-		MockApplier:  mocks.NewMockApplier(mockCtrl),
-		MockCache:    mocks.NewMockGenericCache(mockCtrl),
-		MockRecorder: mocks.NewMockEventRecorder(mockCtrl),
-		MockSignal:   mocks.NewMockRestartSignal(mockCtrl),
+		t:           t,
+		MockCtrl:    mockCtrl,
+		MockClient:  mocks.NewMockClient(mockCtrl),
+		MockApplier: mocks.NewMockApplier(mockCtrl),
+		MockCache:   mocks.NewMockGenericCache(mockCtrl),
+		MockSignal:  mocks.NewMockRestartSignal(mockCtrl),
 	}
 }
 
 // TestMocks is a helper used for unit testing controller Reconcile invocation. It wraps all the mocks
 // needed to verify common reconcile expectations.
 type TestMocks struct {
-	t            *testing.T
-	MockCtrl     *gomock.Controller
-	MockClient   *mocks.MockClient
-	MockApplier  *mocks.MockApplier
-	MockCache    *mocks.MockGenericCache
-	MockRecorder *mocks.MockEventRecorder
-	MockSignal   *mocks.MockRestartSignal
+	t           *testing.T
+	MockCtrl    *gomock.Controller
+	MockClient  *mocks.MockClient
+	MockApplier *mocks.MockApplier
+	MockCache   *mocks.MockGenericCache
+	MockSignal  *mocks.MockRestartSignal
 }
 
 // ExpectClusterCacheGet stubs the ClusterConfig being fetched from the Cache and verifies we request it.
@@ -192,24 +188,6 @@ func (tm *TestMocks) ExpectDelete(obj runtime.Object) {
 		Return(true, nil)
 }
 
-// ExpectEvent verifies the event was fired.
-func (tm *TestMocks) ExpectEvent(event *Event) {
-	if event == nil {
-		return
-	}
-	if event.Varargs {
-		tm.MockRecorder.EXPECT().
-			Eventf(Eq(tm.t, "ExpectEventVarObj", event.Obj),
-				Eq(tm.t, "ExpectEventVarKind", event.Kind),
-				Eq(tm.t, "ExpectEventVarReason", event.Reason), anyMessage, anyArgs)
-	} else {
-		tm.MockRecorder.EXPECT().
-			Event(Eq(tm.t, "ExpectEventObj", event.Obj),
-				Eq(tm.t, "ExpectEvent", event.Kind),
-				Eq(tm.t, "ExpectEvent", event.Reason), anyMessage)
-	}
-}
-
 // ExpectRestart verifies we trigger the Sync controller to restart the SubManager.
 func (tm *TestMocks) ExpectRestart(expectRestart bool, source string) {
 	if !expectRestart {
@@ -279,17 +257,6 @@ func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
 type Diff struct {
 	Declared runtime.Object
 	Actual   runtime.Object
-}
-
-// Event represents a K8S Event that was emitted as result of the reconcile.
-type Event struct {
-	// corev1.EventTypeNormal/corev1.EventTypeWarning
-	Kind   string
-	Reason string
-	// set to true if the Event was produced with Eventf (in contrast to Event)
-	Varargs bool
-
-	Obj runtime.Object
 }
 
 // ClusterConfigImportToken adds an import token to a ClusterConfig.
