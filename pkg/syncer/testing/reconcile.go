@@ -58,7 +58,6 @@ func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
 		MockClient:  mocks.NewMockClient(mockCtrl),
 		MockApplier: mocks.NewMockApplier(mockCtrl),
 		MockCache:   mocks.NewMockGenericCache(mockCtrl),
-		MockSignal:  mocks.NewMockRestartSignal(mockCtrl),
 	}
 }
 
@@ -70,7 +69,6 @@ type TestMocks struct {
 	MockClient  *mocks.MockClient
 	MockApplier *mocks.MockApplier
 	MockCache   *mocks.MockGenericCache
-	MockSignal  *mocks.MockRestartSignal
 }
 
 // ExpectClusterCacheGet stubs the ClusterConfig being fetched from the Cache and verifies we request it.
@@ -186,15 +184,6 @@ func (tm *TestMocks) ExpectDelete(obj runtime.Object) {
 	tm.MockApplier.EXPECT().
 		Delete(anyContext, Eq(tm.t, "ExpectDelete", ToUnstructured(tm.t, Converter, obj))).
 		Return(true, nil)
-}
-
-// ExpectRestart verifies we trigger the Sync controller to restart the SubManager.
-func (tm *TestMocks) ExpectRestart(expectRestart bool, source string) {
-	if !expectRestart {
-		return
-	}
-
-	tm.MockSignal.EXPECT().Restart(Eq(tm.t, "ExpectRestart", source))
 }
 
 // ToUnstructured converts the object to an unstructured.Unstructured.

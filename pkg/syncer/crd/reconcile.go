@@ -32,6 +32,8 @@ const (
 	versionV1        = "v1"
 	versionV1beta1   = "v1beta1"
 	reconcileTimeout = time.Minute * 5
+
+	restartSignal = "crd"
 )
 
 var _ reconcile.Reconciler = &Reconciler{}
@@ -246,7 +248,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	}
 
 	if needRestart {
-		r.signal.Restart("crd")
+		r.signal.Restart(restartSignal)
 	}
 
 	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, clusterConfig.Status.ResourceConditions); err != nil {

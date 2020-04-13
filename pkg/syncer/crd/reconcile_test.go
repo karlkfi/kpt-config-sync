@@ -292,8 +292,10 @@ func (tc crdTestCase) run(t *testing.T) {
 	tm := syncertesting.NewTestMocks(t, mockCtrl)
 	fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 	fakeEventRecorder := testingfake.NewEventRecorder(t)
+	fakeSignal := testingfake.RestartSignalRecorder{}
+
 	testReconciler := NewReconciler(client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder,
-		fakeDecoder, syncertesting.Now, tm.MockSignal)
+		fakeDecoder, syncertesting.Now, &fakeSignal)
 	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds).Items)
 
 	tm.ExpectClusterCacheGet(clusterCfg)
@@ -315,8 +317,6 @@ func (tc crdTestCase) run(t *testing.T) {
 	statusWriter := testingfake.StatusWriterRecorder{}
 	tm.MockClient.EXPECT().Status().Return(&statusWriter)
 
-	tm.ExpectRestart(tc.expectRestart, "crd")
-
 	_, err := testReconciler.Reconcile(
 		runtimereconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -324,6 +324,11 @@ func (tc crdTestCase) run(t *testing.T) {
 			},
 		})
 
+	if tc.expectRestart {
+		fakeSignal.Check(t, restartSignal)
+	} else {
+		fakeSignal.Check(t)
+	}
 	fakeEventRecorder.Check(t, tc.expectEvents...)
 	statusWriter.Check(t, tc.expectStatusUpdate)
 	if err != nil {
