@@ -45,6 +45,7 @@ type clientApplier struct {
 	openAPIResources openapi.Resources
 	client           *client.Client
 	fights           fightDetector
+	fLogger          fightLogger
 }
 
 var _ Applier = &clientApplier{}
@@ -72,6 +73,7 @@ func NewApplier(cfg *rest.Config, client *client.Client) (Applier, error) {
 		openAPIResources: oa,
 		client:           client,
 		fights:           newFightDetector(),
+		fLogger:          newFightLogger(),
 	}, nil
 }
 
@@ -83,20 +85,29 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
-	c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS("")))
+	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
+		if c.fLogger.logFight(time.Now(), fight) {
+			glog.Warningf("Fight detected on create of %s/%s.", intendedState.GetNamespace(), intendedState.GetName())
+		}
+	}
 	return true, nil
 }
 
 // Update implements Applier.
 func (c *clientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
-	updated, err := c.update(ctx, intendedState, currentState)
+	patch, err := c.update(ctx, intendedState, currentState)
 	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
-
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
 	}
+
+	updated := patch != nil && !isNoOpPatch(patch)
 	if updated {
-		c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS("")))
+		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
+			if c.fLogger.logFight(time.Now(), fight) {
+				glog.Warningf("Fight detected on update of %s/%s which applied the following patch:\n%s", intendedState.GetNamespace(), intendedState.GetName(), string(patch))
+			}
+		}
 	}
 	return updated, nil
 }
@@ -109,7 +120,11 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
 	}
-	c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.FromOS("")))
+	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.FromOS(""))); fight != nil {
+		if c.fLogger.logFight(time.Now(), fight) {
+			glog.Warningf("Fight detected on delete of %s/%s.", obj.GetNamespace(), obj.GetName())
+		}
+	}
 	return true, nil
 }
 
@@ -138,41 +153,40 @@ func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
-func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, error) {
+func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
 	if cErr != nil {
-		return false, errors.Errorf("could not serialize current configuration from %v", currentState)
+		return nil, errors.Errorf("could not serialize current configuration from %v", currentState)
 	}
 
 	// Retrieve the last applied configuration of the object from the annotation.
 	previous, oErr := util.GetOriginalConfiguration(currentState)
 	if oErr != nil {
-		return false, errors.Errorf("could not retrieve original configuration from %v", currentState)
+		return nil, errors.Errorf("could not retrieve original configuration from %v", currentState)
 	}
 
 	// Serialize the modified configuration of the object, populating the last applied annotation as well.
 	modified, mErr := util.GetModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
 	if mErr != nil {
-		return false, errors.Errorf("could not serialize intended configuration from %v", intendedState)
+		return nil, errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}
 
 	resourceClient, rErr := c.clientFor(intendedState)
 	if rErr != nil {
-		return false, nil
+		return nil, nil
 	}
 
 	name, resourceDescription := nameDescription(intendedState)
 	gvk := intendedState.GroupVersionKind()
-	//TODO(b/b152322972): Add unit tests for "updated" logic.
-	var updated bool
+	//TODO(b/b152322972): Add unit tests for patch return value.
 	var err error
 
 	// Attempt a strategic patch first.
 	patch := c.calculateStrategic(gvk, previous, modified, current)
 	// If patch is nil, it means we don't have access to the schema.
 	if patch != nil {
-		updated, err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
+		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
 		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
 		// custom resource), so we reset the patch and try again below.
 		if err != nil && apierrors.IsUnsupportedMediaType(err) {
@@ -184,17 +198,17 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	if patch == nil {
 		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
 		if err == nil {
-			updated, err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
+			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
 	if err != nil {
-		return false, errors.Wrap(err, "could not patch")
+		return nil, errors.Wrap(err, "could not patch")
 	}
 	glog.V(1).Infof("Patched %s", resourceDescription)
 	glog.V(3).Infof("Patched with %s", patch)
 
-	return updated, nil
+	return patch, nil
 }
 
 func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous, modified, current []byte) []byte {
@@ -221,29 +235,31 @@ func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous
 	return jsonmergepatch.CreateThreeWayJSONMergePatch(previous, modified, current, preconditions...)
 }
 
+// isNoOpPatch returns true if the given patch is a no-op that should be ignored.
+// TODO(b/152312521): Find a more elegant solution for ignoring noop-like patches.
+func isNoOpPatch(patch []byte) bool {
+	p := string(patch)
+	return p == noOpPatch || p == rmCreationTimestampPatch
+}
+
 // attemptPatch patches resClient with the given patch.
-//
-// Returns (true, nil) if the object was successfully patched.
-// Returns (false, nil) if the patch was a no-op.
-// Returns (false, err) if the patch failed.
 // TODO(b/152322972): Add unit tests for noop logic.
-func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) (bool, error) {
-	if p := string(patch); p == noOpPatch || p == rmCreationTimestampPatch {
-		// TODO(b/152312521): Find a more elegant solution for ignoring noop-like patches.
-		// Avoid doing a noop patch.
-		return false, nil
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
+	if isNoOpPatch(patch) {
+		glog.V(3).Infof("Ignoring no-op patch for %q", name)
+		return nil
 	}
 
 	if err := ctx.Err(); err != nil {
 		// We've already encountered an error, so do not attempt update.
-		return false, status.ResourceWrap(err, "unable to continue updating resource")
+		return status.ResourceWrap(err, "unable to continue updating resource")
 	}
 
 	start := time.Now()
 	_, err := resClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
-	return true, err
+	return err
 }
 
 // resource retrieves the plural resource name for the GroupVersionKind.

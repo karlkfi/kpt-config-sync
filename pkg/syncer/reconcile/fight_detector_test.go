@@ -175,13 +175,13 @@ func TestFightDetector(t *testing.T) {
 
 				aboveThreshold := false
 				for _, update := range updates {
-					nowAbove := fd.markUpdated(now.Add(update), ast.NewFileObject(&u, cmpath.FromSlash("")))
-					aboveThreshold = aboveThreshold || nowAbove
+					fight := fd.markUpdated(now.Add(update), ast.NewFileObject(&u, cmpath.FromSlash("")))
+					aboveThreshold = aboveThreshold || fight != nil
 				}
 				if tc.wantAboveThreshold[o] && !aboveThreshold {
-					t.Errorf("got makeUpdated(%v) = false, want true", o)
+					t.Errorf("got markUpdated(%v) = false, want true", o)
 				} else if !tc.wantAboveThreshold[o] && aboveThreshold {
-					t.Errorf("got makeUpdated(%v) = true, want false", o)
+					t.Errorf("got markUpdated(%v) = true, want false", o)
 				}
 			}
 		})

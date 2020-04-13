@@ -4,7 +4,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,8 +27,8 @@ var fightWarningBuilder = status.NewErrorBuilder("2005")
 
 // fightWarning represents when the Syncer is fighting over a resource with
 // some other process on a Kubernetes cluster.
-func fightWarning(frequency float64, resource id.Resource) status.Error {
-	return fightWarningBuilder.Sprintf("importer excessively updating resource, approximately %d times per minute. "+
+func fightWarning(frequency float64, resource id.Resource) status.ResourceError {
+	return fightWarningBuilder.Sprintf("syncer excessively updating resource, approximately %d times per minute. "+
 		"This may indicate ACM is fighting with another controller over the resource.", int(frequency)).
 		BuildWithResources(resource)
 }
@@ -50,23 +49,18 @@ type fightDetector struct {
 	// fights is a record of how much the Syncer is fighting over any given
 	// API resource.
 	fights map[gknn]*fight
-	// lastLogged is when fightDetector last logged about a given API resource.
-	lastLogged map[gknn]time.Time
 }
 
 func newFightDetector() fightDetector {
 	return fightDetector{
-		fights:     make(map[gknn]*fight),
-		lastLogged: make(map[gknn]time.Time),
+		fights: make(map[gknn]*fight),
 	}
 }
 
 // markUpdated marks that API resource `resource` was updated at time `now`.
-// If the estimated frequency of updates is greater than `fightThreshold`, logs
-// this to glog.Warning. The log message appears at most once per minute.
-//
-// Returns true if the new estimated update frequency is at least `fightThreshold`.
-func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) bool {
+// Returns a ResourceError if the estimated frequency of updates is greater than
+// `fightThreshold`.
+func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) status.ResourceError {
 	i := gknn{
 		gk:        resource.GroupVersionKind().GroupKind(),
 		namespace: resource.GetNamespace(),
@@ -77,13 +71,9 @@ func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) bool {
 		d.fights[i] = &fight{}
 	}
 	if frequency := d.fights[i].markUpdated(now); frequency >= fightThreshold {
-		if now.Sub(d.lastLogged[i]) > time.Minute {
-			glog.Warning(fightWarning(frequency, resource))
-			d.lastLogged[i] = now
-		}
-		return true
+		return fightWarning(frequency, resource)
 	}
-	return false
+	return nil
 }
 
 // gknn uniquely identifies a resource on the API Server with the resource's
