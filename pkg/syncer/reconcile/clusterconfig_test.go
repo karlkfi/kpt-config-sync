@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -199,7 +198,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				defer cancel()
 
 				tm := syncertesting.NewTestMocks(t, mockCtrl)
-				fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
+				fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 				testReconciler := NewClusterConfigReconciler(ctx,
 					client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
@@ -274,7 +273,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			defer cancel()
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
+			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			testReconciler := NewClusterConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 

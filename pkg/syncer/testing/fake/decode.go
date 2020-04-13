@@ -1,4 +1,4 @@
-package mocks
+package fake
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -7,29 +7,29 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ decode.Decoder = &FakeDecoder{}
+var _ decode.Decoder = &Decoder{}
 
-// FakeDecoder is a decoder used for testing.
-type FakeDecoder struct {
+// Decoder is a decoder used for testing.
+type Decoder struct {
 	data map[schema.GroupVersionKind][]*unstructured.Unstructured
 }
 
-// NewFakeDecoder returns a new FakeDecoder.
-func NewFakeDecoder(us []*unstructured.Unstructured) *FakeDecoder {
+// NewDecoder returns a new Decoder.
+func NewDecoder(us []*unstructured.Unstructured) *Decoder {
 	m := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, u := range us {
 		gvk := u.GroupVersionKind()
 		m[gvk] = append(m[gvk], u)
 	}
 
-	return &FakeDecoder{data: m}
+	return &Decoder{data: m}
 }
 
 // UpdateScheme does nothing.
-func (d *FakeDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+func (d *Decoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
 }
 
 // DecodeResources returns fake data.
-func (d *FakeDecoder) DecodeResources(_ []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *Decoder) DecodeResources(_ []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	return d.data, nil
 }

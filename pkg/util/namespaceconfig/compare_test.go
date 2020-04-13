@@ -4,10 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/syncer/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,7 +18,7 @@ type namespaceConfigEqualTestcase struct {
 }
 
 func (t *namespaceConfigEqualTestcase) Run(tt *testing.T) {
-	equal, err := NamespaceConfigsEqual(mocks.NewFakeDecoder(nil), t.lhs, t.rhs)
+	equal, err := NamespaceConfigsEqual(fake.NewDecoder(nil), t.lhs, t.rhs)
 	if err != nil {
 		tt.Fatalf("unexpected error: %v", err)
 	}

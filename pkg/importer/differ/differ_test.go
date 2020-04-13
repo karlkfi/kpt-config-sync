@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/syncer/testing/mocks"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -217,7 +218,7 @@ func TestDiffer(t *testing.T) {
 			}
 
 			err := Update(context.Background(), client.New(mockClient, metrics.APICallDuration),
-				mocks.NewFakeDecoder(nil),
+				fake.NewDecoder(nil),
 				allConfigs(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
 				allConfigs(test.newNodes, test.newClusterConfig, test.newSyncs))
 			if err != nil {

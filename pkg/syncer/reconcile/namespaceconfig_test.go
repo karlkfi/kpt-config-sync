@@ -14,7 +14,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -202,7 +201,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
+			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
@@ -289,7 +288,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			defer cancel()
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter))
+			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter))
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
@@ -350,7 +349,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			defer cancel()
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
+			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 
@@ -517,7 +516,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			defer cancel()
 
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
-			fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
+			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			testReconciler := NewNamespaceConfigReconciler(ctx,
 				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder, fakeDecoder, syncertesting.Now, toSync)
 

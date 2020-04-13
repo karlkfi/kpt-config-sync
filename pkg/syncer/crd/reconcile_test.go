@@ -11,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -309,7 +308,7 @@ func (tc crdTestCase) run(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	tm := syncertesting.NewTestMocks(t, mockCtrl)
-	fakeDecoder := mocks.NewFakeDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
+	fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 	testReconciler := NewReconciler(client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, tm.MockRecorder,
 		fakeDecoder, syncertesting.Now, tm.MockSignal)
 	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds).Items)
