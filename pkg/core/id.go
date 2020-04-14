@@ -1,0 +1,27 @@
+package core
+
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// ID uniquely identifies a resource on an API Server.
+type ID struct {
+	schema.GroupKind
+	client.ObjectKey
+}
+
+// String implements fmt.Stringer.
+func (i ID) String() string {
+	return fmt.Sprintf("%s, %s/%s", i.GroupKind.String(), i.Namespace, i.Name)
+}
+
+// IDOf converts an Object to its ID.
+func IDOf(o Object) ID {
+	return ID{
+		GroupKind: o.GroupVersionKind().GroupKind(),
+		ObjectKey: client.ObjectKey{Namespace: o.GetNamespace(), Name: o.GetName()},
+	}
+}

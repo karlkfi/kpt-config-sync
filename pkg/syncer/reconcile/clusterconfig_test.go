@@ -54,32 +54,32 @@ var (
 
 func TestClusterConfigReconcile(t *testing.T) {
 	testCases := []struct {
-		name               string
-		actual             runtime.Object
-		declared           runtime.Object
-		expectCreate       runtime.Object
-		expectUpdate       *syncertesting.Diff
-		expectDelete       runtime.Object
-		expectStatusUpdate *v1.ClusterConfig
-		wantEvent          *testingfake.Event
+		name         string
+		actual       runtime.Object
+		declared     runtime.Object
+		expectCreate runtime.Object
+		expectUpdate *syncertesting.Diff
+		expectDelete runtime.Object
+		want         *v1.ClusterConfig
+		wantEvent    *testingfake.Event
 	}{
 		{
 			name:     "create from declared state",
 			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			expectCreate: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.TokenAnnotation,
 				syncertesting.ManagementEnabled),
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
-			name:               "do not create if management disabled",
-			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementDisabled),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not create if management disabled",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementDisabled),
+			want:     clusterCfgSynced,
 		},
 		{
-			name:               "do not create if management invalid",
-			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not create if management invalid",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
+			want:     clusterCfgSynced,
 			wantEvent: testingfake.NewEvent(
 				persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid, syncertesting.TokenAnnotation),
 				corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
@@ -92,8 +92,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
 			name:     "update to declared state even if actual managed unset",
@@ -103,8 +103,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
 			name:     "update to declared state even if actual managed invalid",
@@ -114,14 +114,14 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementInvalid),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
-			name:               "do not update if declared management invalid",
-			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
-			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not update if declared management invalid",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			want:     clusterCfgSynced,
 			wantEvent: testingfake.NewEvent(
 				persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid, syncertesting.TokenAnnotation),
 				corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
@@ -134,26 +134,26 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: persistentVolume(corev1.PersistentVolumeReclaimDelete),
 				Actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
-			name:               "do not update if unmanaged",
-			declared:           persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementDisabled),
-			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not update if unmanaged",
+			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementDisabled),
+			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			want:     clusterCfgSynced,
 		},
 		{
-			name:               "delete if managed",
-			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
-			expectDelete:       persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			name:         "delete if managed",
+			actual:       persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
+			expectDelete: persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementEnabled),
+			want:         clusterCfgSynced,
+			wantEvent:    clusterReconcileComplete,
 		},
 		{
-			name:               "do not delete if unmanaged",
-			actual:             persistentVolume(corev1.PersistentVolumeReclaimDelete),
-			expectStatusUpdate: clusterCfgSynced,
+			name:   "do not delete if unmanaged",
+			actual: persistentVolume(corev1.PersistentVolumeReclaimDelete),
+			want:   clusterCfgSynced,
 		},
 		{
 			name:   "unmanage if invalid",
@@ -162,8 +162,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: persistentVolume(corev1.PersistentVolumeReclaimDelete),
 				Actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementInvalid),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			wantEvent:          clusterReconcileComplete,
+			want:      clusterCfgSynced,
+			wantEvent: clusterReconcileComplete,
 		},
 		{
 			name: "resource with owner reference is ignored",
@@ -172,7 +172,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 					"some_operator_config_object",
 					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: "v1"}),
 			),
-			expectStatusUpdate: clusterCfgSynced,
+			want: clusterCfgSynced,
 		},
 	}
 
@@ -190,8 +190,10 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm := syncertesting.NewTestMocks(t, mockCtrl)
 				fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 				fakeEventRecorder := testingfake.NewEventRecorder(t)
+				fakeClient := testingfake.NewClient(t, clusterCfg)
+
 				testReconciler := NewClusterConfigReconciler(ctx,
-					client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
+					client.New(fakeClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 				tm.ExpectClusterCacheGet(clusterCfg)
 				tm.ExpectCacheList(kinds.PersistentVolume(), "", tc.actual)
@@ -199,10 +201,6 @@ func TestClusterConfigReconcile(t *testing.T) {
 				tm.ExpectCreate(tc.expectCreate)
 				tm.ExpectUpdate(tc.expectUpdate)
 				tm.ExpectDelete(tc.expectDelete)
-
-				tm.ExpectClusterClientGet(clusterCfg)
-				statusWriter := testingfake.StatusWriterRecorder{}
-				tm.MockClient.EXPECT().Status().Return(&statusWriter)
 
 				_, err := testReconciler.Reconcile(
 					reconcile.Request{
@@ -216,7 +214,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				} else {
 					fakeEventRecorder.Check(t)
 				}
-				statusWriter.Check(t, tc.expectStatusUpdate)
+				fakeClient.Check(t, tc.want)
 				if err != nil {
 					t.Errorf("unexpected reconciliation error: %v", err)
 				}
@@ -227,15 +225,15 @@ func TestClusterConfigReconcile(t *testing.T) {
 
 func TestInvalidClusterConfig(t *testing.T) {
 	testCases := []struct {
-		name             string
-		clusterConfig    *v1.ClusterConfig
-		wantStatusUpdate *v1.ClusterConfig
-		wantEvent        *testingfake.Event
+		name      string
+		actual    *v1.ClusterConfig
+		want      *v1.ClusterConfig
+		wantEvent *testingfake.Event
 	}{
 		{
-			name:          "error on clusterconfig with invalid name",
-			clusterConfig: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name"))),
-			wantStatusUpdate: clusterConfig(v1.StateError,
+			name:   "error on clusterconfig with invalid name",
+			actual: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name"))),
+			want: clusterConfig(v1.StateError,
 				fake.ClusterConfigMeta(core.Name("some-incorrect-name")),
 				syncertesting.ClusterConfigSyncTime(),
 				clusterSyncError(v1.ConfigManagementError{
@@ -269,20 +267,16 @@ func TestInvalidClusterConfig(t *testing.T) {
 			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
+			fakeClient := testingfake.NewClient(t, tc.actual)
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
-			tm.ExpectClusterCacheGet(tc.clusterConfig)
-
-			tm.ExpectClusterClientGet(tc.clusterConfig)
-
-			statusWriter := testingfake.StatusWriterRecorder{}
-			tm.MockClient.EXPECT().Status().Return(&statusWriter)
+			tm.ExpectClusterCacheGet(tc.actual)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Name: tc.clusterConfig.Name,
+						Name: tc.actual.Name,
 					},
 				})
 			if err != nil {
@@ -294,7 +288,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			} else {
 				fakeEventRecorder.Check(t)
 			}
-			statusWriter.Check(t, tc.wantStatusUpdate)
+			fakeClient.Check(t, tc.want)
 		})
 	}
 }

@@ -55,7 +55,6 @@ func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
 	return TestMocks{
 		t:           t,
 		MockCtrl:    mockCtrl,
-		MockClient:  mocks.NewMockClient(mockCtrl),
 		MockApplier: mocks.NewMockApplier(mockCtrl),
 		MockCache:   mocks.NewMockGenericCache(mockCtrl),
 	}
@@ -66,7 +65,6 @@ func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
 type TestMocks struct {
 	t           *testing.T
 	MockCtrl    *gomock.Controller
-	MockClient  *mocks.MockClient
 	MockApplier *mocks.MockApplier
 	MockCache   *mocks.MockGenericCache
 }
@@ -109,41 +107,6 @@ func (tm *TestMocks) ExpectNamespaceUpdate(intended, actual *unstructured.Unstru
 	}
 	tm.MockApplier.EXPECT().Update(
 		anyContext, Eq(tm.t, "NamespaceUpdate", intended), Eq(tm.t, "NamespaceUpdate", actual))
-}
-
-// ExpectNamespaceConfigDelete verifies that the NamespaceConfig is deleted
-func (tm *TestMocks) ExpectNamespaceConfigDelete(config *v1.NamespaceConfig) {
-	if config == nil {
-		return
-	}
-	tm.MockClient.EXPECT().Delete(anyContext, Eq(tm.t, "NamespaceConfigDelete", config), gomock.Any())
-}
-
-// ExpectClusterClientGet stubs the ClusterConfig being fetched from the Client and verifies we request it.
-func (tm *TestMocks) ExpectClusterClientGet(config *v1.ClusterConfig) {
-	if config == nil {
-		return
-	}
-	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "ClusterClientGet", config))
-}
-
-// ExpectNamespaceConfigClientGet stubs the NamespaceConfig being fetched from the Client and verifies we request it.
-func (tm *TestMocks) ExpectNamespaceConfigClientGet(config *v1.NamespaceConfig) {
-	if config == nil {
-		return
-	}
-	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "NamespaceConfigClientGet", config))
-}
-
-// ExpectNamespaceClientGet stubs the Namespace being fetched from the Client and verifies we request it.
-func (tm *TestMocks) ExpectNamespaceClientGet(namespace *corev1.Namespace) {
-	if namespace == nil {
-		return
-	}
-	tm.MockClient.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceClientGet", namespace))
 }
 
 // ExpectCacheList stubs the Objects being fetched from the Cache and verifies we request them.

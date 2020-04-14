@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,4 +67,15 @@ func DeepCopy(o Object) Object {
 type OwnerReferenced interface {
 	GetOwnerReferences() []metav1.OwnerReference
 	SetOwnerReferences([]metav1.OwnerReference)
+}
+
+// ObjectOf safely attempts to coerce a runtime.Object into a core.Object.
+//
+// We expect this will never return error in production.
+func ObjectOf(o runtime.Object) (Object, error) {
+	co, ok := o.(Object)
+	if !ok {
+		return nil, errors.Errorf("not a Kubernetes object %v", o)
+	}
+	return co, nil
 }

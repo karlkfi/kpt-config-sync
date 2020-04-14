@@ -1,6 +1,7 @@
 package crd
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,15 +49,23 @@ func customResourceDefinitionV1Beta1(version string, opts ...core.MetaMutator) *
 	return result
 }
 
-func crdList(gvks []schema.GroupVersionKind) v1beta1.CustomResourceDefinitionList {
+func crdList(gvks []schema.GroupVersionKind) []v1beta1.CustomResourceDefinition {
 	crdSpecs := map[schema.GroupKind][]string{}
 	for _, gvk := range gvks {
 		gk := gvk.GroupKind()
 		crdSpecs[gk] = append(crdSpecs[gk], gvk.Version)
 	}
-	var crdList v1beta1.CustomResourceDefinitionList
+	var crdList []v1beta1.CustomResourceDefinition
 	for gk, vers := range crdSpecs {
-		var crd v1beta1.CustomResourceDefinition
+		crd := v1beta1.CustomResourceDefinition{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: kinds.CustomResourceDefinitionV1Beta1().GroupVersion().String(),
+				Kind:       kinds.CustomResourceDefinitionV1Beta1().Kind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: strings.ToLower(gk.Kind + "s." + gk.Group),
+			},
+		}
 		crd.Spec.Group = gk.Group
 		crd.Spec.Names.Kind = gk.Kind
 		for _, ver := range vers {
@@ -63,29 +73,37 @@ func crdList(gvks []schema.GroupVersionKind) v1beta1.CustomResourceDefinitionLis
 				Name: ver,
 			})
 		}
-		crdList.Items = append(crdList.Items, crd)
+		crdList = append(crdList, crd)
 	}
 	return crdList
 }
 
 var (
-	clusterCfg       = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token), fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)))
-	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertesting.ClusterConfigImportToken(syncertesting.Token),
-		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)), syncertesting.ClusterConfigSyncTime(), syncertesting.ClusterConfigSyncToken())
+	clusterCfg = clusterConfig(v1.StateSynced,
+		syncertesting.ClusterConfigImportToken(syncertesting.Token),
+		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)),
+	)
+
+	clusterCfgSynced = clusterConfig(v1.StateSynced,
+		syncertesting.ClusterConfigImportToken(syncertesting.Token),
+		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)),
+		syncertesting.ClusterConfigSyncTime(),
+		syncertesting.ClusterConfigSyncToken(),
+	)
 )
 
 type crdTestCase struct {
-	name               string
-	actual             runtime.Object
-	declared           runtime.Object
-	initialCrds        []schema.GroupVersionKind
-	listCrds           []schema.GroupVersionKind
-	expectCreate       runtime.Object
-	expectUpdate       *syncertesting.Diff
-	expectDelete       runtime.Object
-	expectStatusUpdate *v1.ClusterConfig
-	expectEvents       []testingfake.Event
-	expectRestart      bool
+	name          string
+	actual        runtime.Object
+	declared      runtime.Object
+	initialCrds   []schema.GroupVersionKind
+	listCrds      []schema.GroupVersionKind
+	expectCreate  runtime.Object
+	expectUpdate  *syncertesting.Diff
+	expectDelete  runtime.Object
+	want          *v1.ClusterConfig
+	expectEvents  []testingfake.Event
+	expectRestart bool
 }
 
 func TestClusterConfigReconcile(t *testing.T) {
@@ -95,19 +113,19 @@ func TestClusterConfigReconcile(t *testing.T) {
 			declared: customResourceDefinitionV1Beta1(v1Version),
 			expectCreate: customResourceDefinitionV1Beta1(v1Version, syncertesting.TokenAnnotation,
 				syncertesting.ManagementEnabled),
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
-			name:               "do not create if management disabled",
-			declared:           customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementDisabled),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not create if management disabled",
+			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementDisabled),
+			want:     clusterCfgSynced,
 		},
 		{
-			name:               "do not create if management invalid",
-			declared:           customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not create if management invalid",
+			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
+			want:     clusterCfgSynced,
 			expectEvents: []testingfake.Event{
 				*testingfake.NewEvent(fake.CustomResourceDefinitionV1Beta1Object(), corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
 			},
@@ -120,9 +138,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
 			name:     "update to declared state even if actual managed unset",
@@ -132,9 +150,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   customResourceDefinitionV1Beta1(v1beta1Version),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
 			name:     "update to declared state even if actual managed invalid",
@@ -144,15 +162,15 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.TokenAnnotation, syncertesting.ManagementEnabled),
 				Actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementInvalid),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
-			name:               "do not update if declared management invalid",
-			declared:           customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
-			actual:             customResourceDefinitionV1Beta1(v1beta1Version),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not update if declared management invalid",
+			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
+			actual:   customResourceDefinitionV1Beta1(v1beta1Version),
+			want:     clusterCfgSynced,
 			expectEvents: []testingfake.Event{
 				*testingfake.NewEvent(fake.CustomResourceDefinitionV1Beta1Object(), corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
 			},
@@ -165,28 +183,28 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: customResourceDefinitionV1Beta1(v1beta1Version),
 				Actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
-			name:               "do not update if unmanaged",
-			declared:           customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementDisabled),
-			actual:             customResourceDefinitionV1Beta1(v1beta1Version),
-			expectStatusUpdate: clusterCfgSynced,
+			name:     "do not update if unmanaged",
+			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementDisabled),
+			actual:   customResourceDefinitionV1Beta1(v1beta1Version),
+			want:     clusterCfgSynced,
 		},
 		{
-			name:               "delete if managed",
-			actual:             customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
-			expectDelete:       customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			name:          "delete if managed",
+			actual:        customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
+			expectDelete:  customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementEnabled),
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
-			name:               "do not delete if unmanaged",
-			actual:             customResourceDefinitionV1Beta1(v1beta1Version),
-			expectStatusUpdate: clusterCfgSynced,
+			name:   "do not delete if unmanaged",
+			actual: customResourceDefinitionV1Beta1(v1beta1Version),
+			want:   clusterCfgSynced,
 		},
 		{
 			name:   "unmanage if invalid",
@@ -195,9 +213,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 				Declared: customResourceDefinitionV1Beta1(v1beta1Version),
 				Actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementInvalid),
 			},
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete},
+			expectRestart: true,
 		},
 		{
 			name: "resource with owner reference is ignored",
@@ -206,7 +224,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 					"some_operator_config_object",
 					schema.GroupVersionKind{Group: "operator.config.group", Kind: "OperatorConfigObject", Version: v1Version}),
 			),
-			expectStatusUpdate: clusterCfgSynced,
+			want: clusterCfgSynced,
 		},
 		{
 			name:     "create from declared state and external crd change",
@@ -220,14 +238,14 @@ func TestClusterConfigReconcile(t *testing.T) {
 			},
 			expectCreate: customResourceDefinitionV1Beta1(v1Version, syncertesting.TokenAnnotation,
 				syncertesting.ManagementEnabled),
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{clusterReconcileComplete, externalCRDUpdated},
-			expectRestart:      true,
+			want:          clusterCfgSynced,
+			expectEvents:  []testingfake.Event{clusterReconcileComplete, externalCRDUpdated},
+			expectRestart: true,
 		},
 		{
-			name:               "external crd change triggers restart",
-			expectStatusUpdate: clusterCfgSynced,
-			expectEvents:       []testingfake.Event{externalCRDUpdated},
+			name:         "external crd change triggers restart",
+			want:         clusterCfgSynced,
+			expectEvents: []testingfake.Event{externalCRDUpdated},
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "foo.xyz", Version: "v1", Kind: "Stuff"},
 			},
@@ -238,8 +256,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 			expectRestart: true,
 		},
 		{
-			name:               "no change",
-			expectStatusUpdate: clusterCfgSynced,
+			name: "no change",
+			want: clusterCfgSynced,
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "foo.xyz", Version: "v1", Kind: "Stuff"},
 			},
@@ -293,10 +311,15 @@ func (tc crdTestCase) run(t *testing.T) {
 	fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 	fakeEventRecorder := testingfake.NewEventRecorder(t)
 	fakeSignal := testingfake.RestartSignalRecorder{}
+	actual := []runtime.Object{clusterCfg}
+	for _, crd := range crdList(tc.listCrds) {
+		actual = append(actual, crd.DeepCopy())
+	}
+	fakeClient := testingfake.NewClient(t, actual...)
 
-	testReconciler := NewReconciler(client.New(tm.MockClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder,
+	testReconciler := NewReconciler(client.New(fakeClient, metrics.APICallDuration), tm.MockApplier, tm.MockCache, fakeEventRecorder,
 		fakeDecoder, syncertesting.Now, &fakeSignal)
-	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds).Items)
+	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds))
 
 	tm.ExpectClusterCacheGet(clusterCfg)
 	tm.ExpectCacheList(kinds.CustomResourceDefinitionV1Beta1(), "", tc.actual)
@@ -307,15 +330,6 @@ func (tc crdTestCase) run(t *testing.T) {
 	tm.ExpectCreate(tc.expectCreate)
 	tm.ExpectUpdate(tc.expectUpdate)
 	tm.ExpectDelete(tc.expectDelete)
-
-	call := tm.MockClient.EXPECT().List(gomock.Any(), &v1beta1.CustomResourceDefinitionList{}, gomock.Any()).Return(nil)
-	if len(tc.listCrds) != 0 {
-		call.SetArg(1, crdList(tc.listCrds))
-	}
-
-	tm.ExpectClusterClientGet(clusterCfg)
-	statusWriter := testingfake.StatusWriterRecorder{}
-	tm.MockClient.EXPECT().Status().Return(&statusWriter)
 
 	_, err := testReconciler.Reconcile(
 		runtimereconcile.Request{
@@ -330,7 +344,12 @@ func (tc crdTestCase) run(t *testing.T) {
 		fakeSignal.Check(t)
 	}
 	fakeEventRecorder.Check(t, tc.expectEvents...)
-	statusWriter.Check(t, tc.expectStatusUpdate)
+
+	want := []runtime.Object{tc.want}
+	for _, crd := range crdList(tc.listCrds) {
+		want = append(want, crd.DeepCopy())
+	}
+	fakeClient.Check(t, want...)
 	if err != nil {
 		t.Errorf("unexpected reconciliation error: %v", err)
 	}

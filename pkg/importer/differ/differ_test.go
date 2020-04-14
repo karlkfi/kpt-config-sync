@@ -5,271 +5,226 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"github.com/google/nomos/pkg/syncer/testing/fake"
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
-
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type testCase struct {
-	testName                           string
-	oldNodes, newNodes                 []*v1.NamespaceConfig
-	oldClusterConfig, newClusterConfig *v1.ClusterConfig
-	oldSyncs, newSyncs                 []*v1.Sync
-	wantCreate                         []runtime.Object
-	wantDelete                         []runtime.Object
-	wantUpdate                         []nsUpdateMatcher
+var testTime = metav1.NewTime(time.Unix(1234, 5678))
+
+func namespaceConfig(name string, opts ...fake.NamespaceConfigMutator) *v1.NamespaceConfig {
+	opts = append(opts, fake.NamespaceConfigMeta(core.Name(name)))
+	return fake.NamespaceConfigObject(opts...)
 }
 
-var testTime = meta.NewTime(time.Unix(1234, 5678))
-
-type nsUpdateMatcher struct {
-	want *v1.NamespaceConfig
+func markedForDeletion(nc *v1.NamespaceConfig) {
+	nc.Spec.DeleteSyncedTime = testTime
 }
 
-func (n nsUpdateMatcher) Matches(x interface{}) bool {
-	got := x.(*v1.NamespaceConfig)
-	return n.want.Name == got.Name && n.want.Spec.DeleteSyncedTime.Equal(&got.Spec.DeleteSyncedTime)
-}
+// allConfigs constructs a (potentially-invalid) AllConfigs for the purpose
+// of Differ tests.
+//
+// Not intended for use with other tests - this is to make differ tests easy to
+// specify, not replicate code that creates AllConfigs.
+func allConfigs(t *testing.T, objs []runtime.Object) *namespaceconfig.AllConfigs {
+	t.Helper()
 
-func (n nsUpdateMatcher) String() string {
-	return "NamespaceConfig " + n.want.Name
+	result := &namespaceconfig.AllConfigs{
+		NamespaceConfigs: make(map[string]v1.NamespaceConfig),
+		Syncs:            make(map[string]v1.Sync),
+	}
+	for _, o := range objs {
+		switch obj := o.(type) {
+		case *v1.NamespaceConfig:
+			result.NamespaceConfigs[obj.Name] = *obj
+		case *v1.Sync:
+			result.Syncs[obj.Name] = *obj
+		case *v1.ClusterConfig:
+			switch obj.Name {
+			case v1.ClusterConfigName:
+				result.ClusterConfig = obj
+			case v1.CRDClusterConfigName:
+				result.CRDClusterConfig = obj
+			default:
+				t.Fatalf("unsupported ClusterConfig name %q", obj.Name)
+			}
+		default:
+			t.Fatalf("unsupported AllConfigs type: %T", o)
+		}
+	}
+
+	return result
 }
 
 func TestDiffer(t *testing.T) {
 	// Mock out metav1.Now for testing.
-	now = func() meta.Time {
+	now = func() metav1.Time {
 		return testTime
 	}
 
-	for _, test := range []testCase{
+	tcs := []struct {
+		testName string
+		actual   []runtime.Object
+		declared []runtime.Object
+		want     []runtime.Object
+	}{
+		// NamespaceConfig tests
 		{
-			testName: "Nil",
+			testName: "create Namespace node",
+			declared: []runtime.Object{namespaceConfig("foo")},
+			want:     []runtime.Object{namespaceConfig("foo")},
 		},
 		{
-			testName: "All Empty",
-			oldNodes: []*v1.NamespaceConfig{},
-			newNodes: []*v1.NamespaceConfig{},
+			testName: "no-op Namespace node",
+			actual:   []runtime.Object{namespaceConfig("foo")},
+			declared: []runtime.Object{namespaceConfig("foo")},
+			want:     []runtime.Object{namespaceConfig("foo")},
 		},
 		{
-			testName: "One node Create",
-			oldNodes: []*v1.NamespaceConfig{},
-			newNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-			},
-			wantCreate: []runtime.Object{
-				namespaceConfig("r"),
-			},
+			testName: "update Namespace node",
+			actual: []runtime.Object{namespaceConfig("foo",
+				fake.NamespaceConfigMeta(core.Annotation("key", "old")))},
+			declared: []runtime.Object{namespaceConfig("foo",
+				fake.NamespaceConfigMeta(core.Annotation("key", "new")))},
+			want: []runtime.Object{namespaceConfig("foo",
+				fake.NamespaceConfigMeta(core.Annotation("key", "new")))},
 		},
 		{
-			testName: "One node delete",
-			oldNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-			},
-			newNodes: []*v1.NamespaceConfig{},
-			wantUpdate: []nsUpdateMatcher{
-				{namespaceConfigToDelete("r")},
-			},
+			testName: "delete Namespace node",
+			actual:   []runtime.Object{namespaceConfig("foo")},
+			want:     []runtime.Object{namespaceConfig("foo", markedForDeletion)},
 		},
 		{
-			testName: "Rename root node",
-			oldNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-			},
-			newNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r2"),
-			},
-			wantCreate: []runtime.Object{
-				namespaceConfig("r2"),
-			},
-			wantUpdate: []nsUpdateMatcher{
-				{namespaceConfigToDelete("r")},
+			testName: "replace one Namespace node",
+			actual:   []runtime.Object{namespaceConfig("foo")},
+			declared: []runtime.Object{namespaceConfig("bar")},
+			want: []runtime.Object{
+				namespaceConfig("foo", markedForDeletion),
+				namespaceConfig("bar"),
 			},
 		},
 		{
-			testName: "Create 2 nodes",
-			oldNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
+			testName: "create two Namespace nodes",
+			declared: []runtime.Object{
+				namespaceConfig("foo"),
+				namespaceConfig("bar"),
 			},
-			newNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-				namespaceConfig("c1"),
-				namespaceConfig("c2"),
-			},
-			wantCreate: []runtime.Object{
-				namespaceConfig("c1"),
-				namespaceConfig("c2"),
+			want: []runtime.Object{
+				namespaceConfig("foo"),
+				namespaceConfig("bar"),
 			},
 		},
 		{
-			testName: "Create 2 nodes and delete 2",
-			oldNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-				namespaceConfig("co1"),
-				namespaceConfig("co2"),
+			testName: "keep one, create two, delete two Namespace nodes",
+			actual: []runtime.Object{
+				namespaceConfig("alp"),
+				namespaceConfig("foo"),
+				namespaceConfig("bar"),
 			},
-			newNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-				namespaceConfig("c2"),
-				namespaceConfig("c1"),
+			declared: []runtime.Object{
+				namespaceConfig("alp"),
+				namespaceConfig("qux"),
+				namespaceConfig("pim"),
 			},
-			wantCreate: []runtime.Object{
-				namespaceConfig("c1"),
-				namespaceConfig("c2"),
+			want: []runtime.Object{
+				namespaceConfig("alp"),
+				namespaceConfig("foo", markedForDeletion),
+				namespaceConfig("bar", markedForDeletion),
+				namespaceConfig("qux"),
+				namespaceConfig("pim"),
 			},
-			wantUpdate: []nsUpdateMatcher{
-				{namespaceConfigToDelete("co1")},
-				{namespaceConfigToDelete("co2")},
-			},
+		},
+		// ClusterConfig tests
+		{
+			testName: "create ClusterConfig",
+			declared: []runtime.Object{fake.ClusterConfigObject()},
+			want:     []runtime.Object{fake.ClusterConfigObject()},
 		},
 		{
-			testName:         "ClusterConfig create",
-			newClusterConfig: clusterConfig("foo"),
-			wantCreate: []runtime.Object{
-				clusterConfig("foo"),
-			},
+			testName: "no-op ClusterConfig",
+			actual:   []runtime.Object{fake.ClusterConfigObject()},
+			declared: []runtime.Object{fake.ClusterConfigObject()},
+			want:     []runtime.Object{fake.ClusterConfigObject()},
 		},
 		{
-			testName:         "ClusterConfig update no change",
-			oldClusterConfig: clusterConfig("foo"),
-			newClusterConfig: clusterConfig("foo"),
+			testName: "delete ClusterConfig",
+			actual:   []runtime.Object{fake.ClusterConfigObject()},
 		},
 		{
-			testName:         "ClusterConfig delete",
-			oldClusterConfig: clusterConfig("foo"),
-			wantDelete: []runtime.Object{
-				clusterConfig("foo"),
-			},
+			testName: "create CRD ClusterConfig",
+			declared: []runtime.Object{fake.CRDClusterConfigObject()},
+			want:     []runtime.Object{fake.CRDClusterConfigObject()},
 		},
 		{
-			testName: "Create 2 nodes and a ClusterConfig",
-			oldNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-			},
-			newNodes: []*v1.NamespaceConfig{
-				namespaceConfig("r"),
-				namespaceConfig("c2"),
-				namespaceConfig("c1"),
-			},
-			newClusterConfig: clusterConfig("foo"),
-			wantCreate: []runtime.Object{
-				clusterConfig("foo"),
-				namespaceConfig("c1"),
-				namespaceConfig("c2"),
-			},
+			testName: "no-op CRD ClusterConfig",
+			actual:   []runtime.Object{fake.CRDClusterConfigObject()},
+			declared: []runtime.Object{fake.CRDClusterConfigObject()},
+			want:     []runtime.Object{fake.CRDClusterConfigObject()},
 		},
 		{
-			testName: "Empty Syncs",
-			oldSyncs: []*v1.Sync{},
-			newSyncs: []*v1.Sync{},
+			testName: "delete CRD ClusterConfig",
+			actual:   []runtime.Object{fake.CRDClusterConfigObject()},
+		},
+		// Sync tests
+		{
+			testName: "create Sync",
+			declared: []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
+			want:     []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
 		},
 		{
-			testName: "Sync create",
-			oldSyncs: []*v1.Sync{},
-			newSyncs: []*v1.Sync{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
-			},
-			wantCreate: []runtime.Object{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
-			},
+			testName: "no-op Sync",
+			actual:   []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
+			declared: []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
+			want:     []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
 		},
 		{
-			testName: "Sync update no change",
-			oldSyncs: []*v1.Sync{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
-			},
-			newSyncs: []*v1.Sync{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
-			},
+			testName: "delete Sync",
+			actual:   []runtime.Object{fake.SyncObject(kinds.Anvil().GroupKind())},
 		},
+		// Test all at once
 		{
-			testName: "Sync delete",
-			oldSyncs: []*v1.Sync{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
+			testName: "multiple diffs at once",
+			actual: []runtime.Object{
+				fake.CRDClusterConfigObject(),
+				namespaceConfig("foo"),
+				namespaceConfig("bar"),
 			},
-			newSyncs: []*v1.Sync{},
-			wantDelete: []runtime.Object{
-				v1.NewSync(kinds.ResourceQuota().GroupKind()),
+			declared: []runtime.Object{
+				fake.ClusterConfigObject(),
+				namespaceConfig("foo"),
+				namespaceConfig("qux"),
+			},
+			want: []runtime.Object{
+				fake.ClusterConfigObject(),
+				namespaceConfig("foo"),
+				namespaceConfig("bar", markedForDeletion),
+				namespaceConfig("qux"),
 			},
 		},
-	} {
-		t.Run(test.testName, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
+	}
 
-			mockClient := mocks.NewMockClient(mockCtrl)
-			for _, c := range test.wantCreate {
-				mockClient.EXPECT().Create(gomock.Any(), gomock.Eq(c))
-			}
-			for _, c := range test.wantDelete {
-				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockClient.EXPECT().Delete(gomock.Any(), gomock.Eq(c), gomock.Any())
-			}
-			for _, matcher := range test.wantUpdate {
-				mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
-				mockClient.EXPECT().Update(gomock.Any(), matcher)
-			}
+	for _, tc := range tcs {
+		t.Run(tc.testName, func(t *testing.T) {
+			fakeClient := testingfake.NewClient(t, tc.actual...)
 
-			err := Update(context.Background(), client.New(mockClient, metrics.APICallDuration),
-				fake.NewDecoder(nil),
-				allConfigs(test.oldNodes, test.oldClusterConfig, test.oldSyncs),
-				allConfigs(test.newNodes, test.newClusterConfig, test.newSyncs))
+			actual := allConfigs(t, tc.actual)
+
+			declared := allConfigs(t, tc.declared)
+
+			err := Update(context.Background(), client.New(fakeClient, metrics.APICallDuration),
+				testingfake.NewDecoder(nil), *actual, *declared)
+
 			if err != nil {
-				t.Fatalf("unexpected error in diff: %v", err)
+				t.Errorf("unexpected error in diff: %v", err)
 			}
+			fakeClient.Check(t, tc.want...)
 		})
 	}
-}
-
-func namespaceConfig(name string) *v1.NamespaceConfig {
-	return &v1.NamespaceConfig{
-		ObjectMeta: meta.ObjectMeta{
-			Name: name,
-		},
-		Spec: v1.NamespaceConfigSpec{},
-	}
-}
-
-func namespaceConfigToDelete(name string) *v1.NamespaceConfig {
-	ns := namespaceConfig(name)
-	ns.Spec.DeleteSyncedTime = testTime
-	return ns
-}
-
-func clusterConfig(name string) *v1.ClusterConfig {
-	return &v1.ClusterConfig{
-		ObjectMeta: meta.ObjectMeta{
-			Name: name,
-		},
-		Spec: v1.ClusterConfigSpec{},
-	}
-}
-
-func allConfigs(nodes []*v1.NamespaceConfig, clusterConfig *v1.ClusterConfig, syncs []*v1.Sync) namespaceconfig.AllConfigs {
-	configs := namespaceconfig.AllConfigs{
-		ClusterConfig: clusterConfig,
-	}
-
-	for i, n := range nodes {
-		if i == 0 {
-			configs.NamespaceConfigs = make(map[string]v1.NamespaceConfig)
-		}
-		configs.NamespaceConfigs[n.Name] = *n
-	}
-
-	if len(syncs) > 0 {
-		configs.Syncs = make(map[string]v1.Sync)
-	}
-	for _, s := range syncs {
-		configs.Syncs[s.Name] = *s
-	}
-
-	return configs
 }
