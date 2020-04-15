@@ -10,7 +10,7 @@ import (
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
-	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,13 +30,14 @@ const namespaceConfigControllerName = "namespaceconfig-resources"
 func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
-	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
+	oa, err := syncerreconcile.OpenAPIResources(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
+	applier := syncerreconcile.NewApplier(oa, genericClient)
 
 	pnc, err := k8scontroller.New(namespaceConfigControllerName, mgr, k8scontroller.Options{
-		Reconciler: genericreconcile.NewNamespaceConfigReconciler(
+		Reconciler: syncerreconcile.NewNamespaceConfigReconciler(
 			ctx,
 			genericClient,
 			applier,

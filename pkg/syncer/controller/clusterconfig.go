@@ -10,7 +10,7 @@ import (
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
-	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,13 +28,14 @@ const clusterConfigControllerName = "clusterconfig-resources"
 func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
 	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
-	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
+	oa, err := syncerreconcile.OpenAPIResources(mgr.GetConfig())
 	if err != nil {
 		return err
 	}
+	applier := syncerreconcile.NewApplier(oa, genericClient)
 
 	cpc, err := k8scontroller.New(clusterConfigControllerName, mgr, k8scontroller.Options{
-		Reconciler: genericreconcile.NewClusterConfigReconciler(
+		Reconciler: syncerreconcile.NewClusterConfigReconciler(
 			ctx,
 			client.New(mgr.GetClient(), metrics.APICallDuration),
 			applier,
