@@ -2,17 +2,18 @@ package reconcile
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
-	syncerclient "github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -20,9 +21,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/openapi"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const noOpPatch = "{}"
@@ -37,8 +40,10 @@ type Applier interface {
 
 // clientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
 type clientApplier struct {
+	dynamicClient    dynamic.Interface
+	discoveryClient  *discovery.DiscoveryClient
 	openAPIResources openapi.Resources
-	client           *syncerclient.Client
+	client           *client.Client
 	fights           fightDetector
 	fLogger          fightLogger
 }
@@ -46,13 +51,30 @@ type clientApplier struct {
 var _ Applier = &clientApplier{}
 
 // NewApplier returns a new clientApplier.
-func NewApplier(oa openapi.Resources, client *syncerclient.Client) Applier {
+func NewApplier(cfg *rest.Config, client *client.Client) (Applier, error) {
+	c, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	oa, err := openapi.NewOpenAPIGetter(dc).Get()
+	if err != nil {
+		return nil, err
+	}
+
 	return &clientApplier{
+		dynamicClient:    c,
+		discoveryClient:  dc,
 		openAPIResources: oa,
 		client:           client,
 		fights:           newFightDetector(),
 		fLogger:          newFightLogger(),
-	}
+	}, nil
 }
 
 // Create implements Applier.
@@ -115,6 +137,20 @@ func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructur
 	return c.client.Create(ctx, obj)
 }
 
+// clientFor returns the client which may interact with the passed object.
+func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	gvk := obj.GroupVersionKind()
+	apiResource, rErr := c.resource(gvk)
+	if rErr != nil {
+		return nil, errors.Wrapf(rErr, "unable to get resource client for %q", gvk.String())
+	}
+
+	gvr := gvk.GroupVersion().WithResource(apiResource)
+	// If namespace is the empty string (as is the case for cluster-scoped resources), the
+	// client correctly returns itself.
+	return c.dynamicClient.Resource(gvr).Namespace(obj.GetNamespace()), nil
+}
+
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
 func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
@@ -136,14 +172,21 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 		return nil, errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}
 
+	resourceClient, rErr := c.clientFor(intendedState)
+	if rErr != nil {
+		return nil, nil
+	}
+
+	name, resourceDescription := nameDescription(intendedState)
 	gvk := intendedState.GroupVersionKind()
 	//TODO(b/b152322972): Add unit tests for patch return value.
+	var err error
 
 	// Attempt a strategic patch first.
 	patch := c.calculateStrategic(gvk, previous, modified, current)
 	// If patch is nil, it means we don't have access to the schema.
 	if patch != nil {
-		err := attemptPatch(ctx, c.client.Client, intendedState, types.StrategicMergePatchType, patch)
+		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
 		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
 		// custom resource), so we reset the patch and try again below.
 		if err != nil && apierrors.IsUnsupportedMediaType(err) {
@@ -151,19 +194,17 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 		}
 	}
 
-	var err error
 	// If we weren't able to do a Strategic Merge, we fall back to JSON Merge Patch.
 	if patch == nil {
 		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
 		if err == nil {
-			err = attemptPatch(ctx, c.client.Client, intendedState, types.MergePatchType, patch)
+			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not patch")
 	}
-	resourceDescription := core.IDOf(intendedState).String()
 	glog.V(1).Infof("Patched %s", resourceDescription)
 	glog.V(3).Infof("Patched with %s", patch)
 
@@ -202,14 +243,10 @@ func isNoOpPatch(patch []byte) bool {
 }
 
 // attemptPatch patches resClient with the given patch.
-//
-// obj is only used to identify the resource to patch. The actual update
-// information is fully contained in `patch`.
-//
 // TODO(b/152322972): Add unit tests for noop logic.
-func attemptPatch(ctx context.Context, c client.Writer, intended core.Object, patchType types.PatchType, patch []byte) error {
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
 	if isNoOpPatch(patch) {
-		glog.V(3).Infof("Ignoring no-op patch for %q", intended.GetName())
+		glog.V(3).Infof("Ignoring no-op patch for %q", name)
 		return nil
 	}
 
@@ -219,8 +256,29 @@ func attemptPatch(ctx context.Context, c client.Writer, intended core.Object, pa
 	}
 
 	start := time.Now()
-	err := c.Patch(ctx, intended, client.ConstantPatch(patchType, patch))
+	_, err := resClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
 	duration := time.Since(start).Seconds()
-	metrics.APICallDuration.WithLabelValues("patch", intended.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
+	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
 	return err
+}
+
+// resource retrieves the plural resource name for the GroupVersionKind.
+func (c *clientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
+	apiResources, err := c.discoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	if err != nil {
+		return "", errors.Wrapf(err, "could not look up %s using discovery API", gvk)
+	}
+
+	for _, r := range apiResources.APIResources {
+		if r.Kind == gvk.Kind {
+			return r.Name, nil
+		}
+	}
+
+	return "", errors.Errorf("could not find resource for %s", gvk)
+}
+
+func nameDescription(u *unstructured.Unstructured) (string, string) {
+	name := u.GetName()
+	return name, fmt.Sprintf("%s, %s", u.GroupVersionKind(), name)
 }

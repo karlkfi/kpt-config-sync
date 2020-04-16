@@ -28,11 +28,10 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 	}
 
 	resourceClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
-	oa, err := syncerreconcile.OpenAPIResources(mgr.GetConfig())
+	applier, err := syncerreconcile.NewApplier(mgr.GetConfig(), resourceClient)
 	if err != nil {
 		return err
 	}
-	applier := syncerreconcile.NewApplier(oa, resourceClient)
 
 	reconciler := NewReconciler(
 		resourceClient,
