@@ -18,8 +18,8 @@ func (r *RestartSignalRecorder) Restart(signal string) {
 
 // Check ensures that the RestartSignal was called exactly with the passed
 // sequence of signals.
-func (r *RestartSignalRecorder) Check(t *testing.T, restarts ...string) {
-	if diff := cmp.Diff(r.Restarts, restarts); diff != "" {
+func (r *RestartSignalRecorder) Check(t *testing.T, want ...string) {
+	if diff := cmp.Diff(want, r.Restarts); diff != "" {
 		t.Errorf("Diff in calls to fake.RestartSignalRecorder.Restart(): %s", diff)
 	}
 }

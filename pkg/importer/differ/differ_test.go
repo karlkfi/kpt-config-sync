@@ -212,7 +212,7 @@ func TestDiffer(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.testName, func(t *testing.T) {
-			fakeClient := testingfake.NewClient(t, tc.actual...)
+			fakeClient := testingfake.NewClient(t, runtime.NewScheme(), tc.actual...)
 
 			actual := allConfigs(t, tc.actual)
 

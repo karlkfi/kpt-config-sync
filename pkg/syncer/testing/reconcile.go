@@ -53,20 +53,18 @@ var (
 // NewTestMocks returns a new TestMocks.
 func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
 	return TestMocks{
-		t:           t,
-		MockCtrl:    mockCtrl,
-		MockApplier: mocks.NewMockApplier(mockCtrl),
-		MockCache:   mocks.NewMockGenericCache(mockCtrl),
+		t:         t,
+		MockCtrl:  mockCtrl,
+		MockCache: mocks.NewMockGenericCache(mockCtrl),
 	}
 }
 
 // TestMocks is a helper used for unit testing controller Reconcile invocation. It wraps all the mocks
 // needed to verify common reconcile expectations.
 type TestMocks struct {
-	t           *testing.T
-	MockCtrl    *gomock.Controller
-	MockApplier *mocks.MockApplier
-	MockCache   *mocks.MockGenericCache
+	t         *testing.T
+	MockCtrl  *gomock.Controller
+	MockCache *mocks.MockGenericCache
 }
 
 // ExpectClusterCacheGet stubs the ClusterConfig being fetched from the Cache and verifies we request it.
@@ -100,53 +98,11 @@ func (tm *TestMocks) ExpectNamespaceCacheGet(config *v1.NamespaceConfig, namespa
 		SetArg(2, *namespace)
 }
 
-// ExpectNamespaceUpdate verifies the namespace is updated.
-func (tm *TestMocks) ExpectNamespaceUpdate(intended, actual *unstructured.Unstructured) {
-	if intended == nil || len(intended.Object) == 0 || actual == nil || len(actual.Object) == 0 {
-		return
-	}
-	tm.MockApplier.EXPECT().Update(
-		anyContext, Eq(tm.t, "NamespaceUpdate", intended), Eq(tm.t, "NamespaceUpdate", actual))
-}
-
 // ExpectCacheList stubs the Objects being fetched from the Cache and verifies we request them.
 func (tm *TestMocks) ExpectCacheList(gvk schema.GroupVersionKind, namespace string, obj ...runtime.Object) {
 	tm.MockCache.EXPECT().
 		UnstructuredList(anyContext, Eq(tm.t, "ExpectCacheListGVK", gvk), Eq(tm.t, "ExpectCacheListNamespace", namespace)).
 		Return(ToUnstructuredList(tm.t, Converter, obj...), nil)
-}
-
-// ExpectCreate verifies we create the object.
-func (tm *TestMocks) ExpectCreate(obj runtime.Object) {
-	if obj == nil {
-		return
-	}
-	tm.MockApplier.EXPECT().
-		Create(anyContext, Eq(tm.t, "ExpectCreate", ToUnstructured(tm.t, Converter, obj))).
-		Return(true, nil)
-}
-
-// ExpectUpdate verifies we update the object from original to intended state.
-func (tm *TestMocks) ExpectUpdate(d *Diff) {
-	if d == nil {
-		return
-	}
-	declared := ToUnstructured(tm.t, Converter, d.Declared)
-	actual := ToUnstructured(tm.t, Converter, d.Actual)
-
-	tm.MockApplier.EXPECT().
-		Update(anyContext, Eq(tm.t, "ExpectUpdateDeclared", declared), Eq(tm.t, "ExpectUpdateActual", actual)).
-		Return(true, nil)
-}
-
-// ExpectDelete verifies we delete the object.
-func (tm *TestMocks) ExpectDelete(obj runtime.Object) {
-	if obj == nil {
-		return
-	}
-	tm.MockApplier.EXPECT().
-		Delete(anyContext, Eq(tm.t, "ExpectDelete", ToUnstructured(tm.t, Converter, obj))).
-		Return(true, nil)
 }
 
 // ToUnstructured converts the object to an unstructured.Unstructured.

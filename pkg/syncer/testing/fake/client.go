@@ -11,6 +11,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,11 +35,11 @@ var _ client.Client = &Client{}
 // objects.
 //
 // Calls t.Fatal if unable to properly instantiate Client.
-func NewClient(t *testing.T, objs ...runtime.Object) *Client {
+func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...runtime.Object) *Client {
 	t.Helper()
 
 	result := Client{
-		Scheme:  runtime.NewScheme(),
+		Scheme:  scheme,
 		Objects: make(map[core.ID]core.Object),
 	}
 
@@ -137,16 +138,46 @@ func (c *Client) List(_ context.Context, list runtime.Object, opts ...client.Lis
 	return errors.Errorf("fake.Client does not support List(%T)", list)
 }
 
+func (c *Client) fromUnstructured(obj runtime.Object) (runtime.Object, error) {
+	// If possible, we want to deal with the non-Unstructured form of objects.
+	// Unstructureds are prone to declare a bunch of empty maps we don't care
+	// about, and can't easily tell cmp.Diff to ignore.
+
+	u, isUnstructured := obj.(*unstructured.Unstructured)
+	if !isUnstructured {
+		// Already not unstructured.
+		return obj, nil
+	}
+
+	result, err := c.Scheme.New(u.GroupVersionKind())
+	if err != nil {
+		// The type isn't registered.
+		return obj, nil
+	}
+
+	jsn, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsn, result)
+	return result, err
+}
+
 // Create implements client.Client.
 func (c *Client) Create(_ context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-	co, err := core.ObjectOf(obj.DeepCopyObject())
+	if len(opts) > 0 {
+		jsn, _ := json.MarshalIndent(opts, "", "  ")
+		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %v", string(jsn))
+	}
+
+	obj, err := c.fromUnstructured(obj.DeepCopyObject())
 	if err != nil {
 		return err
 	}
 
-	if len(opts) > 0 {
-		jsn, _ := json.MarshalIndent(opts, "", "  ")
-		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %v", string(jsn))
+	co, err := core.ObjectOf(obj)
+	if err != nil {
+		return err
 	}
 
 	id := core.IDOf(co)
@@ -205,7 +236,12 @@ func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.Up
 		return errors.Errorf("fake.Client.Update does not yet support opts, but got: %v", string(jsn))
 	}
 
-	co, err := core.ObjectOf(obj.DeepCopyObject())
+	obj, err := c.fromUnstructured(obj.DeepCopyObject())
+	if err != nil {
+		return err
+	}
+
+	co, err := core.ObjectOf(obj)
 	if err != nil {
 		return err
 	}
@@ -238,12 +274,19 @@ func (c *Client) Status() client.StatusWriter {
 // Check reports an error to `t` if the passed objects in want do not match the
 // expected set of objects in the fake.Client, and only the passed updates to
 // Status fields were recorded.
-func (c *Client) Check(t *testing.T, want ...runtime.Object) {
+func (c *Client) Check(t *testing.T, wants ...runtime.Object) {
 	t.Helper()
 
 	wantMap := make(map[core.ID]core.Object)
 
-	for _, obj := range want {
+	for _, obj := range wants {
+		obj, err := c.fromUnstructured(obj)
+		if err != nil {
+			// This is a test precondition, and if it fails the following error
+			// messages will be garbage.
+			t.Fatal(err)
+		}
+
 		cobj, ok := obj.(core.Object)
 		if !ok {
 			t.Errorf("obj is not a Kubernetes object %v", obj)
@@ -251,8 +294,35 @@ func (c *Client) Check(t *testing.T, want ...runtime.Object) {
 		wantMap[core.IDOf(cobj)] = cobj
 	}
 
-	if diff := cmp.Diff(wantMap, c.Objects, cmpopts.EquateEmpty()); diff != "" {
-		t.Error("diff to fake.Client.Objects:\n", diff)
+	checked := make(map[core.ID]bool)
+	for id, want := range wantMap {
+		checked[id] = true
+		actual, found := c.Objects[id]
+		if !found {
+			t.Errorf("fake.Client missing %s", id.String())
+			continue
+		}
+
+		_, wantUnstructured := want.(*unstructured.Unstructured)
+		_, actualUnstructured := actual.(*unstructured.Unstructured)
+		if wantUnstructured != actualUnstructured {
+			// If you see this error, you should register the type so the code can
+			// compare them properly.
+			t.Errorf("got want.(type)=%T and actual.(type)=%T for two objects of type %s, want equal", want, actual, want.GroupVersionKind().String())
+			continue
+		}
+
+		if diff := cmp.Diff(want, actual, cmpopts.EquateEmpty()); diff != "" {
+			// If you're seeing errors originating from how unstructured conversions work,
+			// e.g. the diffs are a bunch of nil maps, then register the type in the
+			// client's scheme.
+			t.Errorf("diff to fake.Client.Objects[%s]:\n%s", id.String(), diff)
+		}
+	}
+	for id := range c.Objects {
+		if !checked[id] {
+			t.Errorf("fake.Client unexpectedly contains %s", id.String())
+		}
 	}
 }
 
@@ -277,12 +347,19 @@ func (c *Client) list(gk schema.GroupKind) []core.Object {
 
 func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList) error {
 	objs := c.list(kinds.CustomResourceDefinition())
-	for _, o := range objs {
-		crd, ok := o.(*v1beta1.CustomResourceDefinition)
-		if !ok {
-			return errors.Errorf("non-CRD stored as CRD: %v", o)
+	for _, obj := range objs {
+		switch o := obj.(type) {
+		case *v1beta1.CustomResourceDefinition:
+			list.Items = append(list.Items, *o)
+		case *unstructured.Unstructured:
+			crd, err := clusterconfig.AsCRD(o)
+			if err != nil {
+				return err
+			}
+			list.Items = append(list.Items, *crd)
+		default:
+			return errors.Errorf("non-CRD stored as CRD: %+v", obj)
 		}
-		list.Items = append(list.Items, *crd)
 	}
 
 	return nil
@@ -319,4 +396,10 @@ func (c *Client) listUnstructured(list *unstructured.UnstructuredList) error {
 		list.Items = append(list.Items, unstructured.Unstructured{Object: obj})
 	}
 	return nil
+}
+
+// Applier returns a fake.Applier wrapping this fake.Client. Callers using the
+// resulting Applier will read from/write to the original fake.Client.
+func (c *Client) Applier() *Applier {
+	return &Applier{Client: c}
 }

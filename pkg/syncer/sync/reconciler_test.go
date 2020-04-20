@@ -113,7 +113,7 @@ func TestReconcile(t *testing.T) {
 			for i := range tc.actual {
 				actual = append(actual, &tc.actual[i])
 			}
-			fakeClient := fake.NewClient(t, actual...)
+			fakeClient := fake.NewClient(t, runtime.NewScheme(), actual...)
 
 			discoveryClient := fake.NewDiscoveryClient(
 				kinds.ConfigMap(),
