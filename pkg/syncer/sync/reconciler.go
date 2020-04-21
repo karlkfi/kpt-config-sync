@@ -36,10 +36,10 @@ type ClientFactory func() (client.Client, error)
 type MetaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
 	client *syncerclient.Client
-	// syncCache is a shared cache of Syncs on the cluster.
+	// syncReader is a shared cache of Syncs on the cluster.
 	// It is populated by informers in the scheme and used by all controllers and
 	// reconcilers in the manager.
-	syncCache client.Reader
+	syncReader client.Reader
 	// discoveryClient is used to look up versions on the cluster for the GroupKinds in the Syncs being reconciled.
 	discoveryClient utildiscovery.ServerResourcer
 	// builder is used to recreate controllers for watched GroupVersionKinds.
@@ -61,7 +61,7 @@ func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, cli
 
 	return &MetaReconciler{
 		client:          syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
-		syncCache:       mgr.GetCache(),
+		syncReader:      mgr.GetCache(),
 		clientFactory:   clientFactory,
 		discoveryClient: dc,
 		builder:         builder,
@@ -91,7 +91,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 
 func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
 	syncs := &v1.SyncList{}
-	err := r.syncCache.List(ctx, syncs)
+	err := r.syncReader.List(ctx, syncs)
 	if err != nil {
 		panic(errors.Wrap(err, "could not list all Syncs"))
 	}

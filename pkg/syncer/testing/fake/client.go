@@ -110,13 +110,32 @@ func (c *Client) Get(_ context.Context, key client.ObjectKey, obj runtime.Object
 	return nil
 }
 
+func validateListOptions(opts client.ListOptions) error {
+	if opts.Continue != "" {
+		return errors.Errorf("fake.Client.List does not yet support the Continue option, but got: %+v", opts)
+	}
+	if opts.FieldSelector != nil {
+		return errors.Errorf("fake.Client.List does not yet support the FieldSelector option, but got: %+v", opts)
+	}
+	if opts.LabelSelector != nil {
+		return errors.Errorf("fake.Client.List does not yet support the LabelSelector option, but got: %+v", opts)
+	}
+	if opts.Limit != 0 {
+		return errors.Errorf("fake.Client.List does not yet support the Limit option, but got: %+v", opts)
+	}
+
+	return nil
+}
+
 // List implements client.Client.
 //
 // Does not paginate results.
 func (c *Client) List(_ context.Context, list runtime.Object, opts ...client.ListOption) error {
-	if len(opts) > 0 {
-		jsn, _ := json.MarshalIndent(opts, "", "  ")
-		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %v", string(jsn))
+	options := client.ListOptions{}
+	options.ApplyOptions(opts)
+	err := validateListOptions(options)
+	if err != nil {
+		return err
 	}
 
 	_, isList := list.(meta.List)
@@ -125,14 +144,14 @@ func (c *Client) List(_ context.Context, list runtime.Object, opts ...client.Lis
 	}
 
 	if ul, isUnstructured := list.(*unstructured.UnstructuredList); isUnstructured {
-		return c.listUnstructured(ul)
+		return c.listUnstructured(ul, options)
 	}
 
 	switch l := list.(type) {
 	case *v1beta1.CustomResourceDefinitionList:
-		return c.listCRDs(l)
+		return c.listCRDs(l, options)
 	case *v1.SyncList:
-		return c.listSyncs(l)
+		return c.listSyncs(l, options)
 	}
 
 	return errors.Errorf("fake.Client does not support List(%T)", list)
@@ -167,7 +186,7 @@ func (c *Client) fromUnstructured(obj runtime.Object) (runtime.Object, error) {
 func (c *Client) Create(_ context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 	if len(opts) > 0 {
 		jsn, _ := json.MarshalIndent(opts, "", "  ")
-		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %v", string(jsn))
+		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %+v", string(jsn))
 	}
 
 	obj, err := c.fromUnstructured(obj.DeepCopyObject())
@@ -345,10 +364,14 @@ func (c *Client) list(gk schema.GroupKind) []core.Object {
 	return result
 }
 
-func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList) error {
+func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList, options client.ListOptions) error {
 	objs := c.list(kinds.CustomResourceDefinition())
 	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
 		switch o := obj.(type) {
+		// TODO(b/154527698): Handle v1.CRDs once we're able to import the definition.
 		case *v1beta1.CustomResourceDefinition:
 			list.Items = append(list.Items, *o)
 		case *unstructured.Unstructured:
@@ -365,12 +388,15 @@ func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList) error {
 	return nil
 }
 
-func (c *Client) listSyncs(list *v1.SyncList) error {
+func (c *Client) listSyncs(list *v1.SyncList, options client.ListOptions) error {
 	objs := c.list(kinds.Sync().GroupKind())
-	for _, o := range objs {
-		sync, ok := o.(*v1.Sync)
+	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		sync, ok := obj.(*v1.Sync)
 		if !ok {
-			return errors.Errorf("non-Sync stored as CRD: %v", o)
+			return errors.Errorf("non-Sync stored as CRD: %v", obj)
 		}
 		list.Items = append(list.Items, *sync)
 	}
@@ -378,7 +404,7 @@ func (c *Client) listSyncs(list *v1.SyncList) error {
 	return nil
 }
 
-func (c *Client) listUnstructured(list *unstructured.UnstructuredList) error {
+func (c *Client) listUnstructured(list *unstructured.UnstructuredList, options client.ListOptions) error {
 	gvk := list.GetObjectKind().GroupVersionKind()
 	if gvk.Empty() {
 		return errors.Errorf("fake.Client.List(UnstructuredList) requires GVK")
@@ -388,12 +414,15 @@ func (c *Client) listUnstructured(list *unstructured.UnstructuredList) error {
 	}
 	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
-	for _, o := range c.list(gvk.GroupKind()) {
-		obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
+	for _, obj := range c.list(gvk.GroupKind()) {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		uo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 		if err != nil {
 			return err
 		}
-		list.Items = append(list.Items, unstructured.Unstructured{Object: obj})
+		list.Items = append(list.Items, unstructured.Unstructured{Object: uo})
 	}
 	return nil
 }

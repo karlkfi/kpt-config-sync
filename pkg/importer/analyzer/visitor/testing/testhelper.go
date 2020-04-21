@@ -35,11 +35,6 @@ const (
 	ClusterAdminBinding = "cluster-admin-binding"
 )
 
-var (
-	// ImportTime defines a default time to use for testing.
-	ImportTime = metav1.NewTime(time.Date(2017, 8, 10, 5, 16, 00, 0, time.FixedZone("PDT", -7*60*60)))
-)
-
 // ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
 func ObjectSets(runtimeObjs ...core.Object) []*ast.NamespaceObject {
 	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))

@@ -13,8 +13,8 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/cache"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncercache "github.com/google/nomos/pkg/syncer/cache"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -46,9 +47,9 @@ var reservedNamespaceConfig = &v1.NamespaceConfig{
 
 // NamespaceConfigReconciler reconciles a NamespaceConfig object.
 type NamespaceConfigReconciler struct {
-	client   *client.Client
+	client   *syncerclient.Client
 	applier  Applier
-	cache    cache.GenericCache
+	cache    *syncercache.GenericCache
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	now      func() metav1.Time
@@ -60,12 +61,12 @@ type NamespaceConfigReconciler struct {
 var _ reconcile.Reconciler = &NamespaceConfigReconciler{}
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
-func NewNamespaceConfigReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
+func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
 	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *NamespaceConfigReconciler {
 	return &NamespaceConfigReconciler{
-		client:   client,
+		client:   c,
 		applier:  applier,
-		cache:    cache,
+		cache:    syncercache.NewGenericResourceCache(reader),
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
@@ -232,7 +233,7 @@ func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, actua
 	return err
 }
 
-func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name string, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, namespace string, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
 	if config == nil {
 		return nil
 	}
@@ -265,7 +266,7 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 			core.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, name)
+		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, client.InNamespace(namespace))
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from NamespaceConfig controller for %q", gvk))
 			syncErrs = append(syncErrs, newSyncError(config, err))
@@ -292,14 +293,14 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, name stri
 	}
 
 	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs, resConditions); err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", name))
+		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", namespace))
 		r.recorder.Eventf(config, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update NamespaceConfig status: %s", err)
 	}
 
 	if errBuilder == nil && reconcileCount > 0 && len(syncErrs) == 0 {
 		r.recorder.Eventf(config, corev1.EventTypeNormal, v1.EventReasonReconcileComplete,
-			"NamespaceConfig %q was successfully reconciled: %d changes", name, reconcileCount)
+			"NamespaceConfig %q was successfully reconciled: %d changes", namespace, reconcileCount)
 	}
 	return errBuilder
 }

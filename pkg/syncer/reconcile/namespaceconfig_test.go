@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
@@ -22,7 +21,8 @@ import (
 )
 
 func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...core.MetaMutator) *appsv1.Deployment {
-	mutators := append(opts, syncertesting.Herrings...)
+	mutators := append([]core.MetaMutator{core.Namespace(eng)})
+	mutators = append(mutators, opts...)
 	result := fake.DeploymentObject(mutators...)
 	result.Spec.Strategy.Type = deploymentStrategy
 	return result
@@ -176,13 +176,8 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
@@ -196,11 +191,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectNamespaceCacheGet(namespaceCfg, managedNamespace)
-
-			tm.ExpectCacheList(kinds.Deployment(), managedNamespace.Name, tc.actual)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -267,13 +258,9 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 
 			toSync := []schema.GroupVersionKind{kinds.Deployment()}
 
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			s := runtime.NewScheme()
@@ -285,13 +272,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectNamespaceCacheGet(tc.actualNamespaceConfig, tc.namespace)
-
-			if tc.actualNamespaceConfig != nil {
-				tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual)
-			}
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -347,13 +328,9 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 
 			toSync := []schema.GroupVersionKind{kinds.Deployment()}
 
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			s := runtime.NewScheme()
@@ -361,11 +338,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, tc.declared, tc.actual)
 
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectNamespaceCacheGet(tc.declared, tc.actual)
-
-			tm.ExpectCacheList(kinds.Deployment(), tc.actual.Name, nil)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -503,13 +476,9 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				toSync = []schema.GroupVersionKind{tc.toSyncOverride}
 			}
 
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			actual := []runtime.Object{tc.namespaceConfig, tc.namespace}
@@ -519,10 +488,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectNamespaceCacheGet(tc.namespaceConfig, tc.namespace)
-			tm.ExpectCacheList(kinds.Deployment(), tc.namespace.Name, tc.actual...)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

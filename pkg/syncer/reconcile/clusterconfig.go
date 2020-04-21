@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/cache"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncercache "github.com/google/nomos/pkg/syncer/cache"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -29,9 +30,9 @@ var _ reconcile.Reconciler = &ClusterConfigReconciler{}
 
 // ClusterConfigReconciler reconciles a ClusterConfig object.
 type ClusterConfigReconciler struct {
-	client   *client.Client
+	client   *syncerclient.Client
 	applier  Applier
-	cache    cache.GenericCache
+	cache    *syncercache.GenericCache
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	toSync   []schema.GroupVersionKind
@@ -42,12 +43,12 @@ type ClusterConfigReconciler struct {
 
 // NewClusterConfigReconciler returns a new ClusterConfigReconciler.  ctx is the ambient context
 // to use for all reconciler operations.
-func NewClusterConfigReconciler(ctx context.Context, client *client.Client, applier Applier, cache cache.GenericCache, recorder record.EventRecorder,
+func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
 	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *ClusterConfigReconciler {
 	return &ClusterConfigReconciler{
-		client:   client,
+		client:   c,
 		applier:  applier,
-		cache:    cache,
+		cache:    syncercache.NewGenericResourceCache(reader),
 		recorder: recorder,
 		decoder:  decoder,
 		toSync:   toSync,
@@ -123,7 +124,7 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 			SyncedAt(decl, config.Spec.Token)
 		}
 
-		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, "")
+		actualInstances, err := r.cache.UnstructuredList(ctx, gvk)
 		if err != nil {
 			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list from config controller for %q", gvk))
 			continue

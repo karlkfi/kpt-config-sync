@@ -37,9 +37,9 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 }
 
 // DecorateWithClusterConfigs updates AllPolices with all the ClusterConfigs from APIServer.
-func DecorateWithClusterConfigs(ctx context.Context, cache client.Reader, policies *AllConfigs) status.MultiError {
+func DecorateWithClusterConfigs(ctx context.Context, reader client.Reader, policies *AllConfigs) status.MultiError {
 	clusterConfigs := &v1.ClusterConfigList{}
-	if err := cache.List(ctx, clusterConfigs); err != nil {
+	if err := reader.List(ctx, clusterConfigs); err != nil {
 		return status.APIServerError(err, "failed to list ClusterConfigs")
 	}
 

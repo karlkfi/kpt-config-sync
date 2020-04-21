@@ -2,7 +2,6 @@ package crd
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -36,7 +35,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 	reconciler := NewReconciler(
 		resourceClient,
 		applier,
-		syncercache.NewGenericResourceCache(mgr.GetCache()),
+		mgr.GetCache(),
 		mgr.GetEventRecorderFor(crdControllerName),
 		decode.NewGenericResourceDecoder(mgr.GetScheme()),
 		metav1.Now,

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
@@ -36,15 +35,13 @@ var (
 )
 
 func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
-	mutators := append(opts, fake.ClusterConfigMeta(syncertesting.Herrings...))
-	result := fake.ClusterConfigObject(mutators...)
+	result := fake.ClusterConfigObject(opts...)
 	result.Status.SyncState = state
 	return result
 }
 
 func customResourceDefinitionV1Beta1(version string, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
-	mutators := append(opts, syncertesting.Herrings...)
-	result := fake.CustomResourceDefinitionV1Beta1Object(mutators...)
+	result := fake.CustomResourceDefinitionV1Beta1Object(opts...)
 	result.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{{Name: version}}
 	return result
 }
@@ -333,10 +330,6 @@ func TestClusterConfigReconcile(t *testing.T) {
 }
 
 func (tc crdTestCase) run(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	tm := syncertesting.NewTestMocks(t, mockCtrl)
 	fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 	fakeEventRecorder := testingfake.NewEventRecorder(t)
 	fakeSignal := testingfake.RestartSignalRecorder{}
@@ -354,15 +347,9 @@ func (tc crdTestCase) run(t *testing.T) {
 	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1(), &v1beta1.CustomResourceDefinition{})
 	fakeClient := testingfake.NewClient(t, s, actual...)
 
-	testReconciler := NewReconciler(client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder,
+	testReconciler := NewReconciler(client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,
 		fakeDecoder, syncertesting.Now, &fakeSignal)
 	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds))
-
-	tm.ExpectClusterCacheGet(clusterCfg)
-	tm.ExpectCacheList(kinds.CustomResourceDefinitionV1Beta1(), "", tc.actual)
-	if tc.declared != nil && tc.declared.GetObjectKind().GroupVersionKind() == kinds.CustomResourceDefinitionV1() {
-		tm.ExpectCacheList(kinds.CustomResourceDefinitionV1(), "", tc.actual)
-	}
 
 	_, err := testReconciler.Reconcile(
 		runtimereconcile.Request{

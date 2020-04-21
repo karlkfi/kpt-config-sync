@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -38,7 +37,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 			ctx,
 			client.New(mgr.GetClient(), metrics.APICallDuration),
 			applier,
-			syncercache.NewGenericResourceCache(mgr.GetCache()),
+			mgr.GetCache(),
 			&CancelFilteringRecorder{mgr.GetEventRecorderFor(clusterConfigControllerName)},
 			decoder,
 			metav1.Now,

@@ -127,7 +127,7 @@ func TestReconcile(t *testing.T) {
 
 			testReconciler := &MetaReconciler{
 				client:          syncerclient.New(fakeClient, metrics.APICallDuration),
-				syncCache:       fakeClient,
+				syncReader:      fakeClient,
 				discoveryClient: discoveryClient,
 				builder:         newSyncAwareBuilder(),
 				subManager:      restartable,

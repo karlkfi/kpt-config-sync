@@ -1,33 +1,22 @@
 package testing
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/syncer/testing/mocks"
 	"github.com/google/nomos/pkg/testing/fake"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Token is a test sync token.
 const Token = "b38239ea8f58eaed17af6734bd6a025eeafccda1"
 
 var (
-	anyContext = gomock.Any()
-
 	// Converter is an unstructured.Unstructured converter used for testing.
 	Converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
 
@@ -42,68 +31,7 @@ var (
 	ManagementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
 	// TokenAnnotation sets the sync token annotation on the object
 	TokenAnnotation = core.Annotation(v1.SyncTokenAnnotationKey, Token)
-
-	// Herrings is used when the decoder mangles empty vs. non-existent entries in map.
-	Herrings = []core.MetaMutator{
-		core.Annotation("red", "herring"),
-		core.Label("red", "herring"),
-	}
 )
-
-// NewTestMocks returns a new TestMocks.
-func NewTestMocks(t *testing.T, mockCtrl *gomock.Controller) TestMocks {
-	return TestMocks{
-		t:         t,
-		MockCtrl:  mockCtrl,
-		MockCache: mocks.NewMockGenericCache(mockCtrl),
-	}
-}
-
-// TestMocks is a helper used for unit testing controller Reconcile invocation. It wraps all the mocks
-// needed to verify common reconcile expectations.
-type TestMocks struct {
-	t         *testing.T
-	MockCtrl  *gomock.Controller
-	MockCache *mocks.MockGenericCache
-}
-
-// ExpectClusterCacheGet stubs the ClusterConfig being fetched from the Cache and verifies we request it.
-func (tm *TestMocks) ExpectClusterCacheGet(config *v1.ClusterConfig) {
-	if config == nil {
-		return
-	}
-	tm.MockCache.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: config.Name}, Eq(tm.t, "ClusterCacheGet", &v1.ClusterConfig{})).
-		SetArg(2, *config)
-}
-
-// ExpectNamespaceCacheGet organizes the mock calls for first retrieving a NamespaceConfig from the
-// cache, and then supplying the Namespace. Correctly returns the intermediate not found error if
-// supplied nil for a config.
-//
-// Does not yet support missing Namespace.
-func (tm *TestMocks) ExpectNamespaceCacheGet(config *v1.NamespaceConfig, namespace *corev1.Namespace) {
-	if config == nil {
-		tm.MockCache.EXPECT().Get(
-			anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceConfigCacheGet", &v1.NamespaceConfig{})).
-			Return(errors.NewNotFound(schema.GroupResource{}, ""))
-	} else {
-		tm.MockCache.EXPECT().Get(
-			anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceConfigCacheGet",
-				&v1.NamespaceConfig{})).
-			SetArg(2, *config)
-	}
-	tm.MockCache.EXPECT().Get(
-		anyContext, types.NamespacedName{Name: namespace.Name}, Eq(tm.t, "NamespaceCacheGet", &corev1.Namespace{})).
-		SetArg(2, *namespace)
-}
-
-// ExpectCacheList stubs the Objects being fetched from the Cache and verifies we request them.
-func (tm *TestMocks) ExpectCacheList(gvk schema.GroupVersionKind, namespace string, obj ...runtime.Object) {
-	tm.MockCache.EXPECT().
-		UnstructuredList(anyContext, Eq(tm.t, "ExpectCacheListGVK", gvk), Eq(tm.t, "ExpectCacheListNamespace", namespace)).
-		Return(ToUnstructuredList(tm.t, Converter, obj...), nil)
-}
 
 // ToUnstructured converts the object to an unstructured.Unstructured.
 func ToUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
@@ -127,38 +55,6 @@ func ToUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter, o
 		result[i] = ToUnstructured(t, converter, obj)
 	}
 	return result
-}
-
-// cmpDiffMatcher returns true iff cmp.Update returns empty string.
-// Prints the diff if there is one, as the gomock diff is garbage.
-type cmpDiffMatcher struct {
-	t        *testing.T
-	name     string
-	expected interface{}
-}
-
-// Eq creates a named matcher that compares to expected and prints a diff in
-// case a mismatch is not found. Uses cmpopts.Diff to compute a difference to
-// provide more human-readable diffs.
-//
-// Implicitly assumes empty and nil are equivalent.
-func Eq(t *testing.T, name string, expected interface{}) gomock.Matcher {
-	return &cmpDiffMatcher{t: t, name: name, expected: expected}
-}
-
-// String implements Stringer
-func (m *cmpDiffMatcher) String() string {
-	return fmt.Sprintf("is equal to %v", m.expected)
-}
-
-// Matches implements Matcher
-func (m *cmpDiffMatcher) Matches(actual interface{}) bool {
-	opt := cmpopts.EquateEmpty() // Disregard empty map vs nil.
-	if diff := cmp.Diff(m.expected, actual, opt); diff != "" {
-		m.t.Logf("The %q matcher has a diff (expected- +actual):%v\n\n", m.name, diff)
-		return false
-	}
-	return true
 }
 
 // Diff represents the arguments to an Applier.Updawte invocation.

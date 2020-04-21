@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
@@ -33,15 +32,13 @@ func clusterSyncError(err v1.ConfigManagementError) fake.ClusterConfigMutator {
 }
 
 func clusterConfig(state v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
-	mutators := append(opts, fake.ClusterConfigMeta(syncertesting.Herrings...))
-	result := fake.ClusterConfigObject(mutators...)
+	result := fake.ClusterConfigObject(opts...)
 	result.Status.SyncState = state
 	return result
 }
 
 func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts ...core.MetaMutator) *corev1.PersistentVolume {
-	mutators := append(opts, syncertesting.Herrings...)
-	result := fake.PersistentVolumeObject(mutators...)
+	result := fake.PersistentVolumeObject(opts...)
 	result.Spec.PersistentVolumeReclaimPolicy = reclaimPolicy
 	return result
 }
@@ -195,13 +192,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, tc.declared))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			s := runtime.NewScheme()
@@ -213,10 +206,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectClusterCacheGet(clusterCfg)
-			tm.ExpectCacheList(kinds.PersistentVolume(), "", tc.actual)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -273,20 +263,14 @@ func TestInvalidClusterConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			tm := syncertesting.NewTestMocks(t, mockCtrl)
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			fakeClient := testingfake.NewClient(t, runtime.NewScheme(), tc.actual)
 			testReconciler := NewClusterConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), tm.MockCache, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
-
-			tm.ExpectClusterCacheGet(tc.actual)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

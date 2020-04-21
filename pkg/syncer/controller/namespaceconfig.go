@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -40,7 +39,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 			ctx,
 			genericClient,
 			applier,
-			syncercache.NewGenericResourceCache(mgr.GetCache()),
+			mgr.GetCache(),
 			&CancelFilteringRecorder{mgr.GetEventRecorderFor(namespaceConfigControllerName)},
 			decoder,
 			metav1.Now,

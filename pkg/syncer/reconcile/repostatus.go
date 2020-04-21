@@ -14,7 +14,6 @@ import (
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -117,13 +116,12 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
 func (r *RepoStatus) buildState(ctx context.Context, importToken string) (*syncState, error) {
-	opts := client.ListOptions{}
 	ccList := &v1.ClusterConfigList{}
-	if err := r.client.List(ctx, ccList, &opts); err != nil {
+	if err := r.client.List(ctx, ccList); err != nil {
 		return nil, errors.Wrapf(err, "listing ClusterConfigs")
 	}
 	ncList := &v1.NamespaceConfigList{}
-	if err := r.client.List(ctx, ncList, &opts); err != nil {
+	if err := r.client.List(ctx, ncList); err != nil {
 		return nil, errors.Wrapf(err, "listing NamespaceConfigs")
 	}
 	return r.processConfigs(ccList, ncList, importToken), nil

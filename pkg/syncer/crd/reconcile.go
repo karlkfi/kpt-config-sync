@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -48,7 +49,7 @@ type Reconciler struct {
 	applier syncerreconcile.Applier
 	// cache is a shared cache that is populated by informers in the scheme and used by all controllers / reconcilers in the
 	// manager.
-	cache    syncercache.GenericCache
+	cache    *syncercache.GenericCache
 	recorder record.EventRecorder
 	decoder  decode.Decoder
 	now      func() metav1.Time
@@ -66,12 +67,12 @@ type Reconciler struct {
 
 // NewReconciler returns a new Reconciler.
 func NewReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
-	cache syncercache.GenericCache, recorder record.EventRecorder, decoder decode.Decoder,
+	reader client.Reader, recorder record.EventRecorder, decoder decode.Decoder,
 	now func() metav1.Time, signal sync.RestartSignal) *Reconciler {
 	return &Reconciler{
 		client:   client,
 		applier:  applier,
-		cache:    cache,
+		cache:    syncercache.NewGenericResourceCache(reader),
 		recorder: recorder,
 		decoder:  decoder,
 		now:      now,
@@ -170,7 +171,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 
 	var syncErrs []v1.ConfigManagementError
 
-	actualInstancesV1Beta1, err := r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1Beta1(), "")
+	actualInstancesV1Beta1, err := r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1Beta1())
 	if err != nil {
 		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1Beta1()))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
@@ -189,7 +190,7 @@ func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 
 	var actualInstancesV1 []*unstructured.Unstructured
 	if len(declaredInstancesV1) > 0 {
-		actualInstancesV1, err = r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1(), "")
+		actualInstancesV1, err = r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1())
 		if err != nil {
 			mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1()))
 			syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
