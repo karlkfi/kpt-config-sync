@@ -66,7 +66,12 @@ func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.Multi
 
 	var errs status.MultiError
 	var fileObjects []ast.FileObject
-	walkErr := filepath.Walk(p, func(path string, info os.FileInfo, _ error) error {
+	walkErr := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			errs = status.Append(errs, status.PathWrapError(err, path))
+			return nil
+		}
+
 		if info.IsDir() {
 			// This is a directory, continue.
 			return nil
