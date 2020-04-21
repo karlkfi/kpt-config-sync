@@ -85,7 +85,9 @@ func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.Namespace
 		oldObj := obj.(*v1.NamespaceConfig)
 		newObj := intent.DeepCopy()
 		if !oldObj.Spec.DeleteSyncedTime.IsZero() {
-			e := status.ResourceWrap(errors.Errorf("namespace %v terminating, cannot update", oldObj.Name), "",
+			e := status.ResourceWrap(
+				errors.Errorf("NamespaceConfig %s has .spec.deleteSyncedTime set, cannot update", oldObj.Name),
+				"",
 				ast.ParseFileObject(oldObj))
 			return nil, e
 		}
