@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -253,16 +252,6 @@ func testK8SResources() []*restmapper.APIGroupResources {
 			},
 		},
 	}
-}
-
-// Scoper returns a utildiscovery.Scoper with resources commonly used in testing.
-//
-// This includes many core Kubernetes types, as well as the internal Nomos types.
-// Feel free to add new types as necessary.
-func Scoper(crds ...*v1beta1.CustomResourceDefinition) utildiscovery.Scoper {
-	result := utildiscovery.CoreScoper()
-	result.AddCustomResources(crds)
-	return result
 }
 
 // testDynamicResources returns API Resources for both standard K8S resources

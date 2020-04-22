@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -243,11 +242,6 @@ func SyncObject(gk schema.GroupKind, opts ...core.MetaMutator) *v1.Sync {
 	return obj
 }
 
-// SyncAtPath returns a nomos Sync at the specified path.
-func SyncAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(SyncObject(kinds.Role().GroupKind(), opts...), path)
-}
-
 // PersistentVolumeObject returns a PersistentVolume Object.
 func PersistentVolumeObject(opts ...core.MetaMutator) *corev1.PersistentVolume {
 	result := &corev1.PersistentVolume{TypeMeta: toTypeMeta(kinds.PersistentVolume())}
@@ -255,15 +249,6 @@ func PersistentVolumeObject(opts ...core.MetaMutator) *corev1.PersistentVolume {
 	mutate(result, opts...)
 
 	return result
-}
-
-// ReplicaSet returns a default ReplicaSet object.
-func ReplicaSet(opts ...core.MetaMutator) ast.FileObject {
-	obj := &appsv1.ReplicaSet{TypeMeta: toTypeMeta(kinds.ReplicaSet())}
-	defaultMutate(obj)
-	mutate(obj, opts...)
-
-	return FileObject(obj, "namespaces/foo/replicaset.yaml")
 }
 
 // RoleObject initializes a Role.

@@ -191,7 +191,7 @@ func TestMergeResourceConditions(t *testing.T) {
 			clCfgList: &v1.ClusterConfigList{
 				Items: []v1.ClusterConfig{
 					fakeClusterConfigWithResourceConditions(commit2, commit1, []v1.ResourceCondition{
-						v1.ResourceCondition{
+						{
 							GroupVersion:       "/templates.gatekeeper.sh/v1beta1",
 							Kind:               "ConstraintTemplate",
 							NamespacedName:     "/my-constraint-template",
@@ -205,7 +205,7 @@ func TestMergeResourceConditions(t *testing.T) {
 			nsCfgList: &v1.NamespaceConfigList{
 				Items: []v1.NamespaceConfig{
 					fakeNamespaceConfigWithResourceConditions("gatekeeper-system", commit2, commit1, []v1.ResourceCondition{
-						v1.ResourceCondition{
+						{
 							GroupVersion:   "/v1",
 							Kind:           "Pod",
 							NamespacedName: "gatekeeper-system/gatekeeper-controller-manager-0",
@@ -217,7 +217,7 @@ func TestMergeResourceConditions(t *testing.T) {
 				},
 			},
 			wantResourceConditions: []v1.ResourceCondition{
-				v1.ResourceCondition{
+				{
 					GroupVersion:       "/templates.gatekeeper.sh/v1beta1",
 					Kind:               "ConstraintTemplate",
 					NamespacedName:     "/my-constraint-template",
@@ -225,7 +225,7 @@ func TestMergeResourceConditions(t *testing.T) {
 					Token:              commit2,
 					ReconcilingReasons: []string{"ConstraintTemplate has not been processed by PolicyController"},
 				},
-				v1.ResourceCondition{
+				{
 					GroupVersion:   "/v1",
 					Kind:           "Pod",
 					NamespacedName: "gatekeeper-system/gatekeeper-controller-manager-0",

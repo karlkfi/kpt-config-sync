@@ -122,7 +122,7 @@ func TestConvertLogSourcesToReadables(t *testing.T) {
 			}
 
 			sort.Sort(Readables(output))
-			sort.Sort(Readables(test.expected))
+			sort.Sort(test.expected)
 
 			if len(output) != len(test.expected) {
 				t.Errorf("Expected expected Readables and actual readbles to have same length.")

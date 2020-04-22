@@ -26,10 +26,6 @@ var (
 		Group: TemplatesGroup,
 		Kind:  "ConstraintTemplate",
 	}
-	// ConstraintTemplateGKV1alpha1 is the v1alpha1 GVK
-	ConstraintTemplateGKV1alpha1 = ConstraintTemplateGroupKind.WithVersion("v1alpha1")
-	// ConstraintTemplateGKV1beta1 is the v1beta1 GVK
-	ConstraintTemplateGKV1beta1 = ConstraintTemplateGroupKind.WithVersion("v1beta1")
 )
 
 // ConstraintTemplateCRD converts a gatekeeper constraint template to the

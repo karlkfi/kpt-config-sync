@@ -3,8 +3,6 @@
 package service
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"fmt"
 	"net/http"
@@ -13,17 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var (
-	listenAddr = flag.String(
-		"listen_hostport", ":443", "The hostport to listen to.")
-	metricsPort    = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
-	serverCertFile = flag.String(
-		"server_cert", "server.crt", "The server certificate file.")
-	serverKeyFile = flag.String(
-		"server_key", "server.key", "The server private key file.")
-	handlerURLPath = flag.String(
-		"handler_url_path", "/", "The default handler URL path.")
-)
+var metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 
 // NoCache positively turns off page caching.
 func NoCache(handler http.Handler) http.HandlerFunc {
@@ -37,55 +25,6 @@ func NoCache(handler http.Handler) http.HandlerFunc {
 	}
 }
 
-// WithStrictTransport decorates handler to require strict transport security
-// when serving HTTPS request.
-func WithStrictTransport(handler http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Strict-Transport-Security",
-			"max-age=86400; includeSubdomains")
-		handler.ServeHTTP(w, req)
-	}
-}
-
-func configTLS(clientCert []byte) *tls.Config {
-	glog.Infof("Using server certificate file: %v", *serverCertFile)
-	glog.Infof("Using server private key file: %v", *serverKeyFile)
-	if clientCert != nil {
-		glog.V(5).Infof("Using client CA: %v", string(clientCert))
-	}
-	sCert, err := tls.LoadX509KeyPair(*serverCertFile, *serverKeyFile)
-	if err != nil {
-		glog.Fatal(err)
-	}
-
-	config := tls.Config{
-		Certificates: []tls.Certificate{sCert},
-		MinVersion:   tls.VersionTLS12,
-		CurvePreferences: []tls.CurveID{
-			tls.CurveP521,
-			tls.CurveP384,
-			tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		},
-	}
-
-	if clientCert != nil {
-		clientCertPool := x509.NewCertPool()
-		clientCertPool.AppendCertsFromPEM(clientCert)
-		config.ClientCAs = clientCertPool
-		config.ClientAuth = tls.RequireAndVerifyClientCert
-	} else {
-		glog.Warning("Not verifying client cert")
-	}
-
-	return &config
-}
-
 // ServeMetrics spins up a standalone metrics HTTP endpoint.
 func ServeMetrics() {
 	// Expose prometheus metrics via HTTP.
@@ -95,22 +34,5 @@ func ServeMetrics() {
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
 	if err != nil {
 		glog.Fatalf("HTTP ListenAndServe for metrics: %+v", err)
-	}
-}
-
-// Server configures and a https server from passed-in flags using
-// the supplied handler. If clientCert is not nil,
-func Server(handler http.HandlerFunc, clientCert []byte) *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc(*handlerURLPath, handler)
-
-	// TODO(filmil): Check how to install a handler that returns 404 for
-	// everything else.
-
-	return &http.Server{
-		Addr:         *listenAddr,
-		Handler:      mux,
-		TLSConfig:    configTLS(clientCert),
-		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler)),
 	}
 }

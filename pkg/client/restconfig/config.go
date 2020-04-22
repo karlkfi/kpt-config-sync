@@ -129,22 +129,6 @@ func newKubectlConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-// NewClientConfig returns the current (local) Kubernetes client configuration.
-func NewClientConfig() (clientcmd.ClientConfig, error) {
-	return newClientConfigWithOverrides(&clientcmd.ConfigOverrides{})
-}
-
-// newClientConfigWithOverrides returns a client configuration with supplied
-// overrides.
-func newClientConfigWithOverrides(o *clientcmd.ConfigOverrides) (clientcmd.ClientConfig, error) {
-	configPath, err := newConfigPath()
-	if err != nil {
-		return nil, errors.Wrapf(err, "while getting config path")
-	}
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}, o), nil
-}
-
 // newLocalClusterConfig creates a config for connecting to the local cluster API server.
 func newLocalClusterConfig() (*rest.Config, error) {
 	return rest.InClusterConfig()

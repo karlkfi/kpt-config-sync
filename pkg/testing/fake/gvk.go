@@ -20,13 +20,6 @@ func Group(group string) GVKOpt {
 	}
 }
 
-// Version replaces the Group of the GroupVersionKind with version.
-func Version(version string) GVKOpt {
-	return func(o *schema.GroupVersionKind) {
-		o.Version = version
-	}
-}
-
 // Kind replaces the Group of the GroupVersionKind with kind.
 func Kind(kind string) GVKOpt {
 	return func(o *schema.GroupVersionKind) {

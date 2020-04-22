@@ -69,12 +69,3 @@ func Annotations(annotations map[string]string) MetaMutator {
 		SetAnnotations(o, annotations)
 	}
 }
-
-// MetaMutators merges multiple MetaMutators into one.
-func MetaMutators(mutators ...MetaMutator) MetaMutator {
-	return func(o Object) {
-		for _, mutator := range mutators {
-			mutator(o)
-		}
-	}
-}
