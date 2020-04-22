@@ -26,10 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ reconcile.Reconciler = &ClusterConfigReconciler{}
+var _ reconcile.Reconciler = &clusterConfigReconciler{}
 
-// ClusterConfigReconciler reconciles a ClusterConfig object.
-type ClusterConfigReconciler struct {
+// clusterConfigReconciler reconciles a ClusterConfig object.
+type clusterConfigReconciler struct {
 	client   *syncerclient.Client
 	applier  Applier
 	cache    *syncercache.GenericCache
@@ -41,11 +41,11 @@ type ClusterConfigReconciler struct {
 	ctx context.Context
 }
 
-// NewClusterConfigReconciler returns a new ClusterConfigReconciler.  ctx is the ambient context
+// NewClusterConfigReconciler returns a new clusterConfigReconciler.  ctx is the ambient context
 // to use for all reconciler operations.
 func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
-	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *ClusterConfigReconciler {
-	return &ClusterConfigReconciler{
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) reconcile.Reconciler {
+	return &clusterConfigReconciler{
 		client:   c,
 		applier:  applier,
 		cache:    syncercache.NewGenericResourceCache(reader),
@@ -57,8 +57,8 @@ func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, app
 	}
 }
 
-// Reconcile is the Reconcile callback for ClusterConfigReconciler.
-func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+// Reconcile is the Reconcile callback for clusterConfigReconciler.
+func (r *clusterConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	if request.Name == v1.CRDClusterConfigName {
 		// We handle the CRD Cluster Config in the CRD controller, so don't reconcile it here.
 		return reconcile.Result{}, nil
@@ -76,7 +76,7 @@ func (r *ClusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 	return reconcile.Result{}, err
 }
 
-func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name types.NamespacedName) error {
+func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name types.NamespacedName) error {
 	clusterConfig := &v1.ClusterConfig{}
 	err := r.cache.Get(ctx, name, clusterConfig)
 	if err != nil {
@@ -108,7 +108,7 @@ func (r *ClusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	return rErr
 }
 
-func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.ClusterConfig) error {
+func (r *clusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.ClusterConfig) error {
 	grs, err := r.decoder.DecodeResources(config.Spec.Resources)
 	if err != nil {
 		return errors.Wrapf(err, "could not process cluster config: %q", config.GetName())
@@ -162,7 +162,7 @@ func (r *ClusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 	// allow the constraint to get applied.
 	if gks := resourcesWithoutSync(config.Spec.Resources, r.toSync); len(gks) != 0 {
 		glog.Infof(
-			"ClusterConfigReconciler encountered "+
+			"clusterConfigReconciler encountered "+
 				"group-kind(s) %s that were not present in a sync, "+
 				"skipping status update and waiting for reconciler restart",
 			strings.Join(gks, ", "))

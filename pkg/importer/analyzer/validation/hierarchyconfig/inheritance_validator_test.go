@@ -10,7 +10,7 @@ import (
 )
 
 func TestInheritanceValidator(t *testing.T) {
-	test := asttest.Validator(NewInheritanceValidator,
+	asttest.Validator(t, NewInheritanceValidator,
 		IllegalHierarchyModeErrorCode,
 
 		asttest.Pass("inheritance rolebinding default",
@@ -37,6 +37,4 @@ func TestInheritanceValidator(t *testing.T) {
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeNone, kinds.ResourceQuota())),
 		))
-
-	test.RunAll(t)
 }

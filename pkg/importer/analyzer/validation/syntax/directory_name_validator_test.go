@@ -9,11 +9,9 @@ import (
 )
 
 func TestDirectoryNameValidator_Pass(t *testing.T) {
-	test := asttest.Validator(NewDirectoryNameValidator,
+	asttest.Validator(t, NewDirectoryNameValidator,
 		InvalidDirectoryNameErrorCode,
 		asttest.Pass("valid name", fake.Namespace("namespaces/foo")),
 		asttest.Fail("invalid name", fake.Namespace("namespaces/...")),
 		asttest.Fail("controller namespace", fake.Namespace("namespaces/"+configmanagement.ControllerNamespace)))
-
-	test.RunAll(t)
 }

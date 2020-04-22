@@ -25,17 +25,17 @@ const (
 	reconcileTimeout = time.Minute * 5
 )
 
-var _ reconcile.Reconciler = &Reconciler{}
+var _ reconcile.Reconciler = &reconciler{}
 
-// Reconciler responds to changes to NamespaceConfigs by updating its ClusterState.
-type Reconciler struct {
+// reconciler responds to changes to NamespaceConfigs by updating its ClusterState.
+type reconciler struct {
 	cache  cache.Cache
 	state  *state.ClusterState
 	repoCl *repo.Client
 }
 
 // Reconcile is the callback for Reconciler.
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func AddController(mgr manager.Manager, repoCl *repo.Client, cs *state.ClusterState) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{
-		Reconciler: &Reconciler{
+		Reconciler: &reconciler{
 			cache:  mgr.GetCache(),
 			state:  cs,
 			repoCl: repoCl,

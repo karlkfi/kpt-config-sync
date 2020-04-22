@@ -40,7 +40,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 			genericClient,
 			applier,
 			mgr.GetCache(),
-			&CancelFilteringRecorder{mgr.GetEventRecorderFor(namespaceConfigControllerName)},
+			&cancelFilteringRecorder{mgr.GetEventRecorderFor(namespaceConfigControllerName)},
 			decoder,
 			metav1.Now,
 			extractGVKs(resourceTypes),

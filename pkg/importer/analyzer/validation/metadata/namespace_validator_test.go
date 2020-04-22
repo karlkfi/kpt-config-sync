@@ -9,7 +9,7 @@ import (
 )
 
 func TestNamespaceValidator(t *testing.T) {
-	test := asttest.Validator(
+	asttest.Validator(t,
 		NewMetadataNamespaceDirectoryValidator,
 		IllegalMetadataNamespaceDeclarationErrorCode,
 		asttest.Pass("no metadata.namespace",
@@ -24,6 +24,4 @@ func TestNamespaceValidator(t *testing.T) {
 			fake.RoleAtPath("namespaces/foo/role.yaml", core.Namespace("foo")),
 		),
 	)
-
-	test.RunAll(t)
 }

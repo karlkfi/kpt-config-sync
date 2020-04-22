@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseValidator(t *testing.T) {
-	test := asttest.Validator(NewParseValidator,
+	asttest.Validator(t, NewParseValidator,
 		ObjectParseErrorCode,
 		asttest.Pass("cluster",
 			fake.Cluster(),
@@ -36,6 +36,4 @@ func TestParseValidator(t *testing.T) {
 			fake.UnstructuredAtPath(kinds.Repo(), "system/repo.yaml"),
 		),
 	)
-
-	test.RunAll(t)
 }

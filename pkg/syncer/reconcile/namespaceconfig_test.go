@@ -1,4 +1,4 @@
-package reconcile
+package reconcile_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -190,7 +191,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			s.AddKnownTypeWithName(kinds.Deployment(), &appsv1.Deployment{})
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
-			testReconciler := NewNamespaceConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
@@ -271,7 +272,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			}
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
-			testReconciler := NewNamespaceConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
@@ -337,7 +338,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			s.AddKnownTypeWithName(kinds.Namespace(), &corev1.Namespace{})
 			fakeClient := testingfake.NewClient(t, s, tc.declared, tc.actual)
 
-			testReconciler := NewNamespaceConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
@@ -487,7 +488,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			s.AddKnownTypeWithName(kinds.Namespace(), &corev1.Namespace{})
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
-			testReconciler := NewNamespaceConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(

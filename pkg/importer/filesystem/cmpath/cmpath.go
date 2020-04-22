@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -89,11 +88,6 @@ type Relative struct {
 	root Root
 }
 
-// Path returns a copy of the underlying Path relative to the Nomos root.
-func (p Relative) Path() Path {
-	return p.path
-}
-
 // AbsoluteOSPath returns the absolute OS-specific path.
 func (p Relative) AbsoluteOSPath() string {
 	return filepath.Join(p.root.path, p.path.OSPath())
@@ -101,17 +95,12 @@ func (p Relative) AbsoluteOSPath() string {
 
 // Equal returns true if the underlying relative path and root directories are identical.
 func (p Relative) Equal(that Relative) bool {
-	return p.path == that.path && cmp.Equal(p.root, that.root)
+	return p.path == that.path && p.root.Equal(that.root)
 }
 
 // Root returns a copy of the underlying root path this Relative is based from.
 func (p Relative) Root() Root {
 	return Root{path: p.root.path}
-}
-
-// Join returns a copy of the underlying Relative with the additional path element appended.
-func (p Relative) Join(elem string) Relative {
-	return Relative{root: p.root, path: p.path.Join(elem)}
 }
 
 // Path is a path in a filesystem.

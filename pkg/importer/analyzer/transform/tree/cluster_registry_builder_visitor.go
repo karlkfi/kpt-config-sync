@@ -5,15 +5,15 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 )
 
-// ClusterRegistryBuilderVisitor adds all cluster objects to the config root.
-type ClusterRegistryBuilderVisitor struct {
+// clusterRegistryBuilderVisitor adds all cluster objects to the config root.
+type clusterRegistryBuilderVisitor struct {
 	objects []ast.FileObject
 	*visitor.Base
 }
 
-// NewClusterRegistryBuilderVisitor instantiates a ClusterRegistryBuilderVisitor with a set of objects to add.
-func NewClusterRegistryBuilderVisitor(objects []ast.FileObject) *ClusterRegistryBuilderVisitor {
-	v := &ClusterRegistryBuilderVisitor{
+// NewClusterRegistryBuilderVisitor instantiates a clusterRegistryBuilderVisitor with a set of objects to add.
+func NewClusterRegistryBuilderVisitor(objects []ast.FileObject) ast.Visitor {
+	v := &clusterRegistryBuilderVisitor{
 		Base:    visitor.NewBase(),
 		objects: objects,
 	}
@@ -22,7 +22,7 @@ func NewClusterRegistryBuilderVisitor(objects []ast.FileObject) *ClusterRegistry
 }
 
 // VisitRoot adds ClusterRegistry to Root if there are any objects to add.
-func (v *ClusterRegistryBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
+func (v *clusterRegistryBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	for _, o := range v.objects {
 		r.ClusterRegistryObjects = append(r.ClusterRegistryObjects, &ast.ClusterRegistryObject{FileObject: o})
 	}

@@ -50,11 +50,6 @@ const (
 // ResourceConditionState represents the states that a ResourceCondition can be in
 type ResourceConditionState string
 
-// IsHealthy returns true if the state indicates there have been no sync errors.
-func (p ResourceConditionState) IsHealthy() bool {
-	return p == ResourceStateHealthy
-}
-
 // IsReconciling returns true if the state is reconciling.
 func (p ResourceConditionState) IsReconciling() bool {
 	return p == ResourceStateReconciling

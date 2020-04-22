@@ -1,4 +1,4 @@
-package reconcile
+package reconcile_test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -205,7 +206,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			}
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
-			testReconciler := NewClusterConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewClusterConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(
@@ -269,7 +270,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			fakeDecoder := testingfake.NewDecoder(syncertesting.ToUnstructuredList(t, syncertesting.Converter, nil))
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			fakeClient := testingfake.NewClient(t, runtime.NewScheme(), tc.actual)
-			testReconciler := NewClusterConfigReconciler(ctx,
+			testReconciler := syncerreconcile.NewClusterConfigReconciler(ctx,
 				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertesting.Now, toSync)
 
 			_, err := testReconciler.Reconcile(

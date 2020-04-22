@@ -39,13 +39,13 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		return setTypeMeta(repoList.Items[0].DeepCopy()), nil
 	}
 
-	return c.CreateRepo(ctx)
+	return c.createRepo(ctx)
 }
 
-// CreateRepo creates a new Repo resource for the cluster. Currently we don't do anything with the
+// createRepo creates a new Repo resource for the cluster. Currently we don't do anything with the
 // Repo object if a user has defined it in their source of truth so this is harmless/correct. If we
 // start using it to drive logic then we may not want to be creating one here.
-func (c *Client) CreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
+func (c *Client) createRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	repoObj := Default()
 	if err := c.client.Create(ctx, repoObj); err != nil {
 		return nil, err

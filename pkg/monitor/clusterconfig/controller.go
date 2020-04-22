@@ -25,17 +25,17 @@ const (
 	reconcileTimeout = time.Minute * 5
 )
 
-var _ reconcile.Reconciler = &Reconciler{}
+var _ reconcile.Reconciler = &reconciler{}
 
-// Reconciler responds to changes to ClusterConfigs by updating its ClusterState.
-type Reconciler struct {
+// reconciler responds to changes to ClusterConfigs by updating its ClusterState.
+type reconciler struct {
 	cache  cache.Cache
 	state  *state.ClusterState
 	repoCl *repo.Client
 }
 
 // Reconcile is the callback for Reconciler.
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.ClusterConfigName && request.Name != v1.CRDClusterConfigName {
 		glog.Errorf("ClusterConfig has invalid name %q", request.Name)
 		// Return nil since we don't want to queue a retry.
@@ -72,7 +72,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func AddController(mgr manager.Manager, repoCl *repo.Client, cs *state.ClusterState) error {
 	// Create a new controller
 	c, err := controller.New(controllerName, mgr, controller.Options{
-		Reconciler: &Reconciler{
+		Reconciler: &reconciler{
 			cache:  mgr.GetCache(),
 			state:  cs,
 			repoCl: repoCl,

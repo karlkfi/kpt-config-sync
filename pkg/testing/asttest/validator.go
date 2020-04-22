@@ -18,9 +18,9 @@ type ValidatorTestCase struct {
 	Opts []ast.BuildOpt
 }
 
-// ValidatorTest defines a Validator which is initialized and run on each of the provided test
+// validatorTest defines a Validator which is initialized and run on each of the provided test
 // cases.
-type ValidatorTest struct {
+type validatorTest struct {
 	// Validator is the function which produces a fresh ValidatorVisitor.
 	Validator func() ast.Visitor
 	// ErrorCode is what the Validator returns if there is an error.
@@ -34,33 +34,23 @@ type ValidatorTest struct {
 	DefaultOpts []ast.BuildOpt
 }
 
-// NewValidator is a function that produces a new visitor.
-type NewValidator func() ast.Visitor
+// newValidator is a function that produces a new visitor.
+type newValidator func() ast.Visitor
 
-// Validator constructs a ValidatorTest.
+// Validator constructs a validatorTest.
 // validator is the function to call to instantiate the validator.
 // errorCode is the error code returned when validation does not pass.
 // testCases is the set of test cases to run.
-func Validator(validator NewValidator, errorCode string, testCases ...ValidatorTestCase) ValidatorTest {
-	return ValidatorTest{
+func Validator(t *testing.T, validator newValidator, errorCode string, testCases ...ValidatorTestCase) {
+	validatorTest{
 		Validator: validator,
 		ErrorCode: errorCode,
 		TestCases: testCases,
-	}
+	}.runAll(t)
 }
 
-// With adds BuildOpts to ValidatorTest, running before the construction of each AST.
-func (vt ValidatorTest) With(opts ...ast.BuildOpt) ValidatorTest {
-	return ValidatorTest{
-		Validator:   vt.Validator,
-		ErrorCode:   vt.ErrorCode,
-		TestCases:   vt.TestCases,
-		DefaultOpts: append(vt.DefaultOpts, opts...),
-	}
-}
-
-// RunAll executes each test case in the test.
-func (vt *ValidatorTest) RunAll(t *testing.T) {
+// runAll executes each test case in the test.
+func (vt validatorTest) runAll(t *testing.T) {
 	t.Helper()
 	if vt.Validator == nil {
 		t.Fatal("Assign a Validator factory method.")
@@ -72,7 +62,7 @@ func (vt *ValidatorTest) RunAll(t *testing.T) {
 
 			validator := vt.Validator()
 			opts := append(vt.DefaultOpts, tc.Opts...)
-			root := Build(t, opts...)
+			root := build(t, opts...)
 			root.Accept(validator)
 
 			if tc.ShouldFail {
@@ -88,7 +78,7 @@ func (vt *ValidatorTest) RunAll(t *testing.T) {
 func Pass(name string, objects ...ast.FileObject) ValidatorTestCase {
 	return ValidatorTestCase{
 		Name: name,
-		Opts: []ast.BuildOpt{Objects(objects...)},
+		Opts: []ast.BuildOpt{withObjects(objects...)},
 	}
 }
 
@@ -97,12 +87,12 @@ func Fail(name string, objects ...ast.FileObject) ValidatorTestCase {
 	return ValidatorTestCase{
 		Name:       name,
 		ShouldFail: true,
-		Opts:       []ast.BuildOpt{Objects(objects...)},
+		Opts:       []ast.BuildOpt{withObjects(objects...)},
 	}
 }
 
 // With appends additional BuildOpts to the ValidatorTestCase, allowing futher customization of the
-// AST after ValidatorTest.DefaultOpts are run and objects are added.
+// AST after validatorTest.DefaultOpts are run and objects are added.
 func (tc ValidatorTestCase) With(opts ...ast.BuildOpt) ValidatorTestCase {
 	return ValidatorTestCase{
 		Name:       tc.Name,

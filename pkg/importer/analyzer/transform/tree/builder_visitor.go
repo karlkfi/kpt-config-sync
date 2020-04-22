@@ -10,16 +10,16 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 )
 
-// BuilderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
-type BuilderVisitor struct {
+// builderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
+type builderVisitor struct {
 	*visitor.Base
 	objects map[cmpath.Path][]ast.FileObject
 }
 
-// NewBuilderVisitor initializes an BuilderVisitor with the set of objects to use to
+// NewBuilderVisitor initializes an builderVisitor with the set of objects to use to
 // populate the config hierarchy tree.
-func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
-	v := &BuilderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Path][]ast.FileObject)}
+func NewBuilderVisitor(objects []ast.FileObject) ast.Visitor {
+	v := &builderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Path][]ast.FileObject)}
 	v.SetImpl(v)
 
 	for _, object := range objects {
@@ -36,7 +36,7 @@ func NewBuilderVisitor(objects []ast.FileObject) *BuilderVisitor {
 }
 
 // VisitRoot creates nodes for the config hierarchy.
-func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
+func (v *builderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	treeBuilder := newDirectoryTree()
 	for dir := range v.objects {
 		treeBuilder.addDir(dir)
@@ -46,7 +46,7 @@ func (v *BuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 }
 
 // VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
-func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+func (v *builderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	for _, object := range v.objects[n.Path] {
 		if object.GroupVersionKind() == kinds.Namespace() {
 			n.Type = node.Namespace
@@ -58,7 +58,7 @@ func (v *BuilderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 // RequiresValidState marks that the repository should otherwise be in a valid state before
 // attempting to construct the config hierarchy tree.
-func (v *BuilderVisitor) RequiresValidState() bool {
+func (v *builderVisitor) RequiresValidState() bool {
 	return true
 }
 

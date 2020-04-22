@@ -14,7 +14,7 @@ func TestKindValidator(t *testing.T) {
 	v := func() ast.Visitor {
 		return NewHierarchyConfigKindValidator()
 	}
-	test := asttest.Validator(v,
+	asttest.Validator(t, v,
 		UnsupportedResourceInHierarchyConfigErrorCode,
 
 		asttest.Pass("RoleBinding supported",
@@ -45,6 +45,4 @@ func TestKindValidator(t *testing.T) {
 			fake.HierarchyConfig(
 				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.Sync()))),
 	)
-
-	test.RunAll(t)
 }

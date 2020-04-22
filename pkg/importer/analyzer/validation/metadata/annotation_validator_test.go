@@ -16,7 +16,7 @@ const (
 )
 
 func TestAnnotationValidator(t *testing.T) {
-	test := asttest.Validator(NewAnnotationValidator,
+	asttest.Validator(t, NewAnnotationValidator,
 		IllegalAnnotationDefinitionErrorCode,
 
 		asttest.Pass("no annotations",
@@ -53,6 +53,4 @@ func TestAnnotationValidator(t *testing.T) {
 				core.Annotation(v1.ResourceManagementKey, "")),
 		),
 	)
-
-	test.RunAll(t)
 }

@@ -12,7 +12,7 @@ import (
 const notAllowedRepoVersion = "0.0.0"
 
 func TestRepoVersionValidator(t *testing.T) {
-	test := asttest.Validator(system.NewRepoVersionValidator,
+	asttest.Validator(t, system.NewRepoVersionValidator,
 		system.UnsupportedRepoSpecVersionCode,
 		asttest.Pass("Repo with current version",
 			fake.Repo(fake.RepoVersion(repo.CurrentVersion))),
@@ -20,6 +20,4 @@ func TestRepoVersionValidator(t *testing.T) {
 			fake.Repo(fake.RepoVersion(system.OldAllowedRepoVersion))),
 		asttest.Fail("Repo with current version",
 			fake.Repo(fake.RepoVersion(notAllowedRepoVersion))))
-
-	test.RunAll(t)
 }

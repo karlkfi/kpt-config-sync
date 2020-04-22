@@ -16,7 +16,7 @@ const (
 )
 
 func TestLabelValidator(t *testing.T) {
-	test := asttest.Validator(NewLabelValidator,
+	asttest.Validator(t, NewLabelValidator,
 		IllegalLabelDefinitionErrorCode,
 
 		asttest.Pass("no labels",
@@ -49,6 +49,4 @@ func TestLabelValidator(t *testing.T) {
 				core.Label(v1.ClusterSelectorAnnotationKey, "")),
 		),
 	)
-
-	test.RunAll(t)
 }

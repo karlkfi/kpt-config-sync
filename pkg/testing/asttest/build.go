@@ -9,10 +9,10 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-// Build creates and populates an ast.Root with the provided objects.
+// build creates and populates an ast.Root with the provided objects.
 // Assumes all objects are in the same top-level directory, and that top-level directory is the
 // hierarchical config directory.
-func Build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
+func build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
 	t.Helper()
 
 	root, err := ast.Build(opts...)
@@ -22,9 +22,9 @@ func Build(t *testing.T, opts ...ast.BuildOpt) *ast.Root {
 	return root
 }
 
-// Objects adds a list of objects to the AST using the default builders. Each object must be in a
+// withObjects adds a list of objects to the AST using the default builders. Each object must be in a
 // recognized top-level directory.
-func Objects(objects ...ast.FileObject) ast.BuildOpt {
+func withObjects(objects ...ast.FileObject) ast.BuildOpt {
 	var systemObjects []ast.FileObject
 	return func(root *ast.Root) status.MultiError {
 		var clusterObjects []ast.FileObject

@@ -11,6 +11,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -429,6 +430,6 @@ func (c *Client) listUnstructured(list *unstructured.UnstructuredList, options c
 
 // Applier returns a fake.Applier wrapping this fake.Client. Callers using the
 // resulting Applier will read from/write to the original fake.Client.
-func (c *Client) Applier() *Applier {
-	return &Applier{Client: c}
+func (c *Client) Applier() reconcile.Applier {
+	return &applier{Client: c}
 }
