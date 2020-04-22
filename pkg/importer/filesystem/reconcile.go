@@ -30,10 +30,10 @@ import (
 
 const reconcileTimeout = time.Minute * 5
 
-var _ reconcile.Reconciler = &Reconciler{}
+var _ reconcile.Reconciler = &reconciler{}
 
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
-type Reconciler struct {
+type reconciler struct {
 	clusterName     string
 	gitDir          string
 	policyDir       string
@@ -58,12 +58,12 @@ type Reconciler struct {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func NewReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
+func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
-	decoder decode.Decoder) (*Reconciler, error) {
+	decoder decode.Decoder) (*reconciler, error) {
 	repoClient := repo.New(client)
 
-	return &Reconciler{
+	return &reconciler{
 		clusterName:     clusterName,
 		gitDir:          gitDir,
 		policyDir:       policyDir,
@@ -76,7 +76,7 @@ func NewReconciler(clusterName string, gitDir string, policyDir string, parser C
 	}, nil
 }
 
-func (c *Reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
+func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
 	glog.Errorf("Failed to resolve config directory: %v", err)
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 	sErr := status.SourceError.Sprintf("unable to sync repo: %v\n"+
@@ -94,7 +94,7 @@ func (c *Reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 //   * Gets the Nomos CRs currently stored in Kubernetes API server.
 //   * Compares current and desired Nomos CRs.
 //   * Writes updates to make current match desired.
-func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
 
@@ -191,7 +191,7 @@ func (c *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 // updateImportStatus write an updated RepoImportStatus based upon the given arguments.
-func (c *Reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, token string, loadTime time.Time, errs []v1.ConfigManagementError) {
+func (c *reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, token string, loadTime time.Time, errs []v1.ConfigManagementError) {
 	// Try to get a fresh copy of Repo since it is has high contention with syncer.
 	freshRepoObj, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
@@ -213,7 +213,7 @@ func (c *Reconciler) updateImportStatus(ctx context.Context, repoObj *v1.Repo, t
 // is loaded every time before updating.  If errs is nil,
 // Repo.Source.Status.Errors will be cleared.  if token is nil, it will not be
 // updated so as to preserve any prior content.
-func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
+func (c *reconciler) updateSourceStatus(ctx context.Context, token *string, errs ...v1.ConfigManagementError) *v1.Repo {
 	r, err := c.repoClient.GetOrCreateRepo(ctx)
 	if err != nil {
 		glog.Errorf("failed to get fresh Repo: %v", err)
@@ -232,7 +232,7 @@ func (c *Reconciler) updateSourceStatus(ctx context.Context, token *string, errs
 
 // updateDecoderWithAPIResources uses the discovery API and the set of existing
 // syncs on cluster to update the set of resource types the Decoder is able to decode.
-func (c *Reconciler) updateDecoderWithAPIResources(syncMaps ...map[string]v1.Sync) error {
+func (c *reconciler) updateDecoderWithAPIResources(syncMaps ...map[string]v1.Sync) error {
 	resources, discoveryErr := utildiscovery.GetResources(c.discoveryClient)
 	if discoveryErr != nil {
 		return discoveryErr

@@ -19,9 +19,9 @@ type MutatingVisitorTestcase struct {
 	ExpectNoop   bool // Output is expected to the exact tree as input (same pointer, not mutated)
 }
 
-// Runf returns a function that runs the testcase. visitor is the visitor to use
+// run returns a function that runs the test case. visitor is the visitor to use
 // in the test case, and initRoot optionally initializes the root of the tree before traversal.
-func (tc *MutatingVisitorTestcase) Runf(
+func (tc *MutatingVisitorTestcase) run(
 	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
@@ -82,6 +82,6 @@ type MutatingVisitorTestcases struct {
 func (tcs *MutatingVisitorTestcases) Run(t *testing.T) {
 	t.Helper()
 	for _, testcase := range tcs.Testcases {
-		t.Run(testcase.Name, testcase.Runf(tcs.VisitorCtor(), tcs.InitRoot, tcs.Options))
+		t.Run(testcase.Name, testcase.run(tcs.VisitorCtor(), tcs.InitRoot, tcs.Options))
 	}
 }

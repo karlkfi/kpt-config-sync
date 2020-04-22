@@ -21,23 +21,7 @@ func failRoot(_ *ast.Root) status.MultiError {
 	return testError()
 }
 
-func failSystem(_ []*ast.SystemObject) status.MultiError {
-	return testError()
-}
-
 func failSystemObject(_ *ast.SystemObject) status.MultiError {
-	return testError()
-}
-
-func failClusterRegistry(_ []*ast.ClusterRegistryObject) status.MultiError {
-	return testError()
-}
-
-func failClusterRegistryObject(_ *ast.ClusterRegistryObject) status.MultiError {
-	return testError()
-}
-
-func failCluster(_ []*ast.ClusterObject) status.MultiError {
 	return testError()
 }
 
@@ -56,10 +40,6 @@ func failLeafTreeNode(n *ast.TreeNode) status.MultiError {
 	return nil
 }
 
-func failObject(_ *ast.NamespaceObject) status.MultiError {
-	return testError()
-}
-
 func TestValidators(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -74,34 +54,10 @@ func TestValidators(t *testing.T) {
 			validator:   NewRootValidator(failRoot),
 		},
 		{
-			name:        "systemValidator",
-			root:        ast.Root{},
-			failMessage: "does not visit System",
-			validator:   NewSystemValidator(failSystem),
-		},
-		{
 			name:        "systemObjectValidator",
 			root:        ast.Root{SystemObjects: []*ast.SystemObject{{FileObject: fakeObject()}}},
 			failMessage: "does not visit System objects",
 			validator:   NewSystemObjectValidator(failSystemObject),
-		},
-		{
-			name:        "clusterRegistryValidator",
-			root:        ast.Root{},
-			failMessage: "does not visit ClusterRegistry",
-			validator:   NewClusterRegistryValidator(failClusterRegistry),
-		},
-		{
-			name:        "clusterRegistryObjectValidator",
-			root:        ast.Root{ClusterRegistryObjects: []*ast.ClusterRegistryObject{{FileObject: fakeObject()}}},
-			failMessage: "does not visit ClusterRegistry objects",
-			validator:   NewClusterRegistryObjectValidator(failClusterRegistryObject),
-		},
-		{
-			name:        "clusterValidator",
-			root:        ast.Root{},
-			failMessage: "does not visit Cluster",
-			validator:   NewClusterValidator(failCluster),
 		},
 		{
 			name:        "clusterObjectValidator",
@@ -120,18 +76,6 @@ func TestValidators(t *testing.T) {
 			root:        ast.Root{Tree: &ast.TreeNode{Children: []*ast.TreeNode{{}}}},
 			failMessage: "does not visit child TreeNodes",
 			validator:   NewTreeNodeValidator(failLeafTreeNode),
-		},
-		{
-			name:        "objectValidator",
-			root:        ast.Root{Tree: &ast.TreeNode{Objects: []*ast.NamespaceObject{{FileObject: fakeObject()}}}},
-			failMessage: "does not visit root TreeNode objects",
-			validator:   NewObjectValidator(failObject),
-		},
-		{
-			name:        "objectValidator",
-			root:        ast.Root{Tree: &ast.TreeNode{Children: []*ast.TreeNode{{Objects: []*ast.NamespaceObject{{FileObject: fakeObject()}}}}}},
-			failMessage: "does not visit child TreeNode objects",
-			validator:   NewObjectValidator(failObject),
 		},
 	}
 

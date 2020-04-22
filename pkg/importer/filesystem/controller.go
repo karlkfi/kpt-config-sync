@@ -74,7 +74,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
-	r, err := NewReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder)
+	r, err := newReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

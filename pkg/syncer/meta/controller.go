@@ -16,7 +16,7 @@ func AddControllers(mgr manager.Manager) error {
 		return err
 	}
 
-	rc := sync.NewRestartChannel(make(chan event.GenericEvent))
+	rc := sync.RestartChannel(make(chan event.GenericEvent))
 	if err := sync.AddController(mgr, rc); err != nil {
 		return err
 	}

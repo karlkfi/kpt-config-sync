@@ -27,43 +27,43 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "preserve cluster configs",
-			Input:        vt.Helper.ClusterConfigs(),
-			ExpectOutput: vt.Helper.ClusterConfigs(),
+			Input:        vt.ClusterConfigs(),
+			ExpectOutput: vt.ClusterConfigs(),
 		},
 		{
 			Name:  "inherit configs",
-			Input: vt.Helper.AcmeRoot(),
+			Input: vt.AcmeRoot(),
 			ExpectOutput: &ast.Root{
-				ClusterObjects:         vt.Helper.AcmeCluster(),
-				SystemObjects:          vt.Helper.System(),
-				ClusterRegistryObjects: vt.Helper.ClusterRegistry(),
+				ClusterObjects:         vt.AcmeCluster(),
+				SystemObjects:          vt.System(),
+				ClusterRegistryObjects: vt.ClusterRegistry(),
 				Tree: &ast.TreeNode{
 					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.ObjectSets(
-						vt.Helper.AdminRoleBinding(),
-						vt.Helper.AcmeResourceQuota(),
+						vt.AdminRoleBinding(),
+						vt.AcmeResourceQuota(),
 					),
 					Children: []*ast.TreeNode{
 						{
 							Type: node.Namespace,
 							Path: cmpath.FromSlash("namespaces/frontend"),
 							Objects: vt.ObjectSets(
-								vt.Helper.PodReaderRoleBinding(),
-								vt.Helper.PodReaderRole(),
-								vt.Helper.FrontendResourceQuota(),
-								withName(vt.Helper.AdminRoleBinding(), "admin"),
-								vt.Helper.AcmeResourceQuota(),
+								vt.PodReaderRoleBinding(),
+								vt.PodReaderRole(),
+								vt.FrontendResourceQuota(),
+								withName(vt.AdminRoleBinding(), "admin"),
+								vt.AcmeResourceQuota(),
 							),
 						},
 						{
 							Type: node.Namespace,
 							Path: cmpath.FromSlash("namespaces/frontend-test"),
 							Objects: vt.ObjectSets(
-								vt.Helper.DeploymentReaderRoleBinding(),
-								vt.Helper.DeploymentReaderRole(),
-								withName(vt.Helper.AdminRoleBinding(), "admin"),
-								vt.Helper.AcmeResourceQuota(),
+								vt.DeploymentReaderRoleBinding(),
+								vt.DeploymentReaderRole(),
+								withName(vt.AdminRoleBinding(), "admin"),
+								vt.AcmeResourceQuota(),
 							),
 						},
 					},

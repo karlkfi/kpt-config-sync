@@ -120,11 +120,11 @@ func ClusterSelectorObject(opts ...core.MetaMutator) *v1.ClusterSelector {
 
 // ClusterSelector returns a Nomos ClusterSelector.
 func ClusterSelector(opts ...core.MetaMutator) ast.FileObject {
-	return ClusterSelectorAtPath("cluster/cs.yaml", opts...)
+	return clusterSelectorAtPath("cluster/cs.yaml", opts...)
 }
 
 // ClusterSelectorAtPath returns a ClusterSelector at the specified path.
-func ClusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+func clusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ClusterSelectorObject(opts...), path)
 }
 
@@ -271,7 +271,7 @@ func Role(opts ...core.MetaMutator) ast.FileObject {
 }
 
 // ConfigMapObject returns an initialized ConfigMap.
-func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
+func configMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 	obj := &corev1.ConfigMap{TypeMeta: toTypeMeta(kinds.ConfigMap())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -281,7 +281,7 @@ func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 
 // ConfigMapAtPath returns a ConfigMap at the specified filepath.
 func ConfigMapAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(ConfigMapObject(opts...), path)
+	return FileObject(configMapObject(opts...), path)
 }
 
 func toTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {

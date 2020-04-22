@@ -6,7 +6,7 @@ import (
 )
 
 // Metrics contains the Prometheus metrics for the monitor state.
-var Metrics = struct {
+var metrics = struct {
 	Configs     *prometheus.GaugeVec
 	Errors      *prometheus.GaugeVec
 	LastImport  prometheus.Gauge
@@ -62,10 +62,10 @@ var Metrics = struct {
 
 func init() {
 	prometheus.MustRegister(
-		Metrics.Configs,
-		Metrics.Errors,
-		Metrics.LastImport,
-		Metrics.LastSync,
-		Metrics.SyncLatency,
+		metrics.Configs,
+		metrics.Errors,
+		metrics.LastImport,
+		metrics.LastSync,
+		metrics.SyncLatency,
 	)
 }

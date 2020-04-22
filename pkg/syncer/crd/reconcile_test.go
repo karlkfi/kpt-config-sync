@@ -347,7 +347,7 @@ func (tc crdTestCase) run(t *testing.T) {
 	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1(), &v1beta1.CustomResourceDefinition{})
 	fakeClient := testingfake.NewClient(t, s, actual...)
 
-	testReconciler := NewReconciler(client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,
+	testReconciler := newReconciler(client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,
 		fakeDecoder, syncertesting.Now, &fakeSignal)
 	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds))
 

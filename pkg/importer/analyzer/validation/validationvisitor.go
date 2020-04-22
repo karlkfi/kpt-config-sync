@@ -14,19 +14,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// InputValidator checks various filesystem constraints after loading into the tree format.
+// inputValidator checks various filesystem constraints after loading into the tree format.
 // Error messages emitted from the validator should be formatted to first print the constraint
 // that is being violated, then print a useful error message on what is violating the constraint
 // and what is required to fix it.
-type InputValidator struct {
+type inputValidator struct {
 	*visitor.Base
 	errs             status.MultiError
 	nodes            []*ast.TreeNode
 	inheritanceSpecs map[schema.GroupKind]*transform.InheritanceSpec
 }
 
-// InputValidator implements ast.Visitor
-var _ ast.Visitor = &InputValidator{}
+// inputValidator implements ast.Visitor
+var _ ast.Visitor = &inputValidator{}
 
 // NewInputValidator creates a new validator.  syncdGVKs represents the set
 // of valid group-version-kinds for objects in the namespaces and cluster
@@ -34,8 +34,8 @@ var _ ast.Visitor = &InputValidator{}
 // is the list of clusters defined in the source of truth, and cs is the list
 // of selectors.  vet turns on "vetting mode", a mode of stricter control for use
 // in nomos vet.
-func NewInputValidator(specs map[schema.GroupKind]*transform.InheritanceSpec) *InputValidator {
-	v := &InputValidator{
+func NewInputValidator(specs map[schema.GroupKind]*transform.InheritanceSpec) ast.Visitor {
+	v := &inputValidator{
 		Base:             visitor.NewBase(),
 		inheritanceSpecs: specs,
 	}
@@ -45,12 +45,12 @@ func NewInputValidator(specs map[schema.GroupKind]*transform.InheritanceSpec) *I
 }
 
 // Error returns any errors encountered during processing
-func (v *InputValidator) Error() status.MultiError {
+func (v *inputValidator) Error() status.MultiError {
 	return v.errs
 }
 
 // VisitTreeNode implements Visitor
-func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+func (v *inputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	// Namespaces may not have children.
 	if len(v.nodes) > 1 {
 		// Recall that v.nodes are this node's ancestors in the tree of directories.
@@ -70,7 +70,7 @@ func (v *InputValidator) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 }
 
 // VisitObject implements Visitor
-func (v *InputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
+func (v *inputValidator) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	// TODO: Move each individual check here to its own Visitor.
 	gvk := o.GroupVersionKind()
 

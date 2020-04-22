@@ -21,7 +21,7 @@ func withSourceAnnotation(o core.Object, annotation string) core.Object {
 }
 
 func adminRoleBindingWithAnnotation() *rbacv1.RoleBinding {
-	rb := vt.Helper.AdminRoleBinding()
+	rb := vt.AdminRoleBinding()
 	rb.Annotations = map[string]string{"color": "blue"}
 	return rb
 }
@@ -92,7 +92,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.Helper.AdminRoleBinding(), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(vt.AdminRoleBinding(), cmpath.FromSlash("acme/admin.yaml")),
 					),
 				},
 			},
@@ -101,7 +101,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type: node.AbstractNamespace,
 					Path: cmpath.FromSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.Helper.AdminRoleBinding(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(vt.AdminRoleBinding(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
 					),
 				},
 			},

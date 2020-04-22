@@ -53,16 +53,6 @@ func NewValidator(underlying Validator) *ValidatorVisitor {
 	return v
 }
 
-// WithPrerequisites adds a prerequisite visitor which is run before any other validation.
-//
-// Prerequisites are run sequentially in the order they were added.
-// Prerequisites do not modify the pointer to root.
-// Prerequisites should inherit from visitor.Base to ensure all of their Visit methods are called.
-func (v *ValidatorVisitor) WithPrerequisites(prerequisites ...ast.Visitor) *ValidatorVisitor {
-	v.prerequisites = append(v.prerequisites, prerequisites...)
-	return v
-}
-
 // VisitRoot implements Visitor.
 func (v *ValidatorVisitor) VisitRoot(g *ast.Root) *ast.Root {
 	for _, prerequisite := range v.prerequisites {

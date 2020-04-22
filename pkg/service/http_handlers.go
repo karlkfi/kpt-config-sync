@@ -14,7 +14,7 @@ import (
 var metricsPort = flag.Int("metrics-port", 8675, "The port to export prometheus metrics on.")
 
 // NoCache positively turns off page caching.
-func NoCache(handler http.Handler) http.HandlerFunc {
+func noCache(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set(
 			"Cache-Control",
@@ -29,7 +29,7 @@ func NoCache(handler http.Handler) http.HandlerFunc {
 func ServeMetrics() {
 	// Expose prometheus metrics via HTTP.
 	http.Handle("/metrics", promhttp.Handler())
-	http.Handle("/threads", NoCache(http.HandlerFunc(GoRoutineHandler)))
+	http.Handle("/threads", noCache(http.HandlerFunc(goRoutineHandler)))
 	glog.Infof("Serving metrics on :%d/metrics", *metricsPort)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil)
 	if err != nil {

@@ -1,8 +1,6 @@
 package testing
 
 import (
-	"time"
-
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -19,8 +17,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
 
@@ -53,8 +49,8 @@ func FileObjectSets(runtimeObjs ...ast.FileObject) []*ast.NamespaceObject {
 	return astObjs
 }
 
-// ClusterObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func ClusterObjectSets(runtimeObjs ...core.Object) []*ast.ClusterObject {
+// clusterObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
+func clusterObjectSets(runtimeObjs ...core.Object) []*ast.ClusterObject {
 	astObjs := make([]*ast.ClusterObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}
@@ -62,8 +58,8 @@ func ClusterObjectSets(runtimeObjs ...core.Object) []*ast.ClusterObject {
 	return astObjs
 }
 
-// ClusterRegistryObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
-func ClusterRegistryObjectSets(runtimeObjs ...core.Object) []*ast.ClusterRegistryObject {
+// clusterRegistryObjectSets constructs a list of ObjectSet from a list of runtime.NamespaceObject.
+func clusterRegistryObjectSets(runtimeObjs ...core.Object) []*ast.ClusterRegistryObject {
 	astObjs := make([]*ast.ClusterRegistryObject, len(runtimeObjs))
 	for idx := range runtimeObjs {
 		astObjs[idx] = &ast.ClusterRegistryObject{FileObject: *ast.ParseFileObject(runtimeObjs[idx])}
@@ -80,18 +76,8 @@ func SystemObjectSets(runtimeObjs ...core.Object) []*ast.SystemObject {
 	return astObjs
 }
 
-// Helper provides a number of pre-built types for use in testcases.  This does not set an Token
-// or ImportTime
-var Helper TestHelper
-
-// TestHelper provides a number of pre-built types for use in testcases.
-type TestHelper struct {
-	ImportToken string
-	ImportTime  time.Time
-}
-
-// NomosAdminClusterRole returns a ClusterRole for testing.
-func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
+// nomosAdminClusterRole returns a ClusterRole for testing.
+func nomosAdminClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -108,8 +94,8 @@ func (t *TestHelper) NomosAdminClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-// NomosAdminClusterRoleBinding returns a ClusterRoleBinding for testing.
-func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+// nomosAdminClusterRoleBinding returns a ClusterRoleBinding for testing.
+func nomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -133,8 +119,8 @@ func (t *TestHelper) NomosAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-// NomosPodSecurityPolicy returns a PodSecurityPolicy for testing.
-func (t *TestHelper) NomosPodSecurityPolicy() *policyv1beta1.PodSecurityPolicy {
+// nomosPodSecurityPolicy returns a PodSecurityPolicy for testing.
+func nomosPodSecurityPolicy() *policyv1beta1.PodSecurityPolicy {
 	return &policyv1beta1.PodSecurityPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: policyv1beta1.SchemeGroupVersion.String(),
@@ -152,8 +138,8 @@ func (t *TestHelper) NomosPodSecurityPolicy() *policyv1beta1.PodSecurityPolicy {
 	}
 }
 
-// CRD returns a CRD for testing.
-func (t *TestHelper) CRD() *v1beta1.CustomResourceDefinition {
+// crd returns a CRD for testing.
+func crd() *v1beta1.CustomResourceDefinition {
 	return &v1beta1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1beta1.SchemeGroupVersion.String(),
@@ -178,39 +164,28 @@ func (t *TestHelper) CRD() *v1beta1.CustomResourceDefinition {
 }
 
 // EmptyRoot returns an empty Root.
-func (t *TestHelper) EmptyRoot() *ast.Root {
+func EmptyRoot() *ast.Root {
 	return &ast.Root{}
 }
 
 // ClusterConfigs returns a Root with only cluster configs.
-func (t *TestHelper) ClusterConfigs() *ast.Root {
+func ClusterConfigs() *ast.Root {
 	return &ast.Root{
-		ClusterObjects: t.AcmeCluster(),
+		ClusterObjects: AcmeCluster(),
 	}
 }
 
 // CRDClusterConfig returns a Root with only the CRD Cluster Config.
-func (t *TestHelper) CRDClusterConfig() *ast.Root {
+func CRDClusterConfig() *ast.Root {
 	return &ast.Root{
-		ClusterObjects: ClusterObjectSets(
-			t.CRD(),
+		ClusterObjects: clusterObjectSets(
+			crd(),
 		),
 	}
 }
 
-// UnknownResource returns a custom resource without a corresponding CRD on the cluster.
-func (t *TestHelper) UnknownResource() *unstructured.Unstructured {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "uknown.group",
-		Version: "v1",
-		Kind:    "Unknown",
-	})
-	return u
-}
-
 // AdminRoleBinding returns the role binding for the admin role.
-func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
+func AdminRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -235,7 +210,7 @@ func (t *TestHelper) AdminRoleBinding() *rbacv1.RoleBinding {
 }
 
 // PodReaderRole returns the contents of the pod-reader role.
-func (t *TestHelper) PodReaderRole() *rbacv1.Role {
+func PodReaderRole() *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -254,7 +229,7 @@ func (t *TestHelper) PodReaderRole() *rbacv1.Role {
 }
 
 // PodReaderRoleBinding returns the role binding for the pod-reader role.
-func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
+func PodReaderRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -280,7 +255,7 @@ func (t *TestHelper) PodReaderRoleBinding() *rbacv1.RoleBinding {
 }
 
 // DeploymentReaderRole returns the contents of the deployment-reader role.
-func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
+func DeploymentReaderRole() *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -299,7 +274,7 @@ func (t *TestHelper) DeploymentReaderRole() *rbacv1.Role {
 }
 
 // DeploymentReaderRoleBinding returns the rolebinding for deployment-reader role.
-func (t *TestHelper) DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
+func DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
@@ -325,7 +300,7 @@ func (t *TestHelper) DeploymentReaderRoleBinding() *rbacv1.RoleBinding {
 }
 
 // AcmeResourceQuota returns the resource quota for Acme corp.
-func (t *TestHelper) AcmeResourceQuota() *corev1.ResourceQuota {
+func AcmeResourceQuota() *corev1.ResourceQuota {
 	return &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -343,7 +318,7 @@ func (t *TestHelper) AcmeResourceQuota() *corev1.ResourceQuota {
 }
 
 // FrontendResourceQuota returns the resource quota for the frontend namespace.
-func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
+func FrontendResourceQuota() *corev1.ResourceQuota {
 	return &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -362,44 +337,40 @@ func (t *TestHelper) FrontendResourceQuota() *corev1.ResourceQuota {
 }
 
 // AcmeCluster returns the cluster info for Acme corp.
-func (t *TestHelper) AcmeCluster() []*ast.ClusterObject {
-	return ClusterObjectSets(
-		t.NomosAdminClusterRole(),
-		t.NomosAdminClusterRoleBinding(),
-		t.NomosPodSecurityPolicy(),
+func AcmeCluster() []*ast.ClusterObject {
+	return clusterObjectSets(
+		nomosAdminClusterRole(),
+		nomosAdminClusterRoleBinding(),
+		nomosPodSecurityPolicy(),
 	)
 }
 
 // AcmeTree returns a tree of nodes for testing.
-func (t *TestHelper) AcmeTree() *ast.TreeNode {
-	return t.acmeTree()
-}
-
-func (t *TestHelper) acmeTree() *ast.TreeNode {
+func AcmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
 		Type: node.AbstractNamespace,
 		Path: cmpath.FromSlash("namespaces"),
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.
-			t.AdminRoleBinding(),
-			t.AcmeResourceQuota(),
+			AdminRoleBinding(),
+			AcmeResourceQuota(),
 		),
 		Children: []*ast.TreeNode{
 			{
 				Type: node.Namespace,
 				Path: cmpath.FromSlash("namespaces/frontend"),
 				Objects: ObjectSets(
-					t.PodReaderRoleBinding(),
-					t.PodReaderRole(),
-					t.FrontendResourceQuota(),
+					PodReaderRoleBinding(),
+					PodReaderRole(),
+					FrontendResourceQuota(),
 				),
 			},
 			{
 				Type: node.Namespace,
 				Path: cmpath.FromSlash("namespaces/frontend-test"),
 				Objects: ObjectSets(
-					t.DeploymentReaderRoleBinding(),
-					t.DeploymentReaderRole(),
+					DeploymentReaderRoleBinding(),
+					DeploymentReaderRole(),
 				),
 			},
 		},
@@ -407,14 +378,14 @@ func (t *TestHelper) acmeTree() *ast.TreeNode {
 }
 
 // ClusterRegistry returns the contents of a test cluster registry directory.
-func (t *TestHelper) ClusterRegistry() []*ast.ClusterRegistryObject {
-	return ClusterRegistryObjectSets(
+func ClusterRegistry() []*ast.ClusterRegistryObject {
+	return clusterRegistryObjectSets(
 		&clusterregistry.Cluster{},
 	)
 }
 
 // System returns the contents of a test system directory.
-func (t *TestHelper) System() []*ast.SystemObject {
+func System() []*ast.SystemObject {
 	return SystemObjectSets(
 		&v1.Repo{
 			TypeMeta: metav1.TypeMeta{
@@ -431,19 +402,12 @@ func (t *TestHelper) System() []*ast.SystemObject {
 	)
 }
 
-// NamespaceConfigs returns a Root with an example hierarchy.
-func (t *TestHelper) NamespaceConfigs() *ast.Root {
-	return &ast.Root{
-		Tree: t.acmeTree(),
-	}
-}
-
 // AcmeRoot returns a Root with an example hierarchy.
-func (t *TestHelper) AcmeRoot() *ast.Root {
+func AcmeRoot() *ast.Root {
 	return &ast.Root{
-		ClusterRegistryObjects: t.ClusterRegistry(),
-		SystemObjects:          t.System(),
-		ClusterObjects:         t.AcmeCluster(),
-		Tree:                   t.acmeTree(),
+		ClusterRegistryObjects: ClusterRegistry(),
+		SystemObjects:          System(),
+		ClusterObjects:         AcmeCluster(),
+		Tree:                   AcmeTree(),
 	}
 }

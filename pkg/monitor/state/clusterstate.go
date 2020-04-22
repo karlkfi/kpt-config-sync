@@ -87,12 +87,12 @@ func (c *ClusterState) recordLatency(name string, newState v1.ConfigSyncState, i
 	if oldState.IsSynced() || !newState.IsSynced() {
 		return
 	}
-	Metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
+	metrics.SyncLatency.Observe(float64(syncTime.Unix() - importTime.Unix()))
 }
 
 func (c *ClusterState) updateErrors() {
 	for component, count := range c.errors {
-		Metrics.Errors.WithLabelValues(component).Set(float64(count))
+		metrics.Errors.WithLabelValues(component).Set(float64(count))
 	}
 }
 
@@ -102,9 +102,9 @@ func (c *ClusterState) updateState(name string, newState v1.ConfigSyncState) err
 		return nil
 	}
 
-	Metrics.Configs.WithLabelValues(string(newState)).Inc()
+	metrics.Configs.WithLabelValues(string(newState)).Inc()
 	if oldState != v1.StateUnknown {
-		Metrics.Configs.WithLabelValues(string(oldState)).Dec()
+		metrics.Configs.WithLabelValues(string(oldState)).Dec()
 	}
 
 	c.syncStates[name] = newState
@@ -114,10 +114,10 @@ func (c *ClusterState) updateState(name string, newState v1.ConfigSyncState) err
 func (c *ClusterState) updateTimes(importTime, syncTime metav1.Time) {
 	if importTime.After(c.lastImport) {
 		c.lastImport = importTime.Time
-		Metrics.LastImport.Set(float64(importTime.Unix()))
+		metrics.LastImport.Set(float64(importTime.Unix()))
 	}
 	if syncTime.After(c.lastSync) {
 		c.lastSync = syncTime.Time
-		Metrics.LastSync.Set(float64(syncTime.Unix()))
+		metrics.LastSync.Set(float64(syncTime.Unix()))
 	}
 }

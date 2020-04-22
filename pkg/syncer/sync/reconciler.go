@@ -26,14 +26,14 @@ import (
 
 const reconcileTimeout = time.Minute * 5
 
-var _ reconcile.Reconciler = &MetaReconciler{}
+var _ reconcile.Reconciler = &metaReconciler{}
 
 // ClientFactory is a function used for creating new controller-runtime clients.
-type ClientFactory func() (client.Client, error)
+type clientFactory func() (client.Client, error)
 
 // MetaReconciler reconciles Syncs. It responds to changes in Syncs and causes RestartableManager
 // to stop and start controllers based on the resources that are presently sync-enabled.
-type MetaReconciler struct {
+type metaReconciler struct {
 	// client is used to update Sync status fields and finalize Syncs.
 	client *syncerclient.Client
 	// syncReader is a shared cache of Syncs on the cluster.
@@ -47,19 +47,19 @@ type MetaReconciler struct {
 	// subManager is responsible for starting/restarting all controllers that depend on Syncs.
 	subManager watch.RestartableManager
 	// clientFactory returns a new dynamic client.
-	clientFactory ClientFactory
+	clientFactory clientFactory
 	now           func() metav1.Time
 }
 
 // NewMetaReconciler returns a new MetaReconciler that reconciles changes in Syncs.
-func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, clientFactory ClientFactory, now func() metav1.Time) (*MetaReconciler, error) {
+func newMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, clientFactory clientFactory, now func() metav1.Time) (*metaReconciler, error) {
 	builder := newSyncAwareBuilder()
 	sm, err := watch.NewManager(mgr, builder)
 	if err != nil {
 		return nil, err
 	}
 
-	return &MetaReconciler{
+	return &metaReconciler{
 		client:          syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
 		syncReader:      mgr.GetCache(),
 		clientFactory:   clientFactory,
@@ -73,7 +73,7 @@ func NewMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, cli
 // Reconcile is the Reconcile callback for MetaReconciler.
 // It looks at all Syncs in the cluster and restarts the SubManager if its internal state doesn't match the cluster
 // state.
-func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *metaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("sync").Set(float64(start.Unix()))
 
@@ -89,7 +89,7 @@ func (r *MetaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	return reconcile.Result{}, err
 }
 
-func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
+func (r *metaReconciler) reconcileSyncs(ctx context.Context, request reconcile.Request) error {
 	syncs := &v1.SyncList{}
 	err := r.syncReader.List(ctx, syncs)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *MetaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 	return mErr
 }
 
-func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
+func (r *metaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
 	var newFinalizers []string
 	var needsFinalize bool
 	for _, f := range sync.Finalizers {
@@ -196,7 +196,7 @@ func (r *MetaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 	return status.APIServerError(err, "could not finalize sync pending delete")
 }
 
-func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
+func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
 	// It doesn't matter which version we choose when deleting.
 	// Deletes to a resource of a particular version affect all versions with the same group and kind.
 	if len(gvks) == 0 {
@@ -238,5 +238,5 @@ func (r *MetaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 // restartSubManager returns true if the reconcile request indicates that we need to restart all
 // controllers that the Sync Controller manages.
 func restartSubManager(name string) bool {
-	return name == ForceRestart
+	return name == forceRestart
 }

@@ -46,7 +46,7 @@ var reservedNamespaceConfig = &v1.NamespaceConfig{
 }
 
 // NamespaceConfigReconciler reconciles a NamespaceConfig object.
-type NamespaceConfigReconciler struct {
+type namespaceConfigReconciler struct {
 	client   *syncerclient.Client
 	applier  Applier
 	cache    *syncercache.GenericCache
@@ -58,12 +58,12 @@ type NamespaceConfigReconciler struct {
 	ctx context.Context
 }
 
-var _ reconcile.Reconciler = &NamespaceConfigReconciler{}
+var _ reconcile.Reconciler = &namespaceConfigReconciler{}
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
 func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
-	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) *NamespaceConfigReconciler {
-	return &NamespaceConfigReconciler{
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) reconcile.Reconciler {
+	return &namespaceConfigReconciler{
 		client:   c,
 		applier:  applier,
 		cache:    syncercache.NewGenericResourceCache(reader),
@@ -76,7 +76,7 @@ func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, a
 }
 
 // Reconcile is the Reconcile callback for NamespaceConfigReconciler.
-func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *namespaceConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("namespace").Set(float64(start.Unix()))
 
@@ -102,7 +102,7 @@ func (r *NamespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 }
 
 // getNamespaceConfig normalizes the state of the NamespaceConfig and returns the config.
-func (r *NamespaceConfigReconciler) getNamespaceConfig(
+func (r *namespaceConfigReconciler) getNamespaceConfig(
 	ctx context.Context,
 	name string,
 ) *v1.NamespaceConfig {
@@ -120,7 +120,7 @@ func (r *NamespaceConfigReconciler) getNamespaceConfig(
 }
 
 // getNamespace normalizes the state of the namespace and retrieves the current value.
-func (r *NamespaceConfigReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
+func (r *namespaceConfigReconciler) getNamespace(ctx context.Context, name string) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
 	err := r.cache.Get(ctx, apitypes.NamespacedName{Name: name}, ns)
 	if err != nil {
@@ -138,7 +138,7 @@ func invalidManagementLabel(invalid string) string {
 		v1.ResourceManagementKey, invalid, v1.ResourceManagementEnabled)
 }
 
-func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
+func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 	ctx context.Context,
 	name string,
 ) error {
@@ -216,7 +216,7 @@ func (r *NamespaceConfigReconciler) reconcileNamespaceConfig(
 }
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.
-func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, actual *corev1.Namespace) error {
+func (r *namespaceConfigReconciler) unmanageNamespace(ctx context.Context, actual *corev1.Namespace) error {
 	intended := actual.DeepCopy()
 	removeNomosMeta(intended)
 
@@ -233,7 +233,7 @@ func (r *NamespaceConfigReconciler) unmanageNamespace(ctx context.Context, actua
 	return err
 }
 
-func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, namespace string, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+func (r *namespaceConfigReconciler) manageConfigs(ctx context.Context, namespace string, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
 	if config == nil {
 		return nil
 	}
@@ -275,8 +275,8 @@ func (r *NamespaceConfigReconciler) manageConfigs(ctx context.Context, namespace
 
 		for _, act := range actualInstances {
 			annotations := act.GetAnnotations()
-			if AnnotationsHaveResourceCondition(annotations) {
-				resConditions = append(resConditions, MakeResourceCondition(*act, config.Spec.Token))
+			if annotationsHaveResourceCondition(annotations) {
+				resConditions = append(resConditions, makeResourceCondition(*act, config.Spec.Token))
 			}
 		}
 
@@ -319,7 +319,7 @@ func needsUpdate(config *v1.NamespaceConfig, errs []v1.ConfigManagementError, re
 }
 
 // setNamespaceConfigStatus updates the status of the given NamespaceConfig.
-func (r *NamespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
 	if !needsUpdate(config, errs, rcs) {
 		glog.Infof("Status for NamespaceConfig %q is already up-to-date.", config.Name)
 		return nil
@@ -390,7 +390,7 @@ func asUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
 	return &u, err
 }
 
-func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
+func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
 	namespace := asNamespace(namespaceConfig)
 	u, err := asUnstructured(namespace)
 	if err == nil {
@@ -406,7 +406,7 @@ func (r *NamespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig, actual *corev1.Namespace) error {
+func (r *namespaceConfigReconciler) updateNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig, actual *corev1.Namespace) error {
 	glog.V(1).Infof("Namespace %q declared in a NamespaceConfig, updating", namespaceConfig.Name)
 	intended := asNamespace(namespaceConfig)
 
@@ -430,7 +430,7 @@ func (r *NamespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
+func (r *namespaceConfigReconciler) deleteNamespace(ctx context.Context, namespace *corev1.Namespace) error {
 	glog.V(1).Infof("Namespace %q marked for deletion in corresponding NamespaceConfig, deleting", namespace.GetName())
 
 	err := r.client.Delete(ctx, namespace)
@@ -445,7 +445,7 @@ func (r *NamespaceConfigReconciler) deleteNamespace(ctx context.Context, namespa
 	return nil
 }
 
-func (r *NamespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *v1.NamespaceConfig) error {
+func (r *namespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *v1.NamespaceConfig) error {
 	if config == nil {
 		glog.Warningf("Attempted to delete nonexistent NamespaceConfig")
 		return nil
@@ -475,7 +475,7 @@ func (r *NamespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *
 // it does not remove the namespace itself as that is not allowed.
 // Instead, it manage sall configs inside as if the namespace has no managed resources, and then
 // removes the corresponding NamespaceConfig
-func (r *NamespaceConfigReconciler) deleteManageableSystem(ctx context.Context, ns *corev1.Namespace, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
+func (r *namespaceConfigReconciler) deleteManageableSystem(ctx context.Context, ns *corev1.Namespace, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
 	if err := r.manageConfigs(ctx, ns.GetName(), reservedNamespaceConfig, syncErrs); err != nil {
 		return err
 	}

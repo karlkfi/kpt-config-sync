@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestKindValidator(t *testing.T) {
@@ -35,11 +36,11 @@ func TestKindValidator(t *testing.T) {
 		),
 		asttest.Fail("omitting kind not supported",
 			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, fake.GVK(kinds.RoleBinding(), fake.Kind("")))),
+				fake.HierarchyConfigKind(v1.HierarchyModeDefault, kinds.RoleBinding().GroupVersion().WithKind(""))),
 		),
 		asttest.Pass("omitting group supported",
 			fake.HierarchyConfig(
-				fake.HierarchyConfigKind(v1.HierarchyModeDefault, fake.GVK(kinds.RoleBinding(), fake.Group("")))),
+				fake.HierarchyConfigKind(v1.HierarchyModeDefault, schema.GroupVersionKind{Version: "v1", Kind: "Role"})),
 		),
 		asttest.Fail("configmanagement.gke.io group not supported",
 			fake.HierarchyConfig(

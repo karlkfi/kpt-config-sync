@@ -7,7 +7,7 @@ import (
 )
 
 // GoRoutineHandler is a handler that will print the goroutine stacks to the response.
-func GoRoutineHandler(w http.ResponseWriter, _ *http.Request) {
+func goRoutineHandler(w http.ResponseWriter, _ *http.Request) {
 	ps := pprof.Profiles()
 	for _, p := range ps {
 		if p.Name() == "goroutine" {

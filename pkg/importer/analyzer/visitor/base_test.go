@@ -15,7 +15,7 @@ func TestBase(t *testing.T) {
 	b.SetImpl(v)
 	v.Visitor = b
 
-	input := vt.Helper.AcmeRoot()
+	input := vt.AcmeRoot()
 	out := input.Accept(v)
 	if out != input {
 		t.Errorf("ouptut and input have different pointer value")

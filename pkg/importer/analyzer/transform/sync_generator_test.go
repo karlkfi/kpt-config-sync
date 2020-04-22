@@ -25,8 +25,8 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 		{
 			Name: "basic",
 			Input: &ast.Root{
-				ClusterObjects: vt.Helper.AcmeCluster(),
-				Tree:           vt.Helper.AcmeTree(),
+				ClusterObjects: vt.AcmeCluster(),
+				Tree:           vt.AcmeTree(),
 			},
 			ExpectOutput: &ast.Root{
 				SystemObjects: vt.SystemObjectSets(
@@ -37,8 +37,8 @@ var syncGeneratorTestcases = vt.MutatingVisitorTestcases{
 					v1.NewSync(kinds.Role().GroupKind()),
 					v1.NewSync(kinds.RoleBinding().GroupKind()),
 				),
-				ClusterObjects: vt.Helper.AcmeCluster(),
-				Tree:           vt.Helper.AcmeTree(),
+				ClusterObjects: vt.AcmeCluster(),
+				Tree:           vt.AcmeTree(),
 			},
 		},
 	},

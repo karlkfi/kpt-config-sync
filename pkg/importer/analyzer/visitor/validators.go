@@ -23,23 +23,6 @@ func NewRootValidator(validate func(g *ast.Root) status.MultiError) *ValidatorVi
 	return NewValidator(&rootValidator{validate: validate})
 }
 
-// systemValidator validates System.
-type systemValidator struct {
-	ValidatorBase
-	validate func(s []*ast.SystemObject) status.MultiError
-}
-
-// ValidateSystem implements Validator.
-func (v *systemValidator) ValidateSystem(s []*ast.SystemObject) status.MultiError {
-	return v.validate(s)
-}
-
-// NewSystemValidator returns a ValidatorVisitor which validates System with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewSystemValidator(validate func(s []*ast.SystemObject) status.MultiError) *ValidatorVisitor {
-	return NewValidator(&systemValidator{validate: validate})
-}
-
 type systemObjectValidator struct {
 	ValidatorBase
 	validate func(o *ast.SystemObject) status.MultiError
@@ -54,54 +37,6 @@ func (v *systemObjectValidator) ValidateSystemObject(o *ast.SystemObject) status
 // Errors returned by validate during visiting will be returned by Error().
 func NewSystemObjectValidator(validate func(o *ast.SystemObject) status.MultiError) *ValidatorVisitor {
 	return NewValidator(&systemObjectValidator{validate: validate})
-}
-
-type clusterRegistryValidator struct {
-	ValidatorBase
-	validate func(s []*ast.ClusterRegistryObject) status.MultiError
-}
-
-// ValidateClusterRegistry implements Validator.
-func (v *clusterRegistryValidator) ValidateClusterRegistry(c []*ast.ClusterRegistryObject) status.MultiError {
-	return v.validate(c)
-}
-
-// NewClusterRegistryValidator returns a ValidatorVisitor which validates ClusterRegistry with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewClusterRegistryValidator(validate func(s []*ast.ClusterRegistryObject) status.MultiError) *ValidatorVisitor {
-	return NewValidator(&clusterRegistryValidator{validate: validate})
-}
-
-type clusterRegistryObjectValidator struct {
-	ValidatorBase
-	validate func(o *ast.ClusterRegistryObject) status.MultiError
-}
-
-// ValidateClusterRegistryObject implements Validator.
-func (v *clusterRegistryObjectValidator) ValidateClusterRegistryObject(o *ast.ClusterRegistryObject) status.MultiError {
-	return v.validate(o)
-}
-
-// NewClusterRegistryObjectValidator returns a ValidatorVisitor which validates each ClusterRegistryObject with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewClusterRegistryObjectValidator(validate func(o *ast.ClusterRegistryObject) status.MultiError) *ValidatorVisitor {
-	return NewValidator(&clusterRegistryObjectValidator{validate: validate})
-}
-
-type clusterValidator struct {
-	ValidatorBase
-	validate func(s []*ast.ClusterObject) status.MultiError
-}
-
-// ValidateCluster implements Validator.
-func (v *clusterValidator) ValidateCluster(c []*ast.ClusterObject) status.MultiError {
-	return v.validate(c)
-}
-
-// NewClusterValidator returns a ValidatorVisitor which validates Cluster with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewClusterValidator(validate func(c []*ast.ClusterObject) status.MultiError) *ValidatorVisitor {
-	return NewValidator(&clusterValidator{validate: validate})
 }
 
 type clusterObjectValidator struct {
@@ -134,22 +69,6 @@ func (v *treeNodeValidator) ValidateTreeNode(n *ast.TreeNode) status.MultiError 
 // Errors returned by validate during visiting will be returned by Error().
 func NewTreeNodeValidator(validate func(n *ast.TreeNode) status.MultiError) *ValidatorVisitor {
 	return NewValidator(&treeNodeValidator{validate: validate})
-}
-
-type objectValidator struct {
-	ValidatorBase
-	validate func(o *ast.NamespaceObject) status.MultiError
-}
-
-// ValidateObject implements Validator.
-func (v *objectValidator) ValidateObject(o *ast.NamespaceObject) status.MultiError {
-	return v.validate(o)
-}
-
-// NewObjectValidator returns a ValidatorVisitor which validates each NamespaceObject with the passed validation function.
-// Errors returned by validate during visiting will be returned by Error().
-func NewObjectValidator(validate func(o *ast.NamespaceObject) status.MultiError) *ValidatorVisitor {
-	return NewValidator(&objectValidator{validate: validate})
 }
 
 type allObjectValidator struct {

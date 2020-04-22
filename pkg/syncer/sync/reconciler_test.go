@@ -96,7 +96,7 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name:                 "force restart reconcile request restarts SubManager",
-			reconcileRequestName: ForceRestart,
+			reconcileRequestName: forceRestart,
 			actual: []v1.Sync{
 				makeSync(kinds.Deployment().GroupKind(), ""),
 			},
@@ -125,7 +125,7 @@ func TestReconcile(t *testing.T) {
 			)
 			restartable := &fake.RestartableManagerRecorder{}
 
-			testReconciler := &MetaReconciler{
+			testReconciler := &metaReconciler{
 				client:          syncerclient.New(fakeClient, metrics.APICallDuration),
 				syncReader:      fakeClient,
 				discoveryClient: discoveryClient,

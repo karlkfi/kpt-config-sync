@@ -151,7 +151,7 @@ func TestSyncStateBuilding(t *testing.T) {
 		cmp.AllowUnexported(syncState{}),
 		cmp.AllowUnexported(configState{}),
 	}
-	repoStatus := &RepoStatus{}
+	repoStatus := &repoStatus{}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -241,7 +241,7 @@ func TestMergeResourceConditions(t *testing.T) {
 		cmp.AllowUnexported(syncState{}),
 		cmp.AllowUnexported(configState{}),
 	}
-	repoStatus := &RepoStatus{}
+	repoStatus := &repoStatus{}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

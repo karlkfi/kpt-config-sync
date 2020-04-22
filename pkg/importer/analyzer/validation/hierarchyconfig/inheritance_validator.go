@@ -17,7 +17,7 @@ func NewInheritanceValidator() ast.Visitor {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
 			for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
-				if err := ValidateInheritance(gkc); err != nil {
+				if err := validateInheritance(gkc); err != nil {
 					return err
 				}
 			}
@@ -28,7 +28,7 @@ func NewInheritanceValidator() ast.Visitor {
 
 // ValidateInheritance returns an error if the HierarchyModeType is invalid for the GroupKind in the
 // FileGroupKindHierarchyConfig
-func ValidateInheritance(config FileGroupKindHierarchyConfig) status.MultiError {
+func validateInheritance(config FileGroupKindHierarchyConfig) status.MultiError {
 	return errIfNotAllowed(config)
 }
 

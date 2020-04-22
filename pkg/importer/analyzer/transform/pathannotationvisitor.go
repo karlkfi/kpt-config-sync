@@ -8,16 +8,16 @@ import (
 )
 
 // PathAnnotationVisitor sets "configmanagement.gke.io/source-path" annotation on objects.
-type PathAnnotationVisitor struct {
+type pathAnnotationVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 }
 
-var _ ast.Visitor = &PathAnnotationVisitor{}
+var _ ast.Visitor = &pathAnnotationVisitor{}
 
 // NewPathAnnotationVisitor returns a new PathAnnotationVisitor
-func NewPathAnnotationVisitor() *PathAnnotationVisitor {
-	v := &PathAnnotationVisitor{
+func NewPathAnnotationVisitor() ast.Visitor {
+	v := &pathAnnotationVisitor{
 		Copying: visitor.NewCopying(),
 	}
 	v.SetImpl(v)
@@ -25,14 +25,14 @@ func NewPathAnnotationVisitor() *PathAnnotationVisitor {
 }
 
 // VisitClusterObject implements Visitor
-func (v *PathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
+func (v *pathAnnotationVisitor) VisitClusterObject(o *ast.ClusterObject) *ast.ClusterObject {
 	newObject := v.Copying.VisitClusterObject(o)
 	core.SetAnnotation(newObject, v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject
 }
 
 // VisitObject implements Visitor
-func (v *PathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
+func (v *pathAnnotationVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	newObject := v.Copying.VisitObject(o)
 	core.SetAnnotation(newObject, v1.SourcePathAnnotationKey, o.SlashPath())
 	return newObject

@@ -90,8 +90,8 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 	return err
 }
 
-// AnnotationsHaveResourceCondition checks if the given annotations contain at least one resource condition
-func AnnotationsHaveResourceCondition(annotations map[string]string) bool {
+// annotationsHaveResourceCondition checks if the given annotations contain at least one resource condition
+func annotationsHaveResourceCondition(annotations map[string]string) bool {
 	if _, ok := annotations[v1.ResourceStatusErrorsKey]; ok {
 		return true
 	}
@@ -101,8 +101,8 @@ func AnnotationsHaveResourceCondition(annotations map[string]string) bool {
 	return false
 }
 
-// MakeResourceCondition makes a resource condition from an unstructured object and the given config token
-func MakeResourceCondition(obj unstructured.Unstructured, token string) v1.ResourceCondition {
+// makeResourceCondition makes a resource condition from an unstructured object and the given config token
+func makeResourceCondition(obj unstructured.Unstructured, token string) v1.ResourceCondition {
 	resourceCondition := v1.ResourceCondition{ResourceState: v1.ResourceStateHealthy, Token: token}
 	resourceCondition.GroupVersion = obj.GroupVersionKind().GroupVersion().String()
 	resourceCondition.Kind = obj.GroupVersionKind().Kind

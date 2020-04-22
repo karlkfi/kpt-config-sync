@@ -37,12 +37,12 @@ const (
 	restartSignal = "crd"
 )
 
-var _ reconcile.Reconciler = &Reconciler{}
+var _ reconcile.Reconciler = &reconciler{}
 
 // Reconciler reconciles CRD resources on the cluster.
 // It restarts ClusterConfig and NamespaceConfig controllers if changes have been made to
 // CustomResourceDefinitions on the cluster.
-type Reconciler struct {
+type reconciler struct {
 	// client is used to update the ClusterConfig.Status
 	client *syncerclient.Client
 	// applier create/patches/deletes CustomResourceDefinitions.
@@ -66,10 +66,10 @@ type Reconciler struct {
 }
 
 // NewReconciler returns a new Reconciler.
-func NewReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
+func newReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
 	reader client.Reader, recorder record.EventRecorder, decoder decode.Decoder,
-	now func() metav1.Time, signal sync.RestartSignal) *Reconciler {
-	return &Reconciler{
+	now func() metav1.Time, signal sync.RestartSignal) *reconciler {
+	return &reconciler{
 		client:   client,
 		applier:  applier,
 		cache:    syncercache.NewGenericResourceCache(reader),
@@ -81,7 +81,7 @@ func NewReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
 }
 
 // Reconcile implements Reconciler.
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.CRDClusterConfigName {
 		// We only handle the CRD ClusterConfig in this reconciler.
 		return reconcile.Result{}, nil
@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
+func (r *reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
 	crdList := &v1beta1.CustomResourceDefinitionList{}
 	if err := r.client.List(ctx, crdList); err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (r *Reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefi
 	return crdList.Items, nil
 }
 
-func (r *Reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
+func (r *reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
 	allCRDs := map[schema.GroupVersionKind]struct{}{}
 	for _, crd := range crds {
 		crdGk := schema.GroupKind{
@@ -133,7 +133,7 @@ func (r *Reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schem
 	return allCRDs
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, name string) status.MultiError {
+func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiError {
 	var mErr status.MultiError
 
 	clusterConfig := &v1.ClusterConfig{}

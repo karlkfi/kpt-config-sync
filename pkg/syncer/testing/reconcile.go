@@ -34,7 +34,7 @@ var (
 )
 
 // ToUnstructured converts the object to an unstructured.Unstructured.
-func ToUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
+func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
 	if obj == nil {
 		return &unstructured.Unstructured{}
 	}
@@ -52,15 +52,9 @@ func ToUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj r
 func ToUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter, objs ...runtime.Object) []*unstructured.Unstructured {
 	result := make([]*unstructured.Unstructured, len(objs))
 	for i, obj := range objs {
-		result[i] = ToUnstructured(t, converter, obj)
+		result[i] = toUnstructured(t, converter, obj)
 	}
 	return result
-}
-
-// Diff represents the arguments to an Applier.Updawte invocation.
-type Diff struct {
-	Declared runtime.Object
-	Actual   runtime.Object
 }
 
 // ClusterConfigImportToken adds an import token to a ClusterConfig.

@@ -5,11 +5,6 @@ import "k8s.io/apimachinery/pkg/types"
 // MetaMutator is a Mutator that modifies the metadata of an Object.
 type MetaMutator func(o Object)
 
-// Mutate implements object.Mutator.
-func (m MetaMutator) Mutate(object Object) {
-	m(object)
-}
-
 // Namespace replaces the metadata.namespace of the Object under test.
 func Namespace(namespace string) MetaMutator {
 	return func(o Object) {

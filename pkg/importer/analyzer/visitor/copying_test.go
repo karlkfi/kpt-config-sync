@@ -24,18 +24,18 @@ var copyingVisitorTestcases = vt.MutatingVisitorTestcases{
 	Testcases: []vt.MutatingVisitorTestcase{
 		{
 			Name:         "empty",
-			Input:        vt.Helper.EmptyRoot(),
-			ExpectOutput: vt.Helper.EmptyRoot(),
+			Input:        vt.EmptyRoot(),
+			ExpectOutput: vt.EmptyRoot(),
 		},
 		{
 			Name:         "cluster configs",
-			Input:        vt.Helper.ClusterConfigs(),
-			ExpectOutput: vt.Helper.ClusterConfigs(),
+			Input:        vt.ClusterConfigs(),
+			ExpectOutput: vt.ClusterConfigs(),
 		},
 		{
 			Name:         "acme",
-			Input:        vt.Helper.AcmeRoot(),
-			ExpectOutput: vt.Helper.AcmeRoot(),
+			Input:        vt.AcmeRoot(),
+			ExpectOutput: vt.AcmeRoot(),
 		},
 	},
 }
@@ -152,7 +152,7 @@ func TestCopyingVisitorCopies(t *testing.T) {
 	c.SetImpl(v)
 	v.Visitor = c
 
-	input := vt.Helper.AcmeRoot()
+	input := vt.AcmeRoot()
 	out := input.Accept(v)
 	if out == input {
 		t.Errorf("ouptut and input have same pointer value")

@@ -32,7 +32,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 		return err
 	}
 
-	reconciler := NewReconciler(
+	reconciler := newReconciler(
 		resourceClient,
 		applier,
 		mgr.GetCache(),

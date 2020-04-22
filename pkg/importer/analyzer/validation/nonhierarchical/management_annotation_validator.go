@@ -9,10 +9,10 @@ import (
 
 // ManagementAnnotationValidator ensures the passed object either has no Managment annotation, or
 //  declares a valid one.
-var ManagementAnnotationValidator = PerObjectValidator(ValidManagementAnnotation)
+var ManagementAnnotationValidator = PerObjectValidator(validManagementAnnotation)
 
 // ValidManagementAnnotation returns an Error if the user-specified Managment annotation is invalid.
-func ValidManagementAnnotation(o ast.FileObject) status.Error {
+func validManagementAnnotation(o ast.FileObject) status.Error {
 	value, found := o.GetAnnotations()[v1.ResourceManagementKey]
 	if found && (value != v1.ResourceManagementDisabled) {
 		return IllegalManagementAnnotationError(&o, value)

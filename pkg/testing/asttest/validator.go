@@ -90,13 +90,3 @@ func Fail(name string, objects ...ast.FileObject) ValidatorTestCase {
 		Opts:       []ast.BuildOpt{withObjects(objects...)},
 	}
 }
-
-// With appends additional BuildOpts to the ValidatorTestCase, allowing futher customization of the
-// AST after validatorTest.DefaultOpts are run and objects are added.
-func (tc ValidatorTestCase) With(opts ...ast.BuildOpt) ValidatorTestCase {
-	return ValidatorTestCase{
-		Name:       tc.Name,
-		ShouldFail: tc.ShouldFail,
-		Opts:       append(tc.Opts, opts...),
-	}
-}

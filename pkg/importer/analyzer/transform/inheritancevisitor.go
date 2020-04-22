@@ -23,18 +23,18 @@ type InheritanceSpec struct {
 }
 
 // InheritanceVisitor aggregates hierarchical objects.
-type InheritanceVisitor struct {
+type inheritanceVisitor struct {
 	// Copying is used for copying parts of the ast.Root tree and continuing underlying visitor iteration.
 	*visitor.Copying
 	// treeContext is a stack that tracks ancestry and inherited objects during the tree traversal.
 	treeContext []nodeContext
 }
 
-var _ ast.Visitor = &InheritanceVisitor{}
+var _ ast.Visitor = &inheritanceVisitor{}
 
 // NewInheritanceVisitor returns a new InheritanceVisitor for the given GroupKind
-func NewInheritanceVisitor() *InheritanceVisitor {
-	iv := &InheritanceVisitor{
+func NewInheritanceVisitor() ast.Visitor {
+	iv := &inheritanceVisitor{
 		Copying: visitor.NewCopying(),
 	}
 	iv.SetImpl(iv)
@@ -42,7 +42,7 @@ func NewInheritanceVisitor() *InheritanceVisitor {
 }
 
 // Error implements Visitor
-func (v *InheritanceVisitor) Error() status.MultiError {
+func (v *inheritanceVisitor) Error() status.MultiError {
 	return nil
 }
 
@@ -50,7 +50,7 @@ func (v *InheritanceVisitor) Error() status.MultiError {
 //
 // Copies inherited objects into their Namespaces. Otherwise mutating the object later in any
 // individual object modifies all copies in other Namespaces.
-func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+func (v *inheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
 		nodePath: n.Path,
@@ -68,7 +68,7 @@ func (v *InheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 }
 
 // VisitObject implements Visitor
-func (v *InheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
+func (v *inheritanceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 	context := &v.treeContext[len(v.treeContext)-1]
 	if context.nodeType == node.AbstractNamespace {
 		if o.GroupVersionKind() != kinds.NamespaceSelector() {

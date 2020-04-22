@@ -25,7 +25,7 @@ var unaryHandler = &handler.EnqueueRequestsFromMapFunc{
 }
 
 // AddController adds the Sync controller to the manager.
-func AddController(mgr manager.Manager, rc *RestartChannel) error {
+func AddController(mgr manager.Manager, rc RestartChannel) error {
 	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create discoveryclient")
@@ -42,7 +42,7 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 			Mapper: mapper,
 		})
 	}
-	reconciler, err := NewMetaReconciler(mgr, dc, clientFactory, metav1.Now)
+	reconciler, err := newMetaReconciler(mgr, dc, clientFactory, metav1.Now)
 	if err != nil {
 		return errors.Wrapf(err, "could not create %q reconciler", syncControllerName)
 	}
@@ -68,7 +68,7 @@ func AddController(mgr manager.Manager, rc *RestartChannel) error {
 	}
 
 	// Create a watch for forced restarts from other controllers like the CRD controller.
-	managerRestartSource := &source.Channel{Source: rc.Channel()}
+	managerRestartSource := &source.Channel{Source: rc}
 	if err = c.Watch(managerRestartSource, &handler.EnqueueRequestForObject{}); err != nil {
 		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", syncControllerName)
 	}

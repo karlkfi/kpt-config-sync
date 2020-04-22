@@ -14,8 +14,9 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 )
 
-// Visitors implements ParserConfig
-func Visitors(configs []*v1.HierarchyConfig) []ast.Visitor {
+// hierarchicalVisitors returns the set of Visitors used specifically for
+// validating hierarchical repositories.
+func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	return []ast.Visitor{

@@ -109,7 +109,7 @@ func (p *Parser) generateVisitors(
 		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
 	}
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
-	visitors = append(visitors, Visitors(hierarchyConfigs)...)
+	visitors = append(visitors, hierarchicalVisitors(hierarchyConfigs)...)
 	visitors = append(visitors, transform.NewSyncGenerator())
 	return visitors
 }

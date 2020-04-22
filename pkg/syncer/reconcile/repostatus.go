@@ -19,7 +19,7 @@ import (
 
 // RepoStatus is a reconciler for maintaining the status field of the Repo resource based upon
 // updates from the other syncer reconcilers.
-type RepoStatus struct {
+type repoStatus struct {
 	// ctx is a cancelable ambient context for all reconciler operations.
 	ctx context.Context
 	// client is used to list configs on the cluster when building state for a commit
@@ -54,8 +54,8 @@ type configState struct {
 }
 
 // NewRepoStatus returns a reconciler for maintaining the status field of the Repo resource.
-func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() metav1.Time) *RepoStatus {
-	return &RepoStatus{
+func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() metav1.Time) reconcile.Reconciler {
+	return &repoStatus{
 		ctx:     ctx,
 		client:  sClient,
 		rClient: repo.New(sClient),
@@ -64,24 +64,17 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() m
 }
 
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
-// nolint
-// TODO(b/130295620): Enable linting once we use error interfaces instead of structs.
-func (r *RepoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
+func (r *repoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("repo").Set(float64(start.Unix()))
 
 	result, err := r.reconcile()
 	metrics.ReconcileDuration.WithLabelValues("repo", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
-	if err != nil {
-		return result, err
-	}
-	// Linting is disabled for this function so that we can return explicit nil for error, which
-	// avoids golang type weirdness.
-	return result, nil
+	return result, err
 }
 
-func (r *RepoStatus) reconcile() (reconcile.Result, error) {
+func (r *repoStatus) reconcile() (reconcile.Result, error) {
 	repoObj, sErr := r.rClient.GetOrCreateRepo(r.ctx)
 	if sErr != nil {
 		glog.Errorf("Failed to fetch Repo: %v", sErr)
@@ -115,7 +108,7 @@ func (r *RepoStatus) reconcile() (reconcile.Result, error) {
 }
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
-func (r *RepoStatus) buildState(ctx context.Context, importToken string) (*syncState, error) {
+func (r *repoStatus) buildState(ctx context.Context, importToken string) (*syncState, error) {
 	ccList := &v1.ClusterConfigList{}
 	if err := r.client.List(ctx, ccList); err != nil {
 		return nil, errors.Wrapf(err, "listing ClusterConfigs")
@@ -128,7 +121,7 @@ func (r *RepoStatus) buildState(ctx context.Context, importToken string) (*syncS
 }
 
 // processConfigs is broken out to make unit testing easier.
-func (r *RepoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.NamespaceConfigList, importToken string) *syncState {
+func (r *repoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.NamespaceConfigList, importToken string) *syncState {
 	state := &syncState{
 		reconciledCommits:   make(map[string]bool),
 		unreconciledCommits: make(map[string][]string),

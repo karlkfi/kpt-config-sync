@@ -132,8 +132,8 @@ func (r *clusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 
 		for _, act := range actualInstances {
 			annotations := act.GetAnnotations()
-			if AnnotationsHaveResourceCondition(annotations) {
-				resConditions = append(resConditions, MakeResourceCondition(*act, config.Spec.Token))
+			if annotationsHaveResourceCondition(annotations) {
+				resConditions = append(resConditions, makeResourceCondition(*act, config.Spec.Token))
 			}
 		}
 
