@@ -21,11 +21,19 @@ type Namespaced interface {
 }
 
 // LabeledAndAnnotated is a convenience interface.
-// Labels and annotations are optional per the Kubernetes API spec, we require them as a
-// guaranteed place to store bookkeeping metadata.
+// Labels and annotations are optional per the Kubernetes API spec, we require
+// them as a guaranteed place to store bookkeeping metadata.
+//
+// This is a subset of the interface metav1.Object, and allows us to manipulate
+// AST objects with the same code that operates on Kubernetes API objects,
+// without the need to implement parts of metav1.Object that don't deal with
+// labels and annotations.
 type LabeledAndAnnotated interface {
-	Labeled
-	Annotated
+	GetAnnotations() map[string]string
+	SetAnnotations(map[string]string)
+
+	GetLabels() map[string]string
+	SetLabels(map[string]string)
 }
 
 // resourceVersion is optional per the Kubernetes API spec, but we require it to determine whether

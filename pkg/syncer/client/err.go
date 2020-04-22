@@ -14,8 +14,8 @@ func NoUpdateNeeded() error {
 	return &noUpdateNeededError{}
 }
 
-// IsNoUpdateNeeded checks for whether the returned error is noUpdateNeededError
-func IsNoUpdateNeeded(err error) bool {
+// isNoUpdateNeeded checks for whether the returned error is noUpdateNeededError
+func isNoUpdateNeeded(err error) bool {
 	_, ok := err.(*noUpdateNeededError)
 	return ok
 }

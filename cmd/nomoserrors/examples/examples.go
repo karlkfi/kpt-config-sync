@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
@@ -98,7 +97,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.InvalidNamespaceNameError(fake.Namespace("namespaces/foo", core.Name("")), "foo"))
 
 	// 1021
-	result.add(discovery.UnknownObjectKindError(asttesting.NewFakeFileObject(schema.GroupVersionKind{
+	result.add(discovery.UnknownObjectKindError(fake.UnstructuredAtPath(schema.GroupVersionKind{
 		Group:   "com.me",
 		Version: "v1",
 		Kind:    "Engineer",
@@ -214,7 +213,7 @@ func Generate() map[string][]status.Error {
 
 	// 1050
 	result.add(syntax.DeprecatedGroupKindError(
-		asttesting.NewFakeFileObject(schema.GroupVersionKind{
+		fake.UnstructuredAtPath(schema.GroupVersionKind{
 			Group:   "extensions",
 			Version: "v1beta1",
 			Kind:    kinds.Deployment().Kind,

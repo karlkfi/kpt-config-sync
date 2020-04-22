@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
+	openapiv2 "github.com/googleapis/gnostic/OpenAPIv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -42,7 +42,7 @@ func newFakeCachedDiscoveryClient(res []*metav1.APIResourceList) discovery.Cache
 }
 
 // OpenAPISchema implements DiscoveryClient.
-func (d *fakeCachedDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
+func (d *fakeCachedDiscoveryClient) OpenAPISchema() (*openapiv2.Document, error) {
 	return nil, nil
 }
 

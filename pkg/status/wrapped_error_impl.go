@@ -43,10 +43,10 @@ func (w wrappedErrorImpl) Errors() []Error {
 
 // ToCME implements Error.
 func (w wrappedErrorImpl) ToCME() v1.ConfigManagementError {
-	return FromError(w)
+	return fromError(w)
 }
 
-// Cause implements Causer
+// Cause implements causer
 func (w wrappedErrorImpl) Cause() error {
 	return w.wrapped
 }

@@ -41,14 +41,14 @@ func (p pathErrorImpl) RelativePaths() []id.Path {
 	return p.paths
 }
 
-// Cause implements Causer
+// Cause implements causer
 func (p pathErrorImpl) Cause() error {
 	return p.underlying.Cause()
 }
 
 // ToCME implements Error.
 func (p pathErrorImpl) ToCME() v1.ConfigManagementError {
-	return FromPathError(p)
+	return fromPathError(p)
 }
 
 func formatPaths(paths []id.Path) string {

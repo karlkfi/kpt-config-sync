@@ -42,10 +42,10 @@ func (r resourceErrorImpl) Resources() []id.Resource {
 
 // ToCME implements Error.
 func (r resourceErrorImpl) ToCME() v1.ConfigManagementError {
-	return FromResourceError(r)
+	return fromResourceError(r)
 }
 
-// Cause implements Causer
+// Cause implements causer
 func (r resourceErrorImpl) Cause() error {
 	return r.underlying.Cause()
 }

@@ -32,7 +32,7 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 
 	// Syncs
 	var err error
-	configs.Syncs, err = ListSyncs(ctx, cache)
+	configs.Syncs, err = listSyncs(ctx, cache)
 	return &configs, err
 }
 
@@ -56,19 +56,15 @@ func DecorateWithClusterConfigs(ctx context.Context, reader client.Reader, polic
 	return nil
 }
 
-// ListSyncs gets a map-by-name of Syncs currently present in the cluster from
+// listSyncs gets a map-by-name of Syncs currently present in the cluster from
 // the cache.
-func ListSyncs(ctx context.Context, cache cache.Cache) (map[string]v1.Sync, error) {
+func listSyncs(ctx context.Context, cache cache.Cache) (map[string]v1.Sync, error) {
 	syncs := &v1.SyncList{}
 	if err := cache.List(ctx, syncs); err != nil {
 		return nil, errors.Wrap(err, "failed to list Syncs")
 	}
 
-	var ret map[string]v1.Sync
-	if len(syncs.Items) > 0 {
-		ret = make(map[string]v1.Sync, len(syncs.Items))
-	}
-
+	ret := make(map[string]v1.Sync, len(syncs.Items))
 	for _, s := range syncs.Items {
 		ret[s.Name] = *s.DeepCopy()
 	}

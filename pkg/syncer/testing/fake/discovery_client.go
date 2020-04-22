@@ -6,25 +6,25 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// DiscoveryClient implements the subset of the DiscoveryInterface used by the
+// discoveryClient implements the subset of the DiscoveryInterface used by the
 // Syncer.
-type DiscoveryClient struct {
+type discoveryClient struct {
 	resources []*metav1.APIResourceList
 }
 
 // ServerResources implements discovery.ServerResourcer.
-func (d DiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
+func (d discoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
 	return d.resources, nil
 }
 
-var _ discovery.ServerResourcer = DiscoveryClient{}
+var _ discovery.ServerResourcer = discoveryClient{}
 
-// NewDiscoveryClient returns a DiscoveryClient that reports types available
+// NewDiscoveryClient returns a discoveryClient that reports types available
 // to the API Server.
 //
-// Does not report the scope of each GVK as no tests requiring a DiscoveryClient
+// Does not report the scope of each GVK as no tests requiring a discoveryClient
 // use scope information.
-func NewDiscoveryClient(gvks ...schema.GroupVersionKind) DiscoveryClient {
+func NewDiscoveryClient(gvks ...schema.GroupVersionKind) discovery.ServerResourcer {
 	gvs := make(map[string][]string)
 	for _, gvk := range gvks {
 		gv := gvk.GroupVersion().String()
@@ -47,7 +47,7 @@ func NewDiscoveryClient(gvks ...schema.GroupVersionKind) DiscoveryClient {
 		}
 	}
 
-	return DiscoveryClient{
+	return discoveryClient{
 		resources: resources,
 	}
 }

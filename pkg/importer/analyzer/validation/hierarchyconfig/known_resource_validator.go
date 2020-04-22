@@ -15,13 +15,13 @@ import (
 func NewHierarchyConfigScopeValidator(scoper discovery.Scoper, errorOnUnknown bool) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
 		if hc, isHierarchyConfig := o.Object.(*v1.HierarchyConfig); isHierarchyConfig {
-			return validateHierarchyConfigScopes(scoper, NewFileHierarchyConfig(hc, o), errorOnUnknown)
+			return validateHierarchyConfigScopes(scoper, newFileHierarchyConfig(hc, o), errorOnUnknown)
 		}
 		return nil
 	})
 }
 
-func validateHierarchyConfigScopes(scoper discovery.Scoper, hc FileHierarchyConfig, errOnUnknown bool) status.Error {
+func validateHierarchyConfigScopes(scoper discovery.Scoper, hc fileHierarchyConfig, errOnUnknown bool) status.Error {
 	for _, gkc := range hc.flatten() {
 		isNamespaced, err := scoper.GetGroupKindScope(gkc.GK)
 		if err != nil {

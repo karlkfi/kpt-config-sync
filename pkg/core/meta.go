@@ -43,7 +43,7 @@ func Label(label, value string) MetaMutator {
 // to empty map.
 func Labels(labels map[string]string) MetaMutator {
 	return func(o Object) {
-		SetLabels(o, labels)
+		o.SetLabels(copyMap(labels))
 	}
 }
 
@@ -66,6 +66,6 @@ func WithoutAnnotation(annotation string) MetaMutator {
 // Annotations to empty map.
 func Annotations(annotations map[string]string) MetaMutator {
 	return func(o Object) {
-		SetAnnotations(o, annotations)
+		o.SetAnnotations(copyMap(annotations))
 	}
 }

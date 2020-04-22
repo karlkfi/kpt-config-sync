@@ -3,21 +3,16 @@ package metadata
 import (
 	"testing"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func fakeNamedObject(gvk schema.GroupVersionKind, name string) ast.FileObject {
-	object := asttesting.NewFakeObject(gvk)
-	object.SetName(name)
-	return ast.NewFileObject(
-		object,
-		cmpath.FromSlash("namespaces/role.yaml"),
-	)
+	return fake.UnstructuredAtPath(gvk, "namespaces/role.yaml", core.Name(name))
 }
 
 func TestTopLevelNamespaceValidation(t *testing.T) {

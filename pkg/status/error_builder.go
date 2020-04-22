@@ -55,51 +55,28 @@ import (
 
 // ErrorBuilder constructs complex, structured error messages.
 //
-type ErrorBuilder interface {
-	// Build returns the constructed Error.
-	Build() Error
-
-	// BuildWithPaths adds the passed paths to the error in a structured way. If the set of passed
-	// paths is empty returns nil.
-	BuildWithPaths(paths ...id.Path) PathError
-
-	// BuildWithResources adds the passed resources to the error in a structured way. If the set of
-	// passed resources is empty, returns nil.
-	BuildWithResources(resources ...id.Resource) ResourceError
-
-	// Sprint wraps the ErrorBuilder with a message, and returns the result.
-	Sprint(message string) ErrorBuilder
-
-	// Sprintf wraps the ErrorBuilder with a formatted message, and returns the result.
-	Sprintf(format string, a ...interface{}) ErrorBuilder
-
-	// Wrap wraps toWrap with the ErrorBuilder. The resulting Error returns toWrap if Cause() is called.
-	// If toWrap is nil, the final Error returned by Build() is nil.
-	Wrap(toWrap error) ErrorBuilder
+// ErrorBuilder constructs complex error messages. Use NewErrorBuilder to register a KNV for a new
+// code.
+type ErrorBuilder struct {
+	error Error
 }
 
 // NewErrorBuilder returns an ErrorBuilder that can be used to generate errors. Registers this
 // call with the passed unique code. Panics if there is an error code collision.
 func NewErrorBuilder(code string) ErrorBuilder {
 	register(code)
-	return errorBuilder{error: baseErrorImpl{
+	return ErrorBuilder{error: baseErrorImpl{
 		code: code,
 	}}
 }
 
-// errorBuilder constructs complex error messages. Use NewErrorBuilder to register a KNV for a new
-// code.
-type errorBuilder struct {
-	error Error
-}
-
 // Build implements ErrorBuilder.
-func (eb errorBuilder) Build() Error {
+func (eb ErrorBuilder) Build() Error {
 	return eb.error
 }
 
 // BuildWithPaths implements ErrorBuilder.
-func (eb errorBuilder) BuildWithPaths(paths ...id.Path) PathError {
+func (eb ErrorBuilder) BuildWithPaths(paths ...id.Path) PathError {
 	if len(paths) == 0 {
 		return nil
 	}
@@ -110,7 +87,7 @@ func (eb errorBuilder) BuildWithPaths(paths ...id.Path) PathError {
 }
 
 // BuildWithResources implements ErrorBuilder.
-func (eb errorBuilder) BuildWithResources(resources ...id.Resource) ResourceError {
+func (eb ErrorBuilder) BuildWithResources(resources ...id.Resource) ResourceError {
 	if len(resources) == 0 {
 		return nil
 	}
@@ -121,61 +98,28 @@ func (eb errorBuilder) BuildWithResources(resources ...id.Resource) ResourceErro
 }
 
 // Sprint implements ErrorBuilder.
-func (eb errorBuilder) Sprint(message string) ErrorBuilder {
-	return errorBuilder{error: messageErrorImpl{
+func (eb ErrorBuilder) Sprint(message string) ErrorBuilder {
+	return ErrorBuilder{error: messageErrorImpl{
 		underlying: eb.error,
 		message:    message,
 	}}
 }
 
 // Sprintf implements ErrorBuilder.
-func (eb errorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
-	return errorBuilder{error: messageErrorImpl{
+func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
+	return ErrorBuilder{error: messageErrorImpl{
 		underlying: eb.error,
 		message:    fmt.Sprintf(format, a...),
 	}}
 }
 
 // Wrap implements ErrorBuilder.
-func (eb errorBuilder) Wrap(toWrap error) ErrorBuilder {
+func (eb ErrorBuilder) Wrap(toWrap error) ErrorBuilder {
 	if toWrap == nil {
-		return nilErrorBuilder{}
+		return ErrorBuilder{error: nil}
 	}
-	return errorBuilder{error: wrappedErrorImpl{
+	return ErrorBuilder{error: wrappedErrorImpl{
 		underlying: eb.error,
 		wrapped:    toWrap,
 	}}
-}
-
-// nilErrorBuilder represents an ErrorBuilder that will return nil when built.
-type nilErrorBuilder struct{}
-
-// Build implements ErrorBuilder.
-func (n nilErrorBuilder) Build() Error {
-	return nil
-}
-
-// BuildWithPaths implements ErrorBuilder.
-func (n nilErrorBuilder) BuildWithPaths(paths ...id.Path) PathError {
-	return nil
-}
-
-// BuildWithResources implements ErrorBuilder.
-func (n nilErrorBuilder) BuildWithResources(resources ...id.Resource) ResourceError {
-	return nil
-}
-
-// Sprint implements ErrorBuilder.
-func (n nilErrorBuilder) Sprint(message string) ErrorBuilder {
-	return n
-}
-
-// Sprintf implements ErrorBuilder.
-func (n nilErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
-	return n
-}
-
-// Wrap implements ErrorBuilder.
-func (n nilErrorBuilder) Wrap(toWrap error) ErrorBuilder {
-	return n
 }

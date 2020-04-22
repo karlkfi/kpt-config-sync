@@ -7,7 +7,7 @@ import (
 )
 
 // FileHierarchyConfig extends v1alpha1.HierarchyConfig to include the path to the file in the repo.
-type FileHierarchyConfig struct {
+type fileHierarchyConfig struct {
 	*v1.HierarchyConfig
 	// Resource is the source file defining the HierarchyConfig.
 	id.Resource
@@ -15,12 +15,12 @@ type FileHierarchyConfig struct {
 
 // NewFileHierarchyConfig creates a new FileHierarchyConfig from a HierarchyConfig Resource and the source file declaring
 // the HierarchyConfig.
-func NewFileHierarchyConfig(config *v1.HierarchyConfig, resource id.Resource) FileHierarchyConfig {
-	return FileHierarchyConfig{HierarchyConfig: config, Resource: resource}
+func newFileHierarchyConfig(config *v1.HierarchyConfig, resource id.Resource) fileHierarchyConfig {
+	return fileHierarchyConfig{HierarchyConfig: config, Resource: resource}
 }
 
 // flatten returns a list of all GroupKinds defined in the HierarchyConfig and their hierarchy modes.
-func (c FileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
+func (c fileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
 	var result []FileGroupKindHierarchyConfig
 	for _, resource := range c.Spec.Resources {
 		if len(resource.Kinds) == 0 {

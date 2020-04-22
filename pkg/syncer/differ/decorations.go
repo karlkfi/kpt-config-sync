@@ -7,17 +7,17 @@ import (
 
 // enableManaged returns true if the resource explicitly has management enabled on a resource
 // on the API server.
-func managementEnabled(obj core.Annotated) bool {
+func managementEnabled(obj core.LabeledAndAnnotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled
 }
 
 // disableManaged returns true if the resource in the repo explicitly has management disabled.
-func managementDisabled(obj core.Annotated) bool {
+func managementDisabled(obj core.LabeledAndAnnotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled
 }
 
 // managementUnset returns true if the resource has no Nomos ResourceManagementKey.
-func managementUnset(obj core.Annotated) bool {
+func managementUnset(obj core.LabeledAndAnnotated) bool {
 	_, found := obj.GetAnnotations()[v1.ResourceManagementKey]
 	return !found
 }

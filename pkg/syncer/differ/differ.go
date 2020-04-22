@@ -35,10 +35,6 @@ const (
 	Unmanage = Type("unmanage")
 )
 
-// Equals is a function that takes two objects then compares them while ignoring the object meta
-// labels and annotations.
-type Equals func(*unstructured.Unstructured, *unstructured.Unstructured) bool
-
 // Diff is resource where Declared and Actual do not match.
 type Diff struct {
 	// Name is the name of the resource this diff is for.

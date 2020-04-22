@@ -16,7 +16,7 @@ func NewInheritanceValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
 		switch h := o.Object.(type) {
 		case *v1.HierarchyConfig:
-			for _, gkc := range NewFileHierarchyConfig(h, o).flatten() {
+			for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
 				if err := ValidateInheritance(gkc); err != nil {
 					return err
 				}

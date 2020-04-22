@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
@@ -25,22 +25,22 @@ func TestNewAllObjectValidator(t *testing.T) {
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:       "ValidateSystemObject",
-				Object:     asttesting.NewFakeFileObject(kinds.Role(), "system/role.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Role(), "system/role.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "ValidateClusterRegistryObject",
-				Object:     asttesting.NewFakeFileObject(kinds.Role(), "clusterregistry/role.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Role(), "clusterregistry/role.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "ValidateSystemObject",
-				Object:     asttesting.NewFakeFileObject(kinds.Role(), "cluster/role.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Role(), "cluster/role.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "ValidateNamespaceObject",
-				Object:     asttesting.NewFakeFileObject(kinds.Role(), "namespaces/role.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Role(), "namespaces/role.yaml"),
 				ShouldFail: true,
 			},
 		},

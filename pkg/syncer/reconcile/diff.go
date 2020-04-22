@@ -22,10 +22,10 @@ func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 	case differ.NoOp:
 		return false, nil
 	case differ.Create:
-		EnableManagement(diff.Declared)
+		enableManagement(diff.Declared)
 		return applier.Create(ctx, diff.Declared)
 	case differ.Update:
-		EnableManagement(diff.Declared)
+		enableManagement(diff.Declared)
 		return applier.Update(ctx, diff.Declared, diff.Actual)
 	case differ.Delete:
 		return applier.Delete(ctx, diff.Actual)

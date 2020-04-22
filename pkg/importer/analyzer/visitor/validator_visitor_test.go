@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func testError() status.MultiError {
@@ -14,7 +14,7 @@ func testError() status.MultiError {
 }
 
 func fakeObject() ast.FileObject {
-	return asttesting.NewFakeFileObject(kinds.Role(), "")
+	return fake.UnstructuredAtPath(kinds.Role(), "")
 }
 
 func failRoot(_ *ast.Root) status.MultiError {

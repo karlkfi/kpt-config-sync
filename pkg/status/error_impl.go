@@ -33,10 +33,10 @@ func (e baseErrorImpl) Errors() []Error {
 
 // ToCME implements Error.
 func (e baseErrorImpl) ToCME() v1.ConfigManagementError {
-	return FromError(e)
+	return fromError(e)
 }
 
-// Cause implements Causer.
+// Cause implements causer.
 func (e baseErrorImpl) Cause() error {
 	return nil
 }

@@ -6,12 +6,12 @@ import (
 )
 
 // SyncedAt marks the resource as synced at the passed sync token.
-func SyncedAt(obj core.Annotated, token string) {
+func SyncedAt(obj core.LabeledAndAnnotated, token string) {
 	core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, token)
 }
 
-// EnableManagement marks the resource as Nomos-manged.
-func EnableManagement(obj core.LabeledAndAnnotated) {
+// enableManagement marks the resource as Nomos-manged.
+func enableManagement(obj core.LabeledAndAnnotated) {
 	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 	core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 }

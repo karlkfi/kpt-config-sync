@@ -23,7 +23,6 @@ type Root struct {
 
 	// Tree represents the directory hierarchy containing namespace scoped resources.
 	Tree *TreeNode
-	Data *Extension
 }
 
 // Accept invokes VisitRoot on the visitor.

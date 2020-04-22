@@ -25,18 +25,18 @@ type Decoder interface {
 	UpdateScheme(gvks map[schema.GroupVersionKind]bool)
 }
 
-var _ Decoder = &GenericResourceDecoder{}
+var _ Decoder = &genericResourceDecoder{}
 
-// GenericResourceDecoder implements Decoder.
-type GenericResourceDecoder struct {
+// genericResourceDecoder implements Decoder.
+type genericResourceDecoder struct {
 	scheme                *runtime.Scheme
 	decoder               runtime.Decoder
 	unstructuredConverter runtime.UnstructuredConverter
 }
 
-// NewGenericResourceDecoder returns a new GenericResourceDecoder.
-func NewGenericResourceDecoder(scheme *runtime.Scheme) *GenericResourceDecoder {
-	return &GenericResourceDecoder{
+// NewGenericResourceDecoder returns a new genericResourceDecoder.
+func NewGenericResourceDecoder(scheme *runtime.Scheme) Decoder {
+	return &genericResourceDecoder{
 		scheme:                scheme,
 		decoder:               serializer.NewCodecFactory(scheme).UniversalDeserializer(),
 		unstructuredConverter: runtime.DefaultUnstructuredConverter,
@@ -44,13 +44,13 @@ func NewGenericResourceDecoder(scheme *runtime.Scheme) *GenericResourceDecoder {
 }
 
 // UpdateScheme implements Decoder.
-func (d *GenericResourceDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+func (d *genericResourceDecoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
 	scheme.AddToSchemeAsUnstructured(d.scheme, gvks)
 	d.decoder = serializer.NewCodecFactory(d.scheme).UniversalDeserializer()
 }
 
 // DecodeResources implements Decoder.
-func (d *GenericResourceDecoder) DecodeResources(genericResources []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *genericResourceDecoder) DecodeResources(genericResources []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	us := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, gr := range genericResources {
 		for _, v := range gr.Versions {

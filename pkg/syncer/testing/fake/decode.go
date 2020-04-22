@@ -7,29 +7,29 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ decode.Decoder = &Decoder{}
+var _ decode.Decoder = &decoder{}
 
-// Decoder is a decoder used for testing.
-type Decoder struct {
+// decoder is a decoder used for testing.
+type decoder struct {
 	data map[schema.GroupVersionKind][]*unstructured.Unstructured
 }
 
-// NewDecoder returns a new Decoder.
-func NewDecoder(us []*unstructured.Unstructured) *Decoder {
+// NewDecoder returns a new decoder.
+func NewDecoder(us []*unstructured.Unstructured) decode.Decoder {
 	m := make(map[schema.GroupVersionKind][]*unstructured.Unstructured)
 	for _, u := range us {
 		gvk := u.GroupVersionKind()
 		m[gvk] = append(m[gvk], u)
 	}
 
-	return &Decoder{data: m}
+	return &decoder{data: m}
 }
 
 // UpdateScheme does nothing.
-func (d *Decoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+func (d *decoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
 }
 
 // DecodeResources returns fake data.
-func (d *Decoder) DecodeResources(_ []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
+func (d *decoder) DecodeResources(_ []v1.GenericResources) (map[schema.GroupVersionKind][]*unstructured.Unstructured, error) {
 	return d.data, nil
 }

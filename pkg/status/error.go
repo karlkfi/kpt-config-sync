@@ -27,7 +27,7 @@ func prefix(code string) string {
 // Error defines a Kubernetes Nomos Vet error
 // These are GKE Config Management directory errors which are shown to the user and documented.
 type Error interface {
-	Causer
+	causer
 	MultiError
 	// ToCME converts the implementor into ConfigManagementError, preserving
 	// structured information.
@@ -38,8 +38,8 @@ type Error interface {
 	Body() string
 }
 
-// Causer defines an error with an underlying cause.
-type Causer interface {
+// causer defines an error with an underlying cause.
+type causer interface {
 	Cause() error
 }
 
@@ -141,7 +141,7 @@ func toErrorResource(r id.Resource) v1.ErrorResource {
 }
 
 // FromError embeds the error message and error code into a ConfigManagementError.
-func FromError(err Error) v1.ConfigManagementError {
+func fromError(err Error) v1.ConfigManagementError {
 	return v1.ConfigManagementError{
 		ErrorMessage: err.Error(),
 		Code:         knv(err.Code()),
@@ -149,8 +149,8 @@ func FromError(err Error) v1.ConfigManagementError {
 }
 
 // FromPathError converts a PathError to a ConfigManagementError.
-func FromPathError(err PathError) v1.ConfigManagementError {
-	cme := FromError(err)
+func fromPathError(err PathError) v1.ConfigManagementError {
+	cme := fromError(err)
 	for _, path := range err.RelativePaths() {
 		cme.ErrorResources = append(
 			cme.ErrorResources,
@@ -160,8 +160,8 @@ func FromPathError(err PathError) v1.ConfigManagementError {
 }
 
 // FromResourceError converts a ResourceError to a ConfigManagementError.
-func FromResourceError(err ResourceError) v1.ConfigManagementError {
-	cme := FromError(err)
+func fromResourceError(err ResourceError) v1.ConfigManagementError {
+	cme := fromError(err)
 	for _, r := range err.Resources() {
 		cme.ErrorResources = append(cme.ErrorResources, toErrorResource(r))
 	}

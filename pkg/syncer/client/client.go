@@ -125,7 +125,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(core.DeepCopy(workingObj))
 		if err != nil {
-			if IsNoUpdateNeeded(err) {
+			if isNoUpdateNeeded(err) {
 				return newObj, nil
 			}
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))

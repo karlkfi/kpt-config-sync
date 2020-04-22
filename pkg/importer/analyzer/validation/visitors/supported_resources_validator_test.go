@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/testing/fake"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast/asttesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/kinds"
 )
@@ -21,36 +21,36 @@ func TestSupportedClusterResourcesValidator(t *testing.T) {
 		TestCases: []visitortesting.ObjectValidatorTestCase{
 			{
 				Name:   "clusterrole Object",
-				Object: asttesting.NewFakeFileObject(kinds.ClusterRole(), "cluster/r.yaml"),
+				Object: fake.UnstructuredAtPath(kinds.ClusterRole(), "cluster/r.yaml"),
 			},
 			{
 				Name:       "sync Object",
-				Object:     asttesting.NewFakeFileObject(kinds.Sync(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Sync(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "Repo Object",
-				Object:     asttesting.NewFakeFileObject(kinds.Repo(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Repo(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "NamespaceConfig Object",
-				Object:     asttesting.NewFakeFileObject(kinds.NamespaceConfig(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.NamespaceConfig(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "ClusterConfig Object",
-				Object:     asttesting.NewFakeFileObject(kinds.ClusterConfig(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.ClusterConfig(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "HierarchyConfig Object",
-				Object:     asttesting.NewFakeFileObject(kinds.HierarchyConfig(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.HierarchyConfig(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 			{
 				Name:       "Namespace Object",
-				Object:     asttesting.NewFakeFileObject(kinds.Namespace(), "cluster/r.yaml"),
+				Object:     fake.UnstructuredAtPath(kinds.Namespace(), "cluster/r.yaml"),
 				ShouldFail: true,
 			},
 		},

@@ -23,7 +23,7 @@ func ManagedResourceInUnmanagedNamespace(namespace string, resources ...id.Resou
 		BuildWithResources(resources...)
 }
 
-func isUnmanaged(o core.Annotated) bool {
+func isUnmanaged(o core.LabeledAndAnnotated) bool {
 	annotation, hasAnnotation := o.GetAnnotations()[v1.ResourceManagementKey]
 	return hasAnnotation && annotation == v1.ResourceManagementDisabled
 }
