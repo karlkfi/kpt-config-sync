@@ -220,7 +220,7 @@ func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous
 	patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: gvkSchema}
 	patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
 	if err != nil {
-		glog.Warning(errors.Wrap(err, "could not calculate the patch from OpenAPI spec"))
+		glog.Infof("Could not calculate a patch for %q from OpenAPI spec: %v", gvk.String(), err)
 		return nil
 	}
 	return patch
