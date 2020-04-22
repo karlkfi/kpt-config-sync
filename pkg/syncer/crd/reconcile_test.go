@@ -122,6 +122,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				clusterCfgSynced,
 			},
 		},
+		// The declared state is invalid, so take no action.
 		{
 			name:     "do not create if management invalid",
 			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
@@ -154,8 +155,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 			expectEvents:  []testingfake.Event{clusterReconcileComplete, crdUpdated},
 			expectRestart: true,
 		},
+		// The declared state is fine, so overwrite the invalid one on the API Server.
 		{
-			name:     "update to declared state even if actual managed invalid",
+			name:     "update to declared state if actual managed invalid",
 			declared: customResourceDefinitionV1Beta1(v1Version),
 			actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementInvalid),
 			want: []runtime.Object{
@@ -165,6 +167,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			expectEvents:  []testingfake.Event{clusterReconcileComplete, crdUpdated},
 			expectRestart: true,
 		},
+		// The declared state is invalid, so take no action.
 		{
 			name:     "do not update if declared management invalid",
 			declared: customResourceDefinitionV1Beta1(v1Version, syncertesting.ManagementInvalid),
@@ -223,6 +226,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
 		},
+		// There is no declared state, just an invalid annotation.
+		// This was most likely put there by a user, so remove it.
 		{
 			name:   "unmanage if invalid",
 			actual: customResourceDefinitionV1Beta1(v1beta1Version, syncertesting.ManagementInvalid),

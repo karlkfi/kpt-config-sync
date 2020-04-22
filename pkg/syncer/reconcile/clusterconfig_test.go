@@ -75,6 +75,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				clusterCfgSynced,
 			},
 		},
+		// The declared state is invalid, so take no action.
 		{
 			name:     "do not create if management invalid",
 			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
@@ -82,8 +83,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				clusterCfgSynced,
 			},
 			wantEvent: testingfake.NewEvent(
-				persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid, syncertesting.TokenAnnotation),
-				corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
+				persistentVolume(corev1.PersistentVolumeReclaimRecycle), corev1.EventTypeWarning, v1.EventReasonInvalidAnnotation),
 		},
 		{
 			name:     "update to declared state",
@@ -105,8 +105,9 @@ func TestClusterConfigReconcile(t *testing.T) {
 			},
 			wantEvent: clusterReconcileComplete,
 		},
+		// The declared state is fine, so overwrite the invalid one on the API Server.
 		{
-			name:     "update to declared state even if actual managed invalid",
+			name:     "update to declared state if actual managed invalid",
 			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle),
 			actual:   persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementInvalid),
 			want: []runtime.Object{
@@ -115,6 +116,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			},
 			wantEvent: clusterReconcileComplete,
 		},
+		// The declared state is invalid, so take no action.
 		{
 			name:     "do not update if declared management invalid",
 			declared: persistentVolume(corev1.PersistentVolumeReclaimRecycle, syncertesting.ManagementInvalid),
@@ -162,6 +164,8 @@ func TestClusterConfigReconcile(t *testing.T) {
 				persistentVolume(corev1.PersistentVolumeReclaimDelete),
 			},
 		},
+		// There is no declared state, just an invalid annotation.
+		// This was most likely put there by a user, so remove it.
 		{
 			name:   "unmanage if invalid",
 			actual: persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertesting.ManagementInvalid),

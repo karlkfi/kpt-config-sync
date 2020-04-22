@@ -75,8 +75,9 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				namespaceCfgSynced,
 			},
 		},
+		// The declared state is invalid, so take no action.
 		{
-			name:     "do not create if management invalid",
+			name:     "do not create if declared managed invalid",
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			want: []runtime.Object{
 				namespaceCfgSynced,
@@ -105,8 +106,9 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			},
 			wantEvent: managedNamespaceReconcileComplete,
 		},
+		// The declared state is fine, so overwrite the invalid one on the API Server.
 		{
-			name:     "update to declared state even if actual managed invalid",
+			name:     "update to declared state if actual managed invalid",
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType),
 			actual:   deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
 			want: []runtime.Object{
@@ -115,6 +117,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			},
 			wantEvent: managedNamespaceReconcileComplete,
 		},
+		// The declared state is invalid, so take no action.
 		{
 			name:     "do not update if declared managed invalid",
 			declared: deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementInvalid),
@@ -162,6 +165,8 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 				deployment(appsv1.RecreateDeploymentStrategyType),
 			},
 		},
+		// There is no declared state, just an invalid annotation.
+		// This was most likely put there by a user, so remove it.
 		{
 			name:   "unmanage if invalid",
 			actual: deployment(appsv1.RecreateDeploymentStrategyType, syncertesting.ManagementInvalid),
