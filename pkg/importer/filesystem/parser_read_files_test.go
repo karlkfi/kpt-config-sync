@@ -274,6 +274,34 @@ metadata:
 			expectObject: pointer(fake.Namespace("namespaces/backend", core.Annotation("boolean", "true"))),
 		},
 		{
+			testName: "metadata.labels with boolean value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/ns.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  labels:
+    boolean: true
+`,
+			},
+			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+		},
+		{
+			testName: "metadata.labels with quoted boolean value",
+			testFiles: fstesting.FileContentMap{
+				"namespaces/backend/namespace.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  labels:
+    boolean: "true"
+`,
+			},
+			expectObject: pointer(fake.Namespace("namespaces/backend", core.Label("boolean", "true"))),
+		},
+		{
 			testName: "parses nested List",
 			testFiles: fstesting.FileContentMap{
 				"namespaces/foo/list.yaml": `

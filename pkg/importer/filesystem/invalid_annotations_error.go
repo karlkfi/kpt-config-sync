@@ -23,3 +23,14 @@ metadata.annotations.%s `,
 			strings.Join(keys, "\nmetadata.annotations.")).
 		BuildWithResources(resource)
 }
+
+// InvalidLabelValueError reports that an object has been illegally defined in cluster/
+func InvalidLabelValueError(resource id.Resource, keys []string) status.Error {
+	return invalidAnnotationValueErrorBase.
+		Sprintf("Values in metadata.labels MUST be strings. "+
+			`To fix, add quotes around the values. Non-string values for:
+
+metadata.labels.%s `,
+			strings.Join(keys, "\nmetadata.labels.")).
+		BuildWithResources(resource)
+}

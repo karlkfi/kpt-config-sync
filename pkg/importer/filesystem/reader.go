@@ -203,10 +203,13 @@ func asDefaultVersionedOrOriginal(obj runtime.Unstructured) runtime.Object {
 	return obj
 }
 
-// validateMetadata returns a status.MultiError if metadata.annotations
+// validateMetadata returns a status.MultiError if metadata.annotations/labels
 // has a value that wasn't parsed as a string. This is a workaround the
 // k8s.io/apimachinery bug that causes the entire annotations field to be
 // silently discarded if any values aren't strings.
+//
+// TODO(b/154838005): Remove this once we upgrade and don't need to explicitly
+//  check for this.
 func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiError {
 	content := u.UnstructuredContent()
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
@@ -215,30 +218,47 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 	}
 
 	annotations, hasAnnotations := metadata["annotations"]
-	if !hasAnnotations {
-		// No annotations, so nothing to validate.
+	labels, hasLabels := metadata["labels"]
+	if !hasAnnotations && !hasLabels {
+		// No annotations or labels, so nothing to validate.
 		return nil
 	}
 
-	annotationsMap, isMap := annotations.(map[string]interface{})
+	var errs status.MultiError
+	invalidAnnotations, err := getInvalidKeys(annotations)
+	errs = status.Append(errs, err)
+	if len(invalidAnnotations) > 0 {
+		errs = status.Append(errs, InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidAnnotations))
+	}
+	invalidLabels, err := getInvalidKeys(labels)
+	errs = status.Append(errs, err)
+	if len(invalidLabels) > 0 {
+		errs = status.Append(errs, InvalidLabelValueError(&unstructuredID{Unstructured: u, Path: path}, invalidLabels))
+	}
+
+	return errs
+}
+
+func getInvalidKeys(o interface{}) ([]string, status.MultiError) {
+	if o == nil {
+		return nil, nil
+	}
+	m, isMap := o.(map[string]interface{})
 	if !isMap {
 		// We don't expect this error to be thrown since the parser before it would
 		// already return an error. Thus, creating a type just for this case would
 		// be overkill.
-		return status.UndocumentedError("metadata.annotations must be a map")
+		return nil, status.UndocumentedError("metadata.labels and metadata.annotations must be a map")
 	}
 
-	var invalidKeys []string
-	for key, value := range annotationsMap {
+	var result []string
+	for key, value := range m {
 		if _, isString := value.(string); !isString {
 			// The value wasn't parsed as a string.
-			invalidKeys = append(invalidKeys, key)
+			result = append(result, key)
 		}
 	}
-	if invalidKeys != nil {
-		return InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidKeys)
-	}
-	return nil
+	return result, nil
 }
 
 type unstructuredID struct {
