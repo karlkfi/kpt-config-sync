@@ -67,18 +67,21 @@ function install() {
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
-    if ${stable_channel}; then
-      echo "++++++ Using Nomos stable channel"
-      MANIFEST_DIR="${TEST_DIR}/manifests/stable"
-    else
-      echo "++++++ Using Nomos dev channel"
-      MANIFEST_DIR="${TEST_DIR}/manifests/dev"
+
+    if ! ${raw_nomos}; then
+      if ${stable_channel}; then
+        echo "++++++ Using Nomos stable channel"
+        MANIFEST_DIR="${TEST_DIR}/manifests/stable"
+      else
+        echo "++++++ Using Nomos dev channel"
+        MANIFEST_DIR="${TEST_DIR}/manifests/dev"
+      fi
+
+      export MANIFEST_DIR
+
+      echo "++++++ Applying Nomos Initial Configuration"
+      kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
     fi
-
-    export MANIFEST_DIR
-
-    echo "++++++ Applying Nomos Initial Configuration"
-    kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
 
     echo "++++++ Waiting for config-management-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running
@@ -96,6 +99,19 @@ function uninstall() {
   if ${do_installation}; then
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling"
+
+    if ${raw_nomos}; then
+      kubectl delete ns config-management-system
+
+      # I haven't found a good way to delete all this stuff. Some things are missing labels.
+      # Also I might be missing some things?
+      # TODO(b/155230198): Deleting nomos without the operator should be easier
+      kubectl delete crds -l configmanagement.gke.io/system="true"
+      kubectl delete podsecuritypolicy acm-psp
+      kubectl delete clusterrole -l configmanagement.gke.io/system="true"
+      kubectl delete ClusterRoleBinding -l configmanagement.gke.io/system="true"
+      kubectl delete ClusterRole configmanagement.gke.io:policy-controller-psp
+    fi
 
     if kubectl get configmanagement &> /dev/null; then
       ensure_config_management_removed
@@ -412,6 +428,9 @@ flags:
   type: string
   default: "stolos-dev"
   help: "The project in which the test cluster was created"
+- name: "raw-nomos"
+  type: bool
+  help: "If set, runs the tests in a mode where defined-operator-bundle is expected to have the bare nomos resources."
 EOF
 )
 eval "${gotopt2_result}"
@@ -422,6 +441,8 @@ readonly clean="${gotopt2_clean:-false}"
 readonly setup="${gotopt2_setup:-false}"
 readonly timing="${gotopt2_timing:-false}"
 readonly stable_channel="${gotopt2_stable_channel:-false}"
+readonly raw_nomos="${gotopt2_raw_nomos:-false}"
+echo "RAW NOMOS: $raw_nomos"
 # TODO(filmil): remove the need to disable lint checks here and elsewhere.
 # shellcheck disable=SC2154
 readonly test_filter="${gotopt2_test_filter}"

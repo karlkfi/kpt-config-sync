@@ -90,6 +90,30 @@ endif
 	docker tag $(GIT_SYNC_SRC) gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 	docker push gcr.io/${GCR_PREFIX}/$(GIT_SYNC)
 
+# prepare-false-operator prepares a manifest called "defined-operator-bundle" that is
+# actually just all the nomos resources.  This is meant to be a drop-in replacement
+# for `prepare-operator` that will allow us to e2e test nomos with no operator,
+# decoupling the two repositories.  This target seeks to create the artifacts with
+# the same names and filepaths so that it is a drop-in replacement for its predecessor.
+.PHONY: prepare-false-operator
+prepare-false-operator: push-to-gcr-nomos gen-deployments-for-decoupled-e2e
+ifndef GCR_PREFIX
+	$(error GCR_PREFIX must be set, but is not)
+endif
+	@echo "+++ Preparing false operator"
+	@rm -rf ${OPERATOR_STAGING_DIR}
+	@mkdir -p ${OPERATOR_STAGING_DIR}
+	@touch ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+	@echo "+++ Copy manifests (except templates/) to output folder"
+	@rm -rf $(OUTPUT_DIR)/manifests
+	@mkdir $(OUTPUT_DIR)/manifests
+	cp manifests/*.yaml $(OUTPUT_DIR)/manifests
+	@echo "+++ Append all relevant yamls to defined-operator-bundle.yaml"
+	scripts/append-manifests.sh $(OUTPUT_DIR)/manifests ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+	scripts/append-manifests.sh e2e/no-operator/manifests ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+	scripts/append-manifests.sh $(OUTPUT_DIR)/deployment ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
+
+
 # deploy-operator installs the operator prepared with prepare-operator
 .PHONY: deploy-operator
 deploy-operator: prepare-operator

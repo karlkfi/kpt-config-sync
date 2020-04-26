@@ -171,6 +171,36 @@ test-e2e-dev-git: e2e-staging
 		GCP_PROJECT=$(GCP_PROJECT) \
 		E2E_FLAGS="$(E2E_FLAGS)"
 
+# The raw-nomos targets run the e2e tests with the --raw-nomos flag, which installs nomos
+# directly to the cluster instead of using the operator.
+#
+# The `-basic` postfix just means this only runs the basic.bats set of e2e tests.
+# This will be removed once the entire test suite supports this style of run.
+raw-nomos-e2e-basic:
+	$(MAKE) \
+		OPERATOR_TARGET=prepare-false-operator \
+		e2e-staging
+	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+		--preclean \
+		--setup \
+		--test \
+		--clean \
+		--raw-nomos \
+		--file_filter basic \
+		$(E2E_FLAGS)"
+
+# This file is for refactoring further tests to support --raw-nomos
+raw-nomos-e2e-dev:
+	$(MAKE) \
+		OPERATOR_TARGET=prepare-false-operator \
+		e2e-staging
+	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+		--preclean \
+		--setup \
+		--test \
+		--raw-nomos \
+		$(E2E_FLAGS)"
+
 # Runs nomos vet locally for example repos.
 # Requires kubeconfig set up properly with Nomos cluster.
 # This is now a duplicate of cli.bats from the e2e tests framework,
