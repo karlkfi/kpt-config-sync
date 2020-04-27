@@ -12,7 +12,7 @@ import (
 )
 
 func namespaceConfig(opts ...core.MetaMutator) *v1.NamespaceConfig {
-	result := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(opts...))
+	result := fake.NamespaceConfigObject(opts...)
 	return result
 }
 

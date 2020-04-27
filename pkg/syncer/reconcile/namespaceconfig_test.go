@@ -33,7 +33,7 @@ func namespace(name string, opts ...core.MetaMutator) *corev1.Namespace {
 	return fake.NamespaceObject(name, opts...)
 }
 
-func namespaceConfig(name string, state v1.ConfigSyncState, opts ...fake.NamespaceConfigMutator) *v1.NamespaceConfig {
+func namespaceConfig(name string, state v1.ConfigSyncState, opts ...core.MetaMutator) *v1.NamespaceConfig {
 	result := fake.NamespaceConfigObject(opts...)
 	result.Name = name
 	result.Status.SyncState = state
@@ -234,13 +234,13 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 	}{
 		{
 			name:                  "clean up unmanaged Namespace with namespaceconfig",
-			actualNamespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			actualNamespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), syncertesting.ManagementDisabled),
 			namespace:             namespace("eng", syncertesting.ManagementEnabled),
 			wantNamespace:         namespace("eng"),
 		},
 		{
 			name:                  "do nothing to explicitly unmanaged resources",
-			actualNamespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), fake.NamespaceConfigMeta(syncertesting.ManagementDisabled, core.Label("not", "synced"))),
+			actualNamespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token), syncertesting.NamespaceConfigSyncToken(), syncertesting.ManagementDisabled, core.Label("not", "synced")),
 			namespace:             namespace("eng"),
 			declared:              deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementDisabled, core.Label("also not", "synced")),
 			actual:                deployment(appsv1.RecreateDeploymentStrategyType),
@@ -249,9 +249,9 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 		},
 		{
 			name:                   "delete resources in unmanaged Namespace",
-			actualNamespaceConfig:  namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			actualNamespaceConfig:  namespaceConfig("eng", v1.StateSynced, syncertesting.ManagementDisabled),
 			namespace:              namespace("eng"),
-			updatedNamespaceConfig: namespaceConfig("eng", v1.StateSynced, fake.NamespaceConfigMeta(syncertesting.ManagementDisabled)),
+			updatedNamespaceConfig: namespaceConfig("eng", v1.StateSynced, syncertesting.ManagementDisabled),
 			actual:                 deployment(appsv1.RollingUpdateDeploymentStrategyType, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			wantEvent: testingfake.NewEvent(namespaceConfig("eng", v1.StateSynced),
 				corev1.EventTypeNormal, v1.EventReasonReconcileComplete),
@@ -326,6 +326,20 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			wantNamespace: namespace("kube-system", syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
 			want: namespaceConfig("kube-system", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken()),
+		},
+		{
+			name:          "unmanage kube-system",
+			declared:      namespaceConfig("kube-system", v1.StateSynced, syncertesting.ManagementDisabled),
+			actual:        namespace("kube-system", syncertesting.ManagementEnabled),
+			wantNamespace: namespace("kube-system"),
+			want:          namespaceConfig("kube-system", v1.StateSynced, syncertesting.ManagementDisabled),
+		},
+		{
+			name:          "unmanage default",
+			declared:      namespaceConfig("default", v1.StateSynced, syncertesting.ManagementDisabled),
+			actual:        namespace("default", syncertesting.ManagementEnabled),
+			wantNamespace: namespace("default"),
+			want:          namespaceConfig("default", v1.StateSynced, syncertesting.ManagementDisabled),
 		},
 	}
 

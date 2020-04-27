@@ -79,29 +79,33 @@ func ClusterConfigSyncToken() fake.ClusterConfigMutator {
 }
 
 // NamespaceConfigImportToken adds an import token to a Namespace Config.
-func NamespaceConfigImportToken(t string) fake.NamespaceConfigMutator {
-	return func(nc *v1.NamespaceConfig) {
+func NamespaceConfigImportToken(t string) core.MetaMutator {
+	return func(o core.Object) {
+		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.Token = t
 	}
 }
 
 // NamespaceConfigSyncTime adds a sync time to a Namespace Config.
-func NamespaceConfigSyncTime() fake.NamespaceConfigMutator {
-	return func(nc *v1.NamespaceConfig) {
+func NamespaceConfigSyncTime() core.MetaMutator {
+	return func(o core.Object) {
+		nc := o.(*v1.NamespaceConfig)
 		nc.Status.SyncTime = Now()
 	}
 }
 
 // NamespaceConfigSyncToken adds a sync token to a Namespace Config.
-func NamespaceConfigSyncToken() fake.NamespaceConfigMutator {
-	return func(nc *v1.NamespaceConfig) {
+func NamespaceConfigSyncToken() core.MetaMutator {
+	return func(o core.Object) {
+		nc := o.(*v1.NamespaceConfig)
 		nc.Status.Token = Token
 	}
 }
 
 // MarkForDeletion marks a NamespaceConfig with an intent to be delete
-func MarkForDeletion() fake.NamespaceConfigMutator {
-	return func(nc *v1.NamespaceConfig) {
+func MarkForDeletion() core.MetaMutator {
+	return func(o core.Object) {
+		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.DeleteSyncedTime = metav1.Now()
 	}
 }

@@ -45,7 +45,7 @@ func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 // NamespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
 // hydrated runtime.Objects for that Namespace.
 func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...core.Object) v1.NamespaceConfig {
-	config := fake.NamespaceConfigObject(fake.NamespaceConfigMeta(Source(path.Join(dir, "namespace.yaml"))))
+	config := fake.NamespaceConfigObject(Source(path.Join(dir, "namespace.yaml")))
 	config.Spec.Token = visitortesting.ImportToken
 	if clusterName != "" {
 		InCluster(clusterName)(config)

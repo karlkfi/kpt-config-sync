@@ -19,12 +19,13 @@ import (
 
 var testTime = metav1.NewTime(time.Unix(1234, 5678))
 
-func namespaceConfig(name string, opts ...fake.NamespaceConfigMutator) *v1.NamespaceConfig {
-	opts = append(opts, fake.NamespaceConfigMeta(core.Name(name)))
+func namespaceConfig(name string, opts ...core.MetaMutator) *v1.NamespaceConfig {
+	opts = append(opts, core.Name(name))
 	return fake.NamespaceConfigObject(opts...)
 }
 
-func markedForDeletion(nc *v1.NamespaceConfig) {
+func markedForDeletion(o core.Object) {
+	nc := o.(*v1.NamespaceConfig)
 	nc.Spec.DeleteSyncedTime = testTime
 }
 
@@ -90,11 +91,11 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "update Namespace node",
 			actual: []runtime.Object{namespaceConfig("foo",
-				fake.NamespaceConfigMeta(core.Annotation("key", "old")))},
+				core.Annotation("key", "old"))},
 			declared: []runtime.Object{namespaceConfig("foo",
-				fake.NamespaceConfigMeta(core.Annotation("key", "new")))},
+				core.Annotation("key", "new"))},
 			want: []runtime.Object{namespaceConfig("foo",
-				fake.NamespaceConfigMeta(core.Annotation("key", "new")))},
+				core.Annotation("key", "new"))},
 		},
 		{
 			testName: "delete Namespace node",
