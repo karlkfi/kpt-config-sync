@@ -406,6 +406,9 @@ if ${preclean}; then
   clean_up
 fi
 
+echo "++++ kubectl version"
+kubectl version
+
 if ${setup}; then
   set_up_env
 else
