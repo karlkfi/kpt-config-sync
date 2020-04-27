@@ -96,21 +96,6 @@ function token_exists() {
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
 
-@test "${FILE_NAME}: repo .status.import.token is populated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  wait::for -t 60 -- token_exists "repo" "repo" ".status.import.token"
-}
-
-@test "${FILE_NAME}: repo .status.source.token is populated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  wait::for -t 60 -- token_exists "repo" "repo" ".status.source.token"
-}
-
-@test "${FILE_NAME}: repo .status.sync.latestToken is populated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  wait::for -t 60 -- token_exists "repo" "repo" ".status.sync.latestToken"
-}
-
 function dummy_repo_update() {
   debug::log "Update something inconsequential in the repo"
   git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/dir/namespace.yaml
@@ -199,86 +184,4 @@ function timestamp_updated() {
     return 1
   fi
   return 0
-}
-
-@test "${FILE_NAME}: repo .status.import.token is updated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  ensure_token_updated "repo" "repo" ".status.import.token"
-}
-
-@test "${FILE_NAME}: repo .status.source.token is updated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  ensure_token_updated "repo" "repo" ".status.source.token"
-}
-
-@test "${FILE_NAME}: repo .status.sync.latestToken is updated" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  ensure_token_updated "repo" "repo" ".status.sync.latestToken"
-}
-
-@test "${FILE_NAME}: repo .status.import.errors is populated on error" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  ensure_error_free_repo
-  wait::for -t 30 -f -- kubectl get namespace dir
-
-  debug::log "Attempt to add two dirs with the same name"
-  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/foo/dir/namespace.yaml
-  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/bar/dir/namespace.yaml
-  git::commit -a -m "Attempt to add two dirs with the same name"
-
-  debug::log "Check that an error code is set on import status"
-  wait::for -t 30 -o "KNV1002" -- \
-    kubectl get repo repo --output='jsonpath={.status.import.errors[0].code}'
-}
-
-# A sync error happens if the managed objects are well-formed but some specific
-# detail prevents an "apply" operation.  One instance is given below: we have
-# a perfectly legit service in a managed namespace, except that its name is not
-# valid.  Normally, `nomos vet` will notice this before the error gets into a
-# cluster.
-@test "${FILE_NAME}: repo .status.sync.errors is populated on error" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  ensure_error_free_repo
-  wait::for -t 30 -f -- kubectl get namespace dir
-
-  debug::log \
-    "Attempt to add a managed namespace with an invalid service in it"
-  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/dir/namespace.yaml
-  git::add \
-    "${YAML_DIR}/invalid/service-invalid-name.yaml" \
-    acme/namespaces/dir/service.yaml
-  git::commit -a \
-    -m "Attempt to add a managed namespace with an invalid service in it"
-
-  debug::log "Check that an error code is set on sync status"
-  wait::for -t 30 -o "KNV2010" -- \
-    kubectl get repo repo \
-      --output='jsonpath={.status.sync.inProgress[0].errors[0].code}'
-}
-
-@test "${FILE_NAME}: repo .status.sync.token is not populated on initial invalid repo" {
-  skip # TODO(b/138198997): Make non-flaky or remove.
-  get_last_update "repo" "repo" "sync"
-  local last_update="${output}"
-
-  debug::log "Ensure errorful repo by adding two dirs with the same name"
-  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/foo/dir/namespace.yaml
-  git::add "${YAML_DIR}/dir-namespace.yaml" acme/namespaces/bar/dir/namespace.yaml
-  git::commit -a -m "Attempt to add two dirs with the same name"
-
-  debug::log "Check that an error code is set on import status"
-  wait::for -t 30 -o "KNV1002" -- \
-    kubectl get repo repo --output='jsonpath={.status.import.errors[0].code}'
-
-  debug::log "Check that sync timestamp is updated"
-  wait::for -t 60 -- \
-      timestamp_updated "repo" "repo" "sync" "${last_update}"
-
-  debug::log "Check that sync token is not updated"
-  run kubectl get repo repo --output="jsonpath={.status.sync.latestToken}"
-  # shellcheck disable=SC2154
-  if [[ "${output}" != "" ]]; then
-    debug::log "repo repo .status.sync.latestToken is filled in and should not be."
-    debug::error "$(kubectl get repo repo -o yaml)"
-  fi
 }
