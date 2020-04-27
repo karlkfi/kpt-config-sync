@@ -53,6 +53,11 @@ func TestFileReader_Read_NotExist(t *testing.T) {
 func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
 	dir := tempDir(t)
 
+	// If we're root, this test will fail, because we'll have read access anyway.
+	if os.Geteuid() == 0 {
+		t.Skip("Read_BadPermissionsParent will fail running with EUID==0")
+	}
+
 	// Change permissions on the root directory so os.Stat returns a
 	// Permission error.
 	err := os.Chmod(dir, 000)
@@ -70,6 +75,11 @@ func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
 
 func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
 	dir := tempDir(t)
+
+	// If we're root, this test will fail, because we'll have read access anyway.
+	if os.Geteuid() == 0 {
+		t.Skip("Read_BadPermissionsChild will fail running with EUID==0")
+	}
 
 	// Create subdirectory.
 	subDir := path.Join(dir, "namespaces")
