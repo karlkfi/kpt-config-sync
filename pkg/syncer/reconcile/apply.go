@@ -87,7 +87,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	}
 	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
-			glog.Warningf("Fight detected on create of %s/%s.", intendedState.GetNamespace(), intendedState.GetName())
+			glog.Warningf("Fight detected on create of %s.", description(intendedState))
 		}
 	}
 	return true, nil
@@ -105,7 +105,7 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	if updated {
 		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
 			if c.fLogger.logFight(time.Now(), fight) {
-				glog.Warningf("Fight detected on update of %s/%s which applied the following patch:\n%s", intendedState.GetNamespace(), intendedState.GetName(), string(patch))
+				glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
 			}
 		}
 	}
@@ -122,7 +122,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	}
 	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.FromOS(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
-			glog.Warningf("Fight detected on delete of %s/%s.", obj.GetNamespace(), obj.GetName())
+			glog.Warningf("Fight detected on delete of %s.", description(obj))
 		}
 	}
 	return true, nil
@@ -131,7 +131,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 // create creates the resource with the last-applied annotation set.
 func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
 	if err := util.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
-		return errors.Wrap(err, "could not generate apply annotation")
+		return errors.Wrapf(err, "could not generate apply annotation for %s", description(obj))
 	}
 
 	return c.client.Create(ctx, obj)
@@ -177,20 +177,25 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 		return nil, nil
 	}
 
-	name, resourceDescription := nameDescription(intendedState)
+	name := intendedState.GetName()
+	resourceDescription := description(intendedState)
 	gvk := intendedState.GroupVersionKind()
 	//TODO(b/b152322972): Add unit tests for patch return value.
 	var err error
 
 	// Attempt a strategic patch first.
-	patch := c.calculateStrategic(gvk, previous, modified, current)
+	patch := c.calculateStrategic(resourceDescription, gvk, previous, modified, current)
 	// If patch is nil, it means we don't have access to the schema.
 	if patch != nil {
-		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
+		err = attemptPatch(ctx, resourceClient, resourceDescription, name, types.StrategicMergePatchType, patch, gvk)
 		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
 		// custom resource), so we reset the patch and try again below.
-		if err != nil && apierrors.IsUnsupportedMediaType(err) {
-			patch = nil
+		if err != nil {
+			if apierrors.IsUnsupportedMediaType(err) {
+				patch = nil
+			} else {
+				glog.Warningf("strategic merge patch for %s failed: %v", resourceDescription, err)
+			}
 		}
 	}
 
@@ -198,20 +203,19 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	if patch == nil {
 		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
 		if err == nil {
-			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
+			err = attemptPatch(ctx, resourceClient, resourceDescription, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
 	if err != nil {
-		return nil, errors.Wrap(err, "could not patch")
+		return nil, errors.Wrapf(err, "could not patch resource %s with %s", resourceDescription, patch)
 	}
-	glog.V(1).Infof("Patched %s", resourceDescription)
-	glog.V(3).Infof("Patched with %s", patch)
-
+	glog.Infof("Patched %s", resourceDescription)
+	glog.V(1).Infof("Patched with %s", patch)
 	return patch, nil
 }
 
-func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous, modified, current []byte) []byte {
+func (c *clientApplier) calculateStrategic(resourceDescription string, gvk schema.GroupVersionKind, previous, modified, current []byte) []byte {
 	// Try to use schema from OpenAPI Spec if possible.
 	gvkSchema := c.openAPIResources.LookupResource(gvk)
 	if gvkSchema == nil {
@@ -220,7 +224,7 @@ func (c *clientApplier) calculateStrategic(gvk schema.GroupVersionKind, previous
 	patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: gvkSchema}
 	patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
 	if err != nil {
-		glog.Infof("Could not calculate a patch for %q from OpenAPI spec: %v", gvk.String(), err)
+		glog.Infof("could not calculate a patch for %s from OpenAPI spec: %v", resourceDescription, err)
 		return nil
 	}
 	return patch
@@ -244,15 +248,15 @@ func isNoOpPatch(patch []byte) bool {
 
 // attemptPatch patches resClient with the given patch.
 // TODO(b/152322972): Add unit tests for noop logic.
-func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, resourceDescription string, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
 	if isNoOpPatch(patch) {
-		glog.V(3).Infof("Ignoring no-op patch for %q", name)
+		glog.V(3).Infof("Ignoring no-op patch %s for %q", patch, resourceDescription)
 		return nil
 	}
 
 	if err := ctx.Err(); err != nil {
 		// We've already encountered an error, so do not attempt update.
-		return status.ResourceWrap(err, "unable to continue updating resource")
+		return errors.Wrapf(err, "patch cancelled due to context error")
 	}
 
 	start := time.Now()
@@ -275,10 +279,15 @@ func (c *clientApplier) resource(gvk schema.GroupVersionKind) (string, error) {
 		}
 	}
 
-	return "", errors.Errorf("could not find resource for %s", gvk)
+	return "", errors.Errorf("could not find plural resource name for %s", gvk)
 }
 
-func nameDescription(u *unstructured.Unstructured) (string, string) {
+func description(u *unstructured.Unstructured) string {
 	name := u.GetName()
-	return name, fmt.Sprintf("%s, %s", u.GroupVersionKind(), name)
+	namespace := u.GetNamespace()
+	gvk := u.GroupVersionKind()
+	if namespace == "" {
+		return fmt.Sprintf("[%s kind=%s name=%s]", gvk.GroupVersion(), gvk.Kind, name)
+	}
+	return fmt.Sprintf("[%s kind=%s namespace=%s name=%s]", gvk.GroupVersion(), gvk.Kind, namespace, name)
 }
