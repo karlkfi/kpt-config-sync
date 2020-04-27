@@ -150,7 +150,7 @@ func Generate() map[string][]status.Error {
 
 	// 1034
 	result.add(nonhierarchical.IllegalNamespace(fake.Namespace("namespaces/" + configmanagement.ControllerNamespace)))
-	result.add(nonhierarchical.IllegalNamespace(fake.RoleAtPath("namespaces/"+configmanagement.ControllerNamespace+"/role.yaml",
+	result.add(nonhierarchical.ObjectInIllegalNamespace(fake.RoleAtPath("namespaces/"+configmanagement.ControllerNamespace+"/role.yaml",
 		core.Namespace("namespaces/"+configmanagement.ControllerNamespace))))
 
 	// 1035 is Deprecated.
