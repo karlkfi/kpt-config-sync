@@ -29,6 +29,29 @@ teardown() {
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
+@test "${FILE_NAME}: Check that default fields do not end up in NamespaceConfig" {
+  debug::log "Add a deployment"
+  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
+  git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
+  git::commit
+
+  wait::for kubectl get ns dir
+
+  debug::log "Check that the deployment was created"
+  wait::for -t 60 -- kubectl get deployment hello-world -n dir
+
+  debug::log "Check that specified field name is present"
+  selector=".spec.resources[0].versions[0].objects[0].metadata.name"
+  name=$(kubectl get namespaceconfig dir -ojson | jq -c "${selector}")
+  [[ "${name}" == '"hello-world"' ]] || debug::error "NamespaceConfig is missing Deployment hello-world"
+
+  debug::log "Check that unspecified field creationTimestamp is not present"
+  selector=".spec.resources[0].versions[0].objects[0].metadata"
+  if [[ $(kubectl get namespaceconfig dir -ojson | jq -c "${selector}" | grep creationTimestamp) ]]; then
+    debug::error "NamespaceConfig has default field creationTimestamp which was not specified"
+  fi
+}
+
 @test "${FILE_NAME}: Recreate a sync deleted by the user" {
   debug::log "Add a deployment to a directory"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml

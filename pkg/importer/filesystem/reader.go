@@ -7,16 +7,15 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
-
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
 )
 
 // Reader reads a list of FileObjects.
@@ -129,13 +128,21 @@ func toFileObjects(unstructured runtime.Unstructured, path cmpath.Path) ([]ast.F
 		return nil, err
 	}
 
-	obj, ok := asDefaultVersionedOrOriginal(unstructured).(core.Object)
+	obj, ok := unstructured.(core.Object)
+	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
+	// directives are specified for those fields. To be safe, we keep all resources in their raw
+	// unstructured format unless we specifically require them for importer pre-processing. These
+	// resources are mostly limited to configmanagement custom resources which we know are safe.
+	if syntax.MustBeStructured(obj.GroupVersionKind()) {
+		obj, ok = asDefaultVersionedOrOriginal(unstructured).(core.Object)
+	}
 	if !ok {
 		// The type doesn't declare required fields, but is registered.
 		// User-specified types are implicitly Unstructured, which defines Labels/Annotations/etc. even
 		// if the underlying type definition does _NOT_. It isn't clear how this code would ever be reached.
 		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %s", obj.GroupVersionKind().String())
 	}
+
 	return []ast.FileObject{ast.NewFileObject(obj, path)}, nil
 }
 

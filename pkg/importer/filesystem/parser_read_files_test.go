@@ -76,6 +76,14 @@ func pointer(o ast.FileObject) *ast.FileObject {
 }
 
 var specHardPods core.MetaMutator = func(o core.Object) {
+	u, ok := o.(*unstructured.Unstructured)
+	if ok {
+		unstructured.SetNestedStringMap(u.Object, map[string]string{
+			"pods": "10",
+		}, "spec", "hard")
+		return
+	}
+
 	rq, ok := o.(*corev1.ResourceQuota)
 	if !ok {
 		panic(fmt.Sprintf("expected ResourceQuota, got %+v", o))
@@ -106,7 +114,7 @@ func TestFilesystemReader(t *testing.T) {
 			testFiles: fstesting.FileContentMap{
 				"namespaces/bar/namespace.yaml": aNamespace("bar"),
 			},
-			expectObject: pointer(fake.Namespace("namespaces/bar")),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/bar")),
 		},
 		{
 			testName: "Namespace dir with JSON Namespace",
@@ -121,7 +129,7 @@ func TestFilesystemReader(t *testing.T) {
 }
 `,
 			},
-			expectObject: pointer(fake.NamespaceAtPath("namespaces/bar/namespace.json")),
+			expectObject: pointer(fake.NamespaceUnstructuredAtPath("namespaces/bar/namespace.json")),
 		},
 		{
 			testName: "Namespaces dir with ignored file",
@@ -136,7 +144,7 @@ func TestFilesystemReader(t *testing.T) {
 				"namespaces/bar/ignore":         "",
 				"namespaces/bar/ignore2":        "blah blah blah",
 			},
-			expectObject: pointer(fake.Namespace("namespaces/bar")),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/bar")),
 		},
 		{
 			testName: "Namespace with labels/annotations",
@@ -152,7 +160,7 @@ metadata:
     audit: "true"
 `,
 			},
-			expectObject: pointer(fake.Namespace("namespaces/bar", core.Label("env", "prod"), core.Annotation("audit", "true"))),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/bar", core.Label("env", "prod"), core.Annotation("audit", "true"))),
 		},
 		{
 			testName: "Abstract Namespace dir with ignored file",
@@ -173,7 +181,7 @@ spec:
     pods: "10"
 `,
 			},
-			expectObject: pointer(ast.NewFileObject(fake.ResourceQuotaObject(specHardPods, core.Name("pod-quota")), cmpath.FromSlash("namespaces/bar/rq.yaml"))),
+			expectObject: pointer(ast.NewFileObject(fake.ResourceQuotaObjectUnstructured(specHardPods, core.Name("pod-quota")), cmpath.FromSlash("namespaces/bar/rq.yaml"))),
 		},
 		{
 			testName: "Namespace dir with Custom Resource",
@@ -243,7 +251,7 @@ metadata:
     number: "0000"
 `,
 			},
-			expectObject: pointer(fake.Namespace("namespaces/backend", core.Annotation("number", "0000"))),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/backend", core.Annotation("number", "0000"))),
 		},
 		{
 			testName: "metadata.annotations with boolean value",
@@ -271,7 +279,7 @@ metadata:
     boolean: "true"
 `,
 			},
-			expectObject: pointer(fake.Namespace("namespaces/backend", core.Annotation("boolean", "true"))),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/backend", core.Annotation("boolean", "true"))),
 		},
 		{
 			testName: "metadata.labels with boolean value",
@@ -299,7 +307,7 @@ metadata:
     boolean: "true"
 `,
 			},
-			expectObject: pointer(fake.Namespace("namespaces/backend", core.Label("boolean", "true"))),
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/backend", core.Label("boolean", "true"))),
 		},
 		{
 			testName: "parses nested List",
@@ -317,7 +325,7 @@ items:
       name: foo
 `,
 			},
-			expectObject: pointer(fake.NamespaceAtPath("namespaces/foo/list.yaml")),
+			expectObject: pointer(fake.NamespaceUnstructuredAtPath("namespaces/foo/list.yaml")),
 		},
 		{
 			testName: "parses specialized List",
@@ -332,7 +340,7 @@ items:
     name: my-role
 `,
 			},
-			expectObject: pointer(fake.RoleAtPath("namespaces/foo/list.yaml", core.Name("my-role"))),
+			expectObject: pointer(fake.RoleUnstructuredAtPath("namespaces/foo/list.yaml", core.Name("my-role"))),
 		},
 		{
 			testName: "illegal field in list-embedded resource",

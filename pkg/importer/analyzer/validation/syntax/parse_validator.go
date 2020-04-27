@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
@@ -10,11 +11,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var requiredTypedStructs = map[schema.GroupVersionKind]bool{
-	kinds.Cluster():           true,
-	kinds.HierarchyConfig():   true,
-	kinds.NamespaceSelector(): true,
-	kinds.Repo():              true,
+var structuredKinds = map[schema.GroupKind]bool{
+	kinds.Cluster().GroupKind():           true,
+	kinds.ClusterSelector().GroupKind():   true,
+	kinds.HierarchyConfig().GroupKind():   true,
+	kinds.NamespaceSelector().GroupKind(): true,
+	kinds.Repo().GroupKind():              true,
+}
+
+// MustBeStructured returns true if the importer logic requires the given GroupKind
+// to be parsed into a structured object.
+func MustBeStructured(gvk schema.GroupVersionKind) bool {
+	return structuredKinds[gvk.GroupKind()]
 }
 
 // NewParseValidator returns a ValidatorVisitor which ensures required types are actually
@@ -22,14 +30,17 @@ var requiredTypedStructs = map[schema.GroupVersionKind]bool{
 //
 // Objects which are read into *unstructured.Unstructured instead of the go type (if one is
 // available) mean the config is improperly formatted. Note that this condition only applies
-// to Nomos CRDs, as go type definitions for other types (e.g. Application) are not available
-// to the parser.
+// to certain resource kinds (mostly configmanagement) which are required by the importer's
+// logic (eg NamespaceSelector to determine which namespaces an object should sync to).
 func NewParseValidator() ast.Visitor {
 	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		if _, ok := o.Object.(*unstructured.Unstructured); ok {
-			if requiredTypedStructs[o.GroupVersionKind()] {
+		_, isUnstructured := o.Object.(*unstructured.Unstructured)
+		if MustBeStructured(o.GroupVersionKind()) {
+			if isUnstructured {
 				return ObjectParseError(&o)
 			}
+		} else if !isUnstructured {
+			glog.Warningf("Resource should have been parsed as unstructured: %s %s/%s", o.GroupVersionKind(), o.GetNamespace(), o.GetName())
 		}
 		return nil
 	})
@@ -44,6 +55,6 @@ var objectParseError = status.NewErrorBuilder(ObjectParseErrorCode)
 // read in as an *unstructured.Unstructured.
 func ObjectParseError(resource id.Resource) status.Error {
 	return objectParseError.
-		Sprintf("The following config is not parseable as a %v:", resource.GroupVersionKind()).
+		Sprintf("The following config could not be parsed as a %v:", resource.GroupVersionKind()).
 		BuildWithResources(resource)
 }

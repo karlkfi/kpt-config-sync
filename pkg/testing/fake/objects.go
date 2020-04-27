@@ -48,6 +48,14 @@ func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	return obj
 }
 
+// ResourceQuotaObjectUnstructured initializes a ResouceQuota as an unstructured object.
+func ResourceQuotaObjectUnstructured(opts ...core.MetaMutator) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(kinds.ResourceQuota())
+	mutate(u, opts...)
+	return u
+}
+
 // ResourceQuota initializes a FileObject with a ResourceQuota.
 func ResourceQuota(opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ResourceQuotaObject(opts...), "namespaces/foo/rq.yaml")
@@ -268,6 +276,14 @@ func RoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 // Role returns a Role with a default file path.
 func Role(opts ...core.MetaMutator) ast.FileObject {
 	return RoleAtPath("namespaces/foo/role.yaml", opts...)
+}
+
+// RoleUnstructuredAtPath returns an unstructured initialized Role in a FileObject.
+func RoleUnstructuredAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(kinds.Role())
+	mutate(u, opts...)
+	return ast.NewFileObject(u, cmpath.FromSlash(path))
 }
 
 // ConfigMapObject returns an initialized ConfigMap.
