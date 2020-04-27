@@ -156,15 +156,59 @@ function set_up_env_minimal() {
   done
 }
 
-function clean_up_test_resources() {
-  echo "printing diagnostics"
-  echo "+ operator logs"
-  (kubectl -n kube-system logs -l k8s-app=config-management-operator --tail=100) || true
-  echo "+ importer pod"
-  (kubectl -n config-management-system describe pod git-importer) || true
-  echo "+ importer logs"
-  (kubectl -n config-management-system logs -l app=git-importer -c importer --tail=100) || true
+# get a bunch of diagnostics that may help identify problems
+#
+# the prow test runner defines the $ARTIFACTS env variable pointing to a
+# directory to be used to output test results that are automatically presented
+# to various dashboards.  If that directory exists and is writable, put our
+# diagnostics there.  Otherwise, write them to a test-specific directory.
+function dump_diagnostics() {
+  # Include a timestamp label in the output filenames in case we're called
+  # multiple times.  If we're called multiple times in a 1-second window, meh.
+  local label=""
+  label=$(date +%s)
+  if [ -n "${ARTIFACTS+x}" ]; then
+    directory="${ARTIFACTS}/diagnostics"
+    mkdir -p "${directory}"
+    echo "++++++ adding diagnostics to ${directory} with prefix ${label}"
+  else
+    # I guess we don't get good diagnostics.  fall back on the basic stuff that
+    # was added in tg/524288
+    echo "printing diagnostics"
+    echo "+ operator logs"
+    (kubectl -n kube-system logs -l k8s-app=config-management-operator --tail=100) || true
+    echo "+ importer pod"
+    (kubectl -n config-management-system describe pod git-importer) || true
+    echo "+ importer logs"
+    (kubectl -n config-management-system logs -l app=git-importer -c importer --tail=100) || true
+    return 0
+  fi
 
+  echo "+++++++ operator pod"
+  (kubectl -n kube-system describe pod -l k8s-app=config-management-operator > "${directory}/${label}_operator_pod.txt") || true
+  echo "+++++++ importer deployment"
+  (kubectl -n config-management-system describe deployment git-importer > "${directory}/${label}_git-importer_deployment.txt") || true
+  echo "+++++++ importer pod"
+  (kubectl -n config-management-system describe pod git-importer > "${directory}/${label}_git-importer_pod.txt") || true
+  echo "+++++++ syncer deployment"
+  (kubectl -n config-management-system describe deployment syncer > "${directory}/${label}_syncer_deployment.txt") || true
+  echo "+++++++ syncer pod"
+  (kubectl -n config-management-system describe pod syncer > "${directory}/${label}_syncer_pod.txt") || true
+  echo "+++++++ kubectl describe "
+  (kubectl describe -f "${TEST_DIR}/defined-operator-bundle.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
+  echo "+++++++ operator logs"
+  (kubectl -n kube-system logs -l k8s-app=config-management-operator > "${directory}/${label}_operator_logs.txt") || true
+  echo "+++++++ syncer logs"
+  (kubectl -n config-management-system logs -l app=syncer -c syncer > "${directory}/${label}_syncer_logs.txt") || true
+  echo "+++++++ importer logs"
+  (kubectl -n config-management-system logs -l app=git-importer -c importer > "${directory}/${label}_importer_logs.txt") || true
+  echo "+++++++ git-sync logs"
+  (kubectl -n config-management-system logs -l app=git-importer -c git-sync > "${directory}/${label}_git-sync_logs.txt") || true
+  echo "+++++++ configmanagements"
+  (kubectl get configmanagements -oyaml > "${directory}/${label}_config-management.yaml") || true
+}
+
+function clean_up_test_resources() {
   kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 
@@ -176,6 +220,8 @@ function clean_up_test_resources() {
 }
 
 function clean_up() {
+  dump_diagnostics
+
   echo "++++ Cleaning up environment"
 
   declare -a waitpids
