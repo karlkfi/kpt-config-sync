@@ -16,6 +16,7 @@ func TestIsManageableSystem(t *testing.T) {
 		{"kube-foo", false},
 		{"kube-public", true},
 		{"kube-system", true},
+		{"gatekeeper-system", true},
 		{configmanagement.ControllerNamespace, false},
 	} {
 		testcase := testcase
