@@ -82,8 +82,7 @@ func Generate() map[string][]status.Error {
 
 	// 1015 is Deprecated.
 
-	// 1016
-	result.add(filesystem.ConfigManagementNotInstalledError(errors.New("missing ConfigManagement")))
+	// 1016 is Deprecated.
 
 	// 1017
 	result.add(system.MissingRepoError())

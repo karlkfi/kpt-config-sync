@@ -5,8 +5,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,28 +115,7 @@ func ValidateInstallation(client utildiscovery.ClientGetter) status.MultiError {
 	}
 
 	scoper := utildiscovery.Scoper{}
-	if apiErr := scoper.AddAPIResourceLists(lists); apiErr != nil {
-		return apiErr
-	}
-	return validateInstallation(scoper)
-}
-
-// validateInstallation checks to see if Nomos is installed by checking that
-// the ConfigManagement type exists and is correctly cluster-scoped.
-func validateInstallation(scoper utildiscovery.Scoper) status.MultiError {
-	isNamespaced, err := scoper.GetGroupKindScope(kinds.ConfigManagement().GroupKind())
-	if err != nil {
-		return ConfigManagementNotInstalledError(errors.Errorf("%s is not installed. Install to fix.",
-			configmanagement.ProductName))
-	}
-
-	if isNamespaced {
-		return ConfigManagementNotInstalledError(
-			errors.Errorf("corrupt %s installation: ConfigManagement type has wrong scope. Reinstall to fix.",
-				configmanagement.ProductName))
-	}
-
-	return nil
+	return scoper.AddAPIResourceLists(lists)
 }
 
 // watchFileSystem issues a reconcile.Request after every pollPeriod.
