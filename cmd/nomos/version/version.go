@@ -3,6 +3,7 @@ package version
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"sort"
 	"sync"
@@ -27,6 +28,25 @@ func init() {
 	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 }
 
+// GetVersionReadCloser returns a ReadCloser with the output produced by running the "nomos version" command as a string
+func GetVersionReadCloser(contexts []string) (io.ReadCloser, error) {
+	r, w, _ := os.Pipe()
+	writer := util.NewWriter(w)
+	allCfgs, err := allKubectlConfigs()
+	if err != nil {
+		return nil, err
+	}
+
+	versionInternal(allCfgs, writer, contexts)
+	err = w.Close()
+	if err != nil {
+		e := fmt.Errorf("failed to close version file writer with error: %v", err)
+		return nil, e
+	}
+
+	return ioutil.NopCloser(r), nil
+}
+
 var (
 	// clientTimeout is a flag value to specify how long to wait before timeout of client connection.
 	clientTimeout time.Duration
@@ -44,17 +64,7 @@ var (
 of the "nomos" client binary for debugging purposes.`,
 		Example: `  nomos version`,
 		Run: func(_ *cobra.Command, _ []string) {
-			allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)
-			if err != nil {
-				// Unwrap the "no such file or directory" error for better readability
-				if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
-					err = unWrapped
-				}
-
-				// nolint:errcheck
-				fmt.Printf("failed to create client configs: %v\n", err)
-			}
-
+			allCfgs, _ := allKubectlConfigs()
 			versionInternal(allCfgs, os.Stdout, flags.Contexts)
 
 			if allCfgs == nil {
@@ -63,6 +73,22 @@ of the "nomos" client binary for debugging purposes.`,
 		},
 	}
 )
+
+// allKubectlConfigs gets all kubectl configs, with error handling
+func allKubectlConfigs() (map[string]*rest.Config, error) {
+	allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)
+	if err != nil {
+		// Unwrap the "no such file or directory" error for better readability
+		if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
+			err = unWrapped
+		}
+
+		// nolint:errcheck
+		fmt.Printf("failed to create client configs: %v\n", err)
+	}
+
+	return allCfgs, err
+}
 
 // versionInternal allows stubbing out the config for tests.
 func versionInternal(configs map[string]*rest.Config, w io.Writer, contexts []string) {

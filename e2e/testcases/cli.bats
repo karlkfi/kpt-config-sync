@@ -100,6 +100,8 @@ teardown() {
   check_singleton "config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "processed/version.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "processed/status.txt" "${BUG_REPORT_DIR_NAME}"
 }
 
 function get_bug_report_file_name {

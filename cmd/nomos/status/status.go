@@ -3,6 +3,7 @@ package status
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -44,6 +45,27 @@ func init() {
 	flags.AddContexts(Cmd)
 	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
+}
+
+// GetStatusReadCloser returns a ReadCloser with the output produced by running the "nomos status" command as a string
+func GetStatusReadCloser(contexts []string) (io.ReadCloser, error) {
+	r, w, _ := os.Pipe()
+	writer := util.NewWriter(w)
+
+	clientMap, err := statusClients(contexts)
+	if err != nil {
+		return nil, err
+	}
+	names := clusterNames(clientMap)
+
+	printStatus(writer, clientMap, names)
+	err = w.Close()
+	if err != nil {
+		e := fmt.Errorf("failed to close status file writer with error: %v", err)
+		return nil, e
+	}
+
+	return ioutil.NopCloser(r), nil
 }
 
 // Cmd runs a loop that fetches ACM objects from all available clusters and prints a summary of the
