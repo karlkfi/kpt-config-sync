@@ -2,11 +2,12 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -15,6 +16,7 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/watch"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -84,7 +86,7 @@ func (r *metaReconciler) Reconcile(request reconcile.Request) (reconcile.Result,
 	metrics.ReconcileDuration.WithLabelValues("sync", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	if err != nil {
-		glog.Errorf("Could not reconcile syncs: %v", err)
+		glog.Errorf("Error while reconciling Sync resources: %v", err)
 	}
 	return reconcile.Result{}, err
 }
@@ -136,7 +138,7 @@ func (r *metaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 		metrics.ControllerRestarts.WithLabelValues(source).Inc()
 	}
 	if err != nil {
-		glog.Errorf("Could not start SubManager: %v", err)
+		glog.Errorf("Sync reconciler failed to restart SubManager: %v", err)
 		return err
 	}
 
@@ -188,12 +190,16 @@ func (r *metaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 
 	sync = sync.DeepCopy()
 	sync.Finalizers = newFinalizers
-	glog.Infof("Beginning Sync finalize for %s", sync.Name)
+	glog.Infof("beginning Sync finalize for %s", sync.Name)
 	if err := r.gcResources(ctx, sync, gvks); err != nil {
 		return err
 	}
 	err := r.client.Upsert(ctx, sync)
-	return status.APIServerError(err, "could not finalize sync pending delete")
+	if err != nil {
+		return status.APIServerError(err, fmt.Sprintf("could not finalize Sync %s", sync.Name))
+	}
+	glog.Infof("finalized Sync %s", sync.Name)
+	return nil
 }
 
 func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks map[schema.GroupVersionKind]bool) status.MultiError {
@@ -208,19 +214,21 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 		gvk = k
 		break
 	}
+	glog.Infof("Sync reconciler garbage collecting all %s", gvk.GroupKind())
 	var errBuilder status.MultiError
 	// Create a new dynamic client since it's possible that the manager client is reading from the
 	// cache.
 	cl, err := r.clientFactory()
 	if err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerError(err, "failed to create dynamic client during gc"))
+		errBuilder = status.Append(errBuilder,
+			status.APIServerError(err, fmt.Sprintf("failed to create dynamic client during garbage collection of %s", gvk.GroupKind().String())))
 		return errBuilder
 	}
 	gvk.Kind += "List"
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, ul); err != nil {
-		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not list %s resources", gvk))
+		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to list resources of type %s for garbage collection", gvk))
 		return errBuilder
 	}
 	for _, u := range ul.Items {
@@ -229,10 +237,25 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {
-			errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "could not delete %s resource: %v", gvk, u))
+			if !apierrors.IsNotFound(err) {
+				glog.V(2).Infof("Failed to delete %s while garbage collecting", resourceDesc(&u))
+				errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to delete resource %s during garbage collection", resourceDesc(&u)))
+			}
+			continue
 		}
+		glog.Infof("garbage collected %s", resourceDesc(&u))
 	}
 	return errBuilder
+}
+
+func resourceDesc(u *unstructured.Unstructured) string {
+	gvk := u.GroupVersionKind()
+	ns := u.GetNamespace()
+	n := u.GetName()
+	if ns == "" {
+		return fmt.Sprintf("[%s kind=%s name=%s]", gvk.GroupVersion(), gvk.Kind, n)
+	}
+	return fmt.Sprintf("[%s kind=%s namespace=%s name=%s]", gvk.GroupVersion(), gvk.Kind, ns, n)
 }
 
 // restartSubManager returns true if the reconcile request indicates that we need to restart all
