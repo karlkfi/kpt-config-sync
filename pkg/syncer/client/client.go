@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
@@ -51,12 +52,12 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 
 	start := time.Now()
 	err := c.Client.Create(ctx, obj)
-	c.recordLatency(start, "create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+	c.recordLatency(start, "Create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
 	}
-	glog.V(1).Infof("Create OK for %s", description)
+	glog.Infof("Created %s", description)
 	return nil
 }
 
@@ -69,13 +70,15 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 	if err := c.Client.Get(ctx, namespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object is already deleted
+			glog.V(2).Infof("Delete skipped, %s does not exist", description)
 			return nil
 		}
+		// TODO(b/155203803): determine if this belongs in the non error path
 		if isFinalizing(obj) {
-			glog.V(3).Infof("Delete skipped, resource is finalizing %s", description)
+			glog.V(2).Infof("Delete skipped, resource is finalizing %s", description)
 			return nil
 		}
-		return errors.Wrapf(err, "could not look up object we're deleting %s", description)
+		return errors.Wrapf(err, "failed to get %s during delete operation (this is an API server error)", description)
 	}
 
 	start := time.Now()
@@ -83,9 +86,9 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 	err := c.Client.Delete(ctx, obj, opts...)
 
 	if err == nil {
-		glog.V(1).Infof("Delete OK for %s", description)
+		glog.Infof("Deleted %s", description)
 	} else if apierrors.IsNotFound(err) {
-		glog.V(3).Infof("Not found during attempted delete %s", description)
+		glog.V(2).Infof("Not found during attempted delete %s", description)
 		err = nil
 	} else {
 		err = errors.Wrapf(err, "delete failed for %s", description)
@@ -116,7 +119,6 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 	namespacedName := getNamespacedName(workingObj)
 
 	var lastErr error
-	var oldObj core.Object
 
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
@@ -126,18 +128,16 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		newObj, err := updateFn(core.DeepCopy(workingObj))
 		if err != nil {
 			if isNoUpdateNeeded(err) {
+				glog.V(2).Infof("Update function for %s returned no update needed", description)
 				return newObj, nil
 			}
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
 
-		if glog.V(3) {
-			glog.Warningf("update: %q: try: %v diff old..new:\n%v",
-				namespacedName, tryNum, cmp.Diff(workingObj, newObj))
-			if oldObj != nil {
-				glog.Warningf("update: %q: prev..old:\n%v",
-					namespacedName, cmp.Diff(oldObj, workingObj))
-			}
+		// cmp.Diff may take a while on the resource, only compute if V(1)
+		if glog.V(1) {
+			glog.Infof("Updating object %q attempt=%d diff old..new:\n%v",
+				description, tryNum+1, cmp.Diff(workingObj, newObj))
 		}
 
 		start := time.Now()
@@ -147,22 +147,19 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		if err == nil {
 			newV := resourceVersion(newObj)
 			if oldV == newV {
-				glog.V(3).Infof("Update not needed for %s", description)
+				glog.Warningf("ResourceVersion for %s did not change during update (noop), updateFn should have indicated no update needed", description)
 			} else {
-				glog.V(1).Infof("Update OK for %s from ResourceVersion %s to %s", description, oldV, newV)
+				glog.Infof("Updated %s from ResourceVersion %s to %s", description, oldV, newV)
 			}
 			return newObj, nil
 		}
 		lastErr = err
 
-		if glog.V(3) {
-			glog.Warningf("error in clientUpdateFn(...) for %q: %v", namespacedName, err)
-			oldObj = workingObj
-		}
 		if !apierrors.IsConflict(err) {
 			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
 		}
-		<-time.After(100 * time.Millisecond) // Back off on retry a bit.
+		glog.V(2).Infof("Conflict during update for %q: %v", description, err)
+		time.Sleep(100 * time.Millisecond) // Back off on retry a bit.
 	}
 	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update "+description, ast.ParseFileObject(obj))
 }
@@ -176,9 +173,10 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) error {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
 		}
-		return errors.Wrapf(err, "could not get status of %s while upserting", description)
+		return errors.Wrapf(err, "error getting %s for create/update", description)
 	}
 
+	glog.V(1).Infof("Will update %s to %s", description, spew.Sdump(obj))
 	start := time.Now()
 	err := c.Client.Update(ctx, obj)
 	c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
@@ -186,7 +184,7 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) error {
 	if err != nil {
 		return errors.Wrapf(err, "upsert failed for %s", description)
 	}
-	glog.V(1).Infof("Upsert OK for %s", description)
+	glog.Infof("Updated %s via upsert", description)
 	return nil
 }
 
