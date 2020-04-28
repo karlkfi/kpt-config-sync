@@ -146,6 +146,7 @@ func Generate() map[string][]status.Error {
 
 	// 1033
 	result.add(syntax.IllegalSystemResourcePlacementError(fake.RepoAtPath("namespaces/repo.yaml")))
+	result.add(syntax.IllegalSystemResourcePlacementError(fake.HierarchyConfigAtPath("system/hierarchy-config.yaml")))
 
 	// 1034
 	result.add(nonhierarchical.IllegalNamespace(fake.Namespace("namespaces/" + configmanagement.ControllerNamespace)))
