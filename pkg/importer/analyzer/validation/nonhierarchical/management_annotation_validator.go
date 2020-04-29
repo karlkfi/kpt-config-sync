@@ -29,7 +29,7 @@ var illegalManagementAnnotationError = status.NewErrorBuilder(IllegalManagementA
 // Error implements error.
 func IllegalManagementAnnotationError(resource id.Resource, value string) status.Error {
 	return illegalManagementAnnotationError.
-		Sprintf("Config has invalid management annotation %s=%s. Must be %s or unset.",
+		Sprintf("Config has invalid management annotation %s=%s. If set, the value must be %q.",
 			v1.ResourceManagementKey, value, v1.ResourceManagementDisabled).
 		BuildWithResources(resource)
 }
