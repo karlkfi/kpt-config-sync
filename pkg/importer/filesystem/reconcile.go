@@ -2,10 +2,14 @@ package filesystem
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
@@ -43,11 +47,52 @@ type reconciler struct {
 	decoder         decode.Decoder
 	repoClient      *repo.Client
 	cache           cache.Cache
+	// parsedGit is populated when the mounted git repo has successfully been
+	// parsed.
+	parsedGit *gitState
 	// appliedGitDir is set to the resolved symlink for the repo once apply has
 	// succeeded in order to prevent reprocessing.  On error, this is set to empty
 	// string so the importer will retry indefinitely to attempt to recover from
 	// an error state.
 	appliedGitDir string
+}
+
+// gitState contains the parsed state of the mounted git repo at a certain revision.
+type gitState struct {
+	// rev is the git revision hash when the git repo was parsed.
+	rev string
+	// filePathList is a list of the paths of all files parsed from the git repo.
+	filePathList []string
+	// filePaths is a unified string of the paths in filePathList.
+	filePaths string
+}
+
+// stringifyFileList returns a unique(ish) identifier for the given list of FileObjects.
+func makeGetState(rev string, objs []ast.FileObject) *gitState {
+	gs := &gitState{
+		rev:          rev,
+		filePathList: make([]string, len(objs)),
+	}
+	b := strings.Builder{}
+	for i, obj := range objs {
+		gs.filePathList[i] = obj.SlashPath()
+		b.WriteString(obj.SlashPath())
+		b.WriteString(",")
+	}
+	gs.filePaths = b.String()
+	return gs
+}
+
+// dumpForFiles returns a string dump of the given list of FileObjects.
+func dumpForFiles(objs []ast.FileObject) string {
+	b := strings.Builder{}
+	for _, obj := range objs {
+		b.WriteString(fmt.Sprintf("%s\n", obj.SlashPath()))
+		b.WriteString(fmt.Sprintf("%s %s/%s\n", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		b.WriteString(fmt.Sprintf("%v\n", obj.Object))
+		b.WriteString("----------\n")
+	}
+	return b.String()
 }
 
 // NewReconciler returns a new Reconciler.
@@ -76,6 +121,7 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 	}, nil
 }
 
+// dirError updates repo source status with an error due to failure to read mounted git repo.
 func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
 	glog.Errorf("Failed to resolve config directory: %v", err)
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -84,6 +130,13 @@ func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 		err).Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
 	return reconcile.Result{}, nil
+}
+
+// filesystemError updates repo source status with an error due to inconsistent read from filesystem.
+func (c *reconciler) filesystemError(ctx context.Context, rev string) (reconcile.Result, error) {
+	sErr := status.SourceError.Sprintf("inconsistent files read from mounted git repo at revision %s", rev).Build()
+	c.updateSourceStatus(ctx, nil, sErr.ToCME())
+	return reconcile.Result{}, sErr
 }
 
 // Reconcile implements Reconciler.
@@ -153,7 +206,6 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 	desiredFileObjects, mErr := c.parser.Parse(c.clusterName, true, getSyncedCRDs)
-	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", mErr)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -161,6 +213,21 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
+	gs := makeGetState(absGitDir, desiredFileObjects)
+	if c.parsedGit == nil {
+		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
+	} else if c.parsedGit.rev != gs.rev {
+		glog.Infof("Importer state updated to git revision %s. Unverified files list: %s", gs.rev, gs.filePaths)
+	} else if c.parsedGit.filePaths == gs.filePaths {
+		glog.V(2).Infof("Importer state remains at git revision %s. Verified files hash: %s", gs.rev, gs.filePaths)
+	} else {
+		glog.Errorf("Importer read inconsistent files at git revision %s.\nExpected files hash: %s\nDiff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
+		glog.Errorf("Inconsistent files:\n%s", dumpForFiles(desiredFileObjects))
+		return c.filesystemError(ctx, absGitDir)
+	}
+	c.parsedGit = gs
+
+	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
 	// Update the SyncState for all NamespaceConfigs and ClusterConfig.
 	for n := range desiredConfigs.NamespaceConfigs {
 		pn := desiredConfigs.NamespaceConfigs[n]
