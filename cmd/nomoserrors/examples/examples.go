@@ -66,7 +66,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.IllegalAnnotationDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "illegal-annotation"}))
 
 	// 1011
-	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "-label"}))
+	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "label"}))
 
 	// 1012 is Deprecated.
 
