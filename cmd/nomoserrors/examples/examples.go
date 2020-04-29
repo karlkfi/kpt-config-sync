@@ -54,7 +54,7 @@ func Generate() map[string][]status.Error {
 	result.add(syntax.ObjectParseError(fake.Role()))
 
 	// 1007
-	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.Role()))
+	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/foo/bar/role.yaml")))
 
 	// 1008 is Deprecated.
 
