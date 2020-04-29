@@ -162,7 +162,7 @@ func Generate() map[string][]status.Error {
 	// 1037 is Deprecated.
 
 	// 1038
-	result.add(syntax.IllegalKindInNamespacesError(fake.ClusterRoleAtPath("namespaces/foo/cr.yaml")))
+	result.add(syntax.IllegalKindInNamespacesError(fake.NamespaceSelectorAtPath("namespaces/foo/ns-selector.yaml")))
 
 	// 1039
 	result.add(validation.ShouldBeInSystemError(fake.RepoAtPath("namespaces/repo.yaml")))
