@@ -63,7 +63,7 @@ func Generate() map[string][]status.Error {
 		fake.RoleAtPath("namespaces/foo/r.yaml", core.Namespace("bar")), "foo"))
 
 	// 1010
-	result.add(metadata.IllegalAnnotationDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "-annotation"}))
+	result.add(metadata.IllegalAnnotationDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "illegal-annotation"}))
 
 	// 1011
 	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "-label"}))
