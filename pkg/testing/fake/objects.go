@@ -39,6 +39,13 @@ func NamespaceSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObje
 	return FileObject(NamespaceSelectorObject(opts...), path)
 }
 
+// NamespaceSelectorAtPathWithName returns a NamespaceSelector at the specified
+// path with the specified name.
+func NamespaceSelectorAtPathWithName(path string, name string, opts ...core.MetaMutator) ast.FileObject {
+	opts = append(opts, core.Name(name))
+	return FileObject(NamespaceSelectorObject(opts...), path)
+}
+
 // ResourceQuotaObject initializes a ResouceQuota.
 func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	obj := &corev1.ResourceQuota{TypeMeta: toTypeMeta(kinds.ResourceQuota())}

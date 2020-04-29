@@ -75,7 +75,7 @@ func Generate() map[string][]status.Error {
 	result.add(selectors.ObjectHasUnknownNamespaceSelector(fake.Role(), "undeclared-selector"))
 	result.add(selectors.ObjectNotInNamespaceSelectorSubdirectory(
 		fake.RoleAtPath("namespaces/foo/role.yaml"),
-		fake.NamespaceSelectorAtPath("namespaces/bar/selector.yaml")))
+		fake.NamespaceSelectorAtPathWithName("namespaces/bar/selector.yaml", "default-ns-selector")))
 
 	// 1014
 	result.add(selectors.InvalidSelectorError(fake.NamespaceSelector(), errors.New("some parse error")))

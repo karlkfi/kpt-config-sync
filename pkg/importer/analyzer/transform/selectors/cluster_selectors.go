@@ -245,7 +245,7 @@ func (s selectorFileObject) selects(o core.Object) bool {
 // references a ClusterSelector that does not exist.
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
 	return objectHasUnknownSelector.
-		Sprintf("Resource %q MUST refer to an existing ClusterSelector, but has annotation %s=%q which maps to no declared ClusterSelector",
+		Sprintf("Config %q MUST refer to an existing ClusterSelector, but has annotation \"%s=%s\" which maps to no declared ClusterSelector",
 			resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation).
 		BuildWithResources(resource)
 }
