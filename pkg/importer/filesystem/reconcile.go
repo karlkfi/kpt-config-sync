@@ -204,6 +204,13 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return clusterconfig.GetCRDs(decoder, currentConfigs.ClusterConfig)
 	}
 
+	// check git status, blow up if we see issues
+	if err := git.CheckClean(absGitDir); err != nil {
+		glog.Errorf("git check clean returned error: %v", err)
+		LogWalkDirectory(absGitDir)
+		return reconcile.Result{}, err
+	}
+
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 	desiredFileObjects, mErr := c.parser.Parse(c.clusterName, true, getSyncedCRDs)
 	if mErr != nil {

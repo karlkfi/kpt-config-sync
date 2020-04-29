@@ -2,6 +2,7 @@
 package git
 
 import (
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -22,4 +23,19 @@ func CommitHash(dirPath string) (string, error) {
 	}
 	hash := dirName[len(gitSyncPrefix):]
 	return hash, nil
+}
+
+// CheckClean returns an error if the repo pointed to by dir is not clean, or there was an error invoking Git while
+// checking.
+func CheckClean(dir string) error {
+	cmd := exec.Command("git", "-C", dir, "status", "--short")
+	outBytes, err := cmd.CombinedOutput()
+	out := string(outBytes)
+	if err != nil {
+		return errors.Wrapf(err, "error while checking for clean working directory: failed to call git status on dir %s, output: %s", dir, out)
+	}
+	if out != "" {
+		return errors.Errorf("git status returned dirty working tree: %s", out)
+	}
+	return nil
 }
