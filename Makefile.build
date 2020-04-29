@@ -71,7 +71,7 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 
 # All Nomos K8S deployments.
 DEPLOYMENTS_FOR_DECOUPLED_E2E := syncer \
-	git-importer-no-operator-e2e \
+	git-importer-raw-nomos-e2e \
 	monitor
 
 .PHONY: gen-deployments-for-decoupled-e2e

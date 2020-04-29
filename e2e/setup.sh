@@ -68,7 +68,10 @@ function install() {
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
 
-    if ! ${raw_nomos}; then
+    if ${raw_nomos}; then
+      echo "++++++ Using raw Nomos manifests"
+      MANIFEST_DIR="${TEST_DIR}/raw-nomos/manifests"
+    else
       if ${stable_channel}; then
         echo "++++++ Using Nomos stable channel"
         MANIFEST_DIR="${TEST_DIR}/manifests/stable"
@@ -77,11 +80,12 @@ function install() {
         MANIFEST_DIR="${TEST_DIR}/manifests/dev"
       fi
 
-      export MANIFEST_DIR
 
       echo "++++++ Applying Nomos Initial Configuration"
       kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
     fi
+
+    export MANIFEST_DIR
 
     echo "++++++ Waiting for config-management-system deployments to be up"
     wait::for -s -t 180 -- install::nomos_running
@@ -442,7 +446,6 @@ readonly setup="${gotopt2_setup:-false}"
 readonly timing="${gotopt2_timing:-false}"
 readonly stable_channel="${gotopt2_stable_channel:-false}"
 readonly raw_nomos="${gotopt2_raw_nomos:-false}"
-echo "RAW NOMOS: $raw_nomos"
 # TODO(filmil): remove the need to disable lint checks here and elsewhere.
 # shellcheck disable=SC2154
 readonly test_filter="${gotopt2_test_filter}"
@@ -454,6 +457,9 @@ readonly gcp_cluster_name="${gotopt2_gcp_cluster_name}"
 # shellcheck disable=SC2154
 readonly gcp_prober_cred="${gotopt2_gcp_prober_cred}"
 readonly run_tests="${gotopt2_test:-false}"
+
+# Exported so that tests can either apply configManagement or configMaps based on test mode
+export RAW_NOMOS="$raw_nomos"
 
 do_installation=true
 if [[ "${skip_installation}" == "true" ]]; then

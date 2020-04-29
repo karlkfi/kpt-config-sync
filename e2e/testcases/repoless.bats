@@ -20,7 +20,12 @@ teardown() {
 }
 
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-repo.yaml"
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/repoless-repo.yaml"
+  else
+    kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-repo.yaml"
+  fi
+
   setup::git::initialize
   setup::git::init repoless
 
@@ -32,12 +37,16 @@ teardown() {
   resource::check namespace default
   resource::check role pod-reader-default -n default
 
-  # Repair the state
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
+  repair_state
 }
 
 @test "${FILE_NAME}: Syncs correctly with only roles" {
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-ns.yaml"
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/repoless-no-ns.yaml"
+  else
+    kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-ns.yaml"
+  fi
+
   setup::git::initialize
   setup::git::init repoless-no-ns
 
@@ -49,12 +58,16 @@ teardown() {
   resource::check namespace default
   resource::check role pod-reader-default -n default
 
-  # Repair the state
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
+  repair_state
 }
 
 @test "${FILE_NAME}: Syncs correctly with no policy dir set" {
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-policy-dir.yaml"
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/repoless-no-policy-dir.yaml"
+  else
+    kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-policy-dir.yaml"
+  fi
+
   setup::git::initialize
   setup::git::init repoless
 
@@ -66,6 +79,13 @@ teardown() {
   resource::check namespace default
   resource::check role pod-reader-default -n default
 
-  # Repair the state
-  kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
+  repair_state
+}
+
+function repair_state() {
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/base-configmaps.yaml"
+  else
+    kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
+  fi
 }
