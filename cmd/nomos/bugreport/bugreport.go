@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -74,11 +75,13 @@ func writeReadablesToZip(toBeRead []bugreport.Readable, fileName string) []error
 		errorList = append(errorList, e)
 	}
 
+	baseName := filepath.Base(fileName)
+	dirName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
 	zipWriter := zip.NewWriter(outFile)
 
 	for _, readable := range toBeRead {
-		fileName := readable.Name
-		f, err := zipWriter.Create(fileName + ".txt")
+		fileName := dirName + "/" + readable.Name + ".txt"
+		f, err := zipWriter.Create(fileName)
 		if err != nil {
 			e := fmt.Errorf("failed to create file %v inside zip: %v", fileName, err)
 			errorList = append(errorList, e)

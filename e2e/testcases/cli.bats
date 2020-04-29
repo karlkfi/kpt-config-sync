@@ -89,19 +89,17 @@ teardown() {
 
   # check that zip exists
   BUG_REPORT_ZIP_NAME=$(get_bug_report_file_name)
+  BUG_REPORT_DIR_NAME=${BUG_REPORT_ZIP_NAME%.zip}
   [[ -e "${BUG_REPORT_ZIP_NAME}" ]]
 
-  # move into a directory for easy manipulation
-  mkdir contents
-  mv "${BUG_REPORT_ZIP_NAME}" contents
-  (cd contents; /usr/bin/unzip "${BUG_REPORT_ZIP_NAME}")
+  /usr/bin/unzip "${BUG_REPORT_ZIP_NAME}"
 
   # Check that the correct files are there
-  check_singleton "config-management-system/git-importer.*/git-sync.txt" contents
-  check_singleton "config-management-system/git-importer.*/importer.txt" contents
-  check_singleton "config-management-system/monitor.*/monitor.txt" contents
-  check_singleton "config-management-system/syncer.*/syncer.txt" contents
-  check_singleton "kube-system/config-management-operator.*/manager.txt" contents
+  check_singleton "config-management-system/git-importer.*/git-sync.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "config-management-system/git-importer.*/importer.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
 }
 
 function get_bug_report_file_name {
