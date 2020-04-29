@@ -80,7 +80,7 @@ func writeReadablesToZip(toBeRead []bugreport.Readable, fileName string) []error
 	zipWriter := zip.NewWriter(outFile)
 
 	for _, readable := range toBeRead {
-		fileName := dirName + "/" + readable.Name + ".txt"
+		fileName := filepath.Join(dirName, readable.Name) + ".txt"
 		f, err := zipWriter.Create(fileName)
 		if err != nil {
 			e := fmt.Errorf("failed to create file %v inside zip: %v", fileName, err)
