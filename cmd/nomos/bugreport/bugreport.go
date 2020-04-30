@@ -19,6 +19,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+type reporter struct {
+	writer        *zip.Writer
+	name          string
+	errorList     []error
+	writingErrors []error
+}
+
 // Cmd retrieves readers for all relevant nomos container logs and cluster state commands and writes them to a zip file
 var Cmd = &cobra.Command{
 	Use:   "bugreport",
@@ -35,66 +42,51 @@ var Cmd = &cobra.Command{
 			glog.Fatalf("failed to create k8s client: %v", err)
 		}
 
-		var errorList []error
-		var writingErrors []error
-
 		zipName := getReportName()
 		outFile, err := os.Create(zipName)
 		if err != nil {
-			e := fmt.Errorf("failed to create file %v: %v", zipName, err)
-			errorList = append(errorList, e)
+			glog.Fatalf("failed to create file %v: %v", zipName, err)
 		}
-		zipWriter := zip.NewWriter(outFile)
+		report := reporter{
+			writer:        zip.NewWriter(outFile),
+			name:          zipName,
+			errorList:     []error{},
+			writingErrors: []error{},
+		}
 
-		toBeRead, errs := bugreport.FetchLogSources(clientSet)
-		if len(errs) > 0 {
-			errorList = append(errorList, errs...)
-		}
-
-		for _, readable := range toBeRead {
-			err := writeReadableToZip(readable, zipWriter, zipName)
-			if err != nil {
-				writingErrors = append(writingErrors, err)
-			}
-		}
+		report.writeRawInZip(bugreport.FetchLogSources(clientSet))
+		report.writeRawInZip(bugreport.FetchCmResources(clientSet))
 
 		currentk8sContext, err := restconfig.CurrentContextName()
 		if err != nil {
-			errorList = append(errorList, err)
+			report.errorList = append(report.errorList, err)
 		}
 		var k8sContexts = []string{currentk8sContext}
 
-		err = addNomosStatusToZip(k8sContexts, zipWriter, zipName)
-		if err != nil {
-			writingErrors = append(writingErrors, err)
-		}
+		report.addNomosStatusToZip(k8sContexts)
+		report.addNomosVersionToZip(k8sContexts)
 
-		err = addNomosVersionToZip(k8sContexts, zipWriter, zipName)
-		if err != nil {
-			writingErrors = append(writingErrors, err)
-		}
-
-		err = zipWriter.Close()
+		err = report.writer.Close()
 		if err != nil {
 			e := fmt.Errorf("failed to close zip writer: %v", err)
-			errorList = append(errorList, e)
+			report.errorList = append(report.errorList, e)
 		}
 
 		err = outFile.Close()
 		if err != nil {
 			e := fmt.Errorf("failed to close zip file: %v", err)
-			errorList = append(errorList, e)
+			report.errorList = append(report.errorList, e)
 		}
 
-		if len(writingErrors) == 0 {
+		if len(report.writingErrors) == 0 {
 			glog.Infof("Bug report written to zip file: %v\n", zipName)
 		} else {
 			glog.Warningf("Some errors returned while writing zip file.  May exist at: %v\n", zipName)
 		}
-		errorList = append(errorList, writingErrors...)
+		report.errorList = append(report.errorList, report.writingErrors...)
 
-		if len(errorList) > 0 {
-			for _, e := range errorList {
+		if len(report.errorList) > 0 {
+			for _, e := range report.errorList {
 				glog.Errorf("Error: %v\n", e)
 			}
 
@@ -103,28 +95,26 @@ var Cmd = &cobra.Command{
 	},
 }
 
-func addNomosStatusToZip(k8sContexts []string, zipWriter *zip.Writer, zipName string) error {
-	statusRc, err := status.GetStatusReadCloser(k8sContexts)
-	if err != nil {
-		return err
-	}
-
-	return writeReadableToZip(bugreport.Readable{
+func (r *reporter) addNomosStatusToZip(k8sContexts []string) {
+	if statusRc, err := status.GetStatusReadCloser(k8sContexts); err != nil {
+		r.errorList = append(r.errorList, err)
+	} else if err = r.writeReadableToZip(bugreport.Readable{
 		Name:       "processed/status",
 		ReadCloser: statusRc,
-	}, zipWriter, zipName)
+	}); err != nil {
+		r.writingErrors = append(r.writingErrors, err)
+	}
 }
 
-func addNomosVersionToZip(k8sContexts []string, zipWriter *zip.Writer, zipName string) error {
-	versionRc, err := version.GetVersionReadCloser(k8sContexts)
-	if err != nil {
-		return err
-	}
-
-	return writeReadableToZip(bugreport.Readable{
+func (r *reporter) addNomosVersionToZip(k8sContexts []string) {
+	if versionRc, err := version.GetVersionReadCloser(k8sContexts); err != nil {
+		r.errorList = append(r.errorList, err)
+	} else if err = r.writeReadableToZip(bugreport.Readable{
 		Name:       "processed/version",
 		ReadCloser: versionRc,
-	}, zipWriter, zipName)
+	}); err != nil {
+		r.writingErrors = append(r.writingErrors, err)
+	}
 }
 
 func getReportName() string {
@@ -138,11 +128,12 @@ func getReportName() string {
 	return nameWithPath
 }
 
-func writeReadableToZip(readable bugreport.Readable, zipWriter *zip.Writer, zipName string) error {
-	baseName := filepath.Base(zipName)
+//TODO join kubecontext for file path
+func (r *reporter) writeReadableToZip(readable bugreport.Readable) error {
+	baseName := filepath.Base(r.name)
 	dirName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
 	fileName := filepath.FromSlash(filepath.Join(dirName, readable.Name) + ".txt")
-	f, err := zipWriter.Create(fileName)
+	f, err := r.writer.Create(fileName)
 	if err != nil {
 		e := fmt.Errorf("failed to create file %v inside zip: %v", fileName, err)
 		return e
@@ -162,4 +153,18 @@ func writeReadableToZip(readable bugreport.Readable, zipWriter *zip.Writer, zipN
 	}
 
 	return nil
+}
+
+func (r *reporter) writeRawInZip(toBeRead []bugreport.Readable, errs []error) {
+	if len(errs) > 0 {
+		r.errorList = append(r.errorList, errs...)
+	}
+
+	for _, readable := range toBeRead {
+		err := r.writeReadableToZip(readable)
+		if err != nil {
+			r.writingErrors = append(r.writingErrors, err)
+		}
+	}
+
 }

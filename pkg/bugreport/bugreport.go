@@ -2,6 +2,7 @@ package bugreport
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "k8s.io/api/core/v1"
@@ -95,4 +96,30 @@ func listPods(cs coreClient, ns v1.Namespace, lOps metav1.ListOptions) (*v1.PodL
 	}
 
 	return pods, nil
+}
+
+// FetchCmResources provides a set of Readables for configmanagement resources
+// TODO convert json content to yaml
+func FetchCmResources(cs coreClient) (rd []Readable, errorList []error) {
+	base := "apis/configmanagement.gke.io/v1"
+	var resourceLists = []string{
+		"clusterconfigs",
+		"namespaceconfigs",
+		"syncs",
+		"configmanagements",
+		"repos",
+	}
+
+	for _, listName := range resourceLists {
+		if raw, err := cs.CoreV1().RESTClient().Get().AbsPath(path.Join(base, listName)).Stream(); err != nil {
+			errorList = append(errorList, fmt.Errorf("failed to list %s resources: %v", listName, err))
+		} else {
+			rd = append(rd, Readable{
+				ReadCloser: raw,
+				Name:       path.Join("cluster-scope", "configmanagement", listName),
+			})
+		}
+
+	}
+	return rd, errorList
 }
