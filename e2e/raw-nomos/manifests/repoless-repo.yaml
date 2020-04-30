@@ -4,4 +4,12 @@ metadata:
   name: source-format
   namespace: config-management-system
 data:
-  SOURCE_FORMAT: "unstructured"
+  SOURCE_FORMAT: unstructured
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: importer
+  namespace: config-management-system
+data:
+  POLICY_DIR: repoless

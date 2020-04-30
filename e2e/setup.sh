@@ -104,22 +104,21 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling"
 
-    if ${raw_nomos}; then
-      kubectl delete ns config-management-system
-
-      # I haven't found a good way to delete all this stuff. Some things are missing labels.
-      # Also I might be missing some things?
-      # TODO(b/155230198): Deleting nomos without the operator should be easier
-      kubectl delete crds -l configmanagement.gke.io/system="true"
-      kubectl delete podsecuritypolicy acm-psp
-      kubectl delete clusterrole -l configmanagement.gke.io/system="true"
-      kubectl delete ClusterRoleBinding -l configmanagement.gke.io/system="true"
-      kubectl delete ClusterRole configmanagement.gke.io:policy-controller-psp
-    fi
-
     if kubectl get configmanagement &> /dev/null; then
       ensure_config_management_removed
     fi
+
+    if ${raw_nomos}; then
+      echo "+++++ Raw nomos cleanup"
+
+      # We need to make sure the operator is deleted if it wasn't after a previous test run or install
+      kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
+
+      # Wipe out everything we've installed.  In the $raw_nomos scenario, we installed nomos via
+      # this operator bundle.  So, we need to delete it before we can check nomos_uninstalled
+      kubectl delete -f "${TEST_DIR}/defined-operator-bundle.yaml" --ignore-not-found
+    fi
+
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
     echo "++++++ Delete operator bundle"
