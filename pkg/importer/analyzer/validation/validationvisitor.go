@@ -108,7 +108,7 @@ var illegalAbstractNamespaceObjectKindError = status.NewErrorBuilder(IllegalAbst
 // TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
 func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error {
 	return illegalAbstractNamespaceObjectKindError.Sprintf(
-		"Config `%[3]s` illegally declared in an %[1]s directory. "+
+		"Config %[3]q illegally declared in an %[1]s directory. "+
 			"Move this config to a %[2]s directory:",
 		strings.ToLower(string(node.AbstractNamespace)), strings.ToLower(string(node.Namespace)), resource.GetName()).
 		BuildWithResources(resource)
