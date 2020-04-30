@@ -67,19 +67,16 @@ type gitState struct {
 	filePaths string
 }
 
-// stringifyFileList returns a unique(ish) identifier for the given list of FileObjects.
-func makeGetState(rev string, objs []ast.FileObject) *gitState {
+// makeGitState generates a new gitState for the given FileObjects read at the specified revision.
+func makeGitState(rev string, objs []ast.FileObject) *gitState {
 	gs := &gitState{
 		rev:          rev,
 		filePathList: make([]string, len(objs)),
 	}
-	b := strings.Builder{}
 	for i, obj := range objs {
 		gs.filePathList[i] = obj.SlashPath()
-		b.WriteString(obj.SlashPath())
-		b.WriteString(",")
 	}
-	gs.filePaths = b.String()
+	gs.filePaths = strings.Join(gs.filePathList, ",")
 	return gs
 }
 
@@ -135,7 +132,7 @@ func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 // filesystemError updates repo source status with an error due to inconsistent read from filesystem.
 func (c *reconciler) filesystemError(ctx context.Context, rev string) (reconcile.Result, error) {
 	sErr := status.SourceError.Sprintf("inconsistent files read from mounted git repo at revision %s", rev).Build()
-	c.updateSourceStatus(ctx, nil, sErr.ToCME())
+	c.updateSourceStatus(ctx, &rev, sErr.ToCME())
 	return reconcile.Result{}, sErr
 }
 
@@ -220,7 +217,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	gs := makeGetState(absGitDir, desiredFileObjects)
+	gs := makeGitState(absGitDir, desiredFileObjects)
 	if c.parsedGit == nil {
 		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
 	} else if c.parsedGit.rev != gs.rev {
@@ -235,6 +232,11 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	c.parsedGit = gs
 
 	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
+	if sErr := c.sanityCheck(desiredConfigs, currentConfigs); sErr != nil {
+		c.updateSourceStatus(ctx, &token, sErr.ToCME())
+		return reconcile.Result{}, sErr
+	}
+
 	// Update the SyncState for all NamespaceConfigs and ClusterConfig.
 	for n := range desiredConfigs.NamespaceConfigs {
 		pn := desiredConfigs.NamespaceConfigs[n]
@@ -262,6 +264,21 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	glog.V(4).Infof("Reconcile completed")
 	return reconcile.Result{}, nil
+}
+
+// sanityCheck reports if the importer would cause the cluster to drop to zero
+// NamespaceConfigs from anything other than zero or one on the cluster currently.
+// That is too dangerous of a change to actually carry out.
+func (c *reconciler) sanityCheck(desired, current *namespaceconfig.AllConfigs) status.Error {
+	if len(desired.NamespaceConfigs) == 0 {
+		count := len(current.NamespaceConfigs)
+		if count > 1 {
+			glog.Errorf("Importer parsed 0 NamespaceConfigs from mounted git repo but detected %d NamespaceConfigs on the cluster. This is a dangerous change, so it will be rejected.", count)
+			return status.EmptySourceError(count)
+		}
+		glog.Warningf("Importer did not parse any NamespaceConfigs in git repo. Cluster currently has %d NamespaceConfigs, so this will proceed.", count)
+	}
+	return nil
 }
 
 // updateImportStatus write an updated RepoImportStatus based upon the given arguments.

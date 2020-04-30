@@ -246,6 +246,9 @@ func Generate() map[string][]status.Error {
 	// 2004
 	result.add(status.SourceError.Sprint("unable to connect to Git repository").Build())
 
+	// 2006
+	result.add(status.EmptySourceError(10))
+
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))
 

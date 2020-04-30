@@ -74,6 +74,34 @@ function ensure_error_free_repo () {
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
 
+@test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
+  mkdir -p acme/namespaces
+  cp -r /opt/testing/e2e/examples/acme/namespaces acme
+  git add -A
+  ensure_error_free_repo
+
+  debug::log "Delete all the namespaces (oops!)"
+  rm -rf "acme/namespaces"
+  git add -A
+  git::commit -a -m "wiping all namespaces from acme"
+
+  debug::log "Expect an error to be present in status.source.errors"
+  wait::for -t 90 -c "mounted git repo appears to contain no managed namespaces" -- \
+    kubectl get repo repo -o=yaml \
+      --output='jsonpath={.status.source.errors[0].errorMessage}'
+
+  debug::log "Restore the namespaces"
+  cp -r /opt/testing/e2e/examples/acme/namespaces acme
+  git add -A
+  git::commit -a -m "restoring the namespaces"
+
+  debug::log "Expect repo to recover from the error in source message"
+  wait::for -t 90 -o "" -- kubectl get repo repo \
+    --output='jsonpath={.status.source.errors[0].errorMessage}'
+
+  setup::git::remove_all acme
+}
+
 function token_exists() {
   local resource_type="${1}"
   local resource_name="${2}"

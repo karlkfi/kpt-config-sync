@@ -115,8 +115,31 @@ setup::git::init_without() {
   setup::git::__commit_dir_and_wait
 }
 
-# Removes all managed resources of the specified repo from git, pushes it, and blocks until complete.
+# Removes *almost* all managed resources of the specified repo from git, pushes it, and blocks until complete.
 setup::git::remove_all() {
+  local DIR_NAME=${1}
+
+  local TEST_REPO_DIR=${BATS_TMPDIR}
+  cd "${TEST_REPO_DIR}/repo/${DIR_NAME}"
+
+  rm -rf "cluster"
+  rm -rf "namespaces"
+
+  namespace::declare safety
+
+  git add -A
+  git status
+  git commit -m "wiping almost all of ${DIR_NAME}"
+  git push origin master:master -f
+  cd "$CWD"
+
+  wait::for -t 60 -- nomos::repo_synced
+
+  setup::git::remove_all_dangerously "${DIR_NAME}"
+}
+
+# Removes all managed resources of the specified repo from git, pushes it, and blocks until complete.
+setup::git::remove_all_dangerously() {
   local DIR_NAME=${1}
 
   local TEST_REPO_DIR=${BATS_TMPDIR}
