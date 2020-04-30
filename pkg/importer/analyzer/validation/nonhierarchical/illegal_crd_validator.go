@@ -37,7 +37,7 @@ var unsupportedObjectError = status.NewErrorBuilder(UnsupportedObjectErrorCode)
 // UnsupportedObjectError reports than an unsupported object is in the namespaces/ sub-directories or clusters/ directory.
 func UnsupportedObjectError(resource id.Resource) status.Error {
 	return unsupportedObjectError.
-		Sprintf("%s cannot configure CRDs in the %q APIGroup",
+		Sprintf("%s does not allow configuring CRDs in the `%s` APIGroup. To fix, please use a different APIGroup.",
 			configmanagement.ProductName, v1.SchemeGroupVersion.Group).
 		BuildWithResources(resource)
 }
