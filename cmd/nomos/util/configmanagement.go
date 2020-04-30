@@ -9,8 +9,16 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// ConfigManagementName is the name of the ConfigManagement object.
-const ConfigManagementName = "config-management"
+const (
+	// ConfigManagementName is the name of the ConfigManagement object.
+	ConfigManagementName = "config-management"
+	// ConfigManagementGroup is the config management group
+	ConfigManagementGroup = "configmanagement.gke.io"
+	// ConfigManagementKind is the config management kind
+	ConfigManagementKind = "ConfigManagement"
+	// ConfigManagementResource is the config management resource
+	ConfigManagementResource = "configmanagements"
+)
 
 // DynamicClient obtains a client based on the supplied REST config.  Can be overridden in tests.
 var DynamicClient = dynamic.NewForConfig
@@ -27,11 +35,11 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 		return nil, err
 	}
 	gvr := schema.GroupVersionResource{
-		Group:   "configmanagement.gke.io",
+		Group:   ConfigManagementGroup,
 		Version: "v1",
 		// The dynamic client needs the plural resource form to be able to
 		// construct a correct resource URL.
-		Resource: "configmanagements",
+		Resource: ConfigManagementResource,
 	}
 	return &ConfigManagementClient{cl.Resource(gvr).Namespace("")}, nil
 }

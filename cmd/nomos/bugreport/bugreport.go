@@ -3,6 +3,8 @@ package bugreport
 import (
 	"archive/zip"
 	"bufio"
+	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +18,6 @@ import (
 	"github.com/google/nomos/pkg/bugreport"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
 )
 
 type reporter struct {
@@ -32,14 +33,20 @@ var Cmd = &cobra.Command{
 	Short: fmt.Sprintf("Generates a zip file of relevant %v debug information.", configmanagement.CLIName),
 	Long:  "Generates a zip file in your current directory containing an aggregate of the logs and cluster state for debugging purposes.",
 	Run: func(cmd *cobra.Command, args []string) {
+		// hack to set the hidden variable in glog to also print info statements
+		// cobra does not expose core golang-style flags
+		if err := flag.CommandLine.Parse([]string{"--stderrthreshold=0"}); err != nil {
+			glog.Errorf("could not increase logging verbosity: %v", err)
+		}
+
 		cfg, err := restconfig.NewRestConfig()
 		if err != nil {
 			glog.Fatalf("failed to create rest config: %v", err)
 		}
 
-		clientSet, err := kubernetes.NewForConfig(cfg)
+		br, err := bugreport.New(context.Background(), cfg)
 		if err != nil {
-			glog.Fatalf("failed to create k8s client: %v", err)
+			glog.Fatalf("failed to initialize bug reporter: %v", err)
 		}
 
 		zipName := getReportName()
@@ -54,8 +61,8 @@ var Cmd = &cobra.Command{
 			writingErrors: []error{},
 		}
 
-		report.writeRawInZip(bugreport.FetchLogSources(clientSet))
-		report.writeRawInZip(bugreport.FetchCmResources(clientSet))
+		report.writeRawInZip(br.FetchLogSources())
+		report.writeRawInZip(br.FetchCMResources())
 
 		currentk8sContext, err := restconfig.CurrentContextName()
 		if err != nil {
@@ -90,7 +97,7 @@ var Cmd = &cobra.Command{
 				glog.Errorf("Error: %v\n", e)
 			}
 
-			glog.Fatalf("Partial bug report may have succeeded.  Look for file: %s\n", zipName)
+			glog.Errorf("Partial bug report may have succeeded.  Look for file: %s\n", zipName)
 		} else {
 			fmt.Println("Created file " + zipName)
 		}
