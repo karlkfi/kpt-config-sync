@@ -76,8 +76,8 @@ var illegalSelectorAnnotationError = status.NewErrorBuilder(IllegalSelectorAnnot
 // cluster-selector annotation.
 func IllegalClusterSelectorAnnotationError(resource id.Resource) status.Error {
 	return illegalSelectorAnnotationError.
-		Sprintf("%ss may not be cluster-selected, and so MUST NOT declare the annotation %s. "+
-			"To fix, remove metadata.annotations.%s from:",
+		Sprintf("%ss may not be cluster-selected, and so MUST NOT declare the annotation '%s'. "+
+			"To fix, remove `metadata.annotations.%s` from:",
 			resource.GroupVersionKind().Kind, v1.ClusterSelectorAnnotationKey, v1.ClusterSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
@@ -86,8 +86,8 @@ func IllegalClusterSelectorAnnotationError(resource id.Resource) status.Error {
 // namespace-selector annotation.
 func IllegalNamespaceSelectorAnnotationError(resource id.Resource) status.Error {
 	return illegalSelectorAnnotationError.
-		Sprintf("Cluster-scoped objects may not be namespace-selected, and so MUST NOT declare the annotation %s. "+
-			"To fix, remove metadata.annotations.%s from:",
+		Sprintf("Cluster-scoped objects may not be namespace-selected, and so MUST NOT declare the annotation '%s'. "+
+			"To fix, remove `metadata.annotations.%s` from:",
 			v1.NamespaceSelectorAnnotationKey, v1.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
