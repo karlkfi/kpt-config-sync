@@ -111,6 +111,18 @@ function uninstall() {
     if ${raw_nomos}; then
       echo "+++++ Raw nomos cleanup"
 
+      # Get the syncs, remove the table headers, and select the sync names only
+      SYNCS=$(kubectl get syncs | tail -n +2 | cut -d ' ' -f 1)
+
+      # Loop through the syncs and patch out the finalizers.
+      # Normally the operator does this explicitly in the
+      # `finalizeSyncs` function in nomos_controller.go
+      for sync in $SYNCS; do
+        kubectl patch sync "$sync" \
+          --type='json' \
+          -p='[{"op": "replace", "path": "/metadata/finalizers", "value":[]}]'
+      done
+
       # We need to make sure the operator is deleted if it wasn't after a previous test run or install
       kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
 
