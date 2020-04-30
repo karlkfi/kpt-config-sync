@@ -79,6 +79,7 @@ func Generate() map[string][]status.Error {
 
 	// 1014
 	result.add(selectors.InvalidSelectorError(fake.NamespaceSelector(), errors.New("some parse error")))
+	result.add(selectors.EmptySelectorError(fake.NamespaceSelector()))
 
 	// 1015 is Deprecated.
 

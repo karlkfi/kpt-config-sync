@@ -208,7 +208,7 @@ func asSelectorFileObject(o ast.FileObject, labelSelector metav1.LabelSelector) 
 		return selectorFileObject{}, InvalidSelectorError(o, err)
 	}
 	if selector.Empty() {
-		return selectorFileObject{}, emptySelectorError(o)
+		return selectorFileObject{}, EmptySelectorError(o)
 	}
 	return selectorFileObject{
 		FileObject: o,

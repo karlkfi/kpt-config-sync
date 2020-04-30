@@ -24,6 +24,6 @@ func InvalidSelectorError(selector id.Resource, cause error) status.Error {
 
 // EmptySelectorError reports that a ClusterSelector or NamespaceSelector is
 // invalid because it is empty.
-func emptySelectorError(selector id.Resource) status.Error {
-	return invalidSelectorError.Sprintf("%ss MUST define spec.selector", selector.GroupVersionKind().Kind).BuildWithResources(selector)
+func EmptySelectorError(selector id.Resource) status.Error {
+	return invalidSelectorError.Sprintf("%ss MUST define `spec.selector`", selector.GroupVersionKind().Kind).BuildWithResources(selector)
 }
