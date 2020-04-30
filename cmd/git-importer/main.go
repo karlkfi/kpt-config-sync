@@ -7,16 +7,15 @@ import (
 	"os"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
-
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/importer/dirwatcher"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
 var (
@@ -24,11 +23,28 @@ var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
+	watchDirectory    = flag.String("watch-directory", "", "Watch a directory and log filesystem changes instead of running as importer")
+	watchPeriod       = flag.Duration("watch-period", getEnvDuration("WATCH_PERIOD", time.Second), "Period at which to poll the watch directory for changes.")
 )
+
+func getEnvDuration(key string, defaultDuration time.Duration) time.Duration {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultDuration
+	}
+
+	duration, err := time.ParseDuration(val)
+	if err != nil {
+		glog.Errorf("Failed to parse duration %q from env var %s: %s", val, key, err)
+		return defaultDuration
+	}
+	return duration
+}
 
 func main() {
 	flag.Parse()
 	log.Setup()
+	dirWatcher(*watchDirectory)
 
 	go service.ServeMetrics()
 
@@ -60,4 +76,13 @@ func main() {
 	}
 
 	glog.Info("Exiting")
+}
+
+func dirWatcher(dir string) {
+	if dir == "" {
+		return
+	}
+	watcher := dirwatcher.NewWatcher(dir)
+	watcher.Watch(*watchPeriod, signals.SetupSignalHandler())
+	os.Exit(0)
 }

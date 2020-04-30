@@ -65,6 +65,27 @@ spec:
           limits:
             cpu: "1"
             memory: "200Mi"
+      - name: fs-watcher
+        image: IMAGE_NAME
+        command: ["git-importer"]
+        args:
+        - "--v=2"
+        - "--watch-directory=/repo"
+        volumeMounts:
+          - name: repo
+            mountPath: /repo
+            readOnly: true
+        envFrom:
+          - configMapRef:
+              name: importer-fs-watcher # allow user override for WATCH_PERIOD
+              optional: true
+        resources:
+          requests:
+            cpu: "150m"
+            memory: "100Mi"
+          limits:
+            cpu: "1"
+            memory: "200Mi"
       - name: gcenode-askpass-sidecar
         image: IMAGE_NAME
         command: ["gcenode-askpass-sidecar"]
