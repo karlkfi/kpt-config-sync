@@ -12,7 +12,7 @@ endif
 
 DEV_BUCKET := gs://config-management-release/operator-latest
 DEV_BUCKET_USER ?= gs://${GCP_PROJECT}/${USER}
-GIT_SYNC_TAG := v3.1.5-gke.0__linux_amd64
+GIT_SYNC_TAG := v3.1.5-gke.1__linux_amd64
 GIT_SYNC := git-sync:$(GIT_SYNC_TAG)
 GIT_SYNC_SRC := gcr.io/config-management-release/$(GIT_SYNC)
 GATEKEEPER_TAG := anthos1.3.2-480baac.g0
