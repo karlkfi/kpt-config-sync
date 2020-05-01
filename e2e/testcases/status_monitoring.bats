@@ -75,6 +75,9 @@ function ensure_error_free_repo () {
 }
 
 @test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
+
+  skip "this is currently flaky, see b/155512273"
+
   mkdir -p acme/namespaces
   cp -r /opt/testing/e2e/examples/acme/namespaces acme
   git add -A
