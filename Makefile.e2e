@@ -52,22 +52,6 @@ image-e2e-tests: \
 		-t $(E2E_TEST_IMAGE_LATEST) \
 		$(DOCKER_BUILD_QUIET)
 
-E2E_TEST_IMAGE_PROW = gcr.io/$(GCP_PROJECT)/e2e-prow:$(IMAGE_TAG)
-E2E_TEST_IMAGE_PROW_LATEST = gcr.io/$(GCP_PROJECT)/e2e-prow:latest
-
-# Builds the container used by prow to test Nomos setup.  Based on kubekins-e2e,
-# with a few tools added.  The config itself is at go/nomos-prow-configuration.
-image-prow: build/e2e-tests/Dockerfile.prow
-	@echo "+++ Building the image for the prow presubmit run"
-	@docker build \
-		-t $(E2E_TEST_IMAGE_PROW) \
-		-t $(E2E_TEST_IMAGE_PROW_LATEST) \
-		$(DOCKER_BUILD_QUIET) \
-		-f $< \
-		$(dir $<).
-	@docker push $(E2E_TEST_IMAGE_PROW)
-	@docker push $(E2E_TEST_IMAGE_PROW_LATEST)
-
 
 GOTOPT2_BINARY := docker run -i -u $(UID):$(GID) $(BUILDENV_IMAGE) /bin/gotopt2
 
