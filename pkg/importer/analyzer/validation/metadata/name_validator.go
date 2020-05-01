@@ -37,7 +37,7 @@ var illegalTopLevelNamespaceError = status.NewErrorBuilder(IllegalTopLevelNamesp
 // Error implements error
 func IllegalTopLevelNamespaceError(resource id.Resource) status.Error {
 	return illegalTopLevelNamespaceError.
-		Sprintf("%[2]ss MUST be declared in subdirectories of %[1]s/. Create a subdirectory for %[2]ss declared in:",
+		Sprintf("%[2]ss MUST be declared in subdirectories of '%[1]s/'. Create a subdirectory for the following %[2]s configs:",
 			repo.NamespacesDir, node.Namespace).
 		BuildWithResources(resource)
 }
