@@ -25,20 +25,26 @@ import (
 const timeout = time.Second * 15
 
 // NewParser returns a new default-initialized Parser for the CLI.
-func NewParser(root cmpath.Root) *filesystem.Parser {
-	return filesystem.NewParser(root, &filesystem.FileReader{}, importer.DefaultCLIOptions)
+func NewParser() *filesystem.Parser {
+	return filesystem.NewParser(&filesystem.FileReader{}, importer.DefaultCLIOptions)
 }
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(clusterName string, root cmpath.Root, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
-	p := NewParser(root)
+func Parse(clusterName string, root cmpath.Path, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
+	p := NewParser()
 
 	if err := filesystem.ValidateInstallation(importer.DefaultCLIOptions); err != nil {
 		return nil, errors.Wrap(err, "Found issues")
 	}
 
-	fileObjects, mErr := p.Parse(clusterName, enableAPIServerChecks, GetSyncedCRDs)
+	trackedFiles, err := FindFiles(root)
+	if err != nil {
+		return nil, err
+	}
+
+	fileObjects, mErr := p.Parse(clusterName, enableAPIServerChecks, GetSyncedCRDs,
+		root, filesystem.FilterHierarchyFiles(root, trackedFiles))
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}

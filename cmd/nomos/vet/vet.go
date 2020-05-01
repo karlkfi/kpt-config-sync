@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -50,21 +51,28 @@ returns a non-zero error code if any issues are found.
   nomos vet --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		rootDir := flags.Path.String()
-		rootPath := util.GetRootOrDie(rootDir)
+		rootDir, err := cmpath.Abs(cmpath.FromOS(flags.Path.String()))
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
 
+		files, err := parse.FindFiles(rootDir)
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
 		var parser filesystem.ConfigParser
 		switch sourceFormat {
 		case hierarchyFormat:
-			parser = parse.NewParser(rootPath)
+			parser = parse.NewParser()
+			files = filesystem.FilterHierarchyFiles(rootDir, files)
 		case unstructuredFormat:
-			parser = filesystem.NewRawParser(rootPath, &filesystem.FileReader{}, importer.DefaultCLIOptions)
+			parser = filesystem.NewRawParser(&filesystem.FileReader{}, importer.DefaultCLIOptions)
 		default:
 			return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 		}
 
 		encounteredError := false
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, vetCluster(&encounteredError))
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, rootDir, files, vetCluster(&encounteredError))
 
 		if encounteredError {
 			os.Exit(1)

@@ -12,6 +12,8 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -72,16 +74,22 @@ clusters.`,
 			util.PrintErrAndDie(errors.New("format must argument be 'yaml' or 'json'"))
 		}
 
-		rootDir := flags.Path.String()
-		rootPath := util.GetRootOrDie(rootDir)
+		rootDir := cmpath.FromOS(flags.Path.String())
 
-		parser := parse.NewParser(rootPath)
+		files, err := parse.FindFiles(rootDir)
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
+		// Hydrate is only used in hierarchical mode.
+		files = filesystem.FilterHierarchyFiles(rootDir, files)
+
+		parser := parse.NewParser()
 
 		var allObjects []ast.FileObject
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, rootDir, files, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

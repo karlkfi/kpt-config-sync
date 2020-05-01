@@ -3,7 +3,6 @@ package filesystem
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -25,26 +24,12 @@ func tempDir(t *testing.T) string {
 	return dir
 }
 
-func asRooted(t *testing.T, path string) cmpath.RootedPath {
-	root, err := cmpath.NewRoot(cmpath.FromSlash(path))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return root
-}
-
 func TestFileReader_Read_NotExist(t *testing.T) {
 	dir := tempDir(t)
 
-	// Remove directory so os.Stat returns a NotExist error.
-	err := os.RemoveAll(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	reader := FileReader{}
 
-	objs, err := reader.Read(asRooted(t, dir))
+	objs, err := reader.Read(cmpath.FromOS(dir), []cmpath.Path{cmpath.FromOS(filepath.Join(dir, "not-exist"))})
 	if err != nil || len(objs) > 0 {
 		t.Errorf("got Read(nonexistent path) = %+v, %v; want nil, nil", objs, err)
 	}
@@ -58,16 +43,22 @@ func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
 		t.Skip("Read_BadPermissionsParent will fail running with EUID==0")
 	}
 
+	tmpFile := filepath.Join(dir, "tmp.yaml")
+	_, err := os.Create(tmpFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Change permissions on the root directory so os.Stat returns a
 	// Permission error.
-	err := os.Chmod(dir, 000)
+	err = os.Chmod(dir, 000)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	reader := FileReader{}
 
-	objs, err := reader.Read(asRooted(t, dir))
+	objs, err := reader.Read(cmpath.FromSlash(dir), []cmpath.Path{cmpath.FromOS(tmpFile)})
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on parent dir) = %+v, %v; want nil, error", objs, err)
 	}
@@ -82,8 +73,13 @@ func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
 	}
 
 	// Create subdirectory.
-	subDir := path.Join(dir, "namespaces")
+	subDir := filepath.Join(dir, "namespaces")
 	err := os.Mkdir(subDir, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpFile := filepath.Join(subDir, "tmp.yaml")
+	_, err = os.Create(tmpFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +92,7 @@ func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
 
 	reader := FileReader{}
 
-	objs, err := reader.Read(asRooted(t, dir))
+	objs, err := reader.Read(cmpath.FromOS(dir), []cmpath.Path{cmpath.FromOS(tmpFile)})
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on child dir) = %+v, %v; want nil, error", objs, err)
 	}

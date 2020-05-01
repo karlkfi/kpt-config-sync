@@ -1,6 +1,8 @@
 package git
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCommitHash(t *testing.T) {
 	for _, tc := range []struct {

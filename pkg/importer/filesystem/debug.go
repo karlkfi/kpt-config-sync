@@ -8,8 +8,8 @@ import (
 	"github.com/golang/glog"
 )
 
-// WalkDirectory walks a directory and returns a list of all dirs / files / errors.
-func WalkDirectory(dir string) ([]string, error) {
+// walkDirectory walks a directory and returns a list of all dirs / files / errors.
+func walkDirectory(dir string) ([]string, error) {
 	var seen []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -22,9 +22,9 @@ func WalkDirectory(dir string) ([]string, error) {
 	return seen, err
 }
 
-// LogWalkDirectory logs a directory walk to glog.Error
-func LogWalkDirectory(dir string) {
-	files, err := WalkDirectory(dir)
+// logWalkDirectory logs a directory walk to glog.Error
+func logWalkDirectory(dir string) {
+	files, err := walkDirectory(dir)
 	if err != nil {
 		glog.Errorf("error while walking %s: %s", dir, err)
 	}

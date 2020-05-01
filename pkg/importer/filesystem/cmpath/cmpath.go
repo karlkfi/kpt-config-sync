@@ -1,107 +1,12 @@
 package cmpath
 
 import (
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/status"
 )
-
-// RootedPath represents a path that references a repository root, and can
-// be transformed into an absolute OS-specific path.
-type RootedPath interface {
-	Root() Root
-	AbsoluteOSPath() string
-}
-
-// Root is a path to a directory holding a Nomos repository.
-// Robust to changes in the working directory.
-type Root struct {
-	// The underlying absolute OS-specific path to the Nomos repository.
-	path string
-}
-
-// Root implements RootedPath.
-func (p Root) Root() Root {
-	return p
-}
-
-// Join joins a path element to the existing Root, returning a Relative.
-func (p Root) Join(rel Path) Relative {
-	return Relative{path: rel, root: p}
-}
-
-// AbsoluteOSPath implements RootedPath.
-func (p Root) AbsoluteOSPath() string {
-	return p.path
-}
-
-// NewRoot creates a new Root.
-// path is either the path to Nomos relative to system root or the path relative to the working
-//   directory.
-// Returns error if path is not absolute and the program is unable to retrieve the working directory.
-func NewRoot(path Path) (Root, status.Error) {
-	absolutePath, err := makeCleanAbsolute(path.OSPath())
-	if err != nil {
-		return Root{}, err
-	}
-	return Root{path: absolutePath}, nil
-}
-
-// Equal returns true if the underlying paths are identical.
-func (p Root) Equal(that Root) bool {
-	return p.path == that.path
-}
-
-// makeCleanAbsolute returns the cleaned, absolute path.
-func makeCleanAbsolute(path string) (string, status.Error) {
-	if path == "~" || strings.HasPrefix(path, "~/") {
-		// path is relative to home directory.
-		// filepath.Abs does not cover this case.
-		usr, err := user.Current()
-		if err != nil {
-			return "", status.OSWrap(err)
-		}
-		home := usr.HomeDir
-		if path == "~" {
-			return home, nil
-		}
-		return filepath.Join(home, path[2:]), nil
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", status.PathWrapError(err, path)
-	}
-	return filepath.Clean(absPath), nil
-}
-
-// Relative is a path relative to a Root.
-type Relative struct {
-	// The path relative to the Nomos repository root.
-	path Path
-
-	// The underlying Nomos repository this path is relative to.
-	root Root
-}
-
-// AbsoluteOSPath returns the absolute OS-specific path.
-func (p Relative) AbsoluteOSPath() string {
-	return filepath.Join(p.root.path, p.path.OSPath())
-}
-
-// Equal returns true if the underlying relative path and root directories are identical.
-func (p Relative) Equal(that Relative) bool {
-	return p.path == that.path && p.root.Equal(that.root)
-}
-
-// Root returns a copy of the underlying root path this Relative is based from.
-func (p Relative) Root() Root {
-	return Root{path: p.root.path}
-}
 
 // Path is a path in a filesystem.
 type Path struct {
@@ -157,11 +62,33 @@ func (p Path) IsRoot() bool {
 
 // Split returns a slice of the path elements.
 func (p Path) Split() []string {
-	return strings.Split(p.path, "/")
+	splits := strings.Split(p.path, "/")
+	if splits[len(splits)-1] == "" {
+		// Discard trailing empty string if this is a path ending in slash.
+		splits = splits[:len(splits)-1]
+	}
+	return splits
 }
 
 // Equal returns true if the underlying paths are equal.
 func (p Path) Equal(other Path) bool {
 	// Assumes Path was constructed or altered via exported methods.
 	return p.path == other.path
+}
+
+// Abs converts a cmpath.Path of a directory to the absolute path, after
+// following symlinks.
+func Abs(p Path) (Path, error) {
+	// Evaluate any symlinks in the directory.
+	relDir, err := filepath.EvalSymlinks(p.OSPath())
+	if err != nil {
+		return FromOS(""), err
+	}
+	// Ensure we're working with the absolute path, as most symlinks are relative
+	// paths and filepath.EvalSymlinks does not get the absolute destination.
+	absDir, err := filepath.Abs(relDir)
+	if err != nil {
+		return FromOS(""), err
+	}
+	return FromOS(absDir), nil
 }

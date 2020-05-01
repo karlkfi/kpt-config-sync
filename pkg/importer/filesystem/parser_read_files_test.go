@@ -366,22 +366,21 @@ items:
 			d := newTestDir(t)
 			defer d.remove(t)
 
-			if glog.V(6) {
-				glog.Infof("Testcase: %+v", spew.Sdump(tc))
-			}
+			glog.V(6).Infof("Testcase: %+v", spew.Sdump(tc))
 
 			for k, v := range tc.testFiles {
 				d.createTestFile(k, v, t)
 			}
 
-			var err error
-			rootPath, err := cmpath.NewRoot(cmpath.FromOS(d.rootDir))
-			if err != nil {
-				t.Error(err)
+			rootPath := cmpath.FromOS(d.rootDir)
+
+			var files []cmpath.Path
+			for f := range tc.testFiles {
+				files = append(files, cmpath.FromSlash(filepath.Join(d.rootDir, f)))
 			}
 
 			r := &filesystem.FileReader{}
-			actual, mErr := r.Read(rootPath.Join(cmpath.FromSlash(".")))
+			actual, mErr := r.Read(rootPath, files)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 

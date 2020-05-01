@@ -27,14 +27,6 @@ var (
 	loadTime    = metav1.Time{}
 )
 
-type fakeReader []ast.FileObject
-
-var _ filesystem.Reader = &fakeReader{}
-
-func (r fakeReader) Read(_ cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
-	return r, nil
-}
-
 func flatClusterSelector(name, key, value string) ast.FileObject {
 	cs := fake.ClusterSelectorObject(core.Name(name))
 	cs.Spec.Selector.MatchLabels = map[string]string{key: value}
@@ -129,11 +121,14 @@ func TestRawParser_Parse(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
-			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
+			root := cmpath.FromSlash("/")
+			r := fstesting.NewFakeReader(root, tc.objects)
+			p := filesystem.NewRawParser(r, f)
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
-			fileObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs)
+			fileObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs,
+				root, r.ToFileList())
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
 				t.Fatal(err)
@@ -175,12 +170,15 @@ func TestRawParser_ParseErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
-			p := filesystem.NewRawParser(cmpath.Root{}, fakeReader(tc.objects), f)
+			root := cmpath.FromSlash("/")
+			r := fstesting.NewFakeReader(root, tc.objects)
+			p := filesystem.NewRawParser(r, f)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil
 			}
-			_, err := p.Parse("", true, getSyncedCRDs)
+			_, err := p.Parse("", true, getSyncedCRDs,
+				root, r.ToFileList())
 			if err == nil {
 				t.Fatal("expected error")
 			}

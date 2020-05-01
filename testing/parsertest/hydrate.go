@@ -6,9 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/transform/tree/treetesting"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -116,15 +114,6 @@ func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
 	}
 }
 
-// fakeParserReader is a map from a path relative to a repo root to the objects
-// contained in that directory for the test.
-type fakeParserReader map[cmpath.Relative][]ast.FileObject
-
-// Read implements Reader.
-func (r fakeParserReader) Read(path cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
-	return r[path.(cmpath.Relative)], nil
-}
-
 // CRDsToAPIGroupResources converts a list of CRDs to the corresponding APIGroupResources the
 // server would return.
 //
@@ -152,12 +141,12 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 			)
 			extraResource.VersionedResources[version.Name] = []metav1.APIResource{
 				{
-					Name: syncedCRD.Spec.Names.Plural,
+					Name:         syncedCRD.Spec.Names.Plural,
 					SingularName: syncedCRD.Spec.Names.Singular,
-					Namespaced: !(syncedCRD.Spec.Scope == v1beta1.ClusterScoped),
-					Group: syncedCRD.Spec.Group,
-					Version: version.Name,
-					Kind: syncedCRD.Spec.Names.Kind,
+					Namespaced:   !(syncedCRD.Spec.Scope == v1beta1.ClusterScoped),
+					Group:        syncedCRD.Spec.Group,
+					Version:      version.Name,
+					Kind:         syncedCRD.Spec.Names.Kind,
 				},
 			}
 		}
@@ -168,19 +157,10 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 }
 
 // newTestParser creates a parser that processes the passed FileObjects.
-func newTestParser(t *testing.T, objects []ast.FileObject, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
+func newTestParser(reader filesystem.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
 	f := fstesting.NewTestClientGetter(CRDsToAPIGroupResources(syncedCRDs))
 
-	root := cmpath.Root{}
-	flatRoot := treetesting.BuildFlatTree(t, objects...)
-	reader := fakeParserReader{
-		root.Join(cmpath.FromSlash(repo.SystemDir)):          flatRoot.SystemObjects,
-		root.Join(cmpath.FromSlash(repo.ClusterRegistryDir)): flatRoot.ClusterRegistryObjects,
-		root.Join(cmpath.FromSlash(repo.ClusterDir)):         flatRoot.ClusterObjects,
-		root.Join(cmpath.FromSlash(repo.NamespacesDir)):      flatRoot.NamespaceObjects,
-	}
-
-	return filesystem.NewParser(root, reader, f)
+	return filesystem.NewParser(reader, f)
 }
 
 // RunAll runs each unit test.
@@ -194,13 +174,16 @@ func (pt Test) RunAll(t *testing.T) {
 				// Add default objects, if they are defined for this test suite.
 				objects = append(pt.DefaultObjects(), objects...)
 			}
-			parser := newTestParser(t, objects, tc.SyncedCRDs)
+
+			root := cmpath.FromSlash("/")
+			reader := fstesting.NewFakeReader(root, objects)
+			parser := newTestParser(reader, tc.SyncedCRDs)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.SyncedCRDs, nil
 			}
 
-			fileObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs)
+			fileObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, root, reader.ToFileList())
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

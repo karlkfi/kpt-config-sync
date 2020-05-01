@@ -42,15 +42,14 @@ teardown() {
 }
 
 @test "${FILE_NAME}: CLI Vet Acme Symlink" {
-  debug::log "Set up invalid repo missing system directory."
-  cp -r /opt/testing/e2e/examples/acme /opt/testing/e2e/examples/acme-symlink
-  rm -rf /opt/testing/e2e/examples/acme-symlink/system
+  debug::log "Ensure directory does not already exist."
+  rm -rf /opt/testing/e2e/examples/acme-symlink
 
-  debug::log "Ensure nomos vet fails."
+  debug::log "Ensure nomos vet fails on directory that does not exist."
   wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
 
-  debug::log "Add system/ via symlink. If this passes, symlink resolution works."
-  ln -s /opt/testing/e2e/examples/acme/system /opt/testing/e2e/examples/acme-symlink/system
+  debug::log "Add repo via symlink. If this passes, symlink resolution works."
+  ln -s /opt/testing/e2e/examples/acme /opt/testing/e2e/examples/acme-symlink
   ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
 }
 

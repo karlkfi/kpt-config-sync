@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -20,12 +19,13 @@ import (
 
 // Reader reads a list of FileObjects.
 type Reader interface {
-	// Read returns the list of FileObjects in the passed directory.
+	// Read returns the list of FileObjects in the passed file.
 	//
-	// dir is either a repository root directory, or a path relative to one.
-	// Returned fileObjects have their path set to be relative to the repository
-	// root.
-	Read(dir cmpath.RootedPath) ([]ast.FileObject, status.MultiError)
+	// rootDir is the absolute path to policyDir.
+	// files is the list of absolute path to the files to read.
+	// TODO(b/155509765): These two arguments get passed around together a lot
+	//  and have the same lifecycle. Encapsulate in a struct or similar.
+	Read(rootDir cmpath.Path, files []cmpath.Path) ([]ast.FileObject, status.MultiError)
 }
 
 // FileReader reads FileObjects from a filesystem.
@@ -33,75 +33,38 @@ type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
-func evalSymlinks(dir string) (string, error) {
-	p, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return "", status.PathWrapError(err, dir)
+func (r *FileReader) Read(rootDir cmpath.Path, files []cmpath.Path) ([]ast.FileObject, status.MultiError) {
+	var objs []ast.FileObject
+	var errs status.MultiError
+	for _, f := range files {
+		newObjs, err := r.read(rootDir, f)
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		objs = append(objs, newObjs...)
 	}
-	// Symlinks can be relative paths, so force the path to be absolute.
-	p, err = filepath.Abs(p)
-	if err != nil {
-		return "", status.PathWrapError(err, dir)
+	if errs != nil {
+		return nil, errs
 	}
-	return p, nil
+	return objs, nil
 }
 
 // Read implements Reader.
-func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.MultiError) {
-	if _, err := os.Stat(dir.AbsoluteOSPath()); os.IsNotExist(err) {
-		return nil, nil
-	} else if err != nil {
-		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
+func (r *FileReader) read(rootDir cmpath.Path, file cmpath.Path) ([]ast.FileObject, status.MultiError) {
+	unstructureds, err := parseFile(file.OSPath())
+	if err != nil {
+		return nil, status.PathWrapError(err, file.OSPath())
 	}
 
-	rootDir, err := evalSymlinks(dir.Root().AbsoluteOSPath())
-	if err != nil {
-		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
-	}
-	p, err := evalSymlinks(dir.AbsoluteOSPath())
-	if err != nil {
-		return nil, status.PathWrapError(err, dir.AbsoluteOSPath())
-	}
-
-	var errs status.MultiError
 	var fileObjects []ast.FileObject
-	walkErr := filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+	var errs status.MultiError
+	for _, u := range unstructureds {
+		newFileObjects, err := toFileObjects(u, rootDir, file)
 		if err != nil {
-			errs = status.Append(errs, status.PathWrapError(err, path))
-			return nil
+			errs = status.Append(errs, err)
 		}
-
-		if info.IsDir() {
-			// This is a directory, continue.
-			return nil
-		}
-
-		// Read the file to a list of unstructured objects.
-		unstructureds, err := parseFile(path)
-		if err != nil {
-			errs = status.Append(errs, status.PathWrapError(err, path))
-			return nil
-		}
-
-		// Assign relative path since that's what we actually need.
-		source, relErr := filepath.Rel(rootDir, path)
-		if relErr != nil {
-			// We couldn't get the relative path from the repository root. Something is very wrong.
-			errs = status.Append(errs, relErr)
-		}
-
-		for _, u := range unstructureds {
-			newFileObjects, err := toFileObjects(u, cmpath.FromOS(source))
-			if err != nil {
-				errs = status.Append(errs, err)
-			}
-			fileObjects = append(fileObjects, newFileObjects...)
-		}
-
-		return nil
-	})
-	if walkErr != nil {
-		return nil, status.PathWrapError(walkErr, dir.AbsoluteOSPath())
+		fileObjects = append(fileObjects, newFileObjects...)
 	}
 
 	return fileObjects, errs
@@ -111,9 +74,9 @@ func (r *FileReader) Read(dir cmpath.RootedPath) ([]ast.FileObject, status.Multi
 // 1) a slice containing a single FileObject, if the passed Unstructured is a valid Kubernetes object;
 // 2) a list of multiple FileObject, if the passed Unstructured was a List type; or
 // 3) an error, if there was a problem parsing the Unstructured.
-func toFileObjects(unstructured runtime.Unstructured, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func toFileObjects(unstructured runtime.Unstructured, rootDir, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
 	if isList(unstructured) {
-		return flattenList(unstructured, path)
+		return flattenList(unstructured, rootDir, path)
 	}
 
 	isNomosObject := unstructured.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
@@ -143,10 +106,16 @@ func toFileObjects(unstructured runtime.Unstructured, path cmpath.Path) ([]ast.F
 		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %s", obj.GroupVersionKind().String())
 	}
 
-	return []ast.FileObject{ast.NewFileObject(obj, path)}, nil
+	rel, ferr := filepath.Rel(rootDir.OSPath(), path.OSPath())
+	if ferr != nil {
+		return nil, status.UndocumentedErrorBuilder.Sprintf("unable to get relative path to %s", rootDir.OSPath()).
+			BuildWithPaths(path)
+	}
+
+	return []ast.FileObject{ast.NewFileObject(obj, cmpath.FromOS(rel))}, nil
 }
 
-func flattenList(list runtime.Unstructured, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func flattenList(list runtime.Unstructured, rootDir, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	var errs status.MultiError
 
@@ -158,7 +127,7 @@ func flattenList(list runtime.Unstructured, path cmpath.Path) ([]ast.FileObject,
 			return nil
 		}
 		// If the unstructuredItem is itself a List, toFileObjects recurse back here until we get to an actual Object.
-		newObjs, newErrs := toFileObjects(unstructuredItem, path)
+		newObjs, newErrs := toFileObjects(unstructuredItem, rootDir, path)
 		result = append(result, newObjs...)
 		errs = status.Append(errs, newErrs)
 		// Returning an error will stop parsing early, so return nil.
@@ -221,7 +190,7 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 	content := u.UnstructuredContent()
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
 	if !hasMetadata {
-		return status.UndocumentedError("All persistent Kubernetes objects MUST define metadata.")
+		return status.UndocumentedErrorBuilder.Sprint("All persistent Kubernetes objects MUST define metadata.").BuildWithPaths(path)
 	}
 
 	annotations, hasAnnotations := metadata["annotations"]

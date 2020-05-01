@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,10 @@ import (
 const yamlWhitespace = " \t"
 
 func parseFile(path string) ([]*unstructured.Unstructured, error) {
+	if !filepath.IsAbs(path) {
+		return nil, errors.New("attempted to read relative path")
+	}
+
 	switch filepath.Ext(path) {
 	case ".yml", ".yaml":
 		contents, err := ioutil.ReadFile(path)

@@ -2,10 +2,12 @@
 package git
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/pkg/errors"
 )
 
@@ -32,10 +34,32 @@ func CheckClean(dir string) error {
 	outBytes, err := cmd.CombinedOutput()
 	out := string(outBytes)
 	if err != nil {
-		return errors.Wrapf(err, "error while checking for clean working directory: failed to call git status on dir %s, output: %s", dir, out)
+		return errors.Wrapf(err, "checking for clean working directory: failed to call git status on dir %s, output: %s", dir, out)
 	}
 	if out != "" {
 		return errors.Errorf("git status returned dirty working tree: %s", out)
 	}
 	return nil
+}
+
+// ListFiles returns a list of all files tracked by git in the specified
+// repo directory.
+func ListFiles(dir cmpath.Path) ([]cmpath.Path, error) {
+	out, err := exec.Command("git", "-C", dir.OSPath(), "ls-files").CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrap(err, string(out))
+	}
+	files := strings.Split(string(out), "\n")
+	var result []cmpath.Path
+	// The output from git ls-files, when split on newline, will include an empty string at the end which we don't want.
+	for _, f := range files[:len(files)-1] {
+		p := filepath.Join(dir.OSPath(), f)
+		abs, err := cmpath.Abs(cmpath.FromOS(p))
+		if err != nil {
+			fmt.Println(f)
+			return nil, err
+		}
+		result = append(result, abs)
+	}
+	return result, nil
 }

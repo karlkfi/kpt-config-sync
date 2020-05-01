@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
@@ -43,15 +42,9 @@ const (
 func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
 	client := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
-	rootDir := path.Join(gitDir, policyDirRelative)
-	glog.Infof("Policy dir: %s", rootDir)
+	glog.Infof("Policy dir: %s", path.Join(gitDir, policyDirRelative))
 
 	var err error
-	rootPath, err := cmpath.NewRoot(cmpath.FromOS(rootDir))
-	if err != nil {
-		return err
-	}
-
 	if err = ValidateInstallation(importer.DefaultCLIOptions); err != nil {
 		return err
 	}
@@ -62,17 +55,21 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	// If SOURCE_FORMAT is invalid, assume hierarchy.
-	sourceFormat := os.Getenv("SOURCE_FORMAT")
+	format := sourceFormat(os.Getenv("SOURCE_FORMAT"))
 	var cfgParser ConfigParser
-	if sourceFormat == "unstructured" {
+	switch format {
+	case sourceFormatUnstructured:
 		// sourceFormat is unstructured, so use the RawParser.
-		cfgParser = NewRawParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
-	} else {
-		cfgParser = NewParser(rootPath, &FileReader{}, importer.DefaultCLIOptions)
+		cfgParser = NewRawParser(&FileReader{}, importer.DefaultCLIOptions)
+	case sourceFormatHierarchy, "":
+		cfgParser = NewParser(&FileReader{}, importer.DefaultCLIOptions)
+		format = sourceFormatHierarchy
+	default:
+		return errors.Errorf("unknown SOURCE_FORMAT type %q", string(format))
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
-	r, err := newReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder)
+	r, err := newReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder, format)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

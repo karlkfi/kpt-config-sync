@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -29,17 +30,19 @@ func ForEachCluster(
 	parser filesystem.ConfigParser,
 	getSyncedCRDs filesystem.GetSyncedCRDs,
 	enableAPIServerChecks bool,
+	rootDir cmpath.Path,
+	files []cmpath.Path,
 	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultFileObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs)
+	defaultFileObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
 	f(defaultCluster, defaultFileObjects, err)
 
-	clusterRegistry := parser.ReadClusterRegistryResources()
+	clusterRegistry := parser.ReadClusterRegistryResources(rootDir, files)
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		fileObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs)
+		fileObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
 		f(cluster.Name, fileObjects, err2)
 	}
 }

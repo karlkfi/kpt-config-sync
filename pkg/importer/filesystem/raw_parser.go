@@ -15,7 +15,6 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
-	root         cmpath.Root
 	reader       Reader
 	clientGetter utildiscovery.ClientGetter
 }
@@ -23,18 +22,23 @@ type rawParser struct {
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(path cmpath.Root, reader Reader, client utildiscovery.ClientGetter) ConfigParser {
+func NewRawParser(reader Reader, client utildiscovery.ClientGetter) ConfigParser {
 	return &rawParser{
-		root:         path,
 		reader:       reader,
 		clientGetter: client,
 	}
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs) ([]ast.FileObject, status.MultiError) {
+func (p *rawParser) Parse(
+	clusterName string,
+	enableAPIServerChecks bool,
+	getSyncedCRDs GetSyncedCRDs,
+	policyDir cmpath.Path,
+	files []cmpath.Path,
+) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
-	fileObjects, errs := p.reader.Read(p.root)
+	fileObjects, errs := p.reader.Read(policyDir, files)
 	if errs != nil {
 		return nil, errs
 	}
@@ -73,7 +77,7 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, getSyn
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
-func (p *rawParser) ReadClusterRegistryResources() []ast.FileObject {
+func (p *rawParser) ReadClusterRegistryResources(root cmpath.Path, files []cmpath.Path) []ast.FileObject {
 	return nil
 }
 

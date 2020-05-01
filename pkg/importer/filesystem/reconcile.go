@@ -3,13 +3,13 @@ package filesystem
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
@@ -38,13 +38,17 @@ var _ reconcile.Reconciler = &reconciler{}
 
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type reconciler struct {
-	clusterName     string
-	gitDir          string
-	policyDir       string
+	clusterName string
+	// gitDir is the absolute path to the git repository.
+	// Usually contains a symlink.
+	gitDir cmpath.Path
+	// policyDir is the relative path to the root policy dir within gitDir.
+	policyDir       cmpath.Path
 	parser          ConfigParser
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
 	decoder         decode.Decoder
+	format          sourceFormat
 	repoClient      *repo.Client
 	cache           cache.Cache
 	// parsedGit is populated when the mounted git repo has successfully been
@@ -102,19 +106,20 @@ func dumpForFiles(objs []ast.FileObject) string {
 // to call configmanagement and other Kubernetes APIs.
 func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
-	decoder decode.Decoder) (*reconciler, error) {
+	decoder decode.Decoder, format sourceFormat) (*reconciler, error) {
 	repoClient := repo.New(client)
 
 	return &reconciler{
 		clusterName:     clusterName,
-		gitDir:          gitDir,
-		policyDir:       policyDir,
+		gitDir:          cmpath.FromOS(gitDir),
+		policyDir:       cmpath.FromOS(policyDir),
 		parser:          parser,
 		client:          client,
 		discoveryClient: discoveryClient,
 		repoClient:      repoClient,
 		cache:           cache,
 		decoder:         decoder,
+		format:          format,
 	}, nil
 }
 
@@ -151,27 +156,32 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	glog.V(4).Infof("Reconciling: %v", request)
 	startTime := time.Now()
 
-	absGitDir, err := filepath.EvalSymlinks(c.gitDir)
+	// Ensure we're working with the absolute path, as most symlinks are relative
+	// paths and filepath.EvalSymlinks does not get the absolute destination.
+	absGitDir, err := cmpath.Abs(c.gitDir)
 	if err != nil {
 		return c.dirError(ctx, startTime, err)
 	}
 
-	_, err = os.Stat(filepath.Join(absGitDir, c.policyDir))
+	// TODO(b/155510326): Make cmpath.Join work on Paths rather than unsafely with
+	//  strings.
+	absPolicyDir, err := cmpath.Abs(cmpath.FromOS(filepath.Join(absGitDir.OSPath(), c.policyDir.OSPath())))
 	if err != nil {
 		return c.dirError(ctx, startTime, err)
 	}
 
 	// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.
-	if request.Name == pollFilesystem && c.appliedGitDir == absGitDir {
+	if request.Name == pollFilesystem && c.appliedGitDir == absGitDir.OSPath() {
 		glog.V(4).Info("no new changes, nothing to do.")
 		return reconcile.Result{}, nil
 	}
-	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absGitDir, c.gitDir)
-	// Unset applied git dir, only set this on complete import success.
+	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absPolicyDir,
+		filepath.Join(c.gitDir.OSPath(), c.policyDir.OSPath()))
+	// Unset applied git dir. Only set this on complete import success.
 	c.appliedGitDir = ""
 
 	// Parse the commit hash from the new directory to use as an import token.
-	token, err := git.CommitHash(absGitDir)
+	token, err := git.CommitHash(absGitDir.OSPath())
 	if err != nil {
 		glog.Warningf("Invalid format for config directory format: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -202,14 +212,26 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// check git status, blow up if we see issues
-	if err := git.CheckClean(absGitDir); err != nil {
+	if err := git.CheckClean(absGitDir.OSPath()); err != nil {
 		glog.Errorf("git check clean returned error: %v", err)
-		LogWalkDirectory(absGitDir)
+		logWalkDirectory(absGitDir.OSPath())
 		return reconcile.Result{}, err
 	}
 
+	glog.Infof("listing policy files in %s", absPolicyDir.OSPath())
+	wantFiles, err := git.ListFiles(absPolicyDir)
+	if err != nil {
+		glog.Error(err)
+		return reconcile.Result{}, errors.Wrap(err, "listing git files")
+	}
+	if c.format == sourceFormatHierarchy {
+		wantFiles = FilterHierarchyFiles(absPolicyDir, wantFiles)
+	}
+
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredFileObjects, mErr := c.parser.Parse(c.clusterName, true, getSyncedCRDs)
+	desiredFileObjects, mErr := c.parser.Parse(
+		c.clusterName, true, getSyncedCRDs, absPolicyDir, wantFiles,
+	)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", mErr)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -217,7 +239,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	gs := makeGitState(absGitDir, desiredFileObjects)
+	gs := makeGitState(absGitDir.OSPath(), desiredFileObjects)
 	if c.parsedGit == nil {
 		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
 	} else if c.parsedGit.rev != gs.rev {
@@ -227,7 +249,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	} else {
 		glog.Errorf("Importer read inconsistent files at git revision %s.\nExpected files hash: %s\nDiff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
 		glog.Errorf("Inconsistent files:\n%s", dumpForFiles(desiredFileObjects))
-		return c.filesystemError(ctx, absGitDir)
+		return c.filesystemError(ctx, absGitDir.OSPath())
 	}
 	c.parsedGit = gs
 
@@ -257,7 +279,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	c.appliedGitDir = absGitDir
+	c.appliedGitDir = absGitDir.OSPath()
 	importer.Metrics.CycleDuration.WithLabelValues("success").Observe(time.Since(startTime).Seconds())
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
