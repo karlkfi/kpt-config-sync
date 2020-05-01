@@ -50,6 +50,7 @@ func FetchLogSources(client coreClient) ([]Readable, []error) {
 }
 
 func logSourcesForNamespace(cs coreClient, name string, listOps metav1.ListOptions) (logSources, error) {
+	fmt.Println("Retrieving " + name + " logs")
 	ns, err := fetchNamespace(cs, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve namespace %v: %v", name, err)

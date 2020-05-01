@@ -91,6 +91,8 @@ var Cmd = &cobra.Command{
 			}
 
 			glog.Fatalf("Partial bug report may have succeeded.  Look for file: %s\n", zipName)
+		} else {
+			fmt.Println("Created file " + zipName)
 		}
 	},
 }
@@ -151,6 +153,8 @@ func (r *reporter) writeReadableToZip(readable bugreport.Readable) error {
 		e := fmt.Errorf("failed to flush writer to zip for file %v:i %v", fileName, err)
 		return e
 	}
+
+	fmt.Println("Wrote file " + fileName)
 
 	return nil
 }
