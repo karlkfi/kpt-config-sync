@@ -21,7 +21,9 @@ teardown() {
 
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
   if "${RAW_NOMOS}"; then
-    apply_file_and_cycle_pods "${MANIFEST_DIR}/repoless-repo.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/source-format_unstructured.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/importer_repoless.yaml"
+    nomos::restart_pods
   else
     kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-repo.yaml"
   fi
@@ -42,7 +44,9 @@ teardown() {
 
 @test "${FILE_NAME}: Syncs correctly with only roles" {
   if "${RAW_NOMOS}"; then
-    apply_file_and_cycle_pods "${MANIFEST_DIR}/repoless-no-ns.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/source-format_unstructured.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/importer_repoless-no-ns.yaml"
+    nomos::restart_pods
   else
     kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-ns.yaml"
   fi
@@ -63,7 +67,9 @@ teardown() {
 
 @test "${FILE_NAME}: Syncs correctly with no policy dir set" {
   if "${RAW_NOMOS}"; then
-    apply_file_and_cycle_pods "${MANIFEST_DIR}/repoless-no-policy-dir.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/source-format_unstructured.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
+    nomos::restart_pods
   else
     kubectl apply -f "${MANIFEST_DIR}/operator-config-git-repoless-no-policy-dir.yaml"
   fi
@@ -84,16 +90,9 @@ teardown() {
 
 function repair_state() {
   if "${RAW_NOMOS}"; then
-    apply_file_and_cycle_pods "${MANIFEST_DIR}/base-configmaps.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/default-configmaps.yaml"
+    nomos::restart_pods
   else
     kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
   fi
-}
-
-function apply_file_and_cycle_pods() {
-  kubectl apply -f "$1"
-
-  kubectl delete pod -n config-management-system -l app=git-importer
-  kubectl delete pod -n config-management-system -l app=monitor
-  kubectl delete pod -n config-management-system -l app=syncer
 }

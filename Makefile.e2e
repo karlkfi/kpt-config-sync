@@ -163,7 +163,7 @@ test-e2e-dev-git: e2e-staging
 raw-nomos-e2e-basic:
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
-		e2e-staging
+		image-e2e-tests
 	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
 		--preclean \
 		--setup \
@@ -177,11 +177,8 @@ raw-nomos-e2e-basic:
 raw-nomos-e2e-dev:
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
-		e2e-staging
+		image-e2e-tests
 	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
-		--preclean \
-		--setup \
-		--test \
 		--raw-nomos \
 		$(E2E_FLAGS)"
 

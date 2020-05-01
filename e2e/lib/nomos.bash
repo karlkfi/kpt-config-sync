@@ -271,3 +271,12 @@ function nomos::repo_synced() {
     return 1
   fi
 }
+
+# Restarts the git-importer, monitor, and syncer pods
+# Without the operator, it's necessary to restart these pods for them to pickup changes
+# to their configMaps
+function nomos::restart_pods() {
+  kubectl delete pod -n config-management-system -l app=git-importer
+  kubectl delete pod -n config-management-system -l app=monitor
+  kubectl delete pod -n config-management-system -l app=syncer
+}

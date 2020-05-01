@@ -115,7 +115,7 @@ endif
 	scripts/append-manifests.sh \
 		e2e/raw-nomos/manifests \
 		${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml \
-		base-configmaps # only this single file (pattern match)
+		default-configmaps # only this single file (pattern match)
 	scripts/append-manifests.sh \
 		$(OUTPUT_DIR)/deployment \
 		${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml
