@@ -70,7 +70,7 @@ spec:
         command: ["gcenode-askpass-sidecar"]
         args: ["--port=9102"]
       - name: git-sync
-        image: gcr.io/config-management-release/git-sync:v3.1.5-gke.1__linux_amd64
+        image: gcr.io/config-management-release/git-sync:v3.1.5-gke.0__linux_amd64
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See
         # pkg/policyimporter/git/git.go to see where we depend on that magic string from git-sync.
         args: ["--root=/repo", "--dest=rev", "--max-sync-failures=30", "--v=5"]
