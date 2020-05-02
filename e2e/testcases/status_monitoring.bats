@@ -74,14 +74,27 @@ function ensure_error_free_repo () {
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 }
 
-@test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
+function namespace_count_matches () {
+  local expected=$1
+  # the safety namespace (see lib/setup.bash) may be terminating, ignore it
+  local actual=""
+  actual=$(kubectl get ns --no-headers | grep -c -v safety)
+  [ "${expected}" = "${actual}" ]
+}
 
-  skip "this is currently flaky, see b/155512273"
+@test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
 
   mkdir -p acme/namespaces
   cp -r /opt/testing/e2e/examples/acme/namespaces acme
   git add -A
   ensure_error_free_repo
+
+  # the safety namespace (see lib/setup.bash) may be terminating, ignore it
+  SYSTEM_NS_COUNT=$(kubectl get ns --no-headers | grep -c -v safety)
+  ACME_NS_COUNT=$(find acme -name namespace.yaml | wc -l)
+  (( EXPECTED_NS_COUNT = SYSTEM_NS_COUNT + ACME_NS_COUNT ))
+  debug::log "Before delete: ensure we have the ${EXPECTED_NS_COUNT} namespaces we expect"
+  wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
 
   debug::log "Delete all the namespaces (oops!)"
   rm -rf "acme/namespaces"
@@ -93,6 +106,9 @@ function ensure_error_free_repo () {
     kubectl get repo repo -o=yaml \
       --output='jsonpath={.status.source.errors[0].errorMessage}'
 
+  debug::log "Before restore: ensure we still have the ${EXPECTED_NS_COUNT} namespaces we expect"
+  wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
+
   debug::log "Restore the namespaces"
   cp -r /opt/testing/e2e/examples/acme/namespaces acme
   git add -A
@@ -101,6 +117,9 @@ function ensure_error_free_repo () {
   debug::log "Expect repo to recover from the error in source message"
   wait::for -t 90 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
+
+  debug::log "After restore: ensure we still have the ${EXPECTED_NS_COUNT} namespaces we expect"
+  wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
 
   setup::git::remove_all acme
 }
