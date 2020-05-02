@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/nomos/pkg/importer"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -22,12 +23,14 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	case ".yml", ".yaml":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
+			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
 		return parseYAMLFile(contents)
 	case ".json":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
+			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
 		return parseJSONFile(contents)

@@ -138,6 +138,7 @@ func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 func (c *reconciler) filesystemError(ctx context.Context, rev string) (reconcile.Result, error) {
 	sErr := status.SourceError.Sprintf("inconsistent files read from mounted git repo at revision %s", rev).Build()
 	c.updateSourceStatus(ctx, &rev, sErr.ToCME())
+	importer.Metrics.Violations.Inc()
 	return reconcile.Result{}, sErr
 }
 
@@ -215,6 +216,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err := git.CheckClean(absGitDir.OSPath()); err != nil {
 		glog.Errorf("git check clean returned error: %v", err)
 		logWalkDirectory(absGitDir.OSPath())
+		importer.Metrics.Violations.Inc()
 		return reconcile.Result{}, err
 	}
 
@@ -254,8 +256,9 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	c.parsedGit = gs
 
 	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
-	if sErr := c.sanityCheck(desiredConfigs, currentConfigs); sErr != nil {
+	if sErr := c.safetyCheck(desiredConfigs, currentConfigs); sErr != nil {
 		c.updateSourceStatus(ctx, &token, sErr.ToCME())
+		importer.Metrics.Violations.Inc()
 		return reconcile.Result{}, sErr
 	}
 
@@ -288,10 +291,10 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	return reconcile.Result{}, nil
 }
 
-// sanityCheck reports if the importer would cause the cluster to drop to zero
+// safetyCheck reports if the importer would cause the cluster to drop to zero
 // NamespaceConfigs from anything other than zero or one on the cluster currently.
 // That is too dangerous of a change to actually carry out.
-func (c *reconciler) sanityCheck(desired, current *namespaceconfig.AllConfigs) status.Error {
+func (c *reconciler) safetyCheck(desired, current *namespaceconfig.AllConfigs) status.Error {
 	if len(desired.NamespaceConfigs) == 0 {
 		count := len(current.NamespaceConfigs)
 		if count > 1 {

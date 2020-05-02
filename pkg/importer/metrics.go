@@ -9,6 +9,7 @@ import (
 var Metrics = struct {
 	CycleDuration    *prometheus.HistogramVec
 	NamespaceConfigs prometheus.Gauge
+	Violations       prometheus.Counter
 }{
 	CycleDuration: prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -28,11 +29,19 @@ var Metrics = struct {
 			Name:      "namespace_configs",
 		},
 	),
+	Violations: prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Help:      "Total number of safety violations that the importer has encountered.",
+			Namespace: configmanagement.MetricsNamespace,
+			Subsystem: "importer",
+			Name:      "violations_total",
+		}),
 }
 
 func init() {
 	prometheus.MustRegister(
 		Metrics.CycleDuration,
 		Metrics.NamespaceConfigs,
+		Metrics.Violations,
 	)
 }
