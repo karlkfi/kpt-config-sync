@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/cmd/nomos/version"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/client/restconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -293,6 +294,27 @@ func (b *BugReporter) FetchCMResources() (rd []Readable, errorList []error) {
 		}
 
 	}
+	return rd, errorList
+}
+
+// FetchCMSystemPods provides a Readable for pods in the config management system and kube-system namespaces
+func (b *BugReporter) FetchCMSystemPods() (rd []Readable, errorList []error) {
+	var namespaces = []string{
+		configmanagement.ControllerNamespace,
+		"kube-system",
+	}
+	for _, ns := range namespaces {
+		rc, err := b.clientSet.CoreV1().RESTClient().Get().AbsPath(path.Join("api/v1/namespaces", ns, "pods")).Stream()
+		if err != nil {
+			errorList = append(errorList, fmt.Errorf("failed to list %s pods: %v", ns, err))
+		} else {
+			rd = append(rd, Readable{
+				ReadCloser: rc,
+				Name:       path.Join(ns, "pods"),
+			})
+		}
+	}
+
 	return rd, errorList
 }
 

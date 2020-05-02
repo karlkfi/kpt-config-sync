@@ -36,6 +36,7 @@ var Cmd = &cobra.Command{
 
 		report.WriteRawInZip(report.FetchLogSources())
 		report.WriteRawInZip(report.FetchCMResources())
+		report.WriteRawInZip(report.FetchCMSystemPods())
 		report.AddNomosStatusToZip()
 		report.AddNomosVersionToZip()
 
