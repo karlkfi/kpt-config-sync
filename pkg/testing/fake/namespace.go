@@ -24,25 +24,25 @@ func NamespaceObject(name string, opts ...core.MetaMutator) *v1.Namespace {
 // namespaceDir is the directory path within namespaces/ to the Namespace. Parses
 //   namespacesDir to determine valid default metadata.Name.
 func Namespace(dir string, opts ...core.MetaMutator) ast.FileObject {
-	relative := cmpath.FromSlash(dir).Join("namespace.yaml")
+	relative := cmpath.RelativeSlash(dir).Join(cmpath.RelativeSlash("namespace.yaml"))
 	return NamespaceAtPath(relative.SlashPath(), opts...)
 }
 
 // NamespaceAtPath returns a Namespace at exactly the passed path.
 func NamespaceAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	name := cmpath.FromSlash(path).Dir().Base()
+	name := cmpath.RelativeSlash(path).Dir().Base()
 	return FileObject(NamespaceObject(name, opts...), path)
 }
 
 // NamespaceUnstructured returns an unstructured Namespace FileObject with the passed opts.
 func NamespaceUnstructured(dir string, opts ...core.MetaMutator) ast.FileObject {
-	relative := cmpath.FromSlash(dir).Join("namespace.yaml")
+	relative := cmpath.RelativeSlash(dir).Join(cmpath.RelativeSlash("namespace.yaml"))
 	return NamespaceUnstructuredAtPath(relative.SlashPath(), opts...)
 }
 
 // NamespaceUnstructuredAtPath returns an unstructured Namespace at exactly the passed path.
 func NamespaceUnstructuredAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	name := cmpath.FromSlash(path).Dir().Base()
+	name := cmpath.RelativeSlash(path).Dir().Base()
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(kinds.Namespace())
 	mutate(u, core.Name(name))

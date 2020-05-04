@@ -30,8 +30,8 @@ func ForEachCluster(
 	parser filesystem.ConfigParser,
 	getSyncedCRDs filesystem.GetSyncedCRDs,
 	enableAPIServerChecks bool,
-	rootDir cmpath.Path,
-	files []cmpath.Path,
+	rootDir cmpath.Absolute,
+	files []cmpath.Absolute,
 	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.

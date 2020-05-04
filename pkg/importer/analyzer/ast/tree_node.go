@@ -11,7 +11,7 @@ import (
 // TreeNode is analogous to a directory in the config hierarchy.
 type TreeNode struct {
 	// Path is the path this node has relative to a nomos Root.
-	cmpath.Path
+	cmpath.Relative
 
 	// The type of the HierarchyNode
 	Type node.Type

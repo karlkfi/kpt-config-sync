@@ -175,7 +175,7 @@ func TestFightDetector(t *testing.T) {
 
 				aboveThreshold := false
 				for _, update := range updates {
-					fight := fd.markUpdated(now.Add(update), ast.NewFileObject(&u, cmpath.FromSlash("")))
+					fight := fd.markUpdated(now.Add(update), ast.NewFileObject(&u, cmpath.RelativeSlash("")))
 					aboveThreshold = aboveThreshold || fight != nil
 				}
 				if tc.wantAboveThreshold[o] && !aboveThreshold {

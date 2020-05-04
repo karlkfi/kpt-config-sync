@@ -16,14 +16,14 @@ import (
 func GenerateUniqueFileNames(extension string, multiCluster bool, objects ...ast.FileObject) []ast.FileObject {
 	duplicates := make(map[string]int, len(objects))
 	for i := range objects {
-		p := cmpath.FromSlash(filename(extension, objects[i], multiCluster, false))
-		objects[i].Path = p
+		p := cmpath.RelativeSlash(filename(extension, objects[i], multiCluster, false))
+		objects[i].Relative = p
 		duplicates[p.SlashPath()]++
 	}
 
 	for i, obj := range objects {
 		if duplicates[obj.SlashPath()] > 1 {
-			objects[i] = ast.NewFileObject(obj.Object, cmpath.FromSlash(filename(extension, obj.Object, multiCluster, true)))
+			objects[i] = ast.NewFileObject(obj.Object, cmpath.RelativeSlash(filename(extension, obj.Object, multiCluster, true)))
 		}
 	}
 

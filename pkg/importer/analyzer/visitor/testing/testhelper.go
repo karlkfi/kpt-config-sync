@@ -348,8 +348,8 @@ func AcmeCluster() []*ast.ClusterObject {
 // AcmeTree returns a tree of nodes for testing.
 func AcmeTree() *ast.TreeNode {
 	return &ast.TreeNode{
-		Type: node.AbstractNamespace,
-		Path: cmpath.FromSlash("namespaces"),
+		Type:     node.AbstractNamespace,
+		Relative: cmpath.RelativeSlash("namespaces"),
 		Objects: ObjectSets(
 			// TODO: remove RoleBinding once flattening transform is written.
 			AdminRoleBinding(),
@@ -357,8 +357,8 @@ func AcmeTree() *ast.TreeNode {
 		),
 		Children: []*ast.TreeNode{
 			{
-				Type: node.Namespace,
-				Path: cmpath.FromSlash("namespaces/frontend"),
+				Type:     node.Namespace,
+				Relative: cmpath.RelativeSlash("namespaces/frontend"),
 				Objects: ObjectSets(
 					PodReaderRoleBinding(),
 					PodReaderRole(),
@@ -366,8 +366,8 @@ func AcmeTree() *ast.TreeNode {
 				),
 			},
 			{
-				Type: node.Namespace,
-				Path: cmpath.FromSlash("namespaces/frontend-test"),
+				Type:     node.Namespace,
+				Relative: cmpath.RelativeSlash("namespaces/frontend-test"),
 				Objects: ObjectSets(
 					DeploymentReaderRoleBinding(),
 					DeploymentReaderRole(),

@@ -31,7 +31,7 @@ func withObjects(objects ...ast.FileObject) ast.BuildOpt {
 		var clusterRegistryObjects []ast.FileObject
 		var namespaceObjects []ast.FileObject
 		for _, object := range objects {
-			switch object.Path.Split()[0] {
+			switch object.Relative.Split()[0] {
 			case repo.SystemDir:
 				systemObjects = append(systemObjects, object)
 			case repo.ClusterRegistryDir:

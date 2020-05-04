@@ -50,7 +50,7 @@ func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...c
 	if clusterName != "" {
 		InCluster(clusterName)(config)
 	}
-	config.Name = cmpath.FromSlash(dir).Base()
+	config.Name = cmpath.RelativeSlash(dir).Base()
 	for _, o := range objects {
 		o.SetNamespace(config.Name)
 		config.AddResource(o)

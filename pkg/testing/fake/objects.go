@@ -157,7 +157,7 @@ func Cluster(opts ...core.MetaMutator) ast.FileObject {
 // ClusterAtPath returns a Cluster at the specified path.
 func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	result := Cluster(opts...)
-	result.Path = cmpath.FromSlash(path)
+	result.Relative = cmpath.RelativeSlash(path)
 	return result
 }
 
@@ -165,7 +165,7 @@ func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 func ConfigManagement(path string) ast.FileObject {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(kinds.ConfigManagement())
-	return ast.NewFileObject(u, cmpath.FromSlash(path))
+	return ast.NewFileObject(u, cmpath.RelativeSlash(path))
 }
 
 // CustomResourceDefinitionV1Beta1Object returns an initialized CustomResourceDefinition.
@@ -277,7 +277,7 @@ func RoleObject(opts ...core.MetaMutator) *rbacv1.Role {
 
 // RoleAtPath returns an initialized Role in a FileObject.
 func RoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return ast.NewFileObject(RoleObject(opts...), cmpath.FromSlash(path))
+	return ast.NewFileObject(RoleObject(opts...), cmpath.RelativeSlash(path))
 }
 
 // Role returns a Role with a default file path.
@@ -290,7 +290,7 @@ func RoleUnstructuredAtPath(path string, opts ...core.MetaMutator) ast.FileObjec
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(kinds.Role())
 	mutate(u, opts...)
-	return ast.NewFileObject(u, cmpath.FromSlash(path))
+	return ast.NewFileObject(u, cmpath.RelativeSlash(path))
 }
 
 // ConfigMapObject returns an initialized ConfigMap.

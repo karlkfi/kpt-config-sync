@@ -23,7 +23,7 @@ func BuildFlatTree(t *testing.T, objects ...ast.FileObject) *ast.FlatRoot {
 
 	result := &ast.FlatRoot{}
 	for _, object := range objects {
-		switch object.Path.Split()[0] {
+		switch object.Relative.Split()[0] {
 		case repo.SystemDir:
 			result.SystemObjects = append(result.SystemObjects, object)
 		case repo.ClusterRegistryDir:

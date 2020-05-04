@@ -121,7 +121,10 @@ func TestRawParser_Parse(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
-			root := cmpath.FromSlash("/")
+			root, err := cmpath.AbsoluteSlash("/")
+			if err != nil {
+				t.Fatal(err)
+			}
 			r := fstesting.NewFakeReader(root, tc.objects)
 			p := filesystem.NewRawParser(r, f)
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
@@ -170,20 +173,23 @@ func TestRawParser_ParseErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
-			root := cmpath.FromSlash("/")
+			root, err := cmpath.AbsoluteSlash("/")
+			if err != nil {
+				t.Fatal(err)
+			}
 			r := fstesting.NewFakeReader(root, tc.objects)
 			p := filesystem.NewRawParser(r, f)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil
 			}
-			_, err := p.Parse("", true, getSyncedCRDs,
+			_, err2 := p.Parse("", true, getSyncedCRDs,
 				root, r.ToFileList())
-			if err == nil {
+			if err2 == nil {
 				t.Fatal("expected error")
 			}
 
-			errs := err.Errors()
+			errs := err2.Errors()
 			if len(errs) != 1 {
 				t.Fatalf("expected only one error, got %+v", errs)
 			}

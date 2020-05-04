@@ -12,26 +12,26 @@ import (
 type builder struct {
 	// root is the root node of the tree
 	root *ast.TreeNode
-	// namespaceDirs is a map of relative UNIX-style directory path to node
-	nodes map[cmpath.Path]*ast.TreeNode
+	// nodes is a map of relative relatives paths from repository root to each TreeNode.
+	nodes map[cmpath.Relative]*ast.TreeNode
 }
 
 // newDirectoryTree returns a new tree generator
 func newDirectoryTree() *builder {
-	return &builder{nodes: map[cmpath.Path]*ast.TreeNode{}}
+	return &builder{nodes: map[cmpath.Relative]*ast.TreeNode{}}
 }
 
-func newNode(p cmpath.Path) *ast.TreeNode {
+func newNode(p cmpath.Relative) *ast.TreeNode {
 	return &ast.TreeNode{
-		Path: p,
-		Type: node.AbstractNamespace,
+		Relative: p,
+		Type:     node.AbstractNamespace,
 	}
 }
 
 // addDir adds a node at the the given path.
-// p is the cmpath.Path of the new ast.TreeNode.
+// dir is the path of the new ast.TreeNode relative to repository root.
 // Recursively adds parent nodes as necessary until it reaches the config hierarchy root.
-func (t *builder) addDir(dir cmpath.Path) {
+func (t *builder) addDir(dir cmpath.Relative) {
 	if t.nodes[dir] != nil {
 		return
 	}

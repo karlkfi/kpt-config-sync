@@ -74,7 +74,14 @@ clusters.`,
 			util.PrintErrAndDie(errors.New("format must argument be 'yaml' or 'json'"))
 		}
 
-		rootDir := cmpath.FromOS(flags.Path.String())
+		abs, err := filepath.Abs(flags.Path.String())
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
+		rootDir, err := cmpath.AbsoluteOS(abs)
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
 
 		files, err := parse.FindFiles(rootDir)
 		if err != nil {

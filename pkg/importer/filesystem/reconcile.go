@@ -39,11 +39,11 @@ var _ reconcile.Reconciler = &reconciler{}
 // Reconciler manages Nomos CRs by importing configs from a filesystem tree.
 type reconciler struct {
 	clusterName string
-	// gitDir is the absolute path to the git repository.
+	// absGitDir is the absolute path to the git repository.
 	// Usually contains a symlink.
-	gitDir cmpath.Path
-	// policyDir is the relative path to the root policy dir within gitDir.
-	policyDir       cmpath.Path
+	absGitDir cmpath.Absolute
+	// policyDir is the relative path to the root policy dir within absGitDir.
+	policyDir       cmpath.Relative
 	parser          ConfigParser
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
@@ -109,10 +109,15 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 	decoder decode.Decoder, format sourceFormat) (*reconciler, error) {
 	repoClient := repo.New(client)
 
+	absGitDir, err := cmpath.AbsoluteOS(gitDir)
+	if err != nil {
+		return nil, err
+	}
+
 	return &reconciler{
 		clusterName:     clusterName,
-		gitDir:          cmpath.FromOS(gitDir),
-		policyDir:       cmpath.FromOS(policyDir),
+		absGitDir:       absGitDir,
+		policyDir:       cmpath.RelativeOS(policyDir),
 		parser:          parser,
 		client:          client,
 		discoveryClient: discoveryClient,
@@ -159,14 +164,12 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Ensure we're working with the absolute path, as most symlinks are relative
 	// paths and filepath.EvalSymlinks does not get the absolute destination.
-	absGitDir, err := cmpath.Abs(c.gitDir)
+	absGitDir, err := c.absGitDir.EvalSymlinks()
 	if err != nil {
 		return c.dirError(ctx, startTime, err)
 	}
 
-	// TODO(b/155510326): Make cmpath.Join work on Paths rather than unsafely with
-	//  strings.
-	absPolicyDir, err := cmpath.Abs(cmpath.FromOS(filepath.Join(absGitDir.OSPath(), c.policyDir.OSPath())))
+	absPolicyDir, err := absGitDir.Join(c.policyDir).EvalSymlinks()
 	if err != nil {
 		return c.dirError(ctx, startTime, err)
 	}
@@ -177,7 +180,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 	glog.Infof("Resolved config dir: %s. Polling config dir: %s", absPolicyDir,
-		filepath.Join(c.gitDir.OSPath(), c.policyDir.OSPath()))
+		filepath.Join(c.absGitDir.OSPath(), c.policyDir.OSPath()))
 	// Unset applied git dir. Only set this on complete import success.
 	c.appliedGitDir = ""
 

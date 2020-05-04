@@ -12,9 +12,12 @@ import (
 
 // nodeContext keeps track of objects during the tree traversal for purposes of inheriting values.
 type nodeContext struct {
-	nodeType  node.Type              // the type of node being processed
-	nodePath  cmpath.Path            // the node's path, used for annotating inherited objects
-	inherited []*ast.NamespaceObject // the objects that are inherited from the node.
+	// nodeType is the type of node being processed.
+	nodeType node.Type
+	// nodePath is the node's relative path to repository root, used for annotating inherited objects.
+	nodePath cmpath.Relative
+	// inherited is the objects that are inherited from the node.
+	inherited []*ast.NamespaceObject
 }
 
 // InheritanceSpec defines the spec for inherited resources.
@@ -53,7 +56,7 @@ func (v *inheritanceVisitor) Error() status.MultiError {
 func (v *inheritanceVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	v.treeContext = append(v.treeContext, nodeContext{
 		nodeType: n.Type,
-		nodePath: n.Path,
+		nodePath: n.Relative,
 	})
 	newNode := v.Copying.VisitTreeNode(n)
 	v.treeContext = v.treeContext[:len(v.treeContext)-1]

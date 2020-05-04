@@ -34,8 +34,8 @@ func (p *rawParser) Parse(
 	clusterName string,
 	enableAPIServerChecks bool,
 	getSyncedCRDs GetSyncedCRDs,
-	policyDir cmpath.Path,
-	files []cmpath.Path,
+	policyDir cmpath.Absolute,
+	files []cmpath.Absolute,
 ) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(policyDir, files)
@@ -77,7 +77,7 @@ func (p *rawParser) Parse(
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
-func (p *rawParser) ReadClusterRegistryResources(root cmpath.Path, files []cmpath.Path) []ast.FileObject {
+func (p *rawParser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
 	return nil
 }
 

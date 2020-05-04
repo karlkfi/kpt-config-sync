@@ -19,10 +19,10 @@ type ConfigParser interface {
 	Parse(clusterName string,
 		enableAPIServerChecks bool,
 		getSyncedCRDs GetSyncedCRDs,
-		policyDir cmpath.Path,
-		files []cmpath.Path,
+		policyDir cmpath.Absolute,
+		files []cmpath.Absolute,
 	) ([]ast.FileObject, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
-	ReadClusterRegistryResources(root cmpath.Path, files []cmpath.Path) []ast.FileObject
+	ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject
 }

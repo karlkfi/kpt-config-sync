@@ -31,7 +31,7 @@ func NewParser() *filesystem.Parser {
 
 // Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
 // Exits early if it encounters parsing/validation errors.
-func Parse(clusterName string, root cmpath.Path, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
+func Parse(clusterName string, root cmpath.Absolute, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
 	p := NewParser()
 
 	if err := filesystem.ValidateInstallation(importer.DefaultCLIOptions); err != nil {

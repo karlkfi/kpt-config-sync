@@ -34,7 +34,7 @@ func mutate(object core.Object, opts ...core.MetaMutator) {
 
 // FileObject is a shorthand for converting to an ast.FileObject.
 func FileObject(object core.Object, path string) ast.FileObject {
-	return ast.NewFileObject(object, cmpath.FromSlash(path))
+	return ast.NewFileObject(object, cmpath.RelativeSlash(path))
 }
 
 // UnstructuredObject initializes an unstructured.Unstructured.

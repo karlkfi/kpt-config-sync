@@ -175,7 +175,10 @@ func (pt Test) RunAll(t *testing.T) {
 				objects = append(pt.DefaultObjects(), objects...)
 			}
 
-			root := cmpath.FromSlash("/")
+			root, err := cmpath.AbsoluteSlash("/")
+			if err != nil {
+				t.Fatal(err)
+			}
 			reader := fstesting.NewFakeReader(root, objects)
 			parser := newTestParser(reader, tc.SyncedCRDs)
 

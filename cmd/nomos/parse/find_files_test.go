@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -39,24 +38,31 @@ func TestListPolicyFiles(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			dir, err := ioutil.TempDir(os.TempDir(), "nomos-git-test")
+			dirP, err := ioutil.TempDir(os.TempDir(), "nomos-git-test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			dir, err := cmpath.AbsoluteOS(dirP)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// Initialize a git repository.
-			out, err := exec.Command("git", "-C", dir, "init").CombinedOutput()
+			out, err := exec.Command("git", "-C", dir.OSPath(), "init").CombinedOutput()
 			if err != nil {
 				t.Fatal(errors.Wrap(err, string(out)))
 			}
 
 			// Add all of the specified files to the repository.
 			for _, f := range tc.files {
-				var err error
+				p := cmpath.RelativeSlash(f)
 				if strings.HasSuffix(f, "/") {
-					err = os.MkdirAll(filepath.Join(dir, cmpath.FromSlash(f).OSPath()), os.ModePerm)
+					err = os.MkdirAll(dir.Join(p).OSPath(), os.ModePerm)
+					if err != nil {
+						t.Fatal(err)
+					}
 				} else {
-					file, err := os.Create(filepath.Join(dir, cmpath.FromSlash(f).OSPath()))
+					file, err := os.Create(dir.Join(p).OSPath())
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -64,13 +70,10 @@ func TestListPolicyFiles(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					out, err = exec.Command("git", "-C", dir, "add", f).CombinedOutput()
+					out, err = exec.Command("git", "-C", dir.OSPath(), "add", f).CombinedOutput()
 					if err != nil {
 						t.Fatal(errors.Wrap(err, string(out)))
 					}
-				}
-				if err != nil {
-					t.Fatal(err)
 				}
 			}
 
@@ -80,13 +83,13 @@ func TestListPolicyFiles(t *testing.T) {
 				out, err = exec.Command("git",
 					"-c", "user.name='Nomos Test'",
 					"-c", "user.email='nomos-team@google.comcmpath'",
-					"-C", dir, "commit", "-m", "add files").CombinedOutput()
+					"-C", dir.OSPath(), "commit", "-m", "add files").CombinedOutput()
 				if err != nil {
 					t.Fatal(errors.Wrap(err, string(out)))
 				}
 			}
 
-			abs, err := cmpath.Abs(cmpath.FromOS(dir))
+			abs, err := dir.EvalSymlinks()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -115,7 +118,7 @@ func TestListPolicyFiles(t *testing.T) {
 				// Since ListFiles returns absolute paths, we have to convert
 				// these to the expected absolute paths that include the randomly-generated
 				// temp diretory.
-				want = append(want, filepath.Join(dir, cmpath.FromSlash(w).OSPath()))
+				want = append(want, dir.Join(cmpath.RelativeSlash(w)).OSPath())
 			}
 
 			var got []string

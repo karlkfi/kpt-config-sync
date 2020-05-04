@@ -37,24 +37,24 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: cmpath.FromSlash("namespaces"),
-					Type: node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path: cmpath.FromSlash("namespaces/foo"),
-							Type: node.AbstractNamespace,
+							Relative: cmpath.RelativeSlash("namespaces/foo"),
+							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Path:    cmpath.FromSlash("namespaces/foo/bar"),
-									Type:    node.AbstractNamespace,
-									Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
+									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
+									Type:     node.AbstractNamespace,
+									Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Path:    cmpath.FromSlash("namespaces/qux"),
-							Type:    node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/qux/role.yaml")}},
+							Relative: cmpath.RelativeSlash("namespaces/qux"),
+							Type:     node.AbstractNamespace,
+							Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/qux/role.yaml")}},
 						},
 					},
 				},
@@ -70,23 +70,23 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: cmpath.FromSlash("namespaces"),
-					Type: node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path: cmpath.FromSlash("namespaces/foo"),
-							Type: node.AbstractNamespace,
+							Relative: cmpath.RelativeSlash("namespaces/foo"),
+							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Path:    cmpath.FromSlash("namespaces/foo/bar"),
-									Type:    node.AbstractNamespace,
-									Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
+									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
+									Type:     node.AbstractNamespace,
+									Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Path: cmpath.FromSlash("namespaces/qux"),
-							Type: node.AbstractNamespace,
+							Relative: cmpath.RelativeSlash("namespaces/qux"),
+							Type:     node.AbstractNamespace,
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.RoleAtPath("namespaces/qux/role.yaml")},
 								{FileObject: fake.RoleBindingAtPath("namespaces/qux/rolebinding.yaml")},
@@ -109,25 +109,25 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: cmpath.FromSlash("namespaces"),
-					Type: node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path:    cmpath.FromSlash("namespaces/foo"),
-							Type:    node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml")}},
+							Relative: cmpath.RelativeSlash("namespaces/foo"),
+							Type:     node.AbstractNamespace,
+							Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml")}},
 							Children: []*ast.TreeNode{
 								{
-									Path:    cmpath.FromSlash("namespaces/foo/bar"),
-									Type:    node.AbstractNamespace,
-									Objects: []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
+									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
+									Type:     node.AbstractNamespace,
+									Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleAtPath("namespaces/foo/bar/role.yaml")}},
 								},
 							},
 						},
 						{
-							Path:    cmpath.FromSlash("namespaces/qux"),
-							Type:    node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.RoleBindingAtPath("namespaces/qux/rolebinding.yaml")}},
+							Relative: cmpath.RelativeSlash("namespaces/qux"),
+							Type:     node.AbstractNamespace,
+							Objects:  []*ast.NamespaceObject{{FileObject: fake.RoleBindingAtPath("namespaces/qux/rolebinding.yaml")}},
 						},
 					},
 				},
@@ -145,24 +145,24 @@ func TestBuilderVisitor(t *testing.T) {
 			},
 			expected: &ast.Root{
 				Tree: &ast.TreeNode{
-					Path: cmpath.FromSlash("namespaces"),
-					Type: node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
-							Path: cmpath.FromSlash("namespaces/foo"),
-							Type: node.AbstractNamespace,
+							Relative: cmpath.RelativeSlash("namespaces/foo"),
+							Type:     node.AbstractNamespace,
 							Children: []*ast.TreeNode{
 								{
-									Path:    cmpath.FromSlash("namespaces/foo/bar"),
-									Type:    node.Namespace,
-									Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar")}},
+									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
+									Type:     node.Namespace,
+									Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar")}},
 								},
 							},
 						},
 						{
-							Path:    cmpath.FromSlash("namespaces/qux"),
-							Type:    node.Namespace,
-							Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux")}},
+							Relative: cmpath.RelativeSlash("namespaces/qux"),
+							Type:     node.Namespace,
+							Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux")}},
 						},
 					},
 				},

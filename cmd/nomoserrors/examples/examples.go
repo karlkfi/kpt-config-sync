@@ -117,8 +117,8 @@ func Generate() map[string][]status.Error {
 	result.add(system.UnsupportedRepoSpecVersion(fake.Repo(fake.RepoVersion("")), "0.0.0"))
 
 	// 1028
-	result.add(syntax.ReservedDirectoryNameError(cmpath.FromSlash("namespaces/" + configmanagement.ControllerNamespace)))
-	result.add(syntax.InvalidDirectoryNameError(cmpath.FromSlash("namespaces/ABC")))
+	result.add(syntax.ReservedDirectoryNameError(cmpath.RelativeSlash("namespaces/" + configmanagement.ControllerNamespace)))
+	result.add(syntax.InvalidDirectoryNameError(cmpath.RelativeSlash("namespaces/ABC")))
 
 	// 1029
 	result.add(nonhierarchical.NamespaceCollisionError("qux",

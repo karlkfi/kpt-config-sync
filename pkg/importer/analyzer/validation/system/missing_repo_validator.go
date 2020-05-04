@@ -27,5 +27,5 @@ var missingRepoError = status.NewErrorBuilder(MissingRepoErrorCode)
 func MissingRepoError() status.Error {
 	return missingRepoError.
 		Sprintf("The %s/ directory must declare a Repo Resource.", repo.SystemDir).
-		BuildWithPaths(cmpath.FromSlash(repo.SystemDir))
+		BuildWithPaths(cmpath.RelativeSlash(repo.SystemDir))
 }

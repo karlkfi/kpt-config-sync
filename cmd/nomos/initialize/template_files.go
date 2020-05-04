@@ -49,5 +49,5 @@ func defaultRepo() (ast.FileObject, error) {
 	unstructured.RemoveNestedField(u.Object, "metadata", "creationTimestamp")
 	unstructured.RemoveNestedField(u.Object, "status")
 
-	return ast.NewFileObject(u, cmpath.FromSlash("system/repo.yaml")), nil
+	return ast.NewFileObject(u, cmpath.RelativeSlash("system/repo.yaml")), nil
 }

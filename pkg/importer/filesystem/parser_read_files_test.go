@@ -181,7 +181,7 @@ spec:
     pods: "10"
 `,
 			},
-			expectObject: pointer(ast.NewFileObject(fake.ResourceQuotaObjectUnstructured(specHardPods, core.Name("pod-quota")), cmpath.FromSlash("namespaces/bar/rq.yaml"))),
+			expectObject: pointer(ast.NewFileObject(fake.ResourceQuotaObjectUnstructured(specHardPods, core.Name("pod-quota")), cmpath.RelativeSlash("namespaces/bar/rq.yaml"))),
 		},
 		{
 			testName: "Namespace dir with Custom Resource",
@@ -206,7 +206,7 @@ spec:
 						"cafePreference": int64(3),
 					},
 				},
-			}, cmpath.FromSlash("namespaces/bar/philo.yaml"))),
+			}, cmpath.RelativeSlash("namespaces/bar/philo.yaml"))),
 		},
 		{
 			testName: "HierarchyConfig with multiple Kinds",
@@ -372,11 +372,14 @@ items:
 				d.createTestFile(k, v, t)
 			}
 
-			rootPath := cmpath.FromOS(d.rootDir)
+			rootPath, err := cmpath.AbsoluteOS(d.rootDir)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			var files []cmpath.Path
+			var files []cmpath.Absolute
 			for f := range tc.testFiles {
-				files = append(files, cmpath.FromSlash(filepath.Join(d.rootDir, f)))
+				files = append(files, rootPath.Join(cmpath.RelativeSlash(f)))
 			}
 
 			r := &filesystem.FileReader{}

@@ -85,7 +85,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
 	}
-	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
+	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
 			glog.Warningf("Fight detected on create of %s.", description(intendedState))
 		}
@@ -103,7 +103,7 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 
 	updated := patch != nil && !isNoOpPatch(patch)
 	if updated {
-		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.FromOS(""))); fight != nil {
+		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
 			if c.fLogger.logFight(time.Now(), fight) {
 				glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
 			}
@@ -120,7 +120,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	if err != nil {
 		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
 	}
-	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.FromOS(""))); fight != nil {
+	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.RelativeSlash(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
 			glog.Warningf("Fight detected on delete of %s.", description(obj))
 		}

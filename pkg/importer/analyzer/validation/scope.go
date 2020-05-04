@@ -63,7 +63,7 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject, errOnU
 		return nil
 	}
 
-	if o.Path.Split()[0] == expectedTopLevelDir {
+	if o.Relative.Split()[0] == expectedTopLevelDir {
 		return nil
 	}
 

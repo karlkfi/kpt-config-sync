@@ -25,7 +25,7 @@ type Reader interface {
 	// files is the list of absolute path to the files to read.
 	// TODO(b/155509765): These two arguments get passed around together a lot
 	//  and have the same lifecycle. Encapsulate in a struct or similar.
-	Read(rootDir cmpath.Path, files []cmpath.Path) ([]ast.FileObject, status.MultiError)
+	Read(rootDir cmpath.Absolute, files []cmpath.Absolute) ([]ast.FileObject, status.MultiError)
 }
 
 // FileReader reads FileObjects from a filesystem.
@@ -33,7 +33,7 @@ type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
-func (r *FileReader) Read(rootDir cmpath.Path, files []cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) Read(rootDir cmpath.Absolute, files []cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	var objs []ast.FileObject
 	var errs status.MultiError
 	for _, f := range files {
@@ -51,7 +51,7 @@ func (r *FileReader) Read(rootDir cmpath.Path, files []cmpath.Path) ([]ast.FileO
 }
 
 // Read implements Reader.
-func (r *FileReader) read(rootDir cmpath.Path, file cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) read(rootDir cmpath.Absolute, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	unstructureds, err := parseFile(file.OSPath())
 	if err != nil {
 		return nil, status.PathWrapError(err, file.OSPath())
@@ -74,7 +74,7 @@ func (r *FileReader) read(rootDir cmpath.Path, file cmpath.Path) ([]ast.FileObje
 // 1) a slice containing a single FileObject, if the passed Unstructured is a valid Kubernetes object;
 // 2) a list of multiple FileObject, if the passed Unstructured was a List type; or
 // 3) an error, if there was a problem parsing the Unstructured.
-func toFileObjects(unstructured runtime.Unstructured, rootDir, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func toFileObjects(unstructured runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	if isList(unstructured) {
 		return flattenList(unstructured, rootDir, path)
 	}
@@ -112,10 +112,10 @@ func toFileObjects(unstructured runtime.Unstructured, rootDir, path cmpath.Path)
 			BuildWithPaths(path)
 	}
 
-	return []ast.FileObject{ast.NewFileObject(obj, cmpath.FromOS(rel))}, nil
+	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(rel))}, nil
 }
 
-func flattenList(list runtime.Unstructured, rootDir, path cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func flattenList(list runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	var errs status.MultiError
 
@@ -186,7 +186,7 @@ func asDefaultVersionedOrOriginal(obj runtime.Unstructured) runtime.Object {
 //
 // TODO(b/154838005): Remove this once we upgrade and don't need to explicitly
 //  check for this.
-func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiError {
+func validateMetadata(u runtime.Unstructured, path cmpath.Absolute) status.MultiError {
 	content := u.UnstructuredContent()
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
 	if !hasMetadata {
@@ -204,12 +204,12 @@ func validateMetadata(u runtime.Unstructured, path cmpath.Path) status.MultiErro
 	invalidAnnotations, err := getInvalidKeys(annotations)
 	errs = status.Append(errs, err)
 	if len(invalidAnnotations) > 0 {
-		errs = status.Append(errs, InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Path: path}, invalidAnnotations))
+		errs = status.Append(errs, InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Absolute: path}, invalidAnnotations))
 	}
 	invalidLabels, err := getInvalidKeys(labels)
 	errs = status.Append(errs, err)
 	if len(invalidLabels) > 0 {
-		errs = status.Append(errs, InvalidLabelValueError(&unstructuredID{Unstructured: u, Path: path}, invalidLabels))
+		errs = status.Append(errs, InvalidLabelValueError(&unstructuredID{Unstructured: u, Absolute: path}, invalidLabels))
 	}
 
 	return errs
@@ -239,7 +239,7 @@ func getInvalidKeys(o interface{}) ([]string, status.MultiError) {
 
 type unstructuredID struct {
 	runtime.Unstructured
-	cmpath.Path
+	cmpath.Absolute
 }
 
 var _ id.Resource = &unstructuredID{}

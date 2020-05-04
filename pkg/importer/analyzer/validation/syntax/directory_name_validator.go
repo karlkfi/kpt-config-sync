@@ -15,10 +15,10 @@ func NewDirectoryNameValidator() ast.Visitor {
 		func(n *ast.TreeNode) status.MultiError {
 			name := n.Base()
 			if !isValid(name) {
-				return InvalidDirectoryNameError(n.Path)
+				return InvalidDirectoryNameError(n.Relative)
 			}
 			if configmanagement.IsControllerNamespace(name) {
-				return ReservedDirectoryNameError(n.Path)
+				return ReservedDirectoryNameError(n.Relative)
 			}
 			return nil
 		})
@@ -37,7 +37,7 @@ const InvalidDirectoryNameErrorCode = "1028"
 var invalidDirectoryNameError = status.NewErrorBuilder(InvalidDirectoryNameErrorCode)
 
 // ReservedDirectoryNameError represents an illegal usage of a reserved name.
-func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
+func ReservedDirectoryNameError(dir cmpath.Relative) status.Error {
 	// TODO(willbeason): Consider moving to Namespace validation instead.
 	//  Strictly speaking, having a directory named "config-management-system" doesn't necessarily mean there are
 	//  any resources declared in that Namespace. That would make this error message clearer.
@@ -48,7 +48,7 @@ func ReservedDirectoryNameError(dir cmpath.Path) status.Error {
 }
 
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
-func InvalidDirectoryNameError(dir cmpath.Path) status.Error {
+func InvalidDirectoryNameError(dir cmpath.Relative) status.Error {
 	return invalidDirectoryNameError.
 		Sprintf(`Directory names MUST be valid Kubernetes Namespace names. Rename %q so that it:
 1. has a length of 63 characters or fewer;

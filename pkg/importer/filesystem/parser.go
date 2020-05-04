@@ -65,8 +65,8 @@ func (p *Parser) Parse(
 	clusterName string,
 	enableAPIServerChecks bool,
 	getSyncedCRDs GetSyncedCRDs,
-	policyDir cmpath.Path,
-	files []cmpath.Path,
+	policyDir cmpath.Absolute,
+	files []cmpath.Absolute,
 ) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
 
@@ -88,7 +88,7 @@ func (p *Parser) Parse(
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) readObjects(root cmpath.Path, files []cmpath.Path) *ast.FlatRoot {
+func (p *Parser) readObjects(root cmpath.Absolute, files []cmpath.Absolute) *ast.FlatRoot {
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(root, files),
 		ClusterRegistryObjects: p.ReadClusterRegistryResources(root, files),
@@ -204,9 +204,9 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 
 // filterTopDir returns the set of file contained in the top directory of root.
 // Assumes all files are within root.
-func filterTopDir(root cmpath.Path, files []cmpath.Path, topDir string) []cmpath.Path {
+func filterTopDir(root cmpath.Absolute, files []cmpath.Absolute, topDir string) []cmpath.Absolute {
 	rootSplits := root.Split()
-	var result []cmpath.Path
+	var result []cmpath.Absolute
 	for _, f := range files {
 		if f.Split()[len(rootSplits)] != topDir {
 			continue
@@ -216,26 +216,26 @@ func filterTopDir(root cmpath.Path, files []cmpath.Path, topDir string) []cmpath
 	return result
 }
 
-func (p *Parser) readSystemResources(root cmpath.Path, files []cmpath.Path) []ast.FileObject {
+func (p *Parser) readSystemResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.SystemDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readNamespaceResources(root cmpath.Path, files []cmpath.Path, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+func (p *Parser) readNamespaceResources(root cmpath.Absolute, files []cmpath.Absolute, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.NamespacesDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readClusterResources(root cmpath.Path, files []cmpath.Path, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+func (p *Parser) readClusterResources(root cmpath.Absolute, files []cmpath.Absolute, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.ClusterDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
-func (p *Parser) ReadClusterRegistryResources(root cmpath.Path, files []cmpath.Path) []ast.FileObject {
+func (p *Parser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.ClusterRegistryDir))
 	p.errors = status.Append(p.errors, errs)
 	return result

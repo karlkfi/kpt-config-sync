@@ -14,7 +14,7 @@ import (
 func metaObject(m *metav1.ObjectMeta) ast.FileObject {
 	d := fake.DeploymentObject()
 	d.ObjectMeta = *m
-	return ast.NewFileObject(d, cmpath.FromSlash("namespaces/foo/object.yaml"))
+	return ast.NewFileObject(d, cmpath.RelativeSlash("namespaces/foo/object.yaml"))
 }
 
 func TestDisallowedFieldsValidator(t *testing.T) {

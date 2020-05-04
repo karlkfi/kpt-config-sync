@@ -9,6 +9,9 @@ import (
 
 // FileContentMap specifies files that should be created as part of a parser
 // test.
+//
+// Keys are slash-delimited paths relative to the repository root.
+// Values are the contents of the file at the specified path.
 type FileContentMap map[string]string
 
 // TestDir creates a new test directory for putting test files in using

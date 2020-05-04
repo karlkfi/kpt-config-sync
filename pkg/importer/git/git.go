@@ -44,17 +44,18 @@ func CheckClean(dir string) error {
 
 // ListFiles returns a list of all files tracked by git in the specified
 // repo directory.
-func ListFiles(dir cmpath.Path) ([]cmpath.Path, error) {
+func ListFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
 	out, err := exec.Command("git", "-C", dir.OSPath(), "ls-files").CombinedOutput()
 	if err != nil {
 		return nil, errors.Wrap(err, string(out))
 	}
 	files := strings.Split(string(out), "\n")
-	var result []cmpath.Path
+	var result []cmpath.Absolute
 	// The output from git ls-files, when split on newline, will include an empty string at the end which we don't want.
 	for _, f := range files[:len(files)-1] {
-		p := filepath.Join(dir.OSPath(), f)
-		abs, err := cmpath.Abs(cmpath.FromOS(p))
+		// The result of git ls-files is paths relative to the current working
+		// directory, so we have to convert these to absolute paths.
+		abs, err := dir.Join(cmpath.RelativeOS(f)).EvalSymlinks()
 		if err != nil {
 			fmt.Println(f)
 			return nil, err

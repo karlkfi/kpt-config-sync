@@ -9,29 +9,29 @@ import (
 
 // NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
 // designated source file.
-func NewFileObject(object core.Object, source cmpath.Path) FileObject {
-	return FileObject{Object: object, Path: source}
+func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
+	return FileObject{Object: object, Relative: source}
 }
 
 // ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
 // path parsed from its annotations.
 func ParseFileObject(o core.Object) *FileObject {
-	srcPath := cmpath.FromSlash(o.GetAnnotations()[v1.SourcePathAnnotationKey])
-	return &FileObject{Object: o, Path: srcPath}
+	srcPath := cmpath.RelativeSlash(o.GetAnnotations()[v1.SourcePathAnnotationKey])
+	return &FileObject{Object: o, Relative: srcPath}
 }
 
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
 	core.Object
 	// Path is the path this object has relative to Nomos Root, if known.
-	cmpath.Path
+	cmpath.Relative
 }
 
 var _ id.Resource = &FileObject{}
 
 // DeepCopy returns a deep copy of the FileObject.
 func (o *FileObject) DeepCopy() FileObject {
-	return FileObject{Object: core.DeepCopy(o.Object), Path: o.Path}
+	return FileObject{Object: core.DeepCopy(o.Object), Relative: o.Relative}
 }
 
 // SystemObject extends FileObject to implement Visitable for cluster scoped objects.

@@ -38,16 +38,16 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 				SystemObjects:          vt.System(),
 				ClusterRegistryObjects: vt.ClusterRegistry(),
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.ObjectSets(
 						vt.AdminRoleBinding(),
 						vt.AcmeResourceQuota(),
 					),
 					Children: []*ast.TreeNode{
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/frontend"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/frontend"),
 							Objects: vt.ObjectSets(
 								vt.PodReaderRoleBinding(),
 								vt.PodReaderRole(),
@@ -57,8 +57,8 @@ var inheritanceVisitorTestcases = vt.MutatingVisitorTestcases{
 							),
 						},
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/frontend-test"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/frontend-test"),
 							Objects: vt.ObjectSets(
 								vt.DeploymentReaderRoleBinding(),
 								vt.DeploymentReaderRole(),

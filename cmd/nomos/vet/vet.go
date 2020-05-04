@@ -3,6 +3,7 @@ package vet
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -51,7 +52,15 @@ returns a non-zero error code if any issues are found.
   nomos vet --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		rootDir, err := cmpath.Abs(cmpath.FromOS(flags.Path.String()))
+		abs, err := filepath.Abs(flags.Path.String())
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
+		rootDir, err := cmpath.AbsoluteOS(abs)
+		if err != nil {
+			util.PrintErrAndDie(err)
+		}
+		rootDir, err = rootDir.EvalSymlinks()
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

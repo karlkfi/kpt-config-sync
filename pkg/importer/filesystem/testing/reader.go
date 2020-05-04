@@ -2,7 +2,6 @@ package testing
 
 import (
 	"os"
-	"path"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -11,21 +10,21 @@ import (
 )
 
 // FakeReader is a fake implementation of filesystem.Reader.
-type FakeReader map[cmpath.Path][]ast.FileObject
+type FakeReader map[cmpath.Absolute][]ast.FileObject
 
 var _ filesystem.Reader = &FakeReader{}
 
 // NewFakeReader initializes a FakeReader from a set of FileObjects.
-func NewFakeReader(root cmpath.Path, objs []ast.FileObject) FakeReader {
+func NewFakeReader(root cmpath.Absolute, objs []ast.FileObject) FakeReader {
 	result := make(FakeReader)
 	for _, obj := range objs {
-		p := cmpath.FromSlash(path.Join(root.SlashPath(), obj.SlashPath()))
+		p := root.Join(obj.Relative)
 		result[p] = append(result[p], obj)
 	}
 	return result
 }
 
-func (r FakeReader) Read(_ cmpath.Path, paths []cmpath.Path) ([]ast.FileObject, status.MultiError) {
+func (r FakeReader) Read(_ cmpath.Absolute, paths []cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	for _, p := range paths {
 		if objs, ok := r[p]; ok {
@@ -38,8 +37,8 @@ func (r FakeReader) Read(_ cmpath.Path, paths []cmpath.Path) ([]ast.FileObject, 
 }
 
 // ToFileList returns the list of files available to the FakeReader.
-func (r FakeReader) ToFileList() []cmpath.Path {
-	var result []cmpath.Path
+func (r FakeReader) ToFileList() []cmpath.Absolute {
+	var result []cmpath.Absolute
 	for p := range r {
 		result = append(result, p)
 	}

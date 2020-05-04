@@ -40,14 +40,14 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate abstract namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 				},
 			},
 		},
@@ -55,12 +55,12 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Children: []*ast.TreeNode{
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/bar"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar")},
 							},
@@ -70,12 +70,12 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Children: []*ast.TreeNode{
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/bar"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
 									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
@@ -89,19 +89,19 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate RoleBinding in abstract namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.AdminRoleBinding(), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(vt.AdminRoleBinding(), cmpath.RelativeSlash("acme/admin.yaml")),
 					),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.AdminRoleBinding(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(vt.AdminRoleBinding(), "acme/admin.yaml"), cmpath.RelativeSlash("acme/admin.yaml")),
 					),
 				},
 			},
@@ -110,12 +110,12 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "annotate RoleBinding in namespace",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Children: []*ast.TreeNode{
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/bar"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar")},
 								{FileObject: fake.RoleAtPath("namespaces/bar/rb.yaml")},
@@ -126,12 +126,12 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.AbstractNamespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Children: []*ast.TreeNode{
 						{
-							Type: node.Namespace,
-							Path: cmpath.FromSlash("namespaces/bar"),
+							Type:     node.Namespace,
+							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
 									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
@@ -147,19 +147,19 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 			Name: "preserve annotations",
 			Input: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.Namespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.Namespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(adminRoleBindingWithAnnotation(), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(adminRoleBindingWithAnnotation(), cmpath.RelativeSlash("acme/admin.yaml")),
 					),
 				},
 			},
 			ExpectOutput: &ast.Root{
 				Tree: &ast.TreeNode{
-					Type: node.Namespace,
-					Path: cmpath.FromSlash("namespaces"),
+					Type:     node.Namespace,
+					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), cmpath.FromSlash("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), cmpath.RelativeSlash("acme/admin.yaml")),
 					),
 				},
 			},

@@ -15,16 +15,20 @@ import (
 //
 // Guaranteed to return the same files as ListFiles in git repo with no
 // uncommitted changes (see tests for findFiles)
-func FindFiles(dir cmpath.Path) ([]cmpath.Path, error) {
+func FindFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
 	out, err := exec.Command("find", dir.OSPath(), "-type", "f", "-not", "-path", "*/\\.git/*").CombinedOutput()
 	if err != nil {
 		return nil, errors.Wrap(err, string(out))
 	}
 	files := strings.Split(string(out), "\n")
-	var result []cmpath.Path
-	// The output from git ls-files, when split on newline, will include an empty string at the end which we don't want.
+	var result []cmpath.Absolute
+	// The output from git find, when split on newline, will include an empty string at the end which we don't want.
 	for _, f := range files[:len(files)-1] {
-		result = append(result, cmpath.FromOS(f))
+		p, err := cmpath.AbsoluteOS(f)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, p)
 	}
 	return result, nil
 }

@@ -13,13 +13,13 @@ import (
 // builderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
 type builderVisitor struct {
 	*visitor.Base
-	objects map[cmpath.Path][]ast.FileObject
+	objects map[cmpath.Relative][]ast.FileObject
 }
 
 // NewBuilderVisitor initializes an builderVisitor with the set of objects to use to
 // populate the config hierarchy tree.
 func NewBuilderVisitor(objects []ast.FileObject) ast.Visitor {
-	v := &builderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Path][]ast.FileObject)}
+	v := &builderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Relative][]ast.FileObject)}
 	v.SetImpl(v)
 
 	for _, object := range objects {
@@ -47,7 +47,7 @@ func (v *builderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 
 // VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
 func (v *builderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
-	for _, object := range v.objects[n.Path] {
+	for _, object := range v.objects[n.Relative] {
 		if object.GroupVersionKind() == kinds.Namespace() {
 			n.Type = node.Namespace
 		}
