@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,6 +24,7 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	case ".yml", ".yaml":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
+			glog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
 			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
@@ -30,6 +32,7 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	case ".json":
 		contents, err := ioutil.ReadFile(path)
 		if err != nil {
+			glog.Errorf("Failed to read file declared in git from mounted filesystem: %s", path)
 			importer.Metrics.Violations.Inc()
 			return nil, err
 		}
