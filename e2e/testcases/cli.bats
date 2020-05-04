@@ -76,8 +76,10 @@ teardown() {
 
 @test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {
   # confirm all the pods are up
-  namespace::check_exists ${KS_NS}
-  resource::check_count -n ${KS_NS} -r pod -c 1 -l "k8s-app=config-management-operator"
+  if ! "${RAW_NOMOS}"; then
+    namespace::check_exists ${KS_NS}
+    resource::check_count -n ${KS_NS} -r pod -c 1 -l "k8s-app=config-management-operator"
+  fi
 
   namespace::check_exists ${CMS_NS}
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=git-importer"
@@ -100,7 +102,9 @@ teardown() {
   check_singleton "raw/${CurrentContext}/config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/config-management-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
+  if ! "${RAW_NOMOS}"; then
+    check_singleton "raw/${CurrentContext}/kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
+  fi
   check_singleton "raw/${CurrentContext}/kube-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "processed/${CurrentContext}/version.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "processed/${CurrentContext}/status.txt" "${BUG_REPORT_DIR_NAME}"
