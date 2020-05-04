@@ -2,13 +2,8 @@ package filesystem_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -18,7 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
@@ -27,39 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
-
-// Tests that don't make sense without literally writing to a hard disk.
-// Or, ones that (for now) would require their own CL just to refactor to not require writing to a
-// hard disk.
-
-type testDir struct {
-	rootDir string
-}
-
-func (d testDir) remove(t *testing.T) {
-	err := os.RemoveAll(d.rootDir)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func (d testDir) createTestFile(path, contents string, t *testing.T) {
-	path = filepath.Join(d.rootDir, filepath.FromSlash(path))
-	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		t.Fatalf("error creating test dir %s: %v", path, err)
-	}
-	if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
-		t.Fatalf("error creating test file %s: %v", path, err)
-	}
-}
-
-func newTestDir(t *testing.T) *testDir {
-	root, err := ioutil.TempDir("", "test_dir")
-	if err != nil {
-		t.Fatalf("Failed to create test dir %v", err)
-	}
-	return &testDir{root}
-}
 
 func aNamespace(name string) string {
 	return fmt.Sprintf(`
@@ -98,27 +60,27 @@ var specHardPods core.MetaMutator = func(o core.Object) {
 func TestFilesystemReader(t *testing.T) {
 	tests := []struct {
 		testName           string
-		testFiles          fstesting.FileContentMap
+		testFiles          ft.FileContentMap
 		expectObject       *ast.FileObject
 		expectedErrorCodes []string
 	}{
 		{
 			testName: "Defining invalid yaml is an error.",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/invalid.yaml": "This is not valid yaml.",
 			},
 			expectedErrorCodes: []string{status.PathErrorCode},
 		},
 		{
 			testName: "Namespace dir with YAML Namespace",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/namespace.yaml": aNamespace("bar"),
 			},
 			expectObject: pointer(fake.NamespaceUnstructured("namespaces/bar")),
 		},
 		{
 			testName: "Namespace dir with JSON Namespace",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/namespace.json": `
 {
   "apiVersion": "v1",
@@ -133,13 +95,13 @@ func TestFilesystemReader(t *testing.T) {
 		},
 		{
 			testName: "Namespaces dir with ignored file",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/ignore": "",
 			},
 		},
 		{
 			testName: "Namespace dir with 2 ignored files",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/namespace.yaml": aNamespace("bar"),
 				"namespaces/bar/ignore":         "",
 				"namespaces/bar/ignore2":        "blah blah blah",
@@ -148,7 +110,7 @@ func TestFilesystemReader(t *testing.T) {
 		},
 		{
 			testName: "Namespace with labels/annotations",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/namespace.yaml": `
 apiVersion: v1
 kind: Namespace
@@ -164,13 +126,13 @@ metadata:
 		},
 		{
 			testName: "Abstract Namespace dir with ignored file",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/ignore": "",
 			},
 		},
 		{
 			testName: "Namespaces dir with single ResourceQuota single file",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/rq.yaml": `
 kind: ResourceQuota
 apiVersion: v1
@@ -185,7 +147,7 @@ spec:
 		},
 		{
 			testName: "Namespace dir with Custom Resource",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/bar/philo.yaml": `
 apiVersion: employees/v1alpha1
 kind: Engineer
@@ -210,7 +172,7 @@ spec:
 		},
 		{
 			testName: "HierarchyConfig with multiple Kinds",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"system/config.yaml": `
 kind: HierarchyConfig
 apiVersion: configmanagement.gke.io/v1
@@ -227,7 +189,7 @@ spec:
 		},
 		{
 			testName: "metadata.annotations with number value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/ns.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -241,7 +203,7 @@ metadata:
 		},
 		{
 			testName: "metadata.annotations with quoted number value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/namespace.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -255,7 +217,7 @@ metadata:
 		},
 		{
 			testName: "metadata.annotations with boolean value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/ns.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -269,7 +231,7 @@ metadata:
 		},
 		{
 			testName: "metadata.annotations with quoted boolean value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/namespace.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -283,7 +245,7 @@ metadata:
 		},
 		{
 			testName: "metadata.labels with boolean value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/ns.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -297,7 +259,7 @@ metadata:
 		},
 		{
 			testName: "metadata.labels with quoted boolean value",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/backend/namespace.yaml": `
 kind: Namespace
 apiVersion: v1
@@ -311,7 +273,7 @@ metadata:
 		},
 		{
 			testName: "parses nested List",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/foo/list.yaml": `
 kind: List
 apiVersion: v1
@@ -329,7 +291,7 @@ items:
 		},
 		{
 			testName: "parses specialized List",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/foo/list.yaml": `
 kind: RoleList
 apiVersion: rbac.authorization.k8s.io/v1
@@ -344,7 +306,7 @@ items:
 		},
 		{
 			testName: "illegal field in list-embedded resource",
-			testFiles: fstesting.FileContentMap{
+			testFiles: ft.FileContentMap{
 				"namespaces/foo/list.yaml": `
 kind: NamespaceList
 apiVersion: v1
@@ -362,28 +324,15 @@ items:
 	}
 	for _, tc := range tests {
 		t.Run(tc.testName, func(t *testing.T) {
-
-			d := newTestDir(t)
-			defer d.remove(t)
-
-			glog.V(6).Infof("Testcase: %+v", spew.Sdump(tc))
-
-			for k, v := range tc.testFiles {
-				d.createTestFile(k, v, t)
-			}
-
-			rootPath, err := cmpath.AbsoluteOS(d.rootDir)
-			if err != nil {
-				t.Fatal(err)
-			}
+			d := ft.NewTestDir(t, ft.DirContents(tc.testFiles))
 
 			var files []cmpath.Absolute
 			for f := range tc.testFiles {
-				files = append(files, rootPath.Join(cmpath.RelativeSlash(f)))
+				files = append(files, d.Root().Join(cmpath.RelativeSlash(f)))
 			}
 
 			r := &filesystem.FileReader{}
-			actual, mErr := r.Read(rootPath, files)
+			actual, mErr := r.Read(d.Root(), files)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 

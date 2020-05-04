@@ -1,7 +1,7 @@
-// Package testing contains fake implementation of the API discovery mechanisms,
+// Package filesystemtest contains fake implementation of the API discovery mechanisms,
 // seeded with the types used in Nomos.  Use NewTestClientGetter first to create
 // a new instance and work from there.
-package testing
+package filesystemtest
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"

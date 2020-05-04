@@ -74,7 +74,7 @@ clusters.`,
 			util.PrintErrAndDie(errors.New("format must argument be 'yaml' or 'json'"))
 		}
 
-		abs, err := filepath.Abs(flags.Path.String())
+		abs, err := filepath.Abs(flags.Path)
 		if err != nil {
 			util.PrintErrAndDie(err)
 		}

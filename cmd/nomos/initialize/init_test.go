@@ -2,84 +2,128 @@ package initialize
 
 import (
 	"os"
-	"path/filepath"
+	"os/exec"
 	"testing"
 
-	"github.com/google/nomos/cmd/nomos/repo"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/cmd/nomos/flags"
+	"github.com/google/nomos/cmd/nomos/vet"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 )
+
+func resetFlags() {
+	// Flags are global state carried over between tests.
+	// Cobra lazily evaluates flags only if they are declared, so unless these
+	// are reset, successive calls to Cmd.Execute aren't guaranteed to be
+	// independent.
+	flags.Path = flags.PathDefault
+	forceValue = false
+}
 
 type testCase struct {
 	name        string
-	root        string
-	before      func(*fstesting.TestDir)
-	expectError bool
+	testDirOpts []ft.TestDirOpt
+	args        []string
+	wantError   bool
 }
 
-func TestInitialization(t *testing.T) {
+var gitInit ft.TestDirOpt = func(t *testing.T, testDir cmpath.Absolute) {
+	output, err := exec.Command("git", "-C", testDir.OSPath(), "init").CombinedOutput()
+	if err != nil {
+		t.Log(output)
+		t.Fatal(err)
+	}
+}
+
+func TestNomosInitWorkingDirectory(t *testing.T) {
+	resetFlags()
+
+	testDir := ft.NewTestDir(t)
+
+	err := os.Chdir(testDir.Root().OSPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Args = []string{""}
+
+	// Run command
+	err = Cmd.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure init-ed directory passes vet.
+	err = vet.Cmd.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestNomosInit(t *testing.T) {
 	testCases := []testCase{
 		{
-			name:   "empty dir",
-			root:   "empty",
-			before: func(dir *fstesting.TestDir) {},
+			name:      "empty dir",
+			wantError: false,
+		},
+		{
+			name: "empty dir with git",
+			testDirOpts: []ft.TestDirOpt{
+				gitInit,
+			},
+			wantError: false,
 		},
 		{
 			name: "dir with file",
-			root: "nonempty",
-			before: func(dir *fstesting.TestDir) {
-				dir.CreateTestFile("somefile.txt", "contents")
+			testDirOpts: []ft.TestDirOpt{
+				ft.FileContents("some-file.txt", "contents"),
 			},
-			expectError: true,
+			wantError: true,
+		},
+		{
+			name: "dir with file and force",
+			testDirOpts: []ft.TestDirOpt{
+				ft.FileContents("some-file.txt", "contents"),
+			},
+			args:      []string{"--force=true"},
+			wantError: false,
 		},
 		{
 			name: "dir with subdir",
-			root: "nonempty",
-			before: func(dir *fstesting.TestDir) {
-				dir.CreateTestFile("somedir/somefile.txt", "contents")
+			testDirOpts: []ft.TestDirOpt{
+				ft.FileContents("parent/some-file.txt", "contents"),
 			},
-			expectError: true,
-		},
-		{
-			name: "nonexistent dir",
-			root: "nonexistent",
-			before: func(dir *fstesting.TestDir) {
-				dir.Remove()
-			},
+			wantError: true,
 		},
 	}
+
+	// Usage information isn't useful in failed tests.
+	Cmd.SilenceUsage = true
 
 	for _, tc := range testCases {
-		runTestCase(t, tc)
-	}
-}
+		t.Run(tc.name, func(t *testing.T) {
+			resetFlags()
 
-func runTestCase(t *testing.T, tc testCase) {
-	testDir := fstesting.NewTestDir(t, tc.root)
-	defer testDir.Remove()
+			testDir := ft.NewTestDir(t, tc.testDirOpts...)
 
-	tc.before(testDir)
+			os.Args = append([]string{
+				"init", // this first argument does nothing, but is required to exist.
+				"--path", testDir.Root().OSPath(),
+			}, tc.args...)
 
-	// Cleanup test dir before starting.
-	err := os.Remove(filepath.Join(testDir.Root(), "tree"))
-	if err != nil && !os.IsNotExist(err) {
-		t.Fatal(err)
-	}
+			// Run command
+			err := Cmd.Execute()
+			if tc.wantError {
+				if err == nil {
+					t.Error("got Initialize() = nil, want err")
+				}
+				return
+			}
 
-	dir := repo.FilePath{}
-	err = dir.Set(testDir.Root())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Run Initialize
-	err = Initialize(dir)
-	if err != nil {
-		if !tc.expectError {
-			t.Error(errors.Wrapf(err, "(Test: %s): did not expect error but got", tc.name))
-		}
-		// Got and expected error
-	} else if tc.expectError {
-		t.Errorf("(Test: %s): expected error but got none", tc.name)
+			if err != nil && !tc.wantError {
+				t.Errorf("got Initialize() = %s, want nil", err)
+				return
+			}
+		})
 	}
 }

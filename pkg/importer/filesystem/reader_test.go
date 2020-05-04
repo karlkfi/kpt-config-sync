@@ -1,36 +1,19 @@
-package filesystem
+package filesystem_test
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
+	"path"
 	"testing"
 
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 )
 
-var tmpBase = filepath.Join(os.TempDir(), "nomos-test")
-
-func tempDir(t *testing.T) string {
-	err := os.MkdirAll(tmpBase, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dir, err := ioutil.TempDir(tmpBase, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return dir
-}
-
 func TestFileReader_Read_NotExist(t *testing.T) {
-	dir, err := cmpath.AbsoluteOS(tempDir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := ft.NewTestDir(t).Root()
 
-	reader := FileReader{}
+	reader := filesystem.FileReader{}
 
 	objs, err := reader.Read(dir, []cmpath.Absolute{dir.Join(cmpath.RelativeSlash("no-exist"))})
 	if err != nil || len(objs) > 0 {
@@ -39,69 +22,47 @@ func TestFileReader_Read_NotExist(t *testing.T) {
 }
 
 func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
-	dir, err := cmpath.AbsoluteOS(tempDir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// If we're root, this test will fail, because we'll have read access anyway.
 	if os.Geteuid() == 0 {
-		t.Skip("Read_BadPermissionsParent will fail running with EUID==0")
+		t.Skipf("%s will fail running with EUID==0", t.Name())
 	}
 
-	tmpFile := dir.Join(cmpath.RelativeSlash("tmp.yaml"))
-	_, err = os.Create(tmpFile.OSPath())
-	if err != nil {
-		t.Fatal(err)
-	}
+	tmpRelative := "tmp.yaml"
 
-	// Change permissions on the root directory so os.Stat returns a
-	// Permission error.
-	err = os.Chmod(dir.OSPath(), 000)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := ft.NewTestDir(t,
+		ft.FileContents(tmpRelative, ""),
+		ft.Chmod(tmpRelative, 0000),
+	).Root()
 
-	reader := FileReader{}
+	reader := filesystem.FileReader{}
 
-	objs, err := reader.Read(dir, []cmpath.Absolute{tmpFile})
+	objs, err := reader.Read(dir, []cmpath.Absolute{
+		dir.Join(cmpath.RelativeSlash(tmpRelative)),
+	})
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on parent dir) = %+v, %v; want nil, error", objs, err)
 	}
 }
 
 func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
-	dir, err := cmpath.AbsoluteOS(tempDir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// If we're root, this test will fail, because we'll have read access anyway.
 	if os.Geteuid() == 0 {
-		t.Skip("Read_BadPermissionsChild will fail running with EUID==0")
+		t.Skipf("%s will fail running with EUID==0", t.Name())
 	}
 
-	// Create subdirectory.
-	subDir := dir.Join(cmpath.RelativeSlash("namespaces"))
-	err = os.Mkdir(subDir.OSPath(), os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tmpFile := dir.Join(cmpath.RelativeSlash("tmp.yaml"))
-	err = ioutil.WriteFile(tmpFile.OSPath(), nil, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Change permissions on the subdirectory so os.Stat returns a
-	// Permission error.
-	err = os.Chmod(tmpFile.OSPath(), 000)
-	if err != nil {
-		t.Fatal(err)
-	}
+	subDir := "namespaces"
+	tmpRelative := path.Join(subDir, "tmp.yaml")
 
-	reader := FileReader{}
+	dir := ft.NewTestDir(t,
+		ft.FileContents(tmpRelative, ""),
+		ft.Chmod(subDir, 0000),
+	).Root()
 
-	objs, err := reader.Read(dir, []cmpath.Absolute{tmpFile})
+	reader := filesystem.FileReader{}
+
+	objs, err := reader.Read(dir, []cmpath.Absolute{
+		dir.Join(cmpath.RelativeSlash(tmpRelative)),
+	})
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on child dir) = %+v, %v; want nil, error", objs, err)
 	}

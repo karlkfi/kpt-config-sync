@@ -11,7 +11,7 @@ import (
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -119,13 +119,13 @@ func TestRawParser_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
+			f := ft.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
 			root, err := cmpath.AbsoluteSlash("/")
 			if err != nil {
 				t.Fatal(err)
 			}
-			r := fstesting.NewFakeReader(root, tc.objects)
+			r := ft.NewFakeReader(root, tc.objects)
 			p := filesystem.NewRawParser(r, f)
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
@@ -171,13 +171,13 @@ func TestRawParser_ParseErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := fstesting.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
+			f := ft.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
 			root, err := cmpath.AbsoluteSlash("/")
 			if err != nil {
 				t.Fatal(err)
 			}
-			r := fstesting.NewFakeReader(root, tc.objects)
+			r := ft.NewFakeReader(root, tc.objects)
 			p := filesystem.NewRawParser(r, f)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {

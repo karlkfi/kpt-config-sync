@@ -11,7 +11,7 @@ import (
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	fstesting "github.com/google/nomos/pkg/importer/filesystem/testing"
+	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -158,7 +158,7 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 
 // newTestParser creates a parser that processes the passed FileObjects.
 func newTestParser(reader filesystem.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
-	f := fstesting.NewTestClientGetter(CRDsToAPIGroupResources(syncedCRDs))
+	f := ft.NewTestClientGetter(CRDsToAPIGroupResources(syncedCRDs))
 
 	return filesystem.NewParser(reader, f)
 }
@@ -179,7 +179,7 @@ func (pt Test) RunAll(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			reader := fstesting.NewFakeReader(root, objects)
+			reader := ft.NewFakeReader(root, objects)
 			parser := newTestParser(reader, tc.SyncedCRDs)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {

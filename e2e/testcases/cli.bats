@@ -33,47 +33,6 @@ teardown() {
   setup::common_teardown
 }
 
-@test "${FILE_NAME}: CLI Vet Foo-corp" {
-  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/foo-corp-example/foo-corp
-}
-
-@test "${FILE_NAME}: CLI Vet Acme" {
-  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme
-}
-
-@test "${FILE_NAME}: CLI Vet Acme Symlink" {
-  debug::log "Ensure directory does not already exist."
-  rm -rf /opt/testing/e2e/examples/acme-symlink
-
-  debug::log "Ensure nomos vet fails on directory that does not exist."
-  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
-
-  debug::log "Add repo via symlink. If this passes, symlink resolution works."
-  ln -s /opt/testing/e2e/examples/acme /opt/testing/e2e/examples/acme-symlink
-  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/acme-symlink
-}
-
-@test "${FILE_NAME}: CLI Init" {
-  rm -rf "${BATS_TMPDIR}/empty-repo"
-  mkdir "${BATS_TMPDIR}/empty-repo"
-  cd "${BATS_TMPDIR}/empty-repo"
-
-  git init
-  ${NOMOS_BIN} init
-  ${NOMOS_BIN} vet
-}
-
-@test "${FILE_NAME}: CLI Vet Multicluster" {
-  debug::log "Expect default to fail since there is a collision in prod-cluster"
-  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision
-
-  debug::log "Expect prod-cluster to fail since there is a collision"
-  wait::for -f -t 5 -- ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision --clusters=prod-cluster
-
-  debug::log "Expect dev-cluster to succeed since there is no collision"
-  ${NOMOS_BIN} vet --path=/opt/testing/e2e/examples/parse-errors/cluster-specific-collision --clusters=dev-cluster
-}
-
 @test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {
   # confirm all the pods are up
   if ! "${RAW_NOMOS}"; then

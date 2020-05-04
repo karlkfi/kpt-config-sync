@@ -1,13 +1,15 @@
 package flags
 
 import (
-	"github.com/google/nomos/cmd/nomos/repo"
 	"github.com/spf13/cobra"
 )
 
 const (
 	// pathFlag is the flag to set the Path of the Nomos directory.
 	pathFlag = "path"
+
+	// PathDefault is the default value of the path flag if unset.
+	PathDefault = "."
 
 	// contextsFlag is the flag name for the Contexts below.
 	contextsFlag = "contexts"
@@ -28,10 +30,7 @@ var (
 	Clusters []string
 
 	// Path says where the Nomos directory is
-	Path = repo.WorkingDirectoryPath
-
-	// Validate determines whether to use a schema to validate the input
-	Validate bool
+	Path string
 
 	// SkipAPIServer directs whether to try to contact the API Server for checks.
 	SkipAPIServer bool
@@ -51,7 +50,7 @@ func AddClusters(cmd *cobra.Command) {
 
 // AddPath adds the --path flag.
 func AddPath(cmd *cobra.Command) {
-	cmd.Flags().Var(&Path, pathFlag,
+	cmd.Flags().StringVar(&Path, pathFlag, PathDefault,
 		`Root directory to use as a Anthos Configuration Management repository.`)
 }
 
