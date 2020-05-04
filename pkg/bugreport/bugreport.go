@@ -1,12 +1,21 @@
 package bugreport
 
 import (
+	"archive/zip"
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/cmd/nomos/version"
+	"github.com/google/nomos/pkg/client/restconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,6 +50,13 @@ type BugReporter struct {
 	cm        *unstructured.Unstructured
 	enabled   map[Product]bool
 	util.ConfigManagementClient
+	k8sContext string
+	// report file
+	outFile       *os.File
+	writer        *zip.Writer
+	name          string
+	ErrorList     []error
+	WritingErrors []error
 }
 
 // New creates a new BugReport
@@ -61,11 +77,33 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 		Version: "v1",
 		Kind:    util.ConfigManagementKind,
 	})
+
+	errorList := []error{}
+	currentk8sContext, err := restconfig.CurrentContextName()
+	if err != nil {
+		errorList = append(errorList, err)
+	}
+
 	if err := c.Get(ctx, types.NamespacedName{Name: util.ConfigManagementName}, cm); err != nil {
 		return nil, err
 	}
-
-	return &BugReporter{ctx: ctx, client: c, clientSet: cs, cm: cm}, nil
+	zipName := getReportName()
+	outFile, err := os.Create(zipName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file %v: %v", zipName, err)
+	}
+	return &BugReporter{
+		client:        c,
+		clientSet:     cs,
+		ctx:           ctx,
+		cm:            cm,
+		k8sContext:    currentk8sContext,
+		outFile:       outFile,
+		writer:        zip.NewWriter(outFile),
+		name:          zipName,
+		ErrorList:     errorList,
+		WritingErrors: []error{},
+	}, nil
 }
 
 // EnabledServices returns the set of services that are enabled
@@ -256,4 +294,116 @@ func (b *BugReporter) FetchCMResources() (rd []Readable, errorList []error) {
 
 	}
 	return rd, errorList
+}
+
+// AddNomosStatusToZip writes `nomos status` to bugreport zip file
+func (b *BugReporter) AddNomosStatusToZip() {
+	if statusRc, err := status.GetStatusReadCloser([]string{b.k8sContext}); err != nil {
+		b.ErrorList = append(b.ErrorList, err)
+	} else if err = b.writeReadableToZip(Readable{
+		Name:       path.Join("processed", b.k8sContext, "status"),
+		ReadCloser: statusRc,
+	}); err != nil {
+		b.WritingErrors = append(b.WritingErrors, err)
+	}
+}
+
+// AddNomosVersionToZip writes `nomos version` to bugreport zip file
+func (b *BugReporter) AddNomosVersionToZip() {
+	if versionRc, err := version.GetVersionReadCloser([]string{b.k8sContext}); err != nil {
+		b.ErrorList = append(b.ErrorList, err)
+	} else if err = b.writeReadableToZip(Readable{
+		Name:       path.Join("processed", b.k8sContext, "version"),
+		ReadCloser: versionRc,
+	}); err != nil {
+		b.WritingErrors = append(b.WritingErrors, err)
+	}
+}
+
+func getReportName() string {
+	now := time.Now()
+	baseName := fmt.Sprintf("bug_report_%v.zip", now.Unix())
+	nameWithPath, err := filepath.Abs(baseName)
+	if err != nil {
+		nameWithPath = baseName
+	}
+
+	return nameWithPath
+}
+
+func (b *BugReporter) writeReadableToZip(readable Readable) error {
+	baseName := filepath.Base(b.name)
+	dirName := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	fileName := filepath.FromSlash(filepath.Join(dirName, readable.Name) + ".txt")
+	f, err := b.writer.Create(fileName)
+	if err != nil {
+		e := fmt.Errorf("failed to create file %v inside zip: %v", fileName, err)
+		return e
+	}
+
+	w := bufio.NewWriter(f)
+	_, err = w.ReadFrom(readable.ReadCloser)
+	if err != nil {
+		e := fmt.Errorf("failed to write file %v to zip: %v", fileName, err)
+		return e
+	}
+
+	err = w.Flush()
+	if err != nil {
+		e := fmt.Errorf("failed to flush writer to zip for file %v:i %v", fileName, err)
+		return e
+	}
+
+	fmt.Println("Wrote file " + fileName)
+
+	return nil
+}
+
+// WriteRawInZip writes raw kubernetes resource to bugreport zip file
+func (b *BugReporter) WriteRawInZip(toBeRead []Readable, errs []error) {
+	if len(errs) > 0 {
+		b.ErrorList = append(b.ErrorList, errs...)
+	}
+
+	for _, readable := range toBeRead {
+		readable.Name = path.Join("raw", b.k8sContext, readable.Name)
+		err := b.writeReadableToZip(readable)
+		if err != nil {
+			b.WritingErrors = append(b.WritingErrors, err)
+		}
+	}
+
+}
+
+// Close closes all file streams
+func (b *BugReporter) Close() {
+
+	err := b.writer.Close()
+	if err != nil {
+		e := fmt.Errorf("failed to close zip writer: %v", err)
+		b.ErrorList = append(b.ErrorList, e)
+	}
+
+	err = b.outFile.Close()
+	if err != nil {
+		e := fmt.Errorf("failed to close zip file: %v", err)
+		b.ErrorList = append(b.ErrorList, e)
+	}
+
+	if len(b.WritingErrors) == 0 {
+		glog.Infof("Bug report written to zip file: %v\n", b.name)
+	} else {
+		glog.Warningf("Some errors returned while writing zip file.  May exist at: %v\n", b.name)
+	}
+	b.ErrorList = append(b.ErrorList, b.WritingErrors...)
+
+	if len(b.ErrorList) > 0 {
+		for _, e := range b.ErrorList {
+			glog.Errorf("Error: %v\n", e)
+		}
+
+		glog.Errorf("Partial bug report may have succeeded.  Look for file: %s\n", b.name)
+	} else {
+		fmt.Println("Created file " + b.name)
+	}
 }
