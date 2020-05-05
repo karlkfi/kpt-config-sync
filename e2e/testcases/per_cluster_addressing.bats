@@ -8,6 +8,7 @@ load "../lib/configmap"
 load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
+load "../lib/nomos"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
@@ -197,8 +198,7 @@ function get_cluster_name() {
   wait::for -f -- kubectl get rolebindings -n backend bob-rolebinding
 
   debug::log "Change the cluster name"
-  wait::for -- kubectl patch configmanagement config-management --type=merge \
-    -p '{"spec":{"clusterName": "test-cluster-env-test"}}'
+  rename_cluster "test-cluster-env-test"
 
   debug::log "Wait for bob-rolebinding to reappear in the backend namespace"
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
@@ -211,8 +211,14 @@ function get_cluster_name() {
 #   $1: new cluster name (string)
 function rename_cluster() {
   local new_name="${1}"
-  kubectl patch configmanagement config-management --type=merge \
-    -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
+  if "${RAW_NOMOS}"; then
+    kubectl patch configmap cluster-name -n config-management-system --type=merge \
+      -p "{\"data\":{\"CLUSTER_NAME\": \"${new_name}\"}}"
+    nomos::restart_pods
+  else
+    kubectl patch configmanagement config-management --type=merge \
+      -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
+  fi
 }
 
 # Renames a cluster under test, and waits until the rename has taken effect.
