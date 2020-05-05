@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: importer
+  namespace: config-management-system
+data:
+  POLICY_DIR: some-nonexistent-policydir

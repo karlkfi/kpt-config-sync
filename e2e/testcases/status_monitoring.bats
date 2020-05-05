@@ -7,6 +7,7 @@ load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
 load "../lib/resource"
+load "../lib/nomos"
 
 readonly YAML_DIR="${BATS_TEST_DIRNAME}/../testdata"
 
@@ -36,26 +37,44 @@ teardown() {
 function ensure_error_free_repo () {
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
-  wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
-    --output='jsonpath={.status.healthy}'
+
+  if "${RAW_NOMOS}"; then
+    wait::for -t 30 -o "" -- kubectl get repo repo \
+      --output='jsonpath={.status.import.errors[0].errorMessage}'
+  else
+    wait::for -t 30 -o "true" -- kubectl get configmanagement config-management \
+      --output='jsonpath={.status.healthy}'
+  fi
 }
 
 @test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
-
   ensure_error_free_repo
+
   debug::log "Setting policyDir to acme"
-  kubectl patch configmanagement config-management \
-    --type=merge \
-    --patch '{"spec":{"git":{"policyDir":"acme"}}}'
+
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
+    nomos::restart_pods
+  else
+    kubectl patch configmanagement config-management \
+      --type=merge \
+      --patch '{"spec":{"git":{"policyDir":"acme"}}}'
+  fi
+
   wait::for -t 10 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.import.errors[0].errorMessage}'
   wait::for -t 10 -o "" -- kubectl get repo repo \
     --output='jsonpath={.status.source.errors[0].errorMessage}'
 
   debug::log "Break the policydir in the repo"
-  kubectl patch configmanagement config-management \
-    --type=merge \
-    --patch '{"spec":{"git":{"policyDir":"some-nonexistent-policydir"}}}'
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/importer_some-nonexistent-policydir.yaml"
+    nomos::restart_pods
+  else
+    kubectl patch configmanagement config-management \
+      --type=merge \
+      --patch '{"spec":{"git":{"policyDir":"some-nonexistent-policydir"}}}'
+  fi
 
   # Increased timeout from initial 30 to 60 for flakiness.  git-importer
   # gets restarted on each object change.
@@ -65,9 +84,14 @@ function ensure_error_free_repo () {
       --output='jsonpath={.status.source.errors[0].errorMessage}'
 
   debug::log "Fix the policydir in the repo"
-  kubectl patch configmanagement config-management \
-    --type=merge \
-    --patch '{"spec":{"git":{"policyDir":"acme"}}}'
+  if "${RAW_NOMOS}"; then
+    kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
+    nomos::restart_pods
+  else
+    kubectl patch configmanagement config-management \
+      --type=merge \
+      --patch '{"spec":{"git":{"policyDir":"acme"}}}'
+  fi
 
   debug::log "Expect repo to recover from the error in source message"
   wait::for -t 90 -o "" -- kubectl get repo repo \
@@ -142,6 +166,10 @@ function token_exists() {
 }
 
 @test "${FILE_NAME}: Version populated in ConfigManagement.status.configManagementVersion" {
+  if "${RAW_NOMOS}"; then
+    skip "not testing unless test includes operator"
+  fi
+
   wait::for -t 60 -- token_exists \
     "configmanagement" "config-management" ".status.configManagementVersion"
 }
