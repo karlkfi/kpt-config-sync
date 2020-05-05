@@ -51,7 +51,7 @@ var invalidNamespaceNameErrorBuilder = status.NewErrorBuilder(InvalidNamespaceNa
 func InvalidNamespaceNameError(resource id.Resource, expected string) status.Error {
 	return invalidNamespaceNameErrorBuilder.
 		Sprintf("A %[1]s MUST declare `metadata.name` that matches the name of its directory.\n\n"+
-			"expected metadata.name: %[2]s",
+			"expected `metadata.name`: %[2]s",
 			node.Namespace, expected).
 		BuildWithResources(resource)
 }

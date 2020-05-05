@@ -94,7 +94,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.IllegalTopLevelNamespaceError(fake.Namespace("namespaces")))
 
 	// 1020
-	result.add(metadata.InvalidNamespaceNameError(fake.Namespace("namespaces/foo", core.Name("")), "foo"))
+	result.add(metadata.InvalidNamespaceNameError(fake.Namespace("namespaces/foo", core.Name("bar")), "foo"))
 
 	// 1021
 	result.add(discovery.UnknownObjectKindError(fake.UnstructuredAtPath(schema.GroupVersionKind{
