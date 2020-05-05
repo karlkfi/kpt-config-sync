@@ -20,7 +20,7 @@ func TestLogSourceGetPathName(t *testing.T) {
 				pod:  *fake.PodObject("myPod", make([]v1.Container, 0)),
 				cont: *fake.ContainerObject("myContainer"),
 			},
-			expectedName: "myNamespace/myPod/myContainer",
+			expectedName: "namespaces/myNamespace/myPod/myContainer",
 		},
 	}
 

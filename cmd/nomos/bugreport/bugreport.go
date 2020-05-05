@@ -34,6 +34,10 @@ var Cmd = &cobra.Command{
 			glog.Fatalf("failed to initialize bug reporter: %v", err)
 		}
 
+		if err = report.Open(); err != nil {
+			glog.Fatal(err)
+		}
+
 		report.WriteRawInZip(report.FetchLogSources())
 		report.WriteRawInZip(report.FetchCMResources())
 		report.WriteRawInZip(report.FetchCMSystemPods())

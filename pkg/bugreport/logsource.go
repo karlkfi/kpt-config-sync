@@ -2,7 +2,7 @@ package bugreport
 
 import (
 	"io"
-	"strings"
+	"path"
 
 	v1 "k8s.io/api/core/v1"
 )
@@ -14,8 +14,7 @@ type logSource struct {
 }
 
 func (l *logSource) pathName() string {
-	tokens := []string{l.ns.Name, l.pod.Name, l.cont.Name}
-	return strings.Join(tokens, "/")
+	return path.Join(Namespace, l.ns.Name, l.pod.Name, l.cont.Name)
 }
 
 func (l *logSource) fetchRcForLogSource(cs coreClient) (io.ReadCloser, error) {

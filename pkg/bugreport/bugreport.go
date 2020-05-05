@@ -3,8 +3,11 @@ package bugreport
 import (
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,6 +15,10 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/cmd/nomos/version"
@@ -41,6 +48,14 @@ func operatorLabelSelectorOrDie() labels.Requirement {
 	}
 	return *ret
 }
+
+// Filepath for bugreport directory
+const (
+	Namespace    = "namespaces"
+	ClusterScope = "cluster"
+	Raw          = "raw"
+	Processed    = "processed"
+)
 
 // BugReporter handles basic data gathering tasks for generating a
 // bug report
@@ -78,7 +93,6 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 		Version: "v1",
 		Kind:    util.ConfigManagementKind,
 	})
-
 	errorList := []error{}
 	currentk8sContext, err := restconfig.CurrentContextName()
 	if err != nil {
@@ -88,20 +102,13 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 	if err := c.Get(ctx, types.NamespacedName{Name: util.ConfigManagementName}, cm); err != nil {
 		return nil, err
 	}
-	zipName := getReportName()
-	outFile, err := os.Create(zipName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create file %v: %v", zipName, err)
-	}
+
 	return &BugReporter{
 		client:        c,
 		clientSet:     cs,
 		ctx:           ctx,
 		cm:            cm,
 		k8sContext:    currentk8sContext,
-		outFile:       outFile,
-		writer:        zip.NewWriter(outFile),
-		name:          zipName,
 		ErrorList:     errorList,
 		WritingErrors: []error{},
 	}, nil
@@ -139,15 +146,14 @@ func (b *BugReporter) EnabledServices() map[Product]bool {
 
 // FetchLogSources provides a set of Readables for all of nomos' container logs
 // TODO: Still need to figure out a good way to test this
-func (b *BugReporter) FetchLogSources() ([]Readable, []error) {
+func (b *BugReporter) FetchLogSources() []Readable {
 	var toBeLogged logSources
-	var errorList []error
 
 	// for each namespace, generate a list of logSources
 	listOps := client.ListOptions{LabelSelector: labels.NewSelector().Add(operatorLabelSelectorOrDie())}
 	sources, err := b.logSourcesForNamespace("kube-system", listOps, nil)
 	if err != nil {
-		errorList = append(errorList, err)
+		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
@@ -156,35 +162,35 @@ func (b *BugReporter) FetchLogSources() ([]Readable, []error) {
 	nsLabels := map[string]string{"configmanagement.gke.io/configmanagement": "config-management"}
 	sources, err = b.logSourcesForProduct(PolicyController, listOps, nsLabels)
 	if err != nil {
-		errorList = append(errorList, err)
+		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
 
 	sources, err = b.logSourcesForProduct(KCC, listOps, nsLabels)
 	if err != nil {
-		errorList = append(errorList, err)
+		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
 
 	sources, err = b.logSourcesForProduct(ConfigSync, listOps, nil)
 	if err != nil {
-		errorList = append(errorList, err)
+		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
 
 	// If we don't have any logs to pull down, report errors and exit
 	if len(toBeLogged) == 0 {
-		return nil, errorList
+		return nil
 	}
 
 	// Convert logSources to Readables
 	toBeRead, errs := toBeLogged.convertLogSourcesToReadables(b.clientSet)
-	errorList = append(errorList, errs...)
+	b.ErrorList = append(b.ErrorList, errs...)
 
-	return toBeRead, errorList
+	return toBeRead
 }
 
 func (b *BugReporter) logSourcesForProduct(product Product, listOps client.ListOptions, nsLabels map[string]string) (logSources, error) {
@@ -272,50 +278,50 @@ func assembleLogSources(ns corev1.Namespace, pods corev1.PodList) logSources {
 }
 
 // FetchCMResources provides a set of Readables for configmanagement resources
-// TODO convert json content to yaml
-func (b *BugReporter) FetchCMResources() (rd []Readable, errorList []error) {
-	base := "apis/configmanagement.gke.io/v1"
-	var resourceLists = []string{
-		"clusterconfigs",
-		"namespaceconfigs",
-		"syncs",
-		"configmanagements",
-		"repos",
+func (b *BugReporter) FetchCMResources() (rd []Readable) {
+	cmLists := map[string]runtime.Object{
+		"clusterconfigs":   &v1.ClusterConfigList{},
+		"namespaceconfigs": &v1.NamespaceConfigList{},
+		"syncs":            &v1.SyncList{},
+		"repos":            &v1.RepoList{},
 	}
 
-	for _, listName := range resourceLists {
-		if raw, err := b.clientSet.CoreV1().RESTClient().Get().AbsPath(path.Join(base, listName)).Stream(); err != nil {
-			errorList = append(errorList, fmt.Errorf("failed to list %s resources: %v", listName, err))
+	for name, cmList := range cmLists {
+		if err := b.client.List(b.ctx, cmList); err != nil {
+			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s resources: %v", name, err))
 		} else {
-			rd = append(rd, Readable{
-				ReadCloser: raw,
-				Name:       path.Join("cluster-scope", "configmanagement", listName),
-			})
+			rd = b.appendPrettyJSON(rd, pathToClusterCmList(name), cmList)
 		}
-
 	}
-	return rd, errorList
+	rd = b.appendPrettyJSON(rd, pathToClusterCmList(util.ConfigManagementResource), b.cm.Object)
+	return rd
+}
+
+func pathToClusterCmList(name string) string {
+	return path.Join(ClusterScope, "configmanagement", name)
 }
 
 // FetchCMSystemPods provides a Readable for pods in the config management system and kube-system namespaces
-func (b *BugReporter) FetchCMSystemPods() (rd []Readable, errorList []error) {
+func (b *BugReporter) FetchCMSystemPods() (rd []Readable) {
 	var namespaces = []string{
 		configmanagement.ControllerNamespace,
 		"kube-system",
 	}
+
 	for _, ns := range namespaces {
-		rc, err := b.clientSet.CoreV1().RESTClient().Get().AbsPath(path.Join("api/v1/namespaces", ns, "pods")).Stream()
+		podList, err := b.clientSet.CoreV1().Pods(ns).List(metav1.ListOptions{})
 		if err != nil {
-			errorList = append(errorList, fmt.Errorf("failed to list %s pods: %v", ns, err))
+			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s pods: %v", ns, err))
 		} else {
-			rd = append(rd, Readable{
-				ReadCloser: rc,
-				Name:       path.Join(ns, "pods"),
-			})
+			rd = b.appendPrettyJSON(rd, pathToNamespacePodList(ns), podList)
 		}
 	}
 
-	return rd, errorList
+	return rd
+}
+
+func pathToNamespacePodList(ns string) string {
+	return path.Join(Namespace, ns, "pods")
 }
 
 // AddNomosStatusToZip writes `nomos status` to bugreport zip file
@@ -323,7 +329,7 @@ func (b *BugReporter) AddNomosStatusToZip() {
 	if statusRc, err := status.GetStatusReadCloser([]string{b.k8sContext}); err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else if err = b.writeReadableToZip(Readable{
-		Name:       path.Join("processed", b.k8sContext, "status"),
+		Name:       path.Join(Processed, b.k8sContext, "status"),
 		ReadCloser: statusRc,
 	}); err != nil {
 		b.WritingErrors = append(b.WritingErrors, err)
@@ -335,7 +341,7 @@ func (b *BugReporter) AddNomosVersionToZip() {
 	if versionRc, err := version.GetVersionReadCloser([]string{b.k8sContext}); err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else if err = b.writeReadableToZip(Readable{
-		Name:       path.Join("processed", b.k8sContext, "version"),
+		Name:       path.Join(Processed, b.k8sContext, "version"),
 		ReadCloser: versionRc,
 	}); err != nil {
 		b.WritingErrors = append(b.WritingErrors, err)
@@ -382,13 +388,10 @@ func (b *BugReporter) writeReadableToZip(readable Readable) error {
 }
 
 // WriteRawInZip writes raw kubernetes resource to bugreport zip file
-func (b *BugReporter) WriteRawInZip(toBeRead []Readable, errs []error) {
-	if len(errs) > 0 {
-		b.ErrorList = append(b.ErrorList, errs...)
-	}
+func (b *BugReporter) WriteRawInZip(toBeRead []Readable) {
 
 	for _, readable := range toBeRead {
-		readable.Name = path.Join("raw", b.k8sContext, readable.Name)
+		readable.Name = path.Join(Raw, b.k8sContext, readable.Name)
 		err := b.writeReadableToZip(readable)
 		if err != nil {
 			b.WritingErrors = append(b.WritingErrors, err)
@@ -428,4 +431,26 @@ func (b *BugReporter) Close() {
 	} else {
 		fmt.Println("Created file " + b.name)
 	}
+}
+
+// Open initializes bugreport zip files
+func (b *BugReporter) Open() (err error) {
+	b.name = getReportName()
+	if b.outFile, err = os.Create(b.name); err != nil {
+		return fmt.Errorf("failed to create file %v: %v", b.name, err)
+	}
+	b.writer = zip.NewWriter(b.outFile)
+	return nil
+}
+
+func (b *BugReporter) appendPrettyJSON(rd []Readable, pathName string, object interface{}) []Readable {
+	if data, err := json.MarshalIndent(object, "", "  "); err != nil {
+		b.ErrorList = append(b.ErrorList, fmt.Errorf("invalid json response from resources %s: %v", pathName, err))
+	} else {
+		rd = append(rd, Readable{
+			ReadCloser: ioutil.NopCloser(bytes.NewReader(data)),
+			Name:       pathName,
+		})
+	}
+	return rd
 }

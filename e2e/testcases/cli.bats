@@ -62,22 +62,22 @@ teardown() {
 
   CurrentContext=$(kubectl config current-context)
   # Check that the correct files are there
-  check_singleton "raw/${CurrentContext}/config-management-system/git-importer.*/git-sync.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/config-management-system/git-importer.*/importer.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/config-management-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/git-importer.*/git-sync.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/git-importer.*/importer.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
   if ! "${RAW_NOMOS}"; then
-    check_singleton "raw/${CurrentContext}/kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
+    check_singleton "raw/${CurrentContext}/namespaces/kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"
   fi
-  check_singleton "raw/${CurrentContext}/kube-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/namespaces/kube-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "processed/${CurrentContext}/version.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "processed/${CurrentContext}/status.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster-scope/configmanagement/clusterconfigs.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster-scope/configmanagement/configmanagements.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster-scope/configmanagement/namespaceconfigs.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster-scope/configmanagement/repos.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster-scope/configmanagement/syncs.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/cluster/configmanagement/clusterconfigs.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/cluster/configmanagement/configmanagements.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/cluster/configmanagement/namespaceconfigs.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/cluster/configmanagement/repos.txt" "${BUG_REPORT_DIR_NAME}"
+  check_singleton "raw/${CurrentContext}/cluster/configmanagement/syncs.txt" "${BUG_REPORT_DIR_NAME}"
 }
 
 function get_bug_report_file_name {
