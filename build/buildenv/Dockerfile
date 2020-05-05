@@ -1,7 +1,7 @@
 #
 # NOTE: When updating this file, you will also need to do the following:
 #
-# 1. Update the BUILDENV_IMAGE_VERSION variable in Makefile
+# 1. Increment the BUILDENV_IMAGE_VERSION variable in Makefile
 # 2. Run the following locally to test the build then push the image so it's
 #    accessible by CI:
 #    $ make build-buildenv && make build && make push-buildenv
@@ -9,7 +9,7 @@
 #    will fail if you have not uploaded your new image.
 #
 
-ARG GOLANG_CONTAINER=golang:1.12.5-alpine
+ARG GOLANG_CONTAINER=golang:1.14.2-alpine
 
 # Environment to build the helper binaries from.
 FROM ${GOLANG_CONTAINER} AS tools-base

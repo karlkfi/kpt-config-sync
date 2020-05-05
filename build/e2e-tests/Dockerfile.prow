@@ -4,7 +4,7 @@
 ARG KUBEKINS="v20200408-52013df6-1.14"
 
 
-FROM golang:1.13-alpine AS build-base
+FROM golang:1.14.2-alpine AS build-base
 RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev unzip
 
 # We don't use or support modules for the time being.
