@@ -41,7 +41,7 @@ spec:
         image: IMAGE_NAME
         command: ["git-importer"]
         args:
-        - "--v=2"
+        - "--v=0"
         ports:
           - containerPort: 8675
             name: metrics-port
@@ -69,7 +69,7 @@ spec:
         image: IMAGE_NAME
         command: ["git-importer"]
         args:
-        - "--v=2"
+        - "--v=0"
         - "--watch-directory=/repo"
         volumeMounts:
           - name: repo

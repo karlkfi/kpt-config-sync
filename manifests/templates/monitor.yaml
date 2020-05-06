@@ -41,7 +41,7 @@ spec:
         image: IMAGE_NAME
         command: ["monitor"]
         args:
-        - "--v=2"
+        - "--v=0"
         ports:
         - containerPort: 8675
           name: metrics-port
