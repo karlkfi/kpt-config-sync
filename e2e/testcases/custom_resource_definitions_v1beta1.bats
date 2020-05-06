@@ -144,6 +144,10 @@ function teardown() {
 }
 
 @test "${FILE_NAME}: cluster-scoped CRD and CR added, CRD updated, and both removed from repo" {
+  debug::log "Adding clusterrole to avoid importer safety check"
+  git::add "${YAML_DIR}/clusterrole-create.yaml" acme/cluster/e2e-test-clusterrole.yaml
+  git::commit
+
   debug::log "Adding CRD and Custom Resource"
   git::add "${YAML_DIR}/customresources/v1beta1_crds/clusteranvil-crd.yaml" acme/cluster/clusteranvil-crd.yaml
   git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml

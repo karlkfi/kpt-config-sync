@@ -125,6 +125,8 @@ setup::git::remove_all() {
   rm -rf "cluster"
   rm -rf "namespaces"
 
+  mkdir "cluster"
+  cp "/opt/testing/e2e/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "cluster/admin-clusterrole.yaml"
   namespace::declare safety
 
   git add -A
