@@ -34,6 +34,12 @@ teardown() {
 }
 
 @test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {
+  if "${RAW_NOMOS}"; then
+    # Trying to run bugreport in RAW_NOMOS mode causes an error
+    # TODO (b/156016424): Decide whether this is a bug or a feature, and adjust this test accordingly.
+    skip "Bugreport requires the configManagement CR to exist, so it doesn't work in RAW_NOMOS mode"
+  fi
+
   # confirm all the pods are up
   if ! "${RAW_NOMOS}"; then
     namespace::check_exists ${KS_NS}
