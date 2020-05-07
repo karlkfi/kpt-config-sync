@@ -306,10 +306,8 @@ func (c *reconciler) safetyCheck(desired, current *namespaceconfig.AllConfigs) s
 		}
 		glog.Warningf("Importer did not parse any NamespaceConfigs in git repo. Cluster currently has %d NamespaceConfigs, so this will proceed.", count)
 	}
-	// desired cluster-scoped resource count
-	dcsrc := len(desired.ClusterConfig.Spec.Resources) + len(desired.CRDClusterConfig.Spec.Resources)
-	if dcsrc == 0 {
-		count := len(current.ClusterConfig.Spec.Resources) + len(current.CRDClusterConfig.Spec.Resources)
+	if desired.ClusterScopedCount() == 0 {
+		count := current.ClusterScopedCount()
 		if count > 1 {
 			glog.Errorf("Importer parsed 0 cluster-scoped resources from mounted git repo but detected %d resources on the cluster. This is a dangerous change, so it will be rejected.", count)
 			return status.EmptySourceError(count, "cluster-scoped resources")

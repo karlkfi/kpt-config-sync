@@ -68,6 +68,22 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -t 60 -- kubectl get sync deployment.apps
 }
 
+@test "${FILE_NAME}: Check that deleting clusterconfigs is recoverable" {
+  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
+  git::commit
+
+  wait::for kubectl get ns dir
+  wait::for -t 30 -- nomos::repo_synced
+
+  debug::log "Forcefully delete clusterconfigs and verify recovery"
+  kubectl delete clusterconfig --all
+
+  git::add /opt/testing/e2e/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
+  git::commit
+
+  wait::for -t 30 -- nomos::cluster_synced
+}
+
 @test "${FILE_NAME}: Namespace garbage collection" {
   mkdir -p acme/namespaces/accounting
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/accounting/namespace.yaml

@@ -64,6 +64,21 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 	return result
 }
 
+// ClusterScopedCount returns the number of cluster-scoped resources in the AllConfigs.
+func (c *AllConfigs) ClusterScopedCount() int {
+	if c == nil {
+		return 0
+	}
+	count := 0
+	if c.ClusterConfig != nil {
+		count += len(c.ClusterConfig.Spec.Resources)
+	}
+	if c.CRDClusterConfig != nil {
+		count += len(c.CRDClusterConfig.Spec.Resources)
+	}
+	return count
+}
+
 // addClusterResource adds a cluster-scoped resource to the AllConfigs.
 func (c *AllConfigs) addClusterResource(o core.Object) {
 	if o.GroupVersionKind().GroupKind() == kinds.CustomResourceDefinition() {

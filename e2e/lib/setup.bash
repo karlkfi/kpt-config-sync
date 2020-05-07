@@ -136,6 +136,8 @@ setup::git::remove_all() {
   cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 60 -- kubectl get ns safety
+  wait::for -t 60 -- kubectl get clusterrole acme-admin
 
   setup::git::remove_all_dangerously "${DIR_NAME}"
 }
@@ -157,6 +159,8 @@ setup::git::remove_all_dangerously() {
   cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
+  wait::for -f -t 60 -- kubectl get namespaceconfig safety
+  wait::for -f -t 60 -- kubectl get clusterrole acme-admin
 }
 
 # Adds the contents of the specified example directory to the git repository's root
