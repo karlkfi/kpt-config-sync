@@ -34,12 +34,6 @@ teardown() {
 }
 
 @test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {
-  if "${RAW_NOMOS}"; then
-    # Trying to run bugreport in RAW_NOMOS mode causes an error
-    # TODO (b/156016424): Decide whether this is a bug or a feature, and adjust this test accordingly.
-    skip "Bugreport requires the configManagement CR to exist, so it doesn't work in RAW_NOMOS mode"
-  fi
-
   # confirm all the pods are up
   if ! "${RAW_NOMOS}"; then
     namespace::check_exists ${KS_NS}
@@ -74,7 +68,9 @@ teardown() {
   check_singleton "processed/${CurrentContext}/version.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "processed/${CurrentContext}/status.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/cluster/configmanagement/clusterconfigs.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/cluster/configmanagement/configmanagements.txt" "${BUG_REPORT_DIR_NAME}"
+  if ! "${RAW_NOMOS}"; then
+    check_singleton "raw/${CurrentContext}/cluster/configmanagement/configmanagements.txt" "${BUG_REPORT_DIR_NAME}"
+  fi
   check_singleton "raw/${CurrentContext}/cluster/configmanagement/namespaceconfigs.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/cluster/configmanagement/repos.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/cluster/configmanagement/syncs.txt" "${BUG_REPORT_DIR_NAME}"

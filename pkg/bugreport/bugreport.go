@@ -15,9 +15,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/kinds"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
@@ -26,6 +25,7 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -100,7 +100,13 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 	}
 
 	if err := c.Get(ctx, types.NamespacedName{Name: util.ConfigManagementName}, cm); err != nil {
-		return nil, err
+		if meta.IsNoMatchError(err) {
+			fmt.Println("kind <<" + util.ConfigManagementKind + ">> is not registered with the cluster")
+		} else if errors.IsNotFound(err) {
+			fmt.Println("ConfigManagement object not found")
+		} else {
+			errorList = append(errorList, err)
+		}
 	}
 
 	return &BugReporter{
@@ -279,21 +285,34 @@ func assembleLogSources(ns corev1.Namespace, pods corev1.PodList) logSources {
 
 // FetchCMResources provides a set of Readables for configmanagement resources
 func (b *BugReporter) FetchCMResources() (rd []Readable) {
-	cmLists := map[string]runtime.Object{
-		"clusterconfigs":   &v1.ClusterConfigList{},
-		"namespaceconfigs": &v1.NamespaceConfigList{},
-		"syncs":            &v1.SyncList{},
-		"repos":            &v1.RepoList{},
+	rl, err := b.clientSet.ServerResourcesForGroupVersion(kinds.ConfigManagement().GroupVersion().String())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			fmt.Println("No configmanagement resources found on cluster")
+			return rd
+		} else if meta.IsNoMatchError(err) {
+			fmt.Println("No match for " + kinds.ConfigManagement().GroupVersion().String())
+			return rd
+		}
+		b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list server configmanagement resources: %v", err))
+		return rd
 	}
-
-	for name, cmList := range cmLists {
-		if err := b.client.List(b.ctx, cmList); err != nil {
-			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s resources: %v", name, err))
-		} else {
-			rd = b.appendPrettyJSON(rd, pathToClusterCmList(name), cmList)
+	for _, apiResource := range rl.APIResources {
+		// Check for empty singular name to skip subresources
+		if apiResource.SingularName != "" {
+			u := &unstructured.UnstructuredList{}
+			u.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   kinds.ConfigManagement().GroupVersion().Group,
+				Kind:    apiResource.SingularName,
+				Version: "v1",
+			})
+			if err := b.client.List(b.ctx, u); err != nil {
+				b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s resources: %v", apiResource.SingularName, err))
+			} else {
+				rd = b.appendPrettyJSON(rd, pathToClusterCmList(apiResource.Name), u)
+			}
 		}
 	}
-	rd = b.appendPrettyJSON(rd, pathToClusterCmList(util.ConfigManagementResource), b.cm.Object)
 	return rd
 }
 
