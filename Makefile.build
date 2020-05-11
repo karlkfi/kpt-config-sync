@@ -1,6 +1,13 @@
 # Included by Makefile.
 # Rules related to building nomos and docker images.
 
+# There's a lot of file manipulation going on in these Make files that works
+# the first time, but doesn't know how to cleanup after itself.  This nukes that
+# directory so we can confidently build without having to overwrite.
+remove-output-dir:
+	@echo "+++ Removing output directory"
+	rm -rf $(OUTPUT_DIR)
+
 ###################################
 # Build environment
 ###################################
