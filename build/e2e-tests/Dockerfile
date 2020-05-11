@@ -87,13 +87,15 @@ RUN apt-get update \
   software-properties-common \
   unzip
 
-# Add Tini
+# Add Tini, note that the gpg variant of pulling tini is problematic on prow.
 ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
-RUN gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
- && gpg --batch --verify /tini.asc /tini
-RUN chmod +x /tini
+#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+#ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
+#RUN gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
+# && gpg --batch --verify /tini.asc /tini
+RUN curl -L https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini > /tini \
+  && echo "93dcc18adc78c65a028a84799ecf8ad40c936fdfc5f2a57b1acda5a8117fa82c  /tini" | sha256sum --check \
+  && chmod +x /tini
 
 ARG UNAME
 ARG UID
