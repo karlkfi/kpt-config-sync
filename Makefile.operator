@@ -96,7 +96,7 @@ endif
 # decoupling the two repositories.  This target seeks to create the artifacts with
 # the same names and filepaths so that it is a drop-in replacement for its predecessor.
 .PHONY: prepare-false-operator
-prepare-false-operator: remove-output-dir push-to-gcr-nomos gen-deployments-for-decoupled-e2e
+prepare-false-operator: push-to-gcr-nomos gen-deployments-for-decoupled-e2e
 ifndef GCR_PREFIX
 	$(error GCR_PREFIX must be set, but is not)
 endif
