@@ -19,28 +19,10 @@ var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
-	watchDirectory    = flag.String("watch-directory", "", "Watch a directory and log filesystem changes instead of running as importer")
-	watchPeriod       = flag.Duration("watch-period", getEnvDuration("WATCH_PERIOD", time.Second), "Period at which to poll the watch directory for changes.")
 )
-
-func getEnvDuration(key string, defaultDuration time.Duration) time.Duration {
-	val := os.Getenv(key)
-	if val == "" {
-		return defaultDuration
-	}
-
-	duration, err := time.ParseDuration(val)
-	if err != nil {
-		glog.Errorf("Failed to parse duration %q from env var %s: %s", val, key, err)
-		return defaultDuration
-	}
-	return duration
-}
 
 // RunImporter encapsulates the main() logic for the importer.
 func RunImporter() {
-	dirWatcher(*watchDirectory)
-
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()
 	if err != nil {
@@ -71,11 +53,11 @@ func RunImporter() {
 	glog.Info("Exiting")
 }
 
-func dirWatcher(dir string) {
+// DirWatcher watches the filesystem of a given directory until a shutdown signal is received.
+func DirWatcher(dir string, period time.Duration) {
 	if dir == "" {
 		return
 	}
 	watcher := dirwatcher.NewWatcher(dir)
-	watcher.Watch(*watchPeriod, signals.SetupSignalHandler())
-	os.Exit(0)
+	watcher.Watch(period, signals.SetupSignalHandler())
 }
