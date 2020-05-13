@@ -35,10 +35,22 @@ This requires a Nomos cluster configured and in your kubeconfig context.
 It's possible to filter which e2e tests are run, rather than running the whole
 suite.
 
-You can restrict by test name: `console make test-e2e-git
-E2E_FLAGS="--test_filter acme"`
+You can restrict by test name:
+```console
+make test-e2e-git E2E_FLAGS="--test_filter acme"
+```
 
-Or by file name: `console make test-e2e-git E2E_FLAGS="--file_filter acme"`
+Or by file name:
+```console
+make test-e2e-git E2E_FLAGS="--file_filter acme"
+```
+
+Also, It is possible to ignore a test while running the make target.
+
+You can ignore a test by test name:
+```console
+make test-e2e-git E2E_FLAGS="--file_ignore_filter acme.bats"
+```                                              
 
 ## E2E Tests with a custom Operator
 
@@ -62,7 +74,9 @@ This pushes your repo's version of the config-management-operator to a user-priv
 in GCR.
 
 Then, return to the main nomos repo and run tests with the `-user` target:
-`console make test-e2e-git-user E2E_FLAGS="--file_filter acme"`
+```console
+make test-e2e-git-user E2E_FLAGS="--file_filter acme"
+```
 
 ## Isolating setup, tests, and cleanup.
 
@@ -111,3 +125,4 @@ Name          | Value                                                           
 --test        | boolean, run e2e tests                                                                                                              | E2E_FLAGS="--test"
 --test_filter | the filter for test cases as a regex                                                                                                | The following filters for a test containing 'backend' E2E_FLAGS="--test_filter backend"
 --timing      | boolean, print timing info for each test. Also turns on --tap.                                                                      | E2E_FLAGS="--timing"
+--file_ignore_filter | the filter for test files as a regex                                                                                     | E2E_FLAGS="--file_ignore_filter acme"
