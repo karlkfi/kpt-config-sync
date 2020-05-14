@@ -3,26 +3,27 @@ package e2e
 import (
 	"context"
 	"flag"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/e2e/cluster"
+	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TestDeclareNamespace (once complete), will run a test that ensures ACM syncs
+// Namespaces to clusters.
 func TestDeclareNamespace(t *testing.T) {
-	// When complete, this will test that ACM successfully syncs a Namespace to
-	// a Kubernetes cluster.
-
 	// TODO(b/1041731): Build Nomos Image + Generate Manifests.
 	//  Set up Git Server.
 	//  Apply Nomos manifests.
 	//  Wait for ConfigManagement CRD to be available + apply CM.
 	//  Set up Git repo initial state.
-	c := cluster.New(t)
+	c := nomostest.New(t)
 
 	ctx := context.Background()
 	fooNs := client.ObjectKey{Name: "foo"}
@@ -59,6 +60,7 @@ func TestMain(m *testing.M) {
 	if !*e2e.E2E {
 		return
 	}
+	rand.Seed(time.Now().UnixNano())
 
 	os.Exit(m.Run())
 }
