@@ -52,7 +52,7 @@ ci-test-e2e-raw:
 		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
 		$(TEST_E2E_RUN_FLAGS) \
 	 " \
-     raw-nomos-e2e
+     test-e2e-raw
 
 # Same target as above, except set up so that it can be ran from a local machine.
 # We must download the gcs prober credentials, as they will not be mounted in.
@@ -65,7 +65,7 @@ ci-test-e2e-raw-local:
      TEST_E2E_RUN_FLAGS="\
 		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
 	 " \
-     raw-nomos-e2e
+     test-e2e-raw
 
 ### Stress tests targets
 

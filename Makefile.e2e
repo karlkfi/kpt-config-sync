@@ -116,6 +116,7 @@ test-e2e-all-ephemeral:
 		  $(TEST_E2E_RUN_FLAGS) \
 		"
 
+
 # Internal test target that passes flags through, should not be ran directly
 # but rather througn one of the options below.
 __internal_test_e2e_git-noflags: e2e-image-all
@@ -157,7 +158,7 @@ test-e2e-dev-git: e2e-staging
 
 # The raw-nomos targets run the e2e tests with the --raw-nomos flag, which installs nomos
 # directly to the cluster instead of using the operator.
-raw-nomos-e2e: banner
+test-e2e-raw: banner
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
 		e2e-image-all
@@ -170,7 +171,7 @@ raw-nomos-e2e: banner
 		$(E2E_FLAGS)"
 
 # This target is for working on specific tests
-raw-nomos-e2e-dev:
+test-e2e-raw-dev:
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
 		image-e2e-tests
