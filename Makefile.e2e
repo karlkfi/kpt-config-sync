@@ -92,7 +92,9 @@ ensure-image-e2e-tests:
 		docker image pull $(E2E_TEST_IMAGE_LATEST); \
 	fi
 
-
+# This is the original target that was hooked up to `test-e2e-all-ephemeral`.
+# Keeping it until we're sure we don't need it.
+#
 # Clean, ensure and run e2e tests for all importers.
 # Clean cluster after running.
 test-e2e-all-nobuild: banner push-to-gcr-nomos e2e-staging ensure-image-e2e-tests
@@ -101,21 +103,42 @@ test-e2e-all-nobuild: banner push-to-gcr-nomos e2e-staging ensure-image-e2e-test
 		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
-test-e2e-all-ephemeral:
-	$(MAKE) test-e2e-all-nobuild \
+# Clean, ensure and run e2e tests for all importers.
+# Clean cluster after running.
+test-e2e-raw-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests
+	$(MAKE) \
+		OPERATOR_TARGET=prepare-false-operator \
+		e2e-staging
+	$(MAKE) test-e2e-run-git \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="\
-		  --timing \
-		  --create-ssh-key \
-		  --set-admin-role-binding=false \
-		  $(E2E_FLAGS) \
+			--preclean \
+			--setup \
+			--test \
+			--clean \
+			--raw-nomos \
+			$(E2E_FLAGS)" \
+		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
+
+# Leaving this original one in place to verify that the changes will pass CI
+# Otherwise, I could break CI for everyone.  Once that's in place, I'll update
+# the Prow jobs and delete this.
+test-e2e-all-ephemeral: test-e2e-raw-ephemeral
+
+test-e2e-raw-ephemeral:
+	$(MAKE) test-e2e-raw-nobuild \
+		$(E2E_PARAMS) \
+		E2E_FLAGS="\
+			--timing \
+			--create-ssh-key \
+			--set-admin-role-binding=false \
+			$(E2E_FLAGS) \
 		" \
 		TEST_E2E_RUN_FLAGS="\
-	      --hermetic \
-		  --use-ephemeral-cluster \
-		  $(TEST_E2E_RUN_FLAGS) \
+			--hermetic \
+			--use-ephemeral-cluster \
+			$(TEST_E2E_RUN_FLAGS) \
 		"
-
 
 # Internal test target that passes flags through, should not be ran directly
 # but rather througn one of the options below.
