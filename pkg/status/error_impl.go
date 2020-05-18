@@ -1,7 +1,7 @@
 package status
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 // baseErrorImpl represents a root error around which more complex errors are built.

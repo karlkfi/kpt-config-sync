@@ -3,7 +3,7 @@ package namespaceconfig
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/cache"

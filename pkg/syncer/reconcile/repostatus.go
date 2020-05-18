@@ -159,9 +159,7 @@ func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs 
 	s.unreconciledCommits[commitHash] = append(s.unreconciledCommits[commitHash], name)
 	s.configs[name] = configState{commit: commitHash, errors: errs}
 	// If we previously marked the commit as reconciled for a different config, remove the entry.
-	if _, ok := s.reconciledCommits[commitHash]; ok {
-		delete(s.reconciledCommits, commitHash)
-	}
+	delete(s.reconciledCommits, commitHash)
 }
 
 // merge updates the given RepoStatus with current configs and commits in the syncState.

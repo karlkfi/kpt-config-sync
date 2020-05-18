@@ -40,7 +40,7 @@ func pointer(o ast.FileObject) *ast.FileObject {
 var specHardPods core.MetaMutator = func(o core.Object) {
 	u, ok := o.(*unstructured.Unstructured)
 	if ok {
-		unstructured.SetNestedStringMap(u.Object, map[string]string{
+		_ = unstructured.SetNestedStringMap(u.Object, map[string]string{
 			"pods": "10",
 		}, "spec", "hard")
 		return

@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"

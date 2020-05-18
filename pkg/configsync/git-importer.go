@@ -11,7 +11,7 @@ import (
 	"github.com/google/nomos/pkg/importer/dirwatcher"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 var (

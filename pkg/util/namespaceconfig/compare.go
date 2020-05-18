@@ -2,7 +2,7 @@ package namespaceconfig
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/compare"
 	"k8s.io/apimachinery/pkg/api/resource"

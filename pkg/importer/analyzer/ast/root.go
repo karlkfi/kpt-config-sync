@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 )
 
 // Root represents a hierarchy of declared configs, settings for how those configs will be

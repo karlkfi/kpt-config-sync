@@ -22,8 +22,7 @@ import (
 )
 
 func deployment(deploymentStrategy appsv1.DeploymentStrategyType, opts ...core.MetaMutator) *appsv1.Deployment {
-	mutators := append([]core.MetaMutator{core.Namespace(eng)})
-	mutators = append(mutators, opts...)
+	mutators := append([]core.MetaMutator{core.Namespace(eng)}, opts...)
 	result := fake.DeploymentObject(mutators...)
 	result.Spec.Strategy.Type = deploymentStrategy
 	return result

@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {

@@ -100,7 +100,7 @@ func (c *ctBuilder) annotateReconciling(msg string) *ctBuilder {
 }
 
 func (c *ctBuilder) created(cr bool) *ctBuilder {
-	unstructured.SetNestedField(c.Object, cr, "status", "created")
+	_ = unstructured.SetNestedField(c.Object, cr, "status", "created")
 	return c
 }
 
@@ -111,7 +111,7 @@ func (c *ctBuilder) generation(g int64) *ctBuilder {
 
 func (c *ctBuilder) byPod(generation int64, errMsgs ...string) *ctBuilder {
 	bps, saveChanges := newByPodStatus(c.Object)
-	unstructured.SetNestedField(bps, generation, "observedGeneration")
+	_ = unstructured.SetNestedField(bps, generation, "observedGeneration")
 
 	if len(errMsgs) > 0 {
 		var statusErrs []interface{}
@@ -121,7 +121,7 @@ func (c *ctBuilder) byPod(generation int64, errMsgs ...string) *ctBuilder {
 				"message": msg,
 			})
 		}
-		unstructured.SetNestedSlice(bps, statusErrs, "errors")
+		_ = unstructured.SetNestedSlice(bps, statusErrs, "errors")
 	}
 
 	saveChanges()
@@ -140,10 +140,10 @@ func newByPodStatus(obj map[string]interface{}) (map[string]interface{}, func())
 
 	byPodStatus := map[string]interface{}{}
 	id := len(bpArr)
-	unstructured.SetNestedField(byPodStatus, fmt.Sprintf("%d", id), "id")
+	_ = unstructured.SetNestedField(byPodStatus, fmt.Sprintf("%d", id), "id")
 	bpArr = append(bpArr, byPodStatus)
 
 	return byPodStatus, func() {
-		unstructured.SetNestedSlice(obj, bpArr, "status", "byPod")
+		_ = unstructured.SetNestedSlice(obj, bpArr, "status", "byPod")
 	}
 }

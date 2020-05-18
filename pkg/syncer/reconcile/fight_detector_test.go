@@ -129,38 +129,38 @@ func TestFightDetector(t *testing.T) {
 		{
 			name: "one object below threshold",
 			updates: map[gknn][]time.Duration{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
 			},
 		},
 		{
 			name: "one object above threshold",
 			updates: map[gknn][]time.Duration{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}: sixUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "admin"}: sixUpdatesAtOnce,
 			},
 			wantAboveThreshold: map[gknn]bool{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}: true,
+				{gk: roleGK, namespace: "foo", name: "admin"}: true,
 			},
 		},
 		{
 			name: "four objects objects below threshold",
 			updates: map[gknn][]time.Duration{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}:        fourUpdatesAtOnce,
-				gknn{gk: roleBindingGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
-				gknn{gk: roleGK, namespace: "bar", name: "admin"}:        fourUpdatesAtOnce,
-				gknn{gk: roleGK, namespace: "foo", name: "user"}:         fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "admin"}:        fourUpdatesAtOnce,
+				{gk: roleBindingGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "bar", name: "admin"}:        fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "user"}:         fourUpdatesAtOnce,
 			},
 		},
 		{
 			name: "two of four objects objects above threshold",
 			updates: map[gknn][]time.Duration{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}:        sixUpdatesAtOnce,
-				gknn{gk: roleBindingGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
-				gknn{gk: roleGK, namespace: "bar", name: "admin"}:        fourUpdatesAtOnce,
-				gknn{gk: roleGK, namespace: "foo", name: "user"}:         sixUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "admin"}:        sixUpdatesAtOnce,
+				{gk: roleBindingGK, namespace: "foo", name: "admin"}: fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "bar", name: "admin"}:        fourUpdatesAtOnce,
+				{gk: roleGK, namespace: "foo", name: "user"}:         sixUpdatesAtOnce,
 			},
 			wantAboveThreshold: map[gknn]bool{
-				gknn{gk: roleGK, namespace: "foo", name: "admin"}: true,
-				gknn{gk: roleGK, namespace: "foo", name: "user"}:  true,
+				{gk: roleGK, namespace: "foo", name: "admin"}: true,
+				{gk: roleGK, namespace: "foo", name: "user"}:  true,
 			},
 		},
 	}

@@ -4,7 +4,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"

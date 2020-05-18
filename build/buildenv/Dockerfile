@@ -25,14 +25,6 @@ ENV GOCACHE=/go/cache
 # Build static binaries
 ENV CGO_ENABLED=0
 
-# gometalinter is a program that runs all go linters.
-ARG GOMETALINTERV2_RELEASE="102ac984005d45456a7e3ae6dc94ebcd95c2bb19"
-ARG GOMETALINTERV2_REPO="gopkg.in/alecthomas/gometalinter.v2"
-RUN go get ${GOMETALINTERV2_REPO}
-WORKDIR /go/src/${GOMETALINTERV2_REPO}
-RUN git checkout ${GOMETALINTERV2_RELEASE} && \
-    gometalinter.v2 --install
-
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3
 # --> 1.3.0

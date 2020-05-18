@@ -42,7 +42,7 @@ func TestDecodeResources(t *testing.T) {
 				},
 			},
 			want: map[schema.GroupVersionKind][]*unstructured.Unstructured{
-				schema.GroupVersionKind{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
+				{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
 					&unstructured.Unstructured{
 						Object: map[string]interface{}{
 							"kind":       "ObjectTest",
@@ -71,7 +71,7 @@ func TestDecodeResources(t *testing.T) {
 				},
 			},
 			want: map[schema.GroupVersionKind][]*unstructured.Unstructured{
-				schema.GroupVersionKind{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
+				{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
 					&unstructured.Unstructured{
 						Object: map[string]interface{}{
 							"kind":       "ObjectTest",
@@ -111,7 +111,7 @@ func TestDecodeResources(t *testing.T) {
 				},
 			},
 			want: map[schema.GroupVersionKind][]*unstructured.Unstructured{
-				schema.GroupVersionKind{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
+				{Group: "", Version: "v1test", Kind: "ObjectTest"}: {
 					&unstructured.Unstructured{
 						Object: map[string]interface{}{
 							"kind":       "ObjectTest",
@@ -119,7 +119,7 @@ func TestDecodeResources(t *testing.T) {
 						},
 					},
 				},
-				schema.GroupVersionKind{Group: "foo.com", Version: "v1", Kind: "Bar"}: {
+				{Group: "foo.com", Version: "v1", Kind: "Bar"}: {
 					&unstructured.Unstructured{
 						Object: map[string]interface{}{
 							"kind":       "Bar",

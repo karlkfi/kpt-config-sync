@@ -2,7 +2,7 @@
 package meta
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/crd"
 	"github.com/google/nomos/pkg/syncer/sync"
 	"sigs.k8s.io/controller-runtime/pkg/event"

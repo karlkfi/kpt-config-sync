@@ -3,7 +3,7 @@ package discovery
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/go-cmp/cmp"
@@ -54,8 +54,8 @@ func TestAPIInfo_GroupVersionKinds(t *testing.T) {
 				},
 			},
 			expected: map[schema.GroupVersionKind]bool{
-				schema.GroupVersionKind{Group: "rbac", Version: "v1", Kind: "Role"}: true,
-				schema.GroupVersionKind{Group: "rbac", Version: "v2", Kind: "Role"}: true,
+				{Group: "rbac", Version: "v1", Kind: "Role"}: true,
+				{Group: "rbac", Version: "v2", Kind: "Role"}: true,
 			},
 		},
 	}

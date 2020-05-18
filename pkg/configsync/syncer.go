@@ -12,7 +12,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/meta"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 var (

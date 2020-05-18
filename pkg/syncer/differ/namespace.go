@@ -2,7 +2,7 @@ package differ
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 

@@ -40,7 +40,10 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a FooConstraint that is not yet established.
 	cm.nextGet = constraintCRD("FooConstraint", false)
-	cr.Reconcile(request("foo"))
+	_, err := cr.Reconcile(request("foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	gvks = cr.establishedConstraints()
 	if len(gvks) != 0 {
 		t.Errorf("want empty GVK map; got %v", gvks)
@@ -48,7 +51,10 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a random CRD that is established (but should be ignored).
 	cm.nextGet = randomCRD("Anvil", true)
-	cr.Reconcile(request("anvil"))
+	_, err = cr.Reconcile(request("anvil"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	gvks = cr.establishedConstraints()
 	if len(gvks) != 0 {
 		t.Errorf("want empty GVK map; got %v", gvks)
@@ -56,7 +62,10 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a BarConstraint that is established.
 	cm.nextGet = constraintCRD("BarConstraint", true)
-	cr.Reconcile(request("bar"))
+	_, err = cr.Reconcile(request("bar"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	gvks = cr.establishedConstraints()
 	if len(gvks) != 1 || !gvks[constraint.GVK("BarConstraint")] {
 		t.Errorf("want BarConstraint; got %v", gvks)
@@ -64,7 +73,10 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Update FooConstraint to be established along with BarConstraint.
 	cm.nextGet = constraintCRD("FooConstraint", true)
-	cr.Reconcile(request("foo"))
+	_, err = cr.Reconcile(request("foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	gvks = cr.establishedConstraints()
 	if len(gvks) != 2 || !gvks[constraint.GVK("FooConstraint")] || !gvks[constraint.GVK("BarConstraint")] {
 		t.Errorf("want FooConstraint, BarConstraint; got %v", gvks)
@@ -72,7 +84,10 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Delete BarConstraint from the cluster.
 	cm.nextErr = errors.NewNotFound(schema.GroupResource{}, "bar")
-	cr.Reconcile(request("bar"))
+	_, err = cr.Reconcile(request("bar"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	gvks = cr.establishedConstraints()
 	if len(gvks) != 1 || !gvks[constraint.GVK("FooConstraint")] {
 		t.Errorf("want FooConstraint; got %v", gvks)

@@ -3,7 +3,7 @@ package sync
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/api/configmanagement/v1"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/decode"
 	syncerscheme "github.com/google/nomos/pkg/syncer/scheme"
