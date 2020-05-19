@@ -16,8 +16,6 @@ import (
 
 // HandleDiff updates objects on the cluster based on the difference between actual and declared resources.
 func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorder record.EventRecorder) (bool, status.Error) {
-	removeEmptyRulesField(diff.Declared)
-
 	switch diff.Type() {
 	case differ.NoOp:
 		return false, nil
