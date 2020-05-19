@@ -4,7 +4,7 @@
 # the Makefile for the time being.
 #
 
-set -euo pipefail
+set -exuo pipefail
 
 [ -z "${GOTOPT2_BINARY}" ] && \
   (echo "environment is missing the gotopt2 binary"; exit 1)

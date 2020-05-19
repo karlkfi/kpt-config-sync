@@ -83,7 +83,7 @@ GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.2.3
+BUILDENV_IMAGE_VERSION ?= v0.2.4
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # When set to "release", enables these optimizations:
@@ -205,7 +205,7 @@ lint-bash:
 license:
 	@./scripts/prepare-licenses.sh
 
-lint-license:
+lint-license: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
 
 # Print the value of a variable

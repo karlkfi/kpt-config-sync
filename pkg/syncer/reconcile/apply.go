@@ -260,7 +260,7 @@ func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, reso
 	}
 
 	start := time.Now()
-	_, err := resClient.Patch(name, patchType, patch, metav1.UpdateOptions{})
+	_, err := resClient.Patch(name, patchType, patch, metav1.PatchOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
 	return err

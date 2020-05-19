@@ -62,7 +62,7 @@ func (workqueueMetricsProvider) NewAddsMetric(queue string) workqueue.CounterMet
 	return m
 }
 
-func (workqueueMetricsProvider) NewLatencyMetric(queue string) workqueue.SummaryMetric {
+func (workqueueMetricsProvider) NewLatencyMetric(queue string) workqueue.HistogramMetric {
 	const name = "workqueue_queue_duration_seconds"
 	m := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:        name,
@@ -74,7 +74,7 @@ func (workqueueMetricsProvider) NewLatencyMetric(queue string) workqueue.Summary
 	return m
 }
 
-func (workqueueMetricsProvider) NewWorkDurationMetric(queue string) workqueue.SummaryMetric {
+func (workqueueMetricsProvider) NewWorkDurationMetric(queue string) workqueue.HistogramMetric {
 	const name = "workqueue_work_duration_seconds"
 	m := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:        name,
@@ -100,11 +100,11 @@ func (workqueueMetricsProvider) NewUnfinishedWorkSecondsMetric(queue string) wor
 	return m
 }
 
-func (workqueueMetricsProvider) NewLongestRunningProcessorMicrosecondsMetric(queue string) workqueue.SettableGaugeMetric {
-	const name = "workqueue_longest_running_processor_microseconds"
+func (workqueueMetricsProvider) NewLongestRunningProcessorSecondsMetric(queue string) workqueue.SettableGaugeMetric {
+	const name = "workqueue_longest_running_processor_seconds"
 	m := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: name,
-		Help: "(Deprecated) How many microseconds has the longest running " +
+		Help: "How many seconds has the longest running " +
 			"processor for workqueue been running.",
 		ConstLabels: prometheus.Labels{"name": queue},
 	})

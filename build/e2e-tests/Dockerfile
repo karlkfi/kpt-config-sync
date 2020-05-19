@@ -24,31 +24,22 @@
 FROM golang:1.14.2-alpine AS build-base
 RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev unzip
 
-# We don't use or support modules for the time being.
-ENV GO111MODULE=off
+ENV GO111MODULE=on
 # Build static binaries only.
 ENV CGO_ENABLED=0
 
 # tap2junit converts TAP testing output to jUnit
 # v0.0.4
-ARG TAP2JUNIT_RELEASE="afa095c33668ed9abcaeaee5cf0f27f67e96908c"
-ARG TAP2JUNIT_REPO="github.com/filmil/tap2junit"
-RUN go get ${TAP2JUNIT_REPO}/...
-WORKDIR /go/src/${TAP2JUNIT_REPO}
-RUN git checkout ${TAP2JUNIT_RELEASE} && go install ${TAP2JUNIT_REPO}/...
+RUN go get github.com/filmil/tap2junit/cmd/tap2junit@afa095c33668ed9abcaeaee5cf0f27f67e96908c
 
 # gotopt2 parses command line options
 # v0.1.2
-ARG GOTOPT2_RELEASE="484e7f416f00d80d55062b7bd5332fe24659694d"
-ARG GOTOPT2_REPO="github.com/filmil/gotopt2/..."
-RUN go get ${GOTOPT2_REPO}/...
-WORKDIR /go/src/${GOTOPT2_REPO}
-RUN git checkout ${GOTOPT2_RELEASE} && go install ${GOTOPT2_REPO}/...
+RUN go get github.com/filmil/gotopt2/cmd/gotopt2@v0.1.2
 
 # kind can run kubernetes clusters in docker
 # v0.2.1
 # TODO(juliankatz): Reevaluate the use of GO111MODULE.  It conflicts with declaration at the top.
-RUN GO111MODULE="on" go get sigs.k8s.io/kind@v0.2.1
+RUN go get sigs.k8s.io/kind@v0.2.1
 
 # Build intermediate image for gcloud / kubectl
 FROM ubuntu:18.04 as gcloud-install

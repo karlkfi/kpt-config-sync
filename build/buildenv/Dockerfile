@@ -22,17 +22,25 @@ RUN apk add --no-cache \
 # Starting from go 1.10, build and test results are cached, which speeds up
 # following runs.
 ENV GOCACHE=/go/cache
+
+ENV GO111MODULE=on
 # Build static binaries
 ENV CGO_ENABLED=0
 
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3
 # --> 1.3.0
+# We can't just "go get" this dependency since "go get" throws an error if a
+# git repository contains files which are case-insensitive collisions.
+#
+# We can't use go modules since this isn't really a go package.
 ARG SEMBUMP_RELEASE="9ae1b9618feb2c76e88235410e9577e2b63d4576"
 ARG SEMBUMP_REPO="github.com/jessfraz/junk"
-RUN go get ${SEMBUMP_REPO}/sembump
+WORKDIR /go/src/github.com/jessfraz
+RUN git clone https://${SEMBUMP_REPO}.git
 WORKDIR /go/src/${SEMBUMP_REPO}
-RUN git checkout ${SEMBUMP_RELEASE} && go install ${SEMBUMP_REPO}/sembump
+RUN git checkout ${SEMBUMP_RELEASE}
+RUN GO111MODULE=off go install ${SEMBUMP_REPO}/sembump
 
 # semsort knows how to sort semvers.
 # v1.0.2
@@ -40,18 +48,12 @@ RUN git checkout ${SEMBUMP_RELEASE} && go install ${SEMBUMP_REPO}/sembump
 # echo "1.1.0 1.0.0" | semsort
 # 1.0.0
 # 1.1.0
-ARG SEMSORT_RELEASE="0ca60943363a67a752db9ed171e93a7e085eff0d"
-ARG SEMSORT_REPO="github.com/filmil/semsort"
-RUN go get ${SEMSORT_REPO}/...
-WORKDIR /go/src/${SEMSORT_REPO}
-RUN git checkout ${SEMSORT_RELEASE} && go install ${SEMSORT_REPO}/...
+RUN go get github.com/filmil/semsort/cmd/semsort@0ca60943363a67a752db9ed171e93a7e085eff0d
 
-# gotopt2 knows how to parse command line options
-ARG GOTOPT2_RELEASE="v0.1.2"
+# gotopt2 parses command line options
+# v0.1.2
 ARG GOTOPT2_REPO="github.com/filmil/gotopt2"
-RUN go get ${GOTOPT2_REPO}/...
-WORKDIR /go/src/${GOTOPT2_REPO}
-RUN git checkout ${GOTOPT2_RELEASE} && go install ${GOTOPT2_REPO}/...
+RUN go get ${GOTOPT2_REPO}/cmd/gotopt2@v0.1.2
 
 # The build environment docker file.
 FROM ${GOLANG_CONTAINER}
