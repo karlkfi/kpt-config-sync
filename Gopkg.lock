@@ -10,22 +10,6 @@
   version = "v0.49.0"
 
 [[projects]]
-  branch = "2.x"
-  digest = "1:363b0e34612c52f9b707606c16eab4d3a9482a349b853fee485a23b583228dd3"
-  name = "github.com/Masterminds/semver"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "317e8cce5480d12bcbaa660fb8e11f7d7cf27249"
-
-[[projects]]
-  digest = "1:f154754548cdef8790ec20f3e4485e3feb7c7ed5891f52d6e98f3a3d2584a50a"
-  name = "github.com/Masterminds/vcs"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "f94282d8632a0620f79f0c6ff0e82604e8c5c85b"
-  version = "v1.13.1"
-
-[[projects]]
   digest = "1:a2682518d905d662d984ef9959984ef87cecb777d379bfa9d9fe40e78069b3e4"
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
@@ -42,28 +26,12 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:c47f4964978e211c6e566596ec6246c329912ea92e9bb99c00798bb4564c5b09"
-  name = "github.com/armon/go-radix"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "1a2de0c21c94309923825da3df33a4381872c795"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   pruneopts = "UT"
   revision = "37c8de3658fcb183f997c4e13e8337516ab753e6"
   version = "v1.0.1"
-
-[[projects]]
-  digest = "1:0f98f59e9a2f4070d66f0c9c39561f68fcd1dc837b22a852d28d0003aebd1b1e"
-  name = "github.com/boltdb/bolt"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
-  version = "v1.3.1"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -131,22 +99,6 @@
   pruneopts = "UT"
   revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
   version = "v1.3.1"
-
-[[projects]]
-  digest = "1:7d81e48bbfb9399e66210b649fd52f3235b75c974d2c79a0772e40104d6828b5"
-  name = "github.com/golang/dep"
-  packages = [
-    ".",
-    "gps",
-    "gps/internal/pb",
-    "gps/paths",
-    "gps/pkgtree",
-    "gps/verify",
-    "internal/fs",
-  ]
-  pruneopts = "UT"
-  revision = "1f7c19e5f52f49ffb9f956f64c010be14683468b"
-  version = "v0.5.4"
 
 [[projects]]
   branch = "master"
@@ -266,14 +218,6 @@
   version = "v1.0"
 
 [[projects]]
-  digest = "1:dcb3e2ad17349c0cc89ffc16692d05195e6a67b4924fe81760fba9a307a7271d"
-  name = "github.com/jmank88/nuts"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "61b15a02400deb6a15ed0d54df135de0b55f4afb"
-  version = "v0.3.1"
-
-[[projects]]
   digest = "1:989a269720293a706e47a87d57f778b5dad5d0256f7e304efe483e25ad43af77"
   name = "github.com/json-iterator/go"
   packages = ["."]
@@ -318,28 +262,12 @@
   version = "1.0.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:6491080aa184f88c2bb8e2f6056e5e0e9a578b2d8666efbd6e97bc37a0c41e72"
-  name = "github.com/nightlyone/lockfile"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0ad87eef1443f64d3d8c50da647e2b1552851124"
-
-[[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
   name = "github.com/pborman/uuid"
   packages = ["."]
   pruneopts = "UT"
   revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
   version = "v1.2"
-
-[[projects]]
-  digest = "1:6eea828983c70075ca297bb915ffbcfd3e34c5a50affd94428a65df955c0ff9c"
-  name = "github.com/pelletier/go-toml"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
-  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -410,14 +338,6 @@
   version = "v0.0.8"
 
 [[projects]]
-  branch = "master"
-  digest = "1:3b2f0fcb35e10e0f7845f2182e4dd22f5a6fe3db5d1044ca815d646992a2444f"
-  name = "github.com/sdboyer/constext"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "836a144573533ea4da4e6929c235fd348aed1c80"
-
-[[projects]]
   digest = "1:e096613fb7cf34743d49af87d197663cfccd61876e2219853005a57baedfa562"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -469,14 +389,6 @@
   ]
   pruneopts = "UT"
   revision = "858c2ad4c8b6c5d10852cb89079f6ca1c7309787"
-
-[[projects]]
-  branch = "master"
-  digest = "1:b521f10a2d8fa85c04a8ef4e62f2d1e14d303599a55d64dabf9f5a02f84d35eb"
-  name = "golang.org/x/sync"
-  packages = ["errgroup"]
-  pruneopts = "UT"
-  revision = "cd5d95a43a6e21273425c7ae415d3df9ea832eeb"
 
 [[projects]]
   branch = "master"
@@ -860,7 +772,7 @@
   version = "kubernetes-1.16.3"
 
 [[projects]]
-  digest = "1:aa789f809690cfbf626fc5b77bf255d8e2d4ec8564cb99a19b4ce7845deeb9ae"
+  digest = "1:0dd36d97a38147efc14b348edbf3d6e914fe75ace0c6422460ad82baccfa4def"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -884,7 +796,6 @@
     "pkg/reconcile",
     "pkg/recorder",
     "pkg/runtime/inject",
-    "pkg/runtime/signals",
     "pkg/source",
     "pkg/source/internal",
     "pkg/webhook",
@@ -909,7 +820,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/davecgh/go-spew/spew",
-    "github.com/golang/dep",
     "github.com/golang/glog",
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
@@ -977,8 +887,8 @@
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/manager/signals",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-runtime/pkg/source",
   ]
   solver-name = "gps-cdcl"

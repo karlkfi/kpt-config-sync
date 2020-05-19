@@ -251,3 +251,15 @@ Nomos binary blessed: ${RELEASE_VERSION}
 
 ${Changelong in HTML format}
 ```
+
+# 5. OSPO License Requirements
+
+[Per OSPO](go/cloudworksheet), for all of our third-party dependencies we need to:
+
+1. Comply with license requirements, which usually means distributing either
+  - the third-party library source code along our images, or
+  - the third-party library's license.
+1. Collect the following information for each dependency:
+  - the library name,
+  - a link to the URL of the license,
+  - the license type,

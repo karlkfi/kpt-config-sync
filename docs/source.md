@@ -136,7 +136,8 @@ Which will delete any unused dependencies and update the go.mod accordingly.
 Updating dependencies in the `vendor` directory may result in pulling in new
 dependencies that need licensing scrutiny.
 
-To check licenses (it is a part of the linter checks, using licenselinter), run:
+To check licenses (it is a part of the linter checks, using
+[go-licenses](https://github.com/google/go-licenses)), run:
 
 ```console
 $ make lint
@@ -144,20 +145,9 @@ $ make lint
 
 Below is a list of common errors and ways to resolve.
 
-### missing METADATA file, rerun with -generate-meta-file: /some/path/METADATA
-
-From the top level directory of the repo, run:
-
-```console
-$ licenselinter --dir=$PWD --generate-meta-file
-```
-
-This will generate missing METADATA files for `vendor` dependencies that don't
-have them. You can now commit the changes made by the licenselinter.
-
 ## Useful Git Tools
 
-git gui is useful for ammending commits
+git gui is useful for amending commits
 
 ```console
 $ sudo apt-get install git-gui

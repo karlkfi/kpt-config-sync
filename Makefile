@@ -202,7 +202,10 @@ lint-go: build
 lint-bash:
 	@./scripts/lint-bash.sh
 
-lint-license: build
+license:
+	@./scripts/prepare-licenses.sh
+
+lint-license:
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
 
 # Print the value of a variable
