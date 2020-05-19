@@ -1,4 +1,5 @@
-// Package e2e
+// Package e2e defines e2e-test-specific imports and flags for use in e2e
+// testing.
 package e2e
 
 import (

@@ -1,8 +1,11 @@
 package filesystem
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
@@ -12,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -74,30 +78,36 @@ func (r *FileReader) read(rootDir cmpath.Absolute, file cmpath.Absolute) ([]ast.
 // 1) a slice containing a single FileObject, if the passed Unstructured is a valid Kubernetes object;
 // 2) a list of multiple FileObject, if the passed Unstructured was a List type; or
 // 3) an error, if there was a problem parsing the Unstructured.
-func toFileObjects(unstructured runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
-	if isList(unstructured) {
-		return flattenList(unstructured, rootDir, path)
+func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+	if isList(u) {
+		return flattenList(u, rootDir, path)
 	}
 
-	isNomosObject := unstructured.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
-	if !isNomosObject && hasStatusField(unstructured) {
-		return nil, syntax.IllegalFieldsInConfigError(&unstructuredID{Unstructured: unstructured}, id.Status)
+	oid, errs := parseID(u.UnstructuredContent(), path)
+	if errs != nil {
+		return nil, status.ResourceErrorBuilder.Sprint(strings.Join(errs, "\n")).
+			BuildWithResources(oid)
+	}
+
+	isNomosObject := u.GetObjectKind().GroupVersionKind().Group == configmanagement.GroupName
+	if !isNomosObject && hasStatusField(u) {
+		return nil, syntax.IllegalFieldsInConfigError(oid, id.Status)
 	}
 
 	// TODO: Remove the validateMetadata check when we migrate to
 	//  apimachinery 1.17 since it is fixed then.
-	err := validateMetadata(unstructured, path)
+	err := validateMetadata(u, oid)
 	if err != nil {
 		return nil, err
 	}
 
-	obj, ok := unstructured.(core.Object)
+	obj, ok := u.(core.Object)
 	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
 	// directives are specified for those fields. To be safe, we keep all resources in their raw
 	// unstructured format unless we specifically require them for importer pre-processing. These
-	// resources are mostly limited to configmanagement custom resources which we know are safe.
+	// resources are mostly limited to ACM custom resources which we know are safe.
 	if syntax.MustBeStructured(obj.GroupVersionKind()) {
-		obj, ok = asDefaultVersionedOrOriginal(unstructured).(core.Object)
+		obj, ok = asDefaultVersionedOrOriginal(u).(core.Object)
 	}
 	if !ok {
 		// The type doesn't declare required fields, but is registered.
@@ -186,36 +196,42 @@ func asDefaultVersionedOrOriginal(obj runtime.Unstructured) runtime.Object {
 //
 // TODO(b/154838005): Remove this once we upgrade and don't need to explicitly
 //  check for this.
-func validateMetadata(u runtime.Unstructured, path cmpath.Absolute) status.MultiError {
+func validateMetadata(u runtime.Unstructured, oid core.IDPath) status.ResourceError {
 	content := u.UnstructuredContent()
+
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
 	if !hasMetadata {
-		return status.UndocumentedErrorBuilder.Sprint("All persistent Kubernetes objects MUST define metadata.").BuildWithPaths(path)
+		return status.ResourceErrorBuilder.Sprint("resource does not define metadata").BuildWithResources(oid)
 	}
 
-	annotations, hasAnnotations := metadata["annotations"]
-	labels, hasLabels := metadata["labels"]
-	if !hasAnnotations && !hasLabels {
-		// No annotations or labels, so nothing to validate.
-		return nil
+	if annotations, hasAnnotations := metadata["annotations"]; hasAnnotations {
+		invalidAnnotations, err := getInvalidKeys(annotations)
+		if err != nil {
+			err = errors.Wrap(err, "validating annotations")
+			return status.ResourceErrorBuilder.Wrap(err).BuildWithResources(oid)
+		}
+		if len(invalidAnnotations) > 0 {
+			return InvalidAnnotationValueError(oid, invalidAnnotations)
+		}
 	}
 
-	var errs status.MultiError
-	invalidAnnotations, err := getInvalidKeys(annotations)
-	errs = status.Append(errs, err)
-	if len(invalidAnnotations) > 0 {
-		errs = status.Append(errs, InvalidAnnotationValueError(&unstructuredID{Unstructured: u, Absolute: path}, invalidAnnotations))
-	}
-	invalidLabels, err := getInvalidKeys(labels)
-	errs = status.Append(errs, err)
-	if len(invalidLabels) > 0 {
-		errs = status.Append(errs, InvalidLabelValueError(&unstructuredID{Unstructured: u, Absolute: path}, invalidLabels))
+	if labels, hasLabels := metadata["labels"]; hasLabels {
+		invalidLabels, err := getInvalidKeys(labels)
+		if err != nil {
+			err = errors.Wrap(err, "validating labels")
+			return status.ResourceErrorBuilder.Wrap(err).BuildWithResources(oid)
+		}
+		if len(invalidLabels) > 0 {
+			return InvalidAnnotationValueError(oid, invalidLabels)
+		}
 	}
 
-	return errs
+	return nil
 }
 
-func getInvalidKeys(o interface{}) ([]string, status.MultiError) {
+var errNotAMap = errors.New("not a map")
+
+func getInvalidKeys(o interface{}) ([]string, error) {
 	if o == nil {
 		return nil, nil
 	}
@@ -224,7 +240,7 @@ func getInvalidKeys(o interface{}) ([]string, status.MultiError) {
 		// We don't expect this error to be thrown since the parser before it would
 		// already return an error. Thus, creating a type just for this case would
 		// be overkill.
-		return nil, status.UndocumentedError("metadata.labels and metadata.annotations must be a map")
+		return nil, fmt.Errorf("%w: %v", errNotAMap, o)
 	}
 
 	var result []string
@@ -237,33 +253,55 @@ func getInvalidKeys(o interface{}) ([]string, status.MultiError) {
 	return result, nil
 }
 
-type unstructuredID struct {
-	runtime.Unstructured
-	cmpath.Absolute
-}
-
-var _ id.Resource = &unstructuredID{}
-
-// GetNamespace implements id.Resource.
-func (u unstructuredID) GetNamespace() string {
-	if namespaced, isNamespaced := u.Unstructured.(core.Namespaced); isNamespaced {
-		return namespaced.GetNamespace()
+// parseID makes a best-effort approach to collect information about the passed
+// object.
+//
+// The problem is that incomplete information is useless to the user, but we
+// don't know ahead of time what errors there are. Thus, we try to collect
+// as much valid information as possible before exiting.
+//
+// Returns the best guess of the object's core.ID, and an array of encountered
+// errors.
+func parseID(content map[string]interface{}, path id.Path) (core.IDPath, []string) {
+	oid := core.IDPath{
+		Path: path,
 	}
-	// We already hide Namespace from messages if it is empty string, so we don't have to handle this case specially.
-	return ""
-}
+	var errs []string
 
-// GetName implements id.Resource.
-func (u unstructuredID) GetName() string {
-	if named, isNamed := u.Unstructured.(core.Named); isNamed {
-		return named.GetName()
+	apiVersion, err := parseString(content, "apiVersion")
+	if err == nil {
+		gv, err := schema.ParseGroupVersion(apiVersion)
+		if err == nil {
+			oid.Group = gv.Group
+		} else {
+			errs = append(errs, err.Error())
+		}
+	} else {
+		errs = append(errs, err.Error())
 	}
-	// TODO(143557906): Handle displaying errors for type that don't define metadata.name.
-	//  This occurs for any type with ListMeta, and for non-persisted types
-	return ""
+	kind, err := parseString(content, "kind")
+	if err == nil {
+		oid.Kind = kind
+	} else {
+		errs = append(errs, err.Error())
+	}
+	name, err := parseString(content, "metadata", "name")
+	if err == nil {
+		oid.Name = name
+	} else {
+		errs = append(errs, err.Error())
+	}
+
+	return oid, errs
 }
 
-// GroupVersionKind implements id.Resource.
-func (u unstructuredID) GroupVersionKind() schema.GroupVersionKind {
-	return u.Unstructured.GetObjectKind().GroupVersionKind()
+func parseString(content map[string]interface{}, fields ...string) (string, error) {
+	value, hasField, e := unstructured.NestedString(content, fields...)
+	if e != nil {
+		return "", e
+	}
+	if !hasField || value == "" {
+		return "", errors.Errorf("missing field %q", strings.Join(fields, "."))
+	}
+	return value, nil
 }

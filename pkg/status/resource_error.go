@@ -13,13 +13,13 @@ type ResourceError interface {
 	Resources() []id.Resource
 }
 
-// resourceError almost always results from an API server call involving one or more resources.
-var resourceError = NewErrorBuilder(ResourceErrorCode)
+// ResourceErrorBuilder almost always results from an API server call involving one or more resources.
+var ResourceErrorBuilder = NewErrorBuilder(ResourceErrorCode)
 
 // ResourceWrap returns a ResourceError wrapping the given error and Resources.
 func ResourceWrap(err error, msg string, resources ...id.Resource) Error {
 	if err == nil {
 		return nil
 	}
-	return resourceError.Sprint(msg).Wrap(err).BuildWithResources(resources...)
+	return ResourceErrorBuilder.Sprint(msg).Wrap(err).BuildWithResources(resources...)
 }

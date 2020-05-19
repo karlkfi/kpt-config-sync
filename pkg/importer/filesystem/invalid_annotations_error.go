@@ -14,7 +14,7 @@ const InvalidAnnotationValueErrorCode = "1054"
 var invalidAnnotationValueErrorBase = status.NewErrorBuilder(InvalidAnnotationValueErrorCode)
 
 // InvalidAnnotationValueError reports that an object has been illegally defined in cluster/
-func InvalidAnnotationValueError(resource id.Resource, keys []string) status.Error {
+func InvalidAnnotationValueError(resource id.Resource, keys []string) status.ResourceError {
 	return invalidAnnotationValueErrorBase.
 		Sprintf("Values in metadata.annotations MUST be strings. "+
 			`To fix, add quotes around the values. Non-string values for:
@@ -25,7 +25,7 @@ metadata.annotations.%s `,
 }
 
 // InvalidLabelValueError reports that an object has been illegally defined in cluster/
-func InvalidLabelValueError(resource id.Resource, keys []string) status.Error {
+func InvalidLabelValueError(resource id.Resource, keys []string) status.ResourceError {
 	return invalidAnnotationValueErrorBase.
 		Sprintf("Values in metadata.labels MUST be strings. "+
 			`To fix, add quotes around the values. Non-string values for:

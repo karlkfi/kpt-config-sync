@@ -33,7 +33,7 @@ HOME=.output/
 # This is because the goimports included in alpine is a different version than
 # the one used by golangci-lint, and they produce slightly different results.
 echo "Running golangci-lint: "
-if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,golint,unconvert)"; then
+if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,golint,unconvert --exclude-use-default=false)"; then
   echo "${OUT}"
 
   NC=''
