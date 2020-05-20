@@ -35,8 +35,11 @@ teardown() {
 
   resource::check clusterrole repoless-admin
   resource::check namespace backend
+  resource::check_count -c 0 -r namespace -l "backend.tree.hnc.x-k8s.io=0"
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
+  resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
+  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 
   repair_state
@@ -58,8 +61,11 @@ teardown() {
 
   resource::check clusterrole repoless-admin
   resource::check namespace backend
+  resource::check_count -c 0 -r namespace -l "backend.tree.hnc.x-k8s.io=0"
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
+  resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
+  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 
   repair_state
@@ -81,8 +87,11 @@ teardown() {
 
   resource::check clusterrole repoless-admin
   resource::check namespace backend
+  resource::check_count -c 0 -r namespace -l "backend.tree.hnc.x-k8s.io=0"
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
+  resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
+  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 
   repair_state

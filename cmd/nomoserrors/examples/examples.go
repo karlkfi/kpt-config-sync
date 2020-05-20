@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
@@ -233,6 +234,9 @@ func Generate() map[string][]status.Error {
 
 	// 1056
 	result.add(nonhierarchical.ManagedResourceInUnmanagedNamespace("foo", fake.Role()))
+
+	// 1057
+	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label"+v1.HierarchyControllerDepthSuffix}))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))

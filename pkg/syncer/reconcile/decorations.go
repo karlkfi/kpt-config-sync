@@ -10,7 +10,7 @@ func SyncedAt(obj core.LabeledAndAnnotated, token string) {
 	core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, token)
 }
 
-// enableManagement marks the resource as Nomos-manged.
+// enableManagement marks the resource as Nomos-managed.
 func enableManagement(obj core.LabeledAndAnnotated) {
 	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 	core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)

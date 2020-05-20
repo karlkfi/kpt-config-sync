@@ -3,6 +3,7 @@ package filesystem
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
@@ -34,9 +35,11 @@ func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 		syntax.NewNamespaceKindValidator(),
 		metadata.NewAnnotationValidator(),
 		metadata.NewLabelValidator(),
+		hnc.NewDepthLabelValidator(),
 		validation.NewInputValidator(specs),
 		semantic.NewAbstractResourceValidator(),
 		transform.NewPathAnnotationVisitor(),
 		transform.NewInheritanceVisitor(),
+		hnc.NewNamespaceVisitor(),
 	}
 }
