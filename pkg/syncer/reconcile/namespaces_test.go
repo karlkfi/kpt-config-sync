@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIsManageableSystem(t *testing.T) {
@@ -11,11 +12,11 @@ func TestIsManageableSystem(t *testing.T) {
 		name     string
 		reserved bool
 	}{
-		{"default", true},
+		{metav1.NamespaceDefault, true},
 		{"foo-bar", false},
 		{"kube-foo", false},
-		{"kube-public", true},
-		{"kube-system", true},
+		{metav1.NamespacePublic, true},
+		{metav1.NamespaceSystem, true},
 		{"gatekeeper-system", true},
 		{configmanagement.ControllerNamespace, false},
 	} {

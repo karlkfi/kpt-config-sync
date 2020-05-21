@@ -53,7 +53,7 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 			if namespace == "" {
 				// Empty string/non-declared metadata.namespace automatically maps to "default", so this
 				// ensures we maintain these in a single NamespaceConfig entry.
-				namespace = "default"
+				namespace = metav1.NamespaceDefault
 			}
 			result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
 		} else {

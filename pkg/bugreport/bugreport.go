@@ -151,7 +151,7 @@ func (b *BugReporter) FetchLogSources() []Readable {
 
 	// for each namespace, generate a list of logSources
 	listOps := client.ListOptions{LabelSelector: labels.NewSelector().Add(operatorLabelSelectorOrDie())}
-	sources, err := b.logSourcesForNamespace("kube-system", listOps, nil)
+	sources, err := b.logSourcesForNamespace(metav1.NamespaceSystem, listOps, nil)
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else {
@@ -305,7 +305,7 @@ func pathToClusterCmList(name string) string {
 func (b *BugReporter) FetchCMSystemPods() (rd []Readable) {
 	var namespaces = []string{
 		configmanagement.ControllerNamespace,
-		"kube-system",
+		metav1.NamespaceSystem,
 	}
 
 	for _, ns := range namespaces {

@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -320,25 +321,25 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 	}{
 		{
 			name:          "do not add quota enforcement label on managed kube-system",
-			declared:      namespaceConfig("kube-system", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token)),
-			actual:        namespace("kube-system", syncertesting.ManagementEnabled),
-			wantNamespace: namespace("kube-system", syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
-			want: namespaceConfig("kube-system", v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
+			declared:      namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token)),
+			actual:        namespace(metav1.NamespaceSystem, syncertesting.ManagementEnabled),
+			wantNamespace: namespace(metav1.NamespaceSystem, syncertesting.ManagementEnabled, syncertesting.TokenAnnotation),
+			want: namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.NamespaceConfigSyncTime(), syncertesting.NamespaceConfigSyncToken()),
 		},
 		{
 			name:          "unmanage kube-system",
-			declared:      namespaceConfig("kube-system", v1.StateSynced, syncertesting.ManagementDisabled),
-			actual:        namespace("kube-system", syncertesting.ManagementEnabled),
-			wantNamespace: namespace("kube-system"),
-			want:          namespaceConfig("kube-system", v1.StateSynced, syncertesting.ManagementDisabled),
+			declared:      namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertesting.ManagementDisabled),
+			actual:        namespace(metav1.NamespaceSystem, syncertesting.ManagementEnabled),
+			wantNamespace: namespace(metav1.NamespaceSystem),
+			want:          namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertesting.ManagementDisabled),
 		},
 		{
 			name:          "unmanage default",
-			declared:      namespaceConfig("default", v1.StateSynced, syncertesting.ManagementDisabled),
-			actual:        namespace("default", syncertesting.ManagementEnabled),
-			wantNamespace: namespace("default"),
-			want:          namespaceConfig("default", v1.StateSynced, syncertesting.ManagementDisabled),
+			declared:      namespaceConfig(metav1.NamespaceDefault, v1.StateSynced, syncertesting.ManagementDisabled),
+			actual:        namespace(metav1.NamespaceDefault, syncertesting.ManagementEnabled),
+			wantNamespace: namespace(metav1.NamespaceDefault),
+			want:          namespaceConfig(metav1.NamespaceDefault, v1.StateSynced, syncertesting.ManagementDisabled),
 		},
 	}
 
@@ -396,7 +397,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 	}{
 		{
 			name: "default namespace is not deleted when namespace config is removed",
-			namespace: namespace("default", core.Annotations(
+			namespace: namespace(metav1.NamespaceDefault, core.Annotations(
 				map[string]string{
 					v1.ClusterNameAnnotationKey:       "cluster-name",
 					v1.ClusterSelectorAnnotationKey:   "some-selector",
@@ -413,7 +414,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 					},
 				),
 			),
-			namespaceConfig: namespaceConfig("default",
+			namespaceConfig: namespaceConfig(metav1.NamespaceDefault,
 				v1.StateSynced,
 				syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.MarkForDeletion(),
@@ -421,20 +422,20 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			actual: []runtime.Object{
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("default"),
+					core.Namespace(metav1.NamespaceDefault),
 					syncertesting.ManagementEnabled,
 					core.Name("my-deployment")),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("default"),
+					core.Namespace(metav1.NamespaceDefault),
 					core.Name("your-deployment")),
 			},
 			want: []runtime.Object{
-				namespace("default",
+				namespace(metav1.NamespaceDefault,
 					core.Annotation("some-user-annotation", "some-annotation-value"),
 					core.Label("some-user-label", "some-label-value"),
 				),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("default"),
+					core.Namespace(metav1.NamespaceDefault),
 					core.Name("your-deployment")),
 			},
 			wantEvent: testingfake.NewEvent(namespaceConfig("", v1.StateUnknown),
@@ -442,7 +443,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "kube-system namespace is not deleted when namespace config is removed",
-			namespace: namespace("kube-system", core.Annotations(
+			namespace: namespace(metav1.NamespaceSystem, core.Annotations(
 				map[string]string{
 					v1.ClusterNameAnnotationKey:       "cluster-name",
 					v1.ClusterSelectorAnnotationKey:   "some-selector",
@@ -459,7 +460,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 					},
 				),
 			),
-			namespaceConfig: namespaceConfig("kube-system",
+			namespaceConfig: namespaceConfig(metav1.NamespaceSystem,
 				v1.StateSynced,
 				syncertesting.NamespaceConfigImportToken(syncertesting.Token),
 				syncertesting.MarkForDeletion(),
@@ -467,20 +468,20 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			actual: []runtime.Object{
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("kube-system"),
+					core.Namespace(metav1.NamespaceSystem),
 					syncertesting.ManagementEnabled,
 					core.Name("my-deployment")),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("kube-system"),
+					core.Namespace(metav1.NamespaceSystem),
 					core.Name("your-deployment")),
 			},
 			want: []runtime.Object{
-				namespace("kube-system",
+				namespace(metav1.NamespaceSystem,
 					core.Annotation("some-user-annotation", "some-annotation-value"),
 					core.Label("some-user-label", "some-label-value"),
 				),
 				deployment(appsv1.RecreateDeploymentStrategyType,
-					core.Namespace("kube-system"),
+					core.Namespace(metav1.NamespaceSystem),
 					core.Name("your-deployment")),
 			},
 			wantEvent: testingfake.NewEvent(namespaceConfig("", v1.StateUnknown),

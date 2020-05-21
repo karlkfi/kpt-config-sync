@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IllegalNamespaceOnClusterScopedResourceErrorCode represents a cluster-scoped resource illegally
@@ -45,8 +46,11 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 		BuildWithResources(resource)
 }
 
-// ScopeValidator returns errors for resources with illegal or missing metadata.namespace
+// ScopeValidator returns errors for resources with illegal metadata.namespace
 // declarations.
+//
+// If the object is namespace-scoped and does not declare a NamespaceSelector,
+// it is automatically assigned to the "default" Namespace.
 func ScopeValidator(scoper discovery.Scoper) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		isNamespaced, err := scoper.GetObjectScope(o)
@@ -64,7 +68,7 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 				return NamespaceAndSelectorResourceError(o)
 			}
 			if !hasNamespace && !hasNamespaceSelector {
-				return MissingNamespaceOnNamespacedResourceError(&o)
+				o.SetNamespace(metav1.NamespaceDefault)
 			}
 		} else {
 			if o.GetNamespace() != "" {

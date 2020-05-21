@@ -157,7 +157,7 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 				mapMutex.Lock()
 				clientMap[cfgName] = &statusClient{
 					pcs.ConfigmanagementV1().Repos(),
-					kcs.CoreV1().Pods("kube-system"),
+					kcs.CoreV1().Pods(metav1.NamespaceSystem),
 					cmc,
 				}
 				mapMutex.Unlock()
