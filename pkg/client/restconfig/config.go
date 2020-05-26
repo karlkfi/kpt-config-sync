@@ -59,7 +59,7 @@ func newRawConfigWithRules() (*clientcmdapi.Config, *clientcmd.ClientConfigLoadi
 		return nil, nil, errors.Wrap(err, "while getting config path")
 	}
 
-	rules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: configPath}
+	rules := &clientcmd.ClientConfigLoadingRules{Precedence: filepath.SplitList(configPath)}
 	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(rules, &clientcmd.ConfigOverrides{})
 	apiCfg, err := clientCfg.RawConfig()
 	if err != nil {
