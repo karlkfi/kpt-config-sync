@@ -96,19 +96,11 @@ func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast
 
 	// TODO: Remove the validateMetadata check when we migrate to
 	//  apimachinery 1.17 since it is fixed then.
-	err := validateMetadata(u, oid)
-	if err != nil {
+	if err := validateMetadata(u, oid); err != nil {
 		return nil, err
 	}
 
 	obj, ok := u.(core.Object)
-	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
-	// directives are specified for those fields. To be safe, we keep all resources in their raw
-	// unstructured format unless we specifically require them for importer pre-processing. These
-	// resources are mostly limited to ACM custom resources which we know are safe.
-	if syntax.MustBeStructured(obj.GroupVersionKind()) {
-		obj, ok = asDefaultVersionedOrOriginal(u).(core.Object)
-	}
 	if !ok {
 		// The type doesn't declare required fields, but is registered.
 		// User-specified types are implicitly Unstructured, which defines Labels/Annotations/etc. even
@@ -116,8 +108,23 @@ func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast
 		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %s", obj.GroupVersionKind().String())
 	}
 
-	rel, ferr := filepath.Rel(rootDir.OSPath(), path.OSPath())
-	if ferr != nil {
+	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
+	// directives are specified for those fields. To be safe, we keep all resources in their raw
+	// unstructured format unless we specifically require them for importer pre-processing. These
+	// resources are mostly limited to ACM custom resources which we know are safe.
+	if syntax.MustBeStructured(obj.GroupVersionKind()) {
+		rObj, err := asDefaultVersioned(obj)
+		if err != nil {
+			return nil, syntax.ObjectParseError(oid, err)
+		}
+		var ok bool
+		if obj, ok = rObj.(core.Object); !ok {
+			return nil, syntax.ObjectParseError(oid, errNotKubernetes)
+		}
+	}
+
+	rel, err := filepath.Rel(rootDir.OSPath(), path.OSPath())
+	if err != nil {
 		return nil, status.UndocumentedErrorBuilder.Sprintf("unable to get relative path to %s", rootDir.OSPath()).
 			BuildWithPaths(path)
 	}
@@ -170,10 +177,11 @@ func isList(uList runtime.Unstructured) bool {
 	return isList
 }
 
-// asDefaultVersionedOrOriginal returns the object as a Go object in the external form.
-// If the GVK is registered in scheme.Scheme, return that version. Otherwise, try to return the declared version.
-// If this fails, returns the original runtime.Unstructured.
-func asDefaultVersionedOrOriginal(obj runtime.Unstructured) runtime.Object {
+var errNotKubernetes = errors.New("converted Kubernetes object to non-Kubernetes type")
+
+// asDefaultVersioned converts a runtime.Object to the literal Go struct, if
+// one is available. Returns an error if this process fails.
+func asDefaultVersioned(obj runtime.Object) (runtime.Object, error) {
 	// Determine the GroupVersion to convert the object to.
 	groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
 	if _, ok := groupVersioner.KindForGroupVersionKinds([]schema.GroupVersionKind{obj.GetObjectKind().GroupVersionKind()}); !ok {
@@ -182,10 +190,16 @@ func asDefaultVersionedOrOriginal(obj runtime.Unstructured) runtime.Object {
 	}
 
 	converter := runtime.ObjectConvertor(scheme.Scheme)
-	if cObj, err := converter.ConvertToVersion(obj, groupVersioner); err == nil {
+	return converter.ConvertToVersion(obj, groupVersioner)
+}
+
+// asDefaultVersionedOrOriginal returns the object as a Go object in the external form.
+// If the GVK is registered in scheme.Scheme, return that version. Otherwise, try to return the declared version.
+// If this fails, returns the original runtime.Unstructured.
+func asDefaultVersionedOrOriginal(obj runtime.Object) runtime.Object {
+	if cObj, err := asDefaultVersioned(obj); err == nil {
 		return cObj
 	}
-
 	return obj
 }
 

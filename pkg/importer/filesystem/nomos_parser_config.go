@@ -20,7 +20,6 @@ func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	return []ast.Visitor{
-		&mustSucceed{Visitor: syntax.NewParseValidator()},
 		system.NewRepoVersionValidator(),
 		system.NewMissingRepoValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Repo()),
@@ -41,17 +40,4 @@ func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 		transform.NewPathAnnotationVisitor(),
 		transform.NewInheritanceVisitor(),
 	}
-}
-
-// mustSucceed wraps a Visitor, allowing NomosVisitorProvider to specify whether a visitor should
-// be fatal if it returns errors.
-type mustSucceed struct {
-	ast.Visitor
-}
-
-var _ ast.Visitor = &mustSucceed{}
-
-// Fatal returns true if the Visitor encountered any errors.
-func (m mustSucceed) Fatal() bool {
-	return m.Error() != nil
 }
