@@ -19,13 +19,8 @@ go get github.com/google/go-licenses
 chmod -R +rwx .output
 
 echo "Ensuring dependencies contain approved licenses. This may take up to 3 minutes."
-binaries=(nomos git-importer syncer monitor)
-for binary in ${binaries[*]}
-do
-  echo "Linting github.com/google/nomos/cmd/${binary}"
-  # Recursively checks dependencies of the passed binary.
-  # Filter out log messages related to not finding a LICENSE file in literally
-  # every nomos directory.
-  go-licenses check github.com/google/nomos/cmd/"${binary}" \
-    2> >(grep -v "Failed to find license for github.com/google/nomos/")
-done
+# Lints licenses for all packages, even ones just for testing.
+# Faster than evaluating the dependencies of each individual binary by about 3x.
+# We want word-splitting here rather than manually looping through the packages one-by-one.
+# shellcheck disable=SC2046
+go-licenses check $(go list all)
