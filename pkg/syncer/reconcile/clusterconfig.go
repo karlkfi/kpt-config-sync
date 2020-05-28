@@ -102,7 +102,7 @@ func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 	rErr := r.manageConfigs(ctx, clusterConfig)
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
 	if filtered := filterContextCancelled(rErr); filtered != nil {
-		glog.Errorf("Could not reconcile clusterconfig: %v", filtered)
+		glog.Errorf("Could not reconcile clusterconfig: %v", status.FormatError(false, filtered))
 	}
 	return rErr
 }

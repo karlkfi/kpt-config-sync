@@ -89,20 +89,43 @@ func (m *multiError) add(err error) {
 
 // Error implements error
 func (m *multiError) Error() string {
+	return FormatError(true, m)
+}
+
+// Errors returns a list of the contained errors
+func (m *multiError) Errors() []Error {
 	if m == nil {
+		return nil
+	}
+	return m.errs
+}
+
+// FormatError formats the multiple errors using multiline argument.
+// When multiline set to true, errors are formatted and joined using new lines.
+// Else, multiple errors are joined using comma separator.
+// Sample formatted errors: https://paste.googleplex.com/6533732804591616
+// TODO(b/158022901) Sctructure multiline error messages
+func FormatError(multiline bool, e error) string {
+	m := toMultiError(e)
+
+	// mErrs is a slice of Error.
+	mErrs := m.Errors()
+
+	if len(mErrs) == 0 {
 		return ""
 	}
 
-	// sort errors alphabetically by their message.
-	sort.Slice(m.errs, func(i, j int) bool {
-		return m.errs[i].Error() < m.errs[j].Error()
-	})
+	var msgs []string
+	for _, err := range mErrs {
+		msgs = append(msgs, err.Error())
+	}
+	sort.Strings(msgs)
 
 	// Since errors are sorted by message we can eliminate duplicates by comparing the current
 	// error message with the previous.
-	var uniqueErrors = make([]error, 0)
-	for idx, err := range m.errs {
-		if idx == 0 || m.errs[idx-1].Error() != err.Error() {
+	var uniqueErrors = make([]string, 0)
+	for idx, err := range msgs {
+		if idx == 0 || msgs[idx-1] != err {
 			uniqueErrors = append(uniqueErrors, err)
 		}
 	}
@@ -113,13 +136,26 @@ func (m *multiError) Error() string {
 	for idx, err := range uniqueErrors {
 		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
 	}
+	// if in single-line mode, remove new lines from each error message,
+	// return error messages joined with a new line.
+	if !multiline {
+		for idx, err := range allErrors {
+			// removes all the new lines from the errors.
+			allErrors[idx] = rmNewlines(err)
+		}
+		return strings.Join(allErrors, "\n")
+	}
 	return strings.Join(allErrors, "\n\n")
 }
 
-// Errors returns a list of the contained errors
-func (m *multiError) Errors() []Error {
-	if m == nil {
-		return nil
+func rmNewlines(err string) string {
+	return strings.ReplaceAll(err, "\n", " ")
+}
+
+func toMultiError(e error) MultiError {
+	if me, ok := e.(MultiError); ok {
+		return me
 	}
-	return m.errs
+	var m MultiError
+	return Append(m, e)
 }

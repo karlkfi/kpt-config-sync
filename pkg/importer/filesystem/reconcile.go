@@ -88,10 +88,9 @@ func makeGitState(rev string, objs []ast.FileObject) *gitState {
 func dumpForFiles(objs []ast.FileObject) string {
 	b := strings.Builder{}
 	for _, obj := range objs {
-		b.WriteString(fmt.Sprintf("%s\n", obj.SlashPath()))
-		b.WriteString(fmt.Sprintf("%s %s/%s\n", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
-		b.WriteString(fmt.Sprintf("%v\n", obj.Object))
-		b.WriteString("----------\n")
+		b.WriteString(fmt.Sprintf("path=%s ", obj.SlashPath()))
+		b.WriteString(fmt.Sprintf("groupversionkind=%s namespace=%s name=%s ", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		b.WriteString(fmt.Sprintf("object=%v; ", obj.Object))
 	}
 	return b.String()
 }
@@ -130,9 +129,9 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 
 // dirError updates repo source status with an error due to failure to read mounted git repo.
 func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
-	glog.Errorf("Failed to resolve config directory: %v", err)
+	glog.Errorf("Failed to resolve config directory: %v", status.FormatError(false, err))
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-	sErr := status.SourceError.Sprintf("unable to sync repo: %v\n"+
+	sErr := status.SourceError.Sprintf("unable to sync repo: %v: "+
 		"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
 		err).Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
@@ -238,7 +237,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		c.clusterName, true, getSyncedCRDs, absPolicyDir, wantFiles,
 	)
 	if mErr != nil {
-		glog.Warningf("Failed to parse: %v", mErr)
+		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 		return reconcile.Result{}, nil
@@ -252,8 +251,8 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	} else if c.parsedGit.filePaths == gs.filePaths {
 		glog.V(2).Infof("Importer state remains at git revision %s. Verified files hash: %s", gs.rev, gs.filePaths)
 	} else {
-		glog.Errorf("Importer read inconsistent files at git revision %s.\nExpected files hash: %s\nDiff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
-		glog.Errorf("Inconsistent files:\n%s", dumpForFiles(desiredFileObjects))
+		glog.Errorf("Importer read inconsistent files at git revision %s. Expected files hash: %s, Diff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
+		glog.Errorf("Inconsistent files: %s", dumpForFiles(desiredFileObjects))
 		return c.filesystemError(ctx, absGitDir.OSPath())
 	}
 	c.parsedGit = gs
@@ -279,7 +278,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs); errs != nil {
-		glog.Warningf("Failed to apply actions: %v", errs.Error())
+		glog.Warningf("Failed to apply actions: %v", status.FormatError(false, errs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
 		return reconcile.Result{}, nil

@@ -8,6 +8,9 @@ import (
 	"github.com/golang/glog"
 )
 
+// WalkDirectory exported for testing.
+var WalkDirectory = walkDirectory
+
 // walkDirectory walks a directory and returns a list of all dirs / files / errors.
 func walkDirectory(dir string) ([]string, error) {
 	var seen []string
@@ -17,6 +20,10 @@ func walkDirectory(dir string) ([]string, error) {
 			return nil
 		}
 		seen = append(seen, fmt.Sprintf("path=%s mode=%o size=%d mtime=%s", path, info.Mode(), info.Size(), info.ModTime()))
+		// Skip .git subdirectories.
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
+		}
 		return nil
 	})
 	return seen, err
