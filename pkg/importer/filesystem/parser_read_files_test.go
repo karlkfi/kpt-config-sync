@@ -272,6 +272,34 @@ metadata:
 			expectObject: pointer(fake.NamespaceUnstructured("namespaces/backend", core.Label("boolean", "true"))),
 		},
 		{
+			testName: "metadata.labels with numerical value",
+			testFiles: ft.FileContentMap{
+				"namespaces/backend/namespace.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  labels:
+    number: 123456789
+`,
+			},
+			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+		},
+		{
+			testName: "metadata.labels with quoted numerical value",
+			testFiles: ft.FileContentMap{
+				"namespaces/backend/namespace.yaml": `
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: backend
+  labels:
+    number: "123456789"
+`,
+			},
+			expectObject: pointer(fake.NamespaceUnstructured("namespaces/backend", core.Label("number", "123456789"))),
+		},
+		{
 			testName: "parses nested List",
 			testFiles: ft.FileContentMap{
 				"namespaces/foo/list.yaml": `
