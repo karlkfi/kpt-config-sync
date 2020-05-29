@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    configmanagement.gke.io/cluster-name: some-e2e-cluster
+    configmanagement.gke.io/source-path: testdata/no-last-apply.yaml
+    configmanagement.gke.io/token: 1234567890abcdef1234567890abcdef12345678
+  name: problematic
+rules:
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - '*'
+  verbs:
+  - list
+  - get
+  - watch

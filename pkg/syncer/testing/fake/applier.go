@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -13,6 +14,8 @@ import (
 type applier struct {
 	*Client
 }
+
+var _ reconcile.Applier = &applier{}
 
 // Create implements reconcile.Applier.
 func (a *applier) Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
@@ -28,6 +31,20 @@ func (a *applier) Update(ctx context.Context, intendedState, currentState *unstr
 	err := a.Client.Update(ctx, intendedState)
 	if err != nil {
 		return false, status.APIServerError(err, "updating")
+	}
+	return true, nil
+}
+
+// RemoveNomosMeta implements reconcile.Applier.
+func (a *applier) RemoveNomosMeta(ctx context.Context, intent *unstructured.Unstructured) (bool, status.Error) {
+	updated := reconcile.RemoveNomosLabelsAndAnnotations(intent)
+	if !updated {
+		return false, nil
+	}
+
+	err := a.Client.Update(ctx, intent)
+	if err != nil {
+		return false, status.APIServerError(err, "removing meta")
 	}
 	return true, nil
 }

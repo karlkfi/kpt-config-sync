@@ -29,9 +29,8 @@ func HandleDiff(ctx context.Context, applier Applier, diff *differ.Diff, recorde
 		return applier.Delete(ctx, diff.Actual)
 	case differ.Unmanage:
 		// The intended state of an unmanaged resource is a copy of the resource, but without management enabled.
-		intended := diff.Actual.DeepCopy()
-		removeNomosMeta(intended)
-		return applier.Update(ctx, intended, diff.Actual)
+		// See b/157751323 for context on why we are doing a specific Remove() here instead of a generic Update().
+		return applier.RemoveNomosMeta(ctx, diff.Actual)
 	case differ.Error:
 		warnInvalidAnnotationResource(recorder, diff.Declared)
 		return false, nil

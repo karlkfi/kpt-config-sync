@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -35,6 +36,8 @@ const rmCreationTimestampPatch = "{\"metadata\":{\"creationTimestamp\":null}}"
 type Applier interface {
 	Create(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
 	Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error)
+	// RemoveNomosMeta performs a PUT (rather than a PATCH) to ensure that labels and annotations are removed.
+	RemoveNomosMeta(ctx context.Context, intent *unstructured.Unstructured) (bool, status.Error)
 	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
 }
 
@@ -112,6 +115,19 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	return updated, nil
 }
 
+// RemoveNomosMeta implements Applier.
+func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Unstructured) (bool, status.Error) {
+	var changed bool
+	_, err := c.client.Update(ctx, u, func(obj core.Object) (core.Object, error) {
+		changed = RemoveNomosLabelsAndAnnotations(obj)
+		if !changed {
+			return obj, client.NoUpdateNeeded()
+		}
+		return obj, nil
+	})
+	return changed, err
+}
+
 // Delete implements Applier.
 func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	err := c.client.Delete(ctx, obj)
@@ -154,6 +170,7 @@ func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
 func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
+	resourceDescription := description(intendedState)
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
 	if cErr != nil {
@@ -164,6 +181,9 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	previous, oErr := util.GetOriginalConfiguration(currentState)
 	if oErr != nil {
 		return nil, errors.Errorf("could not retrieve original configuration from %v", currentState)
+	}
+	if previous == nil {
+		glog.Warningf("3-way merge patch for %s may be incorrect due to missing last-applied-configuration.", resourceDescription)
 	}
 
 	// Serialize the modified configuration of the object, populating the last applied annotation as well.
@@ -178,7 +198,6 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	}
 
 	name := intendedState.GetName()
-	resourceDescription := description(intendedState)
 	gvk := intendedState.GroupVersionKind()
 	//TODO(b/b152322972): Add unit tests for patch return value.
 	var err error
@@ -187,7 +206,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	patch := c.calculateStrategic(resourceDescription, gvk, previous, modified, current)
 	// If patch is nil, it means we don't have access to the schema.
 	if patch != nil {
-		err = attemptPatch(ctx, resourceClient, resourceDescription, name, types.StrategicMergePatchType, patch, gvk)
+		err = attemptPatch(ctx, resourceClient, name, types.StrategicMergePatchType, patch, gvk)
 		// UnsupportedMediaType error indicates an invalid strategic merge patch (always true for a
 		// custom resource), so we reset the patch and try again below.
 		if err != nil {
@@ -203,15 +222,21 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	if patch == nil {
 		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
 		if err == nil {
-			err = attemptPatch(ctx, resourceClient, resourceDescription, name, types.MergePatchType, patch, gvk)
+			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not patch resource %s with %s", resourceDescription, patch)
 	}
-	glog.Infof("Patched %s", resourceDescription)
-	glog.V(1).Infof("Patched with %s", patch)
+
+	if isNoOpPatch(patch) {
+		glog.V(3).Infof("Ignoring no-op patch %s for %q", patch, resourceDescription)
+	} else {
+		glog.Infof("Patched %s", resourceDescription)
+		glog.V(1).Infof("Patched with %s", patch)
+	}
+
 	return patch, nil
 }
 
@@ -248,9 +273,8 @@ func isNoOpPatch(patch []byte) bool {
 
 // attemptPatch patches resClient with the given patch.
 // TODO(b/152322972): Add unit tests for noop logic.
-func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, resourceDescription string, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
+func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name string, patchType types.PatchType, patch []byte, gvk schema.GroupVersionKind) error {
 	if isNoOpPatch(patch) {
-		glog.V(3).Infof("Ignoring no-op patch %s for %q", patch, resourceDescription)
 		return nil
 	}
 

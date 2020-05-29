@@ -285,3 +285,33 @@ function clean_test_configmaps() {
   wait::for -f -- kubectl -n newer-prj configmaps map2
 }
 
+@test "${FILE_NAME}: Unmanage resource with mangled last-applied-configuration" {
+  debug::log "Verify that the problematic clusterrole does not exist yet"
+  wait::for -t 10 -- \
+    kubectl delete clusterrole problematic --ignore-not-found
+
+  debug::log "Create the problematic clusterrole with invalid annotations"
+  run kubectl create -f "${YAML_DIR}/no-last-apply.yaml"
+  wait::for -t 10 -- resource::check_count -a "configmanagement.gke.io/cluster-name=some-e2e-cluster" -r clusterrole -c 1
+
+  debug::log "Add a clusterrole to manage (so syncer starts looking for them)"
+  git::add "${YAML_DIR}/clusterrole-create.yaml" \
+    "acme/cluster/clusterrole-create.yaml"
+  git::commit -m "Start managing a clusterrole"
+
+  debug::log "Wait until the managed clusterrole appears on the cluster"
+  wait::for -t 30 -- kubectl get clusterrole "e2e-test-clusterrole"
+
+  debug::log "Wait for the syncer to remove annotations from the problematic clusterrole"
+  wait::for -t 30 -- resource::check_count -a "configmanagement.gke.io/cluster-name=some-e2e-cluster" -r clusterrole -c 0
+
+  debug::log "Remove the managed clusterrole from the repo"
+  git::rm "acme/cluster/clusterrole-create.yaml"
+  git::commit -m "Stop managing the clusterrole"
+
+  debug::log "Wait until the managed clusterrole disappears from the cluster"
+  wait::for -f -t 60 -- kubectl get clusterrole "e2e-test-clusterrole"
+
+  wait::for -t 10 -- \
+    kubectl delete clusterrole problematic --ignore-not-found
+}

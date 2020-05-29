@@ -215,19 +215,11 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.
 func (r *namespaceConfigReconciler) unmanageNamespace(ctx context.Context, actual *corev1.Namespace) error {
-	intended := actual.DeepCopy()
-	removeNomosMeta(intended)
-
-	uIntended, err := asUnstructured(intended)
-	if err != nil {
-		return err
-	}
 	uActual, err := asUnstructured(actual)
 	if err != nil {
 		return err
 	}
-
-	_, err = r.applier.Update(ctx, uIntended, uActual)
+	_, err = r.applier.RemoveNomosMeta(ctx, uActual)
 	return err
 }
 
