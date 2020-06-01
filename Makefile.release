@@ -262,7 +262,6 @@ __internal-autorelease: \
 		git-tag \
 		clean \
 		test \
-		ci-test-e2e-raw \
 		push-to-gcr-nomos \
 		upload-release \
 		git-tag-commit \
@@ -289,7 +288,6 @@ __internal-autorelease-local: \
 		info \
 		clean \
 		test \
-		ci-test-e2e-raw-local \
 		push-to-gcr-nomos \
 		upload-release \
 		git-tag-commit \
