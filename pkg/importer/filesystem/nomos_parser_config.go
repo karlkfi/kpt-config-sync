@@ -28,7 +28,6 @@ func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 		visitors.NewSupportedClusterResourcesValidator(),
 		semantic.NewSingletonResourceValidator(kinds.Namespace()),
 		syntax.NewDisallowSystemObjectsValidator(),
-		syntax.NewDeprecatedGroupKindValidator(),
 		metadata.NewNamespaceDirectoryNameValidator(),
 		metadata.NewMetadataNamespaceDirectoryValidator(),
 		syntax.NewDirectoryNameValidator(),

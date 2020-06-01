@@ -213,7 +213,7 @@ func Generate() map[string][]status.Error {
 	// 1049 is Deprecated.
 
 	// 1050
-	result.add(syntax.DeprecatedGroupKindError(
+	result.add(nonhierarchical.DeprecatedGroupKindError(
 		fake.UnstructuredAtPath(schema.GroupVersionKind{
 			Group:   "extensions",
 			Version: "v1beta1",
