@@ -85,16 +85,20 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 	opts = append(opts, client.PropagationPolicy(metav1.DeletePropagationBackground))
 	err := c.Client.Delete(ctx, obj, opts...)
 
-	if err == nil {
+	switch {
+	case err == nil:
 		glog.Infof("Deleted %s", description)
-	} else if apierrors.IsNotFound(err) {
+	case apierrors.IsNotFound(err):
 		glog.V(2).Infof("Not found during attempted delete %s", description)
 		err = nil
-	} else {
+	default:
 		err = errors.Wrapf(err, "delete failed for %s", description)
 	}
 
 	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+	if err != nil {
+		return status.ResourceWrap(err, "failed to delete "+description, ast.ParseFileObject(obj))
+	}
 	return nil
 }
 
