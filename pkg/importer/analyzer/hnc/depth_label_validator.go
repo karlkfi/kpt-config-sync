@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
@@ -16,7 +15,7 @@ import (
 
 // hasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".
 func hasDepthSuffix(s string) bool {
-	return strings.HasSuffix(s, v1.HierarchyControllerDepthSuffix)
+	return strings.HasSuffix(s, DepthSuffix)
 }
 
 // NewDepthLabelValidator ensures there's no depth label declared in metadata, which
@@ -53,6 +52,6 @@ func IllegalDepthLabelError(resource id.Resource, labels []string) status.Error 
 	return illegalDepthLabelError.
 		Sprintf("Configs MUST NOT declare labels ending with %q. "+
 			"The config has disallowed labels: %s",
-			v1.HierarchyControllerDepthSuffix, l).
+			DepthSuffix, l).
 		BuildWithResources(resource)
 }

@@ -22,9 +22,9 @@ import (
 func depthLabels(path string) core.MetaMutator {
 	tl := make(map[string]string)
 	p := strings.Split(path, "/")
-	p = append([]string{v1.DepthLabelRootName}, p...)
+	p = append([]string{DepthLabelRootName}, p...)
 	for i, ans := range p {
-		l := ans + v1.HierarchyControllerDepthSuffix
+		l := ans + DepthSuffix
 		dist := strconv.Itoa(len(p) - i - 1)
 		tl[l] = dist
 	}
@@ -75,7 +75,7 @@ func TestBuilderVisitor(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
 									Type:     node.Namespace,
-									Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar", core.Annotation(v1.HierarchyControllerAnnotationKey, v1.ManagedByValue), depthLabels("foo/bar"))}},
+									Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar", core.Annotation(AnnotationKey, v1.ManagedByValue), depthLabels("foo/bar"))}},
 								},
 							},
 						},
@@ -83,7 +83,7 @@ func TestBuilderVisitor(t *testing.T) {
 							Relative: cmpath.RelativeSlash("namespaces/qux"),
 							Type:     node.Namespace,
 							Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux",
-								core.Annotation(v1.HierarchyControllerAnnotationKey, v1.ManagedByValue),
+								core.Annotation(AnnotationKey, v1.ManagedByValue),
 								depthLabels("qux"))}},
 						},
 					},

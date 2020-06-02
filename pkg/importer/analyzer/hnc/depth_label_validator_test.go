@@ -5,7 +5,6 @@ package hnc
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -13,8 +12,8 @@ import (
 
 const (
 	legalLabel            = "label"
-	illegalSuffixedLabel  = "unsupported" + v1.HierarchyControllerDepthSuffix
-	illegalSuffixedLabel2 = "unsupported2" + v1.HierarchyControllerDepthSuffix
+	illegalSuffixedLabel  = "unsupported" + DepthSuffix
+	illegalSuffixedLabel2 = "unsupported2" + DepthSuffix
 )
 
 func TestDepthLabelValidator(t *testing.T) {

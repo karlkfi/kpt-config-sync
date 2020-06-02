@@ -46,11 +46,6 @@ const (
 	// ResourceStatusReconcilingKey is the annotation that indicates reasons why a resource is
 	// reconciling, encoded as a JSON array.
 	ResourceStatusReconcilingKey = ConfigManagementPrefix + "reconciling"
-
-	// HierarchyControllerAnnotationKey is the annotation that indicates the namespace hierarchy is
-	// not managed by the Hierarchical Namespace Controller (http://bit.ly/k8s-hnc-design) but
-	// someone else, "configmanagement.gke.io" in this case.
-	HierarchyControllerAnnotationKey = "hnc.x-k8s.io/managedBy"
 )
 
 // SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.
@@ -64,6 +59,5 @@ func SyncerAnnotations() []string {
 		ResourceManagementKey,
 		ResourceStatusErrorsKey,
 		ResourceStatusReconcilingKey,
-		HierarchyControllerAnnotationKey,
 	}
 }

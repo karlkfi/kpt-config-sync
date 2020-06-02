@@ -3,6 +3,7 @@ package differ
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 )
 
 // enableManaged returns true if the resource explicitly has management enabled on a resource
@@ -26,7 +27,8 @@ func managementUnset(obj core.LabeledAndAnnotated) bool {
 // manages.
 func hasNomosMeta(obj core.LabeledAndAnnotated) bool {
 	as := obj.GetAnnotations()
-	for _, a := range v1.SyncerAnnotations() {
+	sas := append(v1.SyncerAnnotations(), hnc.AnnotationKey)
+	for _, a := range sas {
 		if _, ok := as[a]; ok {
 			return true
 		}

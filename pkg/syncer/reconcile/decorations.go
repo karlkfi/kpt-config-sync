@@ -3,6 +3,7 @@ package reconcile
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 )
 
 // SyncedAt marks the resource as synced at the passed sync token.
@@ -21,7 +22,7 @@ func enableManagement(obj core.LabeledAndAnnotated) {
 // place. Returns true if the object was modified.
 func RemoveNomosLabelsAndAnnotations(obj core.LabeledAndAnnotated) bool {
 	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	core.RemoveAnnotations(obj, v1.SyncerAnnotations()...)
+	core.RemoveAnnotations(obj, append(v1.SyncerAnnotations(), hnc.AnnotationKey)...)
 	core.RemoveLabels(obj, v1.SyncerLabels())
 	after := len(obj.GetAnnotations()) + len(obj.GetLabels())
 	return before != after
