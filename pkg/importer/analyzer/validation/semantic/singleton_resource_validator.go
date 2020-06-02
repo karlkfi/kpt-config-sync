@@ -4,7 +4,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -41,6 +40,7 @@ func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
 	}
 
 	return multipleSingletonsError.
-		Sprintf("A directory may declare at most one %[1]q Resource:", kinds.ResourceString(gvk)).
+		Sprintf("Multiple %v resources cannot exist in the same directory. " +
+			"To fix, remove the duplicate config(s) such that no more than 1 remains:", gvk.GroupKind().String()).
 		BuildWithResources(duplicates...)
 }
