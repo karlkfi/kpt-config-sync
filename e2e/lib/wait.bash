@@ -21,6 +21,7 @@
 #   -p [poll interval] The amount of time to wait between executions
 #   -s                 Wait for success (exit 0)
 #   -t [timeout]       The timeout in seconds (default 300 seconds)
+#   -l                 Show timing for the command (1-second granularity)
 #   -- End of flags, command starts after this
 # Args
 #  Args for command
@@ -32,6 +33,7 @@ function wait::for() {
   local deadline="$(( $(date +%s) + timeout ))"
   local expected_output=""
   local contained_output=""
+  local show_timing=false
 
   local parse_args=false
   for i in "$@"; do
@@ -54,6 +56,9 @@ function wait::for() {
         -e)
           exitf=(wait::__exit_eq "${1:-}")
           shift
+        ;;
+        -l)
+          show_timing=true
         ;;
         -t)
           timeout="${1:-}"
@@ -91,6 +96,8 @@ function wait::for() {
 
   local out=""
   local status=0
+  local iterations=0
+  local start_time=$(date +%s)
   while (( $(date +%s) < deadline )); do
     status=0
     out="$("${args[@]}" 2>&1)" || status=$?
@@ -103,6 +110,11 @@ function wait::for() {
       continue
     fi
     if "${exitf[@]}" "${status}"; then
+      if ${show_timing}; then
+        local elapsed
+        elapsed=$(( $(date +%s) - start_time ))
+        echo "> iterations:${iterations} elapsed:${elapsed}s command:${args[@]}" >&3
+      fi
       return 0
     fi
     sleep "$sleeptime"
