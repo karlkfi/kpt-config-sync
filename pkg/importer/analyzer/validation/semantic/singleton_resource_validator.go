@@ -40,7 +40,7 @@ func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
 	}
 
 	return multipleSingletonsError.
-		Sprintf("Multiple %v resources cannot exist in the same directory. " +
+		Sprintf("Multiple %v resources cannot exist in the same directory. "+
 			"To fix, remove the duplicate config(s) such that no more than 1 remains:", gvk.GroupKind().String()).
 		BuildWithResources(duplicates...)
 }

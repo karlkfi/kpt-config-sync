@@ -15,7 +15,9 @@ var illegalHierarchicalKindError = status.NewErrorBuilder(IllegalHierarchicalKin
 // IllegalHierarchicalKind reports that a type is not permitted if hierarchical parsing is disabled.
 func IllegalHierarchicalKind(resource id.Resource) status.Error {
 	return illegalHierarchicalKindError.
-		Sprintf("Configs in API Group %q must not be declared if hierarchical parsing is disabled", configmanagement.GroupName).
+		Sprintf("The type %v is not allowed if `sourceFormat` is set to "+
+			"`unstructured`. To fix, remove the problematic config, or convert your repo "+
+			"to use `sourceFormat: hierarchy`.", resource.GroupVersionKind().GroupKind().String()).
 		BuildWithResources(resource)
 }
 
