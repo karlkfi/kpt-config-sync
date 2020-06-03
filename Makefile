@@ -167,7 +167,7 @@ include Makefile.gen
 include Makefile.operator
 
 # Redeploy a component without rerunning the installer.
-redeploy-%: push-to-gcr-nomos gen-yaml-%
+redeploy-all: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Redeploying without rerunning the installer: $*"
 	@kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
 

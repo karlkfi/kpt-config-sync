@@ -47,12 +47,12 @@ image-nomos: build
 		-t gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
 
 # Pushes the specified component's docker image to gcr.io.
-push-to-gcr-%: image-%
-	@echo "+++ Pushing $* to gcr.io"
+push-to-gcr-nomos: image-nomos
+	@echo "+++ Pushing nomos to gcr.io"
 	@echo "+++ Using account:"
 	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	docker push gcr.io/$(GCR_PREFIX)/$*:$(IMAGE_TAG)
+	docker push gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG)
 
 ###################################
 # YAML generation
