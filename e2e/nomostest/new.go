@@ -23,7 +23,7 @@ func New(t *testing.T) *NT {
 		// This safeguard prevents test authors from accidentally forgetting to
 		// check for the e2e test flag, so `go test ./...` functions as expected
 		// without triggering e2e tests.
-		t.Fatal("Attempting to create cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
+		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
 
 	name := testName(t)
@@ -37,28 +37,45 @@ func New(t *testing.T) *NT {
 
 	nt := &NT{
 		Context: context.Background(),
+		T:       t,
 		Name:    name,
 		TmpDir:  tmpDir,
 		Client:  c,
 	}
 
-	waitForGit := installGitServer(t, nt)
+	connectToLocalRegistry(nt)
+	waitForGit := installGitServer(nt)
+	waitForConfigSync := installConfigSync(nt)
 
 	// Wait for git-server to become available before proceeding with the test.
-	err := waitForGit()
+	err := waitForAll(waitForGit, waitForConfigSync)
 	if err != nil {
-		t.Fatal("waiting for git-server to become available:", err)
+		t.Fatal(err)
 	}
 	return nt
+}
+
+func waitForAll(waits ...func() error) error {
+	for _, w := range waits {
+		err := w()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func testDir(t *testing.T, name string) string {
 	t.Helper()
 
 	subPath := filepath.Join("nomos-e2e", name+"-")
+	err := os.MkdirAll(filepath.Join(os.TempDir(), subPath), os.ModePerm)
+	if err != nil {
+		t.Fatalf("creating nomos-e2e tmp directory: %v", err)
+	}
 	tmpDir, err := ioutil.TempDir(os.TempDir(), subPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("creating nomos-e2e tmp test subdirectory: %v", err)
 	}
 	t.Cleanup(func() {
 		err := os.RemoveAll(tmpDir)

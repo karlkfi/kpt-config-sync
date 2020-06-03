@@ -1,13 +1,36 @@
 package nomostest
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/kind/pkg/cluster"
 )
+
+// Use release images from https://github.com/kubernetes-sigs/kind/releases
+const kind1_14 = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
+
+func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
+	// TODO(willbeason): Allow specifying Kubernetes version.
+	return p.Create(name,
+		// Use Kubernetes 1.14
+		cluster.CreateWithNodeImage(kind1_14),
+		// Store the KUBECONFIG at the specified path.
+		cluster.CreateWithKubeconfigPath(kcfgPath),
+		// Allow the cluster to see the local Docker container registry.
+		// https://kind.sigs.k8s.io/docs/user/local-registry/
+		cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
+			ContainerdConfigPatches: []string{
+				fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:%d"]
+  endpoint = ["http://%s:%d"]`, registryPort, registryName, registryPort),
+			},
+		}),
+	)
+}
 
 // newKind creates a new Kind cluster for use in testing with the specified name.
 //
@@ -18,9 +41,8 @@ func newKind(t *testing.T, name string, tmpDir string) *rest.Config {
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, "KUBECONFIG")
 
-	// TODO(willbeason): Allow specifying Kubernetes version.
-	//  Default to 1.16?
-	err := p.Create(name, cluster.CreateWithKubeconfigPath(kcfgPath))
+	err := createKindCluster(p, name, kcfgPath)
+
 	if err != nil {
 		t.Fatalf("creating Kind cluster: %v", err)
 	}

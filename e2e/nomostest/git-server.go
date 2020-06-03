@@ -3,7 +3,6 @@ package nomostest
 import (
 	"encoding/json"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/google/nomos/pkg/core"
@@ -25,15 +24,15 @@ var testGitServerSelector = map[string]string{"app": testGitServer}
 //
 // The git-server almost always comes up before 40 seconds, but we give it a
 // full minute in the callback to be safe.
-func installGitServer(t *testing.T, nt *NT) func() error {
-	t.Helper()
+func installGitServer(nt *NT) func() error {
+	nt.T.Helper()
 
 	objs := gitServer()
 
 	for _, o := range objs {
 		err := nt.Create(o)
 		if err != nil {
-			t.Fatalf("installing %v %s", o.GroupVersionKind(),
+			nt.T.Fatalf("installing %v %s", o.GroupVersionKind(),
 				client.ObjectKey{Name: o.GetName(), Namespace: o.GetNamespace()})
 		}
 	}

@@ -2,6 +2,8 @@ package nomostest
 
 import (
 	"context"
+	"fmt"
+	"testing"
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
@@ -13,6 +15,10 @@ import (
 // NT represents the test environment for a single Nomos end-to-end test case.
 type NT struct {
 	Context context.Context
+
+	// T is the test environment for the test.
+	// Used to exit tests early when setup fails, and for logging.
+	T *testing.T
 
 	// Name is the unique name of the test run.
 	Name string
@@ -28,23 +34,36 @@ type NT struct {
 	Client client.Client
 }
 
+func fmtObj(name, namespace string, obj runtime.Object) string {
+	return fmt.Sprintf("%s/%s %T", namespace, name, obj)
+}
+
 // Get is identical to Get defined for client.Client, except:
 //
 // 1) Context implicitly uses the one created for the test case.
 // 2) name and namespace are strings instead of requiring client.ObjectKey.
 //
 // Leave namespace as empty string for cluster-scoped resources.
-func (nt *NT) Get(name, namespace string, obj runtime.Object) error {
+func (nt *NT) Get(name, namespace string, obj core.Object) error {
+	nt.T.Logf("getting %s", fmtObj(name, namespace, obj))
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
 
 // Create is identical to Create defined for client.Client, but without requiring Context.
-func (nt *NT) Create(obj runtime.Object, opts ...client.CreateOption) error {
+func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
+	nt.T.Logf("creating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Create(nt.Context, obj, opts...)
 }
 
+// Update is identical to Update defined for client.Client, but without requiring Context.
+func (nt *NT) Update(obj core.Object, opts ...client.UpdateOption) error {
+	nt.T.Logf("updating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
+	return nt.Client.Update(nt.Context, obj, opts...)
+}
+
 // Delete is identical to Delete defined for client.Client, but without requiring Context.
-func (nt *NT) Delete(obj runtime.Object, opts ...client.DeleteOption) error {
+func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
+	nt.T.Logf("deleting %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
 }
 

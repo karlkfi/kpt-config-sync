@@ -294,7 +294,7 @@ func RoleUnstructuredAtPath(path string, opts ...core.MetaMutator) ast.FileObjec
 }
 
 // ConfigMapObject returns an initialized ConfigMap.
-func configMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
+func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 	obj := &corev1.ConfigMap{TypeMeta: toTypeMeta(kinds.ConfigMap())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
@@ -304,7 +304,7 @@ func configMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 
 // ConfigMapAtPath returns a ConfigMap at the specified filepath.
 func ConfigMapAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(configMapObject(opts...), path)
+	return FileObject(ConfigMapObject(opts...), path)
 }
 
 func toTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {
