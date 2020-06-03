@@ -82,14 +82,10 @@ gen-deployments-for-decoupled-e2e: $(patsubst %,$(GEN_YAML_DIR)/%.yaml,$(DEPLOYM
 # E2E Git Server
 ###################################
 
-E2E_GIT_PROJECT ?= $(GCP_PROJECT)
-E2E_GIT_IMAGE_SECRET ?=
-
 # Generates yaml for git server used in e2e testing.
 $(TEST_GEN_YAML_DIR)/git-server.yaml: ./test/manifests/templates/git-server.yaml Makefile $(OUTPUT_DIR)
-	@echo "+++ Generating yaml for git-server at $(E2E_GIT_PROJECT)"
-	@sed -e 's|IMAGE_NAME|gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)|' \
-	     -e 's|SECRET_NAME|$(E2E_GIT_IMAGE_SECRET)|'  < \
+	@echo "+++ Generating yaml for git-server at nomos-public"
+	@sed -e 's|IMAGE_NAME|gcr.io/nomos-public/git-server:$(GIT_SERVER_RELEASE)|' \
 			 $< > $@
 
 GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
@@ -103,6 +99,6 @@ build-git-server:
 	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 			$(GIT_SERVER_DOCKER) \
-			-t gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
+			-t gcr.io/nomos-public/git-server:$(GIT_SERVER_RELEASE)
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	@docker push gcr.io/$(E2E_GIT_PROJECT)/git-server:$(GIT_SERVER_RELEASE)
+	@docker push gcr.io/nomos-public/git-server:$(GIT_SERVER_RELEASE)

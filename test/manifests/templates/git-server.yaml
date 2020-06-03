@@ -50,7 +50,5 @@ spec:
               mountPath: "/git-server/keys"
             - name: repos
               mountPath: "/git-server/repos/sot.git"
-      imagePullSecrets:
-        SECRET_NAME
 
 

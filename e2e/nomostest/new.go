@@ -1,6 +1,7 @@
 package nomostest
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,7 +10,12 @@ import (
 	"github.com/google/nomos/e2e"
 )
 
-// New establishes a connection to a test cluster.
+// New establishes a connection to a test cluster and prepares it for testing.
+//
+// The following are guaranteed to be available when this function returns:
+// 1) A connection to the Kubernetes cluster.
+// 2) A functioning git server hosted on the cluster.
+// 3) TODO(willbeason): A fresh ACM installation.
 func New(t *testing.T) *NT {
 	t.Helper()
 
@@ -29,14 +35,26 @@ func New(t *testing.T) *NT {
 	cfg := newKind(t, name, tmpDir)
 	c := connect(t, cfg)
 
-	return &NT{
-		Name:   name,
-		TmpDir: tmpDir,
-		Client: c,
+	nt := &NT{
+		Context: context.Background(),
+		Name:    name,
+		TmpDir:  tmpDir,
+		Client:  c,
 	}
+
+	waitForGit := installGitServer(t, nt)
+
+	// Wait for git-server to become available before proceeding with the test.
+	err := waitForGit()
+	if err != nil {
+		t.Fatal("waiting for git-server to become available:", err)
+	}
+	return nt
 }
 
 func testDir(t *testing.T, name string) string {
+	t.Helper()
+
 	subPath := filepath.Join("nomos-e2e", name+"-")
 	tmpDir, err := ioutil.TempDir(os.TempDir(), subPath)
 	if err != nil {

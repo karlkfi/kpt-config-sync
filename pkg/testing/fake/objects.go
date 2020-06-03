@@ -313,3 +313,13 @@ func toTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {
 		Kind:       gvk.Kind,
 	}
 }
+
+// ServiceObject returns a default-initialized Service with the passed opts
+// applied.
+func ServiceObject(opts ...core.MetaMutator) *corev1.Service {
+	result := &corev1.Service{TypeMeta: toTypeMeta(kinds.Namespace())}
+	defaultMutate(result)
+	mutate(result, opts...)
+
+	return result
+}
