@@ -97,7 +97,8 @@ function wait::for() {
   local out=""
   local status=0
   local iterations=0
-  local start_time=$(date +%s)
+  local start_time=0
+  start_time=$(date +%s)
   while (( $(date +%s) < deadline )); do
     status=0
     out="$("${args[@]}" 2>&1)" || status=$?
@@ -113,6 +114,7 @@ function wait::for() {
       if ${show_timing}; then
         local elapsed
         elapsed=$(( $(date +%s) - start_time ))
+        # shellcheck disable=SC2154
         echo "> iterations:${iterations} elapsed:${elapsed}s command:${args[@]}" >&3
       fi
       return 0

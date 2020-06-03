@@ -106,10 +106,10 @@ teardown() {
   resource::check clusterrole ${clusterresname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that cluster config does not contain resource condition"
-  clusterconfig_condition_null || debug::error "resourceConditions not empty, got: ${resourceConditions}"
+  clusterconfig_condition_null || debug::error "resourceConditions not empty"
 
   debug::log "Checking that namespace config does not contain resource condition"
-  namespaceconfig_condition_null || debug::error "resourceConditions not empty, got: ${resourceConditions}"
+  namespaceconfig_condition_null || debug::error "resourceConditions not empty"
 
   # Test adding error annotations
 
