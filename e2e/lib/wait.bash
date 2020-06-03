@@ -114,7 +114,7 @@ function wait::for() {
       if ${show_timing}; then
         local elapsed
         elapsed=$(( $(date +%s) - start_time ))
-        # shellcheck disable=SC2154
+        # shellcheck disable=SC2145
         echo "> iterations:${iterations} elapsed:${elapsed}s command:${args[@]}" >&3
       fi
       return 0
