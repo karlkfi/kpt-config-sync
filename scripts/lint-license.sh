@@ -4,6 +4,7 @@ set -euxo pipefail
 
 echo "Checking LICENSE file for changes."
 tmp=$(mktemp -d)
+
 bash scripts/prepare-licenses.sh "${tmp}/LICENSE"
 
 if ! cmp -s "${tmp}/LICENSE" "LICENSE" ; then
@@ -16,6 +17,10 @@ rm -r "${tmp}"
 
 # TODO(b/156962677): Don't directly install things in scripts - do it in the image.
 go get github.com/google/go-licenses
+# go mod tidy after getting go-licenses so that it is installed, but not
+# declared as a project dependency.
+go mod tidy
+
 chmod -R +rwx .output
 
 echo "Ensuring dependencies contain approved licenses. This may take up to 3 minutes."

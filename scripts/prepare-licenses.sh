@@ -11,6 +11,10 @@ licenseRegex="\(LICEN\(S\|C\)E\|COPYING\|README\|NOTICE\)"
 # Note that packages may contain multiple license, or may have both a LICENSE
 # and a NOTICE which must BOTH be distributed with the code.
 licenses="${tmp}"/licenses.txt
+
+# Ensure the vendor directory only includes the project's build dependencies.
+go mod tidy
+go mod vendor
 find vendor/ -regex ".*/${licenseRegex}" > "${licenses}"
 sort "${licenses}" -dufo "${licenses}"
 

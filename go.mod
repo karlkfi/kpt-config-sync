@@ -25,7 +25,6 @@ require (
 	github.com/go-openapi/spec v0.19.3 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.4.0
-	github.com/google/go-licenses v0.0.0-20200511085313-e4cf7a36ee79 // indirect
 	github.com/googleapis/gnostic v0.3.1
 	github.com/mailru/easyjson v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1
