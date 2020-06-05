@@ -1,43 +1,10 @@
-
-# Target intended for running the e2e tests with installation as a self-contained
-# setup using a custom identity file.  The identity file is mounted in by the
-# test runner.
-#
 # Environment:
 #   E2E_FLAGS: flag passed into the test container
 #   TEST_E2E_RUN_FLAGS: flags passed to the e2e/e2e.sh script.
 #
 # The --gcp-prober-cred is mounted in as a Kubernetes secret at the path seen
 # below.
-ci-test-e2e:
-	$(MAKE) $(E2E_PARAMS) \
-      E2E_FLAGS="\
-        --tap \
-		--create-ssh-key \
-        --gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
-		$(E2E_FLAGS) \
-     " \
-     TEST_E2E_RUN_FLAGS="\
-	    --hermetic \
-		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
-		$(TEST_E2E_RUN_FLAGS) \
-	 " \
-     test-e2e-all
-
-# Same target as above, except set up so that it can be ran from a local machine.
-# We must download the gcs prober credentials, as they will not be mounted in.
-ci-test-e2e-local:
-	$(MAKE) $(E2E_PARAMS) \
-	 E2E_FLAGS="\
-		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
-		$(E2E_FLAGS) \
-	 " \
-     TEST_E2E_RUN_FLAGS="\
-		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
-	 " \
-     ci-test-e2e
-
-#### Same as above, but for the "raw" targets
+#
 
 ci-test-e2e-raw:
 	$(MAKE) $(E2E_PARAMS) \
@@ -79,7 +46,7 @@ ci-stresstest-e2e:
 		$(E2E_FLAGS) \
      " \
      TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)" \
-	 ci-test-e2e
+	 ci-test-e2e-raw
 
 # Same target as above, except it can be ran from a local machine.
 ci-stresstest-e2e-local:
@@ -87,35 +54,4 @@ ci-stresstest-e2e-local:
 			E2E_FLAGS="\
 			  --testcases-dir=stresstests \
 			" \
-			ci-test-e2e-local
-
-
-# Run ci setup locally against latest
-ci-test-e2e-local-latest:
-	$(MAKE) $(E2E_PARAMS) \
-		OPERATOR_TARGET:=download-operator-latest \
-		E2E_FLAGS="\
-		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
-		--stable_channel --preclean --setup --test --clean $(E2E_FLAGS) \
-		" \
-		TEST_E2E_RUN_FLAGS="\
-		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
-		" \
-		download-cli image-e2e-tests test-e2e-run-git
-
-# Run CI in Prow against latest
-ci-test-e2e-latest:
-	$(MAKE) $(E2E_PARAMS) \
-		OPERATOR_TARGET:=download-operator-latest \
-		E2E_FLAGS="\
-		--tap \
-		--create-ssh-key \
-		--gcp-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
-		--stable_channel --preclean --setup --test --clean $(E2E_FLAGS) \
-		" \
-		TEST_E2E_RUN_FLAGS="\
-		--hermetic \
-		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
-		" \
-		download-cli image-e2e-tests test-e2e-run-git
-
+			ci-test-e2e-raw-local

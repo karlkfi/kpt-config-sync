@@ -55,7 +55,7 @@ image-e2e-tests: \
 
 GOTOPT2_BINARY := docker run -i -u $(UID):$(GID) $(BUILDENV_IMAGE) /bin/gotopt2
 
-test-e2e-run-git:
+__test-e2e-run-git:
 	@echo "+++ Running e2e tests: git"
 	@echo $(E2E_FLAGS)
 	@env GOTOPT2_BINARY="$(GOTOPT2_BINARY)" \
@@ -74,14 +74,6 @@ e2e-image-all: push-to-gcr-nomos image-e2e-tests
 banner:
 	@cat ./build/banner.txt
 
-# Clean, build, and run e2e tests for all importers.
-# Clean cluster after running.
-test-e2e-all: banner e2e-image-all
-	$(MAKE) test-e2e-run-git \
-		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
-
 push-e2e-tests: image-e2e-tests
 	docker push $(E2E_TEST_IMAGE_LATEST)
 
@@ -92,24 +84,13 @@ ensure-image-e2e-tests:
 		docker image pull $(E2E_TEST_IMAGE_LATEST); \
 	fi
 
-# This is the original target that was hooked up to `test-e2e-all-ephemeral`.
-# Keeping it until we're sure we don't need it.
-#
-# Clean, ensure and run e2e tests for all importers.
-# Clean cluster after running.
-test-e2e-all-nobuild: banner push-to-gcr-nomos e2e-staging ensure-image-e2e-tests
-	$(MAKE) test-e2e-run-git \
-		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
-
 # Clean, ensure and run e2e tests for all importers.
 # Clean cluster after running.
 test-e2e-raw-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
 		e2e-staging
-	$(MAKE) test-e2e-run-git \
+	$(MAKE) __test-e2e-run-git \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="\
 			--preclean \
@@ -140,52 +121,13 @@ test-e2e-raw-ephemeral:
 			$(TEST_E2E_RUN_FLAGS) \
 		"
 
-# Internal test target that passes flags through, should not be ran directly
-# but rather througn one of the options below.
-__internal_test_e2e_git-noflags: e2e-image-all
-	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="$(E2E_FLAGS)"
-
-# Clean, build, and run e2e tests for a particular importer.
-# Clean cluster after running.
-test-e2e-git:
-	$(MAKE) \
-		$(E2E_PARAMS) \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-		__internal_test_e2e_git-noflags
-
-test-e2e-git-user:
-	$(MAKE) \
-		IMAGE_TAG=${IMAGE_TAG} \
-		OPERATOR_TARGET=prepare-operator-user \
-		E2E_FLAGS="--preclean --setup --test --clean $(E2E_FLAGS)" \
-		test-e2e-git
-
-# Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
-# allowed flags.  This command assumes you will run "make e2e-staging" separately.
-#
-# Example:
-#     make test-e2e-dev-git-user E2E_FLAGS="--clean"
-test-e2e-dev-git-user:
-	$(MAKE) \
-		IMAGE_TAG=${IMAGE_TAG} \
-		OPERATOR_TARGET=prepare-operator-user \
-		E2E_FLAGS="$(E2E_FLAGS)" \
-		__internal_test_e2e_git-noflags
-
-# Dev mode allows for specifying the args manually via E2E_FLAGS, see e2e/setup.sh for
-# allowed flags.  This command assumes you will run "make e2e-staging" separately.
-test-e2e-dev-git: e2e-staging
-	$(MAKE) test-e2e-run-git \
-		GCP_PROJECT=$(GCP_PROJECT) \
-		E2E_FLAGS="$(E2E_FLAGS)"
-
 # The raw-nomos targets run the e2e tests with the --raw-nomos flag, which installs nomos
 # directly to the cluster instead of using the operator.
 test-e2e-raw: banner
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
 		e2e-image-all
-	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
 		--preclean \
 		--setup \
 		--test \
@@ -198,7 +140,7 @@ test-e2e-raw-dev:
 	$(MAKE) \
 		OPERATOR_TARGET=prepare-false-operator \
 		image-e2e-tests
-	$(MAKE) test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
 		--raw-nomos \
 		$(E2E_FLAGS)"
 

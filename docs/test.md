@@ -17,7 +17,7 @@ cluster; the cluster's service account needs storage.objectViewer role on the
 GCP project that holds Docker images in Google Container Registry.
 
 ```console
-make test-e2e-git
+make test-e2e-raw
 ```
 
 ## Local nomos vet tests
@@ -37,52 +37,33 @@ suite.
 
 You can restrict by test name:
 ```console
-make test-e2e-git E2E_FLAGS="--test_filter acme"
+make test-e2e-raw E2E_FLAGS="--test_filter acme"
 ```
 
 Or by file name:
 ```console
-make test-e2e-git E2E_FLAGS="--file_filter acme"
+make test-e2e-raw E2E_FLAGS="--file_filter acme"
 ```
 
 Also, It is possible to ignore a test while running the make target.
 
 You can ignore a test by test name:
 ```console
-make test-e2e-git E2E_FLAGS="--file_ignore_filter acme.bats"
-```                                              
+make test-e2e-raw E2E_FLAGS="--file_ignore_filter acme.bats"
+```
 
 ## E2E Tests with a custom Operator
 
-The e2e tests install Nomos using the Anthos Config Management Operator,
-a.k.a. the nomos-operator, the code for which lives in the
-[nomos-operator repo](https://team.git.corp.google.com/nomos-team/nomos-operator).
-By default, e2e tests run against the latest release of the operator. However,
-you can run e2e tests against your own build of the operator by doing the
-following:
+This functionality has been removed in an effort to decouple nomos from the operator.
 
-Check out the `nomos-operator` repo. Instructions can be found in
-[the nomos-operator readme](https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/nomos-operator/README.md#clone-the-git-repo)
-
-Once you have made the changes you wish to test in that repository, run
-
-```console
-make release-user PROJECT_NAME=stolos-dev
-```
-
-This pushes your repo's version of the config-management-operator to a user-private location
-in GCR.
-
-Then, return to the main nomos repo and run tests with the `-user` target:
-```console
-make test-e2e-git-user E2E_FLAGS="--file_filter acme"
-```
+In general, if a test needs the operator to verify some functionality, that test should
+be added to the operator repo.
 
 ## Isolating setup, tests, and cleanup.
 
 The e2e test suite starts with a suite setup, then runs tests, and finally does
 a cleanup. (The setup also contains a clean step.) You can run these stages
-individually using the `test-e2e-dev-git` target.
+individually using the `test-e2e-raw-dev` target.
 
 1- Build Anthos Config Management and end to end images. You must do this
 each time you make changes to .go code.
@@ -95,7 +76,7 @@ make e2e-image-all
 
 ```console
 # git
-make test-e2e-dev-git E2E_FLAGS="--setup"
+make test-e2e-raw-dev E2E_FLAGS="--setup"
 ```
 
 3- Run tests with `--test`. This example runs a filtered set of tests with full
@@ -103,14 +84,14 @@ debug output.
 
 ```console
 # git
-make test-e2e-dev-git E2E_FLAGS="--test --tap --test_filter acme"
+make test-e2e-raw-dev E2E_FLAGS="--test --tap --test_filter acme"
 ```
 
 4- Clean up the test environment
 
 ```console
 # git
-make test-e2e-dev-git E2E_FLAGS="--clean"
+make test-e2e-raw-dev E2E_FLAGS="--clean"
 ```
 
 ### E2E_FLAGS

@@ -1,5 +1,7 @@
 # Building (Operator method)
 
+*NOTE*: This doc is deprecated.  It will be updated once nomos and the operator are fully decoupled.
+
 The instructions for configuring and installing Nomos with an operator are
 described in the [Operator Installation Guide](../user/installation.md).
 *However*, `config-management-operator.yaml` uses a released build of Nomos. In order to
