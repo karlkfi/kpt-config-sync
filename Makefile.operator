@@ -18,13 +18,11 @@ operator-manifest: gen-yaml-all
 	@mkdir -p $(STAGING_DIR)/installer/manifests
 	@cp manifests/*.yaml $(GEN_YAML_DIR)/*.yaml $(STAGING_DIR)/installer/manifests
 
-# prepare-false-operator prepares a manifest called "defined-operator-bundle" that is
-# actually just all the nomos resources.  This is meant to be a drop-in replacement
-# for `prepare-operator` that will allow us to e2e test nomos with no operator,
-# decoupling the two repositories.  This target seeks to create the artifacts with
-# the same names and filepaths so that it is a drop-in replacement for its predecessor.
-.PHONY: prepare-false-operator
-prepare-false-operator: push-to-gcr-nomos gen-deployments-for-decoupled-e2e
+# prepare-e2e-manifest prepares a manifest called "defined-operator-bundle" that
+# contains the nomos resources required for e2e testing.  It replaces the now deleted
+# prepare-operator make target, taking advantage of the plumbing that target used.
+.PHONY: prepare-e2e-manifest
+prepare-e2e-manifest: push-to-gcr-nomos gen-deployments-for-decoupled-e2e
 ifndef GCR_PREFIX
 	$(error GCR_PREFIX must be set, but is not)
 endif
