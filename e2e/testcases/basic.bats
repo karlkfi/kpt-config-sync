@@ -210,22 +210,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
     kubectl get pods -n frontend --as alice@acme.com
 }
 
-@test "${FILE_NAME}: ResourceQuota enforced" {
-  clean_test_configmaps
-  git::add /opt/testing/e2e/examples/acme/namespaces/rnd acme/namespaces/rnd/
-  git::commit
-
-  wait::for -- kubectl get -n new-prj resourcequota quota
-
-  run kubectl create configmap map1 -n new-prj
-  assert::contains "created"
-  run kubectl create configmap map2 -n new-prj
-  assert::contains "created"
-  run kubectl create configmap map3 -n new-prj
-  assert::contains "exceeded quota: quota"
-  clean_test_configmaps
-}
-
 function manage_namespace() {
   local ns="${1}"
   debug::log "Add an unmanaged resource into the namespace as a control"
