@@ -49,6 +49,12 @@ func (nt *NT) Get(name, namespace string, obj core.Object) error {
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
 
+// List is identical to List defined for client.Client, but without requiring Context.
+func (nt *NT) List(obj runtime.Object, opts ...client.ListOption) error {
+	nt.T.Logf("listing %T", obj)
+	return nt.Client.List(nt.Context, obj, opts...)
+}
+
 // Create is identical to Create defined for client.Client, but without requiring Context.
 func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
 	nt.T.Logf("creating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))

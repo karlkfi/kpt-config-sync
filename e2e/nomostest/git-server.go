@@ -3,6 +3,8 @@ package nomostest
 import (
 	"encoding/json"
 	"fmt"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/google/nomos/pkg/core"
@@ -99,6 +101,7 @@ func gitDeployment() *appsv1.Deployment {
 		core.Namespace(testGitNamespace),
 		core.Labels(testGitServerSelector),
 	)
+
 	deployment.Spec = appsv1.DeploymentSpec{
 		MinReadySeconds: 2,
 		Strategy:        appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
@@ -109,6 +112,9 @@ func gitDeployment() *appsv1.Deployment {
 			},
 			Spec: corev1.PodSpec{
 				Volumes: []corev1.Volume{
+					{Name: "keys", VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{SecretName: "ssh-pub"},
+					}},
 					{Name: "repos", VolumeSource: corev1.VolumeSource{EmptyDir: nil}},
 				},
 				Containers: []corev1.Container{
@@ -117,6 +123,7 @@ func gitDeployment() *appsv1.Deployment {
 						Image: testGitServerImage,
 						Ports: []corev1.ContainerPort{{ContainerPort: 22}},
 						VolumeMounts: []corev1.VolumeMount{
+							{Name: "keys", MountPath: "/git-server/keys"},
 							{Name: "repos", MountPath: "/git-server/repos/sot.git"},
 						},
 					},
@@ -126,4 +133,59 @@ func gitDeployment() *appsv1.Deployment {
 		},
 	}
 	return deployment
+}
+
+// portForwardGitServer forwards the git-server deployment to port 22.
+func portForwardGitServer(nt *NT) {
+	kcfg := filepath.Join(nt.TmpDir, "KUBECONFIG")
+
+	podList := &corev1.PodList{}
+	err := nt.List(podList, client.InNamespace(testGitNamespace))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	if nPods := len(podList.Items); nPods != 1 {
+		podsJSON, err := json.MarshalIndent(podList, "", "  ")
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		nt.T.Log(string(podsJSON))
+		nt.T.Fatalf("got len(podList.Items) = %d, want 1", nPods)
+	}
+
+	podName := podList.Items[0].Name
+
+	// TODO(willbeason): Do this dynamically for each repository.
+	out, err := exec.Command("kubectl", "exec", "--kubeconfig", kcfg,
+		"-n", testGitNamespace, podName, "--",
+		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git").Output()
+	if err != nil {
+		nt.T.Log(string(out))
+		nt.T.Fatalf("initializing bare repo: %v", err)
+	}
+
+	// This is a go function since port forwarding is blocking, so we have to
+	// dedicate a process to it.
+	//
+	// We write the (potential) error to a channel, which will make it available
+	// at the end of the test when we check for it at cleanup.
+	errs := make(chan error)
+	// TODO(willbeason): Make the port dynamic, and make the autoselected
+	//  port discoverable.
+	go func() {
+		out, err := exec.Command("kubectl", "--kubeconfig", kcfg, "port-forward",
+			"-n", testGitNamespace, podName, "2222:22").Output()
+		if err != nil {
+			nt.T.Log(out)
+			errs <- err
+		}
+	}()
+	nt.T.Cleanup(func() {
+		select {
+		case err = <-errs:
+			nt.T.Fatalf("setting up port forwarding: %v", err)
+		default:
+			// The test completed without port forwarding throwing an error.
+		}
+	})
 }

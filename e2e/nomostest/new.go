@@ -47,22 +47,20 @@ func New(t *testing.T) *NT {
 	waitForGit := installGitServer(nt)
 	waitForConfigSync := installConfigSync(nt)
 
-	// Wait for git-server to become available before proceeding with the test.
-	err := waitForAll(waitForGit, waitForConfigSync)
+	err := waitForGit()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
 	}
-	return nt
-}
+	// The git-server reports itself to be ready, so we don't have to wait on
+	// anything.
+	portForwardGitServer(nt)
 
-func waitForAll(waits ...func() error) error {
-	for _, w := range waits {
-		err := w()
-		if err != nil {
-			return err
-		}
+	err = waitForConfigSync()
+	if err != nil {
+		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
-	return nil
+
+	return nt
 }
 
 func testDir(t *testing.T, name string) string {

@@ -30,7 +30,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.6.0
 	github.com/spf13/cobra v1.0.0
-	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f // indirect
+	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f
 	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.2

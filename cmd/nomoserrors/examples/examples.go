@@ -236,7 +236,7 @@ func Generate() map[string][]status.Error {
 	result.add(nonhierarchical.ManagedResourceInUnmanagedNamespace("foo", fake.Role()))
 
 	// 1057
-	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label"+hnc.DepthSuffix}))
+	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label" + hnc.DepthSuffix}))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))

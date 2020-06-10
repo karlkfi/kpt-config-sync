@@ -25,6 +25,10 @@ func backoff(timeout time.Duration) wait.Backoff {
 
 	// This creates a constant backoff that always retries after exactly one
 	// second. See documentation for wait.Backoff for full explanation.
+	//
+	// No, we don't want to increase the interval each time we poll.
+	// The test environment is not competing for bandwidth in any way where that
+	// would help.
 	return wait.Backoff{
 		Duration: time.Second,
 		Steps:    int(timeout / time.Second),
