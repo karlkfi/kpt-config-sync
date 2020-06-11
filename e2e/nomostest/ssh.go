@@ -1,56 +1,62 @@
 package nomostest
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/core"
-	"golang.org/x/crypto/ssh"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // generateSSHKeys generates a public/public key pair for the test.
-func generateSSHKeys(nt *NT) []core.Object {
+//
+// It turns out kubectl create secret is annoying to emulate, and it doesn't
+// expose the inner logic to outside consumers. So instead of trying to do it
+// ourselves, we're shelling out to kubectl to ensure we create a valid set of
+// secrets.
+func generateSSHKeys(nt *NT, kcfg string) {
 	nt.T.Helper()
 
-	// Generate the private key for the git-sync Pod.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	sshDir := filepath.Join(nt.TmpDir, "ssh")
+	err := os.MkdirAll(sshDir, fileMode)
 	if err != nil {
-		nt.T.Fatal(err)
-	}
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	privateKeyString := base64.StdEncoding.EncodeToString(privateKeyBytes)
-	privateSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "git-creds",
-			Namespace: configmanagement.ControllerNamespace,
-		},
-		Data: map[string][]byte{
-			"ssh": []byte(privateKeyString),
-		},
-		Type: corev1.SecretTypeOpaque,
+		nt.T.Fatal("creating ssh directory:", err)
 	}
 
-	// Generate the public key for git-server.
-	publicKey, err := ssh.NewPublicKey(privateKey.Public())
+	privateKeyPath := filepath.Join(sshDir, "id_rsa.nomos")
+	publicKeyPath := filepath.Join(sshDir, "id_rsa.nomos.pub")
+
+	// ssh-keygen -t rsa -b 4096 -N "" \
+	//   -f /opt/testing/e2e/id_rsa.nomos
+	//   -C "key generated for use in e2e tests"
+	out, err := exec.Command("ssh-keygen", "-t", "rsa", "-b", "4096", "-N", "",
+		"-f", privateKeyPath,
+		"-C", "key generated for use in e2e tests").Output()
 	if err != nil {
-		nt.T.Fatalf("generating public key: %v", err)
+		nt.T.Log(string(out))
+		nt.T.Fatal("generating rsa key for ssh:", err)
 	}
-	publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
-	publicKeyString := base64.StdEncoding.EncodeToString(publicKeyBytes)
-	publicSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ssh-pub",
-			Namespace: testGitNamespace,
-		},
-		Data: map[string][]byte{
-			"id_rsa.nomos.pub": []byte(publicKeyString),
-		},
-		Type: corev1.SecretTypeOpaque,
+
+	// kubectl create secret generic git-creds \
+	//   -n=config-management-system \
+	//   --from-file=ssh="${TEST_DIR}/id_rsa.nomos"
+	out, err = exec.Command("kubectl", "--kubeconfig", kcfg, "create", "secret", "generic", "git-creds",
+		"-n", configmanagement.ControllerNamespace,
+		"--from-file", fmt.Sprintf("ssh=%s", privateKeyPath)).CombinedOutput()
+	if err != nil {
+		nt.T.Log(string(out))
+		nt.T.Fatal("creating git-creds secret", err)
 	}
-	return []core.Object{privateSecret, publicSecret}
+
+	// kubectl create secret generic ssh-pub \
+	//   -n="${GIT_SERVER_NS}" \
+	//   --from-file=/opt/testing/e2e/id_rsa.nomos.pub
+	err = exec.Command("kubectl", "--kubeconfig", kcfg, "create", "secret", "generic", "ssh-pub",
+		"-n", testGitNamespace,
+		"--from-file", filepath.Join(publicKeyPath)).Run()
+	if err != nil {
+		nt.T.Fatal("creating ssh-pub secret", err)
+	}
+
 }

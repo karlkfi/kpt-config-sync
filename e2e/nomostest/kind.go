@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/nomos/e2e"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -13,6 +14,9 @@ import (
 
 // Use release images from https://github.com/kubernetes-sigs/kind/releases
 const kind1_14 = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
+
+// kubeconfig is the filename of the KUBECONFIG file.
+const kubeconfig = "KUBECONFIG"
 
 func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
 	// TODO(willbeason): Allow specifying Kubernetes version.
@@ -39,7 +43,7 @@ func newKind(t *testing.T, name string, tmpDir string) *rest.Config {
 	// TODO(willbeason): Extract this logic into a CLI that doesn't require
 	//  testing.T.
 	p := cluster.NewProvider()
-	kcfgPath := filepath.Join(tmpDir, "KUBECONFIG")
+	kcfgPath := filepath.Join(tmpDir, kubeconfig)
 
 	err := createKindCluster(p, name, kcfgPath)
 
@@ -49,6 +53,13 @@ func newKind(t *testing.T, name string, tmpDir string) *rest.Config {
 
 	// Register the cluster to be deleted at the end of the test.
 	t.Cleanup(func() {
+		if t.Failed() && *e2e.Debug {
+			t.Errorf(`Conect to kind cluster:
+kind export kubeconfig --name=%s`, name)
+			t.Errorf(`Delete kind cluster:
+kind delete cluster --name=%s`, name)
+			return
+		}
 		// If the test runner stops testing with a command like ^C, cleanup
 		// callbacks such as this are not executed.
 		err := p.Delete(name, kcfgPath)

@@ -32,6 +32,8 @@ type NT struct {
 	// Most tests shouldn't need to talk directly to this, unless simulating
 	// direct interactions with the API Server.
 	Client client.Client
+
+	Git *Repository
 }
 
 func fmtObj(name, namespace string, obj runtime.Object) string {

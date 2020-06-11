@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/kinds"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -45,6 +46,10 @@ func installConfigSync(nt *NT) func() error {
 	objs := installationManifests(nt, tmpManifestsDir)
 
 	for _, o := range objs {
+		if o.GroupVersionKind() == kinds.Namespace() && o.GetName() == configmanagement.ControllerNamespace {
+			// We've already created the config-management-system Namespace.
+			continue
+		}
 		err := nt.Create(o)
 		if err != nil {
 			nt.T.Fatal(err)
@@ -74,7 +79,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(dst, bytes, os.ModePerm)
+	return ioutil.WriteFile(dst, bytes, fileMode)
 }
 
 // installationManifests generates the ConfigSync installation YAML and copies
@@ -86,7 +91,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	err = os.MkdirAll(tmpManifestsDir, os.ModePerm)
+	err = os.MkdirAll(tmpManifestsDir, fileMode)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -119,7 +124,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		replaced := strings.Replace(string(bytes),
 			"IMAGE_NAME", "localhost:5000/nomos:latest", -1)
 
-		err = ioutil.WriteFile(filepath.Join(tmpManifestsDir, template), []byte(replaced), os.ModePerm)
+		err = ioutil.WriteFile(filepath.Join(tmpManifestsDir, template), []byte(replaced), fileMode)
 		if err != nil {
 			nt.T.Fatal(err)
 		}
@@ -149,6 +154,5 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 	for _, o := range fos {
 		objs = append(objs, o.Object)
 	}
-	objs = append(objs, generateSSHKeys(nt)...)
 	return objs
 }

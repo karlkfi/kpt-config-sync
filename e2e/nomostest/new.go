@@ -8,7 +8,17 @@ import (
 	"testing"
 
 	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/testing/fake"
 )
+
+// fileMode is the file mode to use for all operations.
+//
+// Go is inconsistent about which user/group it runs commands under, so
+// anything less will either:
+// 1) Make git operations not work as expected, or
+// 2) Cause ssh-keygen to fail.
+const fileMode = os.ModePerm
 
 // New establishes a connection to a test cluster and prepares it for testing.
 //
@@ -44,16 +54,30 @@ func New(t *testing.T) *NT {
 	}
 
 	connectToLocalRegistry(nt)
+	// You can't add Secrets to Namespaces that don't exist, so create them now.
+	err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	err = nt.Create(gitNamespace())
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	// Pods don't always restart if the secrets don't exist, so we have to
+	// create the Namespaces + Secrets before anything else.
+	generateSSHKeys(nt, filepath.Join(tmpDir, kubeconfig))
+
 	waitForGit := installGitServer(nt)
 	waitForConfigSync := installConfigSync(nt)
 
-	err := waitForGit()
+	err = waitForGit()
 	if err != nil {
 		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
 	}
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
-	portForwardGitServer(nt)
+	port := portForwardGitServer(nt)
+	nt.Git = NewRepository(t, "sot.git", nt.TmpDir, port)
 
 	err = waitForConfigSync()
 	if err != nil {
@@ -67,7 +91,7 @@ func testDir(t *testing.T, name string) string {
 	t.Helper()
 
 	subPath := filepath.Join("nomos-e2e", name+"-")
-	err := os.MkdirAll(filepath.Join(os.TempDir(), subPath), os.ModePerm)
+	err := os.MkdirAll(filepath.Join(os.TempDir(), subPath), fileMode)
 	if err != nil {
 		t.Fatalf("creating nomos-e2e tmp directory: %v", err)
 	}
@@ -76,6 +100,10 @@ func testDir(t *testing.T, name string) string {
 		t.Fatalf("creating nomos-e2e tmp test subdirectory: %v", err)
 	}
 	t.Cleanup(func() {
+		if t.Failed() && *e2e.Debug {
+			t.Errorf("temporary directory: %s", tmpDir)
+			return
+		}
 		err := os.RemoveAll(tmpDir)
 		if err != nil {
 			// If you're seeing this error, the test does something that prevents

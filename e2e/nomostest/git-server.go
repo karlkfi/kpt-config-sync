@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"testing"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -75,8 +79,9 @@ func isAvailableDeployment(o core.Object) error {
 }
 
 func gitServer() []core.Object {
+	// Remember that we've already created the git-server's Namespace since the
+	// SSH key must exist before we apply the Deployment.
 	return []core.Object{
-		gitNamespace(),
 		gitService(),
 		gitDeployment(),
 	}
@@ -135,10 +140,16 @@ func gitDeployment() *appsv1.Deployment {
 	return deployment
 }
 
-// portForwardGitServer forwards the git-server deployment to port 22.
-func portForwardGitServer(nt *NT) {
-	kcfg := filepath.Join(nt.TmpDir, "KUBECONFIG")
+// portForwardGitServer forwards the git-server deployment to a port.
+// Returns the localhost port which forwards to the git-server Pod.
+func portForwardGitServer(nt *NT) int {
+	nt.T.Helper()
 
+	kcfg := filepath.Join(nt.TmpDir, kubeconfig)
+
+	// This logic is not robust to the git-server pod being killed/restarted,
+	// but this is a rare occurrence.
+	// Consider if it is worth getting the Pod name again if port forwarding fails.
 	podList := &corev1.PodList{}
 	err := nt.List(podList, client.InNamespace(testGitNamespace))
 	if err != nil {
@@ -155,7 +166,7 @@ func portForwardGitServer(nt *NT) {
 
 	podName := podList.Items[0].Name
 
-	// TODO(willbeason): Do this dynamically for each repository.
+	// TODO(willbeason): Do this dynamically for new repositories.
 	out, err := exec.Command("kubectl", "exec", "--kubeconfig", kcfg,
 		"-n", testGitNamespace, podName, "--",
 		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git").Output()
@@ -164,28 +175,53 @@ func portForwardGitServer(nt *NT) {
 		nt.T.Fatalf("initializing bare repo: %v", err)
 	}
 
-	// This is a go function since port forwarding is blocking, so we have to
-	// dedicate a process to it.
-	//
-	// We write the (potential) error to a channel, which will make it available
-	// at the end of the test when we check for it at cleanup.
-	errs := make(chan error)
-	// TODO(willbeason): Make the port dynamic, and make the autoselected
-	//  port discoverable.
-	go func() {
-		out, err := exec.Command("kubectl", "--kubeconfig", kcfg, "port-forward",
-			"-n", testGitNamespace, podName, "2222:22").Output()
+	return forwardToFreePort(nt.T, kcfg, podName)
+}
+
+// forwardToPort forwards the given Pod in the git-server's Namespace to
+// a free port.
+//
+// Returns the localhost port which kubectl is forwarding to the git-server Pod.
+func forwardToFreePort(t *testing.T, kcfg, pod string) int {
+	t.Helper()
+
+	cmd := exec.Command("kubectl", "--kubeconfig", kcfg, "port-forward",
+		"-n", testGitNamespace, pod, ":22")
+
+	stdout := &strings.Builder{}
+	cmd.Stdout = stdout
+
+	err := cmd.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() {
+		err := cmd.Process.Kill()
 		if err != nil {
-			nt.T.Log(out)
-			errs <- err
-		}
-	}()
-	nt.T.Cleanup(func() {
-		select {
-		case err = <-errs:
-			nt.T.Fatalf("setting up port forwarding: %v", err)
-		default:
-			// The test completed without port forwarding throwing an error.
+			t.Errorf("killing port forward process: %v", err)
 		}
 	})
+
+	port := 0
+	err = Retry(time.Second*5, func() error {
+		s := stdout.String()
+		if !strings.Contains(s, "\n") {
+			return errors.New("nothing written to stdout for kubectl port-forward")
+		}
+
+		line := strings.Split(s, "\n")[0]
+
+		// Sample output:
+		// Forwarding from 127.0.0.1:44043 -> 22
+		_, err = fmt.Sscanf(line, "Forwarding from 127.0.0.1:%d -> 22", &port)
+		if err != nil {
+			t.Fatalf("unable to parse port-forward output: %q", s)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return port
 }
