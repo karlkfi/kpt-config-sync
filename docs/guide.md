@@ -6,4 +6,3 @@
 *   [Testing](test.md)
 *   [Monitoring](monitor.md)
 *   [Releasing](release.md)
-*   [Syllogi](syllogi.md)

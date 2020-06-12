@@ -33,57 +33,19 @@ subjects:
 EOF
 }
 
-function ensure_config_management_removed() {
-  echo "++++++ Removing ConfigManagement CRD"
-  if ! kubectl delete crd configmanagements.configmanagement.gke.io --ignore-not-found --timeout=30s; then
-    echo "++++++ Timed out waiting for ConfigManagement CRD to be deleted normally b/138222737"
-    # We enter this block if both:
-    # 1) The ConfigManagement CRD exists, and
-    # 2) Deleting that CRD timed out.
-
-    # Since the normal deletion process failed, then the operator is not running properly and
-    # we have to manually remove the finalizer, then apply the ConfigManagement without the
-    # problematic finalizer. We assume this is the standard ConfigManagement named
-    # "config-management", and that the problem preventing deletion is the finalizer.
-    kubectl get configmanagements config-management -oyaml >> "${TEST_DIR}/tmp-config-management.yaml"
-    grep -vwE "operator.configmanagement.gke.io" "${TEST_DIR}/tmp-config-management.yaml" >> "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
-    kubectl apply -f "${TEST_DIR}/tmp-config-management-without-finalizer.yaml"
-    if ! kubectl delete crd configmanagements.configmanagement.gke.io --ignore-not-found --timeout=30s; then
-      echo "++++++ Exiting Because Unable to Remove ConfigManagement CRD"
-      exit 1
-    fi
-  fi
-  echo "++++++ Removed ConfigManagement CRD"
-}
-
 # Runs the installer process to set up the cluster under test.
 function install() {
   if ${do_installation}; then
     echo "+++++ Installing"
     # Make sure config-management-system doesn't exist before installing.
     # The google3/ move shouldn't require this as clusters will not persist between tests.
-    ensure_config_management_removed
 
     kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
 
-    if ${raw_nomos}; then
-      echo "++++++ Using raw Nomos manifests"
-      MANIFEST_DIR="${TEST_DIR}/raw-nomos/manifests"
-    else
-      if ${stable_channel}; then
-        echo "++++++ Using Nomos stable channel"
-        MANIFEST_DIR="${TEST_DIR}/manifests/stable"
-      else
-        echo "++++++ Using Nomos dev channel"
-        MANIFEST_DIR="${TEST_DIR}/manifests/dev"
-      fi
-
-
-      echo "++++++ Applying Nomos Initial Configuration"
-      kubectl apply -f "${MANIFEST_DIR}/operator-config-git.yaml"
-    fi
+    echo "++++++ Using raw Nomos manifests"
+    MANIFEST_DIR="${TEST_DIR}/raw-nomos/manifests"
 
     export MANIFEST_DIR
 
@@ -104,32 +66,23 @@ function uninstall() {
     # If we did the installation, then we should uninstall as well.
     echo "+++++ Uninstalling"
 
-    if kubectl get configmanagement &> /dev/null; then
-      ensure_config_management_removed
-    fi
+    # Get the syncs, remove the table headers, and select the sync names only
+    SYNCS=$(kubectl get syncs | tail -n +2 | cut -d ' ' -f 1)
 
-    if ${raw_nomos}; then
-      echo "+++++ Raw nomos cleanup"
+    # Loop through the syncs and patch out the finalizers.
+    # Normally the operator does this explicitly in the
+    # `finalizeSyncs` function in nomos_controller.go
+    for sync in $SYNCS; do
+      kubectl patch sync "$sync" \
+        --type='json' \
+        -p='[{"op": "replace", "path": "/metadata/finalizers", "value":[]}]'
+    done
 
-      # Get the syncs, remove the table headers, and select the sync names only
-      SYNCS=$(kubectl get syncs | tail -n +2 | cut -d ' ' -f 1)
+    # We need to make sure the operator is deleted if it wasn't after a previous test run or install
+    kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
 
-      # Loop through the syncs and patch out the finalizers.
-      # Normally the operator does this explicitly in the
-      # `finalizeSyncs` function in nomos_controller.go
-      for sync in $SYNCS; do
-        kubectl patch sync "$sync" \
-          --type='json' \
-          -p='[{"op": "replace", "path": "/metadata/finalizers", "value":[]}]'
-      done
-
-      # We need to make sure the operator is deleted if it wasn't after a previous test run or install
-      kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
-
-      # Wipe out everything we've installed.  In the $raw_nomos scenario, we installed nomos via
-      # this operator bundle.  So, we need to delete it before we can check nomos_uninstalled
-      kubectl delete -f "${TEST_DIR}/defined-operator-bundle.yaml" --ignore-not-found
-    fi
+    # Wipe out everything we've installed.
+    kubectl delete -f "${TEST_DIR}/defined-operator-bundle.yaml" --ignore-not-found
 
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
@@ -403,9 +356,6 @@ flags:
 - name: "timing"
   type: bool
   help: "If set, prints test timing in the testing output"
-- name: "stable_channel"
-  type: bool
-  help: "If set, uses stable operator channel for testing"
 - name: "test_filter"
   type: string
   help: "A regex defining the test names of tests to execute"
@@ -443,9 +393,6 @@ flags:
   type: string
   default: "stolos-dev"
   help: "The project in which the test cluster was created"
-- name: "raw-nomos"
-  type: bool
-  help: "If set, runs the tests in a mode where defined-operator-bundle is expected to have the bare nomos resources."
 EOF
 )
 eval "${gotopt2_result}"
@@ -455,8 +402,6 @@ readonly preclean="${gotopt2_preclean:-false}"
 readonly clean="${gotopt2_clean:-false}"
 readonly setup="${gotopt2_setup:-false}"
 readonly timing="${gotopt2_timing:-false}"
-readonly stable_channel="${gotopt2_stable_channel:-false}"
-readonly raw_nomos="${gotopt2_raw_nomos:-false}"
 # TODO(filmil): remove the need to disable lint checks here and elsewhere.
 # shellcheck disable=SC2154
 readonly test_filter="${gotopt2_test_filter}"
@@ -468,9 +413,6 @@ readonly gcp_cluster_name="${gotopt2_gcp_cluster_name}"
 # shellcheck disable=SC2154
 readonly gcp_prober_cred="${gotopt2_gcp_prober_cred}"
 readonly run_tests="${gotopt2_test:-false}"
-
-# Exported so that tests can either apply configManagement or configMaps based on test mode
-export RAW_NOMOS="$raw_nomos"
 
 do_installation=true
 if [[ "${skip_installation}" == "true" ]]; then

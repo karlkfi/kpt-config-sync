@@ -211,14 +211,9 @@ function get_cluster_name() {
 #   $1: new cluster name (string)
 function rename_cluster() {
   local new_name="${1}"
-  if "${RAW_NOMOS}"; then
-    kubectl patch configmap cluster-name -n config-management-system --type=merge \
-      -p "{\"data\":{\"CLUSTER_NAME\": \"${new_name}\"}}"
-    nomos::restart_pods
-  else
-    kubectl patch configmanagement config-management --type=merge \
-      -p "{\"spec\":{\"clusterName\": \"${new_name}\"}}"
-  fi
+  kubectl patch configmap cluster-name -n config-management-system --type=merge \
+    -p "{\"data\":{\"CLUSTER_NAME\": \"${new_name}\"}}"
+  nomos::restart_pods
 }
 
 # Renames a cluster under test, and waits until the rename has taken effect.

@@ -92,7 +92,6 @@ test-e2e-raw-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests e2e-stagin
 			--setup \
 			--test \
 			--clean \
-			--raw-nomos \
 			$(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
@@ -116,21 +115,17 @@ test-e2e-raw-ephemeral:
 			$(TEST_E2E_RUN_FLAGS) \
 		"
 
-# The raw-nomos targets run the e2e tests with the --raw-nomos flag, which installs nomos
-# directly to the cluster instead of using the operator.
 test-e2e-raw: banner e2e-image-all
 	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
 		--preclean \
 		--setup \
 		--test \
 		--clean \
-		--raw-nomos \
 		$(E2E_FLAGS)"
 
 # This target is for working on specific tests
 test-e2e-raw-dev: image-e2e-tests
 	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
-		--raw-nomos \
 		$(E2E_FLAGS)"
 
 # Runs nomos vet locally for example repos.
@@ -147,4 +142,3 @@ test-nomos-vet-local: build
 	@cd ./.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
 
 include Makefile.e2e.ci
-include Makefile.e2e.syllogi
