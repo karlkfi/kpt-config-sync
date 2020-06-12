@@ -32,7 +32,7 @@ const defaultConfigMapsName = "default-configmaps.yaml"
 var defaultConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, defaultConfigMapsName)
 
 var templates = []string{
-	"git-importer-raw-nomos-e2e.yaml",
+	"git-importer.yaml",
 	"monitor.yaml",
 	"syncer.yaml",
 }

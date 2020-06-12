@@ -69,15 +69,6 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < $< > $@
 
-# All Nomos K8S deployments.
-DEPLOYMENTS_FOR_DECOUPLED_E2E := syncer \
-	git-importer-raw-nomos-e2e \
-	monitor
-
-.PHONY: gen-deployments-for-decoupled-e2e
-gen-deployments-for-decoupled-e2e: $(patsubst %,$(GEN_YAML_DIR)/%.yaml,$(DEPLOYMENTS_FOR_DECOUPLED_E2E))
-	@echo "+++ Generated deployment yaml for decoupled e2e tests in output folder"
-
 ###################################
 # E2E Git Server
 ###################################

@@ -1,3 +1,4 @@
+# TODO(b/158594746): Use one git-importer deployment instead of three.
 apiVersion: v1
 kind: Service
 metadata:
@@ -86,10 +87,6 @@ spec:
           limits:
             cpu: "1"
             memory: "200Mi"
-      - name: gcenode-askpass-sidecar
-        image: IMAGE_NAME
-        command: ["gcenode-askpass-sidecar"]
-        args: ["--port=9102"]
       - name: git-sync
         image: gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See

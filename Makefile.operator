@@ -22,7 +22,7 @@ operator-manifest: gen-yaml-all
 # contains the nomos resources required for e2e testing.  It replaces the now deleted
 # prepare-operator make target, taking advantage of the plumbing that target used.
 .PHONY: prepare-e2e-manifest
-prepare-e2e-manifest: push-to-gcr-nomos gen-deployments-for-decoupled-e2e
+prepare-e2e-manifest: push-to-gcr-nomos gen-yaml-all
 ifndef GCR_PREFIX
 	$(error GCR_PREFIX must be set, but is not)
 endif
