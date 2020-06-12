@@ -232,6 +232,9 @@ func Generate() map[string][]status.Error {
 	// 1054
 	result.add(filesystem.InvalidAnnotationValueError(fake.Role(), []string{"foo", "bar"}))
 
+	// 1055
+	result.add(nonhierarchical.InvalidNamespaceError(fake.Repo(core.Namespace("FOO"))))
+
 	// 1056
 	result.add(nonhierarchical.ManagedResourceInUnmanagedNamespace("foo", fake.Role()))
 
