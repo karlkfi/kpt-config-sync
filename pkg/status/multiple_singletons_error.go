@@ -12,7 +12,7 @@ var multipleSingletonsError = NewErrorBuilder(MultipleSingletonsErrorCode)
 // MultipleSingletonsError reports that multiple singleton resources were found on the cluster.
 func MultipleSingletonsError(duplicates ...id.Resource) Error {
 	return multipleSingletonsError.Sprintf(
-		"Found more than one %[1]s:\n%[2]s", resourceName(duplicates), formatResources(duplicates)).BuildWithResources(duplicates...)
+		"Unsupported number of %s resource found: %d, want: 1.", resourceName(duplicates), len(duplicates)).BuildWithResources(duplicates...)
 }
 
 func resourceName(dups []id.Resource) string {
