@@ -21,6 +21,8 @@ replace (
 
 require (
 	github.com/davecgh/go-spew v1.1.1
+	github.com/go-logr/glogr v0.1.0
+	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/jsonreference v0.19.3 // indirect
 	github.com/go-openapi/spec v0.19.3 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
