@@ -1,7 +1,6 @@
 package system
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
@@ -40,10 +39,6 @@ var unsupportedRepoSpecVersion = status.NewErrorBuilder(UnsupportedRepoSpecVersi
 // UnsupportedRepoSpecVersion reports that the repo version is not supported.
 func UnsupportedRepoSpecVersion(resource id.Resource, version string) status.Error {
 	return unsupportedRepoSpecVersion.
-		Sprintf(`This version of %s supports repository version %q, but this repository
-declares a Repo object with spec.version: %q. Refer to the release notes at
-https://cloud.google.com/anthos-config-management/docs/release-notes for
-instructions on upgrading your repository.`,
-			configmanagement.ProductName, repo.CurrentVersion, version).
+		Sprintf(`Unsupported Repo spec.version: %q. Must use version %q`, version, repo.CurrentVersion).
 		BuildWithResources(resource)
 }
