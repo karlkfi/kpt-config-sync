@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
@@ -58,17 +59,21 @@ func NewRepository(t *testing.T, name, tmpDir string, port int) *Repository {
 	return g
 }
 
+func (g *Repository) gitCmd(command ...string) *exec.Cmd {
+	// The -C flag executes git from repository root.
+	// https://git-scm.com/docs/git#Documentation/git.txt--Cltpathgt
+	args := []string{"-C", g.root}
+	args = append(args, command...)
+	return exec.Command("git", args...)
+}
+
 // git wraps shelling out to git, ensuring we're running from the git repository
 //
 // Fails immediately if any git command fails.
 func (g *Repository) git(command ...string) {
 	g.T.Helper()
 
-	// The -C flag executes git from repository root.
-	// https://git-scm.com/docs/git#Documentation/git.txt--Cltpathgt
-	args := []string{"-C", g.root}
-	args = append(args, command...)
-	cmd := exec.Command("git", args...)
+	cmd := g.gitCmd(command...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		g.T.Log(string(out))
@@ -201,4 +206,18 @@ func (g *Repository) CommitAndPush(msg string) {
 
 	g.T.Logf("committing %q", msg)
 	g.git("push", "-u", remoteName, branchName)
+}
+
+// Hash returns the current hash of the git repository.
+//
+// Immediately ends the test on error.
+func (g *Repository) Hash() string {
+	// Get the hash of the git repository.
+	// git rev-parse --verify HEAD
+	out, err := g.gitCmd("rev-parse", "--verify", "HEAD").CombinedOutput()
+	if err != nil {
+		g.T.Log(string(out))
+		g.T.Fatal(err)
+	}
+	return strings.TrimSpace(string(out))
 }

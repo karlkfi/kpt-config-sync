@@ -50,6 +50,7 @@ func New(t *testing.T) *NT {
 		T:       t,
 		Name:    name,
 		TmpDir:  tmpDir,
+		Config:  cfg,
 		Client:  c,
 	}
 
@@ -77,12 +78,17 @@ func New(t *testing.T) *NT {
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
 	port := portForwardGitServer(nt)
-	nt.Git = NewRepository(t, "sot.git", nt.TmpDir, port)
+	nt.Repository = NewRepository(t, "sot.git", nt.TmpDir, port)
 
 	err = waitForConfigSync()
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
+	// The Repo type wasn't available when the cluster was initially created.
+	// Create a new Client, since it'll automatically be configured to understand
+	// the Repo type as ConfigSync is now installed.
+	nt.RenewClient()
+	nt.WaitForSync()
 
 	return nt
 }

@@ -3,6 +3,7 @@ package nomostest
 import (
 	"testing"
 
+	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,7 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	builders := []runtime.SchemeBuilder{
 		corev1.SchemeBuilder,
 		appsv1.SchemeBuilder,
+		nomosv1.SchemeBuilder,
 	}
 	for _, b := range builders {
 		err := b.AddToScheme(s)

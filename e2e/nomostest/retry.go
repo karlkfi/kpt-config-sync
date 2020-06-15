@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -37,10 +38,11 @@ func backoff(timeout time.Duration) wait.Backoff {
 
 // defaultErrorFilter returns false if the error's type indicates continuing
 // will not produce a positive result.
-//
-// Specifically:
-// 1) The wrong type was passed to the predicate.
-// 2) The type is not registered in the Client used to talk to the cluster.
 func defaultErrorFilter(err error) bool {
-	return !errors.Is(err, ErrWrongType) && !runtime.IsNotRegisteredError(err)
+	// The type expected by a Predicate is incorrect.
+	return !errors.Is(err, ErrWrongType) &&
+		// The type isn't registered in the Client's schema.
+		!runtime.IsNotRegisteredError(err) &&
+		// The type wasn't available on the API Server when the Client was created.
+		!meta.IsNoMatchError(err)
 }

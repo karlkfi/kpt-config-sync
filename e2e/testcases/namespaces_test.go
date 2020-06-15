@@ -22,13 +22,12 @@ func TestDeclareNamespace(t *testing.T) {
 		t.Error(err)
 	}
 
-	nt.Git.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
-	nt.Git.CommitAndPush("add Namespace")
+	nt.Repository.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
+	nt.Repository.CommitAndPush("add Namespace")
+	nt.WaitForSync()
 
 	// Test that the Namespace "foo" exists.
-	err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate("foo", "", &corev1.Namespace{})
-	})
+	err = nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
 		t.Error(err)
 	}
