@@ -14,13 +14,20 @@
 // go test ./... to just run unit/integration tests.
 //
 //
+// //////////////
 // One-time Setup
+// //////////////
 //
-// Start a local docker registry:
+// 1) Start a local docker registry:
 // $ docker run -d --restart=always -p "5000:5000" --name kind-registry registry:2
 //
+// 2) Connect the kind cluster network to the kind-registry.
+// $ docker network connect kind kind-registry
 //
+//
+// /////////////////////////////////////
 // Testing the current state of the code
+// /////////////////////////////////////
 //
 // If you don't do this each time you modify the code, you'll be testing the
 // currently-pushed image.
