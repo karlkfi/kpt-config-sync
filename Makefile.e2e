@@ -97,11 +97,6 @@ test-e2e-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests e2e-staging
 			$(E2E_FLAGS)" \
 		TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)"
 
-# Leaving this original one in place to verify that the changes will pass CI
-# Otherwise, I could break CI for everyone.  Once that's in place, I'll update
-# the Prow jobs and delete this.
-test-e2e-all-ephemeral: test-e2e-ephemeral
-
 test-e2e-ephemeral:
 	$(MAKE) test-e2e-nobuild \
 		$(E2E_PARAMS) \
