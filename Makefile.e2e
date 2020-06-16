@@ -53,7 +53,7 @@ image-e2e-tests: \
 
 GOTOPT2_BINARY := docker run -i -u $(UID):$(GID) $(BUILDENV_IMAGE) /bin/gotopt2
 
-__test-e2e-run-git:
+__test-e2e-run:
 	@echo "+++ Running e2e tests: git"
 	@echo $(E2E_FLAGS)
 	@env GOTOPT2_BINARY="$(GOTOPT2_BINARY)" \
@@ -84,8 +84,8 @@ ensure-image-e2e-tests:
 
 # Clean, ensure and run e2e tests for all importers.
 # Clean cluster after running.
-test-e2e-raw-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests e2e-staging
-	$(MAKE) __test-e2e-run-git \
+test-e2e-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests e2e-staging
+	$(MAKE) __test-e2e-run \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="\
 			--preclean \
@@ -98,10 +98,10 @@ test-e2e-raw-nobuild: banner push-to-gcr-nomos ensure-image-e2e-tests e2e-stagin
 # Leaving this original one in place to verify that the changes will pass CI
 # Otherwise, I could break CI for everyone.  Once that's in place, I'll update
 # the Prow jobs and delete this.
-test-e2e-all-ephemeral: test-e2e-raw-ephemeral
+test-e2e-all-ephemeral: test-e2e-ephemeral
 
-test-e2e-raw-ephemeral:
-	$(MAKE) test-e2e-raw-nobuild \
+test-e2e-ephemeral:
+	$(MAKE) test-e2e-nobuild \
 		$(E2E_PARAMS) \
 		E2E_FLAGS="\
 			--timing \
@@ -115,8 +115,8 @@ test-e2e-raw-ephemeral:
 			$(TEST_E2E_RUN_FLAGS) \
 		"
 
-test-e2e-raw: banner e2e-image-all
-	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+test-e2e: banner e2e-image-all
+	$(MAKE) __test-e2e-run $(E2E_PARAMS) E2E_FLAGS="\
 		--preclean \
 		--setup \
 		--test \
@@ -124,8 +124,8 @@ test-e2e-raw: banner e2e-image-all
 		$(E2E_FLAGS)"
 
 # This target is for working on specific tests
-test-e2e-raw-dev: image-e2e-tests
-	$(MAKE) __test-e2e-run-git $(E2E_PARAMS) E2E_FLAGS="\
+test-e2e-dev: image-e2e-tests
+	$(MAKE) __test-e2e-run $(E2E_PARAMS) E2E_FLAGS="\
 		$(E2E_FLAGS)"
 
 # Runs nomos vet locally for example repos.

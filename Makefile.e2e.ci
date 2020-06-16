@@ -5,8 +5,9 @@
 # The --gcp-prober-cred is mounted in as a Kubernetes secret at the path seen
 # below.
 #
+ci-test-e2e-raw: test-e2e-ci
 
-ci-test-e2e-raw:
+test-e2e-ci:
 	$(MAKE) $(E2E_PARAMS) \
       E2E_FLAGS="\
         --tap \
@@ -19,11 +20,13 @@ ci-test-e2e-raw:
 		--mounted-prober-cred /etc/prober-gcp-service-account/prober_runner_client_key.json \
 		$(TEST_E2E_RUN_FLAGS) \
 	 " \
-     test-e2e-raw
+     test-e2e
 
 # Same target as above, except set up so that it can be ran from a local machine.
 # We must download the gcs prober credentials, as they will not be mounted in.
-ci-test-e2e-raw-local:
+ci-test-e2e-raw-local: test-e2e-ci-local
+
+test-e2e-ci-local:
 	$(MAKE) $(E2E_PARAMS) \
 	 E2E_FLAGS="\
 		--gcp-prober-cred /tmp/config/prober_runner_client_key.json \
@@ -32,13 +35,15 @@ ci-test-e2e-raw-local:
      TEST_E2E_RUN_FLAGS="\
 		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
 	 " \
-     test-e2e-raw
+     test-e2e
 
 ### Stress tests targets
 
 # The CI target for running stress tests.  Stress tests measure the long-term
 # performance of Nomos.
-ci-stresstest-e2e:
+ci-stresstest-e2e: test-e2e-stresstest-ci
+
+test-e2e-stresstest-ci:
 	$(MAKE) $(E2E_PARAMS) \
       E2E_FLAGS="\
 	    --timing \
@@ -46,12 +51,14 @@ ci-stresstest-e2e:
 		$(E2E_FLAGS) \
      " \
      TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)" \
-	 ci-test-e2e-raw
+	 test-e2e-ci
+
+ci-stresstest-e2e-local: test-e2e-stresstest-ci-local
 
 # Same target as above, except it can be ran from a local machine.
-ci-stresstest-e2e-local:
+test-e2e-stresstest-ci-local:
 	$(MAKE) $(E2E_PARAMS) \
 			E2E_FLAGS="\
 			  --testcases-dir=stresstests \
 			" \
-			ci-test-e2e-raw-local
+			test-e2e-ci-local

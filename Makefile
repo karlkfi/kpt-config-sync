@@ -182,7 +182,7 @@ test: test-unit lint
 
 # Runs all tests.
 # This only runs on local dev environment not CI environment.
-test-all-local: test test-e2e-raw
+test-all-local: test test-e2e
 
 # Runs gofmt and goimports.
 # Even though goimports runs gofmt, it runs it without the -s (simplify) flag
