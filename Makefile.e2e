@@ -16,7 +16,6 @@ E2E_TEST_IMAGE_LATEST = gcr.io/$(GCP_PROJECT)/e2e-tests:test-e2e-latest
 e2e-staging: \
 	$(OUTPUT_DIR) \
 	prepare-e2e-manifest \
-	$(TEST_GEN_YAML_DIR)/git-server.yaml \
 	$(wildcard ./e2e/*)
 	@echo "+++ Creating staging directory for e2e tests"
 	@rm -rf $(E2E_DIR)
@@ -24,7 +23,7 @@ e2e-staging: \
 	@cp -r ./third_party/bats-core $(E2E_DIR)/bats
 	@cp -r ./examples $(OUTPUT_DIR)/e2e
 	@cp ./scripts/init-git-server.sh $(E2E_DIR)
-	@cp $(TEST_GEN_YAML_DIR)/git-server.yaml $(E2E_DIR)
+	@cp ./test/manifests/templates/git-server.yaml $(E2E_DIR)
 	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)
 	@cp -r ./e2e $(OUTPUT_DIR)
 

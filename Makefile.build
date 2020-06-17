@@ -73,11 +73,6 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # E2E Git Server
 ###################################
 
-# Generates yaml for git server used in e2e testing.
-$(TEST_GEN_YAML_DIR)/git-server.yaml: ./test/manifests/templates/git-server.yaml
-	@echo "+++ Generating yaml for git-server at nomos-public"
-	cp $< $@
-
 GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
 GIT_SERVER_RELEASE := v1.0.0
 # Creates docker image for the test git-server from github source
