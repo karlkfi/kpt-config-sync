@@ -40,9 +40,9 @@ function install() {
     # Make sure config-management-system doesn't exist before installing.
     # The google3/ move shouldn't require this as clusters will not persist between tests.
 
-    kubectl apply -f "${TEST_DIR}/defined-operator-bundle.yaml"
+    kubectl apply -f "${TEST_DIR}/../defined-operator-bundle.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
-      --from-file=ssh="${TEST_DIR}/id_rsa.nomos" || true
+      --from-file=ssh="${TEST_DIR}/../id_rsa.nomos" || true
 
     echo "++++++ Using raw Nomos manifests"
     MANIFEST_DIR="${TEST_DIR}/raw-nomos/manifests"
@@ -82,7 +82,7 @@ function uninstall() {
     kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
 
     # Wipe out everything we've installed.
-    kubectl delete -f "${TEST_DIR}/defined-operator-bundle.yaml" --ignore-not-found
+    kubectl delete -f "${TEST_DIR}/../defined-operator-bundle.yaml" --ignore-not-found
 
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
@@ -179,7 +179,7 @@ function dump_diagnostics() {
   echo "+++++++ syncer pod"
   (kubectl -n config-management-system describe pod syncer > "${directory}/${label}_syncer_pod.txt") || true
   echo "+++++++ kubectl describe "
-  (kubectl describe -f "${TEST_DIR}/defined-operator-bundle.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
+  (kubectl describe -f "${TEST_DIR}/../defined-operator-bundle.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
   echo "+++++++ operator logs"
   (kubectl -n kube-system logs -l k8s-app=config-management-operator > "${directory}/${label}_operator_logs.txt") || true
   echo "+++++++ syncer logs"
@@ -258,7 +258,7 @@ function main() {
     done
   fi
 
-  local bats_cmd=("${TEST_DIR}/third_party/bats-core/bin/bats")
+  local bats_cmd=("${TEST_DIR}/../third_party/bats-core/bin/bats")
   if ${tap}; then
     bats_cmd+=(--tap)
   fi

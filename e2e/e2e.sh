@@ -216,4 +216,4 @@ DOCKER_FLAGS+=(
 )
 
 # shellcheck disable=SC2154
-docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/setup.sh" "${gotopt2_args__[@]}"
+docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/e2e/setup.sh" "${gotopt2_args__[@]}"
