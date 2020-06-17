@@ -21,7 +21,7 @@ setup() {
   cd "${TEST_REPO_DIR}/repo"
 
   mkdir -p acme/system
-  cp -r /opt/testing/e2e/examples/acme/system acme
+  cp -r /opt/testing/nomos/examples/acme/system acme
   git add -A
 }
 
@@ -86,7 +86,7 @@ function namespace_count_matches () {
 @test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
 
   mkdir -p acme/namespaces
-  cp -r /opt/testing/e2e/examples/acme/namespaces acme
+  cp -r /opt/testing/nomos/examples/acme/namespaces acme
   git add -A
   ensure_error_free_repo
 
@@ -111,7 +111,7 @@ function namespace_count_matches () {
   wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
 
   debug::log "Restore the namespaces"
-  cp -r /opt/testing/e2e/examples/acme/namespaces acme
+  cp -r /opt/testing/nomos/examples/acme/namespaces acme
   git add -A
   git::commit -a -m "restoring the namespaces"
 

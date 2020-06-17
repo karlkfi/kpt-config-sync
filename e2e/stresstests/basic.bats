@@ -15,7 +15,7 @@ setup() {
   cd "${TEST_REPO_DIR}/repo"
 
   mkdir -p acme/system
-  cp -r /opt/testing/e2e/examples/acme/system acme
+  cp -r /opt/testing/nomos/examples/acme/system acme
   git add -A
 }
 

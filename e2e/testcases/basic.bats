@@ -18,7 +18,7 @@ setup() {
   cd "${TEST_REPO_DIR}/repo"
 
   mkdir -p acme/system
-  cp -r /opt/testing/e2e/examples/acme/system acme
+  cp -r /opt/testing/nomos/examples/acme/system acme
   git add -A
 }
 
@@ -78,7 +78,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   debug::log "Forcefully delete clusterconfigs and verify recovery"
   kubectl delete clusterconfig --all
 
-  git::add /opt/testing/e2e/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
+  git::add /opt/testing/nomos/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
   git::commit
 
   wait::for -t 30 -- nomos::cluster_synced
@@ -163,8 +163,8 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "${FILE_NAME}: RoleBindings updated" {
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
   git::commit
   wait::for -- kubectl get rolebinding -n backend bob-rolebinding
 
@@ -189,11 +189,11 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 }
 
 @test "${FILE_NAME}: RoleBindings enforced" {
-  git::add /opt/testing/e2e/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/alice-rolebinding.yaml acme/namespaces/eng/ar.yaml
-  git::add /opt/testing/e2e/examples/acme/namespaces/eng/frontend/namespace.yaml acme/namespaces/eng/frontend/namespace.yaml
+  git::add /opt/testing/nomos/examples/acme/cluster/admin-clusterrole.yaml acme/cluster/admin-clusterrole.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/backend/namespace.yaml acme/namespaces/eng/backend/namespace.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/alice-rolebinding.yaml acme/namespaces/eng/ar.yaml
+  git::add /opt/testing/nomos/examples/acme/namespaces/eng/frontend/namespace.yaml acme/namespaces/eng/frontend/namespace.yaml
   git::commit
   wait::for -- kubectl get rolebinding -n backend bob-rolebinding
   wait::for -- kubectl get rolebinding -n backend alice-rolebinding

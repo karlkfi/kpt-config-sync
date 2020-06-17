@@ -120,7 +120,7 @@ ENV GIT_CONFIG_NOSYSTEM 1
 ENV USER $UNAME
 USER $UNAME
 
-WORKDIR /opt/testing/e2e
+WORKDIR /opt/testing/nomos
 
 # tini (especially with -g) does correct handling of signals (like Ctrl+C) that you don't
 # get by running a shell script as the entrypoint. If this were removed, Ctrl+C wouldn't

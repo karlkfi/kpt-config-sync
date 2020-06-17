@@ -28,7 +28,7 @@ func generateSSHKeys(nt *NT, kcfg string) {
 	publicKeyPath := filepath.Join(sshDir, "id_rsa.nomos.pub")
 
 	// ssh-keygen -t rsa -b 4096 -N "" \
-	//   -f /opt/testing/e2e/id_rsa.nomos
+	//   -f /opt/testing/nomos/id_rsa.nomos
 	//   -C "key generated for use in e2e tests"
 	out, err := exec.Command("ssh-keygen", "-t", "rsa", "-b", "4096", "-N", "",
 		"-f", privateKeyPath,
@@ -51,7 +51,7 @@ func generateSSHKeys(nt *NT, kcfg string) {
 
 	// kubectl create secret generic ssh-pub \
 	//   -n="${GIT_SERVER_NS}" \
-	//   --from-file=/opt/testing/e2e/id_rsa.nomos.pub
+	//   --from-file=/opt/testing/nomos/id_rsa.nomos.pub
 	err = exec.Command("kubectl", "--kubeconfig", kcfg, "create", "secret", "generic", "ssh-pub",
 		"-n", testGitNamespace,
 		"--from-file", filepath.Join(publicKeyPath)).Run()

@@ -16,15 +16,15 @@ FWD_SSH_PORT=2222
 GIT_SERVER_NS=config-management-system-test
 
 # Create ssh keys
-ssh-keygen -t rsa -b 4096 -N "" -f /opt/testing/e2e/id_rsa.nomos -C "key generated for use in e2e tests"
+ssh-keygen -t rsa -b 4096 -N "" -f /opt/testing/nomos/id_rsa.nomos -C "key generated for use in e2e tests"
 
 rm -rf "${TEST_LOG_REPO}"
 
-kubectl apply -f /opt/testing/e2e/test/manifests/templates/git-server.yaml
+kubectl apply -f /opt/testing/nomos/test/manifests/templates/git-server.yaml
 
 kubectl -n="${GIT_SERVER_NS}" \
   create secret generic ssh-pub \
-  --from-file=/opt/testing/e2e/id_rsa.nomos.pub
+  --from-file=/opt/testing/nomos/id_rsa.nomos.pub
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 
 NEXT_WAIT_TIME=0
@@ -58,7 +58,7 @@ REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" "${POD_ID}" -- git)
 echo "Setting up local git repo"
 # git-sync wants the designated sync branch to exist, so we create a dummy
 # commit so that the sync branch exists
-export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/e2e/id_rsa.nomos"
+export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/nomos/id_rsa.nomos"
 mkdir -p "${TEST_LOG_REPO}/repo"
 cd "${TEST_LOG_REPO}/repo" || exit 1
 git init

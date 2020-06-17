@@ -210,10 +210,10 @@ fi
 DOCKER_FLAGS+=(
     -u "$(id -u):$(id -g)"
     -v "${TEMP_OUTPUT_DIR}:/tmp"
-    -v "${OUTPUT_DIR}/e2e":/opt/testing/e2e
+    -v "${OUTPUT_DIR}/e2e":/opt/testing/nomos
     -v "${OUTPUT_DIR}/go/bin":/opt/testing/go/bin
     "${gotopt2_e2e_container}"
 )
 
 # shellcheck disable=SC2154
-docker run "${DOCKER_FLAGS[@]}" "/opt/testing/e2e/e2e/setup.sh" "${gotopt2_args__[@]}"
+docker run "${DOCKER_FLAGS[@]}" "/opt/testing/nomos/e2e/setup.sh" "${gotopt2_args__[@]}"
