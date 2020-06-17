@@ -23,7 +23,8 @@ e2e-staging: \
 	@cp -r ./third_party/bats-core $(E2E_DIR)/bats
 	@cp -r ./examples $(OUTPUT_DIR)/e2e
 	@cp ./scripts/init-git-server.sh $(E2E_DIR)
-	@cp ./test/manifests/templates/git-server.yaml $(E2E_DIR)
+	@mkdir -p $(E2E_DIR)/test/manifests/templates
+	@cp ./test/manifests/templates/git-server.yaml $(E2E_DIR)/test/manifests/templates
 	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)
 	@cp -r ./e2e $(OUTPUT_DIR)
 

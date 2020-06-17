@@ -20,7 +20,7 @@ ssh-keygen -t rsa -b 4096 -N "" -f /opt/testing/e2e/id_rsa.nomos -C "key generat
 
 rm -rf "${TEST_LOG_REPO}"
 
-kubectl apply -f /opt/testing/e2e/git-server.yaml
+kubectl apply -f /opt/testing/e2e/test/manifests/templates/git-server.yaml
 
 kubectl -n="${GIT_SERVER_NS}" \
   create secret generic ssh-pub \
