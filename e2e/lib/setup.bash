@@ -27,7 +27,7 @@ source "$DIR/wait.bash"
 setup::git::initialize() {
   # Reset git repo to initial state.
   CWD="$(pwd)"
-  echo "Setting up local git repo"
+  echo "Setting up local git repo in ${BATS_TMPDIR}/repo"
 
   local TEST_REPO_DIR=${BATS_TMPDIR}
   rm -rf "${TEST_REPO_DIR}/repo"

@@ -12,7 +12,7 @@ load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
 
-declare KUBE_PROXY_PID
+KUBE_PROXY_PID=""
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
