@@ -73,6 +73,8 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # E2E Git Server
 ###################################
 
+# NOTE: when updating the git-server version, update
+# test/manifests/templates/git-server.yaml to reflect the version change
 GIT_SERVER_DOCKER := $(OUTPUT_DIR)/git-server-docker
 GIT_SERVER_RELEASE := v1.0.0
 # Creates docker image for the test git-server from github source
