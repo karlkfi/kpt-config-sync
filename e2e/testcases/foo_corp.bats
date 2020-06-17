@@ -32,7 +32,7 @@ FOOCORP_NAMESPACES=(
 @test "${FILE_NAME}: All foo-corp created" {
   # TODO(frankf): POLICY_DIR is currently set to "acme" during installation.
   # This should be resolved with new repo format.
-  git::add /opt/testing/nomos/examples/foo-corp-example/foo-corp acme
+  git::add "${NOMOS_DIR}/examples/foo-corp-example/foo-corp" acme
   git::commit
 
   wait::for -t 180 -- nomos::repo_synced

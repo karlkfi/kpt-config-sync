@@ -23,7 +23,7 @@ setup() {
   cd "${TEST_REPO_DIR}/repo"
 
   mkdir -p acme/system
-  cp -r /opt/testing/nomos/examples/acme/system acme
+  cp -r "${NOMOS_DIR}/examples/acme/system" acme
 
   mkdir -p acme/cluster
   git add -A

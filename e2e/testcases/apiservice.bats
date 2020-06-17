@@ -15,7 +15,7 @@ setup() {
   setup::git::initialize
 
   mkdir -p acme/system
-  cp -r /opt/testing/nomos/examples/acme/system acme
+  cp -r "${NOMOS_DIR}/examples/acme/system" acme
   git add -A
   git::commit -a -m "Commit minimal repo contents."
 

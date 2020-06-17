@@ -3,6 +3,8 @@
 set -euo pipefail
 
 DIR=$(dirname "${BASH_SOURCE[0]}")
+NOMOS_DIR=$(readlink -f "${DIR}/../..")
+
 # shellcheck source=e2e/lib/debug.bash
 source "$DIR/debug.bash"
 # shellcheck source=e2e/lib/git.bash
@@ -50,7 +52,7 @@ setup::git::__init_dir() {
   git add "${DIR_NAME}/README.md"
   git commit -a -m "initial commit"
 
-  cp -r "/opt/testing/nomos/examples/${DIR_NAME}" ./
+  cp -r "${NOMOS_DIR}/examples/${DIR_NAME}" ./
 }
 
 setup::git::__commit_dir_and_wait() {
@@ -126,7 +128,7 @@ setup::git::remove_all() {
   rm -rf "namespaces"
 
   mkdir "cluster"
-  cp "/opt/testing/nomos/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "cluster/admin-clusterrole.yaml"
+  cp "${NOMOS_DIR}/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "cluster/admin-clusterrole.yaml"
   namespace::declare safety
 
   git add -A
@@ -173,7 +175,7 @@ setup::git::add_contents_to_root() {
   local TEST_REPO_DIR=${BATS_TMPDIR}
   cd "${TEST_REPO_DIR}/repo"
 
-  cp -r "/opt/testing/nomos/examples/${DIR_NAME}/"* ./
+  cp -r "${NOMOS_DIR}/examples/${DIR_NAME}/"* ./
 
   git add -A
   git commit -m "add files to root"
