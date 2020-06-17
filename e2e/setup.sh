@@ -107,7 +107,7 @@ function set_up_env() {
   # condition where the importer can come up faster than the git server and have
   # to wait two minutes for timeout.
   echo "++++ Setting up git server"
-  /opt/testing/e2e/init-git-server.sh
+  /opt/testing/e2e/scripts/init-git-server.sh
   echo "++++ Setting up Nomos"
   install
   echo "++++ Env setup complete"
