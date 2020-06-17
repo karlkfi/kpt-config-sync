@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euxo pipefail
+set -euo pipefail
 
 echo "Checking LICENSE file for changes."
 tmp=$(mktemp -d)
