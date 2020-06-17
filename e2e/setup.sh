@@ -258,7 +258,7 @@ function main() {
     done
   fi
 
-  local bats_cmd=("${TEST_DIR}/bats/bin/bats")
+  local bats_cmd=("${TEST_DIR}/third_party/bats-core/bin/bats")
   if ${tap}; then
     bats_cmd+=(--tap)
   fi
