@@ -96,6 +96,9 @@ func versionInternal(configs map[string]*rest.Config, w io.Writer, contexts []st
 	if contexts != nil {
 		// filter by specified contexts
 		configs = filterConfigs(contexts, configs)
+		if len(configs) == 0 {
+			fmt.Print("No clusters match the specified context.\n")
+		}
 	}
 
 	vs := versions(configs)
