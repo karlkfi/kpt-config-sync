@@ -15,6 +15,7 @@ import (
 
 // TestDeclareNamespace runs a test that ensures ACM syncs Namespaces to clusters.
 func TestDeclareNamespace(t *testing.T) {
+	t.Parallel()
 	nt := nomostest.New(t)
 
 	err := nt.ValidateNotFound("foo", "", &corev1.Namespace{})

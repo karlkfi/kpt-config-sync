@@ -1,6 +1,7 @@
 package configsync
 
 import (
+	"context"
 	"flag"
 	"os"
 	"time"
@@ -10,6 +11,10 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/dirwatcher"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/policycontroller"
+	"github.com/google/nomos/pkg/syncer/controller"
+	"github.com/google/nomos/pkg/syncer/meta"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -19,10 +24,18 @@ var (
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")
+
+	resyncPeriod = flag.Duration(
+		"resync_period", time.Minute, "The resync period for the syncer system")
+	fightDetectionThreshold = flag.Float64(
+		"fight_detection_threshold", 5.0,
+		"The rate of updates per minute to an API Resource at which the Syncer logs warnings about too many updates to the resource.")
 )
 
 // RunImporter encapsulates the main() logic for the importer.
 func RunImporter() {
+	reconcile.SetFightThreshold(*fightDetectionThreshold)
+
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()
 	if err != nil {
@@ -30,7 +43,9 @@ func RunImporter() {
 	}
 
 	// Create a new Manager to provide shared dependencies and start components.
-	mgr, err := manager.New(cfg, manager.Options{})
+	mgr, err := manager.New(cfg, manager.Options{
+		SyncPeriod: resyncPeriod,
+	})
 	if err != nil {
 		glog.Fatalf("Failed to create manager: %+v", err)
 	}
@@ -45,8 +60,23 @@ func RunImporter() {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
+	// Set up controllers.
+	if err := meta.AddControllers(mgr); err != nil {
+		glog.Fatalf("Error adding Sync controller: %+v", err)
+	}
+
+	mgrStopChannel := signals.SetupSignalHandler()
+	ctx := stoppableContext(mgrStopChannel)
+	if err := controller.AddRepoStatus(ctx, mgr); err != nil {
+		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
+	}
+
+	if err := policycontroller.AddControllers(ctx, mgr); err != nil {
+		glog.Fatalf("Error adding PolicyController controller: %+v", err)
+	}
+
 	// Start the Manager.
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(mgrStopChannel); err != nil {
 		glog.Fatalf("Error starting controller: %+v", err)
 	}
 
@@ -60,4 +90,13 @@ func DirWatcher(dir string, period time.Duration) {
 	}
 	watcher := dirwatcher.NewWatcher(dir)
 	watcher.Watch(period, signals.SetupSignalHandler())
+}
+
+func stoppableContext(stopChannel <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-stopChannel
+		cancel()
+	}()
+	return ctx
 }

@@ -50,6 +50,14 @@ func installConfigSync(nt *NT) func() error {
 			// We've already created the config-management-system Namespace.
 			continue
 		}
+		if o.GroupVersionKind() == kinds.Deployment() && o.GetName() == "syncer" {
+			// TODO(willbeason): Remove this once the syncer Deployment no longer exists.
+			//  As-is provides a fast way to test that syncing works without having to
+			//  run bash e2e tests.
+			// The Syncer is now a no-op, and we want to test that everything indeed
+			// does work with the syncer Deployment missing.
+			continue
+		}
 		err := nt.Create(o)
 		if err != nil {
 			nt.T.Fatal(err)
@@ -63,12 +71,7 @@ func installConfigSync(nt *NT) func() error {
 			if err != nil {
 				return err
 			}
-			err = nt.Validate("git-importer", configmanagement.ControllerNamespace,
-				&appsv1.Deployment{}, isAvailableDeployment)
-			if err != nil {
-				return err
-			}
-			return nt.Validate("syncer", configmanagement.ControllerNamespace,
+			return nt.Validate("git-importer", configmanagement.ControllerNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 		})
 	}
