@@ -138,3 +138,17 @@ test-nomos-vet-local: build
 	@cd ./.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
 
 include Makefile.e2e.ci
+
+# Builds a new nomos image and pushes it to the local Docker repository.
+# For use with the Go e2e tests. See e2e/doc.go.
+__push-local-image: image-nomos
+	@bash scripts/docker-registry.sh
+	@docker tag gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) localhost:5000/nomos:latest
+	@docker push localhost:5000/nomos:latest
+
+# Runs the Go e2e tests
+test-e2e-go: __push-local-image test-e2e-go-nobuild
+
+# Runs the Go e2e tests without building a new Nomos image.
+test-e2e-go-nobuild:
+	@go test ./e2e/... --e2e
