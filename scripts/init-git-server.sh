@@ -9,22 +9,29 @@
 # IMPORTANT NOTE: this script makes use of ~/.ssh/id_rsa.nomos.pub, so this must
 # be created for the script to work properly
 
-TEST_LOG_REPO=/tmp/nomos-test
+# Our bats e2e tests create the initial git repo in /tmp/nomos-test (coresponds
+# to # ${BATS_TMPDIR}/nomos-test) then later set up the testcase repo in
+# /tmp/repo.
+TEST_REPO_DIR=${TEST_REPO_DIR:-/tmp/nomos-test}
 
-FWD_SSH_PORT=2222
+# The port that kubectl port-forward will listen on.
+FWD_SSH_PORT=${FWD_SSH_PORT:-2222}
 
 GIT_SERVER_NS=config-management-system-test
 
+DIR=$(dirname "${BASH_SOURCE[0]}")
+NOMOS_DIR=$(readlink -f "${DIR}/..")
+
 # Create ssh keys
-ssh-keygen -t rsa -b 4096 -N "" -f /opt/testing/nomos/id_rsa.nomos -C "key generated for use in e2e tests"
+ssh-keygen -t rsa -b 4096 -N "" -f "${NOMOS_DIR}/id_rsa.nomos" -C "key generated for use in e2e tests"
 
-rm -rf "${TEST_LOG_REPO}"
+rm -rf "${TEST_REPO_DIR}"
 
-kubectl apply -f /opt/testing/nomos/test/manifests/templates/git-server.yaml
+kubectl apply -f "${NOMOS_DIR}/test/manifests/templates/git-server.yaml"
 
 kubectl -n="${GIT_SERVER_NS}" \
   create secret generic ssh-pub \
-  --from-file=/opt/testing/nomos/id_rsa.nomos.pub
+  --from-file="${NOMOS_DIR}/id_rsa.nomos.pub"
 echo -n "Waiting for test-git-server pod to be ready. This could take a minute..."
 
 NEXT_WAIT_TIME=0
@@ -47,8 +54,8 @@ echo "test-git-server ready"
 POD_ID=$(kubectl get pods -n=${GIT_SERVER_NS} -l app=test-git-server -o jsonpath='{.items[0].metadata.name}')
 
 echo "Setting up remote git repo"
-mkdir -p ${TEST_LOG_REPO}
-kubectl -n="${GIT_SERVER_NS}" port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > "${TEST_LOG_REPO}/port-forward.log" &
+mkdir -p "${TEST_REPO_DIR}"
+kubectl -n="${GIT_SERVER_NS}" port-forward "${POD_ID}" "${FWD_SSH_PORT}:22" > "${TEST_REPO_DIR}/port-forward.log" &
 # shellcheck disable=SC2191
 REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" "${POD_ID}" -- git)
 "${REMOTE_GIT[@]}" init --bare --shared /git-server/repos/sot.git
@@ -58,9 +65,9 @@ REMOTE_GIT=(kubectl exec -n="${GIT_SERVER_NS}" "${POD_ID}" -- git)
 echo "Setting up local git repo"
 # git-sync wants the designated sync branch to exist, so we create a dummy
 # commit so that the sync branch exists
-export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/nomos/id_rsa.nomos"
-mkdir -p "${TEST_LOG_REPO}/repo"
-cd "${TEST_LOG_REPO}/repo" || exit 1
+export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i ${NOMOS_DIR}/id_rsa.nomos"
+mkdir -p "${TEST_REPO_DIR}/repo"
+cd "${TEST_REPO_DIR}/repo" || exit 1
 git init
 git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
 git config user.name "Testing Nome"
