@@ -27,7 +27,7 @@ e2e-staging: \
 	@cp ./scripts/init-git-server.sh $(E2E_DIR)/scripts
 	@mkdir -p $(E2E_DIR)/test/manifests/templates
 	@cp ./test/manifests/templates/git-server.yaml $(E2E_DIR)/test/manifests/templates
-	@cp ${OPERATOR_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)
+	@cp ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml $(E2E_DIR)
 	@cp -r ./e2e $(E2E_DIR)
 
 # Some e2e targets may wish to skip building the nomos CLI and download the latest remote one instead

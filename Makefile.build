@@ -48,7 +48,7 @@ image-nomos: build
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-nomos: image-nomos
-	@echo "+++ Pushing nomos to gcr.io"
+	@echo "+++ Pushing nomos image to gcr.io"
 	@echo "+++ Using account:"
 	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
@@ -68,6 +68,40 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 	@echo "+++ Generating yaml $*"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < $< > $@
+
+###################################
+# nomos-manifest
+###################################
+
+.PHONY: build-manifest
+build-manifest: push-to-gcr-nomos gen-yaml-all
+	@echo "+++ Preparing nomos-manifest.yaml"
+	@rm -rf ${NOMOS_MANIFEST_STAGING_DIR}
+	@mkdir -p ${NOMOS_MANIFEST_STAGING_DIR}
+	@touch ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+	@echo "+++ Copy manifests (except templates/) to output folder"
+	@rm -rf $(OUTPUT_DIR)/manifests
+	@mkdir $(OUTPUT_DIR)/manifests
+	cp manifests/*.yaml $(OUTPUT_DIR)/manifests
+	@echo "+++ Append all relevant yamls to nomos-manifest.yaml"
+	scripts/append-manifests.sh \
+		$(OUTPUT_DIR)/manifests \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+	scripts/append-manifests.sh \
+		$(OUTPUT_DIR)/deployment \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+	scripts/append-manifests.sh \
+		e2e/raw-nomos/manifests \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		default-configmaps # only this single file (pattern match)
+
+.PHONY: upload-manifest
+upload-manifest:
+	@echo "+++ Upload the nomos-manifest to GCS"
+	gsutil cp ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml $(shell ./scripts/manifest-commit-path.sh)
+
+.PHONEY: manifest
+manifest: build-manifest upload-manifest
 
 ###################################
 # E2E Git Server
