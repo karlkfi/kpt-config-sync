@@ -1,3 +1,4 @@
+# Custom Resource Definition for a RepoSync.
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -31,13 +32,56 @@ spec:
         spec:
           description: RepoSyncSpec defines the desired state of RepoSync
           properties:
-            foo:
-              description: Foo is an example field of RepoSync. Edit RepoSync_types.go
-                to remove/update
-              type: string
+            git:
+              description: Git contains configuration specific to importing policies
+                from a Git repo.
+              properties:
+                auth:
+                  description: Auth is the type of secret configured for access to
+                    the Git repo. Must be one of ssh, cookiefile, gcenode, token,
+                    or none. Required. The validation of this is case-sensitive. Required.
+                  pattern: ^(ssh|cookiefile|gcenode|token|none)$
+                  type: string
+                dir:
+                  description: 'Dir is the absolute path of the directory that contains
+                    the local policy.  Default: the root directory of the repo.'
+                  type: string
+                period:
+                  description: 'Period is the time duration in seconds between consecutive
+                    syncs.  Default: 15 seconds. Note to developers that customers
+                    specify this value using string (https://golang.org/pkg/time/#Duration.String)
+                    like "3s" in their Custom Resource YAML. However, time.Duration
+                    is at a nanosecond granularity, and it''s easy to introduce a
+                    bug where it looks like the code is dealing with seconds but its
+                    actually nanoseconds (or vice versa).'
+                  type: string
+                proxy:
+                  description: Proxy is a struct that contains options for configuring
+                    access to the Git repo via a proxy. Only has an effect when secretType
+                    is one of ("cookiefile", "none"). Optional.
+                  type: string
+                repo:
+                  description: Repo is the git repository URL to sync from. Required.
+                  type: string
+                revision:
+                  description: 'Revision is the git revision (tag, branch, ref or
+                    commit) to fetch.  Default: "master".'
+                  type: string
+                secretRef:
+                  description: SecretRef is the secret used to connect to the Git
+                    source of truth.
+                  properties:
+                    name:
+                      description: Name represents the secret name.
+                      type: string
+                  type: object
+              required:
+              - auth
+              - repo
+              type: object
           type: object
         status:
-          description: RepoSyncStatus defines the observed state of RepoSync
+          description: ReposSyncStatus defines the observed state of RepoSync
           type: object
       type: object
   version: v1

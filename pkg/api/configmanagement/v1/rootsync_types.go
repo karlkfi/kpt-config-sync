@@ -23,14 +23,18 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// +kubebuilder:object:root=true
+
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of RootSync. Edit RootSync_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Git contains configuration specific to importing policies from a Git repo.
+	// +optional
+	Git `json:"git,omitempty"`
 }
+
+// +kubebuilder:object:root=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
@@ -42,10 +46,13 @@ type RootSyncStatus struct {
 
 // RootSync is the Schema for the rootsyncs API
 type RootSync struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   RootSyncSpec   `json:"spec,omitempty"`
+	// +optional
+	Spec RootSyncSpec `json:"spec,omitempty"`
+	// +optional
 	Status RootSyncStatus `json:"status,omitempty"`
 }
 
@@ -54,6 +61,7 @@ type RootSync struct {
 // RootSyncList contains a list of RootSync
 type RootSyncList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []RootSync `json:"items"`
 }
