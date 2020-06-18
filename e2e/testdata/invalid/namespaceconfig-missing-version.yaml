@@ -13,7 +13,6 @@ spec:
           annotations:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: namespaces/rnd/quota.yaml
-          creationTimestamp: null
           name: pod-quota
         spec:
           hard:

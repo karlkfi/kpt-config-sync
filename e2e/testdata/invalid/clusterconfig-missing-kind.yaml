@@ -14,7 +14,6 @@ spec:
           annotations:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: cluster/admin-clusterrole.yaml
-          creationTimestamp: null
           name: acme-admin
         rules:
         - apiGroups:

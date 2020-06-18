@@ -14,7 +14,6 @@ spec:
           annotations:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: cluster/admin-clusterrole.yaml
-          creationTimestamp: null
           name: acme-admin
         rules:
         - apiGroups:
@@ -43,7 +42,6 @@ spec:
           annotations:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: cluster/namespace-viewer-clusterrole.yaml
-          creationTimestamp: null
           name: namespace-viewer
         rules:
         - apiGroups:
@@ -59,7 +57,6 @@ spec:
           annotations:
             configmanagement.gke.io/cluster-name: e2e-test-cluster
             configmanagement.gke.io/source-path: cluster/rbac-viewer-clusterrole.yaml
-          creationTimestamp: null
           name: rbac-viewer
         rules:
         - apiGroups:

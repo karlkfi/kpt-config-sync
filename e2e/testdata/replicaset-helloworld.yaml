@@ -12,7 +12,6 @@ spec:
       app: hello-world
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: hello-world
     spec:

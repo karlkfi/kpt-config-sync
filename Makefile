@@ -192,7 +192,7 @@ goimports: $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
-lint: lint-go lint-bash lint-license
+lint: lint-go lint-bash lint-yaml lint-license
 
 lint-go: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
@@ -205,6 +205,9 @@ license:
 
 lint-license: build
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
+
+lint-yaml:
+	@./scripts/lint-yaml.sh
 
 # Print the value of a variable
 print-%:
