@@ -8,8 +8,8 @@ E2E_PARAMS := \
 # The directory for e2e test related files
 E2E_DIR := $(OUTPUT_DIR)/nomos
 
-E2E_TEST_IMAGE = gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG)
-E2E_TEST_IMAGE_LATEST = gcr.io/$(GCP_PROJECT)/e2e-tests:test-e2e-latest
+E2E_VERSION := v0.0.1
+E2E_TEST_IMAGE := gcr.io/$(GCP_PROJECT)/e2e-tests:$(E2E_VERSION)
 
 # Create a staging directory for e2e
 .PHONY: e2e-staging
@@ -39,17 +39,16 @@ download-cli: $(OUTPUT_DIR)
 	@gsutil cp gs://config-management-release/latest/linux_amd64/nomos $(GO_BIN_DIR)/nomos
 	@chmod +x $(GO_BIN_DIR)/nomos
 
+
 # Builds the e2e docker image and depencencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a config-management-release version of the e2e-tests image.
 image-e2e-tests: \
-		e2e-staging \
 		build/e2e-tests/Dockerfile \
 		build/e2e-tests/build.sh
 	@echo "+++ Building the e2e docker image"
 	@build/e2e-tests/build.sh \
 		-t $(E2E_TEST_IMAGE) \
-		-t $(E2E_TEST_IMAGE_LATEST) \
 		$(DOCKER_BUILD_QUIET)
 
 
@@ -62,26 +61,26 @@ __test-e2e-run:
 		 e2e/e2e.sh \
 		--TEMP_OUTPUT_DIR "$(TEMP_OUTPUT_DIR)" \
 		--OUTPUT_DIR "$(OUTPUT_DIR)" \
-		--e2e-container="$(E2E_TEST_IMAGE_LATEST)" \
+		--e2e-container="$(E2E_TEST_IMAGE)" \
 		$(TEST_E2E_RUN_FLAGS) \
 		-- \
 		$(E2E_FLAGS) \
 	    && echo "+++ git e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
-e2e-image-all: push-to-gcr-nomos image-e2e-tests
+e2e-image-all: push-to-gcr-nomos image-e2e-tests e2e-staging
 
 banner:
 	@cat ./build/banner.txt
 
 push-e2e-tests: image-e2e-tests
-	docker push $(E2E_TEST_IMAGE_LATEST)
+	docker push $(E2E_TEST_IMAGE)
 
-# Makes sure that E2E_TEST_IMAGE_LATEST is available in the local docker cache.
+# Makes sure that E2E_TEST_IMAGE is available in the local docker cache.
 # The image takes a *long* time to rebuild, so we reuse a prebuilt one instead.
 ensure-image-e2e-tests:
-	@if ! docker image inspect $(E2E_TEST_IMAGE_LATEST) > /dev/null; then \
-		docker image pull $(E2E_TEST_IMAGE_LATEST); \
+	@if ! docker image inspect $(E2E_TEST_IMAGE) > /dev/null; then \
+		docker image pull $(E2E_TEST_IMAGE); \
 	fi
 
 # Clean, ensure and run e2e tests for all importers.
@@ -121,7 +120,7 @@ test-e2e: banner e2e-image-all
 		$(E2E_FLAGS)"
 
 # This target is for working on specific tests
-test-e2e-dev: image-e2e-tests
+test-e2e-dev: image-e2e-tests e2e-staging
 	$(MAKE) __test-e2e-run $(E2E_PARAMS) E2E_FLAGS="\
 		$(E2E_FLAGS)"
 
