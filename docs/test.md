@@ -17,7 +17,7 @@ cluster; the cluster's service account needs storage.objectViewer role on the
 GCP project that holds Docker images in Google Container Registry.
 
 ```console
-make test-e2e-raw
+make test-e2e
 ```
 
 ## Local nomos vet tests
@@ -37,19 +37,19 @@ suite.
 
 You can restrict by test name:
 ```console
-make test-e2e-raw E2E_FLAGS="--test_filter acme"
+make test-e2e E2E_FLAGS="--test_filter acme"
 ```
 
 Or by file name:
 ```console
-make test-e2e-raw E2E_FLAGS="--file_filter acme"
+make test-e2e E2E_FLAGS="--file_filter acme"
 ```
 
 Also, It is possible to ignore a test while running the make target.
 
 You can ignore a test by test name:
 ```console
-make test-e2e-raw E2E_FLAGS="--file_ignore_filter acme.bats"
+make test-e2e E2E_FLAGS="--file_ignore_filter acme.bats"
 ```
 
 ## E2E Tests with a custom Operator
@@ -63,7 +63,7 @@ be added to the operator repo.
 
 The e2e test suite starts with a suite setup, then runs tests, and finally does
 a cleanup. (The setup also contains a clean step.) You can run these stages
-individually using the `test-e2e-raw-dev` target.
+individually using the `test-e2e-dev` target.
 
 1- Build Anthos Config Management and end to end images. You must do this
 each time you make changes to .go code.
@@ -76,7 +76,7 @@ make e2e-image-all
 
 ```console
 # git
-make test-e2e-raw-dev E2E_FLAGS="--setup"
+make test-e2e-dev E2E_FLAGS="--setup"
 ```
 
 3- Run tests with `--test`. This example runs a filtered set of tests with full
@@ -84,14 +84,14 @@ debug output.
 
 ```console
 # git
-make test-e2e-raw-dev E2E_FLAGS="--test --tap --test_filter acme"
+make test-e2e-dev E2E_FLAGS="--test --tap --test_filter acme"
 ```
 
 4- Clean up the test environment
 
 ```console
 # git
-make test-e2e-raw-dev E2E_FLAGS="--clean"
+make test-e2e-dev E2E_FLAGS="--clean"
 ```
 
 ### E2E_FLAGS
