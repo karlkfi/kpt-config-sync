@@ -6,7 +6,7 @@ E2E_PARAMS := \
 	GCR_PREFIX=$(GCR_PREFIX) \
 
 # The directory for e2e test related files
-E2E_DIR := $(OUTPUT_DIR)/e2e
+E2E_DIR := $(OUTPUT_DIR)/nomos
 
 E2E_TEST_IMAGE = gcr.io/$(GCP_PROJECT)/e2e-tests:$(IMAGE_TAG)
 E2E_TEST_IMAGE_LATEST = gcr.io/$(GCP_PROJECT)/e2e-tests:test-e2e-latest
@@ -22,7 +22,7 @@ e2e-staging: \
 	@mkdir -p $(E2E_DIR)
 	@mkdir -p $(E2E_DIR)/third_party
 	@cp -r ./third_party/bats-core $(E2E_DIR)/third_party
-	@cp -r ./examples $(OUTPUT_DIR)/e2e
+	@cp -r ./examples $(E2E_DIR)
 	@mkdir -p $(E2E_DIR)/scripts
 	@cp ./scripts/init-git-server.sh $(E2E_DIR)/scripts
 	@mkdir -p $(E2E_DIR)/test/manifests/templates

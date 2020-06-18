@@ -210,7 +210,7 @@ fi
 DOCKER_FLAGS+=(
     -u "$(id -u):$(id -g)"
     -v "${TEMP_OUTPUT_DIR}:/tmp"
-    -v "${OUTPUT_DIR}/e2e":/opt/testing/nomos
+    -v "${OUTPUT_DIR}/nomos":/opt/testing/nomos
     -v "${OUTPUT_DIR}/go/bin":/opt/testing/go/bin
     "${gotopt2_e2e_container}"
 )
