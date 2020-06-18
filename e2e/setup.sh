@@ -5,6 +5,7 @@ echo "Start setup.sh"
 set -euo pipefail
 
 readonly TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly NOMOS_DIR="$(readlink -f "$TEST_DIR/..")"
 
 readonly FWD_SSH_PORT=2222
 
@@ -107,7 +108,7 @@ function set_up_env() {
   # condition where the importer can come up faster than the git server and have
   # to wait two minutes for timeout.
   echo "++++ Setting up git server"
-  /opt/testing/nomos/scripts/init-git-server.sh
+  "${NOMOS_DIR}"/scripts/init-git-server.sh
   echo "++++ Setting up Nomos"
   install
   echo "++++ Env setup complete"
@@ -230,7 +231,7 @@ function main() {
     echo "Kubectl/Cluster misconfigured"
     exit 1
   fi
-  GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i /opt/testing/nomos/id_rsa.nomos"; export GIT_SSH_COMMAND
+  GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i ${NOMOS_DIR}/id_rsa.nomos"; export GIT_SSH_COMMAND
 
   # TODO(fmil): remove the root reason for this message.
   # shellcheck disable=SC2154
@@ -298,7 +299,7 @@ function main() {
 
     if "${has_artifacts}"; then
       echo "+++ Converting test results from TAP format to jUnit"
-      /opt/tap2junit -reorder_duration -test_name="git_tests" \
+      tap2junit -reorder_duration -test_name="git_tests" \
         < "${result_file}" \
         > "${ARTIFACTS}/junit_git.xml"
     fi
@@ -336,7 +337,7 @@ setup_prober_cred() {
 echo "e2e/setup.sh: executed with args" "$@"
 
 # gotopt2 binary is built into the e2e container.
-readonly gotopt2_result=$(/opt/gotopt2 "${@}" << EOF
+readonly gotopt2_result=$(gotopt2 "${@}" << EOF
 flags:
 - name: "tap"
   type: bool

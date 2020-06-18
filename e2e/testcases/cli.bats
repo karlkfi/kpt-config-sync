@@ -12,8 +12,6 @@ load "../lib/setup"
 load "../lib/wait"
 load "../lib/namespace"
 
-NOMOS_BIN=/opt/testing/go/bin/linux_amd64/nomos
-
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 CMS_NS="config-management-system"
@@ -44,7 +42,7 @@ teardown() {
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=syncer"
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=monitor"
 
-  "${NOMOS_BIN}" bugreport
+  nomos bugreport
 
   # check that zip exists
   BUG_REPORT_ZIP_NAME=$(get_bug_report_file_name)

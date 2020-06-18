@@ -237,7 +237,7 @@ function teardown() {
   git::commit
 
   debug::log "Check that nomos vet fails"
-  wait::for -f -t 5 -- /opt/testing/go/bin/linux_amd64/nomos vet --path="${BATS_TMPDIR}/repo"
+  wait::for -f -t 5 -- nomos vet --path="${BATS_TMPDIR}/repo"
 }
 
 @test "${FILE_NAME}: invalid CRD added and replaced with valid one" {
@@ -247,7 +247,7 @@ function teardown() {
   namespace::declare prod
   git::commit
 
-  wait::for -f -t 5 -- /opt/testing/go/bin/linux_amd64/nomos vet --path="${BATS_TMPDIR}/repo"
+  wait::for -f -t 5 -- nomos vet --path="${BATS_TMPDIR}/repo"
 
   debug::log "CRD doesn't exist on cluster"
   wait::for -f -t 5 -- kubectl get crd anvils.acme.com
