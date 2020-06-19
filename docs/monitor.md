@@ -11,7 +11,7 @@ port forwarding to easily view them. For example let's say you want to view
 metrics for the Syncer:
 
 ```console
-$ kubectl port-forward -n config-management-system $(kubectl get pods -n config-management-system -l app=syncer -o jsonpath='{.items[0].metadata.name}') 8675
+$ kubectl port-forward -n config-management-system deployment/git-importer 8675
 ```
 
 Now you can view the metric values by visiting http://localhost:8675/metrics. If

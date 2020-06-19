@@ -110,12 +110,11 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -f -- kubectl get ns dir
 }
 
-@test "${FILE_NAME}: Start syncer and only sync namespace" {
-  debug::log "Restarting syncer with an empty repo"
-  kubectl delete pods -n config-management-system -l app=syncer
+@test "${FILE_NAME}: Only sync one namespace" {
+  debug::log "Assert dir Namespace does not exist"
   wait::for -f -- kubectl get ns dir
 
-  debug::log "Add only a single namespace"
+  debug::log "Add dir Namespace"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::commit
   wait::for kubectl get ns dir

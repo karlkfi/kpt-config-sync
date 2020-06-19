@@ -5,7 +5,7 @@
 # Creates a public-private ssh key pair.
 function install::create_keypair() {
   echo "+++ Creating keypair at: $TEST_DIR"
-  if [ -f "$TEST_DIR/id_rsa.nomos" ]; then
+  if [[ -f "$TEST_DIR/id_rsa.nomos" ]]; then
     echo "+++ Keypair already exists"
     return
   fi
@@ -28,10 +28,8 @@ function install::create_keypair() {
 #   $1: namespace
 #   $2: deployment name
 function install::available_replicas() {
-  local namespace
-  namespace="${1}"
-  local deployment
-  deployment="${2}"
+  local namespace="${1}"
+  local deployment="${2}"
 
   kubectl get deployments --ignore-not-found \
     -n="${namespace}" "${deployment}" \
@@ -41,21 +39,18 @@ function install::available_replicas() {
 # Returns 0 if the nomos deployment is up and running. Returns non-zero
 # otherwise.
 function install::nomos_running() {
-  local deployments
-  deployments=("git-importer" "syncer")
-  for deployment in "${deployments[@]}"; do
-    local res
-    res="$(install::available_replicas config-management-system "${deployment}")"
-    if [[ "${res}" == "0" ]] || [[ -z "${res}" ]]; then
-      echo "${deployment} not yet running"
-      return 1
-    fi
-  done
+  local deployment="git-importer"
+  local res
+  res="$(install::available_replicas config-management-system "${deployment}")"
+  if [[ "${res}" == "0" ]] || [[ -z "${res}" ]]; then
+    echo "${deployment} not yet running"
+    return 1
+  fi
   return 0
 }
 
 function install::nomos_uninstalled() {
-  if [ "$(kubectl get pods -n config-management-system | wc -l)" -ne 0 ]; then
+  if [[ "$(kubectl get pods -n config-management-system | wc -l)" -ne 0 ]]; then
     echo "Nomos pods not yet uninstalled"
     return 1
   fi

@@ -34,7 +34,6 @@ var defaultConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, de
 var templates = []string{
 	"git-importer.yaml",
 	"monitor.yaml",
-	"syncer.yaml",
 }
 
 // installConfigSync installs ConfigSync on the test cluster, and returns a
@@ -48,14 +47,6 @@ func installConfigSync(nt *NT) func() error {
 	for _, o := range objs {
 		if o.GroupVersionKind() == kinds.Namespace() && o.GetName() == configmanagement.ControllerNamespace {
 			// We've already created the config-management-system Namespace.
-			continue
-		}
-		if o.GroupVersionKind() == kinds.Deployment() && o.GetName() == "syncer" {
-			// TODO(willbeason): Remove this once the syncer Deployment no longer exists.
-			//  As-is provides a fast way to test that syncing works without having to
-			//  run bash e2e tests.
-			// The Syncer is now a no-op, and we want to test that everything indeed
-			// does work with the syncer Deployment missing.
 			continue
 		}
 		err := nt.Create(o)

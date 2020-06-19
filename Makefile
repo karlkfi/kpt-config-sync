@@ -88,9 +88,7 @@ BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 BUILD_MODE ?= debug
 
 # All Nomos K8S deployments.
-ALL_K8S_DEPLOYMENTS := syncer \
-	git-importer \
-	monitor
+ALL_K8S_DEPLOYMENTS := git-importer monitor
 
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos

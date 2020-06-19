@@ -39,7 +39,6 @@ teardown() {
 
   namespace::check_exists ${CMS_NS}
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=git-importer"
-  resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=syncer"
   resource::check_count -n ${CMS_NS} -r pod -c 1 -l "app=monitor"
 
   nomos bugreport
@@ -56,7 +55,6 @@ teardown() {
   check_singleton "raw/${CurrentContext}/namespaces/config-management-system/git-importer.*/git-sync.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/namespaces/config-management-system/git-importer.*/importer.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/namespaces/config-management-system/monitor.*/monitor.txt" "${BUG_REPORT_DIR_NAME}"
-  check_singleton "raw/${CurrentContext}/namespaces/config-management-system/syncer.*/syncer.txt" "${BUG_REPORT_DIR_NAME}"
   check_singleton "raw/${CurrentContext}/namespaces/config-management-system/pods.txt" "${BUG_REPORT_DIR_NAME}"
   # TODO(b/158867827): This won't work in the new test world, which has no operator
   # check_singleton "raw/${CurrentContext}/namespaces/kube-system/config-management-operator.*/manager.txt" "${BUG_REPORT_DIR_NAME}"

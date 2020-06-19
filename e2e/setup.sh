@@ -55,7 +55,7 @@ function install() {
 
     local image
     image="$(kubectl get pods -n config-management-system \
-      -l app=syncer \
+      -l app=git-importer \
       -ojsonpath='{.items[0].spec.containers[0].image}')"
     echo "Nomos $image up and running"
   fi
@@ -175,16 +175,10 @@ function dump_diagnostics() {
   (kubectl -n config-management-system describe deployment git-importer > "${directory}/${label}_git-importer_deployment.txt") || true
   echo "+++++++ importer pod"
   (kubectl -n config-management-system describe pod git-importer > "${directory}/${label}_git-importer_pod.txt") || true
-  echo "+++++++ syncer deployment"
-  (kubectl -n config-management-system describe deployment syncer > "${directory}/${label}_syncer_deployment.txt") || true
-  echo "+++++++ syncer pod"
-  (kubectl -n config-management-system describe pod syncer > "${directory}/${label}_syncer_pod.txt") || true
   echo "+++++++ kubectl describe "
   (kubectl describe -f "${TEST_DIR}/../defined-operator-bundle.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
   echo "+++++++ operator logs"
   (kubectl -n kube-system logs -l k8s-app=config-management-operator > "${directory}/${label}_operator_logs.txt") || true
-  echo "+++++++ syncer logs"
-  (kubectl -n config-management-system logs -l app=syncer -c syncer > "${directory}/${label}_syncer_logs.txt") || true
   echo "+++++++ importer logs"
   (kubectl -n config-management-system logs -l app=git-importer -c importer > "${directory}/${label}_importer_logs.txt") || true
   echo "+++++++ git-sync logs"
