@@ -45,11 +45,19 @@ type NT struct {
 
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
 	gitPrivateKeyPath string
+
+	// gitRepoPort is the local port that forwards to the git repo.
+	gitRepoPort int
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
 func (nt *NT) GitPrivateKeyPath() string {
 	return nt.gitPrivateKeyPath
+}
+
+// GitRepoPort returns the path to the git private key.
+func (nt *NT) GitRepoPort() int {
+	return nt.gitRepoPort
 }
 
 func fmtObj(name, namespace string, obj runtime.Object) string {
