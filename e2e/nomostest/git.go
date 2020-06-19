@@ -42,17 +42,16 @@ type Repository struct {
 //
 // For now, `name` must be "sot.git" until we support dynamically creating
 // repositories.
-func NewRepository(t *testing.T, name, tmpDir string, port int) *Repository {
+func NewRepository(t *testing.T, name, tmpDir, privateKeyPath string, port int) *Repository {
 	t.Helper()
 
 	localDir := filepath.Join(tmpDir, "repos", name)
-	privateKey := filepath.Join(tmpDir, "ssh", "id_rsa.nomos")
 
 	g := &Repository{
 		root: localDir,
 		T:    t,
 	}
-	g.init(name, privateKey, port)
+	g.init(name, privateKeyPath, port)
 
 	g.initialCommit()
 

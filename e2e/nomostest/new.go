@@ -66,7 +66,7 @@ func New(t *testing.T) *NT {
 	}
 	// Pods don't always restart if the secrets don't exist, so we have to
 	// create the Namespaces + Secrets before anything else.
-	generateSSHKeys(nt, filepath.Join(tmpDir, kubeconfig))
+	nt.gitPrivateKeyPath = generateSSHKeys(nt, filepath.Join(tmpDir, kubeconfig))
 
 	waitForGit := installGitServer(nt)
 	waitForConfigSync := installConfigSync(nt)
@@ -78,7 +78,7 @@ func New(t *testing.T) *NT {
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
 	port := portForwardGitServer(nt)
-	nt.Repository = NewRepository(t, "sot.git", nt.TmpDir, port)
+	nt.Repository = NewRepository(t, "sot.git", nt.TmpDir, nt.GitPrivateKeyPath(), port)
 
 	err = waitForConfigSync()
 	if err != nil {

@@ -42,6 +42,14 @@ type NT struct {
 	// Repository is the repository the cluster is syncing to.
 	// TODO(
 	Repository *Repository
+
+	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
+	gitPrivateKeyPath string
+}
+
+// GitPrivateKeyPath returns the path to the git private key.
+func (nt *NT) GitPrivateKeyPath() string {
+	return nt.gitPrivateKeyPath
 }
 
 func fmtObj(name, namespace string, obj runtime.Object) string {

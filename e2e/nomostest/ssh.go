@@ -15,7 +15,7 @@ import (
 // expose the inner logic to outside consumers. So instead of trying to do it
 // ourselves, we're shelling out to kubectl to ensure we create a valid set of
 // secrets.
-func generateSSHKeys(nt *NT, kcfg string) {
+func generateSSHKeys(nt *NT, kcfg string) string {
 	nt.T.Helper()
 
 	sshDir := filepath.Join(nt.TmpDir, "ssh")
@@ -58,5 +58,5 @@ func generateSSHKeys(nt *NT, kcfg string) {
 	if err != nil {
 		nt.T.Fatal("creating ssh-pub secret", err)
 	}
-
+	return privateKeyPath
 }
