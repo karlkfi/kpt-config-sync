@@ -4,6 +4,7 @@ set -euo pipefail
 
 DIR=$(dirname "${BASH_SOURCE[0]}")
 NOMOS_DIR=$(readlink -f "${DIR}/../..")
+FWD_SSH_PORT=${FWD_SSH_PORT:-2222}
 
 # shellcheck source=e2e/lib/debug.bash
 source "$DIR/debug.bash"
@@ -34,7 +35,7 @@ setup::git::initialize() {
   cd "${TEST_REPO_DIR}/repo"
 
   git init
-  git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
+  git remote add origin "ssh://git@localhost:${FWD_SSH_PORT}/git-server/repos/sot.git"
   git fetch
   git config user.name "Testing Nome"
   git config user.email testing_nome@example.com
