@@ -171,6 +171,13 @@ func portForwardGitServer(nt *NT) int {
 		nt.T.Log(string(out))
 		nt.T.Fatalf("initializing bare repo: %v", err)
 	}
+	out, err = exec.Command("kubectl", "exec", "--kubeconfig", nt.KubeconfigPath(),
+		"-n", testGitNamespace, podName, "--",
+		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false").Output()
+	if err != nil {
+		nt.T.Log(string(out))
+		nt.T.Fatalf("configuring bare repo to allow force push: %v", err)
+	}
 
 	return forwardToFreePort(nt.T, nt.KubeconfigPath(), podName)
 }
