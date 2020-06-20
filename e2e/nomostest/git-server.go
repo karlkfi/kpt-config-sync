@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -145,8 +144,6 @@ func gitDeployment() *appsv1.Deployment {
 func portForwardGitServer(nt *NT) int {
 	nt.T.Helper()
 
-	kcfg := filepath.Join(nt.TmpDir, kubeconfig)
-
 	// This logic is not robust to the git-server pod being killed/restarted,
 	// but this is a rare occurrence.
 	// Consider if it is worth getting the Pod name again if port forwarding fails.
@@ -167,7 +164,7 @@ func portForwardGitServer(nt *NT) int {
 	podName := podList.Items[0].Name
 
 	// TODO(willbeason): Do this dynamically for new repositories.
-	out, err := exec.Command("kubectl", "exec", "--kubeconfig", kcfg,
+	out, err := exec.Command("kubectl", "exec", "--kubeconfig", nt.KubeconfigPath(),
 		"-n", testGitNamespace, podName, "--",
 		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git").Output()
 	if err != nil {
@@ -175,7 +172,7 @@ func portForwardGitServer(nt *NT) int {
 		nt.T.Fatalf("initializing bare repo: %v", err)
 	}
 
-	return forwardToFreePort(nt.T, kcfg, podName)
+	return forwardToFreePort(nt.T, nt.KubeconfigPath(), podName)
 }
 
 // forwardToPort forwards the given Pod in the git-server's Namespace to

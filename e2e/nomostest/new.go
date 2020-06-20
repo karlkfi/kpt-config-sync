@@ -42,16 +42,17 @@ func New(t *testing.T) *NT {
 	// TODO(willbeason): Support connecting to:
 	//  1) A user-specified cluster.
 	//  2) One of a set of already-set-up clusters?
-	cfg := newKind(t, name, tmpDir)
+	cfg, kubeconfigPath := newKind(t, name, tmpDir)
 	c := connect(t, cfg)
 
 	nt := &NT{
-		Context: context.Background(),
-		T:       t,
-		Name:    name,
-		TmpDir:  tmpDir,
-		Config:  cfg,
-		Client:  c,
+		Context:        context.Background(),
+		T:              t,
+		Name:           name,
+		TmpDir:         tmpDir,
+		Config:         cfg,
+		Client:         c,
+		kubeconfigPath: kubeconfigPath,
 	}
 
 	connectToLocalRegistry(nt)

@@ -39,7 +39,7 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
 // newKind creates a new Kind cluster for use in testing with the specified name.
 //
 // Automatically registers the cluster to be deleted at the end of the test.
-func newKind(t *testing.T, name string, tmpDir string) *rest.Config {
+func newKind(t *testing.T, name string, tmpDir string) (*rest.Config, string) {
 	// TODO(willbeason): Extract this logic into a CLI that doesn't require
 	//  testing.T.
 	p := cluster.NewProvider()
@@ -74,5 +74,5 @@ kind delete cluster --name=%s`, name)
 		t.Fatalf("building rest.Config: %v", err)
 	}
 
-	return cfg
+	return cfg, kcfgPath
 }

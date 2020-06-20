@@ -48,6 +48,9 @@ type NT struct {
 
 	// gitRepoPort is the local port that forwards to the git repo.
 	gitRepoPort int
+
+	// kubeconfigPath is the path to the kubeconfig file for the kind cluster
+	kubeconfigPath string
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -58,6 +61,11 @@ func (nt *NT) GitPrivateKeyPath() string {
 // GitRepoPort returns the path to the git private key.
 func (nt *NT) GitRepoPort() int {
 	return nt.gitRepoPort
+}
+
+// KubeconfigPath returns the path to the kubeconifg file.
+func (nt *NT) KubeconfigPath() string {
+	return nt.kubeconfigPath
 }
 
 func fmtObj(name, namespace string, obj runtime.Object) string {
