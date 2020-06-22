@@ -10,14 +10,16 @@ import (
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-// NewSelectorAnnotationValidator ensures objects do not declare invalid namespace-selector
-// and cluster-selector annotations.
-func NewSelectorAnnotationValidator(scoper discovery.Scoper, errorOnUnknown bool) Validator {
+// NewClusterSelectorAnnotationValidator ensures objects do not declare invalid cluster-selector annotations.
+func NewClusterSelectorAnnotationValidator() Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
-		csErr := validateClusterSelectorAnnotation(o)
-		if csErr != nil {
-			return csErr
-		}
+		return validateClusterSelectorAnnotation(o)
+	})
+}
+
+// NewNamespaceSelectorAnnotationValidator ensures objects do not declare invalid namespace-selector annotations.
+func NewNamespaceSelectorAnnotationValidator(scoper discovery.Scoper, errorOnUnknown bool) Validator {
+	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		return validateNamespaceSelectorAnnotation(scoper, o, errorOnUnknown)
 	})
 }

@@ -202,6 +202,29 @@ function get_cluster_name() {
 
   debug::log "Wait for bob-rolebinding to reappear in the backend namespace"
   wait::for -- kubectl get rolebindings -n backend bob-rolebinding
+
+  debug::log "Change the cluster name back to prod"
+  rename_cluster "test-cluster-env-prod"
+}
+
+@test "${FILE_NAME}: ClusterSelector: Importer ignores non-selected custom resources" {
+  debug::log "Require that the cluster name exists on the cluster"
+  wait::for -t 10 -- kubectl get configmaps -n config-management-system cluster-name
+
+  add_clusterregistry_data
+
+  debug::log "Adding a CR (not targeted to this cluster) without its CRD"
+  git::add \
+    "${YAML_DIR}/customresources/anvil-cluster-selected.yaml" \
+    acme/namespaces/eng/backend/anvil.yaml
+  # Also add a valid object to trigger a commit hash change
+  git::update \
+    "${YAML_DIR}/backend/bob-rolebinding-env-prod.yaml" \
+    acme/namespaces/eng/backend/bob-rolebinding.yaml
+  git::commit -m "Add a custom resource without its CRD"
+
+  debug::log "Wait for repo to sync (indicating successful import and validation)"
+  wait::for -t 60 -- nomos::repo_synced
 }
 
 # Renames the cluster under test by patching the Nomos resource with the new

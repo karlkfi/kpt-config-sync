@@ -16,9 +16,7 @@ var (
 	namespaceSelectorAnnotation = core.Annotation(v1.NamespaceSelectorAnnotationKey, "shipping-selector")
 )
 
-func TestSelectorAnnotationValidator(t *testing.T) {
-	scoper := discovery.CoreScoper()
-
+func TestClusterSelectorAnnotationValidator(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
 		// Trivial Cases
 		nht.Pass("empty returns no error"),
@@ -29,10 +27,7 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 		nht.Pass("cluster-scoped object with cluster-selector",
 			fake.ClusterRole(clusterSelectorAnnotation),
 		),
-		nht.Fail("cluster-scoped object with namespace-selector",
-			fake.ClusterRole(namespaceSelectorAnnotation),
-		),
-		nht.Fail("cluster-scoped object with both selectors",
+		nht.Pass("cluster-scoped object with both selectors",
 			fake.ClusterRole(namespaceSelectorAnnotation, clusterSelectorAnnotation),
 		),
 		nht.Pass("namespace-scoped object with no annotation",
@@ -40,9 +35,6 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 		),
 		nht.Pass("namespace-scoped object with cluster-selector",
 			fake.Role(clusterSelectorAnnotation),
-		),
-		nht.Pass("namespace-scoped object with namespace-selector",
-			fake.Role(namespaceSelectorAnnotation),
 		),
 		nht.Pass("namespace-scoped object with both selectors",
 			fake.Role(namespaceSelectorAnnotation, clusterSelectorAnnotation),
@@ -54,17 +46,11 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 		nht.Fail("Cluster with cluster-selector",
 			fake.Cluster(clusterSelectorAnnotation),
 		),
-		nht.Fail("Cluster with namespace-selector",
-			fake.Cluster(namespaceSelectorAnnotation),
-		),
 		nht.Pass("Namespace without annotation",
 			fake.Namespace("namespaces/foo"),
 		),
 		nht.Pass("Namespace with cluster-selector",
 			fake.Namespace("namespaces/foo", clusterSelectorAnnotation),
-		),
-		nht.Fail("Namespace with namespace-selector",
-			fake.Namespace("namespaces/foo", namespaceSelectorAnnotation),
 		),
 		nht.Pass("ClusterSelector without annotation",
 			fake.ClusterSelector(),
@@ -72,17 +58,11 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 		nht.Fail("ClusterSelector with cluster-selector",
 			fake.ClusterSelector(clusterSelectorAnnotation),
 		),
-		nht.Fail("ClusterSelector with namespace-selector",
-			fake.ClusterSelector(namespaceSelectorAnnotation),
-		),
 		nht.Pass("NamespaceSelector without annotation",
 			fake.NamespaceSelector(),
 		),
 		nht.Fail("NamespaceSelector with cluster-selector",
 			fake.NamespaceSelector(clusterSelectorAnnotation),
-		),
-		nht.Fail("NamespaceSelector with namespace-selector",
-			fake.NamespaceSelector(namespaceSelectorAnnotation),
 		),
 		nht.Pass("V1Beta1 CRD without annotation",
 			fake.CustomResourceDefinitionV1Beta1(),
@@ -90,31 +70,22 @@ func TestSelectorAnnotationValidator(t *testing.T) {
 		nht.Fail("V1Beta1 CRD with cluster-selector",
 			fake.CustomResourceDefinitionV1Beta1(clusterSelectorAnnotation),
 		),
-		nht.Fail("V1Beta1 CRD with namespace-selector",
-			fake.CustomResourceDefinitionV1Beta1(namespaceSelectorAnnotation),
-		),
 		nht.Pass("V1 CRD without annotation",
 			fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1()),
 		),
 		nht.Fail("V1 CRD with cluster-selector",
 			fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1(clusterSelectorAnnotation)),
 		),
-		nht.Fail("V1 CRD with namespace-selector",
-			fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1(namespaceSelectorAnnotation)),
-		),
 		// unknown types
-		nht.Fail("Unknown with cluster-selector",
+		nht.Pass("Unknown with cluster-selector",
 			fake.AnvilAtPath("", clusterSelectorAnnotation),
-		),
-		nht.Fail("Unknown with namespace-selector",
-			fake.AnvilAtPath("", namespaceSelectorAnnotation),
 		),
 	}
 
-	nht.RunAll(t, nonhierarchical.NewSelectorAnnotationValidator(scoper, true), testCases)
+	nht.RunAll(t, nonhierarchical.NewClusterSelectorAnnotationValidator(), testCases)
 }
 
-func TestSelectorAnnotationValidatorServerless(t *testing.T) {
+func TestNamespaceSelectorAnnotationValidator(t *testing.T) {
 	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
@@ -124,9 +95,6 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		nht.Pass("cluster-scoped object no annotation",
 			fake.ClusterRole(),
 		),
-		nht.Pass("cluster-scoped object with cluster-selector",
-			fake.ClusterRole(clusterSelectorAnnotation),
-		),
 		nht.Fail("cluster-scoped object with namespace-selector",
 			fake.ClusterRole(namespaceSelectorAnnotation),
 		),
@@ -135,9 +103,6 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		),
 		nht.Pass("namespace-scoped object with no annotation",
 			fake.Role(),
-		),
-		nht.Pass("namespace-scoped object with cluster-selector",
-			fake.Role(clusterSelectorAnnotation),
 		),
 		nht.Pass("namespace-scoped object with namespace-selector",
 			fake.Role(namespaceSelectorAnnotation),
@@ -149,17 +114,11 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		nht.Pass("Cluster without annotation",
 			fake.Cluster(),
 		),
-		nht.Fail("Cluster with cluster-selector",
-			fake.Cluster(clusterSelectorAnnotation),
-		),
 		nht.Fail("Cluster with namespace-selector",
 			fake.Cluster(namespaceSelectorAnnotation),
 		),
 		nht.Pass("Namespace without annotation",
 			fake.Namespace("namespaces/foo"),
-		),
-		nht.Pass("Namespace with cluster-selector",
-			fake.Namespace("namespaces/foo", clusterSelectorAnnotation),
 		),
 		nht.Fail("Namespace with namespace-selector",
 			fake.Namespace("namespaces/foo", namespaceSelectorAnnotation),
@@ -167,8 +126,76 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		nht.Pass("ClusterSelector without annotation",
 			fake.ClusterSelector(),
 		),
-		nht.Fail("ClusterSelector with cluster-selector",
-			fake.ClusterSelector(clusterSelectorAnnotation),
+		nht.Fail("ClusterSelector with namespace-selector",
+			fake.ClusterSelector(namespaceSelectorAnnotation),
+		),
+		nht.Pass("NamespaceSelector without annotation",
+			fake.NamespaceSelector(),
+		),
+		nht.Fail("NamespaceSelector with namespace-selector",
+			fake.NamespaceSelector(namespaceSelectorAnnotation),
+		),
+		nht.Pass("V1Beta1 CRD without annotation",
+			fake.CustomResourceDefinitionV1Beta1(),
+		),
+		nht.Fail("V1Beta1 CRD with namespace-selector",
+			fake.CustomResourceDefinitionV1Beta1(namespaceSelectorAnnotation),
+		),
+		nht.Pass("V1 CRD without annotation",
+			fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1()),
+		),
+		nht.Fail("V1 CRD with namespace-selector",
+			fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1(namespaceSelectorAnnotation)),
+		),
+		// unknown types
+		nht.Fail("Unknown with namespace-selector",
+			fake.AnvilAtPath("", namespaceSelectorAnnotation),
+		),
+	}
+
+	nht.RunAll(t, nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, true), testCases)
+}
+
+func TestNamespaceSelectorAnnotationValidatorServerless(t *testing.T) {
+	scoper := discovery.CoreScoper()
+
+	testCases := []nht.ValidatorTestCase{
+		// Trivial Cases
+		nht.Pass("empty returns no error"),
+		// Scope checking
+		nht.Pass("cluster-scoped object no annotation",
+			fake.ClusterRole(),
+		),
+		nht.Fail("cluster-scoped object with namespace-selector",
+			fake.ClusterRole(namespaceSelectorAnnotation),
+		),
+		nht.Fail("cluster-scoped object with both selectors",
+			fake.ClusterRole(namespaceSelectorAnnotation, clusterSelectorAnnotation),
+		),
+		nht.Pass("namespace-scoped object with no annotation",
+			fake.Role(),
+		),
+		nht.Pass("namespace-scoped object with namespace-selector",
+			fake.Role(namespaceSelectorAnnotation),
+		),
+		nht.Pass("namespace-scoped object with both selectors",
+			fake.Role(namespaceSelectorAnnotation, clusterSelectorAnnotation),
+		),
+		// special cases
+		nht.Pass("Cluster without annotation",
+			fake.Cluster(),
+		),
+		nht.Fail("Cluster with namespace-selector",
+			fake.Cluster(namespaceSelectorAnnotation),
+		),
+		nht.Pass("Namespace without annotation",
+			fake.Namespace("namespaces/foo"),
+		),
+		nht.Fail("Namespace with namespace-selector",
+			fake.Namespace("namespaces/foo", namespaceSelectorAnnotation),
+		),
+		nht.Pass("ClusterSelector without annotation",
+			fake.ClusterSelector(),
 		),
 		nht.Fail("ClusterSelector with namespace-selector",
 			fake.ClusterSelector(namespaceSelectorAnnotation),
@@ -176,26 +203,17 @@ func TestSelectorAnnotationValidatorServerless(t *testing.T) {
 		nht.Pass("NamespaceSelector without annotation",
 			fake.NamespaceSelector(),
 		),
-		nht.Fail("NamespaceSelector with cluster-selector",
-			fake.NamespaceSelector(clusterSelectorAnnotation),
-		),
 		nht.Fail("NamespaceSelector with namespace-selector",
 			fake.NamespaceSelector(namespaceSelectorAnnotation),
-		),
-		nht.Fail("CRD with cluster-selector",
-			fake.CustomResourceDefinitionV1Beta1(clusterSelectorAnnotation),
 		),
 		nht.Fail("CRD with namespace-selector",
 			fake.CustomResourceDefinitionV1Beta1(namespaceSelectorAnnotation),
 		),
 		// unknown types
-		nht.Pass("Unknown with cluster-selector",
-			fake.AnvilAtPath("", clusterSelectorAnnotation),
-		),
 		nht.Pass("Unknown with namespace-selector",
 			fake.AnvilAtPath("", namespaceSelectorAnnotation),
 		),
 	}
 
-	nht.RunAll(t, nonhierarchical.NewSelectorAnnotationValidator(scoper, false), testCases)
+	nht.RunAll(t, nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, false), testCases)
 }

@@ -160,29 +160,36 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 }
 
 func resolveHierarchicalSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
-	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, enableAPIServerChecks).Validate(fileObjects)
-	if annErr != nil {
-		return nil, annErr
+	// Validate and resolve cluster selectors.
+	err := nonhierarchical.NewClusterSelectorAnnotationValidator().Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	csuErr := validation.ClusterSelectorUniqueness.Validate(fileObjects)
-	if csuErr != nil {
-		return nil, csuErr
+	err = validation.ClusterSelectorUniqueness.Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
-	if csErr != nil {
-		return nil, csErr
+	fileObjects, err = selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	nsuErr := validation.NamespaceSelectorUniqueness.Validate(fileObjects)
-	if nsuErr != nil {
-		return nil, nsuErr
+	// Validate and resolve namespace selectors.
+	err = nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, enableAPIServerChecks).Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	fileObjects, nsErr := selectors.ResolveHierarchicalNamespaceSelectors(fileObjects)
-	if nsErr != nil {
-		return nil, nsErr
+	err = validation.NamespaceSelectorUniqueness.Validate(fileObjects)
+	if err != nil {
+		return nil, err
+	}
+
+	fileObjects, err = selectors.ResolveHierarchicalNamespaceSelectors(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
 	return transform.RemoveEphemeralResources(fileObjects), nil

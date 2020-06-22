@@ -82,31 +82,38 @@ func (p *rawParser) ReadClusterRegistryResources(root cmpath.Absolute, files []c
 }
 
 func resolveFlatSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
-	annErr := nonhierarchical.NewSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
-	if annErr != nil {
-		return nil, annErr
+	// Validate and resolve cluster selectors.
+	err := nonhierarchical.NewClusterSelectorAnnotationValidator().Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
 	fileObjects = nonhierarchical.CopyAbstractResources(fileObjects)
 
-	csuErr := validation.ClusterSelectorUniqueness.Validate(fileObjects)
-	if csuErr != nil {
-		return nil, csuErr
+	err = validation.ClusterSelectorUniqueness.Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	fileObjects, csErr := selectors.ResolveClusterSelectors(clusterName, fileObjects)
-	if csErr != nil {
-		return nil, csErr
+	fileObjects, err = selectors.ResolveClusterSelectors(clusterName, fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	nsuErr := validation.NamespaceSelectorUniqueness.Validate(fileObjects)
-	if nsuErr != nil {
-		return nil, nsuErr
+	// Validate and resolve namespace selectors.
+	err = nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
-	fileObjects, nsErr := selectors.ResolveFlatNamespaceSelectors(fileObjects)
-	if nsErr != nil {
-		return nil, nsErr
+	err = validation.NamespaceSelectorUniqueness.Validate(fileObjects)
+	if err != nil {
+		return nil, err
+	}
+
+	fileObjects, err = selectors.ResolveFlatNamespaceSelectors(fileObjects)
+	if err != nil {
+		return nil, err
 	}
 
 	return transform.RemoveEphemeralResources(fileObjects), nil
