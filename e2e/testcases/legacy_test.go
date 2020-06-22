@@ -24,6 +24,11 @@ func (bt *BatsTest) Run(t *testing.T) {
 	}
 	cmd := exec.Command(filepath.Join(nomosDir, filepath.FromSlash("third_party/bats-core/bin/bats")), "--tap", bt.fileName)
 
+	// Factored out for accessing deprecated functions that only exist for supporting bats tests.
+	privateKeyPath := nt.GitPrivateKeyPath() //nolint:staticcheck
+	gitRepoPort := nt.GitRepoPort()          //nolint:staticcheck
+	kubeConfigPath := nt.KubeconfigPath()    //nolint:staticcheck
+
 	// TODO: create pipes for stdout / stderr / tap output and redirect lines through t.Log
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -35,15 +40,15 @@ func (bt *BatsTest) Run(t *testing.T) {
 		fmt.Sprintf("BATS_TMPDIR=%s", filepath.Join(nt.TmpDir, "bats")),
 		"TIMING=true",
 		// tell git to use the ssh private key and not check host key
-		fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", nt.GitPrivateKeyPath()),
+		fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", privateKeyPath),
 		// passes the path to e2e manifests to the bats tests
 		fmt.Sprintf("MANIFEST_DIR=%s", filepath.Join(nomosDir, filepath.FromSlash("e2e/raw-nomos/manifests"))),
 		// passes the git server SSH port to bash tests
-		fmt.Sprintf("FWD_SSH_PORT=%d", nt.GitRepoPort()),
+		fmt.Sprintf("FWD_SSH_PORT=%d", gitRepoPort),
 		// for running 'nomos' command from built binary
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		// provide kubeconfig path to kubectl
-		fmt.Sprintf("KUBECONFIG=%s", nt.KubeconfigPath()),
+		fmt.Sprintf("KUBECONFIG=%s", kubeConfigPath),
 		// kubectl creates the .kube directory in HOME if it does not exist
 		fmt.Sprintf("HOME=%s", filepath.Join(nt.TmpDir, "fake-home")),
 	}

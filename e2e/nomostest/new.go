@@ -79,7 +79,7 @@ func New(t *testing.T) *NT {
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt)
-	nt.Repository = NewRepository(t, "sot.git", nt.TmpDir, nt.GitPrivateKeyPath(), nt.gitRepoPort)
+	nt.Repository = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort)
 
 	err = waitForConfigSync()
 	if err != nil {

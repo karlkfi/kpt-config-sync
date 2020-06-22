@@ -46,7 +46,7 @@ type NT struct {
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
 	gitPrivateKeyPath string
 
-	// gitRepoPort is the local port that forwards to the git repo.
+	// gitRepoPort is the local port that forwards to the git repo deployment.
 	gitRepoPort int
 
 	// kubeconfigPath is the path to the kubeconfig file for the kind cluster
@@ -54,16 +54,22 @@ type NT struct {
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
+//
+// Deprecated: only the legacy bats tests should make use of this function.
 func (nt *NT) GitPrivateKeyPath() string {
 	return nt.gitPrivateKeyPath
 }
 
 // GitRepoPort returns the path to the git private key.
+//
+// Deprecated: only the legacy bats tests should make use of this function.
 func (nt *NT) GitRepoPort() int {
 	return nt.gitRepoPort
 }
 
 // KubeconfigPath returns the path to the kubeconifg file.
+//
+// Deprecated: only the legacy bats tests should make use of this function.
 func (nt *NT) KubeconfigPath() string {
 	return nt.kubeconfigPath
 }

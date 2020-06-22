@@ -171,6 +171,10 @@ func portForwardGitServer(nt *NT) int {
 		nt.T.Log(string(out))
 		nt.T.Fatalf("initializing bare repo: %v", err)
 	}
+	// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
+	// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
+	// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
+	// re-initialize.
 	out, err = exec.Command("kubectl", "exec", "--kubeconfig", nt.KubeconfigPath(),
 		"-n", testGitNamespace, podName, "--",
 		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false").Output()
