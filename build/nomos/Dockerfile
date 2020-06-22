@@ -12,7 +12,6 @@ WORKDIR /opt/nomos/bin
 COPY git-importer git-importer
 COPY monitor monitor
 COPY nomos nomos
-COPY syncer syncer
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
