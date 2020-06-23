@@ -34,11 +34,18 @@ func (bt *BatsTest) Run(t *testing.T) {
 		//fmt.Sprintf("E2E_TEST_FILTER=%s", testCaseRegex),
 		fmt.Sprintf("BATS_TMPDIR=%s", filepath.Join(nt.TmpDir, "bats")),
 		"TIMING=true",
+		// tell git to use the ssh private key and not check host key
 		fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", nt.GitPrivateKeyPath()),
+		// passes the path to e2e manifests to the bats tests
 		fmt.Sprintf("MANIFEST_DIR=%s", filepath.Join(nomosDir, filepath.FromSlash("e2e/raw-nomos/manifests"))),
+		// passes the git server SSH port to bash tests
 		fmt.Sprintf("FWD_SSH_PORT=%d", nt.GitRepoPort()),
+		// for running 'nomos' command from built binary
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+		// provide kubeconfig path to kubectl
 		fmt.Sprintf("KUBECONFIG=%s", nt.KubeconfigPath()),
+		// kubectl creates the .kube directory in HOME if it does not exist
+		fmt.Sprintf("HOME=%s", filepath.Join(nt.TmpDir, "fake-home")),
 	}
 
 	t.Log("Using environment")
