@@ -29,6 +29,14 @@ func (bt *BatsTest) Run(t *testing.T) {
 	gitRepoPort := nt.GitRepoPort()          //nolint:staticcheck
 	kubeConfigPath := nt.KubeconfigPath()    //nolint:staticcheck
 
+	batsTmpDir := filepath.Join(nt.TmpDir, "bats", "tmp")
+	batsHome := filepath.Join(nt.TmpDir, "bats", "home")
+	for _, dir := range []string{batsTmpDir, batsHome} {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			t.Fatalf("failed to create dir %s for bats testing: %v", dir, err)
+		}
+	}
+
 	// TODO: create pipes for stdout / stderr / tap output and redirect lines through t.Log
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -37,7 +45,9 @@ func (bt *BatsTest) Run(t *testing.T) {
 	cmd.Env = []string{
 		// For now omit test case filtering, but it would look something like the following were we to add it.
 		//fmt.Sprintf("E2E_TEST_FILTER=%s", testCaseRegex),
-		fmt.Sprintf("BATS_TMPDIR=%s", filepath.Join(nt.TmpDir, "bats")),
+		// instruct bats to use the per-testcase temp directory rather than /tmp
+		fmt.Sprintf("TMPDIR=%s", batsTmpDir),
+		// instruct our e2e tests to report timing information
 		"TIMING=true",
 		// tell git to use the ssh private key and not check host key
 		fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", privateKeyPath),
@@ -50,7 +60,7 @@ func (bt *BatsTest) Run(t *testing.T) {
 		// provide kubeconfig path to kubectl
 		fmt.Sprintf("KUBECONFIG=%s", kubeConfigPath),
 		// kubectl creates the .kube directory in HOME if it does not exist
-		fmt.Sprintf("HOME=%s", filepath.Join(nt.TmpDir, "fake-home")),
+		fmt.Sprintf("HOME=%s", batsHome),
 	}
 
 	t.Log("Using environment")
