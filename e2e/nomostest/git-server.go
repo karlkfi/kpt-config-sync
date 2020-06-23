@@ -43,10 +43,15 @@ func installGitServer(nt *NT) func() error {
 	}
 
 	return func() error {
-		return Retry(60*time.Second, func() error {
+		took, err := Retry(60*time.Second, func() error {
 			return nt.Validate(testGitServer, testGitNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 		})
+		if err != nil {
+			return err
+		}
+		nt.T.Logf("took %v to wait for git-server to come up", took)
+		return nil
 	}
 }
 
@@ -212,7 +217,7 @@ func forwardToFreePort(t *testing.T, kcfg, pod string) int {
 	})
 
 	port := 0
-	err = Retry(time.Second*5, func() error {
+	took, err := Retry(time.Second*5, func() error {
 		s := stdout.String()
 		if !strings.Contains(s, "\n") {
 			return errors.New("nothing written to stdout for kubectl port-forward")
@@ -231,5 +236,7 @@ func forwardToFreePort(t *testing.T, kcfg, pod string) int {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("took %v to wait for sync", took)
+
 	return port
 }

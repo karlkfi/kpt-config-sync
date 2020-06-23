@@ -56,7 +56,7 @@ func installConfigSync(nt *NT) func() error {
 	}
 
 	return func() error {
-		return Retry(60*time.Second, func() error {
+		took, err := Retry(60*time.Second, func() error {
 			err := nt.Validate("monitor", configmanagement.ControllerNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 			if err != nil {
@@ -65,6 +65,11 @@ func installConfigSync(nt *NT) func() error {
 			return nt.Validate("git-importer", configmanagement.ControllerNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 		})
+		if err != nil {
+			return err
+		}
+		nt.T.Logf("took %v to wait for monitor and git-importer", took)
+		return nil
 	}
 }
 
@@ -90,12 +95,12 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		nt.T.Fatal(err)
 	}
 	for _, f := range manifestFiles {
+		nt.T.Log("copying manifests")
 		// Explicitly not recursive since we want to treat the template files specially.
 		if !f.IsDir() {
 			from := filepath.Join(manifestsDir, f.Name())
 			to := filepath.Join(tmpManifestsDir, f.Name())
 			err = copyFile(from, to)
-			nt.T.Logf("copying %q to %q", from, to)
 			if err != nil {
 				nt.T.Fatal(err)
 			}

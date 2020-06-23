@@ -14,8 +14,22 @@ import (
 // expires.
 //
 // Retries once per second until timeout expires.
-func Retry(timeout time.Duration, fn func() error) error {
-	return retry.OnError(backoff(timeout), defaultErrorFilter, fn)
+// Returns how long the function retried, and the last error if the command
+// timed out.
+func Retry(timeout time.Duration, fn func() error) (time.Duration, error) {
+	start := time.Time{}
+	diff := timeout
+	err := retry.OnError(backoff(timeout), defaultErrorFilter, func() error {
+		if start.IsZero() {
+			start = time.Now()
+		}
+		err := fn()
+		if err == nil {
+			diff = time.Since(start)
+		}
+		return err
+	})
+	return diff, err
 }
 
 // backoff returns a wait.Backoff that retries exactly once per second until

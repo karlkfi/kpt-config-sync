@@ -85,13 +85,11 @@ func fmtObj(name, namespace string, obj runtime.Object) string {
 //
 // Leave namespace as empty string for cluster-scoped resources.
 func (nt *NT) Get(name, namespace string, obj core.Object) error {
-	nt.T.Logf("getting %s", fmtObj(name, namespace, obj))
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
 
 // List is identical to List defined for client.Client, but without requiring Context.
 func (nt *NT) List(obj runtime.Object, opts ...client.ListOption) error {
-	nt.T.Logf("listing %T", obj)
 	return nt.Client.List(nt.Context, obj, opts...)
 }
 
@@ -155,7 +153,7 @@ func (nt *NT) WaitForSync() {
 	sha1 := nt.Repository.Hash()
 
 	// Wait for the repository to report it is synced.
-	err := Retry(60*time.Second, func() error {
+	took, err := Retry(120*time.Second, func() error {
 		repo := &v1.Repo{}
 		return nt.Validate("repo", "", repo, func(o core.Object) error {
 			// Check the Sync.LatestToken as:
@@ -176,8 +174,10 @@ func (nt *NT) WaitForSync() {
 		})
 	})
 	if err != nil {
+		nt.T.Logf("failed after %v to wait for sync", took)
 		nt.T.Fatal(err)
 	}
+	nt.T.Logf("took %v to wait for sync", took)
 
 	// Automatically renew the Client. We don't have tests that depend on behavior
 	// when the test's client is out of date, and if ConfigSync reports that
