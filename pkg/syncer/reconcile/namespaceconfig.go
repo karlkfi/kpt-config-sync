@@ -215,7 +215,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 
 // unmanageNamespace removes the nomos annotations and labels from the Namespace.
 func (r *namespaceConfigReconciler) unmanageNamespace(ctx context.Context, actual *corev1.Namespace) error {
-	uActual, err := asUnstructured(actual)
+	uActual, err := AsUnstructured(actual)
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,13 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	return namespace
 }
 
-func asUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
+// AsUnstructured attempts to convert a runtime.Object to an
+// *unstructured.Unstructured.
+func AsUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
+	if u, isUnstructured := o.(*unstructured.Unstructured); isUnstructured {
+		return u, nil
+	}
+
 	jsn, err := json.Marshal(o)
 	if err != nil {
 		return nil, err
@@ -381,7 +387,7 @@ func asUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
 func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {
 	glog.V(2).Infof("Creating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
 	namespace := asNamespace(namespaceConfig)
-	u, err := asUnstructured(namespace)
+	u, err := AsUnstructured(namespace)
 	if err == nil {
 		_, err = r.applier.Create(ctx, u)
 	}
@@ -399,11 +405,11 @@ func (r *namespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 	glog.V(2).Infof("Updating namespace %q based upon NamespaceConfig declaration.", namespaceConfig.Name)
 	intended := asNamespace(namespaceConfig)
 
-	uActual, err := asUnstructured(actual)
+	uActual, err := AsUnstructured(actual)
 	if err != nil {
 		return err
 	}
-	uIntended, err := asUnstructured(intended)
+	uIntended, err := AsUnstructured(intended)
 	if err != nil {
 		return err
 	}

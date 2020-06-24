@@ -18,6 +18,11 @@ func (w wrappedErrorImpl) Error() string {
 	return format(w)
 }
 
+// Is implements Error.
+func (w wrappedErrorImpl) Is(target error) bool {
+	return w.underlying.Is(target)
+}
+
 // Code implements Error.
 func (w wrappedErrorImpl) Code() string {
 	return w.underlying.Code()

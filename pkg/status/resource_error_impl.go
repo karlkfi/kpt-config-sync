@@ -20,6 +20,11 @@ func (r resourceErrorImpl) Error() string {
 	return format(r)
 }
 
+// Is implements Error.
+func (r resourceErrorImpl) Is(target error) bool {
+	return r.underlying.Is(target)
+}
+
 // Code implements Error.
 func (r resourceErrorImpl) Code() string {
 	return r.underlying.Code()

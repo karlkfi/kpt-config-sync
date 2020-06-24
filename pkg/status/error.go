@@ -36,6 +36,8 @@ type Error interface {
 	Code() string
 	// Body is the body of the error to be printed.
 	Body() string
+	// Is allows comparing error types through errors.Is.
+	Is(target error) bool
 }
 
 // causer defines an error with an underlying cause.

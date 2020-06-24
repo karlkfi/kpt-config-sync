@@ -1,20 +1,20 @@
 package declaredresources
 
 import (
-	"fmt"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/google/nomos/pkg/syncer/reconcile"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 )
 
 // DeclaredResources is the interface for providing resources from the filesystem to the remediator
 type DeclaredResources struct {
 	mutex     sync.RWMutex
-	objectSet map[core.ID]*ast.FileObject
+	objectSet map[core.ID]*unstructured.Unstructured
 }
 
 // NewDeclaredResources creates an instance of DeclaredResources
@@ -25,11 +25,16 @@ func NewDeclaredResources() *DeclaredResources {
 }
 
 // UpdateDecls performs an atomic update on the resource declaration set
-func (dr *DeclaredResources) UpdateDecls(objects []ast.FileObject) error {
-	newSet := make(map[core.ID]*ast.FileObject)
+func (dr *DeclaredResources) UpdateDecls(objects []core.Object) error {
+	newSet := make(map[core.ID]*unstructured.Unstructured)
 	for _, obj := range objects {
 		id := core.IDOf(obj)
-		newSet[id] = &obj
+		u, err := reconcile.AsUnstructured(obj)
+		if err != nil {
+			// This should never happen.
+			return errors.Wrapf(err, "converting %v to unstructured.Unstructured", id)
+		}
+		newSet[id] = u
 	}
 	dr.mutex.Lock()
 	dr.objectSet = newSet
@@ -38,24 +43,16 @@ func (dr *DeclaredResources) UpdateDecls(objects []ast.FileObject) error {
 }
 
 // GetDecl returns the resource declaration as read from Git
-func (dr *DeclaredResources) GetDecl(obj runtime.Object) (*ast.FileObject, error) {
-	o, err := core.ObjectOf(obj)
-	if err != nil {
-		return nil, err
-	}
-	id := core.IDOf(o)
+func (dr *DeclaredResources) GetDecl(id core.ID) (*unstructured.Unstructured, bool) {
 	dr.mutex.RLock()
-	fileObj, ok := dr.objectSet[id]
+	u, found := dr.objectSet[id]
 	dr.mutex.RUnlock()
-	if ok {
-		return fileObj, nil
-	}
-	return nil, fmt.Errorf("id:%v not found in declared resources", id)
+	return u, found
 }
 
 // Decls returns all declarations from Git.
-func (dr *DeclaredResources) Decls() []*ast.FileObject {
-	var objects []*ast.FileObject
+func (dr *DeclaredResources) Decls() []*unstructured.Unstructured {
+	var objects []*unstructured.Unstructured
 	dr.mutex.RLock()
 	objSet := dr.objectSet
 	dr.mutex.RUnlock()

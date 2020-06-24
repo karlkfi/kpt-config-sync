@@ -21,6 +21,11 @@ func (p pathErrorImpl) Error() string {
 	return format(p)
 }
 
+// Is implements Error.
+func (p pathErrorImpl) Is(target error) bool {
+	return p.underlying.Is(target)
+}
+
 // Code implements Error.
 func (p pathErrorImpl) Code() string {
 	return p.underlying.Code()

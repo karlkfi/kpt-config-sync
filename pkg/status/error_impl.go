@@ -16,6 +16,16 @@ func (e baseErrorImpl) Error() string {
 	return format(e)
 }
 
+// Is implements Error.
+func (e baseErrorImpl) Is(target error) bool {
+	// Two errors satisfy errors.Is() if they are both status.Error and have the
+	// same KNV code.
+	if se, ok := target.(Error); ok {
+		return e.Code() == se.Code()
+	}
+	return false
+}
+
 // Code implements Error.
 func (e baseErrorImpl) Code() string {
 	return e.code

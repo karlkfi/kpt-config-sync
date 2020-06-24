@@ -16,6 +16,11 @@ func (m messageErrorImpl) Error() string {
 	return format(m)
 }
 
+// Is implements Error.
+func (m messageErrorImpl) Is(target error) bool {
+	return m.underlying.Is(target)
+}
+
 // Code implements Error.
 func (m messageErrorImpl) Code() string {
 	return m.underlying.Code()

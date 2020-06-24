@@ -1,30 +1,31 @@
 package declaredresources
 
 import (
-	"reflect"
+	"sort"
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
-	obj1    = fake.CustomResourceDefinitionV1Beta1()
-	obj2    = fake.ResourceQuota()
-	testSet = map[core.ID]*ast.FileObject{
-		core.IDOf(obj1): &obj1,
-		core.IDOf(obj2): &obj2,
-	}
+	obj1 = fake.CustomResourceDefinitionV1Beta1Object()
+	obj2 = fake.ResourceQuotaObject()
+
+	testSet = []core.Object{obj1, obj2}
 )
 
 func TestUpdateDecls(t *testing.T) {
 	dr := DeclaredResources{
 		mutex: sync.RWMutex{},
 	}
-	objects := []ast.FileObject{obj1, obj2}
+	objects := testSet
 	expectedIDs := getIDs(objects)
 
 	err := dr.UpdateDecls(objects)
@@ -39,46 +40,71 @@ func TestUpdateDecls(t *testing.T) {
 	}
 }
 
-func TestGetDecls(t *testing.T) {
-	dr := DeclaredResources{
-		objectSet: testSet,
+func asUnstructured(t *testing.T, o runtime.Object) *unstructured.Unstructured {
+	t.Helper()
+	u, err := reconcile.AsUnstructured(o)
+	if err != nil {
+		t.Fatal("converting to unstructured", err)
 	}
-	actual := dr.Decls()
-	if !reflect.DeepEqual(actual, []*ast.FileObject{&obj1, &obj2}) &&
-		!reflect.DeepEqual(actual, []*ast.FileObject{&obj2, &obj1}) {
-		t.Errorf("actual declared resources isn't as expected")
+	return u
+}
+
+func TestGetDecls(t *testing.T) {
+	dr := DeclaredResources{}
+	err := dr.UpdateDecls(testSet)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := dr.Decls()
+	// Sort got decls to ensure determinism.
+	sort.Slice(got, func(i, j int) bool {
+		return core.IDOf(got[i]).String() < core.IDOf(got[j]).String()
+	})
+
+	want := []*unstructured.Unstructured{
+		asUnstructured(t, obj1),
+		asUnstructured(t, obj2),
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Error(diff)
 	}
 }
 
 func TestGetDecl(t *testing.T) {
-	dr := DeclaredResources{
-		objectSet: testSet,
+	dr := DeclaredResources{}
+	err := dr.UpdateDecls(testSet)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	actual, err := dr.GetDecl(fake.CustomResourceDefinitionV1Beta1Object())
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+	actual, found := dr.GetDecl(core.IDOf(obj1))
+	if !found {
+		t.Fatal("got not found, want found")
 	}
-	if !reflect.DeepEqual(actual, &obj1) {
-		t.Errorf("expected %v\nbut got %v", obj1, actual)
+	if diff := cmp.Diff(asUnstructured(t, obj1), actual); diff != "" {
+		t.Error(diff)
 	}
 }
 
 func TestGetGVKSet(t *testing.T) {
-	dr := DeclaredResources{
-		objectSet: testSet,
+	dr := DeclaredResources{}
+	err := dr.UpdateDecls(testSet)
+	if err != nil {
+		t.Fatal(err)
 	}
-	gvkSet := dr.GetGKSet()
-	expected := map[schema.GroupKind]struct{}{
+
+	got := dr.GetGKSet()
+	want := map[schema.GroupKind]struct{}{
 		obj1.GroupVersionKind().GroupKind(): {},
 		obj2.GroupVersionKind().GroupKind(): {},
 	}
-	if !reflect.DeepEqual(gvkSet, expected) {
-		t.Errorf("expected %v\nbut got %v", expected, gvkSet)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Error(diff)
 	}
 }
 
-func getIDs(objects []ast.FileObject) []core.ID {
+func getIDs(objects []core.Object) []core.ID {
 	var IDs []core.ID
 	for _, obj := range objects {
 		IDs = append(IDs, core.IDOf(obj))
