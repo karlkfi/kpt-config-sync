@@ -253,14 +253,6 @@ function manage_namespace() {
   manage_namespace "kube-public"
 }
 
-@test "${FILE_NAME}: Namespace kube-whatever can be managed and has a normal lifecycle" {
-  debug::log "Create a system namespace -- it is not required to exist"
-  kubectl get ns "kube-whatever" || kubectl create ns "kube-whatever"
-  manage_namespace "kube-whatever"
-  debug::log "Ensure that the namespace is cleaned up at the end"
-  wait::for -f -- kubectl get ns "kube-whatever"
-}
-
 function clean_test_configmaps() {
   kubectl delete configmaps -n new-prj --all > /dev/null
   kubectl delete configmaps -n newer-prj --all > /dev/null
