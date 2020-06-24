@@ -26,7 +26,6 @@ source "$DIR/wait.bash"
 # Git-specific repository initialization.
 setup::git::initialize() {
   # Reset git repo to initial state.
-  CWD="$(pwd)"
   echo "Setting up local git repo in ${TEST_REPO}"
 
   rm -rf "${TEST_REPO}"
@@ -55,11 +54,11 @@ setup::git::__init_dir() {
 }
 
 setup::git::__commit_dir_and_wait() {
+  cd "${TEST_REPO}"
   git add -A
   git status
   git commit -m "setUp commit"
   git push origin master:master -f
-  cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
 }
@@ -133,7 +132,6 @@ setup::git::remove_all() {
   git status
   git commit -m "wiping almost all of ${DIR_NAME}"
   git push origin master:master -f
-  cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
   wait::for -t 60 -- kubectl get ns safety
@@ -146,16 +144,14 @@ setup::git::remove_all() {
 setup::git::remove_all_dangerously() {
   local DIR_NAME=${1}
 
-  cd "${TEST_REPO}/${DIR_NAME}"
+  rm -rf "${TEST_REPO}/${DIR_NAME}/cluster"
+  rm -rf "${TEST_REPO}/${DIR_NAME}/namespaces"
 
-  rm -rf "cluster"
-  rm -rf "namespaces"
-
+  cd "${TEST_REPO}"
   git add -A
   git status
   git commit -m "wiping contents of ${DIR_NAME}"
   git push origin master:master -f
-  cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
   wait::for -f -t 60 -- kubectl get namespaceconfig safety
@@ -169,14 +165,12 @@ setup::git::remove_all_dangerously() {
 setup::git::add_contents_to_root() {
   local DIR_NAME=${1}
 
+  cp -r "${NOMOS_DIR}/examples/${DIR_NAME}/"* "${TEST_REPO}/"
+
   cd "${TEST_REPO}"
-
-  cp -r "${NOMOS_DIR}/examples/${DIR_NAME}/"* ./
-
   git add -A
   git commit -m "add files to root"
   git push origin master:master -f
-  cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
 }
@@ -188,14 +182,12 @@ setup::git::add_contents_to_root() {
 setup::git::remove_folder() {
   local DIR_NAME=${1}
 
+  rm -r "${TEST_REPO:?}/${DIR_NAME}"
+
   cd "${TEST_REPO}"
-
-  rm -r "./${DIR_NAME}"
-
   git add -A
   git commit -m "add files to root"
   git push origin master:master -f
-  cd "$CWD"
 
   wait::for -t 60 -- nomos::repo_synced
 }
