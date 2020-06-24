@@ -209,6 +209,13 @@ setup::common() {
     fi
   fi
 
+  E2E_RUN_TEST_NUM="${E2E_RUN_TEST_NUM:-}"
+  if [[ "${E2E_RUN_TEST_NUM}" != "" ]]; then
+    if [[ "${E2E_RUN_TEST_NUM}" != "${BATS_TEST_NUMBER}" ]]; then
+      skip
+    fi
+  fi
+
   echo "--- SETUP COMPLETE ---------------------------------------------------"
 }
 
