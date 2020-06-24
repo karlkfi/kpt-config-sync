@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -12,71 +14,97 @@ import (
 
 type BatsTest struct {
 	fileName string
+	nomosDir string
+}
+
+func (bt *BatsTest) batsPath() string {
+	return filepath.Join(bt.nomosDir, filepath.FromSlash("third_party/bats-core/bin/bats"))
 }
 
 func (bt *BatsTest) Run(t *testing.T) {
 	t.Parallel()
 
-	nt := nomostest.New(t)
-	nomosDir, err := filepath.Abs("../..")
+	countCmd := exec.Command(bt.batsPath(), "--count", bt.fileName)
+	out, err := countCmd.CombinedOutput()
 	if err != nil {
-		t.Fatal("Failed to get nomos dir: ", err)
+		t.Fatal("Failed to get test count from bats:", err)
 	}
-	cmd := exec.Command(filepath.Join(nomosDir, filepath.FromSlash("third_party/bats-core/bin/bats")), "--tap", bt.fileName)
+	testCount, err := strconv.Atoi(strings.Trim(string(out), "\n"))
+	if err != nil {
+		t.Fatalf("Failed to parse test count %q from bats: %v", out, err)
+	}
+	t.Logf("Found %d testcases in %s", testCount, bt.fileName)
+	for testNum := 1; testNum <= testCount; testNum++ {
+		t.Run(strconv.Itoa(testNum), bt.runTest(testNum))
+	}
+}
 
-	// Factored out for accessing deprecated functions that only exist for supporting bats tests.
-	privateKeyPath := nt.GitPrivateKeyPath() //nolint:staticcheck
-	gitRepoPort := nt.GitRepoPort()          //nolint:staticcheck
-	kubeConfigPath := nt.KubeconfigPath()    //nolint:staticcheck
+func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Parallel()
+		nt := nomostest.New(t)
 
-	batsTmpDir := filepath.Join(nt.TmpDir, "bats", "tmp")
-	batsHome := filepath.Join(nt.TmpDir, "bats", "home")
-	for _, dir := range []string{batsTmpDir, batsHome} {
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			t.Fatalf("failed to create dir %s for bats testing: %v", dir, err)
+		// Factored out for accessing deprecated functions that only exist for supporting bats tests.
+		privateKeyPath := nt.GitPrivateKeyPath() //nolint:staticcheck
+		gitRepoPort := nt.GitRepoPort()          //nolint:staticcheck
+		kubeConfigPath := nt.KubeconfigPath()    //nolint:staticcheck
+
+		batsTmpDir := filepath.Join(nt.TmpDir, "bats", "tmp")
+		batsHome := filepath.Join(nt.TmpDir, "bats", "home")
+		for _, dir := range []string{batsTmpDir, batsHome} {
+			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+				t.Fatalf("failed to create dir %s for bats testing: %v", dir, err)
+			}
 		}
-	}
 
-	// TODO: create pipes for stdout / stderr / tap output and redirect lines through t.Log
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	// Set fd3 (tap output) to stdout
-	cmd.ExtraFiles = []*os.File{os.Stderr}
-	cmd.Env = []string{
-		// For now omit test case filtering, but it would look something like the following were we to add it.
-		//fmt.Sprintf("E2E_TEST_FILTER=%s", testCaseRegex),
-		// instruct bats to use the per-testcase temp directory rather than /tmp
-		fmt.Sprintf("TMPDIR=%s", batsTmpDir),
-		// instruct our e2e tests to report timing information
-		"TIMING=true",
-		// tell git to use the ssh private key and not check host key
-		fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", privateKeyPath),
-		// passes the path to e2e manifests to the bats tests
-		fmt.Sprintf("MANIFEST_DIR=%s", filepath.Join(nomosDir, filepath.FromSlash("e2e/raw-nomos/manifests"))),
-		// passes the git server SSH port to bash tests
-		fmt.Sprintf("FWD_SSH_PORT=%d", gitRepoPort),
-		// for running 'nomos' command from built binary
-		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		// provide kubeconfig path to kubectl
-		fmt.Sprintf("KUBECONFIG=%s", kubeConfigPath),
-		// kubectl creates the .kube directory in HOME if it does not exist
-		fmt.Sprintf("HOME=%s", batsHome),
-	}
+		// TODO: create pipes for stdout / stderr / tap output and redirect lines through t.Log
+		cmd := exec.Command(bt.batsPath(), "--tap", bt.fileName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		// Set fd3 (tap output) to stdout
+		cmd.ExtraFiles = []*os.File{os.Stderr}
+		cmd.Env = []string{
+			// Indicate the exact test num to run.
+			fmt.Sprintf("E2E_RUN_TEST_NUM=%d", testNum),
+			// instruct bats to use the per-testcase temp directory rather than /tmp
+			fmt.Sprintf("TMPDIR=%s", batsTmpDir),
+			// instruct our e2e tests to report timing information
+			"TIMING=true",
+			// tell git to use the ssh private key and not check host key
+			fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -o StrictHostKeyChecking=no -i %s", privateKeyPath),
+			// passes the path to e2e manifests to the bats tests
+			fmt.Sprintf("MANIFEST_DIR=%s", filepath.Join(bt.nomosDir, filepath.FromSlash("e2e/raw-nomos/manifests"))),
+			// passes the git server SSH port to bash tests
+			fmt.Sprintf("FWD_SSH_PORT=%d", gitRepoPort),
+			// for running 'nomos' command from built binary
+			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+			// provide kubeconfig path to kubectl
+			fmt.Sprintf("KUBECONFIG=%s", kubeConfigPath),
+			// kubectl creates the .kube directory in HOME if it does not exist
+			fmt.Sprintf("HOME=%s", batsHome),
+		}
 
-	t.Log("Using environment")
-	for _, env := range cmd.Env {
-		t.Logf("  %s", env)
-	}
+		t.Log("Using environment")
+		for _, env := range cmd.Env {
+			t.Logf("  %s", env)
+		}
 
-	t.Logf("Starting legacy test %s", bt.fileName)
-	err = cmd.Run()
-	if err != nil {
-		t.Fatal(err, cmd)
+		t.Logf("Starting legacy test %s", bt.fileName)
+		err := cmd.Run()
+		if err != nil {
+			t.Fatal(err, cmd)
+		}
 	}
 }
 
 func TestBats(t *testing.T) {
 	t.Parallel()
+
+	nomosDir, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal("Failed to get nomos dir: ", err)
+	}
+
 	testCases := []*BatsTest{
 		{fileName: "acme.bats"},
 		//{fileName: "apiservice.bats"},
@@ -101,6 +129,7 @@ func TestBats(t *testing.T) {
 	}
 	for idx := range testCases {
 		tc := testCases[idx]
+		tc.nomosDir = nomosDir
 		t.Run(tc.fileName, tc.Run)
 	}
 }
