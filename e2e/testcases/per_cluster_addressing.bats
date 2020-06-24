@@ -238,24 +238,3 @@ function rename_cluster() {
     -p "{\"data\":{\"CLUSTER_NAME\": \"${new_name}\"}}"
   nomos::restart_pods
 }
-
-# Renames a cluster under test, and waits until the rename has taken effect.
-function expect_rename_to() {
-  local configMapPrefix="cluster-name"
-  local expected_cluster_name
-  expected_cluster_name="${1}"
-  debug::log "Rename cluster to ${expected_cluster_name}"
-  wait::for -t 20 -- rename_cluster "${expected_cluster_name}"
-  debug::log "Expect cluster name to be ${expected_cluster_name}"
-  wait::for -t 40 -o "${expected_cluster_name}" -- get_cluster_name
-  wait::for -t 10 -- configmaps::check_one_exists ${configMapPrefix} config-management-system
-}
-
-@test "${FILE_NAME}: Operator: Cluster rename load test" {
-  for count in {0..3}; do
-    expect_rename_to "eenie_${count}"
-    expect_rename_to "meenie_${count}"
-    expect_rename_to "minie_${count}"
-    expect_rename_to "moe_${count}"
-  done
-}
