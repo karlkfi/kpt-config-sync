@@ -27,12 +27,11 @@ source "$DIR/wait.bash"
 setup::git::initialize() {
   # Reset git repo to initial state.
   CWD="$(pwd)"
-  echo "Setting up local git repo in ${BATS_TMPDIR}/repo"
+  echo "Setting up local git repo in ${TEST_REPO}"
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  rm -rf "${TEST_REPO_DIR}/repo"
-  mkdir -p "${TEST_REPO_DIR}/repo"
-  cd "${TEST_REPO_DIR}/repo"
+  rm -rf "${TEST_REPO}"
+  mkdir -p "${TEST_REPO}"
+  cd "${TEST_REPO}"
 
   git init
   git remote add origin "ssh://git@localhost:${FWD_SSH_PORT}/git-server/repos/sot.git"
@@ -45,8 +44,7 @@ setup::git::initialize() {
 setup::git::__init_dir() {
   local DIR_NAME=${1}
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
+  cd "${TEST_REPO}"
 
   mkdir "${DIR_NAME}"
   touch "${DIR_NAME}/README.md"
@@ -122,8 +120,7 @@ setup::git::init_without() {
 setup::git::remove_all() {
   local DIR_NAME=${1}
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo/${DIR_NAME}"
+  cd "${TEST_REPO}/${DIR_NAME}"
 
   rm -rf "cluster"
   rm -rf "namespaces"
@@ -149,8 +146,7 @@ setup::git::remove_all() {
 setup::git::remove_all_dangerously() {
   local DIR_NAME=${1}
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo/${DIR_NAME}"
+  cd "${TEST_REPO}/${DIR_NAME}"
 
   rm -rf "cluster"
   rm -rf "namespaces"
@@ -173,8 +169,7 @@ setup::git::remove_all_dangerously() {
 setup::git::add_contents_to_root() {
   local DIR_NAME=${1}
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
+  cd "${TEST_REPO}"
 
   cp -r "${NOMOS_DIR}/examples/${DIR_NAME}/"* ./
 
@@ -193,8 +188,7 @@ setup::git::add_contents_to_root() {
 setup::git::remove_folder() {
   local DIR_NAME=${1}
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
+  cd "${TEST_REPO}"
 
   rm -r "./${DIR_NAME}"
 
