@@ -25,6 +25,9 @@ func testName(t *testing.T) string {
 
 	n = strings.Join(words, "-")
 	n = strings.ReplaceAll(n, "/", "--")
+
+	// handle legacy testcase filenames
+	n = strings.ReplaceAll(n, "_", "-")
 	if errs := validation.IsDNS1123Subdomain(n); len(errs) > 0 {
 		t.Fatalf("transformed test name %q into %q, which is not a valid Kind cluster name: %+v",
 			t.Name(), n, errs)
