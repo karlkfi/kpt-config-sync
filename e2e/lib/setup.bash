@@ -174,6 +174,16 @@ setup::git::add_contents_to_root() {
   wait::for -t 60 -- nomos::repo_synced
 }
 
+setup::git::commit_minimal_repo_contents() {
+  cd "${TEST_REPO}"
+  mkdir -p acme/system
+  cp -r "${NOMOS_DIR}/examples/acme/system" acme
+  git add -A
+  git::commit -a -m "Commit minimal repo contents."
+
+  wait::for -t 60 -- nomos::repo_synced
+}
+
 # This removes the specified folder, leaving behind the other files in the project root
 # 
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR

@@ -18,20 +18,12 @@ MINOR_VERSION="$(kubectl version -ojson | jq -r '.serverVersion.minor[0:2]')"
 setup() {
   setup::common
   setup::git::initialize
+  setup::git::commit_minimal_repo_contents
 
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-
-  # Make sure tests start with a clean slate of no CRDs on the cluster.
   mkdir acme/cluster
   mkdir -p acme/namespaces/prod
-  git add -A
-  git::commit -a -m "Commit minimal repo contents."
-  wait::for -t 30 -- nomos::repo_synced
 
+  # Make sure tests start with a clean slate of no CRDs on the cluster.
   kubectl delete crd anvils.acme.com --ignore-not-found
   kubectl delete crd clusteranvils.acme.com --ignore-not-found
 }

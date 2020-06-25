@@ -13,16 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/gatekeeper
 setup() {
   setup::common
   setup::git::initialize
-
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-  git add -A
-  git::commit -a -m "Commit minimal repo contents."
-
-  wait::for -t 30 -- nomos::repo_synced
+  setup::git::commit_minimal_repo_contents
 }
 
 function teardown() {

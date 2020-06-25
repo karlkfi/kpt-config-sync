@@ -13,13 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/apiservice
 setup() {
   setup::common
   setup::git::initialize
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-  git add -A
-  git::commit -a -m "Commit minimal repo contents."
-
-  wait::for -t 30 -- nomos::repo_synced
+  setup::git::commit_minimal_repo_contents
 }
 
 function teardown() {
