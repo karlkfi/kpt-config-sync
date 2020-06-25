@@ -186,6 +186,12 @@ function manage_namespace() {
   manage_namespace "default"
 }
 
+@test "${FILE_NAME}: Namespace gatekeeper-system can be managed" {
+  kubectl create ns gatekeeper-system
+  manage_namespace "gatekeeper-system"
+  kubectl delete ns gatekeeper-system
+}
+
 @test "${FILE_NAME}: Namespace kube-system can be managed" {
   manage_namespace "kube-system"
 }
