@@ -73,7 +73,7 @@ func (r *Remediator) Remediate(ctx context.Context, obj runtime.Object) error {
 			ast.ParseFileObject(diff.Declared),
 			diff.Declared.GetAnnotations()[v1.ResourceManagementKey],
 		)
-	case differ.Unmanage:
+	case differ.Unmanage, differ.UnmanageSystemNamespace:
 		_, err := r.applier.RemoveNomosMeta(ctx, diff.Actual)
 		return err
 	default:
@@ -90,17 +90,23 @@ func (r *Remediator) diff(ctx context.Context, obj runtime.Object) (*differ.Diff
 
 	declared, isDeclared := r.declared.GetDecl(id)
 	actual := &unstructured.Unstructured{}
-	if !isDeclared {
+	switch {
+	case !isDeclared:
+		// Not declared in the SOT, so use the requested version.
 		declared = nil
 		actual.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	} else {
+	case obj.GetObjectKind().GroupVersionKind() != declared.GroupVersionKind():
+		// Trying to remediate a different version than the declared; ignore.
+		return &differ.Diff{}, nil
+	default:
+		// The requested/declared versions match.
 		actual.SetGroupVersionKind(declared.GroupVersionKind())
 	}
 
 	err = r.reader.Get(ctx, id.ObjectKey, actual)
 	switch {
 	case err == nil:
-		// We isDeclared the object on the cluster.
+		// We found the object on the cluster.
 	case apierrors.IsNotFound(err):
 		actual = nil
 	default:
@@ -108,6 +114,7 @@ func (r *Remediator) diff(ctx context.Context, obj runtime.Object) (*differ.Diff
 	}
 
 	return &differ.Diff{
+		Name:     id.Name,
 		Declared: declared,
 		Actual:   actual,
 	}, nil

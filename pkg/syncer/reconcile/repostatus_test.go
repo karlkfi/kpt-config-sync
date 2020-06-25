@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/policycontroller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -204,7 +205,7 @@ func TestMergeResourceConditions(t *testing.T) {
 			},
 			nsCfgList: &v1.NamespaceConfigList{
 				Items: []v1.NamespaceConfig{
-					fakeNamespaceConfigWithResourceConditions("gatekeeper-system", commit2, commit1, []v1.ResourceCondition{
+					fakeNamespaceConfigWithResourceConditions(policycontroller.NamespaceSystem, commit2, commit1, []v1.ResourceCondition{
 						{
 							GroupVersion:   "/v1",
 							Kind:           "Pod",

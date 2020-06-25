@@ -175,10 +175,10 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Delete:
-		if isManageableSystemNamespace(name) {
-			return r.deleteManageableSystem(ctx, ns, config, syncErrs)
-		}
 		return r.deleteNamespace(ctx, ns)
+
+	case differ.UnmanageSystemNamespace:
+		return r.deleteManageableSystem(ctx, ns, config, syncErrs)
 
 	case differ.DeleteNsConfig:
 		return r.deleteNsConfig(ctx, config)
@@ -469,7 +469,7 @@ func (r *namespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *
 
 // deleteManageableSystem handles the special case of "deleting" manageable system namespaces:
 // it does not remove the namespace itself as that is not allowed.
-// Instead, it manage sall configs inside as if the namespace has no managed resources, and then
+// Instead, it manages all configs inside as if the namespace has no managed resources, and then
 // removes the corresponding NamespaceConfig
 func (r *namespaceConfigReconciler) deleteManageableSystem(ctx context.Context, ns *corev1.Namespace, config *v1.NamespaceConfig, syncErrs []v1.ConfigManagementError) error {
 	if err := r.manageConfigs(ctx, ns.GetName(), reservedNamespaceConfig, syncErrs); err != nil {

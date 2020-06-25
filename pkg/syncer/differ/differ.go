@@ -5,6 +5,7 @@ package differ
 import (
 	"fmt"
 
+	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -33,6 +34,10 @@ const (
 
 	// Unmanage indicates the resource's management annotation should be removed from the API Server.
 	Unmanage = Type("unmanage")
+
+	// UnmanageSystemNamespace indicates that the resource is a special Namespace
+	// which should not be deleted directly by ACM. It should be unmanaged instead.
+	UnmanageSystemNamespace = Type("unmanage-system-namespace")
 )
 
 // Diff is resource where Declared and Actual do not match.
@@ -95,12 +100,19 @@ func (d Diff) Type() Type {
 			return NoOp
 		}
 
-		// There are Nomos annotations or labels on the resource.
 		if managementEnabled(d.Actual) {
+			// There are Nomos annotations or labels on the resource.
+			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
+				isManageableSystemNamespace[d.Name] {
+				// The Syncer never creates a differ.Diff with a Namespace, so this only
+				// happens in the Remediator.
+				return UnmanageSystemNamespace
+			}
 			// Delete resource with management enabled on API Server.
 			return Delete
 		}
-		// The resource has Nomos artifacts but is unmanaged, so remove them.
+
+		// The actual resource has Nomos artifacts and is explicitly unmanaged.
 		return Unmanage
 	}
 

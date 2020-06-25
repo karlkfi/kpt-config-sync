@@ -7,12 +7,14 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/policycontroller"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -103,6 +105,31 @@ func TestRemediator_Reconcile(t *testing.T) {
 			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
 			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
 			wantError: nil,
+		},
+		// system namespaces
+		{
+			name:     "don't delete kube-system Namespace",
+			declared: nil,
+			actual:   fake.NamespaceObject(metav1.NamespaceSystem, syncertesting.ManagementEnabled),
+			want:     fake.NamespaceObject(metav1.NamespaceSystem),
+		},
+		{
+			name:     "don't delete kube-public Namespace",
+			declared: nil,
+			actual:   fake.NamespaceObject(metav1.NamespacePublic, syncertesting.ManagementEnabled),
+			want:     fake.NamespaceObject(metav1.NamespacePublic),
+		},
+		{
+			name:     "don't delete default Namespace",
+			declared: nil,
+			actual:   fake.NamespaceObject(metav1.NamespaceDefault, syncertesting.ManagementEnabled),
+			want:     fake.NamespaceObject(metav1.NamespaceDefault),
+		},
+		{
+			name:     "don't delete gatekeeper-system Namespace",
+			declared: nil,
+			actual:   fake.NamespaceObject(policycontroller.NamespaceSystem, syncertesting.ManagementEnabled),
+			want:     fake.NamespaceObject(policycontroller.NamespaceSystem),
 		},
 	}
 

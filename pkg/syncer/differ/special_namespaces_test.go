@@ -1,9 +1,10 @@
-package reconcile
+package differ
 
 import (
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/policycontroller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -17,13 +18,13 @@ func TestIsManageableSystem(t *testing.T) {
 		{"kube-foo", false},
 		{metav1.NamespacePublic, true},
 		{metav1.NamespaceSystem, true},
-		{"gatekeeper-system", true},
+		{policycontroller.NamespaceSystem, true},
 		{configmanagement.ControllerNamespace, false},
 	} {
 		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			reserved := isManageableSystemNamespace(testcase.name)
+			reserved := isManageableSystemNamespace[testcase.name]
 			if reserved != testcase.reserved {
 				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
 			}

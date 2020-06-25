@@ -1,6 +1,9 @@
 package bugreport
 
-import "github.com/google/nomos/pkg/api/configmanagement"
+import (
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/policycontroller"
+)
 
 // Product describes an ACM Product
 type Product string
@@ -16,7 +19,7 @@ const (
 
 var (
 	productNamespaces = map[Product]string{
-		PolicyController: "gatekeeper-system",
+		PolicyController: policycontroller.NamespaceSystem,
 		KCC:              "cnrm-system",
 		ConfigSync:       configmanagement.ControllerNamespace,
 	}
