@@ -110,16 +110,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -f -- kubectl get ns dir
 }
 
-@test "${FILE_NAME}: Only sync one namespace" {
-  debug::log "Assert dir Namespace does not exist"
-  wait::for -f -- kubectl get ns dir
-
-  debug::log "Add dir Namespace"
-  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
-  git::commit
-  wait::for kubectl get ns dir
-}
-
 @test "${FILE_NAME}: Sync deployment and replicaset" {
   debug::log "Add a deployment and corresponding replicaset"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
