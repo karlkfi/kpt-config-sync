@@ -58,16 +58,6 @@ function teardown() {
   ! resource::check ns $ns -a "bar=updated-annotation"
 }
 
-@test "${FILE_NAME}: Namespace has enabled annotation and declared" {
-  local ns=decl-namespace-annotation-enabled
-  namespace::create $ns -a "configmanagement.gke.io/managed=enabled"
-  namespace::declare $ns
-  git::commit
-
-  wait::for -t 10 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_no_warning $ns
-}
-
 @test "${FILE_NAME}: Namespace exists and declared" {
   local ns=decl-namespace-annotation-none
   namespace::create $ns
