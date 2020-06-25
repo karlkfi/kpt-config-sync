@@ -14,15 +14,7 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 setup() {
   setup::common
   setup::git::initialize
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-
-  mkdir -p acme/cluster
-  git add -A
-  git::commit -a -m "Commit minimal repo contents."
+  setup::git::commit_minimal_repo_contents --skip_wait
 }
 
 teardown() {

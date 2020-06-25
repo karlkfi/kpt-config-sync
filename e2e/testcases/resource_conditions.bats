@@ -18,16 +18,8 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 setup() {
   setup::common
   setup::git::initialize
-
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-
+  setup::git::commit_minimal_repo_contents --skip_wait
   mkdir -p acme/cluster
-  git add -A
-  git::commit -a -m "Commit minimal repo contents."
 }
 
 function namespaceconfig_condition() {

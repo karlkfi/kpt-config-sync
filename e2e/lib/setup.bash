@@ -175,12 +175,38 @@ setup::git::add_contents_to_root() {
 }
 
 setup::git::commit_minimal_repo_contents() {
+  echo "+++ Setting up minimal repo contents."
+  local skip_commit=false
+  local skip_wait=false
+  while [[ $# -gt 0 ]]; do
+    local arg="${1:-}"
+    shift
+    case $arg in
+      --skip_commit)
+        skip_commit=true
+      ;;
+      --skip_wait)
+        skip_wait=true
+      ;;
+      *)
+        echo "Unexpected arg $arg" >&3
+        return 1
+      ;;
+    esac
+  done
   cd "${TEST_REPO}"
   mkdir -p acme/system
   cp -r "${NOMOS_DIR}/examples/acme/system" acme
   git add -A
+  if $skip_commit; then
+    echo "+++ Skipping setup commit"
+    return
+  fi
   git::commit -a -m "Commit minimal repo contents."
-
+  if $skip_wait; then
+    echo "+++ Skipping setup wait"
+    return
+  fi
   wait::for -t 60 -- nomos::repo_synced
 }
 
