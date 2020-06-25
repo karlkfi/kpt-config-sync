@@ -147,24 +147,6 @@ function namespace::check_not_found() {
   assert::contains "NotFound"
 }
 
-# Checks that a namespace has a warning event.
-#
-# Arguments
-#   name: The name of the namespace
-function namespace::check_warning() {
-  local ns=$1
-  echo "WARN: checking for namespace warning not yet implemented" 1>&2
-}
-
-# Checks that a namespace has no warning event.
-#
-# Arguments
-#   name: The name of the namespace
-function namespace::check_no_warning() {
-  local ns=$1
-  echo "WARN: checking for no namespace warning not yet implemented" 1>&2
-}
-
 # Internal function
 # Generates namespace yaml
 # Parameters

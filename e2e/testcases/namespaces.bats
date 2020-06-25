@@ -65,7 +65,6 @@ function teardown() {
   git::commit
 
   namespace::check_exists $ns
-  namespace::check_warning $ns
 }
 
 @test "${FILE_NAME}: Namespace has enabled annotation with no declarations" {
@@ -127,8 +126,6 @@ function teardown() {
   namespace::check_exists $invalidns
   managedValue=$(kubectl get ns $invalidns -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
   [[ "${managedValue}" == "null" ]] || debug::error "invalid management annotation not removed"
-
-  namespace::check_warning $invalidns
 }
 
 @test "${FILE_NAME}: sync labels and annotations on kube-system namespace" {
