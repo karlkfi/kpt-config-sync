@@ -132,19 +132,3 @@ function check_cluster_scoped_resource() {
     '["get","list","create"]'
 }
 
-@test "${FILE_NAME}: Lifecycle for clusterrolebindings" {
-  check_cluster_scoped_resource \
-    clusterrolebinding \
-    ".subjects[].name" \
-    '"cyril@acme.com"' \
-    '"cheryl@acme.com"' \
-    "-2"
-}
-
-@test "${FILE_NAME}: Lifecycle for podsecuritypolicies" {
-  check_cluster_scoped_resource \
-    podsecuritypolicy \
-    ".spec.privileged" \
-    'true' \
-    'null'
-}
