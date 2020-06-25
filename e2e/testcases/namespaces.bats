@@ -76,12 +76,6 @@ function teardown() {
   namespace::check_exists $ns
 }
 
-@test "${FILE_NAME}: Namespace exists with no declaration" {
-  local ns=undeclared-annotation-none
-  namespace::create $ns
-  namespace::check_warning $ns
-}
-
 @test "${FILE_NAME}: Namespace with management disabled gets cleaned" {
   local ns=unmanage-test
 
