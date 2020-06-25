@@ -16,13 +16,7 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 setup() {
   setup::common
   setup::git::initialize
-
-  local TEST_REPO_DIR=${BATS_TMPDIR}
-  cd "${TEST_REPO_DIR}/repo"
-
-  mkdir -p acme/system
-  cp -r "${NOMOS_DIR}/examples/acme/system" acme
-  git add -A
+  setup::git::commit_minimal_repo_contents --skip_commit
 }
 
 teardown() {
@@ -85,6 +79,7 @@ function namespace_count_matches () {
 
 @test "${FILE_NAME}: Deleting all namespaces gets an error message in status.source.errors" {
 
+  cd "${TEST_REPO}"
   mkdir -p acme/namespaces
   cp -r "${NOMOS_DIR}/examples/acme/namespaces" acme
   git add -A
@@ -98,7 +93,9 @@ function namespace_count_matches () {
   wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
 
   debug::log "Delete all the namespaces (oops!)"
-  rm -rf "acme/namespaces"
+
+  cd "${TEST_REPO}"
+  rm -rf "${TEST_REPO:?}/acme/namespaces"
   git add -A
   git::commit -a -m "wiping all namespaces from acme"
 
@@ -111,6 +108,7 @@ function namespace_count_matches () {
   wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
 
   debug::log "Restore the namespaces"
+  cd "${TEST_REPO}"
   cp -r "${NOMOS_DIR}/examples/acme/namespaces" acme
   git add -A
   git::commit -a -m "restoring the namespaces"
