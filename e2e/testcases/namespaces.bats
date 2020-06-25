@@ -131,20 +131,6 @@ function teardown() {
   namespace::check_warning $invalidns
 }
 
-@test "${FILE_NAME}: Sync labels and annotations from decls" {
-  debug::log "Creating namespace"
-  local ns=labels-and-annotations
-  namespace::declare $ns \
-    -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
-    -a "foo-corp.com/awesome-controller-mixin=green"
-  git::commit
-
-  debug::log "Checking namespace exists"
-  namespace::check_exists $ns \
-    -l "foo-corp.com/awesome-controller-flavour=fuzzy" \
-    -a "foo-corp.com/awesome-controller-mixin=green"
-}
-
 @test "${FILE_NAME}: sync labels and annotations on kube-system namespace" {
   debug::log "Managing kube-system ns"
   namespace::declare "kube-system" \
