@@ -28,7 +28,7 @@ setup::git::initialize() {
   # Reset git repo to initial state.
   echo "Setting up local git repo in ${TEST_REPO}"
 
-  rm -rf "${TEST_REPO}"
+  rm -rf "${TEST_REPO:?}"
   mkdir -p "${TEST_REPO}"
   cd "${TEST_REPO}"
 
@@ -119,15 +119,14 @@ setup::git::init_without() {
 setup::git::remove_all() {
   local DIR_NAME=${1}
 
-  cd "${TEST_REPO}/${DIR_NAME}"
+  rm -rf "${TEST_REPO:?}/${DIR_NAME}/cluster"
+  rm -rf "${TEST_REPO:?}/${DIR_NAME}/namespaces"
 
-  rm -rf "cluster"
-  rm -rf "namespaces"
-
-  mkdir "cluster"
-  cp "${NOMOS_DIR}/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "cluster/admin-clusterrole.yaml"
+  mkdir -p "${TEST_REPO}/${DIR_NAME}/cluster"
+  cp "${NOMOS_DIR}/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "${TEST_REPO}/${DIR_NAME}/cluster/admin-clusterrole.yaml"
   namespace::declare safety
 
+  cd "${TEST_REPO}"
   git add -A
   git status
   git commit -m "wiping almost all of ${DIR_NAME}"
@@ -144,8 +143,8 @@ setup::git::remove_all() {
 setup::git::remove_all_dangerously() {
   local DIR_NAME=${1}
 
-  rm -rf "${TEST_REPO}/${DIR_NAME}/cluster"
-  rm -rf "${TEST_REPO}/${DIR_NAME}/namespaces"
+  rm -rf "${TEST_REPO:?}/${DIR_NAME}/cluster"
+  rm -rf "${TEST_REPO:?}/${DIR_NAME}/namespaces"
 
   cd "${TEST_REPO}"
   git add -A
