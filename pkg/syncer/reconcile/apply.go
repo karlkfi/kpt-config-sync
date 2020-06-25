@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubectl/pkg/util"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
@@ -144,9 +143,9 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	return true, nil
 }
 
-// create creates the resource with the last-applied annotation set.
+// create creates the resource with the declared-config annotation set.
 func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
-	if err := util.CreateApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
+	if err := createApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
 		return errors.Wrapf(err, "could not generate apply annotation for %s", description(obj))
 	}
 
@@ -177,17 +176,20 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 		return nil, errors.Errorf("could not serialize current configuration from %v", currentState)
 	}
 
-	// Retrieve the last applied configuration of the object from the annotation.
-	previous, oErr := util.GetOriginalConfiguration(currentState)
+	if err := updateConfigAnnotation(currentState); err != nil {
+		return nil, errors.Wrapf(err, "could not update config annotation for %v", currentState)
+	}
+	// Retrieve the declared configuration of the object from the annotation.
+	previous, oErr := getOriginalConfiguration(currentState)
 	if oErr != nil {
 		return nil, errors.Errorf("could not retrieve original configuration from %v", currentState)
 	}
 	if previous == nil {
-		glog.Warningf("3-way merge patch for %s may be incorrect due to missing last-applied-configuration.", resourceDescription)
+		glog.Warningf("3-way merge patch for %s may be incorrect due to missing declared-config annotation.", resourceDescription)
 	}
 
-	// Serialize the modified configuration of the object, populating the last applied annotation as well.
-	modified, mErr := util.GetModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
+	// Serialize the modified configuration of the object, populating the declared annotation as well.
+	modified, mErr := getModifiedConfiguration(intendedState, true, unstructured.UnstructuredJSONScheme)
 	if mErr != nil {
 		return nil, errors.Errorf("could not serialize intended configuration from %v", intendedState)
 	}

@@ -111,6 +111,43 @@ teardown() {
   (( "${rulesCount}" == "${expectRulesCount}" )) || debug::error "clusterrole.rules count shouldn't have changed from ${expectRulesCount} to ${rulesCount} resource=${resource}"
 }
 
+# TODO(b/160032776): remove this test once all users are past 1.4.0
+@test "${FILE_NAME}: Preserve and migrate contents of old last-applied-configuration annotation" {
+  debug::log "Adding a ClusterRole"
+  git::add "${YAML_DIR}/preservefields/namespace-viewer-clusterrole.yaml" acme/cluster/namespace-viewer-clusterrole.yaml
+  git::commit
+
+  debug::log "Waiting for sync to complete"
+  wait::for -t 60 -- nomos::cluster_synced
+
+  debug::log "Checking that the ClusterRole appears on cluster"
+  resource::check clusterrole namespace-viewer -a "configmanagement.gke.io/managed=enabled"
+
+  debug::log "Replacing ClusterRole with old annotation version"
+  kubectl replace -f "${YAML_DIR}/preservefields/namespace-viewer-clusterrole-replace.yaml"
+
+  debug::log "Waiting for ClusterRole annotations to be migrated"
+  wait::for -t 10 -- validate_annotation_migrated namespace-viewer
+}
+
+function validate_annotation_migrated() {
+  local resname="${1:-}"
+  local selector='.metadata.annotations | keys | map(select(. != "configmanagement.gke.io/cluster-name")) | sort'
+  local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
+  local default_keys
+  default_keys="\"configmanagement.gke.io/declared-config\",${nested_default_keys}"
+  # This first check verifies that all of the annotation keys that we expect to be present are in fact present. See validate_configmap_annotations for full details.
+  local annotations
+  annotations=$(kubectl get clusterrole "${resname}" -ojson | jq -c "${selector}")
+  [[ "${annotations}" == "[${default_keys}]" ]] || debug::error "${selector} for keys '${default_keys}' was not updated, got: ${annotations}"
+
+  # This second check verifies that the content of the "declared-config" annotation contains all of the annotation keys that we expect to be present.
+  local config
+  config=$(kubectl get clusterrole "${resname}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  annotations=$(echo "${config}" | jq -c "${selector}")
+  [[ "${annotations}" == "[${nested_default_keys}]" ]] || debug::error "declared-config ${selector} was not updated, got ${annotations}"
+}
+
 @test "${FILE_NAME}: Add/Update/Delete labels" {
   local resname="e2e-test-configmap"
   local ns="crud-labels"
@@ -161,14 +198,16 @@ function validate_configmap_labels() {
   local ns="${2:-}"
   local expected="${3:-}"
   local selector='.metadata.labels'
+  # This first check just verifies that all of the label keys that we expect to be present are in fact present. See validate_configmap_annotations for full details.
   local labels
   labels=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
   [[ "${labels}" == "${expected}" ]] || debug::error "${selector} was not synced, got: ${labels}"
 
+  # This second check verifies that the content of the "declared-config" annotation contains all of the label keys that we expect to be present.
   local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
   labels=$(echo "${config}" | jq -c "${selector}")
-  [[ "${labels}" == "${expected}" ]] || debug::error "last-applied-config ${selector} was not synced, got: ${labels}
+  [[ "${labels}" == "${expected}" ]] || debug::error "declared-config ${selector} was not synced, got: ${labels}
   want: ${expected}"
 }
 
@@ -226,16 +265,24 @@ function validate_configmap_annotations() {
   local resname="${1:-}"
   local ns="${2:-}"
   local additional_keys="${3:-}"
+  # This selector will pull all of the keys out of the annotations map, remove the cluster-name annotation, and sort them.
   local selector='.metadata.annotations | keys | map(select(. != "configmanagement.gke.io/cluster-name")) | sort'
-  local nested_default_keys='["configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
+  # These are annotation keys that we expect to be nested inside the content of the "declared-config" annotation.
+  local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
+  # These are annotation keys that we expect to be present in the annotations map of the resource.
   local default_keys
-  default_keys="${nested_default_keys},\"kubectl.kubernetes.io/last-applied-configuration\""
+  default_keys="\"configmanagement.gke.io/declared-config\",${nested_default_keys}"
+  # We initialize annotations by applying the selector above to the json of the resource.
   local annotations
   annotations=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
-  [[ "${annotations}" == "${default_keys}${additional_keys}]" ]] || debug::error "${selector} for keys '${default_keys}${additional_keys}' was not synced, got: ${annotations}"
+  # We verify that all annotation keys are present in the resource's annotations map.
+  [[ "${annotations}" == "[${default_keys}${additional_keys}]" ]] || debug::error "${selector} for keys '${default_keys}${additional_keys}' was not synced, got: ${annotations}"
 
+  # We initialize config by reading the content of the "declared-config" annotation and formatting it nicely for jq.
   local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  # We reinitialize annotations by applying the same selector above to the nested content we pulled from the "declared-config" annotation.
   annotations=$(echo "${config}" | jq -c "${selector}")
-  [[ "${annotations}" == "${nested_default_keys}${additional_keys}]" ]] || debug::error "last-applied-config ${selector}  was not synced, got ${annotations}"
+  # We verify that all nested annotation keys are present in the resource's annotations map as defined in "declared-config".
+  [[ "${annotations}" == "[${nested_default_keys}${additional_keys}]" ]] || debug::error "declared-config ${selector}  was not synced, got ${annotations}"
 }

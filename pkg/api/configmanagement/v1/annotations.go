@@ -20,6 +20,10 @@ const (
 	// to name of NamespaceSelector resource.
 	NamespaceSelectorAnnotationKey = ConfigManagementPrefix + "namespace-selector"
 
+	// DeclaredConfigAnnotationKey is the annotation key that stores the declared configuration of
+	// a resource in Git.
+	DeclaredConfigAnnotationKey = ConfigManagementPrefix + "declared-config"
+
 	// SourcePathAnnotationKey is the annotation key representing the relative path from POLICY_DIR
 	// where the object was originally declared. Paths are slash-separated and OS-agnostic.
 	SourcePathAnnotationKey = ConfigManagementPrefix + "source-path"
@@ -54,6 +58,7 @@ func SyncerAnnotations() []string {
 		ClusterNameAnnotationKey,
 		ClusterSelectorAnnotationKey,
 		NamespaceSelectorAnnotationKey,
+		DeclaredConfigAnnotationKey,
 		SourcePathAnnotationKey,
 		SyncTokenAnnotationKey,
 		ResourceManagementKey,

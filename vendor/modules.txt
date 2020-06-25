@@ -462,7 +462,6 @@ k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
 # k8s.io/kubectl v0.0.0-00010101000000-000000000000 => k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7
 ## explicit
-k8s.io/kubectl/pkg/util
 k8s.io/kubectl/pkg/util/openapi
 # k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 k8s.io/utils/buffer
