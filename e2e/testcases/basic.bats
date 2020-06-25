@@ -207,6 +207,7 @@ function clean_test_configmaps() {
   wait::for -f -- kubectl -n newer-prj configmaps map2
 }
 
+# TODO(b/159164014): This testcase will be removed as part of the bug fix. (2020-06-24)
 @test "${FILE_NAME}: Unmanage resource with mangled last-applied-configuration" {
   debug::log "Verify that the problematic clusterrole does not exist yet"
   wait::for -t 10 -- \
@@ -237,3 +238,4 @@ function clean_test_configmaps() {
   wait::for -t 10 -- \
     kubectl delete clusterrole problematic --ignore-not-found
 }
+
