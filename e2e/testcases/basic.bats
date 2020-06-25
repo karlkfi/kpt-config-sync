@@ -187,28 +187,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for -t 30 -- namespaceconfig::sync_token_eq backend "$itoken"
 }
 
-@test "${FILE_NAME}: RoleBindings enforced" {
-  git::add "${NOMOS_DIR}/examples/acme/cluster/admin-clusterrole.yaml" acme/cluster/admin-clusterrole.yaml
-  git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/backend/namespace.yaml" acme/namespaces/eng/backend/namespace.yaml
-  git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml" acme/namespaces/eng/backend/br.yaml
-  git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/alice-rolebinding.yaml" acme/namespaces/eng/ar.yaml
-  git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/frontend/namespace.yaml" acme/namespaces/eng/frontend/namespace.yaml
-  git::commit
-  wait::for -- kubectl get rolebinding -n backend bob-rolebinding
-  wait::for -- kubectl get rolebinding -n backend alice-rolebinding
-  wait::for -- kubectl get clusterrole acme-admin
-
-  debug::log "Verify that bob@ and alice@ have their permissions enforced"
-  wait::for -o "No resources found." -t 60 -- \
-    kubectl get pods -n backend --as bob@acme.com
-  wait::for -o "No resources found." -t 60 -- \
-    kubectl get pods -n backend --as alice@acme.com
-  wait::for -f -t 60 -- \
-    kubectl get pods -n frontend --as bob@acme.com
-  wait::for -o "No resources found." -t 60 -- \
-    kubectl get pods -n frontend --as alice@acme.com
-}
-
 function manage_namespace() {
   local ns="${1}"
   debug::log "Add an unmanaged resource into the namespace as a control"
