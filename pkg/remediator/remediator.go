@@ -3,20 +3,26 @@ package remediator
 import (
 	"context"
 
+	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// Interface is the remediation interface satisfied by Remediator to allow for
+// dependency injection in unit tests.
+type Interface interface {
+	// Remediate takes id representing the object to remediate, and then
+	// ensures that the version on the server matches it.
+	Remediate(ctx context.Context, gvknn GVKNN) error
+}
 
 // Remediator ensures objects are consistent with their declared state in the
 // repository.
@@ -28,6 +34,8 @@ type Remediator struct {
 	// declared is the threadsafe in-memory representation of declared configuration.
 	declared *declaredresources.DeclaredResources
 }
+
+var _ Interface = &Remediator{}
 
 // New instantiates a new Remediator.
 func New(
@@ -47,8 +55,8 @@ func New(
 //
 // core.ID doesn't record the Version, and we need the Version in order to
 // retrieve the object's current state from the cluster.
-func (r *Remediator) Remediate(ctx context.Context, obj runtime.Object) error {
-	diff, err := r.diff(ctx, obj)
+func (r *Remediator) Remediate(ctx context.Context, gvknn GVKNN) error {
+	diff, err := r.diff(ctx, gvknn)
 	if err != nil {
 		return err
 	}
@@ -63,7 +71,6 @@ func (r *Remediator) Remediate(ctx context.Context, obj runtime.Object) error {
 		_, err := r.applier.Update(ctx, diff.Declared, diff.Actual)
 		return err
 	case differ.Delete:
-		// TODO(b/157587458): Don't delete special Namespaces.
 		_, err := r.applier.Delete(ctx, diff.Actual)
 		return err
 	case differ.Error:
@@ -82,11 +89,8 @@ func (r *Remediator) Remediate(ctx context.Context, obj runtime.Object) error {
 	}
 }
 
-func (r *Remediator) diff(ctx context.Context, obj runtime.Object) (*differ.Diff, error) {
-	id, err := core.IDOfRuntime(obj)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting ID of object to reconcile")
-	}
+func (r *Remediator) diff(ctx context.Context, gvknn GVKNN) (*differ.Diff, error) {
+	id := gvknn.ID
 
 	declared, isDeclared := r.declared.GetDecl(id)
 	actual := &unstructured.Unstructured{}
@@ -94,16 +98,17 @@ func (r *Remediator) diff(ctx context.Context, obj runtime.Object) (*differ.Diff
 	case !isDeclared:
 		// Not declared in the SOT, so use the requested version.
 		declared = nil
-		actual.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-	case obj.GetObjectKind().GroupVersionKind() != declared.GroupVersionKind():
+		actual.SetGroupVersionKind(gvknn.GroupVersionKind())
+	case gvknn.GroupVersionKind() != declared.GroupVersionKind():
+		glog.V(4).Infof("ignored version %q inconsistent with %v", gvknn.Version, id)
 		// Trying to remediate a different version than the declared; ignore.
 		return &differ.Diff{}, nil
 	default:
 		// The requested/declared versions match.
 		actual.SetGroupVersionKind(declared.GroupVersionKind())
 	}
+	err := r.reader.Get(ctx, id.ObjectKey, actual)
 
-	err = r.reader.Get(ctx, id.ObjectKey, actual)
 	switch {
 	case err == nil:
 		// We found the object on the cluster.

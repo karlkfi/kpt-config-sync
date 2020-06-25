@@ -21,6 +21,8 @@ import (
 func TestRemediator_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name string
+		// version is Version (from GVK) of the object to try to remediate.
+		version string
 		// declared is the state of the object as returned by the Parser.
 		declared core.Object
 		// actual is the current state of the object on the cluster.
@@ -35,6 +37,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// Happy Paths.
 		{
 			name:      "create added object",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(),
 			actual:    nil,
 			want:      fake.ClusterRoleBindingObject(),
@@ -42,6 +45,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "update declared object",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("new-label", "one")),
 			actual:    fake.ClusterRoleBindingObject(),
 			want:      fake.ClusterRoleBindingObject(core.Label("new-label", "one")),
@@ -49,6 +53,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "delete removed object",
+			version:   "v1",
 			declared:  nil,
 			actual:    fake.ClusterRoleBindingObject(syncertesting.ManagementEnabled),
 			want:      nil,
@@ -57,6 +62,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// Unmanaged paths.
 		{
 			name:      "don't create unmanaged object",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementDisabled),
 			actual:    nil,
 			want:      nil,
@@ -64,6 +70,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "don't update unmanaged object",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementDisabled),
 			actual:    fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			want:      fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
@@ -71,6 +78,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "don't delete unmanaged object",
+			version:   "v1",
 			declared:  nil,
 			actual:    fake.ClusterRoleBindingObject(),
 			want:      fake.ClusterRoleBindingObject(),
@@ -79,6 +87,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// Bad declared management annotation paths.
 		{
 			name:      "don't create, and error on bad declared management annotation",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
 			actual:    nil,
 			want:      nil,
@@ -86,6 +95,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "don't update, and error on bad declared management annotation",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
 			actual:    fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			want:      fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
@@ -94,6 +104,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// bad in-cluster management annotation paths.
 		{
 			name:      "remove bad actual management annotation",
+			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
 			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
 			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
@@ -101,6 +112,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		{
 			name:      "don't delete, and remove bad actual management annotation",
+			version:   "v1",
 			declared:  nil,
 			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
 			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
@@ -109,27 +121,48 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// system namespaces
 		{
 			name:     "don't delete kube-system Namespace",
+			version:  "v1",
 			declared: nil,
 			actual:   fake.NamespaceObject(metav1.NamespaceSystem, syncertesting.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespaceSystem),
 		},
 		{
 			name:     "don't delete kube-public Namespace",
+			version:  "v1",
 			declared: nil,
 			actual:   fake.NamespaceObject(metav1.NamespacePublic, syncertesting.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespacePublic),
 		},
 		{
 			name:     "don't delete default Namespace",
+			version:  "v1",
 			declared: nil,
 			actual:   fake.NamespaceObject(metav1.NamespaceDefault, syncertesting.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespaceDefault),
 		},
 		{
 			name:     "don't delete gatekeeper-system Namespace",
+			version:  "v1",
 			declared: nil,
 			actual:   fake.NamespaceObject(policycontroller.NamespaceSystem, syncertesting.ManagementEnabled),
 			want:     fake.NamespaceObject(policycontroller.NamespaceSystem),
+		},
+		// Version difference paths.
+		{
+			name:      "don't create added object with different version",
+			version:   "v1beta1",
+			declared:  fake.ClusterRoleBindingObject(),
+			actual:    nil,
+			want:      nil,
+			wantError: nil,
+		},
+		{
+			name:      "don't update declared object with different version",
+			version:   "v1beta1",
+			declared:  fake.ClusterRoleBindingObject(core.Label("new-label", "one")),
+			actual:    fake.ClusterRoleBindingObject(),
+			want:      fake.ClusterRoleBindingObject(),
+			wantError: nil,
 		},
 	}
 
@@ -153,7 +186,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 				t.Fatal("at least one of actual or declared must be specified for a test")
 			}
 
-			err := r.Remediate(context.Background(), obj)
+			err := r.Remediate(context.Background(), GVKNN{ID: core.IDOf(obj), Version: tc.version})
 			if !errors.Is(err, tc.wantError) {
 				t.Errorf("got Reconcile() = %v, want matching %v",
 					err, tc.wantError)
