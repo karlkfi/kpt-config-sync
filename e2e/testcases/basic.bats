@@ -120,27 +120,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   wait::for kubectl get ns dir
 }
 
-@test "${FILE_NAME}: Deleting deployment removes corresponding replicaset" {
-  debug::log "Add a deployment"
-  git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
-  git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
-  git::commit
-
-  wait::for kubectl get ns dir
-
-  debug::log "check that the deployment and replicaset were created"
-  wait::for -t 60 -- kubectl get deployment hello-world -n dir
-  wait::for -t 60 -- resource::check -r replicaset -n dir -l "app=hello-world"
-
-  debug::log "Remove the deployment"
-  git::rm acme/namespaces/dir/deployment.yaml
-  git::commit
-
-  debug::log "check that the deployment and replicaset were removed"
-  wait::for -f -t 60 -- kubectl get deployment hello-world -n dir
-  wait::for -f -t 60 -- resource::check replicaset -n dir -l "app=hello-world"
-}
-
 @test "${FILE_NAME}: Sync deployment and replicaset" {
   debug::log "Add a deployment and corresponding replicaset"
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
