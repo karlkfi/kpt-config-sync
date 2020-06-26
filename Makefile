@@ -116,7 +116,10 @@ GCLOUD_QUIET := --quiet
 
 # Developer focused docker image tag.
 DATE := $(shell date +'%s')
-IMAGE_TAG ?= latest
+IMAGE_TAG ?= $(shell ./scripts/get-docker-tag.sh)
+
+what-image-tag:
+	echo $(IMAGE_TAG)
 
 DOCKER_RUN_ARGS = \
 	$(DOCKER_INTERACTIVE)                                              \
