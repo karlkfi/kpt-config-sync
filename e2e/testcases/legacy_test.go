@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,12 +59,21 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 			}
 		}
 
-		// TODO: create pipes for stdout / stderr / tap output and redirect lines through t.Log
+		pipeRead, pipeWrite, err := os.Pipe()
+		if err != nil {
+			t.Fatal("failed to create pipe for test output", err)
+		}
+		defer func() {
+			if pipeWrite != nil {
+				_ = pipeWrite.Close()
+			}
+			_ = pipeRead.Close()
+		}()
 		cmd := exec.Command(bt.batsPath(), "--tap", bt.fileName)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = pipeWrite
+		cmd.Stderr = pipeWrite
 		// Set fd3 (tap output) to stdout
-		cmd.ExtraFiles = []*os.File{os.Stderr}
+		cmd.ExtraFiles = []*os.File{pipeWrite}
 		cmd.Env = []string{
 			// Indicate the exact test num to run.
 			fmt.Sprintf("E2E_RUN_TEST_NUM=%d", testNum),
@@ -90,9 +101,35 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 		}
 
 		t.Logf("Starting legacy test %s", bt.fileName)
-		err := cmd.Run()
+		err = cmd.Start()
 		if err != nil {
-			t.Fatal(err, cmd)
+			t.Fatalf("failed to start command %s: %v", cmd, err)
+		}
+
+		// Close our copy of pipe so our read end of the pipe will get EOF when the subprocess terminates (and closes
+		// it's copy of the write end).  Bats will still have the write end of the pipe hooked up to stdout/stderr/fd3
+		// until it exits.
+		_ = pipeWrite.Close()
+		pipeWrite = nil
+
+		reader := bufio.NewReader(pipeRead)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				if err == io.EOF {
+					if len(line) != 0 {
+						t.Log(string(line))
+					}
+					break
+				}
+				t.Fatal("error reading from bats subprocess:", err)
+			}
+			t.Log(strings.TrimRight(string(line), "\n"))
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			t.Fatalf("command failed %s: %v", cmd, err)
 		}
 	}
 }
