@@ -173,7 +173,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			// Simulate the Parser having already parsed the resource and recorded it.
 			d := declared(t, tc.declared)
 
-			r := New(c, c.Applier(), d)
+			r := newReconciler(c, c.Applier(), d)
 
 			// Get the triggering object for the reconcile event.
 			var obj core.Object

@@ -25,29 +25,29 @@ func (gvknn GVKNN) GroupVersionKind() schema.GroupVersionKind {
 	return gvknn.GroupKind.WithVersion(gvknn.Version)
 }
 
-// Queue is a wrapper around workqueue.DelayingInterface for use with declared
+// queue is a wrapper around workqueue.DelayingInterface for use with declared
 // resources. Only deduplicates work items by GVKNN.
-type Queue struct {
+type queue struct {
 	// work is the queue of work to be done.
 	work workqueue.DelayingInterface
 }
 
-// NewQueue creates a new work queue for use in signalling objects that may need
+// newQueue creates a new work queue for use in signalling objects that may need
 // remediation.
-func NewQueue() *Queue {
-	return &Queue{
+func newQueue() *queue {
+	return &queue{
 		work: workqueue.NewDelayingQueue(),
 	}
 }
 
 // Add marks the item as needing processing.
-func (q *Queue) Add(id GVKNN) {
+func (q *queue) Add(id GVKNN) {
 	q.AddAfter(id, 0)
 }
 
 // AddAfter adds the given item to the work queue after the given delay.
 // Blocks until the item has been added.
-func (q *Queue) AddAfter(id GVKNN, duration time.Duration) {
+func (q *queue) AddAfter(id GVKNN, duration time.Duration) {
 	if q.work.ShuttingDown() {
 		return
 	}
@@ -58,7 +58,7 @@ func (q *Queue) AddAfter(id GVKNN, duration time.Duration) {
 // Len returns the current queue length, for informational purposes only. You
 // shouldn't e.g. gate a call to Add() or Get() on Len() being a particular
 // value, that can't be synchronized properly.
-func (q *Queue) Len() int {
+func (q *queue) Len() int {
 	return q.work.Len()
 }
 
@@ -71,7 +71,7 @@ func (q *Queue) Len() int {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *Queue) Get() (*GVKNN, bool) {
+func (q *queue) Get() (*GVKNN, bool) {
 	item, shutdown := q.work.Get()
 	if item == nil || shutdown {
 		return nil, shutdown
@@ -89,6 +89,6 @@ func (q *Queue) Get() (*GVKNN, bool) {
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *Queue) Done(id GVKNN) {
+func (q *queue) Done(id GVKNN) {
 	q.work.Done(id)
 }

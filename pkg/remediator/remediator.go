@@ -1,126 +1,52 @@
 package remediator
 
 import (
-	"context"
-
-	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/parse/declaredresources"
-	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Interface is the remediation interface satisfied by Remediator to allow for
-// dependency injection in unit tests.
+// Interface updates the declared configuration stored in memory.
 type Interface interface {
-	// Remediate takes id representing the object to remediate, and then
-	// ensures that the version on the server matches it.
-	Remediate(ctx context.Context, gvknn GVKNN) error
+	UpdateDecls(objects []core.Object) error
 }
 
-// Remediator ensures objects are consistent with their declared state in the
-// repository.
+// Remediator knows how to keep the state of a Kubernetes cluster in sync with
+// a set of declared resources. It processes a work queue of items, and ensures
+// each matches the set of declarations passed on instantiation.
+//
+// The exposed Queue operations are threadsafe - multiple callers may safely
+// synchronously add and consume work items.
 type Remediator struct {
-	// reader is the source of "actual" configuration on a Kubernetes cluster.
-	reader client.Reader
-	// applier is where to write the declared configuration to.
-	applier reconcile.Applier
-	// declared is the threadsafe in-memory representation of declared configuration.
-	declared *declaredresources.DeclaredResources
+	decls *declaredresources.DeclaredResources
+	*queue
 }
 
 var _ Interface = &Remediator{}
 
-// New instantiates a new Remediator.
-func New(
-	reader client.Reader,
-	applier reconcile.Applier,
-	declared *declaredresources.DeclaredResources,
-) *Remediator {
-	return &Remediator{
-		reader:   reader,
-		applier:  applier,
-		declared: declared,
-	}
-}
-
-// Remediate takes an runtime.Object representing the object to update, and then
-// ensures that the version on the server matches it.
+// New instantiates launches goroutines to make the state of the connected
+// cluster match the declared resources.
 //
-// core.ID doesn't record the Version, and we need the Version in order to
-// retrieve the object's current state from the cluster.
-func (r *Remediator) Remediate(ctx context.Context, gvknn GVKNN) error {
-	diff, err := r.diff(ctx, gvknn)
-	if err != nil {
-		return err
-	}
-
-	switch diff.Type() {
-	case differ.NoOp:
-		return nil
-	case differ.Create:
-		_, err := r.applier.Create(ctx, diff.Declared)
-		return err
-	case differ.Update:
-		_, err := r.applier.Update(ctx, diff.Declared, diff.Actual)
-		return err
-	case differ.Delete:
-		_, err := r.applier.Delete(ctx, diff.Actual)
-		return err
-	case differ.Error:
-		// This is the case where the annotation in the *repository* is invalid.
-		// Should never happen as the Parser would have thrown an error.
-		return nonhierarchical.IllegalManagementAnnotationError(
-			ast.ParseFileObject(diff.Declared),
-			diff.Declared.GetAnnotations()[v1.ResourceManagementKey],
-		)
-	case differ.Unmanage, differ.UnmanageSystemNamespace:
-		_, err := r.applier.RemoveNomosMeta(ctx, diff.Actual)
-		return err
-	default:
-		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
-		return status.InternalErrorf("diff type not supported: %v", diff.Type())
+// It is safe for decls to be modified after they have been passed into the
+// Remediator.
+func New(_ client.Reader, _ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
+	// TODO(b/157587458): Launch goroutine(s) that do remediation.
+	return &Remediator{
+		decls: decls,
+		queue: newQueue(),
 	}
 }
 
-func (r *Remediator) diff(ctx context.Context, gvknn GVKNN) (*differ.Diff, error) {
-	id := gvknn.ID
+// UpdateDecls implements Interface.
+func (r *Remediator) UpdateDecls(objects []core.Object) error {
+	return r.decls.UpdateDecls(objects)
+}
 
-	declared, isDeclared := r.declared.GetDecl(id)
-	actual := &unstructured.Unstructured{}
-	switch {
-	case !isDeclared:
-		// Not declared in the SOT, so use the requested version.
-		declared = nil
-		actual.SetGroupVersionKind(gvknn.GroupVersionKind())
-	case gvknn.GroupVersionKind() != declared.GroupVersionKind():
-		glog.V(4).Infof("ignored version %q inconsistent with %v", gvknn.Version, id)
-		// Trying to remediate a different version than the declared; ignore.
-		return &differ.Diff{}, nil
-	default:
-		// The requested/declared versions match.
-		actual.SetGroupVersionKind(declared.GroupVersionKind())
-	}
-	err := r.reader.Get(ctx, id.ObjectKey, actual)
+// NoOp is a Remediator that takes no actions whatsoever.
+type NoOp struct{}
 
-	switch {
-	case err == nil:
-		// We found the object on the cluster.
-	case apierrors.IsNotFound(err):
-		actual = nil
-	default:
-		return nil, err
-	}
-
-	return &differ.Diff{
-		Name:     id.Name,
-		Declared: declared,
-		Actual:   actual,
-	}, nil
+// UpdateDecls implements Interface.
+func (r *NoOp) UpdateDecls(_ []core.Object) error {
+	return nil
 }

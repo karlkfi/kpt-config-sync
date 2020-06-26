@@ -5,6 +5,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +40,8 @@ const (
 )
 
 // AddController adds the git-importer controller to the manager.
-func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRelative string, pollPeriod time.Duration) error {
+func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRelative string,
+	pollPeriod time.Duration, rm remediator.Interface) error {
 	client := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 
 	glog.Infof("Policy dir: %s", path.Join(gitDir, policyDirRelative))
@@ -69,7 +71,8 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())
-	r, err := newReconciler(clusterName, gitDir, policyDirRelative, cfgParser, client, dc, mgr.GetCache(), decoder, format)
+	r, err := newReconciler(clusterName, gitDir, policyDirRelative, cfgParser,
+		client, dc, mgr.GetCache(), decoder, format, rm)
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}

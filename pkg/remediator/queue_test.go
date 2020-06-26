@@ -119,7 +119,7 @@ func TestQueue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := NewQueue()
+			q := newQueue()
 
 			// We're doing sequential adds, so the resulting queue is deterministic.
 			for _, e := range tc.entries {
@@ -142,7 +142,7 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueue_ReAddDuringProcessing(t *testing.T) {
-	q := NewQueue()
+	q := newQueue()
 	o := gvknn("rbac", "v1", "Role", "shipping", "admin")
 
 	// Mark the item as dirty, then get it from the queue.
