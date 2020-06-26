@@ -5,13 +5,13 @@ import (
 	"os"
 
 	"github.com/go-logr/glogr"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -21,8 +21,11 @@ var (
 )
 
 func init() {
-	_ = clientgoscheme.AddToScheme(scheme)
+	// glogr flags
+	_ = flag.Set("v", "1")
+	_ = flag.Set("logtostderr", "true")
 
+	_ = clientgoscheme.AddToScheme(scheme)
 	_ = configmanagementv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
@@ -39,33 +42,29 @@ func main() {
 	ctrl.SetLogger(glogr.New())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "b4a6ef0e.gke.io",
+		Scheme: scheme,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (&controllers.RepoSyncReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("RepoSync"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	repoSync := controllers.NewRepoSyncReconciler(mgr.GetClient(),
+		ctrl.Log.WithName("controllers").WithName("RepoSync"),
+		mgr.GetScheme())
+	if err := repoSync.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RepoSync")
 		os.Exit(1)
 	}
-	if err = (&controllers.RootSyncReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("RootSync"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+
+	rootSync := controllers.NewRootSyncReconciler(mgr.GetClient(),
+		ctrl.Log.WithName("controllers").WithName("RootSync"),
+		mgr.GetScheme())
+	if err := rootSync.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RootSync")
 		os.Exit(1)
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

@@ -1,0 +1,146 @@
+# TODO Remove once RootSync is implemented.
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    configmanagement.gke.io/system: "true"
+  name: bookinfo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    configmanagement.gke.io/system: "true"
+  name: config-management-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: git-sync
+  namespace: config-management-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: configmanagement.gke.io:reconciler-manager
+  labels:
+    configmanagement.gke.io/system: "true"
+rules:
+- apiGroups:
+  - configmanagement.gke.io
+  resources:
+  - reposyncs
+  verbs:
+  - "*"
+- apiGroups:
+  - configmanagement.gke.io
+  resources:
+  - reposyncs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - configmanagement.gke.io
+  resources:
+  - rootsyncs
+  verbs:
+  - "*"
+- apiGroups:
+  - configmanagement.gke.io
+  resources:
+  - rootsyncs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  verbs:
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: configmanagement.gke.io:reconciler-manager
+  labels:
+    configmanagement.gke.io/system: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: configmanagement.gke.io:reconciler-manager
+subjects:
+- kind: ServiceAccount
+  name: reconciler-manager
+  namespace: config-management-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+  labels:
+    monitored: "true"
+    configmanagement.gke.io/system: "true"
+spec:
+  selector:
+    app: reconciler-manager
+  ports:
+  - name: metrics
+    # which port to use ?
+    port: 8675
+    targetPort: metrics-port
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+  labels:
+    app: reconciler-manager
+    configmanagement.gke.io/system: "true"
+spec:
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: reconciler-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: reconciler-manager
+    spec:
+      serviceAccountName: reconciler-manager
+      containers:
+      - command:
+        - /manager
+        args:
+        - --enable-leader-election
+        image: gcr.io/stolos-dev/RMUSER/reconciler:latest # need to update this.
+        name: reconciler-manager
+        ports:
+        - containerPort: 8675
+          name: metrics-port
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+      terminationGracePeriodSeconds: 10

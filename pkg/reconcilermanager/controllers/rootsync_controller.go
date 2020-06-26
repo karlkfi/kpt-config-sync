@@ -13,9 +13,18 @@ import (
 
 // RootSyncReconciler reconciles a RootSync object
 type RootSyncReconciler struct {
-	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	client client.Client
+	log    logr.Logger
+	scheme *runtime.Scheme
+}
+
+// NewRootSyncReconciler returns a new RootSyncReconciler.
+func NewRootSyncReconciler(c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
+	return &RootSyncReconciler{
+		client: c,
+		log:    l,
+		scheme: s,
+	}
 }
 
 // +kubebuilder:rbac:groups=configmanagement.gke.io,resources=rootsyncs,verbs=get;list;watch;create;update;patch;delete
@@ -23,8 +32,8 @@ type RootSyncReconciler struct {
 
 // Reconcile the RepoSync resource.
 func (r *RootSyncReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("rootsync", req.NamespacedName)
+	_ = context.TODO()
+	_ = r.log.WithValues("rootsync", req.NamespacedName)
 
 	// your logic here
 

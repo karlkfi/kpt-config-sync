@@ -8,6 +8,9 @@ const ClusterConfigName = "config-management-cluster-config"
 // CRDClusterConfigName is the name of the ClusterConfig for CRD resources.
 const CRDClusterConfigName = "config-management-crd-cluster-config"
 
+// NSConfigManagementSystem is the namespace reserved for ACM core componenets.
+const NSConfigManagementSystem = "config-management-system"
+
 // ConfigSyncState represents the states that a namespaceconfig or clusterconfig can be in with regards
 // to the source of truth.
 type ConfigSyncState string

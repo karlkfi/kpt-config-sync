@@ -1,0 +1,11 @@
+apiVersion: configmanagement.gke.io/v1
+kind: RepoSync
+metadata:
+  name: repo-sync
+  namespace: bookinfo
+spec:
+  git:
+    repo: https://github.com/GoogleCloudPlatform/csp-config-management/
+    revision: 1.0.0
+    dir: "foo-corp"
+    auth: ssh
