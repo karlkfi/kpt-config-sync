@@ -65,7 +65,6 @@ function namespace::declare() {
 
   local name
   name="$(basename "${path}")"
-  mkdir -p "acme/namespaces/${path}"
   local dst="acme/namespaces/${path}/namespace.yaml"
   local abs_dst="${TEST_REPO}/${dst}"
   genyaml_args+=("${name}" "${abs_dst}")
