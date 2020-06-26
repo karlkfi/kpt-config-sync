@@ -13,8 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::commit_minimal_repo_contents
 
@@ -26,9 +25,8 @@ setup() {
   kubectl delete crd clusteranvils.acme.com --ignore-not-found
 }
 
-function teardown() {
+test_teardown() {
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 @test "${FILE_NAME}: CRD added, CR added, CRD removed, and then CR removed from repo" {

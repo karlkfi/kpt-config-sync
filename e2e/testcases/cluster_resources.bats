@@ -11,15 +11,13 @@ load "../lib/wait"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::commit_minimal_repo_contents --skip_wait
 }
 
-teardown() {
+test_teardown() {
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata

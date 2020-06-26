@@ -17,18 +17,13 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 CMS_NS="config-management-system"
 KS_NS="kube-system"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
 
   # Fixes a problem when running the tests locally
   if [[ -z "${KUBECONFIG+x}" ]]; then
     export KUBECONFIG="${HOME}/.kube/config"
   fi
-}
-
-teardown() {
-  setup::common_teardown
 }
 
 @test "${FILE_NAME}: CLI bugreport.  Nomos running correctly." {

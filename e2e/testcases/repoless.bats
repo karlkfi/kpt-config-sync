@@ -11,12 +11,8 @@ load "../lib/nomos"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
-  setup::common
-}
-
-teardown() {
-  setup::common_teardown
+test_teardown() {
+  repair_state
 }
 
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
@@ -37,8 +33,6 @@ teardown() {
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
-
-  repair_state
 }
 
 @test "${FILE_NAME}: Syncs correctly with only roles" {
@@ -59,8 +53,6 @@ teardown() {
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
-
-  repair_state
 }
 
 @test "${FILE_NAME}: Syncs correctly with no policy dir set" {
@@ -81,8 +73,6 @@ teardown() {
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
-
-  repair_state
 }
 
 function repair_state() {

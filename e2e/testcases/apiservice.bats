@@ -10,18 +10,16 @@ load "../lib/wait"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/apiservice
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::commit_minimal_repo_contents
 }
 
-function teardown() {
+test_teardown() {
   git::rm acme/cluster/apiservice.yaml
   git::commit
   kubectl delete -f "${YAML_DIR}/apiservice.yaml" --ignore-not-found
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 @test "Create APIService and endpoint in same commit" {

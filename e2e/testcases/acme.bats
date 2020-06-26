@@ -25,19 +25,17 @@ ACME_NAMESPACES=(
   newer-prj
 )
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::init acme
   kubectl proxy &
   KUBE_PROXY_PID=$!
 }
 
-function teardown() {
+test_teardown() {
   kill $KUBE_PROXY_PID
   wait $KUBE_PROXY_PID || true
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 function check_metrics_pages() {

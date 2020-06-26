@@ -15,8 +15,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::commit_minimal_repo_contents --skip_wait
   mkdir -p acme/cluster
@@ -66,9 +65,8 @@ function repos_condition_null() {
   [ "$actual" = null ]
 }
 
-teardown() {
+test_teardown() {
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 @test "${FILE_NAME}: Resource condition annotations" {

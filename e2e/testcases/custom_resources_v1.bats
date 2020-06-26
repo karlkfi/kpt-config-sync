@@ -16,14 +16,13 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 MINOR_VERSION="$(kubectl version -ojson | jq -r '.serverVersion.minor[0:2]')"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::init acme
 }
 
 # This cleans up any CRDs that were created by a testcase
-function teardown() {
+test_teardown() {
   kubectl delete crd anvils.acme.com --ignore-not-found=true || true
   kubectl delete crd clusteranvils.acme.com --ignore-not-found=true || true
   wait::for -f -t 30 -- kubectl get crd anvils.acme.com
@@ -33,7 +32,6 @@ function teardown() {
     WATCH_PID=""
   fi
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 @test "${FILE_NAME}: CRD deleted before repo update" {

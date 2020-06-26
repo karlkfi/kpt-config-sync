@@ -12,8 +12,7 @@ load "../lib/wait"
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/namespaces
 
-setup() {
-  setup::common
+test_setup() {
   local active=()
   mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active)
   if (( ${#active[@]} != 0 )); then
@@ -27,10 +26,9 @@ setup() {
 }
 
 # This cleans up any namespaces that were created by a testcase
-function teardown() {
+test_teardown() {
   setup::git::remove_all acme
   kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
-  setup::common_teardown
 }
 
 @test "${FILE_NAME}: label and annotation lifecycle" {

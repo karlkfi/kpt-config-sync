@@ -227,10 +227,7 @@ setup::git::remove_folder() {
   wait::for -t 60 -- nomos::repo_synced
 }
 
-# Record timing info, and implement the test filter. This is cheap, and all tests should do it.
-setup::common() {
-  START_TIME=$(date +%s%3N)
-
+setup::__skip_test() {
   E2E_TEST_FILTER="${E2E_TEST_FILTER:-}"
   if [[ "${E2E_TEST_FILTER}" != "" ]]; then
     local cur_test=""
@@ -240,26 +237,45 @@ setup::common() {
       fi
     done
     if ! echo "${cur_test}" | grep "${E2E_TEST_FILTER}" &> /dev/null; then
-      skip
+      return
     fi
   fi
 
   E2E_RUN_TEST_NUM="${E2E_RUN_TEST_NUM:-}"
   if [[ "${E2E_RUN_TEST_NUM}" != "" ]]; then
     if [[ "${E2E_RUN_TEST_NUM}" != "${BATS_TEST_NUMBER}" ]]; then
-      skip
+      return
     fi
   fi
+  return 1
+}
 
-  echo "--- SETUP COMPLETE ---------------------------------------------------"
+# Record timing info, and implement the test filter. This is cheap, and all tests should do it.
+setup() {
+  START_TIME=$(date +%s%3N)
+  if setup::__skip_test; then
+    skip
+  fi
+
+  # declare -f -F exits true if test_setup is defined as a function
+  if declare -f -F test_setup > /dev/null; then
+    test_setup
+  fi
 }
 
 # Record and print timing info. This is cheap, and all tests should do it.
-setup::common_teardown() {
+teardown() {
+  # only teardown if ran the test (bats will run teardown even if we skip in setup).
+  if ! setup::__skip_test; then
+    # declare -f -F exits true if test_teardown is defined as a function
+    if declare -f -F test_teardown > /dev/null; then
+      test_teardown
+    fi
+  fi
+
   local end
   end=$(date +%s%3N)
   ((runtime="$end - $START_TIME"))
-
   if [ -n "${TIMING:+1}" ]; then
     echo "# TAP2JUNIT: Duration: ${runtime}ms" >&3
   fi

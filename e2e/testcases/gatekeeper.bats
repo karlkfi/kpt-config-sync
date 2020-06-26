@@ -10,17 +10,15 @@ load "../lib/wait"
 
 YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/gatekeeper
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
   setup::git::commit_minimal_repo_contents
 }
 
-function teardown() {
+test_teardown() {
   kubectl delete -f "${YAML_DIR}/constraint-template-crd.yaml" --ignore-not-found
   kubectl delete -f "${YAML_DIR}/constraint-crd.yaml" --ignore-not-found
   setup::git::remove_all acme
-  setup::common_teardown
 }
 
 @test "constraint template and constraint in same commit" {

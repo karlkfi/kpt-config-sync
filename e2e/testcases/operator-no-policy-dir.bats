@@ -10,23 +10,21 @@ load "../lib/nomos"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
+test_setup() {
   kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
   kubectl apply -f "${MANIFEST_DIR}/source-format_hierarchy.yaml"
   nomos::restart_pods
 
-  setup::common
   setup::git::initialize
   setup::git::init acme
 }
 
-teardown() {
+test_teardown() {
   setup::git::remove_all acme
 
   kubectl apply -f "${MANIFEST_DIR}/default-configmaps.yaml"
   nomos::restart_pods
 
-  setup::common_teardown
 }
 
 

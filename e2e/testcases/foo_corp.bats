@@ -13,13 +13,12 @@ load "../lib/setup"
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-setup() {
-  setup::common
+test_setup() {
   setup::git::initialize
 }
 
-teardown() {
-  setup::common_teardown
+test_teardown() {
+  setup::git::remove_all acme
 }
 
 @test "${FILE_NAME}: All foo-corp created" {
@@ -28,6 +27,5 @@ teardown() {
   git::add "${NOMOS_DIR}/examples/foo-corp-example/foo-corp" acme
   git::commit
   wait::for -t 180 -- nomos::repo_synced
-  setup::git::remove_all acme
 }
 
