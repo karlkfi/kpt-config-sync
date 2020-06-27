@@ -151,4 +151,4 @@ test-e2e-go: __push-local-image test-e2e-go-nobuild
 
 # Runs the Go e2e tests without building a new Nomos image.
 test-e2e-go-nobuild:
-	@go test ./e2e/... --e2e
+	@go test ./e2e/... --e2e --timeout 60m
