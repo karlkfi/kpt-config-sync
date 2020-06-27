@@ -6,4 +6,3 @@ aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
       permissions: "viewer"
-rules: []
