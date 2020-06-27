@@ -44,5 +44,5 @@ function teardown() {
   kubectl apply -f "${YAML_DIR}/constraint-crd.yaml" --validate=false
 
   debug::log "Waiting for nomos to recover"
-  wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 120 -- nomos::repo_synced
 }
