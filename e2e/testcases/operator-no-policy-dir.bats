@@ -12,7 +12,7 @@ FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 setup() {
   kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
-  kubectl apply -f "${MANIFEST_DIR}/source_format_hierarchy.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/source-format_hierarchy.yaml"
   nomos::restart_pods
 
   setup::common
