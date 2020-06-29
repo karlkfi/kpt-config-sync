@@ -146,8 +146,11 @@ __push-local-image: image-nomos
 	@docker tag gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) localhost:5000/nomos:latest
 	@docker push localhost:5000/nomos:latest
 
+__install-nomos-local:
+	@go install ./cmd/nomos/nomos.go
+
 # Runs the Go e2e tests
-test-e2e-go: __push-local-image test-e2e-go-nobuild
+test-e2e-go: __push-local-image __install-nomos-local test-e2e-go-nobuild
 
 # Runs the Go e2e tests without building a new Nomos image.
 test-e2e-go-nobuild:
