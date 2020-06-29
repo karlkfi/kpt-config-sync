@@ -29,6 +29,7 @@ build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
 # Compiles binaries for a specific platform (e.g. "linux-amd64").
 build-platform-%:
 	@echo "+++ Compiling Nomos binaries for $* platform"
+	@echo "+++ Compiling with VERSION: $(VERSION)"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh \
 		--build_mode $(BUILD_MODE) \
 		--pkg $(REPO) \
@@ -95,12 +96,22 @@ build-manifest: push-to-gcr-nomos gen-yaml-all
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
 		default-configmaps # only this single file (pattern match)
 
-.PHONY: upload-manifest
-upload-manifest:
-	@echo "+++ Upload the nomos-manifest to GCS"
-	gsutil cp ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml $(shell ./scripts/manifest-commit-path.sh)
+.PHONY: release-commit
+release-commit:
+	@./scripts/is-dirty-repo.sh # Fail if the repo is dirty
+	@$(eval BRANCH != git rev-parse --abbrev-ref HEAD)
+	@$(eval COMMIT_SHA != git rev-parse HEAD)
+	@$(eval VERSION := "${USER}/${BRANCH}/${COMMIT_SHA}")
+	@$(eval GCR_PREFIX := "stolos-dev/nomos-commits")
+	$(MAKE) build-manifest \
+		VERSION=$(VERSION) \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG=$(COMMIT_SHA) 
+	gsutil cp \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		gs://stolos-dev/config-sync-manifest/commit/$(COMMIT_SHA)/config-sync-manifest.yaml
 
-.PHONEY: manifest
+.PHONY: manifest
 manifest: build-manifest upload-manifest
 
 ###################################
