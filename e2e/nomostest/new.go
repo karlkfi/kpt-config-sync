@@ -36,19 +36,21 @@ func New(t *testing.T) *NT {
 		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
 
-	name := testName(t)
-	tmpDir := testDir(t, name)
+	clusterName := testClusterName(t)
+	tmpDir := testDir(t)
 
 	// TODO(willbeason): Support connecting to:
 	//  1) A user-specified cluster.
 	//  2) One of a set of already-set-up clusters?
-	cfg, kubeconfigPath := newKind(t, name, tmpDir)
+	// We have to update the name since newKind may choose a new name for the
+	// cluster if the name is too long.
+	cfg, kubeconfigPath := newKind(t, clusterName, tmpDir)
 	c := connect(t, cfg)
 
 	nt := &NT{
 		Context:        context.Background(),
 		T:              t,
-		Name:           name,
+		ClusterName:    clusterName,
 		TmpDir:         tmpDir,
 		Config:         cfg,
 		Client:         c,
@@ -94,9 +96,10 @@ func New(t *testing.T) *NT {
 	return nt
 }
 
-func testDir(t *testing.T, name string) string {
+func testDir(t *testing.T) string {
 	t.Helper()
 
+	name := testDirName(t)
 	subPath := filepath.Join("nomos-e2e", name+"-")
 	err := os.MkdirAll(filepath.Join(os.TempDir(), subPath), fileMode)
 	if err != nil {

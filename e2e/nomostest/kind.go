@@ -1,8 +1,6 @@
 package nomostest
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -46,16 +44,6 @@ func newKind(t *testing.T, name string, tmpDir string) (*rest.Config, string) {
 	//  testing.T.
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, kubeconfig)
-
-	// Kind seems to allow a max cluster name length of 49.  If we exceed that, hash the
-	// name, truncate to 40 chars then append 8 hash digits (32 bits).
-	const nameLimit = 49
-	const hashChars = 8
-	if nameLimit < len(name) {
-		hashBytes := sha1.Sum([]byte(name))
-		hashStr := hex.EncodeToString(hashBytes[:])
-		name = fmt.Sprintf("%s-%s", name[:nameLimit-1-hashChars], hashStr[:hashChars])
-	}
 
 	err := createKindCluster(p, name, kcfgPath)
 

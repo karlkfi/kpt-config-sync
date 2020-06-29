@@ -53,7 +53,7 @@ func connectToLocalRegistry(nt *NT) {
 
 	// See https://kind.sigs.k8s.io/docs/user/local-registry/ for explanation.
 	node := &v1.Node{}
-	err := nt.Get(nt.Name+"-control-plane", "", node)
+	err := nt.Get(nt.ClusterName+"-control-plane", "", node)
 	if err != nil {
 		nt.T.Fatal(err)
 	}

@@ -23,8 +23,8 @@ type NT struct {
 	// Used to exit tests early when setup fails, and for logging.
 	T *testing.T
 
-	// Name is the unique name of the test run.
-	Name string
+	// ClusterName is the unique name of the test run.
+	ClusterName string
 
 	// TmpDir is the temporary directory the test will write to.
 	// By default, automatically deleted when the test finishes.
