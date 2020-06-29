@@ -23,7 +23,7 @@ source "$DIR/wait.bash"
 #   -a [annotation] an annotation for the namespace (repeated)
 function namespace::create() {
   local tmp
-  tmp="$(mktemp --tmpdir="${BATS_TMPDIR}" ns-XXXXXX.yaml)"
+  tmp="$(mktemp -up "${BATS_TMPDIR}" ns-XXXXXX).yaml"
   namespace::__genyaml -l 'configmanagement.gke.io/testdata=true' "$@" "${tmp}"
   echo "Creating Cluster Namespace:"
   cat "${tmp}"

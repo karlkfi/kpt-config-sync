@@ -141,7 +141,8 @@ function validate_annotation_migrated() {
 
   # This second check verifies that the content of the "declared-config" annotation contains all of the annotation keys that we expect to be present.
   local config
-  config=$(kubectl get clusterrole "${resname}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  config=$(kubectl get clusterrole "${resname}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
+  config=$(unquote_and_unescape "${config}")
   annotations=$(echo "${config}" | jq -c "${selector}")
   [[ "${annotations}" == "[${nested_default_keys}]" ]] || debug::error "declared-config ${selector} was not updated, got ${annotations}"
 }
@@ -203,7 +204,8 @@ function validate_configmap_labels() {
 
   # This second check verifies that the content of the "declared-config" annotation contains all of the label keys that we expect to be present.
   local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
+  config=$(unquote_and_unescape "${config}")
   labels=$(echo "${config}" | jq -c "${selector}")
   [[ "${labels}" == "${expected}" ]] || debug::error "declared-config ${selector} was not synced, got: ${labels}
   want: ${expected}"
@@ -259,6 +261,17 @@ function validate_configmap_labels() {
   validate_configmap_annotations ${resname} ${ns}
 }
 
+function unquote_and_unescape() {
+  tmp="$1"
+  # Use prefix/suffix commands to unquote the value.
+  tmp="${tmp%\"}"
+  tmp="${tmp#\"}"
+  # Use printf to unescape value.
+  # Disable shellcheck since '%b' and '%s' don't seem to work properly.
+  # shellcheck disable=SC2059
+  printf "${tmp}"
+}
+
 function validate_configmap_annotations() {
   local resname="${1:-}"
   local ns="${2:-}"
@@ -278,7 +291,8 @@ function validate_configmap_annotations() {
 
   # We initialize config by reading the content of the "declared-config" annotation and formatting it nicely for jq.
   local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"' | sed  's/^.\(.*\).$/\1/' | xargs -0 printf '%b')
+  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
+  config=$(unquote_and_unescape "${config}")
   # We reinitialize annotations by applying the same selector above to the nested content we pulled from the "declared-config" annotation.
   annotations=$(echo "${config}" | jq -c "${selector}")
   # We verify that all nested annotation keys are present in the resource's annotations map as defined in "declared-config".

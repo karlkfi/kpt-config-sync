@@ -13,7 +13,12 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
-MINOR_VERSION="$(kubectl version -ojson | jq -r '.serverVersion.minor[0:2]')"
+# It isn't guaranteed that the caller has already launched and connected to a
+# Kubernetes cluster when they parse this file, so we execute this from within
+# tests.
+get_minor_version() {
+  kubectl version -ojson | jq -r '.serverVersion.minor[0:2]'
+}
 
 test_setup() {
   setup::git::initialize
@@ -32,7 +37,9 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: CRD added, CR added, CRD removed, and then CR removed from repo" {
-  if (( MINOR_VERSION < 16 )); then
+  local minor_version
+  minor_version=$(get_minor_version)
+  if (( minor_version < 16 )); then
     skip
   fi
 
@@ -71,7 +78,9 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: namespace-scoped CRD and CR added, CRD updated, and both removed from repo" {
-  if (( MINOR_VERSION < 16 )); then
+  local minor_version
+  minor_version=$(get_minor_version)
+  if (( minor_version < 16 )); then
     skip
   fi
 
@@ -148,7 +157,9 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: cluster-scoped CRD and CR added, CRD updated, and both removed from repo" {
-  if (( MINOR_VERSION < 16 )); then
+  local minor_version
+  minor_version=$(get_minor_version)
+  if (( minor_version < 16 )); then
     skip
   fi
 
@@ -200,7 +211,9 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: CRD added, unmanaged CR added, and CRD removed which removes CR from cluster" {
-  if (( MINOR_VERSION < 16 )); then
+  local minor_version
+  minor_version=$(get_minor_version)
+  if (( minor_version < 16 )); then
     skip
   fi
 
@@ -229,7 +242,9 @@ test_teardown() {
 }
 
 @test "${FILE_NAME}: CRD added, CR added, CRD removed, which causes vet failure" {
-  if (( MINOR_VERSION < 16 )); then
+  local minor_version
+  minor_version=$(get_minor_version)
+  if (( minor_version < 16 )); then
     skip
   fi
 

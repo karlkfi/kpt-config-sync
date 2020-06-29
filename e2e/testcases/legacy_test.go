@@ -29,6 +29,7 @@ func (bt *BatsTest) Run(t *testing.T) {
 	countCmd := exec.Command(bt.batsPath(), "--count", bt.fileName)
 	out, err := countCmd.CombinedOutput()
 	if err != nil {
+		t.Errorf("%v: %s", countCmd, string(out))
 		t.Fatal("Failed to get test count from bats:", err)
 	}
 	testCount, err := strconv.Atoi(strings.Trim(string(out), "\n"))
