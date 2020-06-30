@@ -246,7 +246,8 @@ release-operator-local:
 autorelease: \
 	   git-cookies \
 		__internal-autorelease \
-		release-operator-prow
+		release-operator-prow \
+		release-commit # Added to make this part of the postsubmit.  It is separate from the existing release process.  See go/cs-manifest-creation-and-release.
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
 # No need to do any work if we didn't commit any changes since last release
