@@ -36,7 +36,7 @@ e2e-staging: \
 download-cli: GO_BIN_DIR:=$(OUTPUT_DIR)/go/bin/linux_amd64
 download-cli: $(OUTPUT_DIR)
 	@mkdir -p $(GO_BIN_DIR)
-	@gsutil cp gs://config-management-release/latest/linux_amd64/nomos $(GO_BIN_DIR)/nomos
+	@gsutil cp gs://config-management-release/$(LATEST_IMAGE_TAG)/linux_amd64/nomos $(GO_BIN_DIR)/nomos
 	@chmod +x $(GO_BIN_DIR)/nomos
 
 
@@ -143,8 +143,8 @@ include Makefile.e2e.ci
 # For use with the Go e2e tests. See e2e/doc.go.
 __push-local-image: image-nomos
 	@bash scripts/docker-registry.sh
-	@docker tag gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) localhost:5000/nomos:latest
-	@docker push localhost:5000/nomos:latest
+	@docker tag gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) localhost:5000/nomos:$(LATEST_IMAGE_TAG)
+	@docker push localhost:5000/nomos:$(LATEST_IMAGE_TAG)
 
 __install-nomos-local:
 	@go install ./cmd/nomos/nomos.go

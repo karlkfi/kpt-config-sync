@@ -23,16 +23,16 @@
 #
 # make autorelease - Used by our automated prow job.
 #       will clean, build, package and push the entire code set to our
-# 			release location and move the 'latest' image tag to
-# 			the release just built.
+#       release location and move the '$(LATEST_IMAGE_TAG)' image tag
+#       to the release just built.
 #
 # make release - Same as autorelease but works from your local workstation.
-# 			Should only be used if there are issues with the autoreleaser.
+# 	Should only be used if there are issues with the autoreleaser.
 #      	Must be run on a clean git client and with a clean
 #      	cluster in stolos-dev named <user>-cluster-1.
 #
 # make bless-release - will move the 'stable' image tag to the release that
-# 			was built using one of the above 2 targets.
+# 	was built using one of the above 2 targets.
 
 ##### CONFIG #####
 
@@ -181,7 +181,7 @@ check-dirty:
 
 # Unconditional upload of nomos artifacts tagged with $(IMAGE_TAG) to gcr.io.
 upload-release:
-	@echo "+++ Marking release $(IMAGE_TAG) as 'latest'"
+	@echo "+++ Marking release $(IMAGE_TAG) as '$(LATEST_IMAGE_TAG)'"
 # We are not ready to expose Bespin binaries yet; therefore we'll need to
 # exclude them via the rsync filter.
 	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
@@ -189,10 +189,10 @@ upload-release:
 	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
 	gcloud container images add-tag --quiet \
 		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCR_PREFIX)/nomos:latest
+		gcr.io/$(GCR_PREFIX)/nomos:$(LATEST_IMAGE_TAG)
 	gsutil -m rsync -r -d -p \
 			$(RELEASE_BUCKET)/$(VERSION) \
-			$(RELEASE_BUCKET)/latest
+			$(RELEASE_BUCKET)/$(LATEST_IMAGE_TAG)
 
 ##### Git operations as make targets #####
 
@@ -366,6 +366,7 @@ info:
 	$(info +++ BACKWARDS_INCOMPATIBLE_RELEASE:   $(BACKWARDS_INCOMPATIBLE_RELEASE))
 	$(info +++ HAS_BACKWARDS_INCOMPATIBLE:       $(HAS_BACKWARDS_INCOMPATIBLE))
 	$(info +++ IMAGE_TAG:                        $(IMAGE_TAG))
+	$(info +++ LATEST_IMAGE_TAG:                 $(LATEST_IMAGE_TAG))
 	$(info +++ NEXT_MINOR_RELEASE:               $(NEXT_MINOR_RELEASE) [after $(LAST_RELEASE)])
 	$(info +++ VERSION:                          $(VERSION))
 
