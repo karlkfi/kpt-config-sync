@@ -74,6 +74,7 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # nomos-manifest
 ###################################
 
+
 .PHONY: build-manifest
 build-manifest: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing nomos-manifest.yaml"
@@ -96,13 +97,16 @@ build-manifest: push-to-gcr-nomos gen-yaml-all
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
 		default-configmaps # only this single file (pattern match)
 
+
 .PHONY: release-commit
 release-commit:
-	@./scripts/is-dirty-repo.sh # Fail if the repo is dirty
+	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
+
 	@$(eval BRANCH != git rev-parse --abbrev-ref HEAD)
 	@$(eval COMMIT_SHA != git rev-parse HEAD)
 	@$(eval VERSION := "${USER}/${BRANCH}/${COMMIT_SHA}")
 	@$(eval GCR_PREFIX := "stolos-dev/nomos-commits")
+
 	$(MAKE) build-manifest \
 		VERSION=$(VERSION) \
 		GCR_PREFIX=$(GCR_PREFIX) \
@@ -110,6 +114,34 @@ release-commit:
 	gsutil cp \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
 		gs://stolos-dev/config-sync-manifest/commit/$(COMMIT_SHA)/config-sync-manifest.yaml
+
+
+.PHONY: tag-version
+tag-version:
+	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
+	@echo "+++ Tagging commit $(shell git rev-parse HEAD) with CS_VERSION=$(CS_VERSION)"
+	CS_VERSION=$(CS_VERSION) ./scripts/tag-version.sh
+
+
+.PHONY: tag-upload
+tag-upload:
+	git push origin --tags
+
+
+.PHONY: release-tagged
+release-tagged: tag-version tag-upload
+	@echo "+++ Creating tagged release"
+	@$(eval GIT_TAG != git describe --tags --abbrev=0) # We should have already tagged the commit with the correct version
+	@$(eval GCR_PREFIX := "config-management-release")
+
+	$(MAKE) build-manifest \
+		VERSION=$(GIT_TAG) \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG=$(GIT_TAG) 
+	gsutil cp \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		gs://config-management-release/config-sync-manifest/tag/$(GIT_TAG)/config-sync-manifest.yaml
+
 
 .PHONY: manifest
 manifest: build-manifest upload-manifest

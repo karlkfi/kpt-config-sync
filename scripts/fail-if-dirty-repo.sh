@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eou pipefail
+
 is_dirty_repo() {
   [ -n "$(git status --short)" ]
   return "$?"
