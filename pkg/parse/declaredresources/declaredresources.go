@@ -63,15 +63,15 @@ func (dr *DeclaredResources) Decls() []*unstructured.Unstructured {
 }
 
 // GetGKSet returns the set of all GroupKind found in the git repo.
-func (dr *DeclaredResources) GetGKSet() map[schema.GroupKind]struct{} {
-	gkSet := make(map[schema.GroupKind]struct{})
+func (dr *DeclaredResources) GetGKSet() map[schema.GroupKind]string {
+	gkSet := make(map[schema.GroupKind]string)
 	dr.mutex.RLock()
 	objSet := dr.objectSet
 	dr.mutex.RUnlock()
-	for id := range objSet {
+	for id, obj := range objSet {
 		gk := id.GroupKind
 		if _, ok := gkSet[gk]; !ok {
-			gkSet[gk] = struct{}{}
+			gkSet[gk] = obj.GroupVersionKind().Version
 		}
 	}
 	return gkSet

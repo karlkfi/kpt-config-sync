@@ -95,9 +95,9 @@ func TestGetGVKSet(t *testing.T) {
 	}
 
 	got := dr.GetGKSet()
-	want := map[schema.GroupKind]struct{}{
-		obj1.GroupVersionKind().GroupKind(): {},
-		obj2.GroupVersionKind().GroupKind(): {},
+	want := map[schema.GroupKind]string{
+		obj1.GroupVersionKind().GroupKind(): "v1beta1",
+		obj2.GroupVersionKind().GroupKind(): "v1",
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Error(diff)
