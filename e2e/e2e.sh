@@ -161,7 +161,6 @@ EOF
     --retain \
     --name="${ephemeral_cluster_name}" \
     --wait=120s --loglevel=debug || kind export logs "${ARTIFACTS}/kind-logs"
-  readonly kind_kubeconfig_path="$(kind get kubeconfig-path)"
 
   DOCKER_FLAGS+=(
     "--network=host"
@@ -169,37 +168,40 @@ EOF
 
   if ${hermetic}; then
     mkdir -p "${USER_DIR_ON_HOST}/.config/kind"
-    cp "${kind_kubeconfig_path}" \
-       "${USER_DIR_ON_HOST}/.config/kind/${ephemeral_cluster_name}.kubeconfig"
+    kind get kubeconfig > \
+      "${USER_DIR_ON_HOST}/.config/kind/${ephemeral_cluster_name}.kubeconfig"
     DOCKER_FLAGS+=(
       -e "KUBECONFIG=${HOME_IN_CONTAINER}/.config/kind/${ephemeral_cluster_name}.kubeconfig"
     )
   else
     mkdir -p "${TEMP_OUTPUT_DIR}/config/kind"
-    cp "${kind_kubeconfig_path}" \
-       "$TEMP_OUTPUT_DIR/config/kind/${ephemeral_cluster_name}.kubeconfig"
+    kind get kubeconfig > \
+      "${TEMP_OUTPUT_DIR}/config/kind/${ephemeral_cluster_name}.kubeconfig"
     DOCKER_FLAGS+=(
       -e "KUBECONFIG=${TEMP_OUTPUT_DIR}/config/kind/${ephemeral_cluster_name}.kubeconfig"
     )
   fi
 
-  # A kind cluster must be started here, as this is the last spot we have access
-  # to the 'docker' binary.
-  for node in \
-    $(kubectl --kubeconfig="${kind_kubeconfig_path}" get nodes -oname); do
+  # Bootstrap credentials into the kind cluster here, as this is the last spot
+  # we have access to the 'docker' binary.  Borrowed from
+  # https://kind.sigs.k8s.io/docs/user/private-registries/
+
+  # Create a temp dir for the docker config.
+  echo "Creating temporary docker client config directory ..."
+  DOCKER_CONFIG=$(mktemp -d)
+  export DOCKER_CONFIG
+  trap 'echo "Removing ${DOCKER_CONFIG}/*" && rm -rf ${DOCKER_CONFIG:?}' EXIT
+
+  # This will reveal the access token of the current user to
+  # the docker container.  Don't use this with your own account.
+  gcloud auth print-access-token \
+    | docker login -u oauth2accesstoken --password-stdin https://gcr.io
+  for node in $(kind get nodes --name "${ephemeral_cluster_name}"); do
     readonly node_name="${node#node/}"
-    echo "config node: ${node_name}"
-    # TODO(filmil): This will reveal the access token of the current user to
-    # the docker container.  Don't use this with your own account.
-    gcloud auth print-access-token \
-      | docker exec -i "${node_name}" \
-        docker login -u oauth2accesstoken --password-stdin https://gcr.io
+    docker cp "${DOCKER_CONFIG}/config.json" "${node_name}:/var/lib/kubelet/config.json"
+    docker exec "${node_name}" systemctl restart kubelet.service || true
     echo "finished access token setup for node: ${node_name}"
   done
-  # Ensures that kubelet picks up the access token.  This is a kludge, and will
-  # become unnecessary in future versions of 'kind'.
-  docker exec kind-control-plane cp /root/.docker/config.json /var/lib/kubelet/config.json
-  docker exec kind-control-plane systemctl restart kubelet.service
 fi
 
 if [[ "${gcs_prober_cred}" != "" ]]; then
