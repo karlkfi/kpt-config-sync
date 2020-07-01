@@ -8,7 +8,7 @@ load "../lib/setup"
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 setup() {
-  setup::common
+  START_TIME=$(date +%s%3N)
   setup::git::initialize
 
   local TEST_REPO_DIR=${BATS_TMPDIR}
@@ -20,7 +20,13 @@ setup() {
 }
 
 teardown() {
-  setup::common_teardown
+  local end
+  end=$(date +%s%3N)
+  ((runtime="$end - $START_TIME"))
+
+  if [ -n "${TIMING:+1}" ]; then
+    echo "# TAP2JUNIT: Duration: ${runtime}ms" >&3
+  fi
 }
 
 @test "${FILE_NAME}: Create 10 namespaces" {
