@@ -23,7 +23,7 @@ kubectl apply -f manifests/rootsync-crd.yaml
 
 rm -rf /tmp/reconciler-manager.yaml
 # shellcheck disable=SC2046
-sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager.yaml > /tmp/reconciler-manager.yaml
+sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager/manifest.yaml > /tmp/reconciler-manager.yaml
 
 # Apply the reconciler-manager.yaml manifest.
 kubectl apply -f /tmp/reconciler-manager.yaml
@@ -31,7 +31,7 @@ kubectl apply -f /tmp/reconciler-manager.yaml
 # Verify reconciler-manager pod is running
 
 # Apply RootSync CR.
-#kubectl apply -f e2e/testdata/reconciler-manager/rootsync-sample.yaml
+kubectl apply -f e2e/testdata/reconciler-manager/rootsync-sample.yaml
 
 # Apply RepoSync CR.
 kubectl apply -f e2e/testdata/reconciler-manager/reposync-sample.yaml

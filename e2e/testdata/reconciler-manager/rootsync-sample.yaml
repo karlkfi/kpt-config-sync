@@ -1,5 +1,5 @@
 apiVersion: configmanagement.gke.io/v1
-kind: RepoSync
+kind: RootSync
 metadata:
   name: root-sync
   namespace: config-management-system
@@ -8,4 +8,4 @@ spec:
     repo: https://github.com/GoogleCloudPlatform/csp-config-management/
     revision: 1.0.0
     dir: "foo-corp"
-    auth: none
+    auth: ssh

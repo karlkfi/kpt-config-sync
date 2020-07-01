@@ -83,10 +83,10 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Reque
 	// will be called. Just before calling either Create() or Update(), the mutate
 	// callback will be called.
 	var childCM corev1.ConfigMap
-	childCM.Name = namespaceReconcilerPrefix + req.Namespace
+	childCM.Name = repoSyncReconcilerPrefix + req.Namespace
 	childCM.Namespace = v1.NSConfigManagementSystem
 	op, err := ctrl.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-		mutateConfigMap(repoSync, &childCM)
+		mutateRepoSyncConfigMap(repoSync, &childCM)
 		return nil
 	})
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Reque
 	return op, nil
 }
 
-func mutateConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) {
+func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = []metav1.OwnerReference{
@@ -119,19 +119,23 @@ func mutateConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) {
 
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) (controllerutil.OperationResult, error) {
 	var childDep appsv1.Deployment
-	childDep.Name = namespaceReconcilerPrefix + req.Namespace
+	if err := parseDeployment(&childDep); err != nil {
+		return "", errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
+	}
+	childDep.Name = repoSyncReconcilerPrefix + req.Namespace
 	childDep.Namespace = v1.NSConfigManagementSystem
 	op, err := ctrl.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		mutateDeployment(repoSync, &childDep)
+		mutateRepoSyncDeployment(repoSync, &childDep)
 		return nil
 	})
 	if err != nil {
 		return "", err
 	}
+	r.log.Info("Config for the deployment", "Environment Variable", childDep.Spec.Template.Spec.Containers[0].EnvFrom)
 	return op, nil
 }
 
-func mutateDeployment(rs v1.RepoSync, de *appsv1.Deployment) {
+func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment) {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
 	de.OwnerReferences = []metav1.OwnerReference{
@@ -145,83 +149,16 @@ func mutateDeployment(rs v1.RepoSync, de *appsv1.Deployment) {
 		},
 	}
 
-	// TODO add necessary annotations.
-
-	createOrUpdateLabels(de)
-
-	de.Spec.MinReadySeconds = 10
-	de.Spec.Replicas = pointer.Int32Ptr(1)
-	de.Spec.Strategy = appsv1.DeploymentStrategy{
-		Type: "Recreate",
-	}
-	var ls metav1.LabelSelector
-	de.Spec.Selector = metav1.AddLabelToSelector(&ls, "app", "git-syncer")
-
-	de.Spec.Template.Labels = map[string]string{
-		"app": "git-syncer",
-	}
-
 	templateSpec := &de.Spec.Template.Spec
-	templateSpec.ServiceAccountName = "git-sync"
-	templateSpec.SecurityContext = &corev1.PodSecurityContext{
-		FSGroup: pointer.Int64Ptr(65533),
-	}
-	templateSpec.Volumes = []corev1.Volume{
-		{
-			Name: "repo",
-		},
-		{
-			Name: "git-creds",
-			// TODO Add secret
-		},
-	}
-
-	if len(templateSpec.Containers) == 0 {
-		templateSpec.Containers = make([]corev1.Container, 1)
-	}
-
-	// TODO Update the containers once git-importer and syncer are merged.
+	// TODO Update upon addition of additional containers.
 	container := &templateSpec.Containers[0]
-
-	container.Name = "git-sync"
-	container.Image = "gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64"
-	container.Args = []string{
-		"--root=/repo",
-		"--dest=rev",
-		"--max-sync-failures=30",
-		"--v=5",
-	}
-	container.VolumeMounts = []corev1.VolumeMount{
-		{
-			Name:      "repo",
-			MountPath: "/repo",
-		},
-		{
-			Name:      "git-creds",
-			ReadOnly:  true,
-			MountPath: "/etc/git-secret",
-		},
-	}
-	container.SecurityContext = &corev1.SecurityContext{
-		RunAsUser: pointer.Int64Ptr(65533),
-	}
 	container.EnvFrom = []corev1.EnvFromSource{
 		{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: namespaceReconcilerPrefix + rs.Namespace,
+					Name: repoSyncReconcilerPrefix + rs.Namespace,
 				},
 			},
 		},
 	}
-}
-
-func createOrUpdateLabels(de *appsv1.Deployment) {
-	labels := de.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels["app"] = "git-syncer"
-	labels["configmanagement.gke.io/system"] = "true"
-	de.SetLabels(labels)
 }
