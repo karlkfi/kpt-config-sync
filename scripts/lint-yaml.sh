@@ -28,6 +28,5 @@ validate() {
 
 validate manifests/
 validate e2e/testdata/
-validate examples/
 
 exit "${status}"
