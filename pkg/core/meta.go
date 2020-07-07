@@ -1,6 +1,10 @@
 package core
 
-import "k8s.io/apimachinery/pkg/types"
+import (
+	"k8s.io/apimachinery/pkg/types"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // MetaMutator is a Mutator that modifies the metadata of an Object.
 type MetaMutator func(o Object)
@@ -62,5 +66,12 @@ func WithoutAnnotation(annotation string) MetaMutator {
 func Annotations(annotations map[string]string) MetaMutator {
 	return func(o Object) {
 		o.SetAnnotations(copyMap(annotations))
+	}
+}
+
+// OwnerReference sets the object's owner references to a passed slice of metav1.OwnerReference.
+func OwnerReference(or []metav1.OwnerReference) MetaMutator {
+	return func(o Object) {
+		o.SetOwnerReferences(or)
 	}
 }

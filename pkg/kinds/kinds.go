@@ -164,6 +164,16 @@ func ConfigManagement() schema.GroupVersionKind {
 	}
 }
 
+// RepoSync returns the canonical RepoSync GroupVersionKind.
+func RepoSync() schema.GroupVersionKind {
+	return v1.SchemeGroupVersion.WithKind("RepoSync")
+}
+
+// RootSync returns the canonical RootSync GroupVersionKind.
+func RootSync() schema.GroupVersionKind {
+	return v1.SchemeGroupVersion.WithKind("RootSync")
+}
+
 // ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.
 func ResourceString(gvk schema.GroupVersionKind) string {
 	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)

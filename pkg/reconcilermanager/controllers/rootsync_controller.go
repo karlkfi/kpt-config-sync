@@ -7,13 +7,11 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -97,23 +95,13 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Reque
 func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
-	cm.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion:         v1.SchemeGroupVersion.String(),
-			Kind:               rs.GroupVersionKind().Kind,
-			Name:               rs.Name,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-			UID:                rs.UID,
-		},
-	}
-	cm.Data = map[string]string{
-		"GIT_KNOWN_HOSTS": "false",
-		"GIT_SYNC_BRANCH": rs.Spec.Revision,
-		"GIT_SYNC_REPO":   rs.Spec.Repo,
-		"GIT_SYNC_REV":    "HEAD",
-		"GIT_SYNC_WAIT":   "15",
-	}
+	cm.OwnerReferences = ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+
+	cm.Data = configMapData(rs.Spec.Revision, rs.Spec.Repo)
 }
 
 func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, rootSync v1.RootSync) (controllerutil.OperationResult, error) {
@@ -137,16 +125,11 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Requ
 func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment) {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
-	de.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion:         v1.SchemeGroupVersion.String(),
-			Kind:               rs.GroupVersionKind().Kind,
-			Name:               rs.Name,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-			UID:                rs.UID,
-		},
-	}
+	de.OwnerReferences = ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
 
 	templateSpec := &de.Spec.Template.Spec
 	// TODO Update upon addition of additional containers.

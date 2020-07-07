@@ -48,6 +48,7 @@ type Object interface {
 	Named
 	Namespaced
 	LabeledAndAnnotated
+	OwnerReferenced
 	resourceVersioned
 
 	// GetUID and SetUID define metadata.uid, which all persistent Kubernetes types must define.
