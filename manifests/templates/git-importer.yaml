@@ -63,9 +63,6 @@ spec:
           requests:
             cpu: "150m"
             memory: "100Mi"
-          limits:
-            cpu: "1"
-            memory: "200Mi"
       - name: fs-watcher
         image: IMAGE_NAME
         command: ["git-importer"]
@@ -84,9 +81,6 @@ spec:
           requests:
             cpu: "150m"
             memory: "100Mi"
-          limits:
-            cpu: "1"
-            memory: "200Mi"
       - name: git-sync
         image: gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64
         # Do not put "rev-" in the root arg or you will break our parsing of commit hashes. See
@@ -103,6 +97,10 @@ spec:
         envFrom:
           - configMapRef:
               name: git-sync
+        resources:
+          requests:
+            cpu: "150m"
+            memory: "100Mi"
       volumes:
       - name: repo
       - name: git-creds
