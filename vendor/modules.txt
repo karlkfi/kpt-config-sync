@@ -464,6 +464,7 @@ k8s.io/kube-openapi/pkg/util/proto
 ## explicit
 k8s.io/kubectl/pkg/util/openapi
 # k8s.io/utils v0.0.0-20190801114015-581e00157fb1
+## explicit
 k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/pointer

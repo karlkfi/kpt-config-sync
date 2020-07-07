@@ -47,6 +47,7 @@ require (
 	k8s.io/cluster-registry v0.0.6
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c // indirect
 	k8s.io/kubectl v0.0.0-00010101000000-000000000000
+	k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 	sigs.k8s.io/controller-runtime v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/kind v0.8.1
 	sigs.k8s.io/yaml v1.2.0

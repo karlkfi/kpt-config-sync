@@ -225,10 +225,12 @@ git-cookies:
 # TODO(filmil): This makes the version tags on the YAML files always reference
 # release candidates.  This doesn't seem to be a big problem though.
 # TODO(filmil): Remove the repetition in this target and the -local one.
+# Note: `release-commit` is separate from the existing release process.  See
+# go/cs-manifest-creation-and-release.
 autorelease: \
-	   git-cookies \
-		__internal-autorelease \
-		release-commit # Added to make this part of the postsubmit.  It is separate from the existing release process.  See go/cs-manifest-creation-and-release.
+    git-cookies \
+    release-commit \
+    __internal-autorelease
 
 ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
 # No need to do any work if we didn't commit any changes since last release
