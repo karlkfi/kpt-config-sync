@@ -158,4 +158,4 @@ test-e2e-go-nobuild:
 
 test-e2e-go-ephemeral: __push-local-image
 	@docker build . -f build/test-e2e-go/Dockerfile -t test-e2e-go
-	@docker run -it -v /var/run/docker.sock:/var/run/docker.sock --network="host" test-e2e-go make test-e2e-go-nobuild
+	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" test-e2e-go make test-e2e-go-nobuild
