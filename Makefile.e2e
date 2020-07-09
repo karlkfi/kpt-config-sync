@@ -156,9 +156,9 @@ test-e2e-go: __push-local-image __install-nomos-local test-e2e-go-nobuild
 test-e2e-go-nobuild:
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
 
-# A temporary target just to see if a few tests run in Prow in parallel.
+# A temporary target just to see if a few tests run in Prow in sequence.
 test-e2e-go-nobuild-run-few:
-	@GO111MODULE=on go test ./e2e/... --e2e --run TestBats/preserve_fields.bats --timeout 60m
+	@GO111MODULE=on go test ./e2e/... --e2e --run TestBats/preserve_fields.bats --timeout 60m --parallel 1
 
 # The target to be run by Prow for e2e tests.
 test-e2e-go-ephemeral: __push-local-image
