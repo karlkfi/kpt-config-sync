@@ -180,6 +180,12 @@ test-unit: $(OUTPUT_DIR) pull-buildenv
 # Runs unit tests and linter.
 test: test-unit lint
 
+# The presubmits have made side-effects in the past, which makes their
+# validation suspect (as the repository they are validating is different
+# than what is checked in).  Run `test` but verify that repository is clean.
+test-presubmit: test
+	@./scripts/fail-if-dirty-repo.sh
+
 # Runs all tests.
 # This only runs on local dev environment not CI environment.
 test-all-local: test test-e2e
