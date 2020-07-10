@@ -21,6 +21,15 @@ operator-manifest: gen-yaml-all
 # prepare-e2e-manifest prepares a manifest called "defined-operator-bundle" that
 # contains the nomos resources required for e2e testing.  It replaces the now deleted
 # prepare-operator make target, taking advantage of the plumbing that target used.
+# TODO (b/161182417): The appending business here is only necessary because append-manifests.sh
+# is hard to use.  If improved, we could clean up this logic.
 .PHONY: prepare-e2e-manifest
 prepare-e2e-manifest: build-manifest
-	cp ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	@touch ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	cat ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	scripts/append-manifests.sh \
+		e2e/raw-nomos/manifests \
+		${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml \
+		default-configmaps # only this single file (pattern match)

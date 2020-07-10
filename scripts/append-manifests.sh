@@ -1,19 +1,5 @@
 #!/bin/bash
-#
-# Copyright 2018 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+
 # Use this script to cat yaml k8s specs together for fun and profit.
 # The first argument is a directory containing all the manifests you wish to
 # concatenate.
@@ -21,6 +7,8 @@
 # The third argument is the file pattern from within the directory to use.
 # Usage:
 # ./append_manifests.sh [INPUT_DIR] [OUTPUT_FILE] [PATTERN]
+
+set -eo pipefail
 
 input_dir=$1
 output_file=$2
@@ -33,9 +21,10 @@ pattern="${3:-}"
 # but there is not really a good way to export a bash array into the environment
 # of a child, so it is left here for now.
 # Citation: https://www.mail-archive.com/bug-bash@gnu.org/msg01774.html
+# TODO (b/161182417): Make this something we can pass in.  This is hard to use.
 declare -A ignoreFiles=(
 #  ["deployment/gcp-importer.yaml"]=1
-#  ["00-namespace.yaml"]=1
+ ["00-namespace.yaml"]=1
 #  ["README.md"]=1
 )
 
