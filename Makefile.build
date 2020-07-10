@@ -142,6 +142,21 @@ release-tagged: tag-version tag-upload
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
 		gs://config-management-release/config-sync-manifest/tag/$(GIT_TAG)/config-sync-manifest.yaml
 
+.PHONY: release-user
+release-user:
+	@echo "+++ Creating user release"
+	@$(eval BRANCH_OR_SHA != ./scripts/get-branch-or-sha.sh)
+	@echo "BRANCH_OR_SHA = $(BRANCH_OR_SHA)"
+	@echo "USER = $(USER)"
+
+	# We use the default GCR_PREFIX
+	$(MAKE) build-manifest \
+		VERSION="$(USER)/$(BRANCH_OR_SHA)" \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG="latest"
+	gsutil cp \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		gs://stolos-dev/config-sync-manifest/user/$(USER)/$(BRANCH_OR_SHA)/config-sync-manifest.yaml
 
 .PHONY: manifest
 manifest: build-manifest upload-manifest
