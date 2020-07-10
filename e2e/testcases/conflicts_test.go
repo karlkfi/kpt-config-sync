@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -48,14 +47,16 @@ metadata:
 	}
 
 	// Add a new label via kubectl.
-	exec.Command("kubectl", "--kubeconfig", filepath.Join(nt.TmpDir, "KUBECONFIG"), "apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml"))
+	err = exec.Command("kubectl", "--kubeconfig", filepath.Join(nt.TmpDir, "KUBECONFIG"), "apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml")).Run()
+	if err != nil {
+		t.Fatalf("failed to kubectl apply namespace file: %v", err)
+	}
 
 	_, err = nomostest.Retry(time.Second*5, func() error {
 		// Test that the Namespace "foo" exists with the manually added label.
 		err = nt.Validate("foo", "", &corev1.Namespace{}, nomostest.HasLabel("goodnight", "moon"))
-		// TODO(b/159164014): Check for error presence and return it once bug is fixed.
-		if err == nil {
-			return errors.New("unexpected success, wanted error; got nil")
+		if err != nil {
+			return err
 		}
 
 		// Test that the Namespace "foo" still has the label from Git.
