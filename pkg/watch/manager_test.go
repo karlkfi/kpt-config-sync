@@ -1,12 +1,11 @@
 package watch
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/meta"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 
@@ -14,8 +13,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
-func fakeInformer(schema.GroupVersionKind, meta.RESTMapper, *rest.Config,
-	time.Duration) (mapEntry, error) {
+func fakeInformer(opts informerOptions) (mapEntry, error) {
 	return mapEntry{stopCh: make(chan struct{})}, nil
 }
 
@@ -25,7 +23,7 @@ func TestManager(t *testing.T) {
 		Resync:       time.Hour,
 		InformerFunc: fakeInformer,
 	}
-	m, err := NewManager(config, options)
+	m, err := NewManager(config, nil, options)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}

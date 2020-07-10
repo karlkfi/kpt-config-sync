@@ -4,26 +4,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/google/nomos/pkg/watch"
 	"k8s.io/client-go/util/workqueue"
 )
 
-// GVKNN adds Version to core.ID to make it suitable for getting an object from
-// a cluster into an *unstructured.Unstructured.
-//
-// We have logic to handle if the underlying work queue is shut down, but we
-// don't expect we'll need it.
-type GVKNN struct {
-	core.ID
-	Version string
-}
-
-// GroupVersionKind returns the GVK contained in this GVKNN.
-func (gvknn GVKNN) GroupVersionKind() schema.GroupVersionKind {
-	return gvknn.GroupKind.WithVersion(gvknn.Version)
-}
+// GVKNN is the same type as defined in watch.GVKNN
+type GVKNN = watch.GVKNN
 
 // queue is a wrapper around workqueue.DelayingInterface for use with declared
 // resources. Only deduplicates work items by GVKNN.

@@ -6,6 +6,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // ID uniquely identifies a resource on an API Server.
@@ -34,4 +36,15 @@ func IDOfRuntime(o runtime.Object) (ID, error) {
 		return ID{}, err
 	}
 	return IDOf(obj), nil
+}
+
+// IDOfUnstructured returns the ID of an unstructured object
+func IDOfUnstructured(u unstructured.Unstructured) ID {
+	return ID{
+		GroupKind: u.GroupVersionKind().GroupKind(),
+		ObjectKey: client.ObjectKey{
+			Name:      u.GetName(),
+			Namespace: u.GetNamespace(),
+		},
+	}
 }

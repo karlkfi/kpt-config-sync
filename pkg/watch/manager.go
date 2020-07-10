@@ -36,6 +36,9 @@ type Manager struct {
 
 	// createInformerFunc is the function to create an Informer.
 	createInformerFunc createInformerFunc
+
+	// queue is the work queue for remediator.
+	queue queue
 }
 
 type mapEntry struct {
@@ -72,7 +75,7 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(cfg *rest.Config, options *Options) (*Manager, error) {
+func NewManager(cfg *rest.Config, queue queue, options *Options) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -88,6 +91,7 @@ func NewManager(cfg *rest.Config, options *Options) (*Manager, error) {
 		resync:             options.Resync,
 		createInformerFunc: options.InformerFunc,
 		mapper:             options.Mapper,
+		queue:              queue,
 	}, nil
 }
 
@@ -133,7 +137,15 @@ func (m *Manager) startInformer(gvk schema.GroupVersionKind) error {
 		// The informer is already started
 		return nil
 	}
-	entry, err := m.createInformerFunc(gvk, m.mapper, m.cfg, m.resync)
+	opts := informerOptions{
+		gvk:       gvk,
+		mapper:    m.mapper,
+		config:    m.cfg,
+		resync:    m.resync,
+		resources: m.resources,
+		queue:     m.queue,
+	}
+	entry, err := m.createInformerFunc(opts)
 	if err != nil {
 		return err
 	}
