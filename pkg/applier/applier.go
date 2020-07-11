@@ -3,11 +3,11 @@ package applier
 import (
 	"context"
 
+	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
@@ -29,20 +29,22 @@ type Applier struct {
 	// cachedResources to compare the previous resource (actual) with the new parsed ones (declared)
 	// and get the diff.
 	cachedResources map[core.ID]ast.FileObject
+	// reader reads and lists the resources from API server.
+	reader client.Reader
 }
 
 // New initializes an Applier component.
-func New(applier syncerreconcile.Applier) *Applier {
-	return &Applier{applier: applier, cachedResources: make(map[core.ID]ast.FileObject)}
+func New(reader client.Reader, applier syncerreconcile.Applier) *Applier {
+	return &Applier{
+		reader: reader, applier: applier, cachedResources: make(map[core.ID]ast.FileObject)}
 }
 
 // Apply iterates all the resources in a cluster and syncs the resource with its git repo state.
 func (a *Applier) Apply(ctx context.Context, declaredResources []ast.FileObject) error {
-	// TODO: For the very first run, the cachedResources would be empty and couldn't reflect
-	// the resource state. Thus, it should be built from the API server before comparing with
-	// the declared resources.
+	// The cachedResources is empty at the very first apply run. This sync builds up cache
+	// from the API server to reflect the resource "previous" state.
 	if len(a.cachedResources) == 0 {
-		if err := a.sync(); err != nil {
+		if err := a.sync(ctx); err != nil {
 			return errors.Wrap(err, "failed to sync the cachedResources from API server")
 		}
 	}
@@ -135,21 +137,41 @@ func (a *Applier) diff(declared ast.FileObject) (*differ.Diff, status.Error) {
 	if err != nil {
 		return &differ.Diff{}, syntax.ObjectParseError(declared, err)
 	}
-	uid := core.IDOf(decl)
+	coreID := core.IDOf(decl)
 	var actual *unstructured.Unstructured
-	if cached, ok := a.cachedResources[uid]; ok {
+	if cached, ok := a.cachedResources[coreID]; ok {
 		actual, err = syncerreconcile.AsUnstructured(cached.Object)
 		if err != nil {
 			return &differ.Diff{}, syntax.ObjectParseError(cached, err)
 		}
 	}
 	return &differ.Diff{
-		Name:     uid.String(),
+		Name:     coreID.String(),
 		Actual:   actual,
 		Declared: decl,
 	}, nil
 }
 
 // sync pulls the stored resources from the API server and builds up the cachedResources.
-// TODO
-func (a *Applier) sync() error { return nil }
+func (a *Applier) sync(ctx context.Context) error {
+	if a.cachedResources == nil || len(a.cachedResources) > 0 {
+		glog.V(4).Infof("reset applier's cache to sync with API server")
+		a.cachedResources = make(map[core.ID]ast.FileObject)
+	}
+	resources := &unstructured.UnstructuredList{}
+	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
+	if err := a.reader.List(ctx, resources,
+		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}); err != nil {
+		return status.APIServerError(err, "failed to list resources")
+	}
+	var errs status.MultiError
+	for _, res := range resources.Items {
+		obj := ast.ParseFileObject(res.DeepCopyObject().(core.Object))
+		if coreID, err := core.IDOfRuntime(obj); err != nil {
+			errs = status.Append(errs, err)
+		} else {
+			a.cachedResources[coreID] = *obj
+		}
+	}
+	return errs
+}
