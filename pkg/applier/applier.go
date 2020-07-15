@@ -31,12 +31,32 @@ type Applier struct {
 	cachedResources map[core.ID]ast.FileObject
 	// reader reads and lists the resources from API server.
 	reader client.Reader
+	// listOptions defines the resource filtering condition for different appliers initialized
+	// by root reconcile process or namespace reconcile process.
+	listOptions []client.ListOption
 }
 
-// New initializes an Applier component.
-func New(reader client.Reader, applier syncerreconcile.Applier) *Applier {
+// NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
+// the API server.
+func NewNamespaceApplier(reader client.Reader, applier syncerreconcile.Applier,
+	namespace string) *Applier {
+	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
+	opts := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
 	return &Applier{
-		reader: reader, applier: applier, cachedResources: make(map[core.ID]ast.FileObject)}
+		listOptions: opts, reader: reader, applier: applier,
+		cachedResources: make(map[core.ID]ast.FileObject)}
+}
+
+// NewRootApplier initializes an applier that can fetch all resources from the API server.
+func NewRootApplier(reader client.Reader, applier syncerreconcile.Applier) *Applier {
+	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
+	opts := []client.ListOption{
+		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
+	return &Applier{
+		listOptions: opts, reader: reader, applier: applier,
+		cachedResources: make(map[core.ID]ast.FileObject)}
 }
 
 // Apply iterates all the resources in a cluster and syncs the resource with its git repo state.
@@ -159,9 +179,7 @@ func (a *Applier) sync(ctx context.Context) error {
 		a.cachedResources = make(map[core.ID]ast.FileObject)
 	}
 	resources := &unstructured.UnstructuredList{}
-	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
-	if err := a.reader.List(ctx, resources,
-		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}); err != nil {
+	if err := a.reader.List(ctx, resources, a.listOptions...); err != nil {
 		return status.APIServerError(err, "failed to list resources")
 	}
 	var errs status.MultiError

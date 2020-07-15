@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,14 +60,18 @@ func TestApply(t *testing.T) {
 			name: "No-Op - if the resource has the configManagement disabled.",
 			declaredResources: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled),
+				fake.Namespace("namespace/" + testNs2),
 			},
-			actualResources: []ast.FileObject{},
-			expectedActions: []Event{},
+			actualResources: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
+			},
+			// testNs1 is not touched.
+			expectedActions: []Event{{"Update", testNs2}},
 		},
 		{
 			name: "Update Test1 - if the resource is previously cached.",
 			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			actualResources: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
@@ -75,27 +81,31 @@ func TestApply(t *testing.T) {
 		{
 			name: "Delete Test2 - if the cached resource is not in the upcoming resource",
 			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			actualResources: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{{"Delete", testNs2}},
+			expectedActions: []Event{
+				{"Update", testNs1},
+				{"Delete", testNs2}},
 		},
 	}
 	for _, test := range cases {
 		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
 		var items []unstructured.Unstructured
-		fakeReader := &FakeReader{listResource: unstructured.UnstructuredList{Items: items}}
-		a := New(fakeReader, clientApplier)
+		fakeReader := &FakeReader{
+			listResource:       unstructured.UnstructuredList{Items: items},
+			ExpectedToBeCalled: false}
+		a := NewRootApplier(fakeReader, clientApplier)
 		// Propagate the actual resource to the cache.
 		for _, actual := range test.actualResources {
 			a.cachedResources[core.IDOf(actual)] = actual
 		}
 		// Verify.
 		if err := a.Apply(context.Background(), test.declaredResources); err != nil {
-			t.Errorf("test %q failed, unable to prune: %v", test.name, err)
+			t.Errorf("test %q failed: %v", test.name, err)
 		}
 
 		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
@@ -139,7 +149,7 @@ func TestApplyFirstRun(t *testing.T) {
 		{
 			name: "Update Test1 - if the declared resource is in API server.",
 			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			resourcesStoredInAPIServer: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
@@ -149,7 +159,7 @@ func TestApplyFirstRun(t *testing.T) {
 		{
 			name: "Delete Test2 - if the resource in API server no longer has upcoming resource",
 			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			resourcesStoredInAPIServer: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
@@ -168,10 +178,10 @@ func TestApplyFirstRun(t *testing.T) {
 		fakeReader := &FakeReader{
 			listResource:       unstructured.UnstructuredList{Items: items},
 			ExpectedToBeCalled: true}
-		a := New(fakeReader, clientApplier)
+		a := NewRootApplier(fakeReader, clientApplier)
 		// Verify.
 		if err := a.Apply(context.Background(), test.declaredResources); err != nil {
-			t.Errorf("test %q failed, unable to prune: %v", test.name, err)
+			t.Errorf("test %q failed: %v", test.name, err)
 		}
 
 		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
@@ -180,6 +190,64 @@ func TestApplyFirstRun(t *testing.T) {
 		if !reflect.DeepEqual(clientApplier.ExpectActions, clientApplier.ActualActions) {
 			t.Errorf("test %q failed, was expected to happen %v, \nactual happen %v",
 				test.name, clientApplier.ExpectActions, clientApplier.ActualActions)
+		}
+	}
+}
+
+// TestNewRootApplierSync verifies the root applier can correctly sync resource from API server
+func TestNewRootApplierSync(t *testing.T) {
+	test1 := fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled)
+	items := []unstructured.Unstructured{*unstructuredFn(test1.Object)}
+	fakeReader := &FakeReader{
+		listResource:       unstructured.UnstructuredList{Items: items},
+		ExpectedToBeCalled: true}
+	a := NewRootApplier(fakeReader, nil)
+	// Verify.
+	err := a.sync(context.Background())
+	if err != nil {
+		t.Errorf("unexpected error in sync %v", err)
+	}
+	expected := []client.ListOption{client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
+	if !reflect.DeepEqual(a.listOptions, expected) {
+		t.Errorf("incorrect ListOptions value for rootApplier.\n "+
+			"was expecting %v\nactual got %v", expected, a.listOptions)
+	}
+	if val, ok := a.cachedResources[core.IDOf(test1)]; !ok {
+		t.Errorf("could not fetch resource from API server")
+	} else {
+		if !cmp.Equal(val.Object, unstructuredFn(test1.Object)) {
+			t.Errorf("resource is not properly synced: %v\n",
+				cmp.Diff(val.Object, unstructuredFn(test1.Object)))
+		}
+	}
+}
+
+// TestNewNamespaceApplierSync verifies the namespace applier can correctly sync resource
+// from API server.
+func TestNewNamespaceApplierSync(t *testing.T) {
+	test1 := fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled)
+	items := []unstructured.Unstructured{*unstructuredFn(test1.Object)}
+	fakeReader := &FakeReader{
+		listResource:       unstructured.UnstructuredList{Items: items},
+		ExpectedToBeCalled: true}
+	a := NewNamespaceApplier(fakeReader, nil, testNs1)
+	// Verify.
+	err := a.sync(context.Background())
+	if err != nil {
+		t.Errorf("unexpected error in sync %v", err)
+	}
+	expected := []client.ListOption{
+		client.InNamespace(testNs1), client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
+	if !reflect.DeepEqual(a.listOptions, expected) {
+		t.Errorf("incorrect ListOptions value for namespace Applier.\n "+
+			"was expecting %v\nactual got %v", expected, a.listOptions)
+	}
+	if val, ok := a.cachedResources[core.IDOf(test1)]; !ok {
+		t.Errorf("could not fetch resource from API server")
+	} else {
+		if !cmp.Equal(val.Object, unstructuredFn(test1.Object)) {
+			t.Errorf("resource is not properly synced: %v\n",
+				cmp.Diff(val.Object, unstructuredFn(test1.Object)))
 		}
 	}
 }
@@ -231,7 +299,7 @@ func (f *FakeReader) Get(ctx context.Context, key client.ObjectKey, obj runtime.
 }
 
 func (f *FakeReader) List(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-	if f.ExpectedToBeCalled && !f.ExpectedToBeCalled {
+	if !f.ExpectedToBeCalled {
 		return fmt.Errorf("applier.reader.List shall not be called")
 	}
 	u, _ := obj.(*unstructured.UnstructuredList)
