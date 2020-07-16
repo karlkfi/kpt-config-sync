@@ -48,7 +48,7 @@ func deployment(namespace, name string, containerName string, opts ...core.MetaM
 	return result
 }
 
-func deploymentWithEnvFrom(namespace, name, containerName string, opts ...core.MetaMutator) *appsv1.Deployment {
+func rootDeploymentWithEnvFrom(namespace, name, containerName string, opts ...core.MetaMutator) *appsv1.Deployment {
 	result := fake.DeploymentObject(opts...)
 	result.Namespace = namespace
 	result.Name = name
@@ -105,7 +105,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 			wantConfigMap: configMapWithData(
 				rootsyncReqNamespace,
 				rootsyncName,
-				configMapData(branch, rootsyncRepo),
+				gitSyncData(branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 		},
 		{
@@ -119,13 +119,13 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 			actualConfigMap: configMapWithData(
 				rootsyncReqNamespace,
 				rootsyncName,
-				configMapData(branch, rootsyncRepo),
+				gitSyncData(branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
 			),
 			wantConfigMap: configMapWithData(
 				rootsyncReqNamespace,
 				rootsyncName,
-				configMapData(updatedBranch, rootsyncRepo),
+				gitSyncData(updatedBranch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 		},
 	}
@@ -159,7 +159,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				rootsyncReqNamespace,
 				rootSyncReconcilerName,
 				"git-sync"),
-			wantDeployment: deploymentWithEnvFrom(
+			wantDeployment: rootDeploymentWithEnvFrom(
 				rootsyncReqNamespace,
 				rootSyncReconcilerName,
 				"git-sync",

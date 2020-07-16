@@ -6,8 +6,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-// RepoSyncReconciler reconciles a RepoSync object
+// RepoSyncReconciler reconciles a RepoSync object.
 type RepoSyncReconciler struct {
 	client client.Client
 	log    logr.Logger
@@ -46,18 +46,15 @@ func (r *RepoSyncReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var op controllerutil.OperationResult
-	var err error
-
-	if op, err = r.upsertConfigMap(ctx, req, repoSync); err != nil {
+	// Reconcile git-importer pod's configmaps.
+	if err := r.upsertConfigMap(ctx, req, repoSync); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
-	log.Info("ConfigMap successfully reconciled", executedOperation, op)
 
-	if op, err = r.upsertDeployment(ctx, req, repoSync); err != nil {
+	// Reconcile git-importer pod deployment.
+	if err := r.upsertDeployment(ctx, req, repoSync); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
-	log.Info("Deployment successfully reconciled", executedOperation, op)
 
 	return ctrl.Result{}, nil
 }
@@ -71,7 +68,15 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) (controllerutil.OperationResult, error) {
+// nsReconcilerConfigMapSuffix contains configmap suffixes, which are used to create or update
+// various configmaps required by containers present in Namespace Reconciler pod.
+var nsReconcilerConfigMapSuffix = []string{
+	importer,     // Used by importer container.
+	sourceFormat, // Used by importer container.
+	gitSync,      // Used by git-sync container.
+}
+
+func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) error {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
 	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
@@ -80,20 +85,25 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Reque
 	// object does not exist, Create() will be called. If it does exist, Update()
 	// will be called. Just before calling either Create() or Update(), the mutate
 	// callback will be called.
-	var childCM corev1.ConfigMap
-	childCM.Name = repoSyncReconcilerPrefix + req.Namespace
-	childCM.Namespace = v1.NSConfigManagementSystem
-	op, err := ctrl.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-		mutateRepoSyncConfigMap(repoSync, &childCM)
-		return nil
-	})
-	if err != nil {
-		return "", err
+
+	// CreateOrUpdate configmaps for Namespace Reconciler.
+	for _, cm := range nsReconcilerConfigMapSuffix {
+		var childCM corev1.ConfigMap
+		childCM.Name = buildRepoSyncName(req.Namespace, cm)
+		childCM.Namespace = v1.NSConfigManagementSystem
+		op, err := ctrl.CreateOrUpdate(ctx, r.client, &childCM, func() error {
+			return mutateRepoSyncConfigMap(repoSync, &childCM)
+		})
+		if err != nil {
+			return err
+		}
+		// TODO Restart deployment when a configmap is updated.
+		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
 	}
-	return op, nil
+	return nil
 }
 
-func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) {
+func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -102,28 +112,41 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) {
 		rs.UID,
 	)
 
-	cm.Data = configMapData(rs.Spec.Revision, rs.Spec.Repo)
+	switch cm.Name {
+	case buildRepoSyncName(rs.Namespace, importer):
+		cm.Data = importerData(rs.Spec.Git.Dir)
+	case buildRepoSyncName(rs.Namespace, sourceFormat):
+		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
+	case buildRepoSyncName(rs.Namespace, gitSync):
+		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
+	default:
+		return errors.Errorf("unsupported ConfigMap: %q", cm.Name)
+	}
+	return nil
 }
 
-func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) (controllerutil.OperationResult, error) {
+// deploymentConfig is defined in manifests/templates/reconciler-manager/manifest.yaml.
+var deploymentConfig = "deployment.yaml"
+
+func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) error {
 	var childDep appsv1.Deployment
-	if err := parseDeployment(&childDep); err != nil {
-		return "", errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
+	// Parses the deployment.yaml mounted as configmap in Reconciler Managers deployment.
+	if err := parseDeployment(deploymentConfig, &childDep); err != nil {
+		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
-	childDep.Name = repoSyncReconcilerPrefix + req.Namespace
+	childDep.Name = buildRepoSyncName(req.Namespace)
 	childDep.Namespace = v1.NSConfigManagementSystem
 	op, err := ctrl.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		mutateRepoSyncDeployment(repoSync, &childDep)
-		return nil
+		return mutateRepoSyncDeployment(repoSync, &childDep)
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
-	r.log.Info("Config for the deployment", "Environment Variable", childDep.Spec.Template.Spec.Containers[0].EnvFrom)
-	return op, nil
+	r.log.Info("Deployment successfully reconciled", executedOperation, op)
+	return nil
 }
 
-func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment) {
+func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
 	de.OwnerReferences = ownerReference(
@@ -133,15 +156,34 @@ func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment) {
 	)
 
 	templateSpec := &de.Spec.Template.Spec
-	// TODO Update upon addition of additional containers.
-	container := &templateSpec.Containers[0]
-	container.EnvFrom = []corev1.EnvFromSource{
-		{
-			ConfigMapRef: &corev1.ConfigMapEnvSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: repoSyncReconcilerPrefix + rs.Namespace,
-				},
-			},
-		},
+
+	var updatedContainers []corev1.Container
+	// Mutate spec.Containers to update name and configmap references. The names
+	// of containers are updated in the format repoSyncReconcilerPrefix + namespace +
+	// containerName e.g. ns-reconciler-bookinfo-importer.
+	//
+	// In addition to updating the names for each Namespace Reconciler, configmap
+	// references are updated corresponsing to the Namespace Reconciler.
+	for _, container := range templateSpec.Containers {
+		switch container.Name {
+		case importer:
+			configmapRef := make(map[string]*bool)
+			container.Name = buildRepoSyncName(rs.Namespace, importer)
+			configmapRef[buildRepoSyncName(rs.Namespace, importer)] = pointer.BoolPtr(false)
+			configmapRef[buildRepoSyncName(rs.Namespace, sourceFormat)] = pointer.BoolPtr(true)
+			container.EnvFrom = envFromSources(configmapRef)
+		case gitSync:
+			configmapRef := make(map[string]*bool)
+			container.Name = buildRepoSyncName(rs.Namespace, gitSync)
+			configmapRef[buildRepoSyncName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
+			container.EnvFrom = envFromSources(configmapRef)
+		case fsWatcher:
+			container.Name = buildRepoSyncName(rs.Namespace, fsWatcher)
+		default:
+			return errors.Errorf("unsupported Container: %q", container.Name)
+		}
+		updatedContainers = append(updatedContainers, container)
 	}
+	templateSpec.Containers = updatedContainers
+	return nil
 }

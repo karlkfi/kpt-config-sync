@@ -1,5 +1,5 @@
-# TODO Remove once RootSync is implemented.
-# Namespace 'bookinfo' will be synced from Root Repo by RootSync reconciler.
+# TODO b/159065780 Remove once integrated with Operator actuation, since
+# operator will create the namespace config-management-system.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -7,8 +7,8 @@ metadata:
     configmanagement.gke.io/system: "true"
   name: bookinfo
 ---
-# TODO Remove once integrated with Operator actuation, since operator will create
-# the namespace config-management-system
+# TODO b/159065780 Remove once integrated with Operator actuation, since
+# operator will create the namespace config-management-system.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -25,7 +25,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: git-sync
+  name: importer
   namespace: config-management-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -109,16 +109,26 @@ spec:
     port: 8675
     targetPort: metrics-port
 ---
+# TODO b/159065780 Remove once integrated with Operator actuation, since
+# operator will create the namespace config-management-system.
+apiVersion: v1
+data:
+  CLUSTER_NAME: gke-cluster
+kind: ConfigMap
+metadata:
+  name: cluster-name
+  namespace: config-management-system
+---
 apiVersion: v1
 data:
   deployment.yaml: |
    apiVersion: apps/v1
    kind: Deployment
    metadata:
-     name: git-sync
+     name: git-importer
      namespace: config-management-system
      labels:
-       app: git-sync
+       app: git-importer
        configmanagement.gke.io/system: "true"
    spec:
      minReadySeconds: 10
@@ -127,34 +137,77 @@ data:
        type: Recreate
      selector:
        matchLabels:
-         app: git-sync
+         app: git-importer
      template:
        metadata:
          labels:
-           app: git-sync
+           app: git-importer
        spec:
-         serviceAccountName: git-sync
+         serviceAccountName: importer
          containers:
+         - name: importer
+           image: gcr.io/config-management-release/nomos:latest
+           command: ["git-importer"]
+           args:
+           - "--v=0"
+           ports:
+             - containerPort: 8675
+               name: metrics-port
+           volumeMounts:
+             - name: repo
+               mountPath: /repo
+               readOnly: true
+           envFrom:
+             - configMapRef:
+                 name: importer
+             - configMapRef:
+                 name: cluster-name
+                 optional: true  # If cluster naming is not used, this config map will be missing.
+             - configMapRef:
+                 name: source-format
+                 optional: true
+           resources:
+             requests:
+               cpu: "150m"
+               memory: "100Mi"
+         - name: fs-watcher
+           image: gcr.io/config-management-release/nomos:latest
+           command: ["git-importer"]
+           args:
+           - "--v=0"
+           - "--watch-directory=/repo"
+           volumeMounts:
+             - name: repo
+               mountPath: /repo
+               readOnly: true
+           envFrom:
+             - configMapRef:
+                 name: importer-fs-watcher # allow user override for WATCH_PERIOD
+                 optional: true
+           resources:
+             requests:
+               cpu: "150m"
+               memory: "100Mi"
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64
            args: ["--root=/repo", "--dest=rev", "--max-sync-failures=30", "--v=5"]
-           #volumeMounts:
-           #- name: repo
-           #  mountPath: /repo
-           #- name: git-creds
-           #  mountPath: /etc/git-secret
-           #  readOnly: true
+           volumeMounts:
+           - name: repo
+             mountPath: /repo
+           - name: git-creds
+             mountPath: /etc/git-secret
+             readOnly: true
            securityContext:
              runAsUser: 65533
            envFrom:
            - configMapRef:
                name: git-sync
-         #volumes:
-         #- name: repo
-         #- name: git-creds
-         #  secret:
-         #    secretName: git-creds
-         #    defaultMode: 288
+         volumes:
+         - name: repo
+         - name: git-creds
+           secret:
+             secretName: git-creds
+             defaultMode: 288
          securityContext:
            fsGroup: 65533
 kind: ConfigMap

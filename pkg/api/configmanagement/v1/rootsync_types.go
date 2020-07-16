@@ -13,6 +13,17 @@ import (
 type RootSyncSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 
+	// SourceFormat specifies how the repository is formatted.
+	// See documentation for specifics of what these options do.
+	//
+	// Must be one of hierarchy, unstructured. Optional. Set to
+	// hierarchy if not specified.
+	//
+	// The validation of this is case-sensitive.
+	// +kubebuilder:validation:Pattern=^(hierarchy|unstructured|)$
+	// +optional
+	SourceFormat string `json:"sourceFormat,omitempty"`
+
 	// Git contains configuration specific to importing policies from a Git repo.
 	// +optional
 	Git `json:"git,omitempty"`

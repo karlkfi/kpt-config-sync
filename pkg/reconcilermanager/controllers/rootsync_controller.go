@@ -101,12 +101,12 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) {
 		rs.UID,
 	)
 
-	cm.Data = configMapData(rs.Spec.Revision, rs.Spec.Repo)
+	cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
 }
 
 func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, rootSync v1.RootSync) (controllerutil.OperationResult, error) {
 	var childDep appsv1.Deployment
-	if err := parseDeployment(&childDep); err != nil {
+	if err := parseDeployment(deploymentConfig, &childDep); err != nil {
 		return "", errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
 	childDep.Name = rootSyncReconcilerName
