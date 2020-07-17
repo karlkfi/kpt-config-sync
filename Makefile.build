@@ -109,7 +109,7 @@ release-commit:
 		IMAGE_TAG=$(COMMIT_SHA) 
 	gsutil cp \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://stolos-dev/config-sync-manifest/commit/$(COMMIT_SHA)/config-sync-manifest.yaml
+		gs://stolos-dev/config-sync/commit/$(COMMIT_SHA)/config-sync-manifest.yaml
 
 
 .PHONY: tag-version
@@ -136,7 +136,7 @@ release-tagged: tag-version tag-upload
 		IMAGE_TAG=$(GIT_TAG) 
 	gsutil cp \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://config-management-release/config-sync-manifest/tag/$(GIT_TAG)/config-sync-manifest.yaml
+		gs://config-management-release/config-sync/tag/$(GIT_TAG)/config-sync-manifest.yaml
 
 .PHONY: release-user
 release-user:
@@ -152,7 +152,7 @@ release-user:
 		IMAGE_TAG="latest"
 	gsutil cp \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://stolos-dev/config-sync-manifest/user/$(USER)/$(BRANCH_OR_SHA)/config-sync-manifest.yaml
+		gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA)/config-sync-manifest.yaml
 
 .PHONY: manifest
 manifest: build-manifest upload-manifest
