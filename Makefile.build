@@ -106,10 +106,12 @@ release-commit:
 	$(MAKE) build-manifest \
 		VERSION=$(VERSION) \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(COMMIT_SHA) 
-	gsutil cp \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://stolos-dev/config-sync/commit/$(COMMIT_SHA)/config-sync-manifest.yaml
+		IMAGE_TAG=$(COMMIT_SHA) \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+
+	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/commit/$(COMMIT_SHA))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
 
 
 .PHONY: tag-version
@@ -133,10 +135,12 @@ release-tagged: tag-version tag-upload
 	$(MAKE) build-manifest \
 		VERSION=$(GIT_TAG) \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(GIT_TAG) 
-	gsutil cp \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://config-management-release/config-sync/tag/$(GIT_TAG)/config-sync-manifest.yaml
+		IMAGE_TAG=$(GIT_TAG) \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+
+	$(eval RELEASE_PATH = gs://config-management-release/config-sync/tag/$(GIT_TAG))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
 
 .PHONY: release-user
 release-user:
@@ -149,10 +153,32 @@ release-user:
 	$(MAKE) build-manifest \
 		VERSION="$(USER)/$(BRANCH_OR_SHA)" \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG="latest"
+		IMAGE_TAG="latest" \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+
+	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
+
+PHONY: upload-manifest
+upload-manifest:
+	@$(eval MANIFEST_DESTINATION = $(RELEASE_PATH)/config-sync-manifest.yaml)
 	gsutil cp \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA)/config-sync-manifest.yaml
+		$(MANIFEST_DESTINATION)
+	@echo "+++ CONFIG-SYNC-MANIFEST.YAML UPLOADED TO: $(MANIFEST_DESTINATION)"
+
+.PHONY: upload-cli
+upload-cli:
+	gsutil cp \
+		$(BIN_DIR)/linux_amd64/nomos \
+		$(RELEASE_PATH)/linux_amd64/nomos
+	gsutil cp \
+		$(BIN_DIR)/darwin_amd64/nomos \
+		$(RELEASE_PATH)/darwin_amd64/nomos
+	gsutil cp \
+		$(BIN_DIR)/windows_amd64/nomos.exe \
+		$(RELEASE_PATH)/windows_amd64/nomos.exe
 
 .PHONY: manifest
 manifest: build-manifest upload-manifest
