@@ -1,20 +1,13 @@
 package watch
 
 import (
-	"time"
-
+	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/parse/declaredresources"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
 )
-
-// defaultResyncTime has the same value as in controller-runtime
-var defaultResyncTime = 10 * time.Hour
 
 // Manager accepts new resource lists that are parsed from Git and then
 // updates declared resources and get GVKs.
@@ -28,39 +21,26 @@ type Manager struct {
 	// resources is the declared resources that parsed from Git.
 	resources *declaredresources.DeclaredResources
 
-	// Informers maps GVKs to their associated informers.
-	informers map[schema.GroupVersionKind]mapEntry
-
-	// resync is the time that the informers are resynced.
-	resync time.Duration
-
-	// createInformerFunc is the function to create an Informer.
-	createInformerFunc createInformerFunc
-
 	// queue is the work queue for remediator.
 	queue queue
-}
 
-type mapEntry struct {
-	informer cache.SharedIndexInformer
+	// watcherMap maps GVKs to their associated watchers
+	watcherMap map[schema.GroupVersionKind]Runnable
 
-	// stopCh is the stop channel associated with the informer
-	stopCh chan struct{}
+	// createWatcherFunc is the function to create a watcher.
+	createWatcherFunc createWatcherFunc
 }
 
 // Options contains options for creating a watch manager.
 type Options struct {
 	Mapper meta.RESTMapper
-	// Resync is the frequency that informers are resynced.
-	// It will list all resources and rehydrate the informer's store.
-	Resync       time.Duration
-	InformerFunc createInformerFunc
+
+	watcherFunc createWatcherFunc
 }
 
 // DefaultOptions return the default options:
-// - set up resync time to 1 hour
 // - create discovery RESTmapper from the passed rest.Config
-// - use createInformer to create informers
+// - use createWatcher to create watchers
 func DefaultOptions(cfg *rest.Config) (*Options, error) {
 	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
 	if err != nil {
@@ -68,9 +48,8 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 	}
 
 	return &Options{
-		Mapper:       mapper,
-		Resync:       defaultResyncTime,
-		InformerFunc: createInformer,
+		Mapper:      mapper,
+		watcherFunc: createWatcher,
 	}, nil
 }
 
@@ -85,44 +64,44 @@ func NewManager(cfg *rest.Config, queue queue, options *Options) (*Manager, erro
 	}
 
 	return &Manager{
-		cfg:                cfg,
-		resources:          declaredresources.NewDeclaredResources(),
-		informers:          make(map[schema.GroupVersionKind]mapEntry),
-		resync:             options.Resync,
-		createInformerFunc: options.InformerFunc,
-		mapper:             options.Mapper,
-		queue:              queue,
+		cfg:               cfg,
+		resources:         declaredresources.NewDeclaredResources(),
+		watcherMap:        make(map[schema.GroupVersionKind]Runnable),
+		createWatcherFunc: options.watcherFunc,
+		mapper:            options.Mapper,
+		queue:             queue,
 	}, nil
 }
 
 // Update accepts new resource list and takes following actions:
-// - start informers for any GroupKind that is present in the new
+// - start watchers for any GroupKind that is present in the new
 //   resource list, but weren't present in previous resource list.
-// - stop informers for any GroupKind that is not present
+// - stop watchers for any GroupKind that is not present
 //   in the new resource list
 func (m *Manager) Update(objects []core.Object) error {
 	err := m.resources.UpdateDecls(objects)
 	if err != nil {
 		return err
 	}
+	// TODO(jingfangliu): Change this to GVKSet
 	gkSet := m.resources.GetGKSet()
 
-	// Stop obsolete Informers
-	for gvk := range m.informers {
+	// Stop obsolete watchers
+	for gvk := range m.watcherMap {
 		if _, found := gkSet[gvk.GroupKind()]; !found {
-			m.stopInformer(gvk)
+			m.stopWatcher(gvk)
 		} else {
 			// We can remove this GK from gkSet because we know
-			// it is present in informers so we won't need to start a new informer for it below.
+			// it is present in watcherMap so we won't need to start a new watcher for it below.
 			delete(gkSet, gvk.GroupKind())
 		}
 	}
 
-	// Start new Informers
+	// Start new watchers
 	for gk, version := range gkSet {
 		gvk := gk.WithVersion(version)
-		if _, found := m.informers[gvk]; !found {
-			if err := m.startInformer(gvk); err != nil {
+		if _, found := m.watcherMap[gvk]; !found {
+			if err := m.startWatcher(gvk); err != nil {
 				return err
 			}
 		}
@@ -130,38 +109,39 @@ func (m *Manager) Update(objects []core.Object) error {
 	return nil
 }
 
-// startInformer starts a shared informer for a GVK
-func (m *Manager) startInformer(gvk schema.GroupVersionKind) error {
-	_, found := m.informers[gvk]
+// startWatcher starts a watcher for a GVK
+func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
+	_, found := m.watcherMap[gvk]
 	if found {
-		// The informer is already started
+		// The watcher is already started.
 		return nil
 	}
-	opts := informerOptions{
+	opts := watcherOptions{
 		gvk:       gvk,
 		mapper:    m.mapper,
 		config:    m.cfg,
-		resync:    m.resync,
 		resources: m.resources,
 		queue:     m.queue,
 	}
-	entry, err := m.createInformerFunc(opts)
+	w, err := m.createWatcherFunc(opts)
 	if err != nil {
 		return err
 	}
-	m.informers[gvk] = entry
+	go w.Run()
+	m.watcherMap[gvk] = w
+
 	return nil
 }
 
-// stopInformer stops a shared informer for a GVK
-func (m *Manager) stopInformer(gvk schema.GroupVersionKind) {
-	entry, found := m.informers[gvk]
+// stopWatcher stops a watcher for a GVK
+func (m *Manager) stopWatcher(gvk schema.GroupVersionKind) {
+	w, found := m.watcherMap[gvk]
 	if !found {
-		// The informer is already stopped
+		// The watcher is already stopped.
 		return
 	}
 
-	// The informer will be stopped when stopCh is closed.
-	close(entry.stopCh)
-	delete(m.informers, gvk)
+	// Stop the watcher.
+	w.Stop()
+	delete(m.watcherMap, gvk)
 }

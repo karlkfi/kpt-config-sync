@@ -100,7 +100,7 @@ func (d Diff) Type() Type {
 			return NoOp
 		}
 
-		if managementEnabled(d.Actual) {
+		if ManagementEnabled(d.Actual) {
 			// There are Nomos annotations or labels on the resource.
 			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
 				isManageableSystemNamespace[d.Name] {

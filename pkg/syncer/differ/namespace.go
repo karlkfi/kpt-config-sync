@@ -66,7 +66,7 @@ func (d *NamespaceDiff) Type() Type {
 		}
 
 		// There are Nomos annotations or labels on the Namespace.
-		if managementEnabled(d.Actual) {
+		if ManagementEnabled(d.Actual) {
 			// This is a strange case to arrive at. A user would have to have a managed namespace,
 			// uninstall Nomos, remove the declaration of the namespace from the repo, then reinstall
 			// Nomos with the actual namespace still present and annotated from when it was managed. We

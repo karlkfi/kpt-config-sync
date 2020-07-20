@@ -6,9 +6,9 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 )
 
-// enableManaged returns true if the resource explicitly has management enabled on a resource
+// ManagementEnabled returns true if the resource explicitly has management enabled on a resource
 // on the API server.
-func managementEnabled(obj core.LabeledAndAnnotated) bool {
+func ManagementEnabled(obj core.LabeledAndAnnotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled
 }
 
