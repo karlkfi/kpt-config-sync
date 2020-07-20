@@ -43,7 +43,9 @@ func installGitServer(nt *NT) func() error {
 	}
 
 	return func() error {
-		took, err := Retry(60*time.Second, func() error {
+		// In CI, 2% of the time this takes longer than 60 seconds, so 120 seconds
+		// seems like a reasonable amount of time to wait before erroring out.
+		took, err := Retry(120*time.Second, func() error {
 			return nt.Validate(testGitServer, testGitNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 		})
@@ -180,7 +182,7 @@ func portForwardGitServer(nt *NT) int {
 	// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
 	// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
 	// re-initialize.
-	out, err = exec.Command("kubectl", "exec", "--kubeconfig", nt.KubeconfigPath(),
+	out, err = exec.Command("kubectl", "exec", "--kubeconfig", nt.kubeconfigPath,
 		"-n", testGitNamespace, podName, "--",
 		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false").Output()
 	if err != nil {
@@ -188,7 +190,7 @@ func portForwardGitServer(nt *NT) int {
 		nt.T.Fatalf("configuring bare repo to allow force push: %v", err)
 	}
 
-	return forwardToFreePort(nt.T, nt.KubeconfigPath(), podName)
+	return forwardToFreePort(nt.T, nt.kubeconfigPath, podName)
 }
 
 // forwardToPort forwards the given Pod in the git-server's Namespace to
@@ -217,7 +219,9 @@ func forwardToFreePort(t *testing.T, kcfg, pod string) int {
 	})
 
 	port := 0
-	took, err := Retry(time.Second*5, func() error {
+	// In CI, 2% of the time this takes longer than 5 seconds, so 10 seconds seems
+	// like a reasonable amount of time to wait.
+	took, err := Retry(time.Second*10, func() error {
 		s := stdout.String()
 		if !strings.Contains(s, "\n") {
 			return errors.New("nothing written to stdout for kubectl port-forward")
