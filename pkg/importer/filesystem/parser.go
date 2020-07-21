@@ -71,16 +71,11 @@ func (p *Parser) Parse(
 	p.errors = nil
 
 	flatRoot := p.readObjects(policyDir, files)
-	crds, err := customresources.GetCRDs(flatRoot.ClusterObjects)
-	p.errors = status.Append(p.errors, err)
 	if p.errors != nil {
 		return nil, p.errors
 	}
 
-	visitors := p.generateVisitors(flatRoot, crds)
-	if p.errors != nil {
-		return nil, p.errors
-	}
+	visitors := generateVisitors(flatRoot)
 	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs)
 
 	return fileObjects, p.errors
@@ -98,10 +93,7 @@ func (p *Parser) readObjects(root cmpath.Absolute, files []cmpath.Absolute) *ast
 }
 
 // generateVisitors creates the Visitors to use to hydrate and validate the root.
-func (p *Parser) generateVisitors(
-	flatRoot *ast.FlatRoot,
-	crds []*v1beta1.CustomResourceDefinition,
-) []ast.Visitor {
+func generateVisitors(flatRoot *ast.FlatRoot) []ast.Visitor {
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(flatRoot.SystemObjects),
 		tree.NewClusterBuilderVisitor(flatRoot.ClusterObjects),
@@ -229,13 +221,13 @@ func (p *Parser) readSystemResources(root cmpath.Absolute, files []cmpath.Absolu
 	return result
 }
 
-func (p *Parser) readNamespaceResources(root cmpath.Absolute, files []cmpath.Absolute, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+func (p *Parser) readNamespaceResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.NamespacesDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readClusterResources(root cmpath.Absolute, files []cmpath.Absolute, crds ...*v1beta1.CustomResourceDefinition) []ast.FileObject {
+func (p *Parser) readClusterResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
 	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.ClusterDir))
 	p.errors = status.Append(p.errors, errs)
 	return result

@@ -77,7 +77,7 @@ func (p *rawParser) Parse(
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
-func (p *rawParser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
+func (p *rawParser) ReadClusterRegistryResources(_ cmpath.Absolute, _ []cmpath.Absolute) []ast.FileObject {
 	return nil
 }
 
