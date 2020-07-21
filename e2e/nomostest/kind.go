@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e"
 	"k8s.io/client-go/rest"
@@ -45,11 +46,16 @@ func newKind(t *testing.T, name string, tmpDir string) (*rest.Config, string) {
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, kubeconfig)
 
+	start := time.Now()
+	t.Logf("started creating cluster at %s", start.Format(time.RFC3339))
 	err := createKindCluster(p, name, kcfgPath)
-
+	finish := time.Now()
 	if err != nil {
+		t.Logf("failed creating cluster at %s", finish.Format(time.RFC3339))
+		t.Logf("command took %v to fail", finish.Sub(start))
 		t.Fatalf("creating Kind cluster: %v", err)
 	}
+	t.Logf("finished creating cluster at %s", finish.Format(time.RFC3339))
 
 	// Register the cluster to be deleted at the end of the test.
 	t.Cleanup(func() {
