@@ -93,6 +93,21 @@ build-manifest: push-to-gcr-nomos gen-yaml-all
 		$(OUTPUT_DIR)/deployment \
 		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
 
+# build-manifest-e2e prepares a manifest called "defined-operator-bundle" that
+# contains the nomos resources required for e2e testing.  It replaces the now deleted
+# prepare-operator make target, taking advantage of the plumbing that target used.
+# TODO (b/161182417): The appending business here is only necessary because append-manifests.sh
+# is hard to use.  If improved, we could clean up this logic.
+.PHONY: build-manifest-e2e
+build-manifest-e2e: build-manifest
+	@touch ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	cat ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	scripts/append-manifests.sh \
+		e2e/raw-nomos/manifests \
+		${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml \
+		default-configmaps # only this single file (pattern match)
 
 .PHONY: release-commit
 release-commit:
@@ -179,9 +194,6 @@ upload-cli:
 	gsutil cp \
 		$(BIN_DIR)/windows_amd64/nomos.exe \
 		$(RELEASE_PATH)/windows_amd64/nomos.exe
-
-.PHONY: manifest
-manifest: build-manifest upload-manifest
 
 ###################################
 # E2E Git Server

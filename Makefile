@@ -160,7 +160,6 @@ include Makefile.docs
 include Makefile.e2e
 include Makefile.prow
 include Makefile.gen
-include Makefile.operator
 include Makefile.reconcilermanager
 
 # Redeploy a component without rerunning the installer.

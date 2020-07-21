@@ -15,7 +15,7 @@ E2E_TEST_IMAGE := gcr.io/$(GCP_PROJECT)/e2e-tests:$(E2E_VERSION)
 .PHONY: e2e-staging
 e2e-staging: \
 	$(OUTPUT_DIR) \
-	prepare-e2e-manifest \
+	build-manifest-e2e \
 	$(wildcard ./e2e/*)
 	@echo "+++ Creating staging directory for e2e tests"
 	@rm -rf $(E2E_DIR)
