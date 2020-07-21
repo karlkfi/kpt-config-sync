@@ -157,9 +157,10 @@ test-e2e-go-nobuild:
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
 
 # A temporary target just get things working on Prow.
+# When run with parallel=1, it almost always finishes in under 4 hours.
 # TODO(b/161793092): Will change rapidly until we get things working.
 test-e2e-go-nobuild-run-debug:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 240m --parallel 2
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 180m --parallel 2
 
 # The target to be run by Prow for e2e tests.
 test-e2e-go-ephemeral: __push-local-image

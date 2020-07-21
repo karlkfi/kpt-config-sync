@@ -2,6 +2,8 @@ package nomostest
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -34,6 +36,8 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
   endpoint = ["http://%s:%d"]`, registryPort, registryName, registryPort),
 			},
 		}),
+		// Retain nodes for debugging if cluster creation fails.
+		cluster.CreateWithRetain(true),
 	)
 }
 
@@ -49,15 +53,11 @@ func newKind(t *testing.T, name string, tmpDir string) (*rest.Config, string) {
 	start := time.Now()
 	t.Logf("started creating cluster at %s", start.Format(time.RFC3339))
 	err := createKindCluster(p, name, kcfgPath)
+	creationSuccessful := err == nil
 	finish := time.Now()
-	if err != nil {
-		t.Logf("failed creating cluster at %s", finish.Format(time.RFC3339))
-		t.Logf("command took %v to fail", finish.Sub(start))
-		t.Fatalf("creating Kind cluster: %v", err)
-	}
-	t.Logf("finished creating cluster at %s", finish.Format(time.RFC3339))
 
-	// Register the cluster to be deleted at the end of the test.
+	// Register the cluster to be deleted at the end of the test, even if cluster
+	// creation failed.
 	t.Cleanup(func() {
 		if t.Failed() && *e2e.Debug {
 			t.Errorf(`Conect to kind cluster:
@@ -66,6 +66,21 @@ kind export kubeconfig --name=%s`, name)
 kind delete cluster --name=%s`, name)
 			return
 		}
+
+		if !creationSuccessful {
+			// Since we have set retain=true, the cluster is still available even
+			// though creation did not execute successfully.
+			artifactsDir := os.Getenv("ARTIFACTS")
+			if artifactsDir == "" {
+				artifactsDir = filepath.Join(tmpDir, "artifacts")
+			}
+			t.Logf("exporting failed cluster logs to %s", artifactsDir)
+			err := exec.Command("kind", "export", "logs", "--name", name, artifactsDir).Run()
+			if err != nil {
+				t.Errorf("exporting kind logs: %v", err)
+			}
+		}
+
 		// If the test runner stops testing with a command like ^C, cleanup
 		// callbacks such as this are not executed.
 		err := p.Delete(name, kcfgPath)
@@ -73,6 +88,14 @@ kind delete cluster --name=%s`, name)
 			t.Errorf("deleting Kind cluster %q: %v", name, err)
 		}
 	})
+
+	if err != nil {
+		t.Logf("failed creating cluster at %s", finish.Format(time.RFC3339))
+		t.Logf("command took %v to fail", finish.Sub(start))
+		t.Fatalf("creating Kind cluster: %v", err)
+	}
+	t.Logf("finished creating cluster at %s", finish.Format(time.RFC3339))
+
 
 	// We don't need to specify masterUrl since we have a Kubeconfig.
 	cfg, err := clientcmd.BuildConfigFromFlags("", kcfgPath)
