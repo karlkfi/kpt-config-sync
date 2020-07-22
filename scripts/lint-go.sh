@@ -29,11 +29,8 @@ wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/ins
 # create a /.cache directory.
 HOME=.output/
 
-# Note the absence of goimports even though it is available as a linter.
-# This is because the goimports included in alpine is a different version than
-# the one used by golangci-lint, and they produce slightly different results.
 echo "Running golangci-lint: "
-if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,golint,unconvert --exclude-use-default=false)"; then
+if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,goimports,golint,unconvert --exclude-use-default=false)"; then
   echo "${OUT}"
 
   NC=''
@@ -43,8 +40,13 @@ if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,golint,unconvert --e
     RED='\033[0;31m'
   fi
 
+  # make fmt-go only resolves gofmt and goimports errors, since the other linters
+  # don't have autoformatters.
   if echo "${OUT}" | grep "(gofmt)" > /dev/null; then
-    echo -e "${RED}ADVICE${NC}: running \"make goimports\" may fix the (gofmt) error"
+    echo -e "${RED}ADVICE${NC}: running \"make fmt-go\" may fix the (gofmt) error"
+  fi
+  if echo "${OUT}" | grep "(goimports)" > /dev/null; then
+    echo -e "${RED}ADVICE${NC}: running \"make fmt-go\" may fix the (goimports) error"
   fi
   exit 1
 fi

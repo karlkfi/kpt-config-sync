@@ -27,6 +27,12 @@ ENV GO111MODULE=on
 # Build static binaries
 ENV CGO_ENABLED=0
 
+# Install goimports.
+# This is required by the `make fmt-go` target, even though it isn't used
+# in building the Nomos image. This was previously included in golang:alpine,
+# but not any more so we have to install it ourselves.
+RUN go get golang.org/x/tools/cmd/goimports
+
 # sembump knows how to increment semvers.
 # sembump -kind=minor v1.2.3
 # --> 1.3.0

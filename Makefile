@@ -80,7 +80,7 @@ GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 # NOTE: nomos-public is fully accessible publicly, do not use for anything
 # other than buildenv
 BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.2.4
+BUILDENV_IMAGE_VERSION ?= v0.2.5
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
 # When set to "release", enables these optimizations:
@@ -192,14 +192,14 @@ test-all-local: test test-e2e
 # Runs gofmt and goimports.
 # Even though goimports runs gofmt, it runs it without the -s (simplify) flag
 # and offers no option to turn it on. So we run them in sequence.
-goimports: $(OUTPUT_DIR)
+fmt-go: $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
 lint: lint-go lint-bash lint-yaml lint-license
 
 lint-go: build
-	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint.sh $(NOMOS_GO_PKG)
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-go.sh $(NOMOS_GO_PKG)
 
 lint-bash:
 	@./scripts/lint-bash.sh
