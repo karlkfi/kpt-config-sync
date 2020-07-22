@@ -156,15 +156,13 @@ test-e2e-go: __push-local-image __install-nomos-local test-e2e-go-nobuild
 test-e2e-go-nobuild:
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
 
-# A target for running Go e2e tests on Prow.
-# When run with parallel=12, it finishes successfully in 15-20 minutes.
-# Note that Glinux desktops have no benefit for parallel > 12, so this may be
-# slower than `make test-e2e-go-nobuild` when not run in the Prow cluster.
+# A temporary target just get things working on Prow.
+# When run with parallel=4, it finishes successfully in 30-60 minutes.
 # TODO(b/161793092): Will change rapidly until we get things working.
-test-e2e-go-nobuild-run-prow:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m --parallel 24
+test-e2e-go-nobuild-run-debug:
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 120m --parallel 12
 
 # The target to be run by Prow for e2e tests.
 test-e2e-go-ephemeral: __push-local-image
 	@docker build . -f build/test-e2e-go/Dockerfile -t test-e2e-go
-	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" test-e2e-go make test-e2e-go-nobuild-run-prow
+	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" test-e2e-go make test-e2e-go-nobuild-run-debug
