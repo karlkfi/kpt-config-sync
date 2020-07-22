@@ -96,7 +96,6 @@ kind delete cluster --name=%s`, name)
 	}
 	t.Logf("finished creating cluster at %s", finish.Format(time.RFC3339))
 
-
 	// We don't need to specify masterUrl since we have a Kubeconfig.
 	cfg, err := clientcmd.BuildConfigFromFlags("", kcfgPath)
 	if err != nil {
