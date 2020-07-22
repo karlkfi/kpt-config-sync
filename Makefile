@@ -20,7 +20,7 @@
 
 # List of GOOS-GOARCH cross compilation targets
 # Corresponding host mounts for Go std packages should be set below.
-PLATFORMS ?= linux-amd64
+PLATFORMS ?= linux_amd64
 
 REPO := github.com/google/nomos
 

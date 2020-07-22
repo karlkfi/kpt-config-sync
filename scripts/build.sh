@@ -69,8 +69,8 @@ if [ -z "${BUILD_MODE}" ]; then
     exit 1
 fi
 
-# Example: "linux-amd64" -> ["linux" "amd64"]
-IFS='-' read -r -a platform_split <<< "${PLATFORM}"
+# Example: "linux_amd64" -> ["linux" "amd64"]
+IFS='_' read -r -a platform_split <<< "${PLATFORM}"
 GOOS="${platform_split[0]}"
 GOARCH="${platform_split[1]}"
 

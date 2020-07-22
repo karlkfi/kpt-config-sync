@@ -37,7 +37,7 @@
 ##### CONFIG #####
 
 # List of GOOS-GOARCH cross compilation targets
-PLATFORMS ?= linux-amd64 darwin-amd64 windows-amd64
+PLATFORMS ?= linux_amd64 darwin_amd64 windows_amd64
 
 # GCP project that owns container registry for official releases.
 GCP_PROJECT ?= config-management-release
