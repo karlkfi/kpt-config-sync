@@ -110,7 +110,7 @@ function check_cluster_scoped_resource() {
   debug::log "Modify the clusterrole on the apiserver to remove 'create' verb from the role"
   kubectl apply --filename="${YAML_DIR}/clusterrole-create.yaml"
   debug::log "Nomos should revert the permission to what it is in the source of truth"
-  wait::for -t 10 -- \
+  wait::for -t 20 -- \
     clusterrole::validate_management_selection ${clusterrole_name} '.rules[0].verbs' '["get","list","create"]'
 }
 

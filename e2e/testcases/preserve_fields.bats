@@ -125,7 +125,7 @@ test_teardown() {
   kubectl replace -f "${YAML_DIR}/preservefields/namespace-viewer-clusterrole-replace.yaml"
 
   debug::log "Waiting for ClusterRole annotations to be migrated"
-  wait::for -t 10 -- validate_annotation_migrated namespace-viewer
+  wait::for -t 20 -- validate_annotation_migrated namespace-viewer
 }
 
 function validate_annotation_migrated() {

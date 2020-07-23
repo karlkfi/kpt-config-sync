@@ -15,30 +15,56 @@ import (
 	"sigs.k8s.io/kind/pkg/cluster"
 )
 
-// Use release images from https://github.com/kubernetes-sigs/kind/releases
-const kind1_14 = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
+const (
+	// Use release images from https://github.com/kubernetes-sigs/kind/releases
+	kind1_14 = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
 
-// kubeconfig is the filename of the KUBECONFIG file.
-const kubeconfig = "KUBECONFIG"
+	// kubeconfig is the filename of the KUBECONFIG file.
+	kubeconfig = "KUBECONFIG"
+
+	// maxKindTries is the number of times to attempt to create a Kind cluster for
+	// a single test.
+	maxKindTries = 6
+)
 
 func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
-	// TODO(willbeason): Allow specifying Kubernetes version.
-	return p.Create(name,
-		// Use Kubernetes 1.14
-		cluster.CreateWithNodeImage(kind1_14),
-		// Store the KUBECONFIG at the specified path.
-		cluster.CreateWithKubeconfigPath(kcfgPath),
-		// Allow the cluster to see the local Docker container registry.
-		// https://kind.sigs.k8s.io/docs/user/local-registry/
-		cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
-			ContainerdConfigPatches: []string{
-				fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:%d"]
+	var err error
+	for i := 0; i < maxKindTries; i++ {
+		if i > 0 {
+			// This isn't the first time we're executing this loop.
+			// We've tried creating the cluster before but got an error. Since we set
+			// retain=true, the cluster still exists in a problematic state. We must
+			// delete is before retrying.
+			err = p.Delete(name, kcfgPath)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = p.Create(name,
+			// Use Kubernetes 1.14
+			// TODO(willbeason): Allow specifying Kubernetes version.
+			cluster.CreateWithNodeImage(kind1_14),
+			// Store the KUBECONFIG at the specified path.
+			cluster.CreateWithKubeconfigPath(kcfgPath),
+			// Allow the cluster to see the local Docker container registry.
+			// https://kind.sigs.k8s.io/docs/user/local-registry/
+			cluster.CreateWithV1Alpha4Config(&v1alpha4.Cluster{
+				ContainerdConfigPatches: []string{
+					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:%d"]
   endpoint = ["http://%s:%d"]`, registryPort, registryName, registryPort),
-			},
-		}),
-		// Retain nodes for debugging if cluster creation fails.
-		cluster.CreateWithRetain(true),
-	)
+				},
+			}),
+			// Retain nodes for debugging logs.
+			cluster.CreateWithRetain(true),
+		)
+		if err == nil {
+			return nil
+		}
+	}
+
+	// We failed to create the cluster maxKindTries times, to fail out.
+	return err
 }
 
 // newKind creates a new Kind cluster for use in testing with the specified name.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 )
@@ -48,18 +49,22 @@ func startLocalRegistry(nt *NT) {
 
 func connectToLocalRegistry(nt *NT) {
 	nt.T.Helper()
-	// TODO(willbeason): Push the ConfigSync images to the image repository.
 	startLocalRegistry(nt)
 
-	// See https://kind.sigs.k8s.io/docs/user/local-registry/ for explanation.
-	node := &v1.Node{}
-	err := nt.Get(nt.ClusterName+"-control-plane", "", node)
+	// We get access to the kubectl API before the Kind cluster is finished being
+	// set up, so the control plane is sometimes still being modified when we do
+	// this.
+	_, err := Retry(20*time.Second, func() error {
+		// See https://kind.sigs.k8s.io/docs/user/local-registry/ for explanation.
+		node := &v1.Node{}
+		err := nt.Get(nt.ClusterName+"-control-plane", "", node)
+		if err != nil {
+			return err
+		}
+		node.Annotations["kind.x-k8s.io/registry"] = fmt.Sprintf("localhost:%d", registryPort)
+		return nt.Update(node)
+	})
 	if err != nil {
-		nt.T.Fatal(err)
-	}
-	node.Annotations["kind.x-k8s.io/registry"] = fmt.Sprintf("localhost:%d", registryPort)
-	err = nt.Update(node)
-	if err != nil {
-		nt.T.Fatal(err)
+		nt.T.Fatalf("connecting cluster to local Docker registry: %v", err)
 	}
 }

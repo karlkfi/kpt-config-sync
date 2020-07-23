@@ -170,7 +170,7 @@ test_teardown() {
   wait::for -l -t 10 -- namespaceconfig_condition_null
 
   debug::log "Check that cluster config does not contain resource conditions"
-  wait::for -l -t 10 -- clusterconfig_condition_null
+  wait::for -l -t 20 -- clusterconfig_condition_null
 
   debug::log "Check that repo does not contain resource conditions"
   wait::for -l -t 10 -- repos_condition_null
