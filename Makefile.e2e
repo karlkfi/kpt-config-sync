@@ -150,19 +150,27 @@ __install-nomos-local:
 	@GO111MODULE=on go install ./cmd/nomos/nomos.go
 
 # Runs the Go e2e tests
+# Rebuilds the nomos image, so use this when you're actively modifying the Nomos
+# code between test runs.
 test-e2e-go: __push-local-image __install-nomos-local test-e2e-go-nobuild
 
 # Runs the Go e2e tests without building a new Nomos image.
+# This doesn't rebuild the Nomos image, so you can modify test code and rerun
+# this without having to rebuild the image.
 test-e2e-go-nobuild:
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
 
-# A temporary target just get things working on Prow.
-# When run with parallel=4, it finishes successfully in 30-60 minutes.
-# TODO(b/161793092): Will change rapidly until we get things working.
-test-e2e-go-nobuild-run-debug:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 120m --parallel 30
+# Go test target for Prow.
+# For g-linux machines, this will be slower than the above target, as this
+# target specifies more parallel tests than a g-linux machine has cores.
+__test-e2e-go-nobuild-prow:
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 40m --parallel 15
 
 # The target to be run by Prow for e2e tests.
+# Called by the nomos-ci-raw-go target in the test-infra repository:
+# https://gke-internal.googlesource.com/test-infra/+/refs/heads/master/prow/gob/config/team-review.googlesource.com/gke-kubernetes-enterprise-control/prototype/team-gke-kubernetes-enterprise-control-prototype.yaml#601
 test-e2e-go-ephemeral: __push-local-image
-	@docker build . -f build/test-e2e-go/Dockerfile -t test-e2e-go
-	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" test-e2e-go make test-e2e-go-nobuild-run-debug
+	@docker build . -f build/test-e2e-go/Dockerfile -t prow-image
+	# The .sock volume allows you to connect to the Docker daemon of the host.
+	# Part of the docker-in-docker pattern.
+	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" prow-image make __test-e2e-go-nobuild-prow
