@@ -161,10 +161,9 @@ test-e2e-go-nobuild:
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
 
 # Go test target for Prow.
-# For g-linux machines, this will be slower than the above target, as this
-# target specifies more parallel tests than a g-linux machine has cores.
+# Separate from the above as we are still tuning how Prow runs tests.
 __test-e2e-go-nobuild-prow:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 40m --parallel 15
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 40m --parallel 12
 
 # The target to be run by Prow for e2e tests.
 # Called by the nomos-ci-raw-go target in the test-infra repository:
