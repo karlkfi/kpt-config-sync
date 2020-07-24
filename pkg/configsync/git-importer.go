@@ -11,13 +11,9 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer/dirwatcher"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/policycontroller"
-	"github.com/google/nomos/pkg/remediator"
-	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
-	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -34,7 +30,6 @@ var (
 	fightDetectionThreshold = flag.Float64(
 		"fight_detection_threshold", 5.0,
 		"The rate of updates per minute to an API Resource at which the Syncer logs warnings about too many updates to the resource.")
-	enableRemediator = flag.Bool("enable-remediator", false, "enable remediator behavior")
 )
 
 // RunImporter encapsulates the main() logic for the importer.
@@ -60,26 +55,9 @@ func RunImporter() {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 
-	decls := declaredresources.NewDeclaredResources()
-	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
-	applier, err := reconcile.NewApplier(mgr.GetConfig(), genericClient)
-	if err != nil {
-		glog.Fatalf("Instantiating Applier for Remediator: %v", err)
-	}
-
-	// Construct the Remediator. This is only directly talked to by the importer
-	// controller (defined in package filesystem). The full remediation process is
-	// launched in a goroutine when the remediator is constructed.
-	var r remediator.Interface
-	if *enableRemediator {
-		r = remediator.New(mgr.GetClient(), applier, decls)
-	} else {
-		r = &remediator.NoOp{}
-	}
-
 	// Set up controllers.
 	if err := filesystem.AddController(*clusterName, mgr, *gitDir,
-		*policyDirRelative, *pollPeriod, r); err != nil {
+		*policyDirRelative, *pollPeriod); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 

@@ -4,7 +4,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Interface updates the declared configuration stored in memory.
@@ -30,7 +29,7 @@ var _ Interface = &Remediator{}
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(_ client.Reader, _ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
+func New(_ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
 	// TODO(b/157587458): Launch goroutine(s) that do remediation.
 	return &Remediator{
 		decls: decls,

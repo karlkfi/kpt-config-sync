@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
-	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -61,10 +59,6 @@ type reconciler struct {
 	// string so the importer will retry indefinitely to attempt to recover from
 	// an error state.
 	appliedGitDir string
-	// remediator is where the Reconciler writes the resources it parses.
-	// Updating these in production results in GVK watchers being updated, and
-	// future updates to managed resources will use the new declarations.
-	remediator remediator.Interface
 }
 
 // gitState contains the parsed state of the mounted git repo at a certain revision.
@@ -111,7 +105,7 @@ func dumpForFiles(objs []ast.FileObject) string {
 // to call configmanagement and other Kubernetes APIs.
 func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
-	decoder decode.Decoder, format sourceFormat, rm remediator.Interface) (*reconciler, error) {
+	decoder decode.Decoder, format sourceFormat) (*reconciler, error) {
 	repoClient := repo.New(client)
 
 	absGitDir, err := cmpath.AbsoluteOS(gitDir)
@@ -130,7 +124,6 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 		cache:           cache,
 		decoder:         decoder,
 		format:          format,
-		remediator:      rm,
 	}, nil
 }
 
@@ -296,15 +289,6 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	importer.Metrics.NamespaceConfigs.Set(float64(len(desiredConfigs.NamespaceConfigs)))
 	c.updateImportStatus(ctx, repoObj, token, startTime, nil)
 
-	os := make([]core.Object, len(desiredFileObjects))
-	for i, fo := range desiredFileObjects {
-		os[i] = fo.Object
-	}
-	err = c.remediator.UpdateDecls(os)
-	if err != nil {
-		glog.Error("updating declared resources store: ", err)
-		return reconcile.Result{}, err
-	}
 	glog.V(4).Infof("Reconcile completed")
 	return reconcile.Result{}, nil
 }
