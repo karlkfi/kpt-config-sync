@@ -148,7 +148,8 @@ func TestBats(t *testing.T) {
 		{fileName: "apiservice.bats"},
 		{fileName: "basic.bats"},
 		{fileName: "cli.bats"},
-		{fileName: "cluster_resources.bats"},
+		// Converted to cluster_resources_test.go.
+		//{fileName: "cluster_resources.bats"},
 		{fileName: "custom_resource_definitions_v1.bats"},
 		{fileName: "custom_resource_definitions_v1beta1.bats"},
 		{fileName: "custom_resources_v1.bats"},

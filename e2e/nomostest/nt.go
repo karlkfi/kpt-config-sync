@@ -85,6 +85,14 @@ func fmtObj(name, namespace string, obj runtime.Object) string {
 //
 // Leave namespace as empty string for cluster-scoped resources.
 func (nt *NT) Get(name, namespace string, obj core.Object) error {
+	if obj.GetResourceVersion() != "" {
+		// If obj is already populated, this can cause the final obj to be a
+		// composite of multiple states of the object on the cluster.
+		//
+		// If this is due to a retry loop, remember to create a new instance to
+		// populate for each loop.
+		return errors.Errorf("called .Get on already-populated object")
+	}
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
 
@@ -145,33 +153,37 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 	return err
 }
 
-// WaitForSync waits for the Repo object to report that the sync token on the
-// Repo object matches the version in the Git repository.
-func (nt *NT) WaitForSync() {
+// WaitForRepoSync is a convenience method that waits for the Repo's
+// status.sync.latestToken is equal to the repository's sha1.
+func (nt *NT) WaitForRepoSync() {
+	nt.T.Helper()
+
+	nt.WaitForSync(func() core.Object { return &v1.Repo{} }, "repo", RepoHasStatusSyncLatestToken)
+}
+
+// WaitForSync waits for the passed object to
+// syncedTo is a function that accepts the sha1 hash of the repository and
+// returns a Predicate that validates the passed object/name.
+//
+// Use WaitForRepoSync() if you're just waiting for ACM to report the latest
+// commit has successfully synced.
+//
+// o returns a new object of the type to check is synced. It can't just be a
+// struct pointer as calling .Get on the same struct pointer multiple times
+// has undefined behavior.
+func (nt *NT) WaitForSync(o func() core.Object, name string, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	sha1 := nt.Repository.Hash()
+	isSynced := make([]Predicate, len(syncedTo))
+	for i, s := range syncedTo {
+		isSynced[i] = s(sha1)
+	}
 
 	// Wait for the repository to report it is synced.
 	took, err := Retry(120*time.Second, func() error {
-		repo := &v1.Repo{}
-		return nt.Validate("repo", "", repo, func(o core.Object) error {
-			// Check the Sync.LatestToken as:
-			// 1) Source.LatestToken is the most-recently-cloned hash of the git repository.
-			//      It just means we've seen the update to the repository, but haven't
-			//      updated the state of any objects on the cluster.
-			// 2) Import.LatestToken is updated once we've successfully written the
-			//      declared objects to ClusterConfigs/NamespaceConfigs, but haven't
-			//      necessarily applied them to the cluster successfully.
-			// 3) Sync.LatestToken is updated once we've updated the state of all
-			//      objects on the cluster to match their declared states, so this is
-			//      the one we want.
-			if token := repo.Status.Sync.LatestToken; token != sha1 {
-				return fmt.Errorf("status.sync.latestToken %q does not match git revision %q",
-					token, sha1)
-			}
-			return nil
-		})
+		obj := o()
+		return nt.Validate(name, "", obj, isSynced...)
 	})
 	if err != nil {
 		nt.T.Logf("failed after %v to wait for sync", took)
@@ -179,10 +191,12 @@ func (nt *NT) WaitForSync() {
 	}
 	nt.T.Logf("took %v to wait for sync", took)
 
-	// Automatically renew the Client. We don't have tests that depend on behavior
-	// when the test's client is out of date, and if ConfigSync reports that
-	// everything has synced properly then (usually) new types should be available.
-	nt.Client = connect(nt.T, nt.Config)
+	if _, isRepo := o().(*v1.Repo); isRepo {
+		// Automatically renew the Client. We don't have tests that depend on behavior
+		// when the test's client is out of date, and if ConfigSync reports that
+		// everything has synced properly then (usually) new types should be available.
+		nt.RenewClient()
+	}
 }
 
 // RenewClient gets a new Client for talking to the cluster.

@@ -25,7 +25,7 @@ func TestDeclareNamespace(t *testing.T) {
 
 	nt.Repository.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Repository.CommitAndPush("add Namespace")
-	nt.WaitForSync()
+	nt.WaitForRepoSync()
 
 	// Test that the Namespace "foo" exists.
 	err = nt.Validate("foo", "", &corev1.Namespace{})

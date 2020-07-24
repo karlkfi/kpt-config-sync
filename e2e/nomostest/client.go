@@ -6,6 +6,7 @@ import (
 	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +44,7 @@ func newScheme(t *testing.T) *runtime.Scheme {
 		corev1.SchemeBuilder,
 		appsv1.SchemeBuilder,
 		nomosv1.SchemeBuilder,
+		rbacv1.SchemeBuilder,
 	}
 	for _, b := range builders {
 		err := b.AddToScheme(s)

@@ -186,12 +186,14 @@ func (g *Repository) AddFile(path string, bytes []byte) {
 func (g *Repository) Remove(path string) {
 	g.T.Helper()
 
-	err := os.Remove(path)
+	absPath := filepath.Join(g.root, path)
+
+	err := os.Remove(absPath)
 	if err != nil {
 		g.T.Fatal(err)
 	}
 
-	g.git("add", filepath.Join(g.root, path))
+	g.git("add", absPath)
 }
 
 // CommitAndPush commits any changes to the git repository, and

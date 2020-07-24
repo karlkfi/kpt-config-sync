@@ -87,6 +87,15 @@ func RoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(RoleBindingObject(opts...), path)
 }
 
+// ClusterRoleObject returns an rbacv1 ClusterRole.
+func ClusterRoleObject(opts ...core.MetaMutator) *rbacv1.ClusterRole {
+	obj := &rbacv1.ClusterRole{TypeMeta: toTypeMeta(kinds.ClusterRole())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return obj
+}
+
 // ClusterRole returns an rbacv1 ClusterRole at the specified path.
 func ClusterRole(opts ...core.MetaMutator) ast.FileObject {
 	return ClusterRoleAtPath("cluster/cr.yaml", opts...)

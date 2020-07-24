@@ -91,7 +91,7 @@ func New(t *testing.T) *NT {
 	// Create a new Client, since it'll automatically be configured to understand
 	// the Repo type as ConfigSync is now installed.
 	nt.RenewClient()
-	nt.WaitForSync()
+	nt.WaitForRepoSync()
 
 	return nt
 }
