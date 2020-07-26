@@ -75,3 +75,10 @@ func OwnerReference(or []metav1.OwnerReference) MetaMutator {
 		o.SetOwnerReferences(or)
 	}
 }
+
+// Generation replaces the metadata.generation of the Object under test.
+func Generation(gen int64) MetaMutator {
+	return func(o Object) {
+		o.SetGeneration(gen)
+	}
+}

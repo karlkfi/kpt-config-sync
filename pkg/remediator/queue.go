@@ -1,7 +1,7 @@
 package remediator
 
 import (
-	"time"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
@@ -22,41 +22,73 @@ func (gvknn GVKNN) GroupVersionKind() schema.GroupVersionKind {
 	return gvknn.GroupKind.WithVersion(gvknn.Version)
 }
 
-// queue is a wrapper around workqueue.DelayingInterface for use with declared
-// resources. Only deduplicates work items by GVKNN.
-type queue struct {
-	// work is the queue of work to be done.
-	work workqueue.DelayingInterface
+func gvknnOfObject(obj core.Object) GVKNN {
+	return GVKNN{
+		ID:      core.IDOf(obj),
+		Version: obj.GroupVersionKind().Version,
+	}
+}
+
+// objectQueue is a wrapper around workqueue.DelayingInterface for use with
+// declared resources. It deduplicates work items by their GVKNN.
+type objectQueue struct {
+	// The workqueue contains work item keys so that it can maintain the order in
+	// which those items should be worked on.
+	workqueue.DelayingInterface
+	// objects is a map of actual work items which need to be processed.
+	objects map[GVKNN]core.Object
+	// dirty is a map of object keys which will need to be reprocessed even if
+	// they are currently being processed. This is explained further in Add().
+	dirty map[GVKNN]bool
+	// objectLock prevents concurrent access to `objects` and `dirty`.
+	objectLock sync.Mutex
 }
 
 // newQueue creates a new work queue for use in signalling objects that may need
 // remediation.
-func newQueue() *queue {
-	return &queue{
-		work: workqueue.NewDelayingQueue(),
+func newQueue() *objectQueue {
+	return &objectQueue{
+		DelayingInterface: workqueue.NewDelayingQueue(),
+		objects:           map[GVKNN]core.Object{},
+		dirty:             map[GVKNN]bool{},
 	}
 }
 
-// Add marks the item as needing processing.
-func (q *queue) Add(id GVKNN) {
-	q.AddAfter(id, 0)
-}
+// Add marks the object as needing processing unless the object is already in
+// the queue AND the existing object is more current than the new one.
+func (q *objectQueue) Add(obj core.Object) {
+	q.objectLock.Lock()
+	defer q.objectLock.Unlock()
 
-// AddAfter adds the given item to the work queue after the given delay.
-// Blocks until the item has been added.
-func (q *queue) AddAfter(id GVKNN, duration time.Duration) {
-	if q.work.ShuttingDown() {
+	gvknn := gvknnOfObject(obj)
+
+	// Generation is not incremented when metadata is changed. Therefore if
+	// generation is equal, we default to accepting the new object as it may have
+	// new labels or annotations or other metadata.
+	if current, ok := q.objects[gvknn]; ok && current.GetGeneration() > obj.GetGeneration() {
+		glog.V(4).Infof("Queue already contains object %q with generation %d; ignoring object: %v", gvknn, current.GetGeneration(), obj)
 		return
 	}
-	// Blocks until AddAfter adds the item.
-	q.work.AddAfter(id, duration)
-}
 
-// Len returns the current queue length, for informational purposes only. You
-// shouldn't e.g. gate a call to Add() or Get() on Len() being a particular
-// value, that can't be synchronized properly.
-func (q *queue) Len() int {
-	return q.work.Len()
+	// It is possible that a reconciler has already pulled the object for this
+	// GVKNN out of the queue and is actively processing it. In that case, we
+	// need to mark it dirty here so that it gets re-processed. Eg:
+	// 1. q.objects contains generation 1 of a resource.
+	// 2. A reconciler pulls gen1 out of the queue to process.
+	// 3. The gvknn is no longer marked dirty (see Get() below).
+	// 3. Another process/user updates the resource in parallel.
+	// 4. The API server notifies the watcher which calls Add() with gen2 of the resource.
+	// 5. We insert gen2 and re-mark the gvknn as dirty.
+	// 6. The reconciler finishes processing gen1 of the resource and calls Done().
+	// 7. Since the gvknn is still marked dirty, we leave the resource in q.objects.
+	// 8. Eventually a reconciler pulls gen2 of the resource out of the queue for processing.
+	// 9. The gvknn is no longer marked dirty.
+	// 10. The reconciler finishes processing gen2 of the resource and calls Done().
+	// 11. Since the gvknn is not marked dirty, we remove the resource from q.objects.
+	glog.V(2).Infof("Upserting object into queue: %v", obj)
+	q.objects[gvknn] = obj
+	q.dirty[gvknn] = true
+	q.DelayingInterface.Add(gvknn)
 }
 
 // Get blocks until it can return an item to be processed.
@@ -68,11 +100,18 @@ func (q *queue) Len() int {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *queue) Get() (*GVKNN, bool) {
-	item, shutdown := q.work.Get()
+func (q *objectQueue) Get() (core.Object, bool) {
+	// This call is a yielding block that will allow Add() and Done() to be called
+	// while it blocks.
+	item, shutdown := q.DelayingInterface.Get()
 	if item == nil || shutdown {
 		return nil, shutdown
 	}
+
+	// Now that we are past that blocking call, we need to lock to prevent
+	// concurrent access to our data structures.
+	q.objectLock.Lock()
+	defer q.objectLock.Unlock()
 
 	gvknn, isID := item.(GVKNN)
 	if !isID {
@@ -80,12 +119,26 @@ func (q *queue) Get() (*GVKNN, bool) {
 		return nil, false
 	}
 
-	return &gvknn, false
+	obj := q.objects[gvknn]
+	delete(q.dirty, gvknn)
+	glog.V(4).Infof("Fetched object for processing: %v", obj)
+	return obj, false
 }
 
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *queue) Done(id GVKNN) {
-	q.work.Done(id)
+func (q *objectQueue) Done(obj core.Object) {
+	q.objectLock.Lock()
+	defer q.objectLock.Unlock()
+
+	gvknn := gvknnOfObject(obj)
+	q.DelayingInterface.Done(gvknn)
+
+	if q.dirty[gvknn] {
+		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
+	} else {
+		glog.V(2).Infof("Removing clean object reference: %v", q.objects[gvknn])
+		delete(q.objects, gvknn)
+	}
 }

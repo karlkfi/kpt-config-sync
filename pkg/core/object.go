@@ -41,6 +41,8 @@ type LabeledAndAnnotated interface {
 type resourceVersioned interface {
 	GetResourceVersion() string
 	SetResourceVersion(version string)
+	GetGeneration() int64
+	SetGeneration(generation int64)
 }
 
 // Object defines the minimal interface we expect any resource we allow Nomos to sync.

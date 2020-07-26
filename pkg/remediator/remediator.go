@@ -19,7 +19,7 @@ type Interface interface {
 // synchronously add and consume work items.
 type Remediator struct {
 	decls *declaredresources.DeclaredResources
-	*queue
+	*objectQueue
 }
 
 var _ Interface = &Remediator{}
@@ -32,8 +32,8 @@ var _ Interface = &Remediator{}
 func New(_ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
 	// TODO(b/157587458): Launch goroutine(s) that do remediation.
 	return &Remediator{
-		decls: decls,
-		queue: newQueue(),
+		decls:       decls,
+		objectQueue: newQueue(),
 	}
 }
 
