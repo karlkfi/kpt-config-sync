@@ -58,6 +58,11 @@ func TestManager(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	want = map[schema.GroupVersionKind]Runnable{
+		obj2.GroupVersionKind():                   nil,
+		deploymentOtherVersion.GroupVersionKind(): nil,
+	}
+
 	compare(t, want, m.watcherMap)
 
 	objects = []core.Object{}
@@ -103,7 +108,7 @@ func TestManagerDiffererntVersions(t *testing.T) {
 	}
 
 	want := map[schema.GroupVersionKind]Runnable{
-		deploymentv1.GroupVersionKind(): nil,
+		deploymentv1beta1.GroupVersionKind(): nil,
 	}
 	compare(t, want, m.watcherMap)
 
@@ -127,7 +132,7 @@ func TestManagerDiffererntVersions(t *testing.T) {
 	}
 
 	want = map[schema.GroupVersionKind]Runnable{
-		deploymentv1beta1.GroupVersionKind(): nil,
+		deploymentv1.GroupVersionKind(): nil,
 	}
 
 	compare(t, want, m.watcherMap)

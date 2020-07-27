@@ -76,30 +76,29 @@ func NewManager(cfg *rest.Config, queue queue, options *Options) (*Manager, erro
 // Update accepts new resource list and takes following actions:
 // - start watchers for any GroupKind that is present in the new
 //   resource list, but weren't present in previous resource list.
-// - stop watchers for any GroupKind that is not present
+// - stop watchers for any GroupVersionKind that is not present
 //   in the new resource list
 func (m *Manager) Update(objects []core.Object) error {
 	err := m.resources.UpdateDecls(objects)
 	if err != nil {
 		return err
 	}
-	// TODO(jingfangliu): Change this to GVKSet
-	gkSet := m.resources.GetGKSet()
+
+	gvkSet := m.resources.GetGVKSet()
 
 	// Stop obsolete watchers
 	for gvk := range m.watcherMap {
-		if _, found := gkSet[gvk.GroupKind()]; !found {
+		if _, found := gvkSet[gvk]; !found {
 			m.stopWatcher(gvk)
 		} else {
-			// We can remove this GK from gkSet because we know
+			// We can remove this GVK from gvkSet because we know
 			// it is present in watcherMap so we won't need to start a new watcher for it below.
-			delete(gkSet, gvk.GroupKind())
+			delete(gvkSet, gvk)
 		}
 	}
 
 	// Start new watchers
-	for gk, version := range gkSet {
-		gvk := gk.WithVersion(version)
+	for gvk := range gvkSet {
 		if _, found := m.watcherMap[gvk]; !found {
 			if err := m.startWatcher(gvk); err != nil {
 				return err
