@@ -171,24 +171,14 @@ func portForwardGitServer(nt *NT) int {
 	podName := podList.Items[0].Name
 
 	// TODO(willbeason): Do this dynamically for new repositories.
-	out, err := exec.Command("kubectl", "exec", "--kubeconfig", nt.KubeconfigPath(),
-		"-n", testGitNamespace, podName, "--",
-		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git").Output()
-	if err != nil {
-		nt.T.Log(string(out))
-		nt.T.Fatalf("initializing bare repo: %v", err)
-	}
+	nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git")
 	// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
 	// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
 	// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
 	// re-initialize.
-	out, err = exec.Command("kubectl", "exec", "--kubeconfig", nt.kubeconfigPath,
-		"-n", testGitNamespace, podName, "--",
-		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false").Output()
-	if err != nil {
-		nt.T.Log(string(out))
-		nt.T.Fatalf("configuring bare repo to allow force push: %v", err)
-	}
+	nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false")
 
 	return forwardToFreePort(nt.T, nt.kubeconfigPath, podName)
 }

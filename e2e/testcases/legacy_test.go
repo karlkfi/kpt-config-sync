@@ -160,7 +160,8 @@ func TestBats(t *testing.T) {
 		{fileName: "namespaces.bats"},
 		{fileName: "operator-no-policy-dir.bats"},
 		{fileName: "per_cluster_addressing.bats"},
-		{fileName: "preserve_fields.bats"},
+		// Converted to preserve_fields_test.go.
+		//{fileName: "preserve_fields.bats"},
 		{fileName: "repoless.bats"},
 		{fileName: "resource_conditions.bats"},
 		{fileName: "status_monitoring.bats"},

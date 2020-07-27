@@ -3,7 +3,6 @@ package e2e
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -47,10 +46,7 @@ metadata:
 	}
 
 	// Add a new label via kubectl.
-	err = exec.Command("kubectl", "--kubeconfig", filepath.Join(nt.TmpDir, "KUBECONFIG"), "apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml")).Run()
-	if err != nil {
-		t.Fatalf("failed to kubectl apply namespace file: %v", err)
-	}
+	nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml"))
 
 	_, err = nomostest.Retry(time.Second*5, func() error {
 		// Test that the Namespace "foo" exists with the manually added label.

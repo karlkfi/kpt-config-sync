@@ -8,7 +8,7 @@ import (
 
 // RepoSyncObject initializes a RepoSync.
 func RepoSyncObject(opts ...core.MetaMutator) *v1.RepoSync {
-	result := &v1.RepoSync{TypeMeta: toTypeMeta(kinds.RepoSync())}
+	result := &v1.RepoSync{TypeMeta: ToTypeMeta(kinds.RepoSync())}
 	mutate(result, opts...)
 
 	return result

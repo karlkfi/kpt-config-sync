@@ -178,3 +178,8 @@ func RootSync() schema.GroupVersionKind {
 func ResourceString(gvk schema.GroupVersionKind) string {
 	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)
 }
+
+// Service returns the canonical Service GroupVersionKind.
+func Service() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("Service")
+}

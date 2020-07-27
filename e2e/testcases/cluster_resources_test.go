@@ -1,10 +1,12 @@
 package e2e
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
@@ -14,6 +16,13 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
+// sortPolicyRules sorts PolicyRules lexicographically by JSON representation.
+func sortPolicyRules(l, r rbacv1.PolicyRule) bool {
+	jsnL, _ := json.Marshal(l)
+	jsnR, _ := json.Marshal(r)
+	return string(jsnL) < string(jsnR)
+}
+
 func hasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 	return func(o core.Object) error {
 		cr, ok := o.(*rbacv1.ClusterRole)
@@ -21,7 +30,8 @@ func hasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 			return nomostest.WrongTypeErr(cr, &rbacv1.ClusterRole{})
 		}
 
-		if diff := cmp.Diff(rules, cr.Rules); diff != "" {
+		// Ignore the order of the policy rules.
+		if diff := cmp.Diff(rules, cr.Rules, cmpopts.SortSlices(sortPolicyRules)); diff != "" {
 			return errors.New(diff)
 		}
 		return nil
@@ -31,6 +41,7 @@ func hasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 // TestRevertClusterRole ensures that we revert conflicting manually-applied
 // changes to cluster-scoped objects.
 func TestRevertClusterRole(t *testing.T) {
+	t.Parallel()
 	nt := nomostest.New(t)
 
 	crName := "e2e-test-clusterrole"
@@ -88,6 +99,7 @@ func TestRevertClusterRole(t *testing.T) {
 // TestClusterRoleLifecycle ensures we can add/update/delete cluster-scoped
 // resources.
 func TestClusterRoleLifecycle(t *testing.T) {
+	t.Parallel()
 	nt := nomostest.New(t)
 
 	crName := "e2e-test-clusterrole"

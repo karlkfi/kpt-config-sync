@@ -10,7 +10,7 @@ import (
 
 // DeploymentObject initializes a Deployment.
 func DeploymentObject(opts ...core.MetaMutator) *appsv1.Deployment {
-	result := &appsv1.Deployment{TypeMeta: toTypeMeta(kinds.Deployment())}
+	result := &appsv1.Deployment{TypeMeta: ToTypeMeta(kinds.Deployment())}
 	defaultMutate(result)
 	mutate(result, opts...)
 

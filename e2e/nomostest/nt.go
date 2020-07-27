@@ -3,6 +3,7 @@ package nomostest
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -40,7 +41,6 @@ type NT struct {
 	Client client.Client
 
 	// Repository is the repository the cluster is syncing to.
-	// TODO(
 	Repository *Repository
 
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
@@ -211,4 +211,22 @@ func (nt *NT) RenewClient() {
 	nt.T.Helper()
 
 	nt.Client = connect(nt.T, nt.Config)
+}
+
+// Kubectl is a convenience method for calling kubectl against the
+// currently-connected cluster.
+//
+// Fails the test if the kubectl command fails - call kubectl directly if you
+// want specialized behavior.
+func (nt *NT) Kubectl(args ...string) {
+	nt.T.Helper()
+
+	prefix := []string{"--kubeconfig", nt.kubeconfigPath}
+	args = append(prefix, args...)
+	out, err := exec.Command("kubectl", args...).CombinedOutput()
+	if err != nil {
+		nt.T.Log(append([]string{"kubectl"}, args...))
+		nt.T.Log(string(out))
+		nt.T.Fatal(err)
+	}
 }

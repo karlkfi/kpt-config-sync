@@ -60,7 +60,7 @@ test_teardown() {
   clusterIP=$(kubectl get service ${resname} -n ${ns} -ojson | jq -c ".spec.clusterIP")
   [[ "${clusterIP}" != "" ]] || debug::error "service.spec.clusterIP should not have been removed"
 
-  debug::log "Modify custom resource in repo"
+  debug::log "Modify Service"
   oldresver=$(resource::resource_version services ${resname} -n ${ns})
   git::update "${YAML_DIR}/preservefields/service-modify.yaml" acme/namespaces/${ns}/service.yaml
   git::commit

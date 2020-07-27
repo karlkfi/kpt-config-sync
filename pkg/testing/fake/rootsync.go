@@ -8,7 +8,7 @@ import (
 
 // RootSyncObject initializes a RootSync.
 func RootSyncObject(opts ...core.MetaMutator) *v1.RootSync {
-	result := &v1.RootSync{TypeMeta: toTypeMeta(kinds.RootSync())}
+	result := &v1.RootSync{TypeMeta: ToTypeMeta(kinds.RootSync())}
 	mutate(result, opts...)
 
 	return result

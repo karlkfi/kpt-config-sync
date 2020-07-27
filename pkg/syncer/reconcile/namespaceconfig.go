@@ -2,7 +2,6 @@ package reconcile
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -22,8 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -365,23 +362,6 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace
-}
-
-// AsUnstructured attempts to convert a runtime.Object to an
-// *unstructured.Unstructured.
-func AsUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
-	if u, isUnstructured := o.(*unstructured.Unstructured); isUnstructured {
-		return u, nil
-	}
-
-	jsn, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-
-	u := unstructured.Unstructured{}
-	err = u.UnmarshalJSON(jsn)
-	return &u, err
 }
 
 func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespaceConfig *v1.NamespaceConfig) error {

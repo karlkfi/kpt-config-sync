@@ -33,7 +33,7 @@ func HierarchyConfig(opts ...core.MetaMutator) ast.FileObject {
 
 // HierarchyConfigObject initializes a HierarchyConfig.
 func HierarchyConfigObject(opts ...core.MetaMutator) *v1.HierarchyConfig {
-	result := &v1.HierarchyConfig{TypeMeta: toTypeMeta(kinds.HierarchyConfig())}
+	result := &v1.HierarchyConfig{TypeMeta: ToTypeMeta(kinds.HierarchyConfig())}
 	defaultMutate(result)
 	for _, opt := range opts {
 		opt(result)

@@ -11,7 +11,7 @@ import (
 
 // NamespaceObject returns an initialized Namespace.
 func NamespaceObject(name string, opts ...core.MetaMutator) *v1.Namespace {
-	result := &v1.Namespace{TypeMeta: toTypeMeta(kinds.Namespace())}
+	result := &v1.Namespace{TypeMeta: ToTypeMeta(kinds.Namespace())}
 	defaultMutate(result)
 	mutate(result, core.Name(name))
 	mutate(result, opts...)

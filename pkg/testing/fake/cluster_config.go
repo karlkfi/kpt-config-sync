@@ -24,7 +24,7 @@ func CRDClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
 
 // ClusterConfigObject initializes a ClusterConfig.
 func ClusterConfigObject(opts ...ClusterConfigMutator) *v1.ClusterConfig {
-	result := &v1.ClusterConfig{TypeMeta: toTypeMeta(kinds.ClusterConfig())}
+	result := &v1.ClusterConfig{TypeMeta: ToTypeMeta(kinds.ClusterConfig())}
 	defaultMutate(result)
 	mutate(result, core.Name(v1.ClusterConfigName))
 	for _, opt := range opts {

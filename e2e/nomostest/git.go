@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
@@ -27,9 +29,9 @@ const (
 // We shell out for git commands as the git libraries are difficult to configure
 // ssh for, and git-server requires ssh authentication.
 type Repository struct {
-	// root is the location on the machine running the test at which the local
+	// Root is the location on the machine running the test at which the local
 	// repository is stored.
-	root string
+	Root string
 
 	T *testing.T
 }
@@ -48,7 +50,7 @@ func NewRepository(nt *NT, name, tmpDir string, port int) *Repository {
 	localDir := filepath.Join(tmpDir, "repos", name)
 
 	g := &Repository{
-		root: localDir,
+		Root: localDir,
 		T:    nt.T,
 	}
 	g.init(name, nt.gitPrivateKeyPath, port)
@@ -61,7 +63,7 @@ func NewRepository(nt *NT, name, tmpDir string, port int) *Repository {
 func (g *Repository) gitCmd(command ...string) *exec.Cmd {
 	// The -C flag executes git from repository root.
 	// https://git-scm.com/docs/git#Documentation/git.txt--Cltpathgt
-	args := []string{"-C", g.root}
+	args := []string{"-C", g.Root}
 	args = append(args, command...)
 	return exec.Command("git", args...)
 }
@@ -95,7 +97,7 @@ func (g *Repository) initialCommit() {
 func (g *Repository) init(name, privateKey string, port int) {
 	g.T.Helper()
 
-	err := os.MkdirAll(g.root, fileMode)
+	err := os.MkdirAll(g.Root, fileMode)
 	if err != nil {
 		g.T.Fatal(err)
 	}
@@ -135,12 +137,23 @@ func (g *Repository) Add(path string, obj core.Object) {
 	// json "omitempty" directives.
 	var bytes []byte
 	var err error
+	var u *unstructured.Unstructured
 	ext := filepath.Ext(path)
 	switch ext {
 	case ".yaml", ".yml":
-		bytes, err = yaml.Marshal(obj)
+		// We must convert through JSON/Unstructured to avoid "omitempty" fields
+		// from being specified.
+		u, err = reconcile.AsUnstructuredSanitized(obj)
+		if err != nil {
+			g.T.Fatal(err)
+		}
+		bytes, err = yaml.Marshal(u)
 	case ".json":
-		bytes, err = json.MarshalIndent(obj, "", "  ")
+		u, err = reconcile.AsUnstructured(obj)
+		if err != nil {
+			g.T.Fatal(err)
+		}
+		bytes, err = json.MarshalIndent(u, "", "  ")
 	default:
 		// If you're seeing this error, use "AddFile" instead to test ignoring
 		// files with extensions we ignore.
@@ -163,7 +176,7 @@ func (g *Repository) Add(path string, obj core.Object) {
 func (g *Repository) AddFile(path string, bytes []byte) {
 	g.T.Helper()
 
-	absPath := filepath.Join(g.root, path)
+	absPath := filepath.Join(g.Root, path)
 
 	err := os.MkdirAll(filepath.Dir(absPath), fileMode)
 	if err != nil {
@@ -186,7 +199,7 @@ func (g *Repository) AddFile(path string, bytes []byte) {
 func (g *Repository) Remove(path string) {
 	g.T.Helper()
 
-	absPath := filepath.Join(g.root, path)
+	absPath := filepath.Join(g.Root, path)
 
 	err := os.Remove(absPath)
 	if err != nil {

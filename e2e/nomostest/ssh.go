@@ -41,22 +41,15 @@ func generateSSHKeys(nt *NT, kcfg string) string {
 	// kubectl create secret generic git-creds \
 	//   -n=config-management-system \
 	//   --from-file=ssh="${TEST_DIR}/id_rsa.nomos"
-	out, err = exec.Command("kubectl", "--kubeconfig", kcfg, "create", "secret", "generic", "git-creds",
+	nt.Kubectl("create", "secret", "generic", "git-creds",
 		"-n", configmanagement.ControllerNamespace,
-		"--from-file", fmt.Sprintf("ssh=%s", privateKeyPath)).CombinedOutput()
-	if err != nil {
-		nt.T.Log(string(out))
-		nt.T.Fatal("creating git-creds secret", err)
-	}
+		"--from-file", fmt.Sprintf("ssh=%s", privateKeyPath))
 
 	// kubectl create secret generic ssh-pub \
 	//   -n="${GIT_SERVER_NS}" \
 	//   --from-file=/opt/testing/nomos/id_rsa.nomos.pub
-	err = exec.Command("kubectl", "--kubeconfig", kcfg, "create", "secret", "generic", "ssh-pub",
+	nt.Kubectl("create", "secret", "generic", "ssh-pub",
 		"-n", testGitNamespace,
-		"--from-file", filepath.Join(publicKeyPath)).Run()
-	if err != nil {
-		nt.T.Fatal("creating ssh-pub secret", err)
-	}
+		"--from-file", filepath.Join(publicKeyPath))
 	return privateKeyPath
 }

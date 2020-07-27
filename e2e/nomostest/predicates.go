@@ -2,7 +2,9 @@ package nomostest
 
 import (
 	"fmt"
+	"sort"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 )
@@ -24,15 +26,65 @@ func WrongTypeErr(got, want interface{}) error {
 // the Predicate.
 var ErrFailedPredicate = errors.New("failed predicate")
 
-// HasLabel returns a predicate that tests if an Object has the specified label key/value pair.
-func HasLabel(key, value string) Predicate {
+// HasAnnotation returns a predicate that tests if an Object has the specified label key/value pair.
+func HasAnnotation(key, value string) Predicate {
 	return func(o core.Object) error {
-		got, okay := o.GetLabels()[key]
-		if !okay {
+		got, ok := o.GetAnnotations()[key]
+		if !ok {
 			return fmt.Errorf("object %q does not have label %q; wanted %q", o.GetName(), key, value)
 		}
 		if got != value {
 			return fmt.Errorf("got %q for label %q on object %q; wanted %q", got, key, o.GetName(), value)
+		}
+		return nil
+	}
+}
+
+// HasLabel returns a predicate that tests if an Object has the specified label key/value pair.
+func HasLabel(key, value string) Predicate {
+	return func(o core.Object) error {
+		got, ok := o.GetLabels()[key]
+		if !ok {
+			return fmt.Errorf("object %q does not have label %q; wanted %q", o.GetName(), key, value)
+		}
+		if got != value {
+			return fmt.Errorf("got %q for label %q on object %q; wanted %q", got, key, o.GetName(), value)
+		}
+		return nil
+	}
+}
+
+// HasExactlyAnnotationKeys ensures the Object has exactly the passed set of
+// annotations, ignoring values.
+func HasExactlyAnnotationKeys(wantKeys ...string) Predicate {
+	sort.Strings(wantKeys)
+	return func(o core.Object) error {
+		annotations := o.GetAnnotations()
+		var gotKeys []string
+		for k := range annotations {
+			gotKeys = append(gotKeys, k)
+		}
+		sort.Strings(gotKeys)
+		if diff := cmp.Diff(wantKeys, gotKeys); diff != "" {
+			return errors.Errorf("unexpected diff in metadata.annotation keys: %s", diff)
+		}
+		return nil
+	}
+}
+
+// HasExactlyLabelKeys ensures the Object has exactly the passed set of
+// labels, ignoring values.
+func HasExactlyLabelKeys(wantKeys ...string) Predicate {
+	sort.Strings(wantKeys)
+	return func(o core.Object) error {
+		labels := o.GetLabels()
+		var gotKeys []string
+		for k := range labels {
+			gotKeys = append(gotKeys, k)
+		}
+		sort.Strings(gotKeys)
+		if diff := cmp.Diff(wantKeys, gotKeys); diff != "" {
+			return errors.Errorf("unexpected diff in metadata.annotation keys: %s", diff)
 		}
 		return nil
 	}

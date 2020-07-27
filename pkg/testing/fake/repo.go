@@ -17,7 +17,7 @@ func RepoVersion(version string) core.MetaMutator {
 
 // RepoObject returns an initialized Repo.
 func RepoObject(opts ...core.MetaMutator) *v1.Repo {
-	result := &v1.Repo{TypeMeta: toTypeMeta(kinds.Repo())}
+	result := &v1.Repo{TypeMeta: ToTypeMeta(kinds.Repo())}
 	defaultMutate(result)
 	mutate(result, core.Name("repo"))
 	RepoVersion(repo.CurrentVersion)(result)
