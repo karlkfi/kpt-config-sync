@@ -2,6 +2,7 @@ package applier
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -25,10 +26,10 @@ import (
 type Applier struct {
 	// applier provides the basic resource creation, updating and deletion functions.
 	applier syncerreconcile.Applier
-	// cachedResources stores the previously parsed resources in memory. The applier uses this
-	// cachedResources to compare the previous resource (actual) with the new parsed ones (declared)
-	// and get the diff.
-	cachedResources map[core.ID]ast.FileObject
+	// cachedObjects stores the previously parsed git resources in memory. The applier uses this
+	// cachedResources to compare with newly parsed resources from git to determine which
+	// previously declared resources should be deleted.
+	cachedObjects map[core.ID]ast.FileObject
 	// reader reads and lists the resources from API server.
 	reader client.Reader
 	// listOptions defines the resource filtering condition for different appliers initialized
@@ -38,15 +39,17 @@ type Applier struct {
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(reader client.Reader, applier syncerreconcile.Applier,
-	namespace string) *Applier {
+func NewNamespaceApplier(reader client.Reader,
+	applier syncerreconcile.Applier, namespace string) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
-	return &Applier{
+	a := &Applier{
 		listOptions: opts, reader: reader, applier: applier,
-		cachedResources: make(map[core.ID]ast.FileObject)}
+		cachedObjects: make(map[core.ID]ast.FileObject)}
+	glog.V(4).Infof("Applier %v is initialized", namespace)
+	return a
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
@@ -54,142 +57,187 @@ func NewRootApplier(reader client.Reader, applier syncerreconcile.Applier) *Appl
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	opts := []client.ListOption{
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
-	return &Applier{
+	a := &Applier{
 		listOptions: opts, reader: reader, applier: applier,
-		cachedResources: make(map[core.ID]ast.FileObject)}
+		cachedObjects: make(map[core.ID]ast.FileObject)}
+	glog.V(4).Infof("Root applier is initialized and synced with the API server")
+	return a
 }
 
-// Apply iterates all the resources in a cluster and syncs the resource with its git repo state.
-func (a *Applier) Apply(ctx context.Context, declaredResources []ast.FileObject) error {
-	// The cachedResources is empty at the very first apply run. This sync builds up cache
-	// from the API server to reflect the resource "previous" state.
-	if len(a.cachedResources) == 0 {
-		if err := a.sync(ctx); err != nil {
-			return errors.Wrap(err, "failed to sync the cachedResources from API server")
-		}
-	}
-	newCached := make(map[core.ID]ast.FileObject)
-	if len(declaredResources) == 0 {
-		glog.V(4).Infof("no declared resources to apply.")
-	}
-	// Take CRUD actions based on the diff between actual resource (cached, reflecting what the
-	// api server stores) and the declared resource (reflecting the real git repo).
+// sync actuates a list of Diff to make sure the actual resources in the API service are
+// in sync with the declared resources.
+func (a *Applier) sync(ctx context.Context, diffs []differ.Diff) error {
 	var errs status.MultiError
-	for _, declared := range declaredResources {
-		d, err := a.diff(declared)
-		if err != nil {
-			errs = status.Append(errs, err)
-			continue
+	for _, d := range diffs {
+		// Take CRUD actions based on the diff between actual resource (what's stored in
+		// the api server) and the declared resource (the cached git resource).
+		var decl ast.FileObject
+		if d.Declared != nil {
+			decl = *ast.ParseFileObject(d.Declared.DeepCopyObject().(core.Object))
+		} else {
+			decl = *ast.ParseFileObject(d.Actual.DeepCopyObject().(core.Object))
 		}
-		coreID := core.IDOf(declared)
-		// Note: coreID is not types.UID (a cluster-scoped unique string), but a GVKNN.
-		newCached[coreID] = declared
+		coreID := core.IDOf(decl)
+
 		switch d.Type() {
 		case differ.NoOp:
 			continue
 		case differ.Error:
-			err = nonhierarchical.IllegalManagementAnnotationError(declared,
-				declared.GetAnnotations()[v1.ResourceManagementKey])
+			err := nonhierarchical.IllegalManagementAnnotationError(decl,
+				decl.GetAnnotations()[v1.ResourceManagementKey])
 			errs = status.Append(errs, err)
 		case differ.Create:
 			if _, e := a.applier.Create(ctx, d.Declared); e != nil {
-				err = status.ResourceWrap(e, "unable to create resource %s", declared)
+				err := status.ResourceWrap(e, "unable to create resource %s", decl)
 				errs = status.Append(errs, err)
 			} else {
-				glog.V(4).Infof("created resource %s", coreID.String())
+				glog.V(4).Infof("created resource %v", coreID)
 			}
 		case differ.Update:
 			if _, e := a.applier.Update(ctx, d.Declared, d.Actual); e != nil {
-				err = status.ResourceWrap(e, "unable to update resource %s", declared)
+				err := status.ResourceWrap(e, "unable to update resource %s", decl)
 				errs = status.Append(errs, err)
 			} else {
-				glog.V(4).Infof("updated resource %s", coreID.String())
+				glog.V(4).Infof("updated resource %v", coreID)
 			}
 		case differ.Delete:
-			// Note: Since the for loop iterates on the declaredResources, this case shall not
-			// be triggered unless the passed in declaredResources contains nil elements.
 			if _, e := a.applier.Delete(ctx, d.Actual); e != nil {
-				err = status.ResourceWrap(e, "unable to delete %s", declared)
+				err := status.ResourceWrap(e, "unable to delete %s", decl)
 				errs = status.Append(errs, err)
 			} else {
-				glog.V(4).Infof("deleted resource %s", coreID.String())
+				glog.V(4).Infof("deleted resource %v", coreID)
 			}
 		case differ.Unmanage:
 			if _, e := a.applier.RemoveNomosMeta(ctx, d.Actual); e != nil {
-				err = status.ResourceWrap(
-					e, "unable to remove the nomos meta from %s", declared)
+				err := status.ResourceWrap(
+					e, "unable to remove the nomos meta from %v", decl)
 				errs = status.Append(errs, err)
 			} else {
-				glog.V(4).Infof("unmanaged the resource %s", coreID.String())
+				glog.V(4).Infof("unmanaged the resource %v", coreID)
 			}
 		default:
-			err = status.InternalErrorf("diff type not supported: %v", d.Type())
+			err := status.InternalErrorf("diff type not supported: %v", d.Type())
 			errs = status.Append(errs, err)
 		}
 	}
-	// Prune the actual resource if they no longer exist in the new declared resource list.
-	for coreID, actual := range a.cachedResources {
-		if _, ok := newCached[coreID]; !ok {
-			cachedActual, err := syncerreconcile.AsUnstructured(actual.Object)
-			if err != nil {
-				err := syntax.ObjectParseError(actual, err)
-				errs = status.Append(errs, err)
-				continue
-			}
-			if _, e := a.applier.Delete(ctx, cachedActual); e != nil {
-				err := errors.Wrapf(e, "unable to delete resource %s", coreID.String())
-				errs = status.Append(errs, err)
-			} else {
-				glog.V(4).Infof("deleted resource %s", coreID.String())
-			}
-		}
-	}
-	// TODO: make a table/list of all of the failure modes and have an action for each one.
-	// e.g. the declared state is not really applied to the resource, we shall not update the cache.
-	a.cachedResources = newCached
-	glog.Infof("applier has synced all resources.")
+	glog.V(4).Infof("all resources are up to date.")
 	return errs
 }
 
-// diff builds a Diff struct from the declared resource and the cached resources (if exists).
-func (a *Applier) diff(declared ast.FileObject) (*differ.Diff, status.Error) {
-	decl, err := syncerreconcile.AsUnstructured(declared.Object)
-	if err != nil {
-		return &differ.Diff{}, syntax.ObjectParseError(declared, err)
-	}
-	coreID := core.IDOf(decl)
-	var actual *unstructured.Unstructured
-	if cached, ok := a.cachedResources[coreID]; ok {
-		actual, err = syncerreconcile.AsUnstructured(cached.Object)
-		if err != nil {
-			return &differ.Diff{}, syntax.ObjectParseError(cached, err)
+// diff does a three way merge logic and returns the Differ list to sync.
+// Compare between previous declared and new declared to decide the delete list.
+// Compare between the new declared and the actual states to decide the create and update.
+// TODO(b/162440063): We should update the Diff class to accept core Objects or FileObjects instead of Unstructureds.
+func (a *Applier) diff(newDeclared, previousDeclared, actual map[core.ID]ast.FileObject) ([]differ.Diff, status.MultiError) {
+	var diffs []differ.Diff
+	var errs status.MultiError
+	// Delete.
+	for coreID, previousDecl := range previousDeclared {
+		if _, ok := newDeclared[coreID]; !ok {
+			previousUn, err := syncerreconcile.AsUnstructured(previousDecl.Object)
+			if err != nil {
+				errs = status.Append(errs, syntax.ObjectParseError(previousDecl, err))
+				continue
+			}
+			toDelete := differ.Diff{
+				Name:     coreID.String(),
+				Declared: nil,
+				Actual:   previousUn,
+			}
+			diffs = append(diffs, toDelete)
 		}
 	}
-	return &differ.Diff{
-		Name:     coreID.String(),
-		Actual:   actual,
-		Declared: decl,
-	}, nil
+	// Create and Update.
+	for coreID, newDecl := range newDeclared {
+		newDeclUn, err := syncerreconcile.AsUnstructured(newDecl.Object)
+		if err != nil {
+			errs = status.Append(errs, syntax.ObjectParseError(newDecl, err))
+			continue
+		}
+		if actual, ok := actual[coreID]; !ok {
+			toCreate := differ.Diff{
+				Name:     coreID.String(),
+				Declared: newDeclUn,
+				Actual:   nil,
+			}
+			diffs = append(diffs, toCreate)
+		} else {
+			actualUn, err := syncerreconcile.AsUnstructured(actual.Object)
+			if err != nil {
+				errs = status.Append(errs, syntax.ObjectParseError(actual, err))
+				continue
+			}
+			toUpdate := differ.Diff{
+				Name:     coreID.String(),
+				Declared: newDeclUn,
+				Actual:   actualUn,
+			}
+			diffs = append(diffs, toUpdate)
+		}
+	}
+	return diffs, errs
 }
 
-// sync pulls the stored resources from the API server and builds up the cachedResources.
-func (a *Applier) sync(ctx context.Context) error {
-	if a.cachedResources == nil || len(a.cachedResources) > 0 {
-		glog.V(4).Infof("reset applier's cache to sync with API server")
-		a.cachedResources = make(map[core.ID]ast.FileObject)
+// Apply updates the resource API server with the latest parsed git resource. This is called
+// when a new change in the git resource is detected.
+func (a *Applier) Apply(ctx context.Context, desiredResource []ast.FileObject) error {
+	// create the new cache showing the new declared resource.
+	newCache := make(map[core.ID]ast.FileObject)
+	for _, desired := range desiredResource {
+		newCache[core.IDOf(desired)] = desired
 	}
+
+	// pull the actual resource from the API server.
+	actualObjects, err := a.getActualObject(ctx)
+	if err != nil {
+		return err
+	}
+	diffs, err := a.diff(newCache, a.cachedObjects, actualObjects)
+	if err != nil {
+		return err
+	}
+	// Sync the API resource state to the git resource.
+	if err := a.sync(ctx, diffs); err != nil {
+		return err
+	}
+	// Update the cache.
+	a.cachedObjects = newCache
+	return nil
+}
+
+// Refresh syncs and updates the API server with the (cached) git resource states.
+func (a *Applier) Refresh(ctx context.Context) error {
+	actualObjects, err := a.getActualObject(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to pull the resource from the API server")
+
+	}
+	// Two way merge. Compare between the cached declared and the actual states to decide the create and update.
+	diffs, err := a.diff(a.cachedObjects, nil, actualObjects)
+	if err != nil {
+		return fmt.Errorf("failed to analysis the two way merge: %v", err)
+	}
+	if err := a.sync(ctx, diffs); err != nil {
+		return fmt.Errorf("applier failure: %v", err)
+	}
+	return nil
+}
+
+// getActualObject pulls the stored resource from the API server.
+func (a *Applier) getActualObject(ctx context.Context) (map[core.ID]ast.FileObject, error) {
 	resources := &unstructured.UnstructuredList{}
 	if err := a.reader.List(ctx, resources, a.listOptions...); err != nil {
-		return status.APIServerError(err, "failed to list resources")
+		return nil, status.APIServerError(err, "failed to list resources")
 	}
+	actual := make(map[core.ID]ast.FileObject)
 	var errs status.MultiError
 	for _, res := range resources.Items {
 		obj := ast.ParseFileObject(res.DeepCopyObject().(core.Object))
 		if coreID, err := core.IDOfRuntime(obj); err != nil {
 			errs = status.Append(errs, err)
 		} else {
-			a.cachedResources[coreID] = *obj
+			actual[coreID] = *obj
 		}
 	}
-	return errs
+	return actual, errs
 }
