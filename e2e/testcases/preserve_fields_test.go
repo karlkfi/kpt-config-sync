@@ -20,7 +20,6 @@ import (
 )
 
 func TestPreserveGeneratedServiceFields(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	// Declare the Service's Namespace
@@ -113,7 +112,6 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 }
 
 func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	nsViewerName := "namespace-viewer"
@@ -178,7 +176,6 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 // annotation.
 // TODO(b/160032776): Remove this test once all users are past 1.4.0.
 func TestPreserveLastApplied(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	// Declare a ClusterRole and wait for it to sync.
@@ -232,7 +229,6 @@ func TestPreserveLastApplied(t *testing.T) {
 }
 
 func TestAddUpdateDeleteLabels(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	ns := "crud-labels"
@@ -283,7 +279,6 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 }
 
 func TestAddUpdateDeleteAnnotations(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	ns := "crud-annotations"

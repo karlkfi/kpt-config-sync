@@ -15,7 +15,6 @@ import (
 
 // TestConflictingKubectlApply runs a test that ensures ACM merges changes from a separate kubectl apply.
 func TestConflictingKubectlApply(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	err := nt.ValidateNotFound("foo", "", &corev1.Namespace{})

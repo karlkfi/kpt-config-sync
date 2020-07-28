@@ -22,11 +22,17 @@ const fileMode = os.ModePerm
 
 // New establishes a connection to a test cluster and prepares it for testing.
 //
+// Marks the test as parallel. For now we have no tests which *can't* be made
+// parallel; if we need that in the future we can make a version of this
+// function that doesn't do this. As below keeps us from forgetting to mark
+// tests as parallel, and unnecessarily waiting.
+//
 // The following are guaranteed to be available when this function returns:
 // 1) A connection to the Kubernetes cluster.
 // 2) A functioning git server hosted on the cluster.
 // 3) TODO(willbeason): A fresh ACM installation.
 func New(t *testing.T) *NT {
+	t.Parallel()
 	t.Helper()
 
 	if !*e2e.E2E {

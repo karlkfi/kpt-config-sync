@@ -41,7 +41,6 @@ func hasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 // TestRevertClusterRole ensures that we revert conflicting manually-applied
 // changes to cluster-scoped objects.
 func TestRevertClusterRole(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	crName := "e2e-test-clusterrole"
@@ -99,7 +98,6 @@ func TestRevertClusterRole(t *testing.T) {
 // TestClusterRoleLifecycle ensures we can add/update/delete cluster-scoped
 // resources.
 func TestClusterRoleLifecycle(t *testing.T) {
-	t.Parallel()
 	nt := nomostest.New(t)
 
 	crName := "e2e-test-clusterrole"

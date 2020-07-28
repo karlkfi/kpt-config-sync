@@ -44,7 +44,6 @@ func (bt *BatsTest) Run(t *testing.T) {
 
 func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 	return func(t *testing.T) {
-		t.Parallel()
 		nt := nomostest.New(t)
 
 		// Factored out for accessing deprecated functions that only exist for supporting bats tests.
@@ -163,7 +162,8 @@ func TestBats(t *testing.T) {
 		// Converted to preserve_fields_test.go.
 		//{fileName: "preserve_fields.bats"},
 		{fileName: "repoless.bats"},
-		{fileName: "resource_conditions.bats"},
+		// Converted to resource_conditions_test.go.
+		//{fileName: "resource_conditions.bats"},
 		{fileName: "status_monitoring.bats"},
 	}
 	for idx := range testCases {
