@@ -3,6 +3,7 @@ package remediator
 import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 )
 
@@ -18,8 +19,8 @@ type Interface interface {
 // The exposed Queue operations are threadsafe - multiple callers may safely
 // synchronously add and consume work items.
 type Remediator struct {
-	decls *declaredresources.DeclaredResources
-	*objectQueue
+	decls       *declaredresources.DeclaredResources
+	objectQueue *queue.ObjectQueue
 }
 
 var _ Interface = &Remediator{}
@@ -33,7 +34,7 @@ func New(_ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remed
 	// TODO(b/157587458): Launch goroutine(s) that do remediation.
 	return &Remediator{
 		decls:       decls,
-		objectQueue: newQueue(),
+		objectQueue: queue.New(),
 	}
 }
 

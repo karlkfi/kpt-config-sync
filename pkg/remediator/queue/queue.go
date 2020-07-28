@@ -1,4 +1,4 @@
-package remediator
+package queue
 
 import (
 	"sync"
@@ -29,9 +29,9 @@ func gvknnOfObject(obj core.Object) GVKNN {
 	}
 }
 
-// objectQueue is a wrapper around workqueue.DelayingInterface for use with
+// ObjectQueue is a wrapper around workqueue.DelayingInterface for use with
 // declared resources. It deduplicates work items by their GVKNN.
-type objectQueue struct {
+type ObjectQueue struct {
 	// The workqueue contains work item keys so that it can maintain the order in
 	// which those items should be worked on.
 	workqueue.DelayingInterface
@@ -44,10 +44,10 @@ type objectQueue struct {
 	objectLock sync.Mutex
 }
 
-// newQueue creates a new work queue for use in signalling objects that may need
+// New creates a new work queue for use in signalling objects that may need
 // remediation.
-func newQueue() *objectQueue {
-	return &objectQueue{
+func New() *ObjectQueue {
+	return &ObjectQueue{
 		DelayingInterface: workqueue.NewDelayingQueue(),
 		objects:           map[GVKNN]core.Object{},
 		dirty:             map[GVKNN]bool{},
@@ -56,7 +56,7 @@ func newQueue() *objectQueue {
 
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
-func (q *objectQueue) Add(obj core.Object) {
+func (q *ObjectQueue) Add(obj core.Object) {
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 
@@ -100,7 +100,7 @@ func (q *objectQueue) Add(obj core.Object) {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *objectQueue) Get() (core.Object, bool) {
+func (q *ObjectQueue) Get() (core.Object, bool) {
 	// This call is a yielding block that will allow Add() and Done() to be called
 	// while it blocks.
 	item, shutdown := q.DelayingInterface.Get()
@@ -128,7 +128,7 @@ func (q *objectQueue) Get() (core.Object, bool) {
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *objectQueue) Done(obj core.Object) {
+func (q *ObjectQueue) Done(obj core.Object) {
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 

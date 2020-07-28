@@ -1,4 +1,4 @@
-package remediator
+package reconcile
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -45,7 +46,7 @@ func newReconciler(
 //
 // core.ID doesn't record the Version, and we need the Version in order to
 // retrieve the object's current state from the cluster.
-func (r *reconciler) Remediate(ctx context.Context, gvknn GVKNN) error {
+func (r *reconciler) Remediate(ctx context.Context, gvknn queue.GVKNN) error {
 	diff, err := r.diff(ctx, gvknn)
 	if err != nil {
 		return err
@@ -79,7 +80,7 @@ func (r *reconciler) Remediate(ctx context.Context, gvknn GVKNN) error {
 	}
 }
 
-func (r *reconciler) diff(ctx context.Context, gvknn GVKNN) (*differ.Diff, error) {
+func (r *reconciler) diff(ctx context.Context, gvknn queue.GVKNN) (*differ.Diff, error) {
 	id := gvknn.ID
 
 	declared, isDeclared := r.declared.GetDecl(id)

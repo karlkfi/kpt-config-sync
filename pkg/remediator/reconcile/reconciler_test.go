@@ -1,4 +1,4 @@
-package remediator
+package reconcile
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/policycontroller"
+	"github.com/google/nomos/pkg/remediator/queue"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -186,7 +187,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 				t.Fatal("at least one of actual or declared must be specified for a test")
 			}
 
-			err := r.Remediate(context.Background(), GVKNN{ID: core.IDOf(obj), Version: tc.version})
+			err := r.Remediate(context.Background(), queue.GVKNN{ID: core.IDOf(obj), Version: tc.version})
 			if !errors.Is(err, tc.wantError) {
 				t.Errorf("got Reconcile() = %v, want matching %v",
 					err, tc.wantError)

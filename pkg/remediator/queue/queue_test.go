@@ -1,4 +1,4 @@
-package remediator
+package queue
 
 import (
 	"testing"
@@ -8,10 +8,10 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
-type action func(t *testing.T, q *objectQueue)
+type action func(t *testing.T, q *ObjectQueue)
 
 func add(toAdd core.Object, wantLen int) action {
-	return func(t *testing.T, q *objectQueue) {
+	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		q.Add(toAdd)
 		if q.Len() != wantLen {
@@ -21,7 +21,7 @@ func add(toAdd core.Object, wantLen int) action {
 }
 
 func get(wantObj core.Object, wantLen int) action {
-	return func(t *testing.T, q *objectQueue) {
+	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		got, shutdown := q.Get()
 		if shutdown {
@@ -37,7 +37,7 @@ func get(wantObj core.Object, wantLen int) action {
 }
 
 func done(toDone core.Object, wantLen int) action {
-	return func(t *testing.T, q *objectQueue) {
+	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		q.Done(toDone)
 		if q.Len() != wantLen {
@@ -167,7 +167,7 @@ func TestObjectQueue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := newQueue()
+			q := New()
 			for _, actAndVerify := range tc.actions {
 				actAndVerify(t, q)
 			}
