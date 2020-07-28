@@ -139,12 +139,13 @@ func TestManagerDiffererntVersions(t *testing.T) {
 }
 
 func compare(t *testing.T, a, b map[schema.GroupVersionKind]Runnable) {
-	if len(a) != len(b) {
-		t.Errorf("%v and %v don't have the same size", a, b)
+	if diff := cmp.Diff(a, b,
+		cmpopts.SortMaps(lessFunc),
+		cmpopts.IgnoreInterfaces(struct{ Runnable }{})); diff != "" {
+		t.Errorf(diff)
 	}
-	for key := range a {
-		if _, found := b[key]; !found {
-			t.Errorf("%v not found in %v", key, b)
-		}
-	}
+}
+
+func lessFunc(a, b schema.GroupVersionKind) bool {
+	return a.String() < b.String()
 }
