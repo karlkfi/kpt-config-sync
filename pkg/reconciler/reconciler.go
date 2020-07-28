@@ -69,7 +69,7 @@ func Run(opts Options) {
 		glog.Fatalf("Instantiating Applier for Remediator: %v", err)
 	}
 
-	remediator.New(baseApplier, decls)
+	remediator.New(opts.ReconcilerScope, baseApplier, decls)
 
 	// Configure Parser
 	// TODO(b/162014057): configure the parser and get everything running.

@@ -30,11 +30,11 @@ var _ Interface = &Remediator{}
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(_ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
+func New(name string, _ reconcile.Applier, decls *declaredresources.DeclaredResources) *Remediator {
 	// TODO(b/157587458): Launch goroutine(s) that do remediation.
 	return &Remediator{
 		decls:       decls,
-		objectQueue: queue.New(),
+		objectQueue: queue.NewNamed(name),
 	}
 }
 

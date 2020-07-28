@@ -167,7 +167,7 @@ func TestObjectQueue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := New()
+			q := NewNamed("test")
 			for _, actAndVerify := range tc.actions {
 				actAndVerify(t, q)
 			}

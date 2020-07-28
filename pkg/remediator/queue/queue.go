@@ -5,7 +5,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -29,12 +28,12 @@ func gvknnOfObject(obj core.Object) GVKNN {
 	}
 }
 
-// ObjectQueue is a wrapper around workqueue.DelayingInterface for use with
+// objectQueue is a wrapper around workqueue.RateLimitingInterface for use with
 // declared resources. It deduplicates work items by their GVKNN.
-type ObjectQueue struct {
+type objectQueue struct {
 	// The workqueue contains work item keys so that it can maintain the order in
 	// which those items should be worked on.
-	workqueue.DelayingInterface
+	workqueue.RateLimitingInterface
 	// objects is a map of actual work items which need to be processed.
 	objects map[GVKNN]core.Object
 	// dirty is a map of object keys which will need to be reprocessed even if
@@ -44,19 +43,26 @@ type ObjectQueue struct {
 	objectLock sync.Mutex
 }
 
-// New creates a new work queue for use in signalling objects that may need
+// named creates a new work queue for use in signalling objects that may need
 // remediation.
-func New() *ObjectQueue {
-	return &ObjectQueue{
-		DelayingInterface: workqueue.NewDelayingQueue(),
-		objects:           map[GVKNN]core.Object{},
-		dirty:             map[GVKNN]bool{},
+func named(name string) *objectQueue {
+	return &objectQueue{
+		RateLimitingInterface: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), name),
+		objects:               map[GVKNN]core.Object{},
+		dirty:                 map[GVKNN]bool{},
 	}
 }
 
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
-func (q *ObjectQueue) Add(obj core.Object) {
+func (q *objectQueue) Add(item interface{}) {
+	obj, ok := item.(core.Object)
+	if !ok {
+		glog.Errorf("Add() received non-core.Object item: %v", item)
+		q.Forget(item)
+		return
+	}
+
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 
@@ -88,7 +94,7 @@ func (q *ObjectQueue) Add(obj core.Object) {
 	glog.V(2).Infof("Upserting object into queue: %v", obj)
 	q.objects[gvknn] = obj
 	q.dirty[gvknn] = true
-	q.DelayingInterface.Add(gvknn)
+	q.RateLimitingInterface.Add(gvknn)
 }
 
 // Get blocks until it can return an item to be processed.
@@ -100,10 +106,10 @@ func (q *ObjectQueue) Add(obj core.Object) {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *ObjectQueue) Get() (core.Object, bool) {
+func (q *objectQueue) Get() (interface{}, bool) {
 	// This call is a yielding block that will allow Add() and Done() to be called
 	// while it blocks.
-	item, shutdown := q.DelayingInterface.Get()
+	item, shutdown := q.RateLimitingInterface.Get()
 	if item == nil || shutdown {
 		return nil, shutdown
 	}
@@ -115,7 +121,8 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 
 	gvknn, isID := item.(GVKNN)
 	if !isID {
-		glog.Warning(status.InternalErrorf("got non GVKNN from work queue: %+v", item))
+		glog.Warningf("Got non GVKNN from work queue: %v", item)
+		q.Forget(item)
 		return nil, false
 	}
 
@@ -128,12 +135,19 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *ObjectQueue) Done(obj core.Object) {
+func (q *objectQueue) Done(item interface{}) {
+	obj, ok := item.(core.Object)
+	if !ok {
+		glog.Errorf("Done() received non-core.Object item: %v", item)
+		q.Forget(item)
+		return
+	}
+
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 
 	gvknn := gvknnOfObject(obj)
-	q.DelayingInterface.Done(gvknn)
+	q.RateLimitingInterface.Done(gvknn)
 
 	if q.dirty[gvknn] {
 		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
