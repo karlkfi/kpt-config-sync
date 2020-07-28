@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	ctrl "sigs.k8s.io/controller-runtime"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,32 +34,32 @@ func NewRootSyncReconciler(c client.Client, l logr.Logger, s *runtime.Scheme) *R
 // +kubebuilder:rbac:groups=configmanagement.gke.io,resources=rootsyncs/status,verbs=get;update;patch
 
 // Reconcile the RootSync resource.
-func (r *RootSyncReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controllerruntime.Result, error) {
 	ctx := context.TODO()
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 
 	var rootSync v1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rootSync); err != nil {
 		log.Info("unable to fetch RootSync", "error", err)
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Overwrite git-importer pod's configmaps.
 	if err := r.upsertConfigMap(ctx, rootSync); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
+		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
 	// Overwrite git-importer pod deployment.
 	if err := r.upsertDeployment(ctx, rootSync); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "Deployment reconcile failed")
+		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 
-	return ctrl.Result{}, nil
+	return controllerruntime.Result{}, nil
 }
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
-func (r *RootSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1.RootSync{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
@@ -81,7 +81,7 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 		var childCM corev1.ConfigMap
 		childCM.Name = buildRootSyncName(cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
-		op, err := ctrl.CreateOrUpdate(ctx, r.client, &childCM, func() error {
+		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
 			return mutateRootSyncConfigMap(rootSync, &childCM)
 		})
 		if err != nil {
@@ -118,12 +118,12 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) error {
 func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
-	if err := parseDeployment(deploymentConfig, &childDep); err != nil {
+	if err := parseDeployment(&childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
 	childDep.Name = buildRootSyncName()
 	childDep.Namespace = v1.NSConfigManagementSystem
-	op, err := ctrl.CreateOrUpdate(ctx, r.client, &childDep, func() error {
+	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
 		return mutateRootSyncDeployment(rootSync, &childDep)
 	})
 	if err != nil {
@@ -166,6 +166,6 @@ func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment) error {
 		updatedContainers = append(updatedContainers, container)
 	}
 	templateSpec.Containers = updatedContainers
-	return nil
 
+	return nil
 }

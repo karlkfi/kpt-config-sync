@@ -21,3 +21,11 @@ const (
 const (
 	fsWatcher = "fs-watcher"
 )
+
+// reconcilerConfigMapSuffix contains configmaps which are used to create or update
+// various configmaps required by Root Reconciler and Namespace Reconciler pods.
+var reconcilerConfigMaps = []string{
+	importer,     // Used by importer container.
+	sourceFormat, // Used by importer container.
+	gitSync,      // Used by git-sync container.
+}

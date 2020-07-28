@@ -1,44 +1,15 @@
 package controllers
 
 import (
-	"io/ioutil"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// reconcilerConfigMapSuffix contains configmaps which are used to create or update
-// various configmaps required by Root Reconciler and Namespace Reconciler pods.
-var reconcilerConfigMaps = []string{
-	importer,     // Used by importer container.
-	sourceFormat, // Used by importer container.
-	gitSync,      // Used by git-sync container.
-}
-
-// deploymentConfig is defined in configmap manifests/templates/reconciler-manager/manifest.yaml.
-var deploymentConfig = "deployment.yaml"
-
-// TODO b/161890483 Initiliaze the deployment object to be used while
-// initializing the reconciler struct in the manager.
-func parseDeployment(config string, de *appsv1.Deployment) error {
-	// config is defined in manifests/templates/reconciler-manager/manifest.yaml
-	yamlDep, err := ioutil.ReadFile(config)
-	if err != nil {
-		return err
-	}
-	err = yaml.Unmarshal(yamlDep, de)
-	if err != nil {
-		return err
-	}
-	return err
-}
 
 func gitSyncData(branch, repo string) map[string]string {
 	result := make(map[string]string)
