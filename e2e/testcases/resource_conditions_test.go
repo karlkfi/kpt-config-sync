@@ -226,8 +226,12 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	// In the real world, this annotation would be removed once PolicyController
 	// created the CRD corresponding to this ConstraintTemplate. Thus, this test
 	// requires Gatekeeper to not be installed to test this path in a non-flaky way.
-	err := nt.Validate(ctName, "", fake.UnstructuredObject(ctGVK),
-		nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["ConstraintTemplate has not been created"]`))
+	_, err := nomostest.Retry(20*time.Second, func() error {
+		// This happens asynchronously with syncing the repo; so the Repo may report
+		// "synced" before this appears.
+		return nt.Validate(ctName, "", fake.UnstructuredObject(ctGVK),
+			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["ConstraintTemplate has not been created"]`))
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,8 +269,12 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	// In the real world, this annotation would be removed once PolicyController
 	// began enforcing it. Thus, this test requires Gatekeeper to not be installed
 	// to test this path in a non-flaky way.
-	err := nt.Validate(constraintName, "", fake.UnstructuredObject(constraintGVK),
-		nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["Constraint has not been processed by PolicyController"]`))
+	_, err := nomostest.Retry(20*time.Second, func() error {
+		// This happens asynchronously with syncing the repo; so the Repo may report
+		// "synced" before this appears.
+		return nt.Validate(constraintName, "", fake.UnstructuredObject(constraintGVK),
+			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["Constraint has not been processed by PolicyController"]`))
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
