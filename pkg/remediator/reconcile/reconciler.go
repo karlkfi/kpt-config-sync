@@ -3,16 +3,14 @@ package reconcile
 import (
 	"context"
 
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
-	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
-	"github.com/google/nomos/pkg/syncer/reconcile"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,7 +21,7 @@ type reconciler struct {
 	// reader is the source of "actual" configuration on a Kubernetes cluster.
 	reader client.Reader
 	// applier is where to write the declared configuration to.
-	applier reconcile.Applier
+	applier syncerreconcile.Applier
 	// declared is the threadsafe in-memory representation of declared configuration.
 	declared *declaredresources.DeclaredResources
 }
@@ -31,7 +29,7 @@ type reconciler struct {
 // newReconciler instantiates a new reconciler.
 func newReconciler(
 	reader client.Reader,
-	applier reconcile.Applier,
+	applier syncerreconcile.Applier,
 	declared *declaredresources.DeclaredResources,
 ) *reconciler {
 	return &reconciler{
@@ -43,11 +41,8 @@ func newReconciler(
 
 // Remediate takes an runtime.Object representing the object to update, and then
 // ensures that the version on the server matches it.
-//
-// core.ID doesn't record the Version, and we need the Version in order to
-// retrieve the object's current state from the cluster.
-func (r *reconciler) Remediate(ctx context.Context, gvknn queue.GVKNN) error {
-	diff, err := r.diff(ctx, gvknn)
+func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) error {
+	diff, err := r.diff(id, obj)
 	if err != nil {
 		return err
 	}
@@ -80,37 +75,19 @@ func (r *reconciler) Remediate(ctx context.Context, gvknn queue.GVKNN) error {
 	}
 }
 
-func (r *reconciler) diff(ctx context.Context, gvknn queue.GVKNN) (*differ.Diff, error) {
-	id := gvknn.ID
-
-	declared, isDeclared := r.declared.GetDecl(id)
-	actual := &unstructured.Unstructured{}
-	switch {
-	case !isDeclared:
-		// Not declared in the SOT, so use the requested version.
-		declared = nil
-		actual.SetGroupVersionKind(gvknn.GroupVersionKind())
-	case gvknn.GroupVersionKind() != declared.GroupVersionKind():
-		// TODO(b/159723324): Drop this case since WatchManager won't start watches
-		//  for multiple versions of the same GK.
-		glog.V(4).Infof("ignored version %q inconsistent with %v", gvknn.Version, id)
-		// Trying to remediate a different version than the declared; ignore.
-		return &differ.Diff{}, nil
-	default:
-		// The requested/declared versions match.
-		actual.SetGroupVersionKind(declared.GroupVersionKind())
-	}
-	err := r.reader.Get(ctx, id.ObjectKey, actual)
-
-	switch {
-	case err == nil:
-		// We found the object on the cluster.
-	case apierrors.IsNotFound(err):
+func (r *reconciler) diff(id core.ID, obj core.Object) (*differ.Diff, error) {
+	var actual *unstructured.Unstructured
+	var err error
+	if obj == nil {
 		actual = nil
-	default:
-		return nil, err
+	} else {
+		actual, err = syncerreconcile.AsUnstructuredSanitized(obj)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	declared, _ := r.declared.GetDecl(id)
 	return &differ.Diff{
 		Name:     id.Name,
 		Declared: declared,

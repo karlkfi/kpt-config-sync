@@ -8,13 +8,13 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/policycontroller"
-	"github.com/google/nomos/pkg/remediator/queue"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -150,19 +150,10 @@ func TestRemediator_Reconcile(t *testing.T) {
 		},
 		// Version difference paths.
 		{
-			name:      "don't create added object with different version",
-			version:   "v1beta1",
-			declared:  fake.ClusterRoleBindingObject(),
-			actual:    nil,
-			want:      nil,
-			wantError: nil,
-		},
-		{
-			name:      "don't update declared object with different version",
-			version:   "v1beta1",
-			declared:  fake.ClusterRoleBindingObject(core.Label("new-label", "one")),
+			name:      "update actual object with different version",
+			declared:  fake.ClusterRoleBindingV1Beta1Object(core.Label("new-label", "one")),
 			actual:    fake.ClusterRoleBindingObject(),
-			want:      fake.ClusterRoleBindingObject(),
+			want:      fake.ClusterRoleBindingV1Beta1Object(core.Label("new-label", "one")),
 			wantError: nil,
 		},
 	}
@@ -187,7 +178,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 				t.Fatal("at least one of actual or declared must be specified for a test")
 			}
 
-			err := r.Remediate(context.Background(), queue.GVKNN{ID: core.IDOf(obj), Version: tc.version})
+			err := r.Remediate(context.Background(), core.IDOf(obj), tc.actual)
 			if !errors.Is(err, tc.wantError) {
 				t.Errorf("got Reconcile() = %v, want matching %v",
 					err, tc.wantError)
@@ -210,6 +201,11 @@ func fakeClient(t *testing.T, actual core.Object) *testingfake.Client {
 		t.Fatal(err)
 	}
 	err = rbacv1.AddToScheme(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = rbacv1beta1.AddToScheme(s)
 	if err != nil {
 		t.Fatal(err)
 	}

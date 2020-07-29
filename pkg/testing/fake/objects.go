@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -113,6 +114,15 @@ func ClusterRoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObj
 // ClusterRoleBindingObject initializes a ClusterRoleBinding.
 func ClusterRoleBindingObject(opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
 	obj := &rbacv1.ClusterRoleBinding{TypeMeta: ToTypeMeta(kinds.ClusterRoleBinding())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return obj
+}
+
+// ClusterRoleBindingV1Beta1Object initializes a v1beta1 ClusterRoleBinding.
+func ClusterRoleBindingV1Beta1Object(opts ...core.MetaMutator) *rbacv1beta1.ClusterRoleBinding {
+	obj := &rbacv1beta1.ClusterRoleBinding{TypeMeta: ToTypeMeta(kinds.ClusterRoleBindingV1Beta1())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 

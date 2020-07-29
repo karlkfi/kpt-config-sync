@@ -10,6 +10,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -102,6 +103,11 @@ func ClusterSelector() schema.GroupVersionKind {
 // ClusterRoleBinding returns the canonical ClusterRoleBinding GroupVersionKind
 func ClusterRoleBinding() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
+}
+
+// ClusterRoleBindingV1Beta1 returns the canonical ClusterRoleBinding GroupVersionKind
+func ClusterRoleBindingV1Beta1() schema.GroupVersionKind {
+	return rbacv1beta1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
 }
 
 // ClusterRole returns the canonical ClusterRole GroupVersionKind
