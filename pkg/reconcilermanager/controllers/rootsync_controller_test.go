@@ -3,11 +3,11 @@ package controllers
 import (
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/utils/pointer"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -60,6 +60,7 @@ func rootDeploymentWithEnvFrom(namespace, name, containerName string, opts ...co
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: name,
 				},
+				Optional: pointer.BoolPtr(false),
 			},
 		},
 	}
@@ -89,6 +90,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 		rootSync        v1.RootSync
 		actualConfigMap *corev1.ConfigMap
 		wantConfigMap   *corev1.ConfigMap
+		wantErr         bool
 	}{
 		{
 			name: "ConfigMap created",
@@ -99,14 +101,15 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 				core.UID(uid),
 			),
 			actualConfigMap: configMap(
-				rootsyncReqNamespace,
-				rootsyncName,
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
 			),
 			wantConfigMap: configMapWithData(
-				rootsyncReqNamespace,
-				rootsyncName,
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
 				gitSyncData(branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			wantErr: false,
 		},
 		{
 			name: "ConfigMap updated with revision number",
@@ -117,24 +120,51 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 				core.UID(uid),
 			),
 			actualConfigMap: configMapWithData(
-				rootsyncReqNamespace,
-				rootsyncName,
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
 				gitSyncData(branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
 			),
 			wantConfigMap: configMapWithData(
-				rootsyncReqNamespace,
-				rootsyncName,
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
 				gitSyncData(updatedBranch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			wantErr: false,
+		},
+		{
+			name: "ConfigMap mutate failed, Unsupported ConfigMap",
+			rootSync: rootSync(
+				"1.0.0",
+				core.Name(rootsyncName),
+				core.Namespace(rootsyncReqNamespace),
+				core.UID(uid),
+			),
+			actualConfigMap: configMap(
+				v1.NSConfigManagementSystem,
+				unsupportedConfigMap,
+			),
+			wantConfigMap: configMapWithData(
+				v1.NSConfigManagementSystem,
+				unsupportedConfigMap,
+				gitSyncData(branch, rootsyncRepo),
+				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			wantErr: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mutateRootSyncConfigMap(tc.rootSync, tc.actualConfigMap)
-			if !cmp.Equal(tc.actualConfigMap, tc.wantConfigMap) {
-				t.Errorf("\ngot:  %v\nwant: %v", spew.Sdump(tc.actualConfigMap), spew.Sdump(tc.wantConfigMap))
+			err := mutateRootSyncConfigMap(tc.rootSync, tc.actualConfigMap)
+			if tc.wantErr && err == nil {
+				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error", err)
+			} else if !tc.wantErr && err != nil {
+				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error: nil", err)
+			}
+			if !tc.wantErr {
+				if diff := cmp.Diff(tc.actualConfigMap, tc.wantConfigMap); diff != "" {
+					t.Errorf("mutateRootSyncConfigMap() got diff: %v\nwant: nil", diff)
+				}
 			}
 		})
 	}
@@ -146,6 +176,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 		rootSync         v1.RootSync
 		actualDeployment *appsv1.Deployment
 		wantDeployment   *appsv1.Deployment
+		wantErr          bool
 	}{
 		{
 			name: "Deployment created",
@@ -156,22 +187,50 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				core.UID(uid),
 			),
 			actualDeployment: deployment(
-				rootsyncReqNamespace,
-				rootSyncReconcilerName,
-				"git-sync"),
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
+				gitSync),
 			wantDeployment: rootDeploymentWithEnvFrom(
-				rootsyncReqNamespace,
-				rootSyncReconcilerName,
-				"git-sync",
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
+				gitSync,
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			wantErr: false,
+		},
+		{
+			name: "Deployment failed, Unsupported container",
+			rootSync: rootSync(
+				"1.0.0",
+				core.Name(rootsyncName),
+				core.Namespace(rootsyncReqNamespace),
+				core.UID(uid),
+			),
+			actualDeployment: deployment(
+				v1.NSConfigManagementSystem,
+				buildRootSyncName(gitSync),
+				unsupportedContainer),
+			wantDeployment: rootDeploymentWithEnvFrom(
+				v1.NSConfigManagementSystem,
+				gitSync,
+				gitSync,
+				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			wantErr: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mutateRootSyncDeployment(tc.rootSync, tc.actualDeployment)
-			if !cmp.Equal(tc.actualDeployment, tc.wantDeployment) {
-				t.Errorf("\ngot:  %v\nwant: %v", spew.Sdump(tc.actualDeployment), spew.Sdump(tc.wantDeployment))
+			err := mutateRootSyncDeployment(tc.rootSync, tc.actualDeployment)
+			if tc.wantErr && err == nil {
+				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
+			} else if !tc.wantErr && err != nil {
+				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: nil", err)
+			}
+			if !tc.wantErr {
+				diff := cmp.Diff(tc.actualDeployment, tc.wantDeployment)
+				if diff != "" {
+					t.Errorf("mutateRepoSyncDeployment() got diff: %v\nwant: nil", diff)
+				}
 			}
 		})
 	}

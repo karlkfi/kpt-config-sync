@@ -158,9 +158,9 @@ func TestRepoSyncMutateConfigMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := mutateRepoSyncConfigMap(tc.repoSync, tc.actualConfigMap)
 			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error: %t", err, tc.wantErr)
+				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error: %t", err, tc.wantErr)
+				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error: nil", err)
 			}
 			if !tc.wantErr {
 				if diff := cmp.Diff(tc.actualConfigMap, tc.wantConfigMap); diff != "" {
@@ -229,9 +229,9 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := mutateRepoSyncDeployment(tc.repoSync, tc.actualDeployment)
 			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: %t", err, tc.wantErr)
+				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: %t", err, tc.wantErr)
+				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: nil", err)
 			}
 			if !tc.wantErr {
 				diff := cmp.Diff(tc.actualDeployment, tc.wantDeployment)

@@ -46,12 +46,12 @@ func (r *RepoSyncReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Reconcile git-importer pod's configmaps.
+	// Overwrite git-importer pod's configmaps.
 	if err := r.upsertConfigMap(ctx, req, repoSync); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
-	// Reconcile git-importer pod deployment.
+	// Overwrite git-importer pod deployment.
 	if err := r.upsertDeployment(ctx, req, repoSync); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
@@ -68,14 +68,6 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// nsReconcilerConfigMapSuffix contains configmap suffixes, which are used to create or update
-// various configmaps required by containers present in Namespace Reconciler pod.
-var nsReconcilerConfigMapSuffix = []string{
-	importer,     // Used by importer container.
-	sourceFormat, // Used by importer container.
-	gitSync,      // Used by git-sync container.
-}
-
 func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) error {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
@@ -87,7 +79,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, req ctrl.Reque
 	// callback will be called.
 
 	// CreateOrUpdate configmaps for Namespace Reconciler.
-	for _, cm := range nsReconcilerConfigMapSuffix {
+	for _, cm := range reconcilerConfigMaps {
 		var childCM corev1.ConfigMap
 		childCM.Name = buildRepoSyncName(req.Namespace, cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
@@ -125,12 +117,9 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) error {
 	return nil
 }
 
-// deploymentConfig is defined in manifests/templates/reconciler-manager/manifest.yaml.
-var deploymentConfig = "deployment.yaml"
-
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, req ctrl.Request, repoSync v1.RepoSync) error {
 	var childDep appsv1.Deployment
-	// Parses the deployment.yaml mounted as configmap in Reconciler Managers deployment.
+	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := parseDeployment(deploymentConfig, &childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}

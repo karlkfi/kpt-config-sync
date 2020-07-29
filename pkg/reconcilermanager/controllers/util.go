@@ -14,6 +14,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// reconcilerConfigMapSuffix contains configmaps which are used to create or update
+// various configmaps required by Root Reconciler and Namespace Reconciler pods.
+var reconcilerConfigMaps = []string{
+	importer,     // Used by importer container.
+	sourceFormat, // Used by importer container.
+	gitSync,      // Used by git-sync container.
+}
+
+// deploymentConfig is defined in configmap manifests/templates/reconciler-manager/manifest.yaml.
+var deploymentConfig = "deployment.yaml"
+
 // TODO b/161890483 Initiliaze the deployment object to be used while
 // initializing the reconciler struct in the manager.
 func parseDeployment(config string, de *appsv1.Deployment) error {
@@ -82,5 +93,10 @@ func envFromSources(configmapRef map[string]*bool) []corev1.EnvFromSource {
 
 func buildRepoSyncName(names ...string) string {
 	prefix := []string{repoSyncReconcilerPrefix}
+	return strings.Join(append(prefix, names...), "-")
+}
+
+func buildRootSyncName(names ...string) string {
+	prefix := []string{rootSyncReconcilerName}
 	return strings.Join(append(prefix, names...), "-")
 }
