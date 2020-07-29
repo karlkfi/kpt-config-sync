@@ -174,7 +174,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 	case differ.Delete:
 		return r.deleteNamespace(ctx, ns)
 
-	case differ.UnmanageSystemNamespace:
+	case differ.UnmanageNamespace:
 		return r.deleteManageableSystem(ctx, ns, config, syncErrs)
 
 	case differ.DeleteNsConfig:

@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,7 @@ var (
 	enableManaged     = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 	disableManaged    = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
 	managementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
+	preventDeletion   = core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)
 )
 
 func TestNamespaceDiffType(t *testing.T) {
@@ -84,6 +86,12 @@ func TestNamespaceDiffType(t *testing.T) {
 			declared:   markForDeletion(namespaceConfig()),
 			actual:     fake.NamespaceObject("foo", enableManaged),
 			expectType: Delete,
+		},
+		{
+			name:       "marked for deletion, unmanage if deletion: prevent",
+			declared:   markForDeletion(namespaceConfig()),
+			actual:     fake.NamespaceObject("foo", enableManaged, preventDeletion),
+			expectType: UnmanageNamespace,
 		},
 		{
 			name:       "in cluster only, unset noop",

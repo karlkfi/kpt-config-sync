@@ -3,6 +3,7 @@ package differ
 import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/lifecycle"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,7 +19,7 @@ type NamespaceDiff struct {
 func (d *NamespaceDiff) Type() Type {
 
 	if d.Declared != nil {
-		// The NamespaceConfig IS in the repository.
+		// The NamespaceConfig IS on the cluster.
 
 		if !d.Declared.Spec.DeleteSyncedTime.IsZero() {
 			// NamespaceConfig is marked for deletion
@@ -26,8 +27,8 @@ func (d *NamespaceDiff) Type() Type {
 				// Corresponding Namespace has already been deleted, so delete the NsConfig
 				return DeleteNsConfig
 			}
-			if isManageableSystemNamespace[d.Name] {
-				return UnmanageSystemNamespace
+			if lifecycle.HasPreventDeletion(d.Actual) || isManageableSystemNamespace[d.Name] {
+				return UnmanageNamespace
 			}
 			return Delete
 		}
@@ -57,7 +58,7 @@ func (d *NamespaceDiff) Type() Type {
 		return Error
 	}
 
-	// The Namespace IS NOT in the repository.
+	// The NamespaceConfig IS NOT in the cluster.
 	if d.Actual != nil {
 		// The Namespace IS on the API Server.
 		if !hasNomosMeta(d.Actual) {

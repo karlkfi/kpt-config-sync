@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/lifecycle"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -35,9 +36,9 @@ const (
 	// Unmanage indicates the resource's management annotation should be removed from the API Server.
 	Unmanage = Type("unmanage")
 
-	// UnmanageSystemNamespace indicates that the resource is a special Namespace
+	// UnmanageNamespace indicates that the resource is a special Namespace
 	// which should not be deleted directly by ACM. It should be unmanaged instead.
-	UnmanageSystemNamespace = Type("unmanage-system-namespace")
+	UnmanageNamespace = Type("unmanage-namespace")
 )
 
 // Diff is resource where Declared and Actual do not match.
@@ -102,12 +103,28 @@ func (d Diff) Type() Type {
 
 		if ManagementEnabled(d.Actual) {
 			// There are Nomos annotations or labels on the resource.
+
+			if lifecycle.HasPreventDeletion(d.Actual) {
+				// This object is marked with the lifecycle annotation that says to not
+				// delete it. We should orphan the objects by unmanaging them.
+				if d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
+					// Special case for Namespaces. Not strictly necessary; but here to keep
+					// consistent with namespace.go. Only happens in the Remediator, and
+					// the Remediator doesn't do anything special for Namespaces.
+					return UnmanageNamespace
+				}
+				return Unmanage
+			}
+
 			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
 				isManageableSystemNamespace[d.Name] {
+				// Don't delete this Namespace from the cluster; unmanage it.
+
 				// The Syncer never creates a differ.Diff with a Namespace, so this only
 				// happens in the Remediator.
-				return UnmanageSystemNamespace
+				return UnmanageNamespace
 			}
+
 			// Delete resource with management enabled on API Server.
 			return Delete
 		}

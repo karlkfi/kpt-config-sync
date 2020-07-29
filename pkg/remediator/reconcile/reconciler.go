@@ -61,7 +61,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 			ast.ParseFileObject(diff.Declared),
 			diff.Declared.GetAnnotations()[v1.ResourceManagementKey],
 		)
-	case differ.Unmanage, differ.UnmanageSystemNamespace:
+	case differ.Unmanage, differ.UnmanageNamespace:
 		_, err := r.applier.RemoveNomosMeta(ctx, diff.Actual)
 		return err
 	default:

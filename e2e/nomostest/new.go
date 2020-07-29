@@ -116,7 +116,7 @@ func testDir(t *testing.T) string {
 	}
 	tmpDir, err := ioutil.TempDir(filepath.Join(os.TempDir(), nomosE2E), name)
 	if err != nil {
-		t.Fatalf("creating nomos-e2e tmp test subdirectory: %v", err)
+		t.Fatalf("creating nomos-e2e tmp test subdirectory %s: %v", tmpDir, err)
 	}
 	t.Cleanup(func() {
 		if t.Failed() && *e2e.Debug {

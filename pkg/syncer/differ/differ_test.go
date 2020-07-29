@@ -39,6 +39,12 @@ func owned() func(*unstructured.Unstructured) {
 	}
 }
 
+func preventDeletionUnstructured() func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		preventDeletion(u)
+	}
+}
+
 func TestDiffType(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -119,6 +125,12 @@ func TestDiffType(t *testing.T) {
 		{
 			name:       "in cluster only and owned, do nothing",
 			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled), owned()),
+			expectType: NoOp,
+		},
+		{
+			name: "in cluster only and owned and prevent deletion, unmanage",
+			actual: buildUnstructured(managed(v1.ResourceManagementEnabled), owned(),
+				preventDeletionUnstructured()),
 			expectType: NoOp,
 		},
 	}
