@@ -1,11 +1,14 @@
 package namespaceconfig
 
 import (
+	"sort"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/lifecycle"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,6 +34,18 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 		Syncs:            map[string]v1.Sync{},
 	}
 
+	// Sort cluster-scoped objects first.
+	// This ensures that if a Namespace is declared, it is inserted before any
+	// objects that would go inside it.
+	sort.Slice(fileObjects, func(i, j int) bool {
+		iNamespaced := fileObjects[i].GetNamespace() != ""
+		jNamespaced := fileObjects[j].GetNamespace() != ""
+		if iNamespaced != jNamespaced {
+			return jNamespaced
+		}
+		return false
+	})
+
 	for _, f := range fileObjects {
 		if transform.IsEphemeral(f.GroupVersionKind()) {
 			// Do not materialize NamespaceSelectors.
@@ -48,17 +63,15 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 		result.addSync(*v1.NewSync(f.GroupVersionKind().GroupKind()))
 
 		isNamespaced := f.GetNamespace() != ""
-		if isNamespaced {
-			namespace := f.GetNamespace()
-			if namespace == "" {
-				// Empty string/non-declared metadata.namespace automatically maps to "default", so this
-				// ensures we maintain these in a single NamespaceConfig entry.
-				namespace = metav1.NamespaceDefault
-			}
-			result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
-		} else {
+		if !isNamespaced {
+			// The object is cluster-scoped.
 			result.addClusterResource(f.Object)
+			continue
 		}
+
+		// The object is namespace-scoped.
+		namespace := f.GetNamespace()
+		result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
 	}
 
 	return result
@@ -107,8 +120,11 @@ func (c *AllConfigs) addNamespaceConfig(name string, importToken string, loadTim
 func (c *AllConfigs) addNamespaceResource(namespace string, importToken string, loadTime metav1.Time, o core.Object) {
 	ns, found := c.NamespaceConfigs[namespace]
 	if !found {
-		// TODO(b/137213356): What should we do when a Namespace doesn't exist?
-		c.addNamespaceConfig(namespace, importToken, loadTime, nil, nil)
+		// Add an implicit Namespace, and mark it "deletion: prevent", which means
+		// it won't be deleted when its members are removed from the SOT.
+		c.addNamespaceConfig(namespace, importToken, loadTime, map[string]string{
+			lifecycle.Deletion: lifecycle.PreventDeletion,
+		}, nil)
 		ns = c.NamespaceConfigs[namespace]
 	}
 	ns.AddResource(o)

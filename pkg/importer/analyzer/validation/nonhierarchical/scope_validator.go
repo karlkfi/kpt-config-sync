@@ -70,10 +70,8 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 			if !hasNamespace && !hasNamespaceSelector {
 				o.SetNamespace(metav1.NamespaceDefault)
 			}
-		} else {
-			if o.GetNamespace() != "" {
-				return IllegalNamespaceOnClusterScopedResourceError(&o)
-			}
+		} else if o.GetNamespace() != "" {
+			return IllegalNamespaceOnClusterScopedResourceError(&o)
 		}
 
 		return nil
