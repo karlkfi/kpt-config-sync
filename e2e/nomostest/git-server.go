@@ -22,7 +22,12 @@ const testGitNamespace = "config-management-system-test"
 const testGitServer = "test-git-server"
 const testGitServerImage = "gcr.io/nomos-public/git-server:v1.0.0"
 
-var testGitServerSelector = map[string]string{"app": testGitServer}
+func testGitServerSelector() map[string]string {
+	// Note that maps are copied by reference into objects.
+	// If this were just a variable, then concurrent usages by Clients may result
+	// in concurrent map writes (and thus flaky test panics).
+	return map[string]string{"app": testGitServer}
+}
 
 // installGitServer installs the git-server Pod, and returns a callback that
 // waits for the Pod to become available.
@@ -102,7 +107,7 @@ func gitService() *corev1.Service {
 		core.Name(testGitServer),
 		core.Namespace(testGitNamespace),
 	)
-	service.Spec.Selector = testGitServerSelector
+	service.Spec.Selector = testGitServerSelector()
 	service.Spec.Ports = []corev1.ServicePort{{Name: "ssh", Port: 22}}
 	return service
 }
@@ -110,16 +115,16 @@ func gitService() *corev1.Service {
 func gitDeployment() *appsv1.Deployment {
 	deployment := fake.DeploymentObject(core.Name(testGitServer),
 		core.Namespace(testGitNamespace),
-		core.Labels(testGitServerSelector),
+		core.Labels(testGitServerSelector()),
 	)
 
 	deployment.Spec = appsv1.DeploymentSpec{
 		MinReadySeconds: 2,
 		Strategy:        appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
-		Selector:        &v1.LabelSelector{MatchLabels: testGitServerSelector},
+		Selector:        &v1.LabelSelector{MatchLabels: testGitServerSelector()},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: v1.ObjectMeta{
-				Labels: testGitServerSelector,
+				Labels: testGitServerSelector(),
 			},
 			Spec: corev1.PodSpec{
 				Volumes: []corev1.Volume{
