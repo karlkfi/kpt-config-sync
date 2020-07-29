@@ -107,7 +107,7 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) error {
 	switch cm.Name {
 	case buildRepoSyncName(rs.Namespace, importer):
 		cm.Data = importerData(rs.Spec.Git.Dir)
-	case buildRepoSyncName(rs.Namespace, sourceFormat):
+	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRepoSyncName(rs.Namespace, gitSync):
 		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
@@ -158,7 +158,7 @@ func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment) error {
 		case importer:
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRepoSyncName(rs.Namespace, importer)] = pointer.BoolPtr(false)
-			configmapRef[buildRepoSyncName(rs.Namespace, sourceFormat)] = pointer.BoolPtr(true)
+			configmapRef[buildRepoSyncName(rs.Namespace, SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)

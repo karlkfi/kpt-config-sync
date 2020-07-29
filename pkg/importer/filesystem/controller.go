@@ -56,15 +56,15 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	}
 
 	// If SOURCE_FORMAT is invalid, assume hierarchy.
-	format := sourceFormat(os.Getenv("SOURCE_FORMAT"))
+	format := SourceFormat(os.Getenv(SourceFormatKey))
 	var cfgParser ConfigParser
 	switch format {
-	case sourceFormatUnstructured:
-		// sourceFormat is unstructured, so use the RawParser.
+	case SourceFormatUnstructured:
+		// SourceFormat is unstructured, so use the RawParser.
 		cfgParser = NewRawParser(&FileReader{}, importer.DefaultCLIOptions)
-	case sourceFormatHierarchy, "":
+	case SourceFormatHierarchy, "":
 		cfgParser = NewParser(&FileReader{}, importer.DefaultCLIOptions)
-		format = sourceFormatHierarchy
+		format = SourceFormatHierarchy
 	default:
 		return errors.Errorf("unknown SOURCE_FORMAT type %q", string(format))
 	}

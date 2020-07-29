@@ -65,7 +65,7 @@ func nsImporterDeploymentWithConfigMap() map[string][]configMapRef {
 				name: importer,
 			},
 			{
-				name:     sourceFormat,
+				name:     SourceFormat,
 				optional: pointer.BoolPtr(true),
 			},
 		},
@@ -323,7 +323,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, sourceFormat),
+			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
@@ -373,7 +373,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, sourceFormat),
+			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),

@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +50,8 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	nt.WaitForRepoSync()
 
 	// Ensure we kept the undeclared Namespace that had the "deletion: prevent" annotation.
-	err = nt.Validate("shipping", "", &corev1.Namespace{})
+	err = nt.Validate("shipping", "", &corev1.Namespace{},
+		nomostest.NotPendingDeletion)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,6 +130,43 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPreventDeletionImplicitNamespace(t *testing.T) {
+	nt := nomostest.NewWithOptions(t, ntopts.New{
+		Nomos: ntopts.Nomos{SourceFormat: filesystem.SourceFormatUnstructured},
+	})
+
+	role := fake.RoleObject(core.Name("configmap-getter"), core.Namespace("delivery"))
+	role.Rules = []rbacv1.PolicyRule{{
+		APIGroups: []string{""},
+		Resources: []string{"configmaps"},
+		Verbs:     []string{"get"},
+	}}
+	nt.Repository.Add("acme/role.yaml", role)
+	nt.Repository.CommitAndPush("Declare configmap-getter Role")
+	nt.WaitForRepoSync()
+
+	err := nt.Validate("delivery", "", &corev1.Namespace{},
+		nomostest.HasAnnotation(lifecycle.Deletion, lifecycle.PreventDeletion))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = nt.Validate("configmap-getter", "delivery", &rbacv1.Role{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nt.Repository.Remove("acme/role.yaml")
+	nt.Repository.CommitAndPush("Remove configmap-getter Role")
+	nt.WaitForRepoSync()
+
+	// Ensure the Namespace wasn't deleted.
+	err = nt.Validate("delivery", "", &corev1.Namespace{},
+		nomostest.NotPendingDeletion)
 	if err != nil {
 		t.Fatal(err)
 	}

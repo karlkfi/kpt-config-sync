@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -16,9 +17,6 @@ import (
 )
 
 const (
-	// Use release images from https://github.com/kubernetes-sigs/kind/releases
-	kind1_14 = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
-
 	// kubeconfig is the filename of the KUBECONFIG file.
 	kubeconfig = "KUBECONFIG"
 
@@ -27,7 +25,7 @@ const (
 	maxKindTries = 6
 )
 
-func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
+func createKindCluster(p *cluster.Provider, name, kcfgPath string, version ntopts.KindVersion) error {
 	var err error
 	for i := 0; i < maxKindTries; i++ {
 		if i > 0 {
@@ -44,7 +42,7 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
 		err = p.Create(name,
 			// Use Kubernetes 1.14
 			// TODO(willbeason): Allow specifying Kubernetes version.
-			cluster.CreateWithNodeImage(kind1_14),
+			cluster.CreateWithNodeImage(string(version)),
 			// Store the KUBECONFIG at the specified path.
 			cluster.CreateWithKubeconfigPath(kcfgPath),
 			// Allow the cluster to see the local Docker container registry.
@@ -70,15 +68,14 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string) error {
 // newKind creates a new Kind cluster for use in testing with the specified name.
 //
 // Automatically registers the cluster to be deleted at the end of the test.
-func newKind(t *testing.T, name string, tmpDir string) (*rest.Config, string) {
-	// TODO(willbeason): Extract this logic into a CLI that doesn't require
-	//  testing.T.
+func newKind(t *testing.T, name, tmpDir string, opts ntopts.KindCluster) (*rest.Config, string) {
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, kubeconfig)
 
 	start := time.Now()
 	t.Logf("started creating cluster at %s", start.Format(time.RFC3339))
-	err := createKindCluster(p, name, kcfgPath)
+
+	err := createKindCluster(p, name, kcfgPath, opts.Version)
 	creationSuccessful := err == nil
 	finish := time.Now()
 

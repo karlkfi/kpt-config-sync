@@ -3,6 +3,7 @@ package controllers
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
@@ -29,7 +30,7 @@ func importerData(policydir string) map[string]string {
 
 func sourceFormatData(format string) map[string]string {
 	result := make(map[string]string)
-	result["SOURCE_FORMAT"] = format
+	result[filesystem.SourceFormatKey] = format
 	return result
 }
 

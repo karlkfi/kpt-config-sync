@@ -21,3 +21,8 @@ var E2E = flag.Bool("e2e", false,
 // 3) The test prints out how to connect to the kind cluster.
 var Debug = flag.Bool("debug", false,
 	"If true, do not destroy cluster and clean up temporary directory after test.")
+
+// KubernetesVersion is the version of Kubernetes to test against. Only has effect
+// when testing against test-created Kind clusters.
+var KubernetesVersion = flag.String("kubernetes-version", "1.16",
+	"The version of Kubernetes to create")

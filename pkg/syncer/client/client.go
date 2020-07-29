@@ -214,11 +214,7 @@ func resourceVersion(obj core.Object) string {
 	return obj.GetResourceVersion()
 }
 
-type hasDeletionTimestamp interface {
-	GetDeletionTimestamp() *metav1.Time
-}
-
 // isFinalizing returns true if the object is finalizing.
 func isFinalizing(o core.Object) bool {
-	return o.(hasDeletionTimestamp).GetDeletionTimestamp() != nil
+	return o.GetDeletionTimestamp() != nil
 }

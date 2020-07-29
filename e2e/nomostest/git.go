@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -44,7 +45,7 @@ type Repository struct {
 //
 // For now, `name` must be "sot.git" until we support dynamically creating
 // repositories.
-func NewRepository(nt *NT, name, tmpDir string, port int) *Repository {
+func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesystem.SourceFormat) *Repository {
 	nt.T.Helper()
 
 	localDir := filepath.Join(tmpDir, "repos", name)
@@ -55,7 +56,7 @@ func NewRepository(nt *NT, name, tmpDir string, port int) *Repository {
 	}
 	g.init(name, nt.gitPrivateKeyPath, port)
 
-	g.initialCommit()
+	g.initialCommit(sourceFormat)
 
 	return g
 }
@@ -83,12 +84,22 @@ func (g *Repository) git(command ...string) {
 }
 
 // initialCommit initializes the Nomos repo with the Repo object.
-func (g *Repository) initialCommit() {
-	// TODO(willbeason): Allow initializing an unstructured repo.
+func (g *Repository) initialCommit(sourceFormat filesystem.SourceFormat) {
 	g.T.Helper()
 
-	g.AddFile("README.md", []byte("Test repository."))
-	g.Add("acme/system/repo.yaml", fake.RepoObject())
+	// Add the README to the inside of acme/ so the directory is guaranteed to
+	// exist - ACM refuses to sync to non-existent directories, and git requires
+	// at least one file in order for a directory to exist.
+	g.AddFile("acme/README.md", []byte("Test repository."))
+	switch sourceFormat {
+	case filesystem.SourceFormatHierarchy:
+		// Hierarchy format requires a Repo object.
+		g.Add("acme/system/repo.yaml", fake.RepoObject())
+	case filesystem.SourceFormatUnstructured:
+		// It is an error for unstructured repos to include the Repo object.
+	default:
+		g.T.Fatalf("Unrecognized SourceFormat: %q", sourceFormat)
+	}
 	g.CommitAndPush("initial commit")
 }
 

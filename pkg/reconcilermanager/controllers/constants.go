@@ -12,7 +12,7 @@ const (
 const (
 	importer = "importer"
 
-	sourceFormat = "source-format"
+	SourceFormat = "source-format"
 
 	gitSync = "git-sync"
 )
@@ -26,6 +26,6 @@ const (
 // various configmaps required by Root Reconciler and Namespace Reconciler pods.
 var reconcilerConfigMaps = []string{
 	importer,     // Used by importer container.
-	sourceFormat, // Used by importer container.
+	SourceFormat, // Used by importer container.
 	gitSync,      // Used by git-sync container.
 }

@@ -89,3 +89,14 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 		return nil
 	}
 }
+
+// NotPendingDeletion ensures o is not pending deletion.
+//
+// Check this when the object could be scheduled for deletion, to avoid flaky
+// behavior when we're ensuring we don't want something to be deleted.
+func NotPendingDeletion(o core.Object) error {
+	if o.GetDeletionTimestamp() == nil {
+		return nil
+	}
+	return errors.Errorf("object has non-nil deletionTimestamp")
+}

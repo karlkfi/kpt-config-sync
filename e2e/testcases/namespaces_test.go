@@ -1,13 +1,8 @@
 package e2e
 
 import (
-	"flag"
-	"math/rand"
-	"os"
 	"testing"
-	"time"
 
-	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -31,16 +26,4 @@ func TestDeclareNamespace(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-}
-
-func TestMain(m *testing.M) {
-	// This TestMain function is required in every e2e test case file.
-	flag.Parse()
-
-	if !*e2e.E2E {
-		return
-	}
-	rand.Seed(time.Now().UnixNano())
-
-	os.Exit(m.Run())
 }

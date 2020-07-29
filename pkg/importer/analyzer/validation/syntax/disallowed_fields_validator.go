@@ -23,10 +23,6 @@ type hasCreationTimestamp interface {
 	GetCreationTimestamp() v1.Time
 }
 
-type hasDeletionTimestamp interface {
-	GetDeletionTimestamp() *v1.Time
-}
-
 type hasDeletionGracePeriodSeconds interface {
 	GetDeletionGracePeriodSeconds() *int64
 }
@@ -60,10 +56,8 @@ func DisallowFields(o ast.FileObject) status.Error {
 			return IllegalFieldsInConfigError(o, id.CreationTimestamp)
 		}
 	}
-	if deletion, ok := obj.(hasDeletionTimestamp); ok {
-		if deletion.GetDeletionTimestamp() != nil {
-			return IllegalFieldsInConfigError(o, id.DeletionTimestamp)
-		}
+	if obj.GetDeletionTimestamp() != nil {
+		return IllegalFieldsInConfigError(o, id.DeletionTimestamp)
 	}
 	if gracePeriod, ok := obj.(hasDeletionGracePeriodSeconds); ok {
 		if gracePeriod.GetDeletionGracePeriodSeconds() != nil {

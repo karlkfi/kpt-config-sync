@@ -52,6 +52,7 @@ type Object interface {
 	LabeledAndAnnotated
 	OwnerReferenced
 	resourceVersioned
+	HasDeletionTimestamp
 
 	// GetUID and SetUID define metadata.uid, which all persistent Kubernetes types must define.
 	// Users MUST leave the uid field empty as it is managed by Kubernetes.
@@ -89,4 +90,9 @@ func ObjectOf(o runtime.Object) (Object, error) {
 		return nil, errors.Errorf("not a Kubernetes object %v", o)
 	}
 	return co, nil
+}
+
+// HasDeletionTimestamp returns the object's DeletionTimestamp, if there is one.
+type HasDeletionTimestamp interface {
+	GetDeletionTimestamp() *metav1.Time
 }

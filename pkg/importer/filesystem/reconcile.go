@@ -48,7 +48,7 @@ type reconciler struct {
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
 	decoder         decode.Decoder
-	format          sourceFormat
+	format          SourceFormat
 	repoClient      *repo.Client
 	cache           cache.Cache
 	// parsedGit is populated when the mounted git repo has successfully been
@@ -105,7 +105,7 @@ func dumpForFiles(objs []ast.FileObject) string {
 // to call configmanagement and other Kubernetes APIs.
 func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
 	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
-	decoder decode.Decoder, format sourceFormat) (*reconciler, error) {
+	decoder decode.Decoder, format SourceFormat) (*reconciler, error) {
 	repoClient := repo.New(client)
 
 	absGitDir, err := cmpath.AbsoluteOS(gitDir)
@@ -228,7 +228,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		glog.Error(err)
 		return reconcile.Result{}, errors.Wrap(err, "listing git files")
 	}
-	if c.format == sourceFormatHierarchy {
+	if c.format == SourceFormatHierarchy {
 		wantFiles = FilterHierarchyFiles(absPolicyDir, wantFiles)
 	}
 

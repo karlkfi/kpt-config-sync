@@ -7,12 +7,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const manifests = "manifests"
@@ -38,16 +41,21 @@ var templates = []string{
 
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
-func installConfigSync(nt *NT) func() error {
+func installConfigSync(nt *NT, nomos ntopts.Nomos) func() error {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
 	objs := installationManifests(nt, tmpManifestsDir)
 
 	for _, o := range objs {
-		if o.GroupVersionKind() == kinds.Namespace() && o.GetName() == configmanagement.ControllerNamespace {
+		if o.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() && o.GetName() == configmanagement.ControllerNamespace {
 			// We've already created the config-management-system Namespace.
 			continue
+		}
+		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == controllers.SourceFormat {
+			u := o.(*unstructured.Unstructured)
+			data := u.Object["data"].(map[string]interface{})
+			data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
 		}
 		err := nt.Create(o)
 		if err != nil {

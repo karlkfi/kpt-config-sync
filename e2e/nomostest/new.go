@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -26,6 +28,15 @@ const nomosE2E = "nomos-e2e"
 
 // New establishes a connection to a test cluster and prepares it for testing.
 //
+// Use NewWithOptions for customization.
+func New(t *testing.T) *NT {
+	return NewWithOptions(t, ntopts.New{})
+}
+
+// NewWithOptions establishes a connection to a test cluster based on the passed
+//
+// options.
+//
 // Marks the test as parallel. For now we have no tests which *can't* be made
 // parallel; if we need that in the future we can make a version of this
 // function that doesn't do this. As below keeps us from forgetting to mark
@@ -34,8 +45,8 @@ const nomosE2E = "nomos-e2e"
 // The following are guaranteed to be available when this function returns:
 // 1) A connection to the Kubernetes cluster.
 // 2) A functioning git server hosted on the cluster.
-// 3) TODO(willbeason): A fresh ACM installation.
-func New(t *testing.T) *NT {
+// 3) A fresh ACM installation.
+func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 	t.Parallel()
 	t.Helper()
 
@@ -46,22 +57,33 @@ func New(t *testing.T) *NT {
 		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
 
-	clusterName := testClusterName(t)
-	tmpDir := testDir(t)
+	// Set default options.
+	if opts.Name == "" {
+		opts.Name = testClusterName(t)
+	}
+	if opts.TmpDir == "" {
+		opts.TmpDir = testDir(t)
+	}
+	if opts.KindCluster.Version == "" {
+		opts.KindCluster.Version = ntopts.AsKindVersion(t, *e2e.KubernetesVersion)
+	}
+	if opts.Nomos.SourceFormat == "" {
+		opts.Nomos.SourceFormat = filesystem.SourceFormatHierarchy
+	}
 
 	// TODO(willbeason): Support connecting to:
 	//  1) A user-specified cluster.
 	//  2) One of a set of already-set-up clusters?
 	// We have to update the name since newKind may choose a new name for the
 	// cluster if the name is too long.
-	cfg, kubeconfigPath := newKind(t, clusterName, tmpDir)
+	cfg, kubeconfigPath := newKind(t, opts.Name, opts.TmpDir, opts.KindCluster)
 	c := connect(t, cfg)
 
 	nt := &NT{
 		Context:        context.Background(),
 		T:              t,
-		ClusterName:    clusterName,
-		TmpDir:         tmpDir,
+		ClusterName:    opts.Name,
+		TmpDir:         opts.TmpDir,
 		Config:         cfg,
 		Client:         c,
 		kubeconfigPath: kubeconfigPath,
@@ -79,10 +101,10 @@ func New(t *testing.T) *NT {
 	}
 	// Pods don't always restart if the secrets don't exist, so we have to
 	// create the Namespaces + Secrets before anything else.
-	nt.gitPrivateKeyPath = generateSSHKeys(nt, filepath.Join(tmpDir, kubeconfig))
+	nt.gitPrivateKeyPath = generateSSHKeys(nt, filepath.Join(opts.TmpDir, kubeconfig))
 
 	waitForGit := installGitServer(nt)
-	waitForConfigSync := installConfigSync(nt)
+	waitForConfigSync := installConfigSync(nt, opts.Nomos)
 
 	err = waitForGit()
 	if err != nil {
@@ -91,7 +113,7 @@ func New(t *testing.T) *NT {
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt)
-	nt.Repository = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort)
+	nt.Repository = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
 
 	err = waitForConfigSync()
 	if err != nil {

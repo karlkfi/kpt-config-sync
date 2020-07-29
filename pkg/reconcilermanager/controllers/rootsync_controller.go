@@ -105,7 +105,7 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) error {
 	switch cm.Name {
 	case buildRootSyncName(importer):
 		cm.Data = importerData(rs.Spec.Git.Dir)
-	case buildRootSyncName(sourceFormat):
+	case buildRootSyncName(SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRootSyncName(gitSync):
 		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
@@ -153,7 +153,7 @@ func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment) error {
 		case importer:
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRootSyncName(importer)] = pointer.BoolPtr(false)
-			configmapRef[buildRootSyncName(sourceFormat)] = pointer.BoolPtr(true)
+			configmapRef[buildRootSyncName(SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)
