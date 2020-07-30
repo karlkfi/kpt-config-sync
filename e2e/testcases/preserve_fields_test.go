@@ -163,8 +163,10 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 	nt.Repository.CommitAndPush("add label to aggregate ClusterRole")
 	nt.WaitForRepoSync()
 
-	// TODO(b/162496882): We don't actually preserve the aggregate field, so
-	//  everything below checks confirms that the bug is still present.
+	// TODO(b/162496882): We don't usually preserve the aggregate field, so
+	//  we Retry when in reality we would just check once.
+	//  We don't have a robust check for this bug right now as it isn't triggered
+	//  100% of the time.
 
 	// First, ensure that RBAC is actually continuing to update the aggregate
 	// role with the correct permissions.
@@ -183,51 +185,6 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		// Failing on this check probably indicates a new bug was introduced.
 		t.Fatal(err)
 	}
-
-	// In below block of code, we're going to **FAIL** if the ClusterRole's
-	// resourceVersion is stable for ten seconds. The bug makes ACM and RBAC fight
-	// over the resource, causing its resourceVersion to change constantly.
-	// If the resourceVersion doesn't stay stable for at least a period of 10
-	// seconds, the bug is still present and the test will finish successfully.
-
-	// If this test begins failing here then congratulations! The bug is resolved.
-	resourceVersion := ""
-	stableCount := 0
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		cr := &rbacv1.ClusterRole{}
-		err := nt.Get(aggregateRoleName, "", cr)
-		if err != nil {
-			return err
-		}
-
-		// Get the new resourceVersion. If it has changed, it means some process
-		// has modified it. Since this is a fresh cluster, we can be sure that either
-		// the RBAC controller or ACM modified it, but probably both.
-		// Such updates indicate RBAC and ACM are fighting over this ClusterRole.
-		newResourceVersion := cr.GetResourceVersion()
-		if resourceVersion != newResourceVersion {
-			// The resourceVersion has changed, so either the bug is still in effect
-			// or it was a random change.
-			stableCount = 0
-			resourceVersion = newResourceVersion
-		} else {
-			stableCount++
-		}
-
-		if stableCount < 10 {
-			// We haven't been stable for long enough to verify that the bug is fixed,
-			// so try again.
-			return errors.Errorf("got resourceVersion stable for %d seconds, want 10", stableCount)
-		}
-
-		// The bug is fixed! We aren't fighting over the ClusterRole any more!
-		return nil
-	})
-
-	if err == nil {
-		t.Fatal("the ClusterRole is stable, so b/162496882 has been fixed")
-	}
-	// The bug is still present and a KI, so "succeed".
 }
 
 // TestPreserveLastApplied ensures we don't destroy the last-applied-configuration
