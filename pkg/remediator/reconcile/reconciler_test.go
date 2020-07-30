@@ -165,7 +165,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			// Simulate the Parser having already parsed the resource and recorded it.
 			d := declared(t, tc.declared)
 
-			r := newReconciler(c, c.Applier(), d)
+			r := newReconciler(c.Applier(), d)
 
 			// Get the triggering object for the reconcile event.
 			var obj core.Object
@@ -193,7 +193,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 	}
 }
 
-func fakeClient(t *testing.T, actual core.Object) *testingfake.Client {
+func fakeClient(t *testing.T, actual ...core.Object) *testingfake.Client {
 	t.Helper()
 	s := runtime.NewScheme()
 	err := corev1.AddToScheme(s)
@@ -211,9 +211,11 @@ func fakeClient(t *testing.T, actual core.Object) *testingfake.Client {
 	}
 
 	c := testingfake.NewClient(t, s)
-	if actual != nil {
-		err := c.Create(context.Background(), actual)
-		if err != nil {
+	for _, a := range actual {
+		if a == nil {
+			continue
+		}
+		if err := c.Create(context.Background(), a); err != nil {
 			// Test precondition; fail early.
 			t.Fatal(err)
 		}
@@ -221,15 +223,12 @@ func fakeClient(t *testing.T, actual core.Object) *testingfake.Client {
 	return c
 }
 
-func declared(t *testing.T, declared core.Object) *declaredresources.DeclaredResources {
+func declared(t *testing.T, declared ...core.Object) *declaredresources.DeclaredResources {
 	t.Helper()
 	d := declaredresources.NewDeclaredResources()
-	if declared != nil {
-		err := d.UpdateDecls([]core.Object{declared})
-		if err != nil {
-			// Test precondition; fail early.
-			t.Fatal(err)
-		}
+	if err := d.UpdateDecls(declared); err != nil {
+		// Test precondition; fail early.
+		t.Fatal(err)
 	}
 	return d
 }

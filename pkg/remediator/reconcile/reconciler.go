@@ -12,14 +12,11 @@ import (
 	"github.com/google/nomos/pkg/syncer/differ"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // reconciler ensures objects are consistent with their declared state in the
 // repository.
 type reconciler struct {
-	// reader is the source of "actual" configuration on a Kubernetes cluster.
-	reader client.Reader
 	// applier is where to write the declared configuration to.
 	applier syncerreconcile.Applier
 	// declared is the threadsafe in-memory representation of declared configuration.
@@ -28,12 +25,10 @@ type reconciler struct {
 
 // newReconciler instantiates a new reconciler.
 func newReconciler(
-	reader client.Reader,
 	applier syncerreconcile.Applier,
 	declared *declaredresources.DeclaredResources,
 ) *reconciler {
 	return &reconciler{
-		reader:   reader,
 		applier:  applier,
 		declared: declared,
 	}

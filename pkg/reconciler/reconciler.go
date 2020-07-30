@@ -19,14 +19,18 @@ const RootScope = ":root"
 
 // Options contains the settings for a reconciler process.
 type Options struct {
-	// ReconcilerScope is the scope of resources which the reconciler will manage.
-	// Currently this can either be a namespace or the root scope which allows a
-	// cluster admin to manage the entire cluster.
-	ReconcilerScope string
 	// FightDetectionThreshold is the rate of updates per minute to an API
 	// Resource at which the reconciler will log warnings about too many updates
 	// to the resource.
 	FightDetectionThreshold float64
+	// NumWorkers is the number of concurrent remediator workers to run at once.
+	// Each worker pulls resources off of the work queue and remediates them one
+	// at a time.
+	NumWorkers int
+	// ReconcilerScope is the scope of resources which the reconciler will manage.
+	// Currently this can either be a namespace or the root scope which allows a
+	// cluster admin to manage the entire cluster.
+	ReconcilerScope string
 }
 
 // Run configures and starts the various components of a reconciler process.
@@ -69,7 +73,7 @@ func Run(opts Options) {
 		glog.Fatalf("Instantiating Applier for Remediator: %v", err)
 	}
 
-	remediator.New(opts.ReconcilerScope, baseApplier, decls)
+	remediator.New(opts.ReconcilerScope, baseApplier, decls, opts.NumWorkers)
 
 	// Configure Parser
 	// TODO(b/162014057): configure the parser and get everything running.

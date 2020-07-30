@@ -3,6 +3,7 @@ package declaredresources
 import (
 	"sync"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,6 +29,11 @@ func NewDeclaredResources() *DeclaredResources {
 func (dr *DeclaredResources) UpdateDecls(objects []core.Object) error {
 	newSet := make(map[core.ID]*unstructured.Unstructured)
 	for _, obj := range objects {
+		if obj == nil {
+			glog.Warning("DeclaredResources received nil declared resource")
+			// TODO(b/162601559): Increment internal error metric here
+			continue
+		}
 		id := core.IDOf(obj)
 		u, err := reconcile.AsUnstructured(obj)
 		if err != nil {
