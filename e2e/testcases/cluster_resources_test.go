@@ -86,12 +86,27 @@ func TestRevertClusterRole(t *testing.T) {
 	}
 
 	// Ensure the conflict is reverted.
-	_, err = nomostest.Retry(30*time.Second, func() error {
+	d, err := nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate(crName, "", &rbacv1.ClusterRole{},
 			hasRules(declaredRules))
 	})
+
 	if err != nil {
-		t.Errorf("reverting ClusterRole conflict: %v", err)
+		// err is non-nil about 1% of the time, making this a flaky test.
+		// So, wait for up to ten minutes for the ClusterRole to be reverted.
+		// If it doesn't after ten minutes, this is definitely a bug.
+		d2, err := nomostest.Retry(10*time.Minute, func() error {
+			return nt.Validate(crName, "", &rbacv1.ClusterRole{},
+				hasRules(declaredRules))
+		})
+		if err == nil {
+			// This was probably a flake. Consider increasing test resources or
+			// reducing test parallelism.
+			t.Fatalf("reverted ClusterRole conflict after %v: %v", d+d2, err)
+		}
+
+		// There is definitely some sort of bug in ACM.
+		t.Errorf("did not revert ClusterRole conflict after: %v", err)
 	}
 }
 
