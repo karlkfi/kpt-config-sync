@@ -47,7 +47,16 @@ func (w *Worker) processNextObject(ctx context.Context) bool {
 }
 
 func (w *Worker) process(ctx context.Context, obj core.Object) bool {
-	if err := w.reconciler.Remediate(ctx, core.IDOf(obj), obj); err != nil {
+	var toRemediate core.Object
+	if queue.WasDeleted(obj) {
+		// Passing a nil Object to the reconciler signals that the accompanying ID
+		// is for an Object that was deleted.
+		toRemediate = nil
+	} else {
+		toRemediate = obj
+	}
+
+	if err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate); err != nil {
 		glog.Errorf("Worker received an error while reconciling %q: %v", core.IDOf(obj), err)
 		w.objectQueue.AddRateLimited(obj)
 		return false

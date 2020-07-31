@@ -4,15 +4,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/parse/declaredresources"
-	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"k8s.io/apimachinery/pkg/watch"
 )
-
-// queue is the interface to add an event to the work queue.
-type queue interface {
-	Add(core.Object)
-}
 
 // Runnable defines the custom watch interface.
 type Runnable interface {
@@ -27,7 +22,7 @@ type Runnable interface {
 type filteredWatcher struct {
 	base      watch.Interface
 	resources *declaredresources.DeclaredResources
-	queue     queue
+	queue     *queue.ObjectQueue
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -41,17 +36,41 @@ func (w *filteredWatcher) Stop() { w.base.Stop() }
 // in the event to the controller work queue.
 func (w *filteredWatcher) Run() {
 	for event := range w.base.ResultChan() {
+		var deleted bool
+		switch event.Type {
+		case watch.Added, watch.Modified:
+			deleted = false
+		case watch.Deleted:
+			deleted = true
+		case watch.Bookmark:
+			glog.V(4).Infof("Ignoring Bookmark watch event: %#v", event)
+			continue
+		default:
+			glog.Errorf("Unsupported watch event: %#v", event)
+			continue
+		}
+
 		// get core.Object from the runtime object.
 		object, err := core.ObjectOf(event.Object)
 		if err != nil {
-			glog.Warning(status.InternalErrorf("getting core.Object from runtime.Object %v", err))
+			glog.Warningf("Received non core.Object in watch event: %v", err)
+			// TODO(b/162601559): Increment internal error metric here
 			continue
 		}
 		// filter objects.
 		if w.ignoreObject(object) {
-			glog.V(4).Info("ignore event for unwatched object")
+			glog.V(4).Infof("Ignoring event for unmanaged object: %v", object)
 			continue
 		}
+
+		if deleted {
+			glog.V(2).Infof("Received watch event for deleted object %q", core.IDOf(object))
+			object = queue.MarkDeleted(object)
+		} else {
+			glog.V(2).Infof("Received watch event for created/updated object %q", core.IDOf(object))
+		}
+
+		glog.V(3).Infof("Received object: %v", object)
 		w.queue.Add(object)
 	}
 }

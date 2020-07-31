@@ -49,11 +49,13 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				fake.ClusterRoleBindingObject(),
 				fake.ClusterRoleObject(),
 			},
-			toProcess: []core.Object{},
-			want:      []runtime.Object{
-				// TODO(b/159821780): Update the workqueue to properly funnel delete events to the reconciler.
-				//fake.ClusterRoleBindingObject(),
-				//fake.ClusterRoleObject(),
+			toProcess: []core.Object{
+				queue.MarkDeleted(fake.ClusterRoleBindingObject()),
+				queue.MarkDeleted(fake.ClusterRoleObject()),
+			},
+			want: []runtime.Object{
+				fake.ClusterRoleBindingObject(),
+				fake.ClusterRoleObject(),
 			},
 		},
 	}
@@ -65,7 +67,15 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				q.Add(obj)
 			}
 
-			c := fakeClient(t, tc.toProcess...)
+			c := fakeClient(t)
+			for _, obj := range tc.toProcess {
+				if !queue.WasDeleted(obj) {
+					if err := c.Create(context.Background(), obj); err != nil {
+						t.Fatalf("Failed to create object in fake client: %v", err)
+					}
+				}
+			}
+
 			d := declared(t, tc.declared...)
 			w := NewWorker(c.Applier(), q, d)
 

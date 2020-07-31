@@ -3,6 +3,7 @@ package watch
 import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/remediator/queue"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -22,7 +23,7 @@ type Manager struct {
 	resources *declaredresources.DeclaredResources
 
 	// queue is the work queue for remediator.
-	queue queue
+	queue *queue.ObjectQueue
 
 	// watcherMap maps GVKs to their associated watchers
 	watcherMap map[schema.GroupVersionKind]Runnable
@@ -54,7 +55,7 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(cfg *rest.Config, queue queue, options *Options) (*Manager, error) {
+func NewManager(cfg *rest.Config, q *queue.ObjectQueue, options *Options) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -69,7 +70,7 @@ func NewManager(cfg *rest.Config, queue queue, options *Options) (*Manager, erro
 		watcherMap:        make(map[schema.GroupVersionKind]Runnable),
 		createWatcherFunc: options.watcherFunc,
 		mapper:            options.Mapper,
-		queue:             queue,
+		queue:             q,
 	}, nil
 }
 

@@ -2,6 +2,7 @@ package watch
 
 import (
 	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/remediator/queue"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,7 +17,7 @@ type watcherOptions struct {
 	mapper    meta.RESTMapper
 	config    *rest.Config
 	resources *declaredresources.DeclaredResources
-	queue     queue
+	queue     *queue.ObjectQueue
 }
 
 // createWatcherFunc is the type of functions to create watchers
