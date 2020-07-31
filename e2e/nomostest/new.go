@@ -20,6 +20,10 @@ import (
 // 2) Cause ssh-keygen to fail.
 const fileMode = os.ModePerm
 
+// nomosE2E is the subdirectory inside the filesystem's temporary directory in
+// which we write test data.
+const nomosE2E = "nomos-e2e"
+
 // New establishes a connection to a test cluster and prepares it for testing.
 //
 // Marks the test as parallel. For now we have no tests which *can't* be made
@@ -106,12 +110,11 @@ func testDir(t *testing.T) string {
 	t.Helper()
 
 	name := testDirName(t)
-	subPath := filepath.Join("nomos-e2e", name+"-")
-	err := os.MkdirAll(filepath.Join(os.TempDir(), subPath), fileMode)
+	err := os.MkdirAll(filepath.Join(os.TempDir(), nomosE2E), fileMode)
 	if err != nil {
 		t.Fatalf("creating nomos-e2e tmp directory: %v", err)
 	}
-	tmpDir, err := ioutil.TempDir(os.TempDir(), subPath)
+	tmpDir, err := ioutil.TempDir(filepath.Join(os.TempDir(), nomosE2E), name)
 	if err != nil {
 		t.Fatalf("creating nomos-e2e tmp test subdirectory: %v", err)
 	}
