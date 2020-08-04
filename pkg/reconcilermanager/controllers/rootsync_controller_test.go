@@ -1,13 +1,19 @@
 package controllers
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	syncerFake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +79,33 @@ func rootDeploymentWithEnvFrom(namespace, name, containerName string, opts ...co
 	return result
 }
 
-func rootSync(rev string, opts ...core.MetaMutator) v1.RootSync {
+// rsDeploymentWithEnvFroms returns appsv1.Deployment
+// containerConfigMap contains map of container name and their respective configmaps.
+func rsDeploymentWithEnvFroms(namespace, name string, containerConfigMap map[string][]configMapRef, opts ...core.MetaMutator) *appsv1.Deployment {
+	result := fake.DeploymentObject(opts...)
+	result.Namespace = namespace
+	result.Name = name
+	result.Spec.Template.Spec = corev1.PodSpec{
+		Containers: importerContainer(name, containerConfigMap),
+	}
+	return result
+}
+
+func importerContainer(name string, containerConfigMap map[string][]configMapRef) []corev1.Container {
+	var container []corev1.Container
+	for cntrName, cms := range containerConfigMap {
+		cntr := fake.ContainerObject(cntrName)
+		var eFromSource []corev1.EnvFromSource
+		for _, cm := range cms {
+			eFromSource = append(eFromSource, envFromSource(name, cm))
+		}
+		cntr.EnvFrom = append(cntr.EnvFrom, eFromSource...)
+		container = append(container, *cntr)
+	}
+	return container
+}
+
+func rootSync(rev string, opts ...core.MetaMutator) *v1.RootSync {
 	result := fake.RootSyncObject(opts...)
 	result.Spec.Git = v1.Git{
 		Repo:     rootsyncRepo,
@@ -81,13 +113,13 @@ func rootSync(rev string, opts ...core.MetaMutator) v1.RootSync {
 		Dir:      rootsyncDir,
 		Auth:     auth,
 	}
-	return *result
+	return result
 }
 
 func TestRootSyncMutateConfigMap(t *testing.T) {
 	testCases := []struct {
 		name            string
-		rootSync        v1.RootSync
+		rootSync        *v1.RootSync
 		actualConfigMap *corev1.ConfigMap
 		wantConfigMap   *corev1.ConfigMap
 		wantErr         bool
@@ -155,7 +187,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRootSyncConfigMap(tc.rootSync, tc.actualConfigMap)
+			err := mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -173,7 +205,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 func TestRootSyncMutateDeployment(t *testing.T) {
 	testCases := []struct {
 		name             string
-		rootSync         v1.RootSync
+		rootSync         *v1.RootSync
 		actualDeployment *appsv1.Deployment
 		wantDeployment   *appsv1.Deployment
 		wantErr          bool
@@ -220,7 +252,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRootSyncDeployment(tc.rootSync, tc.actualDeployment)
+			err := mutateRootSyncDeployment(*tc.rootSync, tc.actualDeployment)
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -234,4 +266,129 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRootSyncReconciler(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	rsParseDeployment = func(de *appsv1.Deployment) error {
+		de.Spec = appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: importer},
+						{Name: gitSync},
+						{Name: fsWatcher},
+					},
+				},
+			},
+		}
+		return nil
+	}
+
+	s := runtime.NewScheme()
+	if err := corev1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := appsv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+
+	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	fakeClient := syncerFake.NewClient(t, s, rsResource)
+	testReconciler := NewRootSyncReconciler(
+		fakeClient,
+		controllerruntime.Log.WithName("controllers").WithName("RootSync"),
+		s,
+	)
+
+	// Test creating Configmaps and Deployment resources.
+	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(gitSync),
+			gitSyncData(branch, rootsyncRepo),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(importer),
+			importerData(rootsyncDir),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+	}
+
+	wantDeployment := []*appsv1.Deployment{
+		rsDeploymentWithEnvFroms(
+			rootsyncReqNamespace,
+			"root-reconciler",
+			importerDeploymentWithConfigMap(),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+	}
+
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("diff %s", diff)
+		}
+	}
+
+	for i, j := range fakeClient.Objects {
+		fmt.Println(i, "**", j)
+	}
+
+	fmt.Println(wantDeployment)
+
+	// Compare ConfigMapRef field in containers.
+	cmpDeployment(t, wantDeployment, fakeClient)
+	t.Log("ConfigMap and Deployement successfully created")
+
+	// Test updating Configmaps and Deployment resources.
+	rsResource.Spec.Git.Revision = updatedBranch
+	if err := fakeClient.Update(context.Background(), rsResource); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap = []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(gitSync),
+			gitSyncData(updatedBranch, rootsyncRepo),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(importer),
+			importerData(rootsyncDir),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			buildRootSyncName(SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+		),
+	}
+
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("diff %s", diff)
+		}
+	}
+
+	t.Log("ConfigMap and Deployement successfully updated")
 }

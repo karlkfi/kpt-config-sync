@@ -118,7 +118,7 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) error {
 func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
-	if err := parseDeployment(&childDep); err != nil {
+	if err := rsParseDeployment(&childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
 	childDep.Name = buildRootSyncName()

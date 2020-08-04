@@ -120,7 +120,7 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) error {
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, repoSync v1.RepoSync) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
-	if err := parseDeployment(&childDep); err != nil {
+	if err := nsParseDeployment(&childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
 	childDep.Name = buildRepoSyncName(repoSync.Namespace)

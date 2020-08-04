@@ -58,7 +58,7 @@ func nsGitSyncConfigMap(containerName string, configmap configMapRef) map[string
 	return result
 }
 
-func nsImporterDeploymentWithConfigMap() map[string][]configMapRef {
+func importerDeploymentWithConfigMap() map[string][]configMapRef {
 	return map[string][]configMapRef{
 		buildRepoSyncName(reposyncReqNamespace, importer): {
 			{
@@ -271,7 +271,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 
 func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
-	parseDeployment = func(de *appsv1.Deployment) error {
+	nsParseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -333,7 +333,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
-			nsImporterDeploymentWithConfigMap(),
+			importerDeploymentWithConfigMap(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 	}
