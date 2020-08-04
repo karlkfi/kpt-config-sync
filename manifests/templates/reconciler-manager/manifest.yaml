@@ -150,6 +150,7 @@ data:
            command: ["git-importer"]
            args:
            - "--v=0"
+           - "--git-dir=/repo/root/rev"
            ports:
              - containerPort: 8675
                name: metrics-port
@@ -190,7 +191,7 @@ data:
                memory: "100Mi"
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64
-           args: ["--root=/repo", "--dest=rev", "--max-sync-failures=30", "--v=5"]
+           args: ["--root=/repo/root", "--dest=rev", "--max-sync-failures=30", "--v=5"]
            volumeMounts:
            - name: repo
              mountPath: /repo
