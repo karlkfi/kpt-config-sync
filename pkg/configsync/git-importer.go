@@ -67,7 +67,7 @@ func RunImporter() {
 	}
 
 	mgrStopChannel := signals.SetupSignalHandler()
-	ctx := stoppableContext(mgrStopChannel)
+	ctx := StoppableContext(context.Background(), mgrStopChannel)
 	if err := controller.AddRepoStatus(ctx, mgr); err != nil {
 		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
 	}
@@ -93,11 +93,13 @@ func DirWatcher(dir string, period time.Duration) {
 	watcher.Watch(period, signals.SetupSignalHandler())
 }
 
-func stoppableContext(stopChannel <-chan struct{}) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
+// StoppableContext returns a Context that will be canceled when the given stop
+// channel is closed.
+func StoppableContext(ctx context.Context, stopChannel <-chan struct{}) context.Context {
+	stoppable, cancel := context.WithCancel(ctx)
 	go func() {
 		<-stopChannel
 		cancel()
 	}()
-	return ctx
+	return stoppable
 }

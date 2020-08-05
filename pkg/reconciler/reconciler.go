@@ -1,16 +1,21 @@
 package reconciler
 
 import (
+	"context"
+	"time"
+
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/configsync"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 // RootScope is a special constant for a reconciler which is running as the
@@ -31,10 +36,14 @@ type Options struct {
 	// Currently this can either be a namespace or the root scope which allows a
 	// cluster admin to manage the entire cluster.
 	ReconcilerScope string
+	// ApplierResyncPeriod is the period of time between forced re-sync runs of
+	// the Applier. At the end of each period, the Applier will re-apply its
+	// current set of declared resources to the cluster.
+	ApplierResyncPeriod time.Duration
 }
 
 // Run configures and starts the various components of a reconciler process.
-func Run(opts Options) {
+func Run(ctx context.Context, opts Options) {
 	reconcile.SetFightThreshold(opts.FightDetectionThreshold)
 
 	// Get a config to talk to the apiserver.
@@ -57,26 +66,33 @@ func Run(opts Options) {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 
-	// Configure Applier
+	// Configure the Applier.
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	baseApplier, err := reconcile.NewApplier(mgr.GetConfig(), genericClient)
 
+	var a *applier.Applier
 	if opts.ReconcilerScope == RootScope {
-		applier.NewRootApplier(genericClient, baseApplier)
+		a = applier.NewRootApplier(genericClient, baseApplier)
 	} else {
-		applier.NewNamespaceApplier(genericClient, baseApplier, opts.ReconcilerScope)
+		a = applier.NewNamespaceApplier(genericClient, baseApplier, opts.ReconcilerScope)
 	}
 
-	// Configure Remediator
+	// Configure the Remediator.
 	decls := declaredresources.NewDeclaredResources()
 	if err != nil {
 		glog.Fatalf("Instantiating Applier for Remediator: %v", err)
 	}
 
-	remediator.New(opts.ReconcilerScope, baseApplier, decls, opts.NumWorkers)
+	rem := remediator.New(opts.ReconcilerScope, baseApplier, decls, opts.NumWorkers)
 
-	// Configure Parser
+	// Configure the Parser.
 	// TODO(b/162014057): configure the parser and get everything running.
 
-	// Note that there should be a blocking call here.
+	// Start the Remediator.
+	stopChan := signals.SetupSignalHandler()
+	rem.Start(configsync.StoppableContext(ctx, stopChan))
+	// Start the Applier.
+	a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
+	// Start the Parser.
+	// parser.Run(...) <-- this should not return until stop channel is closed or context is cancelled
 }
