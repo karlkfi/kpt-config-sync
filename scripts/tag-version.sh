@@ -65,6 +65,11 @@ if [ -z "$CS_VERSION" ]; then
   exit 1
 fi
 
+# If a user omits the leading "v" (enters 1.2.3 instead of v1.2.3), handle it.
+if ! [[ "${CS_VERSION}" = v* ]]; then
+  CS_VERSION="v${CS_VERSION}"
+fi
+
 # Fetch all existing tags
 git fetch --tags > /dev/null
 echo "+++ Successfully fetched tags"
