@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -60,29 +61,47 @@ func nsGitSyncConfigMap(containerName string, configmap configMapRef) map[string
 
 func importerDeploymentWithConfigMap() map[string][]configMapRef {
 	return map[string][]configMapRef{
-		buildRepoSyncName(reposyncReqNamespace, importer): {
+		importer: {
 			{
-				name: importer,
+				name:     importer,
+				optional: pointer.BoolPtr(false),
 			},
 			{
 				name:     SourceFormat,
 				optional: pointer.BoolPtr(true),
 			},
 		},
-		buildRepoSyncName(reposyncReqNamespace, gitSync): {
+		gitSync: {
 			{
-				name: gitSync,
+				name:     gitSync,
+				optional: pointer.BoolPtr(false),
 			},
 		},
 	}
 }
 
+func nsDeploymentAnnotation() map[string]string {
+	return map[string]string{
+		"configmanagement.gke.io/configmap": "7b226e732d7265636f6e63696c65722d626f6f6b696e666f2d6769742d73796e63223a7b224749545f4b4e4f574e5f484f535453223a2266616c7365222c224749545f53594e435f4252414e4348223a22312e302e30222c224749545f53594e435f5245504f223a2268747470733a2f2f6769746875622e636f6d2f746573742f7265706f73796e632f6373702d636f6e6669672d6d616e6167656d656e742f222c224749545f53594e435f524556223a2248454144222c224749545f53594e435f57414954223a223135227d7d6c62272e07bb014262b821756295c58d",
+	}
+}
+
+func nsDeploymentUpdatedAnnotation() map[string]string {
+	return map[string]string{
+		"configmanagement.gke.io/configmap": "7b226e732d7265636f6e63696c65722d626f6f6b696e666f2d6769742d73796e63223a7b224749545f4b4e4f574e5f484f535453223a2266616c7365222c224749545f53594e435f4252414e4348223a22322e302e30222c224749545f53594e435f5245504f223a2268747470733a2f2f6769746875622e636f6d2f746573742f7265706f73796e632f6373702d636f6e6669672d6d616e6167656d656e742f222c224749545f53594e435f524556223a2248454144222c224749545f53594e435f57414954223a223135227d7d6c62272e07bb014262b821756295c58d",
+	}
+}
+
 // nsDeploymentWithEnvFrom returns appsv1.Deployment
 // containerConfigMap contains map of container name and their respective configmaps.
-func nsDeploymentWithEnvFrom(namespace, name string, containerConfigMap map[string][]configMapRef, opts ...core.MetaMutator) *appsv1.Deployment {
+func nsDeploymentWithEnvFrom(namespace, name string,
+	containerConfigMap map[string][]configMapRef,
+	annotation map[string]string,
+	opts ...core.MetaMutator) *appsv1.Deployment {
 	result := fake.DeploymentObject(opts...)
 	result.Namespace = namespace
 	result.Name = buildRepoSyncName(name)
+	result.Spec.Template.Annotations = annotation
 
 	var container []corev1.Container
 	for cntrName, cms := range containerConfigMap {
@@ -109,6 +128,25 @@ func envFromSource(name string, configMap configMapRef) corev1.EnvFromSource {
 			Optional: configMap.optional,
 		},
 	}
+}
+
+func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client, *RepoSyncReconciler) {
+	t.Helper()
+	s := runtime.NewScheme()
+	if err := corev1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := appsv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+
+	fakeClient := syncerFake.NewClient(t, s, objs...)
+	testReconciler := NewRepoSyncReconciler(
+		fakeClient,
+		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
+		s,
+	)
+	return fakeClient, testReconciler
 }
 
 func TestRepoSyncMutateConfigMap(t *testing.T) {
@@ -182,7 +220,7 @@ func TestRepoSyncMutateConfigMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRepoSyncConfigMap(*tc.repoSync, tc.actualConfigMap)
+			_, err := mutateRepoSyncConfigMap(*tc.repoSync, tc.actualConfigMap)
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -224,6 +262,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),
+				map[string]string{"configmanagement.gke.io/configmap": "31323334"},
 				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
 			wantErr: false,
 		},
@@ -246,6 +285,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),
+				nil,
 				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
 			wantErr: true,
 		},
@@ -253,7 +293,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRepoSyncDeployment(*tc.repoSync, tc.actualDeployment)
+			err := mutateRepoSyncDeployment(*tc.repoSync, tc.actualDeployment, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -286,22 +326,9 @@ func TestRepoSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	s := runtime.NewScheme()
-	if err := corev1.AddToScheme(s); err != nil {
-		t.Fatal(err)
-	}
-	if err := appsv1.AddToScheme(s); err != nil {
-		t.Fatal(err)
-	}
-
 	nsResource := repoSync(branch, core.Name(reposyncName), core.Namespace(reposyncReqNamespace))
 	reqNamespacedName := namespacedName(reposyncName, reposyncReqNamespace)
-	fakeClient := syncerFake.NewClient(t, s, nsResource)
-	testReconciler := NewRepoSyncReconciler(
-		fakeClient,
-		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
-		s,
-	)
+	fakeClient, testReconciler := setupNSReconciler(t, nsResource)
 
 	// Test creating Configmaps and Deployment resources.
 	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
@@ -334,6 +361,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
 			importerDeploymentWithConfigMap(),
+			nsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 	}
@@ -379,22 +407,25 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 	}
 
+	wantDeployment = []*appsv1.Deployment{
+		nsDeploymentWithEnvFrom(
+			v1.NSConfigManagementSystem,
+			reposyncReqNamespace,
+			importerDeploymentWithConfigMap(),
+			nsDeploymentUpdatedAnnotation(),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+		),
+	}
+
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("diff %s", diff)
 		}
 	}
 
+	// cmpDeployment compare ConfigMapRef field in containers.
+	cmpDeployment(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
-}
-
-func namespacedName(name, namespace string) reconcile.Request {
-	return reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      name,
-		},
-	}
 }
 
 func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFake.Client) {
@@ -402,6 +433,7 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 	for _, de := range want {
 		actual := fakeClient.Objects[core.IDOf(de)]
 		a := actual.(*appsv1.Deployment)
+		cmpConfigMapAnnotations(t, de.Spec.Template.Annotations, a.Spec.Template.Annotations)
 		for _, i := range de.Spec.Template.Spec.Containers {
 			for _, j := range a.Spec.Template.Spec.Containers {
 				if i.Name == j.Name {
@@ -412,5 +444,21 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 				}
 			}
 		}
+	}
+}
+
+func cmpConfigMapAnnotations(t *testing.T, want, got map[string]string) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Unexpected Annotation found, got: %s,want: %s", got, want)
+	}
+}
+
+func namespacedName(name, namespace string) reconcile.Request {
+	return reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		},
 	}
 }

@@ -50,6 +50,10 @@ const (
 	// ResourceStatusReconcilingKey is the annotation that indicates reasons why a resource is
 	// reconciling, encoded as a JSON array.
 	ResourceStatusReconcilingKey = ConfigManagementPrefix + "reconciling"
+
+	// ConfigMapAnnotationKey is the annotation key representing the hash of all the configmaps
+	// required to run root reconciler and namespace reconciler process.
+	ConfigMapAnnotationKey = ConfigManagementPrefix + "configmap"
 )
 
 // SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.

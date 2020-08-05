@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -97,12 +96,23 @@ func importerContainer(name string, containerConfigMap map[string][]configMapRef
 		cntr := fake.ContainerObject(cntrName)
 		var eFromSource []corev1.EnvFromSource
 		for _, cm := range cms {
-			eFromSource = append(eFromSource, envFromSource(name, cm))
+			eFromSource = append(eFromSource, rsEnvFromSource(cm))
 		}
 		cntr.EnvFrom = append(cntr.EnvFrom, eFromSource...)
 		container = append(container, *cntr)
 	}
 	return container
+}
+
+func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
+	return corev1.EnvFromSource{
+		ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: buildRootSyncName(configMap.name),
+			},
+			Optional: configMap.optional,
+		},
+	}
 }
 
 func rootSync(rev string, opts ...core.MetaMutator) *v1.RootSync {
@@ -342,12 +352,6 @@ func TestRootSyncReconciler(t *testing.T) {
 			t.Errorf("diff %s", diff)
 		}
 	}
-
-	for i, j := range fakeClient.Objects {
-		fmt.Println(i, "**", j)
-	}
-
-	fmt.Println(wantDeployment)
 
 	// Compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
