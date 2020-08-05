@@ -3,82 +3,163 @@ package watch
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/testing/fake"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-func prepareObjects() (u1, u2, u3 *unstructured.Unstructured) {
-	// an object that can be found in the declared resources
-	u1 = fake.UnstructuredObject(kinds.Deployment(),
-		core.Name("default-name"),
-		core.Namespace("default"))
-
-	// an object that can't be found in declared resources
-	// and isn't managed by config sync
-	u2 = fake.UnstructuredObject(kinds.Deployment(),
-		core.Name("unwatched"),
-		core.Namespace("default"))
-
-	// an object that is managed by config sync
-	u3 = fake.UnstructuredObject(kinds.Deployment(),
-		core.Name("managed-resource"),
-		core.Namespace("default"))
-	u3.SetAnnotations(
-		map[string]string{
-			v1.ResourceManagementKey: v1.ResourceManagementEnabled,
-		},
-	)
-	return
+type action struct {
+	event watch.EventType
+	obj   runtime.Object
 }
 
 func TestWrappedWatcher(t *testing.T) {
-	u1, u2, u3 := prepareObjects()
-	obj, err := core.ObjectOf(u1)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+	deployment1 := fake.DeploymentObject(core.Name("hello"))
+	deployment1Beta := fake.DeploymentObject(core.Name("hello"))
+	deployment1Beta.GetObjectKind().SetGroupVersionKind(deployment1Beta.GroupVersionKind().GroupKind().WithVersion("beta1"))
+
+	deployment2 := fake.DeploymentObject(core.Name("world"))
+	deployment3 := fake.DeploymentObject(core.Name("nomes"))
+	managedDeployment := fake.DeploymentObject(core.Name("not-declared"), core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+
+	testCases := []struct {
+		name     string
+		declared []core.Object
+		actions  []action
+		want     []core.ID
+	}{
+		{
+			"Enqueue events for declared resources",
+			[]core.Object{
+				deployment1,
+				deployment2,
+				deployment3,
+			},
+			[]action{
+				{
+					watch.Added,
+					deployment1,
+				},
+				{
+					watch.Modified,
+					deployment2,
+				},
+				{
+					watch.Deleted,
+					deployment3,
+				},
+			},
+			[]core.ID{
+				core.IDOf(deployment1),
+				core.IDOf(deployment2),
+				core.IDOf(deployment3),
+			},
+		},
+		{
+			"Enqueue events for undeclared-but-managed resource",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Modified,
+					managedDeployment,
+				},
+			},
+			[]core.ID{
+				core.IDOf(managedDeployment),
+			},
+		},
+		{
+			"Filter events for undeclared-and-unmanaged resources",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Added,
+					deployment2,
+				},
+				{
+					watch.Added,
+					deployment3,
+				},
+			},
+			nil,
+		},
+		{
+			"Filter events for declared resource with different GVK",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Modified,
+					deployment1Beta,
+				},
+			},
+			nil,
+		},
+		{
+			"Ignore bookmark events",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Modified,
+					deployment1,
+				},
+				{
+					watch.Bookmark,
+					nil,
+				},
+			},
+			[]core.ID{
+				core.IDOf(deployment1),
+			},
+		},
 	}
 
-	resources := declaredresources.NewDeclaredResources()
-	err = resources.UpdateDecls([]core.Object{obj})
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dr := declaredresources.NewDeclaredResources()
+			if err := dr.UpdateDecls(tc.declared); err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
 
-	base := watch.NewFakeWithChanSize(3, false)
-	base.Add(u1)
-	base.Add(u2)
-	base.Add(u3)
+			base := watch.NewFakeWithChanSize(len(tc.actions), false)
+			for _, a := range tc.actions {
+				base.Action(a.event, a.obj)
+			}
 
-	// u2 should get filtered out so we don't want it in the queue.
-	want := map[core.ID]bool{
-		core.IDOfUnstructured(*u1): true,
-		core.IDOfUnstructured(*u3): true,
-	}
+			q := queue.NewNamed("test")
+			w := filteredWatcher{
+				resources: dr,
+				base:      base,
+				queue:     q,
+			}
 
-	q := queue.NewNamed("test")
-	w := filteredWatcher{
-		resources: resources,
-		base:      base,
-		queue:     q,
-	}
+			w.Stop()
+			w.Run()
 
-	w.Stop()
-	w.Run()
+			var got []core.ID
+			for q.Len() > 0 {
+				obj, shutdown := q.Get()
+				if shutdown {
+					t.Fatal("Object queue was shut down unexpectedly.")
+				}
+				got = append(got, core.IDOf(obj))
+			}
 
-	if q.Len() != len(want) {
-		t.Fatalf("want %d objects in queue; got %d", len(want), q.Len())
-	}
-
-	for _, u := range []*unstructured.Unstructured{u1, u3} {
-		id := core.IDOfUnstructured(*u)
-		if _, found := want[id]; !found {
-			t.Errorf("%v should be in the queue", id)
-		}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("did not get desired object IDs: %v", diff)
+			}
+		})
 	}
 }

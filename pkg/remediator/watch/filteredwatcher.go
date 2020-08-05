@@ -75,11 +75,16 @@ func (w *filteredWatcher) Run() {
 	}
 }
 
-// ignoreObject returns true if the object is not
-// managed by Config Sync or not in the declared resources.
+// ignoreObject returns true if the object is not managed by Config Sync or not
+// in the declared resources.
 func (w *filteredWatcher) ignoreObject(object core.Object) bool {
-	// Get id from the runtime object.
 	id := core.IDOf(object)
-	_, found := w.resources.GetDecl(id)
-	return !found && !differ.ManagementEnabled(object)
+	if declared, ok := w.resources.GetDecl(id); ok {
+		// If the object is declared, we only ignore it if it has a different GVK
+		// than the declaration. In that case we expect to get another event for the
+		// same object but with a matching GVK so we can actually compare it to its
+		// declaration.
+		return object.GroupVersionKind().String() != declared.GroupVersionKind().String()
+	}
+	return !differ.ManagementEnabled(object)
 }
