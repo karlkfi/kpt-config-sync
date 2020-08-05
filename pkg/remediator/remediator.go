@@ -7,7 +7,10 @@ import (
 	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/remediator/reconcile"
+	"github.com/google/nomos/pkg/remediator/watch"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	"github.com/pkg/errors"
+	"k8s.io/client-go/rest"
 )
 
 // Remediator knows how to keep the state of a Kubernetes cluster in sync with
@@ -17,10 +20,9 @@ import (
 // The exposed Queue operations are threadsafe - multiple callers may safely
 // synchronously add and consume work items.
 type Remediator struct {
-	decls       *declaredresources.DeclaredResources
-	objectQueue *queue.ObjectQueue
-	workers     []*reconcile.Worker
-	started     bool
+	watchMgr *watch.Manager
+	workers  []*reconcile.Worker
+	started  bool
 }
 
 // New instantiates launches goroutines to make the state of the connected
@@ -28,23 +30,25 @@ type Remediator struct {
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(name string, applier syncerreconcile.Applier, decls *declaredresources.DeclaredResources, numWorkers int) *Remediator {
-	// TODO(b/157587458): Integrate watch manager here and in UpdateDecls()
-
+func New(name string, cfg *rest.Config, applier syncerreconcile.Applier, decls *declaredresources.DeclaredResources, numWorkers int) (*Remediator, error) {
 	q := queue.NewNamed(name)
 	workers := make([]*reconcile.Worker, numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		workers[i] = reconcile.NewWorker(applier, q, decls)
 	}
 
-	return &Remediator{
-		decls:       decls,
-		objectQueue: q,
-		workers:     workers,
+	watchMgr, err := watch.NewManager(cfg, q, decls, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating watch manager")
 	}
+
+	return &Remediator{
+		watchMgr: watchMgr,
+		workers:  workers,
+	}, nil
 }
 
-// Start implements Interface
+// Start begins the asynchronous processes for the Remediator's reconcile workers.
 func (r *Remediator) Start(ctx context.Context) {
 	if r.started {
 		return
@@ -55,7 +59,8 @@ func (r *Remediator) Start(ctx context.Context) {
 	r.started = true
 }
 
-// UpdateDecls implements Interface.
+// UpdateDecls updates the declared resources for all reconcile workers and
+// potentially starts/stops server-side watches.
 func (r *Remediator) UpdateDecls(objects []core.Object) error {
-	return r.decls.UpdateDecls(objects)
+	return r.watchMgr.Update(objects)
 }

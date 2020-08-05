@@ -68,7 +68,10 @@ func Run(ctx context.Context, opts Options) {
 
 	// Configure the Applier.
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
-	baseApplier, err := reconcile.NewApplier(mgr.GetConfig(), genericClient)
+	baseApplier, err := reconcile.NewApplier(cfg, genericClient)
+	if err != nil {
+		glog.Fatalf("Instantiating Applier: %v", err)
+	}
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == RootScope {
@@ -79,11 +82,11 @@ func Run(ctx context.Context, opts Options) {
 
 	// Configure the Remediator.
 	decls := declaredresources.NewDeclaredResources()
-	if err != nil {
-		glog.Fatalf("Instantiating Applier for Remediator: %v", err)
-	}
 
-	rem := remediator.New(opts.ReconcilerScope, baseApplier, decls, opts.NumWorkers)
+	rem, err := remediator.New(opts.ReconcilerScope, cfg, baseApplier, decls, opts.NumWorkers)
+	if err != nil {
+		glog.Fatalf("Instantiating Remediator: %v", err)
+	}
 
 	// Configure the Parser.
 	// TODO(b/162014057): configure the parser and get everything running.

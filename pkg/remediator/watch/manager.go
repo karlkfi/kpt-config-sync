@@ -19,7 +19,7 @@ type Manager struct {
 	// mapper is the RESTMapper to use for mapping GroupVersionKinds to Resources.
 	mapper meta.RESTMapper
 
-	// resources is the declared resources that parsed from Git.
+	// resources is the declared resources that are parsed from Git.
 	resources *declaredresources.DeclaredResources
 
 	// queue is the work queue for remediator.
@@ -34,6 +34,7 @@ type Manager struct {
 
 // Options contains options for creating a watch manager.
 type Options struct {
+	// Mapper is the RESTMapper to use for mapping GroupVersionKinds to Resources.
 	Mapper meta.RESTMapper
 
 	watcherFunc createWatcherFunc
@@ -55,7 +56,7 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(cfg *rest.Config, q *queue.ObjectQueue, options *Options) (*Manager, error) {
+func NewManager(cfg *rest.Config, q *queue.ObjectQueue, decls *declaredresources.DeclaredResources, options *Options) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -66,7 +67,7 @@ func NewManager(cfg *rest.Config, q *queue.ObjectQueue, options *Options) (*Mana
 
 	return &Manager{
 		cfg:               cfg,
-		resources:         declaredresources.NewDeclaredResources(),
+		resources:         decls,
 		watcherMap:        make(map[schema.GroupVersionKind]Runnable),
 		createWatcherFunc: options.watcherFunc,
 		mapper:            options.Mapper,
