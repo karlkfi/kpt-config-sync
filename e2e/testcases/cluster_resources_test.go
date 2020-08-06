@@ -60,8 +60,8 @@ func TestRevertClusterRole(t *testing.T) {
 	}
 	declaredcr := fake.ClusterRoleObject(core.Name(crName))
 	declaredcr.Rules = declaredRules
-	nt.Repository.Add("acme/cluster/clusterrole.yaml", declaredcr)
-	nt.Repository.CommitAndPush("add get/list/create ClusterRole")
+	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
+	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
@@ -132,8 +132,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 	declaredcr := fake.ClusterRoleObject(core.Name(crName))
 	declaredcr.Rules = declaredRules
-	nt.Repository.Add("acme/cluster/clusterrole.yaml", declaredcr)
-	nt.Repository.CommitAndPush("add get/list/create ClusterRole")
+	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
+	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSync()
 	// Validate ClusterConfig behavior.
 	nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName,
@@ -157,8 +157,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 	updatedcr := fake.ClusterRoleObject(core.Name(crName))
 	updatedcr.Rules = updatedRules
-	nt.Repository.Add("acme/cluster/clusterrole.yaml", updatedcr)
-	nt.Repository.CommitAndPush("update ClusterRole to get/list")
+	nt.Root.Add("acme/cluster/clusterrole.yaml", updatedcr)
+	nt.Root.CommitAndPush("update ClusterRole to get/list")
 
 	// Ensure the resource is updated.
 	_, err = nomostest.Retry(30*time.Second, func() error {
@@ -170,8 +170,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	// Delete the ClusterRole from the SOT.
-	nt.Repository.Remove("acme/cluster/clusterrole.yaml")
-	nt.Repository.CommitAndPush("deleting ClusterRole")
+	nt.Root.Remove("acme/cluster/clusterrole.yaml")
+	nt.Root.CommitAndPush("deleting ClusterRole")
 	nt.WaitForRepoSync()
 
 	err = nt.ValidateNotFound(crName, "", &rbacv1.ClusterRole{})

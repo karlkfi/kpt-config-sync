@@ -21,7 +21,7 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	nt := nomostest.New(t)
 
 	ns := "rc-annotations"
-	nt.Repository.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	crName := "e2e-test-clusterrole"
@@ -31,13 +31,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		Resources: []string{"deployments"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Repository.Add("acme/cluster/cr.yaml", cr)
+	nt.Root.Add("acme/cluster/cr.yaml", cr)
 
 	cmName := "e2e-test-configmap"
 	cm := fake.ConfigMapObject(core.Name(cmName))
 	cmPath := fmt.Sprintf("acme/namespaces/%s/configmap.yaml", ns)
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("add ConfigMap and ClusterRole with no annotations")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("add ConfigMap and ClusterRole with no annotations")
 	// The bats test checks the NamespaceConfig/ClusterConfig, but checking the Repo
 	// is sufficient.
 	nt.WaitForRepoSync()
@@ -219,8 +219,8 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 			},
 		},
 	}
-	nt.Repository.Add("acme/cluster/constraint-template.yaml", ct)
-	nt.Repository.CommitAndPush("add gatekeeper ConstraintTemplate")
+	nt.Root.Add("acme/cluster/constraint-template.yaml", ct)
+	nt.Root.CommitAndPush("add gatekeeper ConstraintTemplate")
 	nt.WaitForRepoSync()
 
 	// In the real world, this annotation would be removed once PolicyController
@@ -262,8 +262,8 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 			"repos": []string{"only-this-repo"},
 		},
 	}
-	nt.Repository.Add("acme/cluster/constraint.yaml", constraint)
-	nt.Repository.CommitAndPush("Add Gatekeeper Constraint")
+	nt.Root.Add("acme/cluster/constraint.yaml", constraint)
+	nt.Root.CommitAndPush("Add Gatekeeper Constraint")
 	nt.WaitForRepoSync()
 
 	// In the real world, this annotation would be removed once PolicyController

@@ -113,7 +113,10 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt)
-	nt.Repository = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+	nt.Root = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+	for _, nsr := range opts.MultiRepo.NotRootRepos {
+		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
+	}
 
 	err = waitForConfigSync()
 	if err != nil {

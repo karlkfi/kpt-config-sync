@@ -12,4 +12,5 @@ type New struct {
 
 	KindCluster
 	Nomos
+	MultiRepo
 }

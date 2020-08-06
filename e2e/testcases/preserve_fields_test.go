@@ -24,7 +24,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	// Declare the Service's Namespace
 	ns := "autogen-fields"
-	nt.Repository.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
 		fake.NamespaceObject(ns))
 
 	// Declare the Service.
@@ -45,9 +45,9 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 			TargetPort: intstr.FromInt(targetPort1),
 		}},
 	}
-	nt.Repository.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
 
-	nt.Repository.CommitAndPush("declare Namespace and Service")
+	nt.Root.CommitAndPush("declare Namespace and Service")
 	nt.WaitForRepoSync()
 
 	// Ensure the Service has the target port we set.
@@ -100,8 +100,8 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	updatedService := service.DeepCopy()
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
-	nt.Repository.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
-	nt.Repository.CommitAndPush("update declared Service")
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
+	nt.Root.CommitAndPush("update declared Service")
 	nt.WaitForRepoSync()
 
 	// Ensure the Service has the new target port we set.
@@ -122,7 +122,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		Resources: []string{"namespaces"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Repository.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
+	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
 
 	rbacViewerName := "rbac-viewer"
 	rbacViewer := fake.ClusterRoleObject(core.Name(rbacViewerName),
@@ -132,7 +132,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		Resources: []string{"roles", "rolebindings", "clusterroles", "clusterrolebindings"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Repository.Add("acme/cluster/rbac-viewer-cr.yaml", rbacViewer)
+	nt.Root.Add("acme/cluster/rbac-viewer-cr.yaml", rbacViewer)
 
 	aggregateRoleName := "aggregate"
 	aggregateRole := fake.ClusterRoleObject(core.Name(aggregateRoleName))
@@ -141,9 +141,9 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 			MatchLabels: map[string]string{"permissions": "viewer"},
 		}},
 	}
-	nt.Repository.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
+	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
 
-	nt.Repository.CommitAndPush("declare ClusterRoles")
+	nt.Root.CommitAndPush("declare ClusterRoles")
 	nt.WaitForRepoSync()
 
 	// Ensure the aggregate rule is actually aggregated.
@@ -159,8 +159,8 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 
 	// Update aggregateRole with a new label.
 	aggregateRole.Labels["meaningless-label"] = "exists"
-	nt.Repository.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
-	nt.Repository.CommitAndPush("add label to aggregate ClusterRole")
+	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
+	nt.Root.CommitAndPush("add label to aggregate ClusterRole")
 	nt.WaitForRepoSync()
 
 	// TODO(b/162496882): We don't usually preserve the aggregate field, so
@@ -202,8 +202,8 @@ func TestPreserveLastApplied(t *testing.T) {
 		Resources: []string{"namespaces"},
 		Verbs:     []string{"get", "list"},
 	}}
-	nt.Repository.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
-	nt.Repository.CommitAndPush("add namespace-viewer ClusterRole")
+	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
+	nt.Root.CommitAndPush("add namespace-viewer ClusterRole")
 	nt.WaitForRepoSync()
 
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
@@ -220,8 +220,8 @@ func TestPreserveLastApplied(t *testing.T) {
 	// verifying that ConfigSync copies the contents of "last-applied" to
 	// "last-declared" and deletes "last-applied".
 	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
-	nt.Repository.Add("ns-viewer-cr-replace.yaml", nsViewer)
-	nt.Kubectl("replace", "-f", filepath.Join(nt.Repository.Root, "ns-viewer-cr-replace.yaml"))
+	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
+	nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
 
 	_, err = nomostest.Retry(20*time.Second, func() error {
 		return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
@@ -247,14 +247,14 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	nt := nomostest.New(t)
 
 	ns := "crud-labels"
-	nt.Repository.Add("acme/namespaces/crud-labels/ns.yaml",
+	nt.Root.Add("acme/namespaces/crud-labels/ns.yaml",
 		fake.NamespaceObject(ns))
 
 	cmName := "e2e-test-configmap"
 	cmPath := "acme/namespaces/crud-labels/configmap.yaml"
 	cm := fake.ConfigMapObject(core.Name(cmName))
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Adding ConfigMap with no labels to repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Adding ConfigMap with no labels to repo")
 	nt.WaitForRepoSync()
 
 	// Checking that the configmap with no labels appears on cluster, and
@@ -267,8 +267,8 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	}
 
 	cm.Labels["baz"] = "qux"
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Update label for ConfigMap in repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Update label for ConfigMap in repo")
 	nt.WaitForRepoSync()
 
 	// Checking that label is updated after syncing an update.
@@ -280,8 +280,8 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	}
 
 	delete(cm.Labels, "baz")
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Delete label for configmap in repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Delete label for configmap in repo")
 	nt.WaitForRepoSync()
 
 	// Check that the label is deleted after syncing.
@@ -297,14 +297,14 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt := nomostest.New(t)
 
 	ns := "crud-annotations"
-	nt.Repository.Add("acme/namespaces/crud-annotations/ns.yaml",
+	nt.Root.Add("acme/namespaces/crud-annotations/ns.yaml",
 		fake.NamespaceObject(ns))
 
 	cmName := "e2e-test-configmap"
 	cmPath := "acme/namespaces/crud-annotations/configmap.yaml"
 	cm := fake.ConfigMapObject(core.Name(cmName))
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Adding ConfigMap with no annotations to repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSync()
 
 	// Checking that the configmap with no annotations appears on cluster, and
@@ -326,8 +326,8 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	cm.Annotations["baz"] = "qux"
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Update annotation for ConfigMap in repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Update annotation for ConfigMap in repo")
 	nt.WaitForRepoSync()
 
 	// Checking that annotation is updated after syncing an update.
@@ -350,8 +350,8 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	delete(cm.Annotations, "baz")
-	nt.Repository.Add(cmPath, cm)
-	nt.Repository.CommitAndPush("Delete annotation for configmap in repo")
+	nt.Root.Add(cmPath, cm)
+	nt.Root.CommitAndPush("Delete annotation for configmap in repo")
 	nt.WaitForRepoSync()
 
 	// Check that the annotation is deleted after syncing.

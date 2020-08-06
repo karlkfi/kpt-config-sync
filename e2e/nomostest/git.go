@@ -19,8 +19,10 @@ import (
 )
 
 const (
+	// remoteName is static as every git repository has exactly one remote.
 	remoteName = "origin"
-	// TODO(willbeason): Allow configuring branch.
+	// branchName is static as behavior when switching branches is never under
+	// test.
 	branchName = "master"
 )
 
@@ -55,7 +57,6 @@ func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesyste
 		T:    nt.T,
 	}
 	g.init(name, nt.gitPrivateKeyPath, port)
-
 	g.initialCommit(sourceFormat)
 
 	return g

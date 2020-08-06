@@ -32,10 +32,10 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	}}
 
 	// Declare the Namespace with the lifecycle annotation, and ensure it is created.
-	nt.Repository.Add("acme/namespaces/shipping/ns.yaml",
+	nt.Root.Add("acme/namespaces/shipping/ns.yaml",
 		fake.NamespaceObject("shipping", preventDeletion))
-	nt.Repository.Add("acme/namespaces/shipping/role.yaml", role)
-	nt.Repository.CommitAndPush("declare Namespace with prevent deletion lifecycle annotation")
+	nt.Root.Add("acme/namespaces/shipping/role.yaml", role)
+	nt.Root.CommitAndPush("declare Namespace with prevent deletion lifecycle annotation")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("shipping", "", &corev1.Namespace{})
@@ -44,9 +44,9 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	}
 
 	// Delete the declaration and ensure the Namespace isn't deleted.
-	nt.Repository.Remove("acme/namespaces/shipping/ns.yaml")
-	nt.Repository.Remove("acme/namespaces/shipping/role.yaml")
-	nt.Repository.CommitAndPush("remove Namespace shipping declaration")
+	nt.Root.Remove("acme/namespaces/shipping/ns.yaml")
+	nt.Root.Remove("acme/namespaces/shipping/role.yaml")
+	nt.Root.CommitAndPush("remove Namespace shipping declaration")
 	nt.WaitForRepoSync()
 
 	// Ensure we kept the undeclared Namespace that had the "deletion: prevent" annotation.
@@ -78,9 +78,9 @@ func TestPreventDeletionRole(t *testing.T) {
 		Resources: []string{"configmaps"},
 		Verbs:     []string{"get"},
 	}}
-	nt.Repository.Add("acme/namespaces/shipping/ns.yaml", fake.NamespaceObject("shipping"))
-	nt.Repository.Add("acme/namespaces/shipping/role.yaml", role)
-	nt.Repository.CommitAndPush("declare Role with prevent deletion lifecycle annotation")
+	nt.Root.Add("acme/namespaces/shipping/ns.yaml", fake.NamespaceObject("shipping"))
+	nt.Root.Add("acme/namespaces/shipping/role.yaml", role)
+	nt.Root.CommitAndPush("declare Role with prevent deletion lifecycle annotation")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
@@ -89,8 +89,8 @@ func TestPreventDeletionRole(t *testing.T) {
 	}
 
 	// Delete the declaration and ensure the Namespace isn't deleted.
-	nt.Repository.Remove("acme/namespaces/shipping/role.yaml")
-	nt.Repository.CommitAndPush("remove Role declaration")
+	nt.Root.Remove("acme/namespaces/shipping/role.yaml")
+	nt.Root.CommitAndPush("remove Role declaration")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
@@ -115,8 +115,8 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 		Resources: []string{"configmaps"},
 		Verbs:     []string{"get"},
 	}}
-	nt.Repository.Add("acme/cluster/cr.yaml", clusterRole)
-	nt.Repository.CommitAndPush("declare ClusterRole with prevent deletion lifecycle annotation")
+	nt.Root.Add("acme/cluster/cr.yaml", clusterRole)
+	nt.Root.CommitAndPush("declare ClusterRole with prevent deletion lifecycle annotation")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("cluster-admin", "", &rbacv1.ClusterRole{})
@@ -125,8 +125,8 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	}
 
 	// Delete the declaration and ensure the ClusterRole isn't deleted.
-	nt.Repository.Remove("acme/cluster/cr.yaml")
-	nt.Repository.CommitAndPush("remove ClusterRole bar declaration")
+	nt.Root.Remove("acme/cluster/cr.yaml")
+	nt.Root.CommitAndPush("remove ClusterRole bar declaration")
 	nt.WaitForRepoSync()
 
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
@@ -146,8 +146,8 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 		Resources: []string{"configmaps"},
 		Verbs:     []string{"get"},
 	}}
-	nt.Repository.Add("acme/role.yaml", role)
-	nt.Repository.CommitAndPush("Declare configmap-getter Role")
+	nt.Root.Add("acme/role.yaml", role)
+	nt.Root.CommitAndPush("Declare configmap-getter Role")
 	nt.WaitForRepoSync()
 
 	err := nt.Validate("delivery", "", &corev1.Namespace{},
@@ -160,8 +160,8 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nt.Repository.Remove("acme/role.yaml")
-	nt.Repository.CommitAndPush("Remove configmap-getter Role")
+	nt.Root.Remove("acme/role.yaml")
+	nt.Root.CommitAndPush("Remove configmap-getter Role")
 	nt.WaitForRepoSync()
 
 	// Ensure the Namespace wasn't deleted.

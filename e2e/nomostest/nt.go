@@ -41,8 +41,12 @@ type NT struct {
 	// direct interactions with the API Server.
 	Client client.Client
 
-	// Repository is the repository the cluster is syncing to.
-	Repository *Repository
+	// Root is the root repository the cluster is syncing to.
+	Root *Repository
+
+	// NonRootRepos is the Namespace repositories the cluster is syncing to.
+	// Only used in multi-repo tests.
+	NonRootRepos map[string]*Repository
 
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
 	gitPrivateKeyPath string
@@ -175,7 +179,7 @@ func (nt *NT) WaitForRepoSync() {
 func (nt *NT) WaitForSync(o func() core.Object, name string, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
-	sha1 := nt.Repository.Hash()
+	sha1 := nt.Root.Hash()
 	isSynced := make([]Predicate, len(syncedTo))
 	for i, s := range syncedTo {
 		isSynced[i] = s(sha1)

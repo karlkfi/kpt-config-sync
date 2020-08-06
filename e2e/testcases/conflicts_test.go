@@ -22,8 +22,8 @@ func TestConflictingKubectlApply(t *testing.T) {
 		t.Error(err)
 	}
 
-	nt.Repository.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo", core.Label("hello", "world")))
-	nt.Repository.CommitAndPush("add hello:world Namespace")
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo", core.Label("hello", "world")))
+	nt.Root.CommitAndPush("add hello:world Namespace")
 	nt.WaitForRepoSync()
 
 	// Test that the Namespace "foo" exists with the expected label.
