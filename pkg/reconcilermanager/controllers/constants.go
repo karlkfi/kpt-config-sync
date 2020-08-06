@@ -2,8 +2,10 @@ package controllers
 
 const (
 	repoSyncReconcilerPrefix = "ns-reconciler"
+	rootSyncReconcilerName   = "root-reconciler"
 
-	rootSyncReconcilerName = "root-reconciler"
+	repoSyncName = "repo-sync"
+	rootSyncName = "root-sync"
 
 	executedOperation = "operation"
 )

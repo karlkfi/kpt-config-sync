@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -44,6 +45,9 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	if err := r.client.Get(ctx, req.NamespacedName, &repoSync); err != nil {
 		log.Info("unable to fetch RepoSync", "error", err)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
+	}
+	if err := r.validate(repoSync); err != nil {
+		return controllerruntime.Result{}, err
 	}
 
 	// Overwrite git-importer pod's configmaps.
@@ -95,6 +99,17 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.Re
 	return nil
 }
 
+// validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
+// details.
+func (r *RepoSyncReconciler) validate(rs v1.RepoSync) error {
+	if rs.Name != repoSyncName {
+		// Please don't change the error message.
+		return fmt.Errorf(
+			"there must be at most one RepoSync resource declared per namespace. "+
+				"'meta.name' must be 'repo-sync'. Instead found %q", rs.Name)
+	}
+	return nil
+}
 func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.

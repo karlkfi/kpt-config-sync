@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -43,7 +44,9 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Info("unable to fetch RootSync", "error", err)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
-
+	if err := r.validate(rootSync); err != nil {
+		return controllerruntime.Result{}, err
+	}
 	// Overwrite git-importer pod's configmaps.
 	if err := r.upsertConfigMap(ctx, rootSync); err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
@@ -89,6 +92,18 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 		}
 		// TODO(b/161892553) Restart deployment when a configmap is updated.
 		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
+// validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
+// details.
+func (r *RootSyncReconciler) validate(rs v1.RootSync) error {
+	if rs.Name != rootSyncName {
+		// Please don't change the error message.
+		return fmt.Errorf(
+			"there must be exactly one RootSync resource declared. 'meta.name' must be "+
+				"'root-sync'. Instead found %q", rs.Name)
 	}
 	return nil
 }
