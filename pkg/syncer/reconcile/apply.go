@@ -251,7 +251,7 @@ func (c *clientApplier) calculateStrategic(resourceDescription string, gvk schem
 	patchMeta := strategicpatch.PatchMetaFromOpenAPI{Schema: gvkSchema}
 	patch, err := strategicpatch.CreateThreeWayMergePatch(previous, modified, current, patchMeta, true)
 	if err != nil {
-		glog.Infof("could not calculate a patch for %s from OpenAPI spec: %v", resourceDescription, err)
+		glog.Infof("strategic patch unavailable for %s (will use JSON patch instead): %v", resourceDescription, err)
 		return nil
 	}
 	return patch
