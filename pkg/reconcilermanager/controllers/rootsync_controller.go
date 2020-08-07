@@ -45,7 +45,8 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 	if err := r.validate(rootSync); err != nil {
-		return controllerruntime.Result{}, err
+		log.Error(err, "failed to validate RootSync request")
+		return controllerruntime.Result{}, nil
 	}
 	// Overwrite git-importer pod's configmaps.
 	if err := r.upsertConfigMap(ctx, rootSync); err != nil {

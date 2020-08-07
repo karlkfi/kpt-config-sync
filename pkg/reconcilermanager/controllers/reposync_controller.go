@@ -46,7 +46,8 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 	if err := r.validate(repoSync); err != nil {
-		return controllerruntime.Result{}, err
+		log.Error(err, "failed to validate RepoSync request")
+		return controllerruntime.Result{}, nil
 	}
 
 	// Overwrite git-importer pod's configmaps.

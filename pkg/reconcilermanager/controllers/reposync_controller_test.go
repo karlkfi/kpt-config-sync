@@ -438,7 +438,8 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 			for _, j := range a.Spec.Template.Spec.Containers {
 				if i.Name == j.Name {
 					// Compare EnvFrom fields in the container.
-					if diff := cmp.Diff(i.EnvFrom, j.EnvFrom, cmpopts.EquateEmpty()); diff != "" {
+					if diff := cmp.Diff(i.EnvFrom, j.EnvFrom,
+						cmpopts.SortSlices(func(x, y corev1.EnvFromSource) bool { return x.ConfigMapRef.Name < y.ConfigMapRef.Name })); diff != "" {
 						t.Errorf("Unexpected configMapRef found, diff %s", diff)
 					}
 				}
