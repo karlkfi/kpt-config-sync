@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
@@ -26,7 +26,7 @@ func TestManager(t *testing.T) {
 	options := &Options{
 		watcherFunc: fakeRunnable,
 	}
-	m, err := NewManager(config, nil, declaredresources.NewDeclaredResources(), options)
+	m, err := NewManager(":test", config, nil, declared.NewResources(), options)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -83,7 +83,7 @@ func TestManagerDifferentVersions(t *testing.T) {
 	options := &Options{
 		watcherFunc: fakeRunnable,
 	}
-	m, err := NewManager(config, nil, declaredresources.NewDeclaredResources(), options)
+	m, err := NewManager(":test", config, nil, declared.NewResources(), options)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}

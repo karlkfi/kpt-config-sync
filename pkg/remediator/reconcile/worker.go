@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,7 +20,7 @@ type Worker struct {
 }
 
 // NewWorker returns a new Worker for the given queue and declared resources.
-func NewWorker(a syncerreconcile.Applier, q *queue.ObjectQueue, d *declaredresources.DeclaredResources) *Worker {
+func NewWorker(a syncerreconcile.Applier, q *queue.ObjectQueue, d *declared.Resources) *Worker {
 	return &Worker{
 		objectQueue: q,
 		reconciler:  newReconciler(a, d),

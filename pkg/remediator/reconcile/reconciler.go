@@ -5,9 +5,9 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -20,13 +20,13 @@ type reconciler struct {
 	// applier is where to write the declared configuration to.
 	applier syncerreconcile.Applier
 	// declared is the threadsafe in-memory representation of declared configuration.
-	declared *declaredresources.DeclaredResources
+	declared *declared.Resources
 }
 
 // newReconciler instantiates a new reconciler.
 func newReconciler(
 	applier syncerreconcile.Applier,
-	declared *declaredresources.DeclaredResources,
+	declared *declared.Resources,
 ) *reconciler {
 	return &reconciler{
 		applier:  applier,
@@ -82,7 +82,7 @@ func (r *reconciler) diff(id core.ID, obj core.Object) (*differ.Diff, error) {
 		}
 	}
 
-	declared, _ := r.declared.GetDecl(id)
+	declared, _ := r.declared.Get(id)
 	return &differ.Diff{
 		Name:     id.Name,
 		Declared: declared,

@@ -42,6 +42,10 @@ const (
 	// Nomos will not manage content and lifecycle for the given resource.
 	ResourceManagementDisabled = "disabled"
 
+	// ResourceManagerKey is the annotation that indicates which multi-repo reconciler is managing
+	// the resource.
+	ResourceManagerKey = ConfigManagementPrefix + "manager"
+
 	// The following annotations implement the extended resource status specification.
 
 	// ResourceStatusErrorsKey is the annotation that indicates any errors, encoded as a JSON array.
@@ -66,6 +70,7 @@ func SyncerAnnotations() []string {
 		SourcePathAnnotationKey,
 		SyncTokenAnnotationKey,
 		ResourceManagementKey,
+		ResourceManagerKey,
 		ResourceStatusErrorsKey,
 		ResourceStatusReconcilingKey,
 	}

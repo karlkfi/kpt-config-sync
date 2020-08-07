@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,7 +25,9 @@ func TestWrappedWatcher(t *testing.T) {
 
 	deployment2 := fake.DeploymentObject(core.Name("world"))
 	deployment3 := fake.DeploymentObject(core.Name("nomes"))
+
 	managedDeployment := fake.DeploymentObject(core.Name("not-declared"), core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), core.Annotation(v1.ResourceManagerKey, declared.RootReconciler))
 
 	testCases := []struct {
 		name     string
@@ -93,6 +95,19 @@ func TestWrappedWatcher(t *testing.T) {
 			nil,
 		},
 		{
+			"Filter events for declared resource with different manager",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Modified,
+					deploymentForRoot,
+				},
+			},
+			nil,
+		},
+		{
 			"Filter events for declared resource with different GVK",
 			[]core.Object{
 				deployment1,
@@ -128,8 +143,8 @@ func TestWrappedWatcher(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dr := declaredresources.NewDeclaredResources()
-			if err := dr.UpdateDecls(tc.declared); err != nil {
+			dr := declared.NewResources()
+			if err := dr.Update(tc.declared); err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
 
@@ -140,9 +155,10 @@ func TestWrappedWatcher(t *testing.T) {
 
 			q := queue.NewNamed("test")
 			w := filteredWatcher{
-				resources: dr,
-				base:      base,
-				queue:     q,
+				resources:  dr,
+				base:       base,
+				queue:      q,
+				reconciler: ":test",
 			}
 
 			w.Stop()

@@ -1,7 +1,7 @@
 package watch
 
 import (
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,11 +13,12 @@ import (
 // watcherOptions contains the options needed
 // to create a watcher.
 type watcherOptions struct {
-	gvk       schema.GroupVersionKind
-	mapper    meta.RESTMapper
-	config    *rest.Config
-	resources *declaredresources.DeclaredResources
-	queue     *queue.ObjectQueue
+	gvk        schema.GroupVersionKind
+	mapper     meta.RESTMapper
+	config     *rest.Config
+	resources  *declared.Resources
+	queue      *queue.ObjectQueue
+	reconciler string
 }
 
 // createWatcherFunc is the type of functions to create watchers
@@ -44,9 +45,10 @@ func createWatcher(opts watcherOptions) (Runnable, error) {
 	}
 
 	watcher := &filteredWatcher{
-		base:      baseWatcher,
-		resources: opts.resources,
-		queue:     opts.queue,
+		base:       baseWatcher,
+		resources:  opts.resources,
+		queue:      opts.queue,
+		reconciler: opts.reconciler,
 	}
 
 	return watcher, nil

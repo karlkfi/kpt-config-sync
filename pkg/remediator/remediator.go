@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/remediator/reconcile"
 	"github.com/google/nomos/pkg/remediator/watch"
@@ -30,14 +30,14 @@ type Remediator struct {
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(name string, cfg *rest.Config, applier syncerreconcile.Applier, decls *declaredresources.DeclaredResources, numWorkers int) (*Remediator, error) {
-	q := queue.NewNamed(name)
+func New(reconciler string, cfg *rest.Config, applier syncerreconcile.Applier, decls *declared.Resources, numWorkers int) (*Remediator, error) {
+	q := queue.NewNamed(reconciler)
 	workers := make([]*reconcile.Worker, numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		workers[i] = reconcile.NewWorker(applier, q, decls)
 	}
 
-	watchMgr, err := watch.NewManager(cfg, q, decls, nil)
+	watchMgr, err := watch.NewManager(reconciler, cfg, q, decls, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating watch manager")
 	}
@@ -59,8 +59,8 @@ func (r *Remediator) Start(ctx context.Context) {
 	r.started = true
 }
 
-// UpdateDecls updates the declared resources for all reconcile workers and
+// Update updates the declared resources for all reconcile workers and
 // potentially starts/stops server-side watches.
-func (r *Remediator) UpdateDecls(objects []core.Object) error {
+func (r *Remediator) Update(objects []core.Object) error {
 	return r.watchMgr.Update(objects)
 }

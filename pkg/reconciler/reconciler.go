@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/configsync"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -17,10 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
-
-// RootScope is a special constant for a reconciler which is running as the
-// "root reconciler" (vs a namespace reconciler).
-const RootScope = ":root"
 
 // Options contains the settings for a reconciler process.
 type Options struct {
@@ -74,14 +70,14 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	var a *applier.Applier
-	if opts.ReconcilerScope == RootScope {
+	if opts.ReconcilerScope == declared.RootReconciler {
 		a = applier.NewRootApplier(genericClient, baseApplier)
 	} else {
 		a = applier.NewNamespaceApplier(genericClient, baseApplier, opts.ReconcilerScope)
 	}
 
 	// Configure the Remediator.
-	decls := declaredresources.NewDeclaredResources()
+	decls := declared.NewResources()
 
 	rem, err := remediator.New(opts.ReconcilerScope, cfg, baseApplier, decls, opts.NumWorkers)
 	if err != nil {

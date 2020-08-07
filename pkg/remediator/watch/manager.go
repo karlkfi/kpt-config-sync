@@ -2,7 +2,7 @@ package watch
 
 import (
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,6 +13,9 @@ import (
 // Manager accepts new resource lists that are parsed from Git and then
 // updates declared resources and get GVKs.
 type Manager struct {
+	// reconciler is the name of the reconciler process running the Manager.
+	reconciler string
+
 	// cfg is the rest config used to talk to apiserver.
 	cfg *rest.Config
 
@@ -20,7 +23,7 @@ type Manager struct {
 	mapper meta.RESTMapper
 
 	// resources is the declared resources that are parsed from Git.
-	resources *declaredresources.DeclaredResources
+	resources *declared.Resources
 
 	// queue is the work queue for remediator.
 	queue *queue.ObjectQueue
@@ -56,7 +59,7 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(cfg *rest.Config, q *queue.ObjectQueue, decls *declaredresources.DeclaredResources, options *Options) (*Manager, error) {
+func NewManager(reconciler string, cfg *rest.Config, q *queue.ObjectQueue, decls *declared.Resources, options *Options) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)
@@ -66,6 +69,7 @@ func NewManager(cfg *rest.Config, q *queue.ObjectQueue, decls *declaredresources
 	}
 
 	return &Manager{
+		reconciler:        reconciler,
 		cfg:               cfg,
 		resources:         decls,
 		watcherMap:        make(map[schema.GroupVersionKind]Runnable),
@@ -81,12 +85,12 @@ func NewManager(cfg *rest.Config, q *queue.ObjectQueue, decls *declaredresources
 // - stop watchers for any GroupVersionKind that is not present
 //   in the new resource list
 func (m *Manager) Update(objects []core.Object) error {
-	err := m.resources.UpdateDecls(objects)
+	err := m.resources.Update(objects)
 	if err != nil {
 		return err
 	}
 
-	gvkSet := m.resources.GetGVKSet()
+	gvkSet := m.resources.GVKSet()
 
 	// Stop obsolete watchers
 	for gvk := range m.watcherMap {
@@ -118,11 +122,12 @@ func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
 		return nil
 	}
 	opts := watcherOptions{
-		gvk:       gvk,
-		mapper:    m.mapper,
-		config:    m.cfg,
-		resources: m.resources,
-		queue:     m.queue,
+		gvk:        gvk,
+		mapper:     m.mapper,
+		config:     m.cfg,
+		resources:  m.resources,
+		queue:      m.queue,
+		reconciler: m.reconciler,
 	}
 	w, err := m.createWatcherFunc(opts)
 	if err != nil {

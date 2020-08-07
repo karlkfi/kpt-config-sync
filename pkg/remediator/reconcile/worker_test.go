@@ -76,7 +76,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				}
 			}
 
-			d := declared(t, tc.declared...)
+			d := makeDeclared(t, tc.declared...)
 			w := NewWorker(c.Applier(), q, d)
 
 			for _, obj := range tc.toProcess {

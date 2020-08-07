@@ -3,7 +3,7 @@ package watch
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/parse/declaredresources"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"k8s.io/apimachinery/pkg/watch"
@@ -20,9 +20,10 @@ type Runnable interface {
 // - either present in the declared resources,
 // - or managed by Config Sync.
 type filteredWatcher struct {
-	base      watch.Interface
-	resources *declaredresources.DeclaredResources
-	queue     *queue.ObjectQueue
+	base       watch.Interface
+	resources  *declared.Resources
+	queue      *queue.ObjectQueue
+	reconciler string
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -58,8 +59,8 @@ func (w *filteredWatcher) Run() {
 			continue
 		}
 		// filter objects.
-		if w.ignoreObject(object) {
-			glog.V(4).Infof("Ignoring event for unmanaged object: %v", object)
+		if !w.shouldProcess(object) {
+			glog.V(4).Infof("Ignoring event for object: %v", object)
 			continue
 		}
 
@@ -75,16 +76,22 @@ func (w *filteredWatcher) Run() {
 	}
 }
 
-// ignoreObject returns true if the object is not managed by Config Sync or not
-// in the declared resources.
-func (w *filteredWatcher) ignoreObject(object core.Object) bool {
-	id := core.IDOf(object)
-	if declared, ok := w.resources.GetDecl(id); ok {
-		// If the object is declared, we only ignore it if it has a different GVK
-		// than the declaration. In that case we expect to get another event for the
-		// same object but with a matching GVK so we can actually compare it to its
-		// declaration.
-		return object.GroupVersionKind().String() != declared.GroupVersionKind().String()
+// shouldProcess returns true if the given object should be enqueued by the
+// watcher for processing.
+func (w *filteredWatcher) shouldProcess(object core.Object) bool {
+	if !declared.CanManage(w.reconciler, object) {
+		return false
 	}
-	return !differ.ManagementEnabled(object)
+
+	id := core.IDOf(object)
+	if decl, ok := w.resources.Get(id); ok {
+		// If the object is declared, we only process it if it has the same GVK as
+		// its declaration. Otherwise we expect to get another event for the same
+		// object but with a matching GVK so we can actually compare it to its
+		// declaration.
+		return object.GroupVersionKind().String() == decl.GroupVersionKind().String()
+	}
+	// Even if the object is undeclared, we still want to process it if it is
+	// tagged as a managed object.
+	return differ.ManagementEnabled(object)
 }

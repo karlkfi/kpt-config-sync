@@ -1,4 +1,4 @@
-package declaredresources
+package declared
 
 import (
 	"sort"
@@ -21,14 +21,14 @@ var (
 	testSet = []core.Object{obj1, obj2}
 )
 
-func TestUpdateDecls(t *testing.T) {
-	dr := DeclaredResources{
+func TestUpdate(t *testing.T) {
+	dr := Resources{
 		mutex: sync.RWMutex{},
 	}
 	objects := testSet
 	expectedIDs := getIDs(objects)
 
-	err := dr.UpdateDecls(objects)
+	err := dr.Update(objects)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -49,14 +49,14 @@ func asUnstructured(t *testing.T, o runtime.Object) *unstructured.Unstructured {
 	return u
 }
 
-func TestGetDecls(t *testing.T) {
-	dr := DeclaredResources{}
-	err := dr.UpdateDecls(testSet)
+func TestDeclarations(t *testing.T) {
+	dr := Resources{}
+	err := dr.Update(testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	got := dr.Decls()
+	got := dr.Declarations()
 	// Sort got decls to ensure determinism.
 	sort.Slice(got, func(i, j int) bool {
 		return core.IDOf(got[i]).String() < core.IDOf(got[j]).String()
@@ -71,14 +71,14 @@ func TestGetDecls(t *testing.T) {
 	}
 }
 
-func TestGetDecl(t *testing.T) {
-	dr := DeclaredResources{}
-	err := dr.UpdateDecls(testSet)
+func TestGet(t *testing.T) {
+	dr := Resources{}
+	err := dr.Update(testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	actual, found := dr.GetDecl(core.IDOf(obj1))
+	actual, found := dr.Get(core.IDOf(obj1))
 	if !found {
 		t.Fatal("got not found, want found")
 	}
@@ -87,14 +87,14 @@ func TestGetDecl(t *testing.T) {
 	}
 }
 
-func TestGetGVKSet(t *testing.T) {
-	dr := DeclaredResources{}
-	err := dr.UpdateDecls(testSet)
+func TestGVKSet(t *testing.T) {
+	dr := Resources{}
+	err := dr.Update(testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	got := dr.GetGVKSet()
+	got := dr.GVKSet()
 	want := map[schema.GroupVersionKind]struct{}{
 		obj1.GroupVersionKind(): {},
 		obj2.GroupVersionKind(): {},

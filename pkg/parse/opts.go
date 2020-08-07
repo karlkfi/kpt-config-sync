@@ -58,7 +58,7 @@ func (o *opts) apply(ctx context.Context, objs []ast.FileObject) status.MultiErr
 	for i, o := range objs {
 		cos[i] = o
 	}
-	err := o.remediator.UpdateDecls(cos)
+	err := o.remediator.Update(cos)
 	if err != nil {
 		return status.UndocumentedErrorBuilder.Wrap(err).Build()
 	}

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/parse/declaredresources"
 	"github.com/google/nomos/pkg/policycontroller"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
@@ -163,7 +163,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			// Set up the fake client that represents the initial state of the cluster.
 			c := fakeClient(t, tc.actual)
 			// Simulate the Parser having already parsed the resource and recorded it.
-			d := declared(t, tc.declared)
+			d := makeDeclared(t, tc.declared)
 
 			r := newReconciler(c.Applier(), d)
 
@@ -223,10 +223,10 @@ func fakeClient(t *testing.T, actual ...core.Object) *testingfake.Client {
 	return c
 }
 
-func declared(t *testing.T, declared ...core.Object) *declaredresources.DeclaredResources {
+func makeDeclared(t *testing.T, objs ...core.Object) *declared.Resources {
 	t.Helper()
-	d := declaredresources.NewDeclaredResources()
-	if err := d.UpdateDecls(declared); err != nil {
+	d := declared.NewResources()
+	if err := d.Update(objs); err != nil {
 		// Test precondition; fail early.
 		t.Fatal(err)
 	}
