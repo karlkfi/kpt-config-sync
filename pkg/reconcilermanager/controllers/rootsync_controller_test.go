@@ -24,6 +24,11 @@ const (
 	rootsyncName         = "root-sync"
 	rootsyncRepo         = "https://github.com/test/rootsync/csp-config-management/"
 	rootsyncDir          = "baz-corp"
+
+	// Hash of all configmap.data created by Root Reconciler.
+	rsAnnotation = "49d0d5da30e10d1759e945f1b9ed61c2"
+	// Updated hash of all configmap.data updated by Root Reconciler.
+	rsUpdatedAnnotation = "d92e449392ac477b84e07e8ea88ed6c5"
 )
 
 func configMap(namespace, name string, opts ...core.MetaMutator) *corev1.ConfigMap {
@@ -53,37 +58,29 @@ func deployment(namespace, name string, containerName string, opts ...core.MetaM
 	return result
 }
 
-func rootDeploymentWithEnvFrom(namespace, name, containerName string, opts ...core.MetaMutator) *appsv1.Deployment {
-	result := fake.DeploymentObject(opts...)
-	result.Namespace = namespace
-	result.Name = name
-
-	container := fake.ContainerObject(containerName)
-	container.EnvFrom = []corev1.EnvFromSource{
-		{
-			ConfigMapRef: &corev1.ConfigMapEnvSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: name,
-				},
-				Optional: pointer.BoolPtr(false),
-			},
-		},
+func rsDeploymentAnnotation() map[string]string {
+	return map[string]string{
+		"configmanagement.gke.io/configmap": rsAnnotation,
 	}
-
-	result.Spec.Template.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			*container,
-		},
-	}
-	return result
 }
 
-// rsDeploymentWithEnvFroms returns appsv1.Deployment
+func rsDeploymentUpdatedAnnotation() map[string]string {
+	return map[string]string{
+		"configmanagement.gke.io/configmap": rsUpdatedAnnotation,
+	}
+}
+
+// rsDeploymentWithEnvFrom returns appsv1.Deployment
 // containerConfigMap contains map of container name and their respective configmaps.
-func rsDeploymentWithEnvFroms(namespace, name string, containerConfigMap map[string][]configMapRef, opts ...core.MetaMutator) *appsv1.Deployment {
+func rsDeploymentWithEnvFrom(namespace, name string,
+	containerConfigMap map[string][]configMapRef,
+	annotation map[string]string,
+	opts ...core.MetaMutator) *appsv1.Deployment {
 	result := fake.DeploymentObject(opts...)
 	result.Namespace = namespace
 	result.Name = name
+	result.Spec.Template.Annotations = annotation
+
 	result.Spec.Template.Spec = corev1.PodSpec{
 		Containers: importerContainer(name, containerConfigMap),
 	}
@@ -197,7 +194,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
+			_, err := mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -232,10 +229,14 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
 				gitSync),
-			wantDeployment: rootDeploymentWithEnvFrom(
+			wantDeployment: rsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
-				gitSync,
+				gitSyncConfigMap(gitSync, configMapRef{
+					name:     gitSync,
+					optional: pointer.BoolPtr(false),
+				}),
+				map[string]string{"configmanagement.gke.io/configmap": "31323334"},
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: false,
 		},
@@ -251,10 +252,14 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
 				unsupportedContainer),
-			wantDeployment: rootDeploymentWithEnvFrom(
+			wantDeployment: rsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
 				gitSync,
-				gitSync,
+				gitSyncConfigMap(gitSync, configMapRef{
+					name:     gitSync,
+					optional: pointer.BoolPtr(false),
+				}),
+				nil,
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: true,
 		},
@@ -262,7 +267,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRootSyncDeployment(*tc.rootSync, tc.actualDeployment)
+			err := mutateRootSyncDeployment(*tc.rootSync, tc.actualDeployment, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -339,10 +344,11 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	wantDeployment := []*appsv1.Deployment{
-		rsDeploymentWithEnvFroms(
+		rsDeploymentWithEnvFrom(
 			rootsyncReqNamespace,
 			"root-reconciler",
 			importerDeploymentWithConfigMap(),
+			rsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 	}
@@ -388,11 +394,23 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 	}
 
+	wantDeployment = []*appsv1.Deployment{
+		rsDeploymentWithEnvFrom(
+			v1.NSConfigManagementSystem,
+			"root-reconciler",
+			importerDeploymentWithConfigMap(),
+			rsDeploymentUpdatedAnnotation(),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+		),
+	}
+
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("diff %s", diff)
 		}
 	}
 
+	// Compare ConfigMapRef field in containers.
+	cmpDeployment(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
 }

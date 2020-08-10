@@ -35,6 +35,11 @@ const (
 
 	unsupportedConfigMap = "xyz"
 	unsupportedContainer = "abc"
+
+	// Hash of all configmap.data created by Namespace Reconciler.
+	nsAnnotation = "a5bae8eb8c52efd2f1648720f794c5d8"
+	// Updated hash of all configmap.data updated by Namespace Reconciler.
+	nsUpdatedAnnotation = "bacb4d4b3958f97c957187c00cf94253"
 )
 
 func repoSync(rev string, opts ...core.MetaMutator) *v1.RepoSync {
@@ -53,7 +58,7 @@ type configMapRef struct {
 	optional *bool
 }
 
-func nsGitSyncConfigMap(containerName string, configmap configMapRef) map[string][]configMapRef {
+func gitSyncConfigMap(containerName string, configmap configMapRef) map[string][]configMapRef {
 	result := make(map[string][]configMapRef)
 	result[containerName] = []configMapRef{configmap}
 	return result
@@ -82,13 +87,13 @@ func importerDeploymentWithConfigMap() map[string][]configMapRef {
 
 func nsDeploymentAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": "7b226e732d7265636f6e63696c65722d626f6f6b696e666f2d6769742d73796e63223a7b224749545f4b4e4f574e5f484f535453223a2266616c7365222c224749545f53594e435f4252414e4348223a22312e302e30222c224749545f53594e435f5245504f223a2268747470733a2f2f6769746875622e636f6d2f746573742f7265706f73796e632f6373702d636f6e6669672d6d616e6167656d656e742f222c224749545f53594e435f524556223a2248454144222c224749545f53594e435f57414954223a223135227d7d6c62272e07bb014262b821756295c58d",
+		"configmanagement.gke.io/configmap": nsAnnotation,
 	}
 }
 
 func nsDeploymentUpdatedAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": "7b226e732d7265636f6e63696c65722d626f6f6b696e666f2d6769742d73796e63223a7b224749545f4b4e4f574e5f484f535453223a2266616c7365222c224749545f53594e435f4252414e4348223a22322e302e30222c224749545f53594e435f5245504f223a2268747470733a2f2f6769746875622e636f6d2f746573742f7265706f73796e632f6373702d636f6e6669672d6d616e6167656d656e742f222c224749545f53594e435f524556223a2248454144222c224749545f53594e435f57414954223a223135227d7d6c62272e07bb014262b821756295c58d",
+		"configmanagement.gke.io/configmap": nsUpdatedAnnotation,
 	}
 }
 
@@ -258,7 +263,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			wantDeployment: nsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
 				reposyncReqNamespace,
-				nsGitSyncConfigMap(gitSync, configMapRef{
+				gitSyncConfigMap(gitSync, configMapRef{
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),
@@ -281,7 +286,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			wantDeployment: nsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
 				reposyncReqNamespace,
-				nsGitSyncConfigMap(gitSync, configMapRef{
+				gitSyncConfigMap(gitSync, configMapRef{
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),

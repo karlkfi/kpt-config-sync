@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -73,6 +74,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
+// TODO b/163405299 De-duplicate RepoSyncReconciler.upsertConfigMap() and RootSyncReconciler.upsertConfigMap().
 func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.RepoSync) ([]byte, error) {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
@@ -83,9 +85,8 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.Re
 	// will be called. Just before calling either Create() or Update(), the mutate
 	// callback will be called.
 
-	// configMapDataHash contains ConfigMap data hash
-	var configMapDataHash []byte
-	var err error
+	// configMapDataHash contain ConfigMap data.
+	configMapData := make(map[string]map[string]string)
 
 	// CreateOrUpdate configmaps for Namespace Reconciler.
 	for _, cm := range reconcilerConfigMaps {
@@ -93,17 +94,20 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.Re
 		childCM.Name = buildRepoSyncName(repoSync.Namespace, cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			configMapDataHash, err = mutateRepoSyncConfigMap(repoSync, &childCM)
+			data, err := mutateRepoSyncConfigMap(repoSync, &childCM)
+			configMapData[childCM.Name] = data
 			return err
 		})
 		if err != nil {
 			return nil, err
 		}
-
 		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
 	}
 
-	return configMapDataHash, nil
+	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
+	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
+	// deployment in the event of configmap update. More information: go/csmr-update-deployment.
+	return hash(configMapData)
 }
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
@@ -118,7 +122,7 @@ func (r *RepoSyncReconciler) validate(rs v1.RepoSync) error {
 	return nil
 }
 
-func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) ([]byte, error) {
+func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -127,24 +131,18 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) ([]byte, erro
 		rs.UID,
 	)
 
-	// allData contains configmap.data keyed by ConfigMap name.
-	allData := make(map[string]map[string]string)
-
 	switch cm.Name {
 	case buildRepoSyncName(rs.Namespace, importer):
 		cm.Data = importerData(rs.Spec.Git.Dir)
-		allData[cm.Name] = cm.Data
 	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
-		allData[cm.Name] = cm.Data
 	case buildRepoSyncName(rs.Namespace, gitSync):
 		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
-		allData[cm.Name] = cm.Data
 	default:
 		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
 	}
 
-	return hash(allData)
+	return cm.Data, nil
 }
 
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, repoSync v1.RepoSync, configMapDataHash []byte) error {
@@ -176,12 +174,7 @@ func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment, configMapDa
 
 	// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 	// reconciler creates/updates.
-	annotation := de.Spec.Template.Annotations
-	if annotation == nil {
-		annotation = make(map[string]string)
-	}
-	annotation[v1.ConfigMapAnnotationKey] = fmt.Sprintf("%x", configMapDataHash)
-	de.Spec.Template.Annotations = annotation
+	core.SetAnnotation(&de.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 	templateSpec := &de.Spec.Template.Spec
 

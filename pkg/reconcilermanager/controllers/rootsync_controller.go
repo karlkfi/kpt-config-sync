@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,12 +50,13 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, nil
 	}
 	// Overwrite git-importer pod's configmaps.
-	if err := r.upsertConfigMap(ctx, rootSync); err != nil {
+	configMapDataHash, err := r.upsertConfigMap(ctx, rootSync)
+	if err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
 	// Overwrite git-importer pod deployment.
-	if err := r.upsertDeployment(ctx, rootSync); err != nil {
+	if err := r.upsertDeployment(ctx, rootSync, configMapDataHash); err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 
@@ -70,7 +72,7 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.RootSync) error {
+func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.RootSync) ([]byte, error) {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
 	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
@@ -80,21 +82,29 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 	// will be called. Just before calling either Create() or Update(), the mutate
 	// callback will be called.
 
+	// configMapData contain ConfigMap data.
+	configMapData := make(map[string]map[string]string)
+
 	// CreateOrUpdate configmaps for Root Reconciler.
 	for _, cm := range reconcilerConfigMaps {
 		var childCM corev1.ConfigMap
 		childCM.Name = buildRootSyncName(cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			return mutateRootSyncConfigMap(rootSync, &childCM)
+			data, err := mutateRootSyncConfigMap(rootSync, &childCM)
+			configMapData[childCM.Name] = data
+			return err
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		// TODO(b/161892553) Restart deployment when a configmap is updated.
 		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
 	}
-	return nil
+
+	// hash return 128 bit FNV-1 hash of data of all the configmaps created by the controller.
+	// Reconciler deployment's template.spec annotated with the hash. Deployment is recreated in the
+	// event of configmap update. More information go/csmr-update-deployment
+	return hash(configMapData)
 }
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
@@ -109,7 +119,7 @@ func (r *RootSyncReconciler) validate(rs v1.RootSync) error {
 	return nil
 }
 
-func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) error {
+func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -126,12 +136,12 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) error {
 	case buildRootSyncName(gitSync):
 		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
 	default:
-		return errors.Errorf("unsupported ConfigMap: %q", cm.Name)
+		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
 	}
-	return nil
+	return cm.Data, nil
 }
 
-func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync) error {
+func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := rsParseDeployment(&childDep); err != nil {
@@ -140,7 +150,7 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	childDep.Name = buildRootSyncName()
 	childDep.Namespace = v1.NSConfigManagementSystem
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		return mutateRootSyncDeployment(rootSync, &childDep)
+		return mutateRootSyncDeployment(rootSync, &childDep, configMapDataHash)
 	})
 	if err != nil {
 		return err
@@ -149,7 +159,7 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	return nil
 }
 
-func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment) error {
+func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment, configMapDataHash []byte) error {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
 	de.OwnerReferences = ownerReference(
@@ -157,6 +167,10 @@ func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment) error {
 		rs.Name,
 		rs.UID,
 	)
+
+	// Mutate Annotation with the hash of configmap.data from all the ConfigMap
+	// reconciler creates/updates.
+	core.SetAnnotation(&de.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 	templateSpec := &de.Spec.Template.Spec
 
