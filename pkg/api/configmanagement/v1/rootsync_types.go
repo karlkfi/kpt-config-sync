@@ -9,6 +9,20 @@ import (
 
 // +kubebuilder:object:root=true
 
+// RootSync is the Schema for the rootsyncs API
+type RootSync struct {
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// +optional
+	Spec RootSyncSpec `json:"spec,omitempty"`
+	// +optional
+	Status RootSyncStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:generate=true
+
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -29,26 +43,12 @@ type RootSyncSpec struct {
 	Git `json:"git,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+// +kubebuilder:object:generate=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-}
-
-// +kubebuilder:object:root=true
-
-// RootSync is the Schema for the rootsyncs API
-type RootSync struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// +optional
-	Spec RootSyncSpec `json:"spec,omitempty"`
-	// +optional
-	Status RootSyncStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
