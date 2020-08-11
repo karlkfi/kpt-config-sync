@@ -25,6 +25,16 @@ type Remediator struct {
 	started  bool
 }
 
+// Interface is a fake-able subset of the interface Remediator implements that
+// accepts a new set of declared configuration.
+//
+// Placed here to make discovering the production implementation (above) easier.
+type Interface interface {
+	Update(objects []core.Object) error
+}
+
+var _ Interface = &Remediator{}
+
 // New instantiates launches goroutines to make the state of the connected
 // cluster match the declared resources.
 //

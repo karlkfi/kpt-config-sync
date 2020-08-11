@@ -28,8 +28,10 @@ func NewRootParser(
 		clusterName:      clusterName,
 		reader:           reader,
 		pollingFrequency: pollingFrequency,
-		gitDir:           gitDir,
-		policyDir:        policyDir,
+		files: files{
+			gitDir:    gitDir,
+			policyDir: policyDir,
+		},
 	}
 
 	switch format {
@@ -86,5 +88,5 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 	}
 
 	// TODO(b/163053203): Validate RepoSync CRs.
-	return p.apply(ctx, objs)
+	return p.update(ctx, objs)
 }

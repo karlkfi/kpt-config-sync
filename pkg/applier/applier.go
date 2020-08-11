@@ -37,6 +37,13 @@ type Applier struct {
 	listOptions []client.ListOption
 }
 
+// Interface is a fake-able subset of the interface Applier implements.
+//
+// Placed here to make discovering the production implementation (above) easier.
+type Interface interface {
+	Apply(ctx context.Context, desiredResource []ast.FileObject) error
+}
+
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
 func NewNamespaceApplier(reader client.Reader,
