@@ -10,10 +10,14 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/configsync"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
+	"github.com/google/nomos/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -36,6 +40,32 @@ type Options struct {
 	// the Applier. At the end of each period, the Applier will re-apply its
 	// current set of declared resources to the cluster.
 	ApplierResyncPeriod time.Duration
+	// GitPollingFrequency is how often to check the local git repository for
+	// changes.
+	GitPollingFrequency time.Duration
+	// GitRoot is the absolute path to the Git repository.
+	// Usually contains a symlink that must be resolved every time before parsing.
+	GitRoot string
+	// PolicyDir is the relative path to the policies within the Git repository.
+	PolicyDir cmpath.Relative
+	// DiscoveryInterfaceGetter is how to fetch a new DiscoveryClient when the set
+	// of available CRDs may have changed.
+	// TODO(b/162958883): Determine if we can actually just used a
+	//  CachedDiscoveryClient and just invalidate it each time, since that's
+	//  simpler.
+	DiscoveryInterfaceGetter discovery.ClientGetter
+	// RootOptions is the set of options to fill in if this is configuring the
+	// Root reconciler.
+	// Unset for Namespace repositories.
+	*RootOptions
+}
+
+// RootOptions are the options specific to parsing Root repositories.
+type RootOptions struct {
+	// ClusterName is the name of the cluster we are parsing configuration for.
+	ClusterName string
+	// SourceFormat is how the Root repository is structured.
+	SourceFormat filesystem.SourceFormat
 }
 
 // Run configures and starts the various components of a reconciler process.
@@ -85,7 +115,21 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	// Configure the Parser.
-	// TODO(b/162014057): configure the parser and get everything running.
+	gitRoot, err := cmpath.AbsoluteOS(opts.GitRoot)
+	if err != nil {
+		glog.Fatalf("Validating repository root path %q: %v", opts.GitRoot, err)
+	}
+	var parser parse.Runnable
+	if opts.ReconcilerScope == declared.RootReconciler {
+		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, mgr.GetClient(),
+			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.DiscoveryInterfaceGetter)
+		if err != nil {
+			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
+		}
+	} else {
+		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, mgr.GetClient(),
+			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.DiscoveryInterfaceGetter)
+	}
 
 	// Start the Remediator.
 	stopChan := signals.SetupSignalHandler()
@@ -93,5 +137,8 @@ func Run(ctx context.Context, opts Options) {
 	// Start the Applier.
 	a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
 	// Start the Parser.
-	// parser.Run(...) <-- this should not return until stop channel is closed or context is cancelled
+	// This will not return until:
+	// - the Context is cancelled, or
+	// - its Done channel is closed.
+	parser.Run(configsync.StoppableContext(ctx, stopChan))
 }
