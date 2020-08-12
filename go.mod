@@ -15,8 +15,6 @@ replace (
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190918162238-f783a3654da8
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20190918160344-1fbdaa4c8d90
 	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190912054826-cd179ad6a269
-	k8s.io/kubectl => k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.4.0
 )
 
 require (
@@ -46,9 +44,9 @@ require (
 	k8s.io/client-go v0.18.2
 	k8s.io/cluster-registry v0.0.6
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c // indirect
-	k8s.io/kubectl v0.0.0-00010101000000-000000000000
+	k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1
-	sigs.k8s.io/controller-runtime v0.0.0-00010101000000-000000000000
+	sigs.k8s.io/controller-runtime v0.4.0
 	sigs.k8s.io/kind v0.8.1
 	sigs.k8s.io/yaml v1.2.0
 )
