@@ -1,7 +1,6 @@
 package ast
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
@@ -16,8 +15,10 @@ func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
 // ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
 // path parsed from its annotations.
 func ParseFileObject(o core.Object) *FileObject {
-	srcPath := cmpath.RelativeSlash(o.GetAnnotations()[v1.SourcePathAnnotationKey])
-	return &FileObject{Object: o, Relative: srcPath}
+	return &FileObject{
+		Object:   o,
+		Relative: cmpath.RelativeSlash(id.GetSourceAnnotation(o)),
+	}
 }
 
 // FileObject extends runtime.FileObject to include the path to the file in the repo.

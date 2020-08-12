@@ -6,6 +6,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -67,7 +68,7 @@ func (p *Parser) Parse(
 	getSyncedCRDs GetSyncedCRDs,
 	policyDir cmpath.Absolute,
 	files []cmpath.Absolute,
-) ([]ast.FileObject, status.MultiError) {
+) ([]core.Object, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects(policyDir, files)
@@ -78,7 +79,7 @@ func (p *Parser) Parse(
 	visitors := generateVisitors(flatRoot)
 	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs)
 
-	return fileObjects, p.errors
+	return AsCoreObjects(fileObjects), p.errors
 }
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in

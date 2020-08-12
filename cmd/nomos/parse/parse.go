@@ -43,11 +43,12 @@ func Parse(clusterName string, root cmpath.Absolute, enableAPIServerChecks bool)
 		return nil, err
 	}
 
-	fileObjects, mErr := p.Parse(clusterName, enableAPIServerChecks, GetSyncedCRDs,
+	coreObjects, mErr := p.Parse(clusterName, enableAPIServerChecks, GetSyncedCRDs,
 		root, filesystem.FilterHierarchyFiles(root, trackedFiles))
 	if mErr != nil {
 		return nil, errors.Wrap(mErr, "Found issues")
 	}
+	fileObjects := filesystem.AsFileObjects(coreObjects)
 
 	return namespaceconfig.NewAllConfigs("", metav1.Time{}, fileObjects), nil
 }

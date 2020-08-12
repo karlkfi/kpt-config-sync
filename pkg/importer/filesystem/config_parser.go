@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -21,8 +22,26 @@ type ConfigParser interface {
 		getSyncedCRDs GetSyncedCRDs,
 		policyDir cmpath.Absolute,
 		files []cmpath.Absolute,
-	) ([]ast.FileObject, status.MultiError)
+	) ([]core.Object, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
 	ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject
+}
+
+// AsCoreObjects converts a slice of FileObjects to a slice of core.Objects.
+func AsCoreObjects(fos []ast.FileObject) []core.Object {
+	result := make([]core.Object, len(fos))
+	for i, fo := range fos {
+		result[i] = fo.Object
+	}
+	return result
+}
+
+// AsFileObjects converts a slice of core.Objects to a slice of FileObjects.
+func AsFileObjects(os []core.Object) []ast.FileObject {
+	result := make([]ast.FileObject, len(os))
+	for i, o := range os {
+		result[i] = *ast.ParseFileObject(o)
+	}
+	return result
 }

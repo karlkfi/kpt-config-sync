@@ -82,10 +82,11 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 		wantFiles = filesystem.FilterHierarchyFiles(policyDir, wantFiles)
 	}
 
-	objs, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
 	if err != nil {
 		return err
 	}
+	objs := filesystem.AsFileObjects(cos)
 
 	// TODO(b/163053203): Validate RepoSync CRs.
 	return p.update(ctx, objs)

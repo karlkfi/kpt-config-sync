@@ -68,10 +68,11 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	objs, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
 	if err != nil {
 		return err
 	}
+	objs := filesystem.AsFileObjects(cos)
 
 	nsv := namespaceScopeVisitor(p.scope)
 	err = nsv.Validate(objs)

@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -36,7 +37,7 @@ func (p *rawParser) Parse(
 	getSyncedCRDs GetSyncedCRDs,
 	policyDir cmpath.Absolute,
 	files []cmpath.Absolute,
-) ([]ast.FileObject, status.MultiError) {
+) ([]core.Object, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(policyDir, files)
 	if errs != nil {
@@ -72,7 +73,7 @@ func (p *rawParser) Parse(
 	for _, v := range validators {
 		errs = status.Append(errs, v.Validate(fileObjects))
 	}
-	return fileObjects, errs
+	return AsCoreObjects(fileObjects), errs
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

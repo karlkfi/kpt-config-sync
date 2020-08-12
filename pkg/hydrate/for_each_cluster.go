@@ -35,14 +35,16 @@ func ForEachCluster(
 	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultFileObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)
 	f(defaultCluster, defaultFileObjects, err)
 
 	clusterRegistry := parser.ReadClusterRegistryResources(rootDir, files)
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		fileObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+		fileObjects := filesystem.AsFileObjects(coreObjects)
 		f(cluster.Name, fileObjects, err2)
 	}
 }

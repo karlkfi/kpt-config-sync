@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// Annotated has Kubernetes annotations.
+type Annotated interface {
+	GetAnnotations() map[string]string
+}
 
 // Resource identifies a Resource in a Nomos repository.
 // Unique so long as no single file illegally declares two Resources of the same Name and Group/Version/Kind.
 type Resource interface {
-	// Path is the embedded interface providing path information to this Resource.
-	Path
+	// GetAnnotations contains the source path annotation, if present.
+	GetAnnotations() map[string]string
 	// GetNamespace returns the namespace containing this resource.
 	// If the resource is not namespaced, returns empty string.
 	GetNamespace() string
@@ -21,11 +27,21 @@ type Resource interface {
 	GroupVersionKind() schema.GroupVersionKind
 }
 
+// GetSourceAnnotation returns the string value of the SourcePath Annotation.
+// Returns empty string if unset or the object has no annotations.
+func GetSourceAnnotation(obj Annotated) string {
+	as := obj.GetAnnotations()
+	if as == nil {
+		return ""
+	}
+	return as[v1.SourcePathAnnotationKey]
+}
+
 // PrintResource returns a human-readable output for the Resource.
 func PrintResource(r Resource) string {
 	var sb strings.Builder
-	if r.SlashPath() != "" {
-		sb.WriteString(fmt.Sprintf("source: %s\n", r.SlashPath()))
+	if sourcePath := GetSourceAnnotation(r); sourcePath != "" {
+		sb.WriteString(fmt.Sprintf("source: %s\n", sourcePath))
 	}
 	if r.GetNamespace() != "" {
 		sb.WriteString(fmt.Sprintf("namespace: %s\n", r.GetNamespace()))

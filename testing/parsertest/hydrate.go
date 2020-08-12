@@ -186,7 +186,8 @@ func (pt Test) RunAll(t *testing.T) {
 				return tc.SyncedCRDs, nil
 			}
 
-			fileObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, root, reader.ToFileList())
+			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, root, reader.ToFileList())
+			fileObjects := filesystem.AsFileObjects(coreObjects)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

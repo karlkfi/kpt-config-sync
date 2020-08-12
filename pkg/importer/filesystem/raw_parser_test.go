@@ -130,8 +130,9 @@ func TestRawParser_Parse(t *testing.T) {
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
-			fileObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs,
+			coreObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs,
 				root, r.ToFileList())
+			fileObjects := filesystem.AsFileObjects(coreObjects)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
 				t.Fatal(err)
