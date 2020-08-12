@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/status"
 )
@@ -16,7 +15,7 @@ type updater struct {
 	applier    applier.Interface
 }
 
-func (u *updater) update(ctx context.Context, objs []ast.FileObject) status.MultiError {
+func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiError {
 	// The Remediator MUST be updated before the applier.
 	//
 	// The main reason for this is to avoid a race condition where:
@@ -24,11 +23,7 @@ func (u *updater) update(ctx context.Context, objs []ast.FileObject) status.Mult
 	// 2. the applier writes that resource to the cluster
 	// 3. a user or controller modifies that resource
 	// 4. the remediator establishes a new watch for that GVK
-	cos := make([]core.Object, len(objs))
-	for i, o := range objs {
-		cos[i] = o
-	}
-	err := u.remediator.Update(cos)
+	err := u.remediator.Update(objs)
 	if err != nil {
 		return status.UndocumentedErrorBuilder.Wrap(err).Build()
 	}

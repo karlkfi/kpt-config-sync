@@ -12,20 +12,20 @@ func ManagementEnabled(obj core.LabeledAndAnnotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled
 }
 
-// disableManaged returns true if the resource in the repo explicitly has management disabled.
-func managementDisabled(obj core.LabeledAndAnnotated) bool {
+// ManagementDisabled returns true if the resource in the repo explicitly has management disabled.
+func ManagementDisabled(obj core.LabeledAndAnnotated) bool {
 	return obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled
 }
 
-// managementUnset returns true if the resource has no Nomos ResourceManagementKey.
-func managementUnset(obj core.LabeledAndAnnotated) bool {
+// ManagementUnset returns true if the resource has no Nomos ResourceManagementKey.
+func ManagementUnset(obj core.LabeledAndAnnotated) bool {
 	_, found := obj.GetAnnotations()[v1.ResourceManagementKey]
 	return !found
 }
 
-// hasNomosMeta returns true if the given map has at least one Nomos annotation or label that syncer
+// HasNomosMeta returns true if the given map has at least one Nomos annotation or label that syncer
 // manages.
-func hasNomosMeta(obj core.LabeledAndAnnotated) bool {
+func HasNomosMeta(obj core.LabeledAndAnnotated) bool {
 	as := obj.GetAnnotations()
 	sas := append(v1.SyncerAnnotations(), hnc.AnnotationKey)
 	for _, a := range sas {

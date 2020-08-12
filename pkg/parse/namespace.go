@@ -80,5 +80,5 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	return p.update(ctx, objs)
+	return p.update(ctx, cos)
 }

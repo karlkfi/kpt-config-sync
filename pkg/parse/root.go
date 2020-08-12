@@ -86,8 +86,7 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 	if err != nil {
 		return err
 	}
-	objs := filesystem.AsFileObjects(cos)
 
 	// TODO(b/163053203): Validate RepoSync CRs.
-	return p.update(ctx, objs)
+	return p.update(ctx, cos)
 }

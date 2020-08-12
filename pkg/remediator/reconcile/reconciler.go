@@ -6,12 +6,11 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // reconciler ensures objects are consistent with their declared state in the
@@ -37,55 +36,59 @@ func newReconciler(
 // Remediate takes an runtime.Object representing the object to update, and then
 // ensures that the version on the server matches it.
 func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) error {
-	diff, err := r.diff(id, obj)
-	if err != nil {
-		return err
-	}
-
-	switch diff.Type() {
-	case differ.NoOp:
-		return nil
-	case differ.Create:
-		_, err := r.applier.Create(ctx, diff.Declared)
-		return err
-	case differ.Update:
-		_, err := r.applier.Update(ctx, diff.Declared, diff.Actual)
-		return err
-	case differ.Delete:
-		_, err := r.applier.Delete(ctx, diff.Actual)
-		return err
-	case differ.Error:
-		// This is the case where the annotation in the *repository* is invalid.
-		// Should never happen as the Parser would have thrown an error.
-		return nonhierarchical.IllegalManagementAnnotationError(
-			ast.ParseFileObject(diff.Declared),
-			diff.Declared.GetAnnotations()[v1.ResourceManagementKey],
-		)
-	case differ.Unmanage, differ.UnmanageNamespace:
-		_, err := r.applier.RemoveNomosMeta(ctx, diff.Actual)
-		return err
-	default:
-		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
-		return status.InternalErrorf("diff type not supported: %v", diff.Type())
-	}
-}
-
-func (r *reconciler) diff(id core.ID, obj core.Object) (*differ.Diff, error) {
-	var actual *unstructured.Unstructured
+	declared, _ := r.declared.Get(id)
+	var decl core.Object
 	var err error
-	if obj == nil {
-		actual = nil
+	if declared == nil {
+		decl = nil
 	} else {
-		actual, err = syncerreconcile.AsUnstructuredSanitized(obj)
+		decl, err = core.ObjectOf(declared)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	declared, _ := r.declared.Get(id)
-	return &differ.Diff{
+	d := diff.Diff{
 		Name:     id.Name,
-		Declared: declared,
-		Actual:   actual,
-	}, nil
+		Declared: decl,
+		Actual:   obj,
+	}
+	switch d.Type() {
+	case diff.NoOp:
+		return nil
+	case diff.Create:
+		_, err = r.applier.Create(ctx, declared)
+		return err
+	case diff.Update:
+		actual, err := d.UnstructuredActual()
+		if err != nil {
+			return err
+		}
+		_, err = r.applier.Update(ctx, declared, actual)
+		return err
+	case diff.Delete:
+		actual, err := d.UnstructuredActual()
+		if err != nil {
+			return err
+		}
+		_, err = r.applier.Delete(ctx, actual)
+		return err
+	case diff.Error:
+		// This is the case where the annotation in the *repository* is invalid.
+		// Should never happen as the Parser would have thrown an error.
+		return nonhierarchical.IllegalManagementAnnotationError(
+			ast.ParseFileObject(d.Declared),
+			d.Declared.GetAnnotations()[v1.ResourceManagementKey],
+		)
+	case diff.Unmanage:
+		actual, err := d.UnstructuredActual()
+		if err != nil {
+			return err
+		}
+		_, err = r.applier.RemoveNomosMeta(ctx, actual)
+		return err
+	default:
+		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
+		return status.InternalErrorf("diff type not supported: %v", d.Type())
+	}
 }

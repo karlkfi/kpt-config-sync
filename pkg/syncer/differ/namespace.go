@@ -27,13 +27,13 @@ func (d *NamespaceDiff) Type() Type {
 				// Corresponding Namespace has already been deleted, so delete the NsConfig
 				return DeleteNsConfig
 			}
-			if lifecycle.HasPreventDeletion(d.Actual) || isManageableSystemNamespace[d.Name] {
+			if lifecycle.HasPreventDeletion(d.Actual) || IsManageableSystemNamespace(d.Name) {
 				return UnmanageNamespace
 			}
 			return Delete
 		}
 
-		if managementUnset(d.Declared) {
+		if ManagementUnset(d.Declared) {
 			// The declared Namespace has no resource management key, so it is managed.
 			if d.Actual != nil {
 				// The Namespace is also in the cluster, so update it.
@@ -43,10 +43,10 @@ func (d *NamespaceDiff) Type() Type {
 			// The Namespace is not in the cluster, so create it.
 			return Create
 		}
-		if managementDisabled(d.Declared) {
+		if ManagementDisabled(d.Declared) {
 			// The Namespace is explicitly marked management disabled in the repository.
 			if d.Actual != nil {
-				if hasNomosMeta(d.Actual) {
+				if HasNomosMeta(d.Actual) {
 					// Management is disabled for the Namespace, so remove management annotations from the API Server.
 					return Unmanage
 				}
@@ -61,7 +61,7 @@ func (d *NamespaceDiff) Type() Type {
 	// The NamespaceConfig IS NOT in the cluster.
 	if d.Actual != nil {
 		// The Namespace IS on the API Server.
-		if !hasNomosMeta(d.Actual) {
+		if !HasNomosMeta(d.Actual) {
 			// No Nomos annotations or labels, so don't do anything.
 			return NoOp
 		}

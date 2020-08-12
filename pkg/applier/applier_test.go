@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -97,12 +97,12 @@ func TestApply(t *testing.T) {
 	for _, test := range cases {
 		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
 		var items []unstructured.Unstructured
-		previousCache := make(map[core.ID]ast.FileObject)
+		previousCache := make(map[core.ID]core.Object)
 		// Propagate the actual resources.
 		for _, actual := range test.actualResources {
 			actualUn, _ := syncerreconcile.AsUnstructured(actual.Object)
 			items = append(items, *actualUn)
-			previousCache[core.IDOf(actual)] = actual
+			previousCache[core.IDOf(actual)] = actual.Object
 		}
 		fakeReader := &FakeReader{
 			listResource:       unstructured.UnstructuredList{Items: items},
@@ -110,7 +110,7 @@ func TestApply(t *testing.T) {
 		a := NewRootApplier(fakeReader, clientApplier)
 		a.cachedObjects = previousCache
 		// Verify.
-		if err := a.Apply(context.Background(), test.declaredResources); err != nil {
+		if err := a.Apply(context.Background(), filesystem.AsCoreObjects(test.declaredResources)); err != nil {
 			t.Errorf("test %q failed: %v", test.name, err)
 		}
 		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
@@ -188,9 +188,9 @@ func TestRefresh(t *testing.T) {
 		a := NewRootApplier(fakeReader, clientApplier)
 		// The cache is used to store the declared git resource. Assuming it is out of sync
 		// with the state in the API server.
-		a.cachedObjects = make(map[core.ID]ast.FileObject)
+		a.cachedObjects = make(map[core.ID]core.Object)
 		for _, actual := range test.declaredResources {
-			a.cachedObjects[core.IDOf(actual)] = actual
+			a.cachedObjects[core.IDOf(actual)] = actual.Object
 		}
 
 		err := a.Refresh(context.Background())

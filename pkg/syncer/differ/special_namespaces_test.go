@@ -24,7 +24,7 @@ func TestIsManageableSystem(t *testing.T) {
 		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			reserved := isManageableSystemNamespace[testcase.name]
+			reserved := IsManageableSystemNamespace(testcase.name)
 			if reserved != testcase.reserved {
 				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
 			}
