@@ -9,3 +9,5 @@ spec:
     revision: 1.0.0
     dir: "foo-corp"
     auth: ssh
+    secretRef:
+      name: root-ssh-key

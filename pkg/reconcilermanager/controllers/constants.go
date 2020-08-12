@@ -7,6 +7,12 @@ const (
 	rootSyncName = "root-sync"
 
 	executedOperation = "operation"
+
+	gitCredentialVolume = "git-creds"
+
+	gitSecretNone = "none"
+
+	gitSecretGCENode = "gcenode"
 )
 
 // Configmaps Suffix.

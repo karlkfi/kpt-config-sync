@@ -43,17 +43,24 @@ sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager/reconci
 kubectl apply -f /tmp/reconciler-manager.yaml
 kubectl apply -f ./manifests/templates/reconciler-manager/dev.yaml
 
-# Cleanup exiting git-creds secret.
-kubectl delete secret git-creds -n=config-management-system --ignore-not-found
-# Create git-creds secret.
+# Cleanup exiting root-ssh-key secret.
+kubectl delete secret root-ssh-key -n=config-management-system --ignore-not-found
+# Create root-ssh-key secret for Root Reconciler.
 # shellcheck disable=SC2086
-kubectl create secret generic git-creds -n=config-management-system \
+kubectl create secret generic root-ssh-key -n=config-management-system \
+      --from-file=ssh=${HOME}/.ssh/id_rsa.nomos
+
+# Cleanup exiting ssh-key secret.
+kubectl delete secret ssh-key -n=bookinfo --ignore-not-found
+# Create ssh-key secret for Namespace Reconciler.
+# shellcheck disable=SC2086
+kubectl create secret generic ssh-key -n=bookinfo \
       --from-file=ssh=${HOME}/.ssh/id_rsa.nomos
 
 # Verify reconciler-manager pod is running.
 
 # Apply RootSync CR.
-#kubectl apply -f e2e/testdata/reconciler-manager/rootsync-sample.yaml
+kubectl apply -f e2e/testdata/reconciler-manager/rootsync-sample.yaml
 
 # Apply RepoSync CR.
 kubectl apply -f e2e/testdata/reconciler-manager/reposync-sample.yaml
@@ -62,8 +69,10 @@ sleep 10s
 
 # Verify whether respective controllers create various obejcts i.e. Deployments.
 kubectl get all -n config-management-system
+kubectl get all -n bookinfo
 
 # Verify whether config map is created.
 kubectl get cm -n config-management-system
+kubectl get cm -n bookinfo
 
 # End

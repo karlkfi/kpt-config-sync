@@ -6,19 +6,21 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	syncerFake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/pointer"
-	controllerruntime "sigs.k8s.io/controller-runtime"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	syncerFake "github.com/google/nomos/pkg/syncer/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
 const (
+	secretAuth           = "ssh"
 	rootsyncReqNamespace = "config-management-system"
 	rootsyncKind         = "RootSync"
 	rootsyncName         = "root-sync"
@@ -29,6 +31,8 @@ const (
 	rsAnnotation = "49d0d5da30e10d1759e945f1b9ed61c2"
 	// Updated hash of all configmap.data updated by Root Reconciler.
 	rsUpdatedAnnotation = "d92e449392ac477b84e07e8ea88ed6c5"
+
+	rootsyncSSHKey = "root-ssh-key"
 )
 
 func configMap(namespace, name string, opts ...core.MetaMutator) *corev1.ConfigMap {
@@ -43,6 +47,24 @@ func configMapWithData(namespace, name string, data map[string]string, opts ...c
 	result.Namespace = namespace
 	result.Name = name
 	result.Data = data
+	return result
+}
+
+func secretData(t *testing.T, auth string) map[string][]byte {
+	t.Helper()
+	key, err := json.Marshal("test-key")
+	if err != nil {
+		t.Fatalf("failed to marshal test key: %v", err)
+	}
+	return map[string][]byte{
+		auth: key,
+	}
+}
+
+func secret(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev1.Secret {
+	t.Helper()
+	result := fake.SecretObject(name, opts...)
+	result.Data = secretData(t, auth)
 	return result
 }
 
@@ -115,10 +137,11 @@ func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
 func rootSync(rev string, opts ...core.MetaMutator) *v1.RootSync {
 	result := fake.RootSyncObject(opts...)
 	result.Spec.Git = v1.Git{
-		Repo:     rootsyncRepo,
-		Revision: rev,
-		Dir:      rootsyncDir,
-		Auth:     auth,
+		Repo:      rootsyncRepo,
+		Revision:  rev,
+		Dir:       rootsyncDir,
+		Auth:      auth,
+		SecretRef: v1.SecretReference{Name: rootsyncSSHKey},
 	}
 	return result
 }
@@ -310,7 +333,7 @@ func TestRootSyncReconciler(t *testing.T) {
 
 	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
-	fakeClient := syncerFake.NewClient(t, s, rsResource)
+	fakeClient := syncerFake.NewClient(t, s, rsResource, secret(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 	testReconciler := NewRootSyncReconciler(
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RootSync"),

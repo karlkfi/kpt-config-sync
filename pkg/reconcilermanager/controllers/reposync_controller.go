@@ -3,20 +3,24 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // RepoSyncReconciler reconciles a RepoSync object.
@@ -58,6 +62,16 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, err
 	}
 
+	if err := r.validateNamespaceSecret(ctx, &rs); err != nil {
+		log.Error(err, "RepoSync failed Secret validation required for installation")
+		reposync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		_ = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, nil
+	}
+	log.V(2).Info("secret found, proceeding with installation")
+
 	// Overwrite git-importer pod's configmaps.
 	configMapDataHash, err := r.upsertConfigMap(ctx, &rs)
 	if err != nil {
@@ -83,8 +97,22 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
 func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
+	// mapSecretToRepoSync define a mapping from the Secret object in the event to
+	// the RepoSync object to reconcile.
+	mapSecretToRepoSync := handler.ToRequestsFunc(
+		func(a handler.MapObject) []reconcile.Request {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{
+					Name:      reposync.Name,
+					Namespace: a.Meta.GetNamespace(),
+				}},
+			}
+		})
+
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1.RepoSync{}).
+		// Watch Secrets and trigger Reconciles for RepoSync object.
+		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
@@ -108,7 +136,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSyn
 	for _, cm := range reconcilerConfigMaps {
 		var childCM corev1.ConfigMap
 		childCM.Name = buildRepoSyncName(rs.Namespace, cm)
-		childCM.Namespace = v1.NSConfigManagementSystem
+		childCM.Namespace = rs.Namespace
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
 			data, err := mutateRepoSyncConfigMap(rs, &childCM)
 			configMapData[childCM.Name] = data
@@ -136,6 +164,22 @@ func (r *RepoSyncReconciler) validate(rs *v1.RepoSync) error {
 				"'meta.name' must be 'repo-sync'. Instead found %q", rs.Name)
 	}
 	return nil
+}
+
+// validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
+func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1.RepoSync) error {
+	if strings.ToLower(repoSync.Spec.Auth) == gitSecretNone || strings.ToLower(repoSync.Spec.Auth) == gitSecretGCENode {
+		// There is no Secret to check for the Config object.
+		return nil
+	}
+	secret, err := validateSecretExist(ctx,
+		repoSync.Spec.SecretRef.Name,
+		repoSync.Namespace,
+		r.client)
+	if err != nil {
+		return err
+	}
+	return validateSecretData(repoSync.Spec.Auth, secret)
 }
 
 func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
@@ -167,8 +211,10 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSy
 	if err := nsParseDeployment(&childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
+
 	childDep.Name = buildRepoSyncName(rs.Namespace)
-	childDep.Namespace = v1.NSConfigManagementSystem
+	childDep.Namespace = rs.Namespace
+
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
 		return mutateRepoSyncDeployment(rs, &childDep, configMapDataHash)
 	})
@@ -199,13 +245,21 @@ func mutateRepoSyncDeployment(rs *v1.RepoSync, de *appsv1.Deployment, configMapD
 
 	templateSpec := &de.Spec.Template.Spec
 
+	var updatedVolumes []corev1.Volume
+	// Mutate secret.secretname to secret reference specified in RepoSync CR.
+	// Secret reference is the name of the secret used by git-sync container to
+	// authenticate with the git repository using the authorization method specified
+	// in the RepoSync CR.
+	for _, volume := range templateSpec.Volumes {
+		if volume.Name == gitCredentialVolume {
+			volume.Secret.SecretName = rs.Spec.SecretRef.Name
+		}
+		updatedVolumes = append(updatedVolumes, volume)
+	}
+	templateSpec.Volumes = updatedVolumes
+
 	var updatedContainers []corev1.Container
-	// Mutate spec.Containers to update name and configmap references. The names
-	// of containers are updated in the format repoSyncReconcilerPrefix + namespace +
-	// containerName e.g. ns-reconciler-bookinfo-importer.
-	//
-	// In addition to updating the names for each Namespace Reconciler, configmap
-	// references are updated corresponsing to the Namespace Reconciler.
+	// Mutate spec.Containers to update name, configmap references and volumemounts.
 	for _, container := range templateSpec.Containers {
 		switch container.Name {
 		case importer:

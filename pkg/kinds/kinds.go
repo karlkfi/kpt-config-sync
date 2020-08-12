@@ -189,3 +189,8 @@ func ResourceString(gvk schema.GroupVersionKind) string {
 func Service() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Service")
 }
+
+// Secret returns the canonical Secret GroupVersionKind.
+func Secret() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("Secret")
+}
