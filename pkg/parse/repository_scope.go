@@ -7,11 +7,11 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-// namespaceScopeVisitor ensures all objects in a Namespace Repo are either
+// repositoryScopeVisitor ensures all objects in a Namespace Repo are either
 // 1) The Namespace for the scope, or
 // 2) Namespace-scoped objects that define metadata.namespace matching the scope, or
 //      omit metadata.namespace.
-func namespaceScopeVisitor(scope string) nonhierarchical.Validator {
+func repositoryScopeVisitor(scope string) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
 		// By this point we've validated that there are no cluster-scoped objects
 		// in this repo.
@@ -31,7 +31,11 @@ func namespaceScopeVisitor(scope string) nonhierarchical.Validator {
 	})
 }
 
-var badScopeErrBuilder = status.NewErrorBuilder("1058")
+// BadScopeErrCode is the error code indicating that a resource has been
+// declared in a Namespace repository that shouldn't be there.
+const BadScopeErrCode = "1058"
+
+var badScopeErrBuilder = status.NewErrorBuilder(BadScopeErrCode)
 
 func badScopeErr(resource id.Resource, want string) status.ResourceError {
 	return badScopeErrBuilder.

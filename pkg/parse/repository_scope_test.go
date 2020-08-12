@@ -41,11 +41,11 @@ func TestNamespaceScopeVisitor(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.want.Object == nil {
-				// We don't expect namespaceScopeVisitor to mutate the object.
+				// We don't expect repositoryScopeVisitor to mutate the object.
 				tc.want = tc.obj.DeepCopy()
 			}
 
-			visitor := namespaceScopeVisitor(tc.scope)
+			visitor := repositoryScopeVisitor(tc.scope)
 
 			err := visitor.Validate([]ast.FileObject{tc.obj})
 			var got status.Error
