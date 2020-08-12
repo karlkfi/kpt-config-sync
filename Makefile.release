@@ -1,355 +1,91 @@
-#!/usr/bin/make
-#
-# Copyright 2018 CSP Config Management Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+####################################################################################################
+# CORE COMMANDS
 
-######################################################################
+autorelease: release-commit
 
-# Makefile that configures for release.
-#
-# This file contains all the specific workflow and configuration to create
-# a nomos release.
-#
-# make autorelease - Used by our automated prow job.
-#       will clean, build, package and push the entire code set to our
-#       release location and move the '$(LATEST_IMAGE_TAG)' image tag
-#       to the release just built.
-#
-# make release - Same as autorelease but works from your local workstation.
-# 	Should only be used if there are issues with the autoreleaser.
-#      	Must be run on a clean git client and with a clean
-#      	cluster in stolos-dev named <user>-cluster-1.
-#
-# make bless-release - will move the 'stable' image tag to the release that
-# 	was built using one of the above 2 targets.
+.PHONY: release-commit
+release-commit:
+	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
 
-##### CONFIG #####
+	@$(eval BRANCH != git rev-parse --abbrev-ref HEAD)
+	@$(eval COMMIT_SHA != git rev-parse HEAD)
+	@$(eval VERSION := "${USER}/${BRANCH}/${COMMIT_SHA}")
+	@$(eval GCR_PREFIX := "stolos-dev/nomos-commits")
 
-# List of GOOS-GOARCH cross compilation targets
-PLATFORMS ?= linux_amd64 darwin_amd64 windows_amd64
+	$(MAKE) build-manifest \
+		VERSION=$(VERSION) \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG=$(COMMIT_SHA) \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
 
-# GCP project that owns container registry for official releases.
-GCP_PROJECT ?= config-management-release
+	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/commit/$(COMMIT_SHA))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
 
-# GCR prefix to locate containers. For release it is just the GCP Project name.
-GCR_PREFIX ?= $(GCP_PROJECT)
+.PHONY: release-tagged
+release-tagged: tag-version tag-upload
+	@echo "+++ Creating tagged release"
+	@$(eval GIT_TAG != git describe --tags --abbrev=0) # We should have already tagged the commit with the correct version
+	@$(eval GCR_PREFIX := "config-management-release")
 
-# The GCS bucket containing official releases.
-RELEASE_BUCKET ?= gs://config-management-release
+	$(MAKE) build-manifest \
+		VERSION=$(GIT_TAG) \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG=$(GIT_TAG) \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
 
-# Use git tags to set version string.
-VERSION = $(shell git describe --tags --always --dirty)
+	$(eval RELEASE_PATH = gs://config-management-release/config-sync/tag/$(GIT_TAG))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
 
-# TODO(filmil): See if we can avoid referring explicitly to the internal
-# repository.
-NOMOS_GIT_REPO := https://team.googlesource.com/gke-kubernetes-enterprise-control/prototype
+.PHONY: release-user
+release-user:
+	@echo "+++ Creating user release"
+	@$(eval BRANCH_OR_SHA != ./scripts/get-branch-or-sha.sh)
+	@echo "BRANCH_OR_SHA = $(BRANCH_OR_SHA)"
+	@echo "USER = $(USER)"
 
-# We now only require authenticatedUser to see ACM bits.
-# Approved in b/155786751
-# See b/125003511, b/139345284, b/151333330 for some history.
-# Upon promoting to gs://config-management-released/released/... the
-# right process is to enable READER access for all authenticated users
-# in the new release directory (latest, or x.y.z), e.g.
-#
-#  gsutil acl -r ch -g AllAuth:R gs://config-management-release/released/latest
-#  gsutil acl -r ch -g AllAuth:R gs://config-management-release/released/1.4.0
-#
-# However, for e2e to continue running, we need to explicitly allow
-# the prowbot to access objects in various pre-released directories.
-READ_ACCESS_LIST ?= \
-	serviceAccount:425329972751-compute@developer.gserviceaccount.com:legacyObjectReader #prowbot
+	# We use the default GCR_PREFIX
+	$(MAKE) build-manifest \
+		VERSION="$(USER)/$(BRANCH_OR_SHA)" \
+		GCR_PREFIX=$(GCR_PREFIX) \
+		IMAGE_TAG="latest" \
+		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
 
-##### SETUP ######
+	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA))
+	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
+	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
 
-include Makefile
+####################################################################################################
+# SUPPORTING COMMANDS
 
-##### Post-setup env variable evaulations #####
+.PHONY: tag-version
+tag-version:
+	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
+	@echo "+++ Tagging commit $(shell git rev-parse HEAD) with CS_VERSION=$(CS_VERSION)"
+	CS_VERSION=$(CS_VERSION) ./scripts/tag-version.sh
 
-# The version of the last known release candidate, e.g. v1.2.3-rc.4, but could
-# also be v1.2.3 if the last release candidate was promoted to a release.
-LAST_RC := $(shell \
-		git tag --sort=version:refname --list 'v*' | \
-		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
-		tail -n 1)
+.PHONY: tag-upload
+tag-upload:
+	git push origin --tags
 
-# The version of the last known release (without -rc.X), e.g. v1.2.3
-LAST_RELEASE := $(shell \
-		git tag --sort=version:refname --list 'v*' | \
-		grep -v "rc" | \
-		docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | \
-		tail -n 1)
+PHONY: upload-manifest
+upload-manifest:
+	@$(eval MANIFEST_DESTINATION = $(RELEASE_PATH)/config-sync-manifest.yaml)
+	gsutil cp \
+		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		$(MANIFEST_DESTINATION)
+	@echo "+++ CONFIG-SYNC-MANIFEST.YAML UPLOADED TO: $(MANIFEST_DESTINATION)"
 
-# Set the IMAGE_TAG to only include the version info and no other build info.
-IMAGE_TAG := $(VERSION)
-
-# Enable optimzations.
-BUILD_MODE ?= release
-
-# This is the hash of the last release candidate's revision.  No need to run the
-# release process if this has not changed since the last run.
-LAST_RC_GIT_HASH := $(shell git rev-list -n 1 $(LAST_RC))
-
-# This is the hash of the current git HEAD
-HEAD_GIT_HASH := $(shell git rev-parse HEAD)
-
-# Finds any backwards incompatible changes since last tagged release candidate.
-BACKWARDS_INCOMPATIBLE_RC := $(shell \
-		git log $(LAST_RC)..$(NEXT_RC) | grep 'BACKWARDS INCOMPATIBLE')
-
-# Finds any backwards incompatible changes since last tagged full release.
-BACKWARDS_INCOMPATIBLE_RELEASE := $(shell \
-		git log $(LAST_RELEASE)..$(NEXT_RC) | grep 'BACKWARDS INCOMPATIBLE')
-
-BUMP_LAST_RC := $(shell \
-		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC) | \
-		xargs docker run --rm $(BUILDENV_IMAGE) sembump --kind=minor)
-BUMP_LAST_RELEASE := $(shell \
-		docker run --rm $(BUILDENV_IMAGE) sembump --kind=minor $(LAST_RELEASE))
-# Finds the next minor version number that comes after both LAST_RELEASE and
-# LAST_RC.
-#
-# Example:
-#   LAST_RELEASE=v0.10.4, LAST_RC=v0.11.0-rc.2 => NEXT_MINOR_RELEASE=v0.11.0
-#   LAST_RELEASE=v0.10.4, LAST_RC=v0.10.3-rc.5 => NEXT_MINOR_RELEASE=v0.11.0
-NEXT_MINOR_RELEASE := \
-  $(shell echo "$(BUMP_LAST_RC) $(BUMP_LAST_RELEASE)" | \
-    docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | head -n 1)
-
-# If a release candidate has backwards incompatible changes with respect to
-# last one built, then increment the minor version to denote that.
-# TODO(filmil): Re-verify reasoning about semver jump-around since it's a bit
-# involved.
-HAS_BACKWARDS_INCOMPATIBLE := $(shell \
-		[ -n "$(BACKWARDS_INCOMPATIBLE_RC)" ] && echo 1 || echo 0)
-ifeq ($(HAS_BACKWARDS_INCOMPATIBLE),0)
-  # v1.2.3-rc.4 -> v1.2.3-rc.5
-  # v1.2.3      -> v1.2.3-rc.1
-  NEXT_RC = $(shell docker run --rm $(BUILDENV_IMAGE) sembump -pre $(LAST_RC))
-else
-  # What would be the next release candidate without an incompatible change?
-  # LAST_RC=v0.10.3-rc.2 => NEXT_RC_WITHOUT=v0.10.3-rc.3
-  NEXT_RC_WITHOUT = \
-    $(shell docker run --rm $(BUILDENV_IMAGE) sembump -pre $(LAST_RC))
-  # What would be the next release candidate if there *is* an incompatible
-  # change?  It's the first minor release that follows both the
-  # NEXT_MINOR_RELEASE and the last release candidate that would have been used
-  # if there were no incompatible changes.
-  #
-  # Example:
-  # (1)
-  #   NEXT_MINOR_RELEASE=v0.11.0
-  #   NEXT_RC_WITHOUT=v0.10.4
-  #   => NEXT_RC=v0.11.0-rc.1
-  # (2)
-  #   NEXT_MINOR_RELEASE=v0.11.0
-  #   NEXT_RC_WITHOUT=v0.11.0-rc.1
-  #   => NEXT_RC=v0.11.0-rc.2
-  NEXT_RC = \
-    $(shell echo "$(NEXT_MINOR_RELEASE)-rc.1 $(NEXT_RC_WITHOUT)" | \
-	 docker run -i $(BUILDENV_IMAGE) semsort 2>&1 | tail -n 1)
-endif
-
-##### TARGETS #####
-
-# Checks the version tag to see if its dirty.  We should never release from
-# a dirty git client.
-check-dirty:
-	@echo "VERSION=$(VERSION)"
-	@bash -c '\
-		if [[ $(VERSION) == *"dirty"* ]]; then \
-		echo "Cannot release from a dirty client: VERSION=$(VERSION)"; \
-		exit 1; \
-	fi\
-	'
-
-# Unconditional upload of nomos artifacts tagged with $(IMAGE_TAG) to gcr.io.
-upload-release:
-	@echo "+++ Marking release $(IMAGE_TAG) as '$(LATEST_IMAGE_TAG)'"
-# We are not ready to expose Bespin binaries yet; therefore we'll need to
-# exclude them via the rsync filter.
-	gsutil -m rsync -r -p -x ".*bespin.*" $(BIN_DIR) \
-		$(RELEASE_BUCKET)/$(VERSION)
-	gsutil -m iam ch -R $(READ_ACCESS_LIST) $(RELEASE_BUCKET)/$(VERSION)
-	gcloud container images add-tag --quiet \
-		gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG) \
-		gcr.io/$(GCR_PREFIX)/nomos:$(LATEST_IMAGE_TAG)
-	gsutil -m rsync -r -d -p \
-			$(RELEASE_BUCKET)/$(VERSION) \
-			$(RELEASE_BUCKET)/$(LATEST_IMAGE_TAG)
-
-##### Git operations as make targets #####
-
-# Where the "origin" remote is not defined, define it.   go/prow jobs don't have
-# it defined, and this matters in the 'autorelease' target below.
-git-remote-add:
-	git remote add origin $(NOMOS_GIT_REPO) || true
-
-# Ensures that tags are fetched from the git repository.
-git-tag:
-	git fetch --tag
-
-# Commits the NEXT_RC release tag.
-git-tag-commit:
-	git tag -a $(NEXT_RC) -m "Release candidate $(NEXT_RC)"
-
-# Uploads a newly-tagged NEXT_RC (e.g. v1.2.3-rc.4)
-git-tag-upload:
-	$(info +++ Uploading tag $(NEXT_RC))
-	git push origin $(NEXT_RC)
-
-git-relnotes-rc:
-	$(info +++ Relnotes for $(LAST_RC)..$(NEXT_RC))
-	git log $(LAST_RC)..$(NEXT_RC)
-	$(info +++ ----)
-
-git-cookies:
-	$(info +++ Configuring gitcookies for Prow)
-	git config http.cookiefile /etc/cookies/cookies
-
-# Release target used by automated releaser on go/prow.  It keeps building
-# ever-newer release candidates from the HEAD rev of master.
-#
-# The __internal-* target is split out because the build process must redefine
-# VERSION and IMAGE_TAG to tag the release correctly.
-# TODO(filmil): This makes the version tags on the YAML files always reference
-# release candidates.  This doesn't seem to be a big problem though.
-# TODO(filmil): Remove the repetition in this target and the -local one.
-# Note: `release-commit` is separate from the existing release process.  See
-# go/cs-manifest-creation-and-release.
-autorelease: \
-    git-cookies \
-    release-commit \
-    __internal-autorelease
-
-ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
-# No need to do any work if we didn't commit any changes since last release
-# candidate had been built.
-__internal-autorelease:
-	$(info +++ Git has has not changed since $(LAST_RC).  Nothing to do.)
-else
-__internal-autorelease: VERSION=$(NEXT_RC)
-__internal-autorelease: IMAGE_TAG=$(NEXT_RC)
-__internal-autorelease: \
-		info \
-		git-remote-add \
-		git-tag \
-		clean \
-		test \
-		push-to-gcr-nomos \
-		upload-release \
-		git-tag-commit \
-		git-tag-upload \
-		git-relnotes-rc
-	$(info +++ Completed releasing $(NEXT_RC))
-endif
-
-# Same as 'autorelease', except rigged so that it works on a local machine.
-release: \
-		__internal-autorelease-local
-
-ifeq ($(LAST_RC_GIT_HASH), $(HEAD_GIT_HASH))
-# No need to do any work if we didn't commit any changes since last release
-# candidate had been built.
-__internal-autorelease-local:
-	$(info +++ Git has has not changed since $(LAST_RC).  Nothing to do.)
-else
-__internal-autorelease-local: VERSION=$(NEXT_RC)
-__internal-autorelease-local: IMAGE_TAG=$(NEXT_RC)
-__internal-autorelease-local: \
-		git-tag \
-		info \
-		clean \
-		test \
-		push-to-gcr-nomos \
-		upload-release \
-		git-tag-commit \
-		git-tag-upload \
-		git-relnotes-rc
-	$(info +++ Completed releasing $(NEXT_RC) [LOCAL RELEASE])
-endif
-
-define bless_autorelease_instructions =
-+++
-+++ Bless an automated release from go/nomos-releaser
-+++
-+++
-+++ Previous release tag:                             $(LAST_RELEASE)
-+++ Last release candidate tag found in the git repo: $(LAST_RC)
-+++ Proposed release tag:                             $(NEXT_RELEASE)
-+++
-+++ Proposed changelog is below.
-endef
-
-# Promote the latest release candidate
-bless-release: NEXT_RELEASE=$(shell \
-		docker run --rm $(BUILDENV_IMAGE) sembump $(LAST_RC))
-bless-release:
-	$(info $(bless_autorelease_instructions))
-	TZ=America/Los_Angeles \
-	  git log \
-	     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
-	  --date=local \
-	  $(LAST_RELEASE)..$(LAST_RC)
-	@bash -c '\
-			read -p "Release candidate to promote (default=$(LAST_RC)): " chosen_rc;           \
-	        chosen_rc="$${chosen_rc:-$(LAST_RC)}";                                         \
-			read -p "Blessed release version      (default=$(NEXT_RELEASE)): " chosen_release; \
-	        chosen_release="$${chosen_release:-$(NEXT_RELEASE)}";                          \
-		    echo "Chosen:  $${chosen_release}";                                            \
-			echo "RC:      $${chosen_rc}";                                                 \
-			git tag -a $${chosen_release} $${chosen_rc}                                    \
-			   -m "Blessed release $${chosen_release}" ;                                   \
-			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_rc}                                   \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release} ;                            \
-			gcloud container images add-tag --quiet                                        \
-			   gcr.io/$(GCR_PREFIX)/nomos:$${chosen_release}                              \
-			   gcr.io/$(GCR_PREFIX)/nomos:stable ;                                        \
-			gsutil -m rsync -r -d -p                                                       \
-			   $(RELEASE_BUCKET)/$${chosen_rc}                                             \
-			   $(RELEASE_BUCKET)/$${chosen_release} ;                                      \
-			gsutil -m rsync -r -d -p                                                       \
-			   $(RELEASE_BUCKET)/$${chosen_release}                                        \
-			   $(RELEASE_BUCKET)/stable ;                                                  \
-			git push origin $${chosen_release};                                            \
-			echo -e "\nRelease notes $(LAST_RELEASE)..$${chosen_release}:\n"; \
-			TZ=America/Los_Angeles \
-			  git log \
-			     --pretty="format:%C(yellow)%h %C(cyan)%>(12,trunc)%cd %C(green)%<(24,trunc)%aN%C(reset)%s" \
-                 --date=local $(LAST_RELEASE)..$${chosen_release} ; \
-	'
-
-#############################################################################
-# Various release info printed for diagnostics.
-
-info:
-	$(info +++)
-	$(info +++ RELEASE CANDIDATE INFORMATION)
-	$(info +++)
-	$(info +++ Last blessed version:             $(LAST_RELEASE))
-	$(info +++ Last release candidate:           $(LAST_RC))
-	$(info +++ Next release candidate:           $(NEXT_RC))
-	$(info +++)
-	$(info +++ Last release candidate commit ID: $(LAST_RC_GIT_HASH))
-	$(info +++ Next release candidate commit ID: $(HEAD_GIT_HASH))
-	$(info +++)
-	$(info +++ Diagnostics (to be removed once the process is validated): )
-	$(info +++ BACKWARDS_INCOMPATIBLE_RC:        $(BACKWARDS_INCOMPATIBLE_RC))
-	$(info +++ BACKWARDS_INCOMPATIBLE_RELEASE:   $(BACKWARDS_INCOMPATIBLE_RELEASE))
-	$(info +++ HAS_BACKWARDS_INCOMPATIBLE:       $(HAS_BACKWARDS_INCOMPATIBLE))
-	$(info +++ IMAGE_TAG:                        $(IMAGE_TAG))
-	$(info +++ LATEST_IMAGE_TAG:                 $(LATEST_IMAGE_TAG))
-	$(info +++ NEXT_MINOR_RELEASE:               $(NEXT_MINOR_RELEASE) [after $(LAST_RELEASE)])
-	$(info +++ VERSION:                          $(VERSION))
+.PHONY: upload-cli
+upload-cli:
+	gsutil cp \
+		$(BIN_DIR)/linux_amd64/nomos \
+		$(RELEASE_PATH)/linux_amd64/nomos
+	gsutil cp \
+		$(BIN_DIR)/darwin_amd64/nomos \
+		$(RELEASE_PATH)/darwin_amd64/nomos
+	gsutil cp \
+		$(BIN_DIR)/windows_amd64/nomos.exe \
+		$(RELEASE_PATH)/windows_amd64/nomos.exe
 

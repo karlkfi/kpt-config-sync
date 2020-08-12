@@ -161,6 +161,7 @@ include Makefile.e2e
 include Makefile.prow
 include Makefile.gen
 include Makefile.reconcilermanager
+include Makefile.release
 
 # Redeploy a component without rerunning the installer.
 redeploy-all: push-to-gcr-nomos gen-yaml-all

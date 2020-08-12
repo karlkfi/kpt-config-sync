@@ -74,7 +74,6 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # nomos-manifest
 ###################################
 
-
 .PHONY: build-manifest
 build-manifest: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing nomos-manifest.yaml"
@@ -108,92 +107,6 @@ build-manifest-e2e: build-manifest
 		e2e/raw-nomos/manifests \
 		${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml \
 		default-configmaps # only this single file (pattern match)
-
-.PHONY: release-commit
-release-commit:
-	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
-
-	@$(eval BRANCH != git rev-parse --abbrev-ref HEAD)
-	@$(eval COMMIT_SHA != git rev-parse HEAD)
-	@$(eval VERSION := "${USER}/${BRANCH}/${COMMIT_SHA}")
-	@$(eval GCR_PREFIX := "stolos-dev/nomos-commits")
-
-	$(MAKE) build-manifest \
-		VERSION=$(VERSION) \
-		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(COMMIT_SHA) \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
-
-	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/commit/$(COMMIT_SHA))
-	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
-	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
-
-
-.PHONY: tag-version
-tag-version:
-	@./scripts/fail-if-dirty-repo.sh # Fail if the repo is dirty
-	@echo "+++ Tagging commit $(shell git rev-parse HEAD) with CS_VERSION=$(CS_VERSION)"
-	CS_VERSION=$(CS_VERSION) ./scripts/tag-version.sh
-
-
-.PHONY: tag-upload
-tag-upload:
-	git push origin --tags
-
-
-.PHONY: release-tagged
-release-tagged: tag-version tag-upload
-	@echo "+++ Creating tagged release"
-	@$(eval GIT_TAG != git describe --tags --abbrev=0) # We should have already tagged the commit with the correct version
-	@$(eval GCR_PREFIX := "config-management-release")
-
-	$(MAKE) build-manifest \
-		VERSION=$(GIT_TAG) \
-		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(GIT_TAG) \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
-
-	$(eval RELEASE_PATH = gs://config-management-release/config-sync/tag/$(GIT_TAG))
-	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
-	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
-
-.PHONY: release-user
-release-user:
-	@echo "+++ Creating user release"
-	@$(eval BRANCH_OR_SHA != ./scripts/get-branch-or-sha.sh)
-	@echo "BRANCH_OR_SHA = $(BRANCH_OR_SHA)"
-	@echo "USER = $(USER)"
-
-	# We use the default GCR_PREFIX
-	$(MAKE) build-manifest \
-		VERSION="$(USER)/$(BRANCH_OR_SHA)" \
-		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG="latest" \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
-
-	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA))
-	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
-	$(MAKE) upload-cli RELEASE_PATH=$(RELEASE_PATH)
-
-PHONY: upload-manifest
-upload-manifest:
-	@$(eval MANIFEST_DESTINATION = $(RELEASE_PATH)/config-sync-manifest.yaml)
-	gsutil cp \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
-		$(MANIFEST_DESTINATION)
-	@echo "+++ CONFIG-SYNC-MANIFEST.YAML UPLOADED TO: $(MANIFEST_DESTINATION)"
-
-.PHONY: upload-cli
-upload-cli:
-	gsutil cp \
-		$(BIN_DIR)/linux_amd64/nomos \
-		$(RELEASE_PATH)/linux_amd64/nomos
-	gsutil cp \
-		$(BIN_DIR)/darwin_amd64/nomos \
-		$(RELEASE_PATH)/darwin_amd64/nomos
-	gsutil cp \
-		$(BIN_DIR)/windows_amd64/nomos.exe \
-		$(RELEASE_PATH)/windows_amd64/nomos.exe
 
 ###################################
 # E2E Git Server
