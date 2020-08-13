@@ -6,10 +6,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,28 +43,42 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	ctx := context.TODO()
 	log := r.log.WithValues("reposync", req.NamespacedName)
 
-	var repoSync v1.RepoSync
-	if err := r.client.Get(ctx, req.NamespacedName, &repoSync); err != nil {
+	var rs v1.RepoSync
+	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		log.Info("unable to fetch RepoSync", "error", err)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
-	if err := r.validate(repoSync); err != nil {
-		log.Error(err, "failed to validate RepoSync request")
-		return controllerruntime.Result{}, nil
+
+	if err := r.validate(&rs); err != nil {
+		log.Error(err, "RepoSync failed validation")
+		reposync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, err
 	}
 
 	// Overwrite git-importer pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMap(ctx, repoSync)
+	configMapDataHash, err := r.upsertConfigMap(ctx, &rs)
 	if err != nil {
+		log.Error(err, "Failed to create/update ConfigMap")
+		reposync.SetStalled(&rs, "ConfigMap", err)
+		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
 	// Overwrite git-importer pod deployment.
-	if err := r.upsertDeployment(ctx, repoSync, configMapDataHash); err != nil {
+	if err := r.upsertDeployment(ctx, &rs, configMapDataHash); err != nil {
+		log.Error(err, "Failed to create/update Deployment")
+		reposync.SetStalled(&rs, "Deployment", err)
+		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 
-	return controllerruntime.Result{}, nil
+	// Since there were no errors, we can clear any previous Stalled condition.
+	reposync.ClearCondition(&rs, v1.RepoSyncStalled)
+	err = r.updateStatus(ctx, &rs, log)
+	return controllerruntime.Result{}, err
 }
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
@@ -75,7 +91,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 }
 
 // TODO b/163405299 De-duplicate RepoSyncReconciler.upsertConfigMap() and RootSyncReconciler.upsertConfigMap().
-func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.RepoSync) ([]byte, error) {
+func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSync) ([]byte, error) {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
 	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
@@ -91,10 +107,10 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.Re
 	// CreateOrUpdate configmaps for Namespace Reconciler.
 	for _, cm := range reconcilerConfigMaps {
 		var childCM corev1.ConfigMap
-		childCM.Name = buildRepoSyncName(repoSync.Namespace, cm)
+		childCM.Name = buildRepoSyncName(rs.Namespace, cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			data, err := mutateRepoSyncConfigMap(repoSync, &childCM)
+			data, err := mutateRepoSyncConfigMap(rs, &childCM)
 			configMapData[childCM.Name] = data
 			return err
 		})
@@ -112,8 +128,8 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, repoSync v1.Re
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
-func (r *RepoSyncReconciler) validate(rs v1.RepoSync) error {
-	if rs.Name != repoSyncName {
+func (r *RepoSyncReconciler) validate(rs *v1.RepoSync) error {
+	if rs.Name != reposync.Name {
 		// Please don't change the error message.
 		return fmt.Errorf(
 			"there must be at most one RepoSync resource declared per namespace. "+
@@ -122,7 +138,7 @@ func (r *RepoSyncReconciler) validate(rs v1.RepoSync) error {
 	return nil
 }
 
-func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
+func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -145,25 +161,30 @@ func mutateRepoSyncConfigMap(rs v1.RepoSync, cm *corev1.ConfigMap) (map[string]s
 	return cm.Data, nil
 }
 
-func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, repoSync v1.RepoSync, configMapDataHash []byte) error {
+func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := nsParseDeployment(&childDep); err != nil {
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
-	childDep.Name = buildRepoSyncName(repoSync.Namespace)
+	childDep.Name = buildRepoSyncName(rs.Namespace)
 	childDep.Namespace = v1.NSConfigManagementSystem
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		return mutateRepoSyncDeployment(repoSync, &childDep, configMapDataHash)
+		return mutateRepoSyncDeployment(rs, &childDep, configMapDataHash)
 	})
 	if err != nil {
 		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		rs.Status.Reconciler = childDep.Name
+		msg := fmt.Sprintf("Reconciler deployment was %s", op)
+		reposync.SetReconciling(rs, "Deployment", msg)
 	}
 	r.log.Info("Deployment successfully reconciled", executedOperation, op)
 	return nil
 }
 
-func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment, configMapDataHash []byte) error {
+func mutateRepoSyncDeployment(rs *v1.RepoSync, de *appsv1.Deployment, configMapDataHash []byte) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
 	de.OwnerReferences = ownerReference(
@@ -204,4 +225,13 @@ func mutateRepoSyncDeployment(rs v1.RepoSync, de *appsv1.Deployment, configMapDa
 	}
 	templateSpec.Containers = updatedContainers
 	return nil
+}
+
+func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1.RepoSync, log logr.Logger) error {
+	rs.Status.ObservedGeneration = rs.Generation
+	err := r.client.Status().Update(ctx, rs)
+	if err != nil {
+		log.Error(err, "failed to update RepoSync status")
+	}
+	return err
 }

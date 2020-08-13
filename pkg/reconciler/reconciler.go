@@ -14,10 +14,13 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
-	"github.com/google/nomos/pkg/syncer/client"
+	"github.com/google/nomos/pkg/reposync"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/discovery"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -93,7 +96,7 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	// Configure the Applier.
-	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
+	genericClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 	baseApplier, err := reconcile.NewApplier(cfg, genericClient)
 	if err != nil {
 		glog.Fatalf("Instantiating Applier: %v", err)
@@ -131,6 +134,10 @@ func Run(ctx context.Context, opts Options) {
 			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.DiscoveryInterfaceGetter)
 	}
 
+	// Right before we start everything, mark the RepoSync as no longer
+	// Reconciling.
+	updateRepoSyncStatus(ctx, mgr.GetClient(), opts.ReconcilerScope)
+
 	// Start the Remediator.
 	stopChan := signals.SetupSignalHandler()
 	rem.Start(configsync.StoppableContext(ctx, stopChan))
@@ -141,4 +148,28 @@ func Run(ctx context.Context, opts Options) {
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
 	parser.Run(configsync.StoppableContext(ctx, stopChan))
+}
+
+// updateRepoSyncStatus loops (with exponential backoff) until it is able to
+// remove the Reconciling status from the reconciler's RepoSync.
+func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace string) {
+	childCtx, cancel := context.WithCancel(ctx)
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      reposync.Name,
+	}
+	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
+		var rs v1.RepoSync
+		if err := cl.Get(childCtx, key, &rs); err != nil {
+			glog.Errorf("Failed to get RepoSync for %s reconciler: %v", namespace, err)
+			return
+		}
+
+		reposync.ClearCondition(&rs, v1.RepoSyncReconciling)
+		if err := cl.Status().Update(childCtx, &rs); err != nil {
+			glog.Errorf("Failed to update RepoSync status from %s reconciler: %v", namespace, err)
+		} else {
+			cancel()
+		}
+	}, time.Second)
 }
