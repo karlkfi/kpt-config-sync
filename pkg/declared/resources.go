@@ -42,7 +42,7 @@ func (r *Resources) Update(objects []core.Object) error {
 			continue
 		}
 		id := core.IDOf(obj)
-		u, err := reconcile.AsUnstructured(obj)
+		u, err := reconcile.AsUnstructuredSanitized(obj)
 		if err != nil {
 			// This should never happen.
 			return errors.Wrapf(err, "converting %v to unstructured.Unstructured", id)

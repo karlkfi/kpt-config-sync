@@ -161,7 +161,7 @@ func (g *Repository) Add(path string, obj core.Object) {
 		}
 		bytes, err = yaml.Marshal(u)
 	case ".json":
-		u, err = reconcile.AsUnstructured(obj)
+		u, err = reconcile.AsUnstructuredSanitized(obj)
 		if err != nil {
 			g.T.Fatal(err)
 		}

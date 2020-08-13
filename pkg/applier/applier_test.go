@@ -180,7 +180,7 @@ func TestRefresh(t *testing.T) {
 		var items []unstructured.Unstructured
 		// Propagate the actual resource to api server
 		for _, resource := range test.actualResource {
-			items = append(items, *unstructuredFn(resource.Object))
+			items = append(items, *asUnstructured(t, resource.Object))
 		}
 		fakeReader := &FakeReader{
 			listResource:       unstructured.UnstructuredList{Items: items},
@@ -260,12 +260,19 @@ func (f *FakeReader) List(ctx context.Context, obj runtime.Object, opts ...clien
 	if !f.ExpectedToBeCalled {
 		return fmt.Errorf("applier.reader.List shall not be called")
 	}
-	u, _ := obj.(*unstructured.UnstructuredList)
+	u, ok := obj.(*unstructured.UnstructuredList)
+	if !ok {
+		return fmt.Errorf("got List(%T), want List(UnstructuredList)", obj)
+	}
 	u.Items = f.listResource.Items
 	return nil
 }
 
-var unstructuredFn = func(object core.Object) *unstructured.Unstructured {
-	unstructuredObj, _ := reconcile.AsUnstructured(object)
+func asUnstructured(t *testing.T, object core.Object) *unstructured.Unstructured {
+	t.Helper()
+	unstructuredObj, err := reconcile.AsUnstructuredSanitized(object)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return unstructuredObj
 }

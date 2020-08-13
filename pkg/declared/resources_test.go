@@ -42,7 +42,7 @@ func TestUpdate(t *testing.T) {
 
 func asUnstructured(t *testing.T, o runtime.Object) *unstructured.Unstructured {
 	t.Helper()
-	u, err := reconcile.AsUnstructured(o)
+	u, err := reconcile.AsUnstructuredSanitized(o)
 	if err != nil {
 		t.Fatal("converting to unstructured", err)
 	}
