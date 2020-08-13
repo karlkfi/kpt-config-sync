@@ -222,7 +222,7 @@ manual-test-boostrap: e2e-image-all
 	$(MAKE) __test-e2e-run E2E_FLAGS="--preclean --setup"
 
 # Reapply the resources, including a new image.  Use this to update with your code changes.
-manual-test-refresh: build-manifest
+manual-test-refresh: config-sync-manifest
 	kubectl apply -f ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 
 # Clean up the cluster

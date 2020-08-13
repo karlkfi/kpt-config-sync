@@ -74,9 +74,9 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # nomos-manifest
 ###################################
 
-# build-manifest creates the config-sync-manifest.yaml for release and incorporation into ACM Operator
-.PHONY: build-manifest
-build-manifest: push-to-gcr-nomos gen-yaml-all
+# config-sync-manifest creates the config-sync-manifest.yaml for release and incorporation into ACM Operator
+.PHONY: config-sync-manifest
+config-sync-manifest: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing config-sync-manifest.yaml"
 	@rm -rf ${NOMOS_MANIFEST_STAGING_DIR}
 	@mkdir -p ${NOMOS_MANIFEST_STAGING_DIR}
@@ -93,12 +93,12 @@ build-manifest: push-to-gcr-nomos gen-yaml-all
 		$(OUTPUT_DIR)/deployment \
 		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 
-# build-manifest-e2e adds additional resources that are necessary for the e2e tests
+# config-sync-manifest-e2e adds additional resources that are necessary for the e2e tests
 #
 # TODO (b/161182417): The appending business here is only necessary because append-manifests.sh
 # is hard to use.  If improved, we could clean up this logic.
-.PHONY: build-manifest-e2e
-build-manifest-e2e: build-manifest
+.PHONY: config-sync-manifest-e2e
+config-sync-manifest-e2e: config-sync-manifest
 	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
