@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/parse/kptfile"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,12 +74,12 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	// TODO: Call kptfile.AsResourceGroup
-	//cos, e := kptfile.AsResourceGroup(cos)
-	//if e != nil {
-	//	err = status.Append(err, e)
-	//	return err
-	//}
+	// Parse and generate a ResourceGroup from the Kptfile if it exists
+	cos, e := kptfile.AsResourceGroup(cos)
+	if e != nil {
+		err = status.Append(err, e)
+		return err
+	}
 
 	objs := filesystem.AsFileObjects(cos)
 
