@@ -15,6 +15,10 @@ func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
 // ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
 // path parsed from its annotations.
 func ParseFileObject(o core.Object) *FileObject {
+	if fo, isFileObject := o.(*FileObject); isFileObject {
+		// Prevent unintentional nesting of FileObjects inside FileObjects.
+		return fo
+	}
 	return &FileObject{
 		Object:   o,
 		Relative: cmpath.RelativeSlash(id.GetSourceAnnotation(o)),
