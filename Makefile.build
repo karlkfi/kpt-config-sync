@@ -74,38 +74,38 @@ $(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
 # nomos-manifest
 ###################################
 
+# build-manifest creates the config-sync-manifest.yaml for release and incorporation into ACM Operator
 .PHONY: build-manifest
 build-manifest: push-to-gcr-nomos gen-yaml-all
-	@echo "+++ Preparing nomos-manifest.yaml"
+	@echo "+++ Preparing config-sync-manifest.yaml"
 	@rm -rf ${NOMOS_MANIFEST_STAGING_DIR}
 	@mkdir -p ${NOMOS_MANIFEST_STAGING_DIR}
-	@touch ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 	@echo "+++ Copy manifests (except templates/) to output folder"
 	@rm -rf $(OUTPUT_DIR)/manifests
 	@mkdir $(OUTPUT_DIR)/manifests
 	cp manifests/*.yaml $(OUTPUT_DIR)/manifests
-	@echo "+++ Append all relevant yamls to nomos-manifest.yaml"
+	@echo "+++ Append all relevant yamls to config-sync-manifest.yaml"
 	scripts/append-manifests.sh \
 		$(OUTPUT_DIR)/manifests \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 	scripts/append-manifests.sh \
 		$(OUTPUT_DIR)/deployment \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 
-# build-manifest-e2e prepares a manifest called "defined-operator-bundle" that
-# contains the nomos resources required for e2e testing.  It replaces the now deleted
-# prepare-operator make target, taking advantage of the plumbing that target used.
+# build-manifest-e2e adds additional resources that are necessary for the e2e tests
+#
 # TODO (b/161182417): The appending business here is only necessary because append-manifests.sh
 # is hard to use.  If improved, we could clean up this logic.
 .PHONY: build-manifest-e2e
 build-manifest-e2e: build-manifest
-	@touch ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
-	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
-	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
-	cat ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml
+	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
+	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
+	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
+	cat ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	scripts/append-manifests.sh \
 		e2e/raw-nomos/manifests \
-		${NOMOS_MANIFEST_STAGING_DIR}/defined-operator-bundle.yaml \
+		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
 		default-configmaps # only this single file (pattern match)
 
 ###################################

@@ -41,7 +41,7 @@ function install() {
     # Make sure config-management-system doesn't exist before installing.
     # The google3/ move shouldn't require this as clusters will not persist between tests.
 
-    kubectl apply -f "${TEST_DIR}/../defined-operator-bundle.yaml"
+    kubectl apply -f "${TEST_DIR}/../config-sync-manifest-e2e.yaml"
     kubectl create secret generic git-creds -n=config-management-system \
       --from-file=ssh="${TEST_DIR}/../id_rsa.nomos" || true
 
@@ -83,12 +83,12 @@ function uninstall() {
     kubectl -n kube-system delete all -l k8s-app=config-management-operator --ignore-not-found
 
     # Wipe out everything we've installed.
-    kubectl delete -f "${TEST_DIR}/../defined-operator-bundle.yaml" --ignore-not-found
+    kubectl delete -f "${TEST_DIR}/../config-sync-manifest-e2e.yaml" --ignore-not-found
 
     echo "++++++ Wait to confirm shutdown"
     wait::for -s -t 300 -- install::nomos_uninstalled
     echo "++++++ Delete operator bundle"
-    kubectl delete --ignore-not-found -f defined-operator-bundle.yaml --timeout=30s
+    kubectl delete --ignore-not-found -f config-sync-manifest-e2e.yaml --timeout=30s
 
     # make sure that config-management-system no longer exists.
     if ! kubectl get ns config-management-system &> /dev/null; then
@@ -176,7 +176,7 @@ function dump_diagnostics() {
   echo "+++++++ importer pod"
   (kubectl -n config-management-system describe pod git-importer > "${directory}/${label}_git-importer_pod.txt") || true
   echo "+++++++ kubectl describe "
-  (kubectl describe -f "${TEST_DIR}/../defined-operator-bundle.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
+  (kubectl describe -f "${TEST_DIR}/../config-sync-manifest-e2e.yaml" > "${directory}/${label}_describe_defined_operator_bundle.txt") || true
   echo "+++++++ operator logs"
   (kubectl -n kube-system logs -l k8s-app=config-management-operator > "${directory}/${label}_operator_logs.txt") || true
   echo "+++++++ importer logs"

@@ -73,7 +73,7 @@ PHONY: upload-manifest
 upload-manifest:
 	@$(eval MANIFEST_DESTINATION = $(RELEASE_PATH)/config-sync-manifest.yaml)
 	gsutil cp \
-		${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml \
+		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
 		$(MANIFEST_DESTINATION)
 	@echo "+++ CONFIG-SYNC-MANIFEST.YAML UPLOADED TO: $(MANIFEST_DESTINATION)"
 

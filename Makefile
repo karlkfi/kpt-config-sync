@@ -223,7 +223,7 @@ manual-test-boostrap: e2e-image-all
 
 # Reapply the resources, including a new image.  Use this to update with your code changes.
 manual-test-refresh: build-manifest
-	kubectl apply -f ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+	kubectl apply -f ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
 
 # Clean up the cluster
 manual-test-clean: e2e-image-all
