@@ -2,7 +2,6 @@ package kptfile
 
 import (
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
@@ -91,8 +90,8 @@ func isKptfile(id core.ID) bool {
 	return id.Group == kptGroup && id.Kind == kptKind
 }
 
-func kptfileFrom(obj ast.FileObject) (*Kptfile, error) {
-	data, err := yaml.Marshal(obj.Object)
+func kptfileFrom(obj core.Object) (*Kptfile, error) {
+	data, err := yaml.Marshal(obj)
 	if err != nil {
 		return nil, err
 	}

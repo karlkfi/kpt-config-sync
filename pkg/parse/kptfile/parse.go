@@ -2,16 +2,15 @@ package kptfile
 
 import (
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 )
 
-// AsResourceGroup accepts a list of FileObject and returns a list of FileObject
+// AsResourceGroup accepts a list of core.Object and returns a list of FileObject
 // with the following transformation:
 // If no Kptfile is found, return the original FileObjects;
 // If only one Kptfile is found, remove the Kptfile from the list and append a ResourceGroup;
 // If multiple Kptfiles are found, return a MultipleKptfilesError
-func AsResourceGroup(objs []ast.FileObject) ([]ast.FileObject, error) {
+func AsResourceGroup(objs []core.Object) ([]core.Object, error) {
 	kptfiles, resources := peelOffKptFiles(objs)
 	switch len(kptfiles) {
 	case 0:
@@ -24,17 +23,17 @@ func AsResourceGroup(objs []ast.FileObject) ([]ast.FileObject, error) {
 		rg := resourceGroupFromKptFile(kpt, getIDs(resources))
 		return append(resources, rg), nil
 	default:
-		paths := make([]string, len(kptfiles))
+		names := make([]string, len(kptfiles))
 		for i, kptfile := range kptfiles {
-			paths[i] = kptfile.OSPath()
+			names[i] = kptfile.GetName()
 		}
-		return resources, status.MultipleKptfilesError(paths...)
+		return resources, status.MultipleKptfilesError(names...)
 	}
 }
 
-func peelOffKptFiles(objs []ast.FileObject) ([]ast.FileObject, []ast.FileObject) {
-	var kptfiles []ast.FileObject
-	var resources []ast.FileObject
+func peelOffKptFiles(objs []core.Object) ([]core.Object, []core.Object) {
+	var kptfiles []core.Object
+	var resources []core.Object
 	for _, obj := range objs {
 		if isKptfile(core.IDOf(obj)) {
 			kptfiles = append(kptfiles, obj)
@@ -45,7 +44,7 @@ func peelOffKptFiles(objs []ast.FileObject) ([]ast.FileObject, []ast.FileObject)
 	return kptfiles, resources
 }
 
-func getIDs(objs []ast.FileObject) []ObjMetadata {
+func getIDs(objs []core.Object) []ObjMetadata {
 	var ids []ObjMetadata
 	for _, obj := range objs {
 		coreID := core.IDOf(obj)

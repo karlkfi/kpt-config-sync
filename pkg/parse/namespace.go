@@ -72,6 +72,14 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 	if err != nil {
 		return err
 	}
+
+	// TODO: Call kptfile.AsResourceGroup
+	//cos, e := kptfile.AsResourceGroup(cos)
+	//if e != nil {
+	//	err = status.Append(err, e)
+	//	return err
+	//}
+
 	objs := filesystem.AsFileObjects(cos)
 
 	scoper, err := p.buildScoper(ctx)

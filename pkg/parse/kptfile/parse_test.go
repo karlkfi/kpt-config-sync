@@ -6,22 +6,18 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func fakeEmptyResourceGroup(labels, annotations map[string]string) ast.FileObject {
+func fakeEmptyResourceGroup(labels, annotations map[string]string) core.Object {
 	name := "test-rg"
 	namespace := "test-namespace"
-	rg := newResourceGroup(name, namespace, labels, annotations, nil)
-	return ast.FileObject{
-		Object: rg,
-	}
+	return newResourceGroup(name, namespace, labels, annotations, nil)
 }
 
-func fakeResourceGroup(labels, annotations map[string]string) ast.FileObject {
+func fakeResourceGroup(labels, annotations map[string]string) core.Object {
 	name := "test-rg"
 	namespace := "test-namespace"
 	ids := []ObjMetadata{
@@ -38,13 +34,10 @@ func fakeResourceGroup(labels, annotations map[string]string) ast.FileObject {
 			Kind:      "ConfigMap",
 		},
 	}
-	rg := newResourceGroup(name, namespace, labels, annotations, ids)
-	return ast.FileObject{
-		Object: rg,
-	}
+	return newResourceGroup(name, namespace, labels, annotations, ids)
 }
 
-func fakeKptfile(labels, annotations map[string]string) ast.FileObject {
+func fakeKptfile(labels, annotations map[string]string) core.Object {
 	kptfile := &Kptfile{}
 	kptfile.SetName("name-not-important")
 	kptfile.SetGroupVersionKind(schema.GroupVersionKind{
@@ -58,57 +51,55 @@ func fakeKptfile(labels, annotations map[string]string) ast.FileObject {
 		Labels:      labels,
 		Annotations: annotations,
 	}
-	return ast.FileObject{
-		Object: kptfile,
-	}
+	return kptfile
 }
 
-func fakeKptfileAtPath(path string) ast.FileObject {
+func fakeKptfileWithName(name string) core.Object {
 	obj := fakeKptfile(nil, nil)
-	obj.Relative = cmpath.RelativeOS(path)
+	obj.SetName(name)
 	return obj
 }
 
 func TestGenerateResourceGroup(t *testing.T) {
 	tcs := []struct {
 		testName string
-		input    []ast.FileObject
-		want     []ast.FileObject
+		input    []core.Object
+		want     []core.Object
 		err      error
 	}{
 		{
 			testName: "no change when there is no kptfile found",
-			input:    []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml")},
-			want:     []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml")},
+			input:    []core.Object{fake.Deployment("deployment")},
+			want:     []core.Object{fake.Deployment("deployment")},
 		},
 		{
 			testName: "empty ResourceGroup generated when there are no resources",
-			input:    []ast.FileObject{fakeKptfile(nil, nil)},
-			want:     []ast.FileObject{fakeEmptyResourceGroup(nil, nil)},
+			input:    []core.Object{fakeKptfile(nil, nil)},
+			want:     []core.Object{fakeEmptyResourceGroup(nil, nil)},
 		},
 		{
 			testName: "ResourceGroup generated when there is one kptfile",
-			input:    []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"), fakeKptfile(nil, nil)},
-			want:     []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"), fakeResourceGroup(nil, nil)},
+			input:    []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"), fakeKptfile(nil, nil)},
+			want:     []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"), fakeResourceGroup(nil, nil)},
 		},
 		{
 			testName: "ResourceGroup generated with random labels",
-			input: []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
+			input: []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
 				fakeKptfile(map[string]string{"random-key": "random-value"}, nil)},
-			want: []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
+			want: []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
 				fakeResourceGroup(map[string]string{"random-key": "random-value"}, nil)},
 		},
 		{
 			testName: "ResourceGroup generated with random annotations",
-			input: []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
+			input: []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
 				fakeKptfile(nil, map[string]string{"random-key": "random-value"})},
-			want: []ast.FileObject{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
+			want: []core.Object{fake.Deployment("deployment"), fake.ConfigMapAtPath("cm.yaml"),
 				fakeResourceGroup(nil, map[string]string{"random-key": "random-value"})},
 		},
 		{
 			testName: "Multiple Kptfiles lead to an error",
-			input:    []ast.FileObject{fakeKptfileAtPath("a/Kptfile"), fakeKptfileAtPath("b/Kptfile")},
-			err:      fmt.Errorf("KNV1059: Repo must contain at most one Kptfile:\na/Kptfile\nb/Kptfile\n\nFor more information, see https://g.co/cloud/acm-errors#knv1059"),
+			input:    []core.Object{fakeKptfileWithName("a"), fakeKptfileWithName("b")},
+			err:      fmt.Errorf("KNV1059: Repo must contain at most one Kptfile:\na\nb\n\nFor more information, see https://g.co/cloud/acm-errors#knv1059"),
 		},
 	}
 	for _, tc := range tcs {

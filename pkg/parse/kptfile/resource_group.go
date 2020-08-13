@@ -1,7 +1,7 @@
 package kptfile
 
 import (
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -94,16 +94,14 @@ func (in *ResourceGroup) DeepCopyObject() runtime.Object {
 // inventory.namespace -> resourcegroup namespace
 // inventory.annotations -> resourcegroup annotations
 // inventory.labels -> resourcegroup labels
-func resourceGroupFromKptFile(kpt *Kptfile, ids []ObjMetadata) ast.FileObject {
+func resourceGroupFromKptFile(kpt *Kptfile, ids []ObjMetadata) core.Object {
 	name := kpt.Inventory.Identifier
 	namespace := kpt.Inventory.Namespace
 	labels := kpt.Inventory.Labels
 	annotations := kpt.Inventory.Annotations
 
 	rg := newResourceGroup(name, namespace, labels, annotations, ids)
-	return ast.FileObject{
-		Object: rg,
-	}
+	return rg
 }
 
 func newResourceGroup(name, namespace string, labels, annotations map[string]string, ids []ObjMetadata) *ResourceGroup {
