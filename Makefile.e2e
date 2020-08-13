@@ -68,7 +68,7 @@ __test-e2e-run:
 	    && echo "+++ git e2e tests completed" \
 	    || (echo "### e2e tests failed. Temp dir (with test output logs etc) are available in ${TEMP_OUTPUT_DIR}"; exit 1)
 
-e2e-image-all: push-to-gcr-nomos image-e2e-tests e2e-staging
+e2e-image-all: image-e2e-tests e2e-staging
 
 banner:
 	@cat ./build/banner.txt

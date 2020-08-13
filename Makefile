@@ -163,11 +163,6 @@ include Makefile.gen
 include Makefile.reconcilermanager
 include Makefile.release
 
-# Redeploy a component without rerunning the installer.
-redeploy-all: push-to-gcr-nomos gen-yaml-all
-	@echo "+++ Redeploying without rerunning the installer: $*"
-	@kubectl apply -f $(GEN_YAML_DIR)/$*.yaml
-
 # Cleans all artifacts.
 clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
@@ -217,3 +212,21 @@ lint-yaml:
 # Print the value of a variable
 print-%:
 	@echo $($*)
+
+####################################################################################################
+# MANUAL TESTING COMMANDS
+
+# Setup a working ConfigSync, with git-creds.  It's the same one from the e2e tests... i.e. the
+# git-creds point to the in-cluster git-server.  You'll likely need to override this.
+manual-test-boostrap: e2e-image-all
+	$(MAKE) __test-e2e-run E2E_FLAGS="--preclean --setup"
+
+# Reapply the resources, including a new image.  Use this to update with your code changes.
+manual-test-refresh: build-manifest
+	kubectl apply -f ${NOMOS_MANIFEST_STAGING_DIR}/nomos-manifest.yaml
+
+# Clean up the cluster
+manual-test-clean: e2e-image-all
+	$(MAKE) __test-e2e-run E2E_FLAGS="--clean"
+
+####################################################################################################
