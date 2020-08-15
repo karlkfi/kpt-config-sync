@@ -2,18 +2,19 @@ package applier
 
 import (
 	"context"
-	"fmt"
+	"sync"
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,50 +26,61 @@ type Applier struct {
 	// cachedResources to compare with newly parsed resources from git to determine which
 	// previously declared resources should be deleted.
 	cachedObjects map[core.ID]core.Object
-	// reader reads and lists the resources from API server.
-	reader client.Reader
+	// client reads and lists the resources from API server and updates RepoSync status.
+	client client.Client
 	// listOptions defines the resource filtering condition for different appliers initialized
 	// by root reconcile process or namespace reconcile process.
 	listOptions []client.ListOption
+	// scope is the scope of the applier (eg root or a namespace).
+	scope string
+	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
+	mux sync.Mutex
 }
 
 // Interface is a fake-able subset of the interface Applier implements.
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
-	Apply(ctx context.Context, desiredResource []core.Object) error
+	Apply(ctx context.Context, desiredResource []core.Object) status.MultiError
 }
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(reader client.Reader,
-	applier syncerreconcile.Applier, namespace string) *Applier {
+func NewNamespaceApplier(c client.Client, applier syncerreconcile.Applier, namespace string) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	opts := []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
 	a := &Applier{
-		listOptions: opts, reader: reader, applier: applier,
-		cachedObjects: make(map[core.ID]core.Object)}
+		applier:       applier,
+		cachedObjects: make(map[core.ID]core.Object),
+		client:        c,
+		listOptions:   opts,
+		scope:         namespace,
+	}
 	glog.V(4).Infof("Applier %v is initialized", namespace)
 	return a
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
-func NewRootApplier(reader client.Reader, applier syncerreconcile.Applier) *Applier {
+func NewRootApplier(c client.Client, applier syncerreconcile.Applier) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	opts := []client.ListOption{
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
 	a := &Applier{
-		listOptions: opts, reader: reader, applier: applier,
-		cachedObjects: make(map[core.ID]core.Object)}
+		applier:       applier,
+		cachedObjects: make(map[core.ID]core.Object),
+		client:        c,
+		listOptions:   opts,
+		scope:         declared.RootReconciler,
+	}
 	glog.V(4).Infof("Root applier is initialized and synced with the API server")
 	return a
 }
 
 // sync actuates a list of Diff to make sure the actual resources in the API service are
 // in sync with the declared resources.
-func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) error {
+func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError {
 	var errs status.MultiError
 	for _, d := range diffs {
 		// Take CRUD actions based on the diff between actual resource (what's stored in
@@ -153,18 +165,24 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) error {
 
 // Apply updates the resource API server with the latest parsed git resource. This is called
 // when a new change in the git resource is detected.
-func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) error {
+func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) status.MultiError {
 	// create the new cache showing the new declared resource.
 	newCache := make(map[core.ID]core.Object)
+	gvks := make(map[schema.GroupVersionKind]bool)
 	for _, desired := range desiredResource {
 		newCache[core.IDOf(desired)] = desired
+		gvks[desired.GroupVersionKind()] = true
 	}
 
+	a.mux.Lock()
+	defer a.mux.Unlock()
+
 	// pull the actual resource from the API server.
-	actualObjects, err := a.getActualObject(ctx)
+	actualObjects, err := a.getActualObjects(ctx, gvks)
 	if err != nil {
 		return err
 	}
+	// TODO(b/165081629): Enable prune on startup (eg when cachedObjects is nil)
 	diffs := diff.ThreeWay(newCache, a.cachedObjects, actualObjects)
 	// Sync the API resource state to the git resource.
 	if err := a.sync(ctx, diffs); err != nil {
@@ -176,34 +194,46 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) erro
 }
 
 // Refresh syncs and updates the API server with the (cached) git resource states.
-func (a *Applier) Refresh(ctx context.Context) error {
-	actualObjects, err := a.getActualObject(ctx)
+func (a *Applier) Refresh(ctx context.Context) status.MultiError {
+	a.mux.Lock()
+	defer a.mux.Unlock()
+
+	gvks := make(map[schema.GroupVersionKind]bool)
+	for _, resource := range a.cachedObjects {
+		gvks[resource.GroupVersionKind()] = true
+	}
+
+	actualObjects, err := a.getActualObjects(ctx, gvks)
 	if err != nil {
-		return errors.Wrap(err, "failed to pull the resource from the API server")
+		return err
 
 	}
 	// Two way merge. Compare between the cached declared and the actual states to decide the create and update.
 	diffs := diff.TwoWay(a.cachedObjects, actualObjects)
 	if err := a.sync(ctx, diffs); err != nil {
-		return fmt.Errorf("applier failure: %v", err)
+		return err
 	}
 	return nil
 }
 
-// getActualObject pulls the stored resource from the API server.
-func (a *Applier) getActualObject(ctx context.Context) (map[core.ID]core.Object, error) {
-	resources := &unstructured.UnstructuredList{}
-	if err := a.reader.List(ctx, resources, a.listOptions...); err != nil {
-		return nil, status.APIServerError(err, "failed to list resources")
-	}
-	actual := make(map[core.ID]core.Object)
+// getActualObjects fetches the current resources from the API server.
+func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVersionKind]bool) (map[core.ID]core.Object, status.MultiError) {
 	var errs status.MultiError
-	for _, res := range resources.Items {
-		obj := res.DeepCopyObject().(core.Object)
-		if coreID, err := core.IDOfRuntime(obj); err != nil {
-			errs = status.Append(errs, err)
-		} else {
-			actual[coreID] = obj
+	actual := make(map[core.ID]core.Object)
+	for gvk := range gvks {
+		resources := &unstructured.UnstructuredList{}
+		resources.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
+		if err := a.client.List(ctx, resources, a.listOptions...); err != nil {
+			errs = status.Append(errs, status.APIServerErrorf(err, "failed to list %s resources", gvk.String()))
+			continue
+		}
+		for _, res := range resources.Items {
+			obj := res.DeepCopyObject().(core.Object)
+			if coreID, err := core.IDOfRuntime(obj); err != nil {
+				errs = status.Append(errs, err)
+			} else {
+				actual[coreID] = obj
+			}
 		}
 	}
 	return actual, errs

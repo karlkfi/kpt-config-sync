@@ -104,9 +104,9 @@ func Run(ctx context.Context, opts Options) {
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a = applier.NewRootApplier(genericClient, baseApplier)
+		a = applier.NewRootApplier(mgr.GetClient(), baseApplier)
 	} else {
-		a = applier.NewNamespaceApplier(genericClient, baseApplier, opts.ReconcilerScope)
+		a = applier.NewNamespaceApplier(mgr.GetClient(), baseApplier, opts.ReconcilerScope)
 	}
 
 	// Configure the Remediator.
@@ -154,13 +154,9 @@ func Run(ctx context.Context, opts Options) {
 // remove the Reconciling status from the reconciler's RepoSync.
 func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace string) {
 	childCtx, cancel := context.WithCancel(ctx)
-	key := client.ObjectKey{
-		Namespace: namespace,
-		Name:      reposync.Name,
-	}
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
 		var rs v1.RepoSync
-		if err := cl.Get(childCtx, key, &rs); err != nil {
+		if err := cl.Get(childCtx, reposync.ObjectKey(namespace), &rs); err != nil {
 			glog.Errorf("Failed to get RepoSync for %s reconciler: %v", namespace, err)
 			return
 		}

@@ -60,6 +60,19 @@ func ToCME(m MultiError) []v1.ConfigManagementError {
 	return cmes
 }
 
+// ToCSE converts a MultiError to ConfigSyncErrors.
+func ToCSE(m MultiError) []v1.ConfigSyncError {
+	var cses []v1.ConfigSyncError
+
+	if m != nil {
+		for _, err := range m.Errors() {
+			cses = append(cses, err.ToCSE())
+		}
+	}
+
+	return cses
+}
+
 var _ MultiError = (*multiError)(nil)
 
 // MultiError is an error that contains multiple errors.

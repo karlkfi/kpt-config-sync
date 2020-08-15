@@ -56,6 +56,11 @@ func (p pathErrorImpl) ToCME() v1.ConfigManagementError {
 	return fromPathError(p)
 }
 
+// ToCSE implements Error.
+func (p pathErrorImpl) ToCSE() v1.ConfigSyncError {
+	return cseFromPathError(p)
+}
+
 func formatPaths(paths []id.Path) string {
 	pathStrs := make([]string, len(paths))
 	for i, path := range paths {

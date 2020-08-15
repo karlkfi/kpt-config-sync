@@ -51,6 +51,11 @@ func (w wrappedErrorImpl) ToCME() v1.ConfigManagementError {
 	return fromError(w)
 }
 
+// ToCSE implements Error.
+func (w wrappedErrorImpl) ToCSE() v1.ConfigSyncError {
+	return cseFromError(w)
+}
+
 // Cause implements causer
 func (w wrappedErrorImpl) Cause() error {
 	return w.wrapped

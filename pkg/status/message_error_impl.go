@@ -41,6 +41,11 @@ func (m messageErrorImpl) ToCME() v1.ConfigManagementError {
 	return fromError(m)
 }
 
+// ToCSE implements Error.
+func (m messageErrorImpl) ToCSE() v1.ConfigSyncError {
+	return cseFromError(m)
+}
+
 // Cause implements causer.
 func (m messageErrorImpl) Cause() error {
 	return m.underlying.Cause()

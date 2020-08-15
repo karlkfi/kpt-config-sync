@@ -50,6 +50,11 @@ func (r resourceErrorImpl) ToCME() v1.ConfigManagementError {
 	return fromResourceError(r)
 }
 
+// ToCSE implements Error.
+func (r resourceErrorImpl) ToCSE() v1.ConfigSyncError {
+	return cseFromResourceError(r)
+}
+
 // Cause implements causer
 func (r resourceErrorImpl) Cause() error {
 	return r.underlying.Cause()

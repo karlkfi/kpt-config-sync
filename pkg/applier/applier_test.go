@@ -2,29 +2,21 @@ package applier
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/syncer/reconcile"
-	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"github.com/google/nomos/pkg/status"
-
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
-	"github.com/google/nomos/pkg/core"
+	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
-
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (
@@ -95,19 +87,17 @@ func TestApply(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
+		fakeClient := clientForTest(t)
 		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
-		var items []unstructured.Unstructured
 		previousCache := make(map[core.ID]core.Object)
 		// Propagate the actual resources.
 		for _, actual := range test.actualResources {
-			actualUn, _ := syncerreconcile.AsUnstructured(actual.Object)
-			items = append(items, *actualUn)
+			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
+				t.Fatal(err)
+			}
 			previousCache[core.IDOf(actual)] = actual.Object
 		}
-		fakeReader := &FakeReader{
-			listResource:       unstructured.UnstructuredList{Items: items},
-			ExpectedToBeCalled: true}
-		a := NewRootApplier(fakeReader, clientApplier)
+		a := NewRootApplier(fakeClient, clientApplier)
 		a.cachedObjects = previousCache
 		// Verify.
 		if err := a.Apply(context.Background(), filesystem.AsCoreObjects(test.declaredResources)); err != nil {
@@ -176,16 +166,15 @@ func TestRefresh(t *testing.T) {
 		},
 	}
 	for _, test := range cases {
-		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
-		var items []unstructured.Unstructured
+		fakeClient := clientForTest(t)
 		// Propagate the actual resource to api server
-		for _, resource := range test.actualResource {
-			items = append(items, *asUnstructured(t, resource.Object))
+		for _, actual := range test.actualResource {
+			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
+				t.Fatal(err)
+			}
 		}
-		fakeReader := &FakeReader{
-			listResource:       unstructured.UnstructuredList{Items: items},
-			ExpectedToBeCalled: true}
-		a := NewRootApplier(fakeReader, clientApplier)
+		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
+		a := NewRootApplier(fakeClient, clientApplier)
 		// The cache is used to store the declared git resource. Assuming it is out of sync
 		// with the state in the API server.
 		a.cachedObjects = make(map[core.ID]core.Object)
@@ -244,35 +233,13 @@ func (a *FakeApplier) Delete(ctx context.Context, obj *unstructured.Unstructured
 	return true, nil
 }
 
-type FakeReader struct {
-	listResource       unstructured.UnstructuredList
-	ExpectedToBeCalled bool
-}
-
-func (f *FakeReader) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-	if !f.ExpectedToBeCalled {
-		return fmt.Errorf("applier.reader.Get shall not be called")
-	}
-	return nil
-}
-
-func (f *FakeReader) List(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-	if !f.ExpectedToBeCalled {
-		return fmt.Errorf("applier.reader.List shall not be called")
-	}
-	u, ok := obj.(*unstructured.UnstructuredList)
-	if !ok {
-		return fmt.Errorf("got List(%T), want List(UnstructuredList)", obj)
-	}
-	u.Items = f.listResource.Items
-	return nil
-}
-
-func asUnstructured(t *testing.T, object core.Object) *unstructured.Unstructured {
+func clientForTest(t *testing.T) *testingfake.Client {
 	t.Helper()
-	unstructuredObj, err := reconcile.AsUnstructuredSanitized(object)
+	s := runtime.NewScheme()
+	err := corev1.AddToScheme(s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return unstructuredObj
+
+	return testingfake.NewClient(t, s)
 }

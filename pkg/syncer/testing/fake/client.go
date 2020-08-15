@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -117,9 +118,6 @@ func validateListOptions(opts client.ListOptions) error {
 	}
 	if opts.FieldSelector != nil {
 		return errors.Errorf("fake.Client.List does not yet support the FieldSelector option, but got: %+v", opts)
-	}
-	if opts.LabelSelector != nil {
-		return errors.Errorf("fake.Client.List does not yet support the LabelSelector option, but got: %+v", opts)
 	}
 	if opts.Limit != 0 {
 		return errors.Errorf("fake.Client.List does not yet support the Limit option, but got: %+v", opts)
@@ -371,6 +369,12 @@ func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList, options cl
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
 			continue
 		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
 		switch o := obj.(type) {
 		// TODO(b/154527698): Handle v1.CRDs once we're able to import the definition.
 		case *v1beta1.CustomResourceDefinition:
@@ -395,6 +399,12 @@ func (c *Client) listSyncs(list *v1.SyncList, options client.ListOptions) error 
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
 			continue
 		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
 		sync, ok := obj.(*v1.Sync)
 		if !ok {
 			return errors.Errorf("non-Sync stored as CRD: %v", obj)
@@ -418,6 +428,12 @@ func (c *Client) listUnstructured(list *unstructured.UnstructuredList, options c
 	for _, obj := range c.list(gvk.GroupKind()) {
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
 			continue
+		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
 		}
 		uo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 		if err != nil {
