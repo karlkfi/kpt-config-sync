@@ -15,8 +15,8 @@ type opts struct {
 	// clusterName is the name of the cluster we're syncing configuration to.
 	clusterName string
 
-	// reader knows how to read objects from a Kubernetes cluster.
-	reader client.Reader
+	// client knows how to read objects from a Kubernetes cluster and update status.
+	client client.Client
 
 	// pollingFrequency is how often to re-import configuration from the filesystem.
 	//

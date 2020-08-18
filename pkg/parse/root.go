@@ -18,7 +18,7 @@ func NewRootParser(
 	clusterName string,
 	format filesystem.SourceFormat,
 	fileReader filesystem.Reader,
-	reader client.Reader,
+	c client.Client,
 	pollingFrequency time.Duration,
 	gitDir cmpath.Absolute,
 	policyDir cmpath.Relative,
@@ -26,7 +26,7 @@ func NewRootParser(
 ) (Runnable, error) {
 	opts := opts{
 		clusterName:      clusterName,
-		reader:           reader,
+		client:           c,
 		pollingFrequency: pollingFrequency,
 		files: files{
 			gitDir:    gitDir,
@@ -82,7 +82,7 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 		wantFiles = filesystem.FilterHierarchyFiles(policyDir, wantFiles)
 	}
 
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), policyDir, wantFiles)
 	if err != nil {
 		return err
 	}

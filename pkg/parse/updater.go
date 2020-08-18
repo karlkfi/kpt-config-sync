@@ -28,9 +28,5 @@ func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiEr
 		return status.UndocumentedErrorBuilder.Wrap(err).Build()
 	}
 
-	err = u.applier.Apply(ctx, objs)
-	if err != nil {
-		return status.UndocumentedErrorBuilder.Wrap(err).Build()
-	}
-	return nil
+	return u.applier.Apply(ctx, objs)
 }

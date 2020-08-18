@@ -5,11 +5,14 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/parse/kptfile"
+	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,7 +20,7 @@ import (
 func NewNamespaceParser(
 	scope string,
 	fileReader filesystem.Reader,
-	clientReader client.Reader,
+	c client.Client,
 	pollingFrequency time.Duration,
 	gitDir cmpath.Absolute,
 	policyDir cmpath.Relative,
@@ -25,7 +28,7 @@ func NewNamespaceParser(
 ) Runnable {
 	return &namespace{
 		opts: opts{
-			reader:           clientReader,
+			client:           c,
 			pollingFrequency: pollingFrequency,
 			files: files{
 				gitDir:    gitDir,
@@ -58,6 +61,7 @@ func (p *namespace) Run(ctx context.Context) {
 			if err != nil {
 				glog.Error(err)
 			}
+			p.setRepoSyncErrs(ctx, err)
 		}
 	}
 }
@@ -69,7 +73,7 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.reader), policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), policyDir, wantFiles)
 	if err != nil {
 		return err
 	}
@@ -112,10 +116,24 @@ func (p *namespace) buildScoper(ctx context.Context) (discovery.Scoper, status.M
 	// There is a race condition here, as we can't guarantee the Root parser has
 	// fully synced all declared CRDs. Recall that the namespace parsers are
 	// running asynchronously.
-	crds, err := listCrds(ctx, p.reader)()
+	crds, err := listCrds(ctx, p.client)()
 	if err != nil {
 		return nil, err
 	}
 	scoper.AddCustomResources(crds)
 	return scoper, nil
+}
+
+func (p *namespace) setRepoSyncErrs(ctx context.Context, errs status.MultiError) {
+	var rs v1.RepoSync
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+		glog.Errorf("Failed to get RepoSync for %s parser: %v", p.scope, err)
+		return
+	}
+
+	rs.Status.Sync.LastUpdate = metav1.Now()
+	rs.Status.Sync.Errors = status.ToCSE(errs)
+	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		glog.Errorf("Failed to update RepoSync status from %s parser: %v", p.scope, err)
+	}
 }
