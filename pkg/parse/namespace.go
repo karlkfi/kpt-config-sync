@@ -24,6 +24,8 @@ func NewNamespaceParser(
 	pollingFrequency time.Duration,
 	gitDir cmpath.Absolute,
 	policyDir cmpath.Relative,
+	gitRef string,
+	gitRepo string,
 	discoveryInterfaceGetter discovery.ClientGetter,
 ) Runnable {
 	return &namespace{
@@ -33,6 +35,8 @@ func NewNamespaceParser(
 			files: files{
 				gitDir:    gitDir,
 				policyDir: policyDir,
+				gitRef:    gitRef,
+				gitRepo:   gitRepo,
 			},
 			parser: filesystem.NewRawParser(fileReader, discoveryInterfaceGetter),
 		},
@@ -84,6 +88,13 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		err = status.Append(err, e)
 		return err
 	}
+
+	commitHash, e := p.CommitHash()
+	if e != nil {
+		err = status.Append(err, e)
+		return err
+	}
+	addAnnotationsAndLabels(cos, p.scope, p.gitRef, p.gitRepo, commitHash)
 
 	objs := filesystem.AsFileObjects(cos)
 

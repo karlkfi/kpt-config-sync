@@ -10,6 +10,19 @@ func SetAnnotation(obj LabeledAndAnnotated, annotation, value string) {
 	obj.SetAnnotations(as)
 }
 
+// GetAnnotation gets the annotation value on the passed annotated object for a given key.
+func GetAnnotation(obj LabeledAndAnnotated, annotation string) string {
+	as := obj.GetAnnotations()
+	if as == nil {
+		return ""
+	}
+	value, found := as[annotation]
+	if found {
+		return value
+	}
+	return ""
+}
+
 // RemoveAnnotations removes the passed set of annotations from obj.
 func RemoveAnnotations(obj LabeledAndAnnotated, annotations ...string) {
 	as := obj.GetAnnotations()

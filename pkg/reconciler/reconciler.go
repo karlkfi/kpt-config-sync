@@ -49,6 +49,10 @@ type Options struct {
 	// GitRoot is the absolute path to the Git repository.
 	// Usually contains a symlink that must be resolved every time before parsing.
 	GitRoot string
+	// GitRef is the git revision being synced.
+	GitRef string
+	// GitRepo is the git repo being synced.
+	GitRepo string
 	// PolicyDir is the relative path to the policies within the Git repository.
 	PolicyDir cmpath.Relative
 	// DiscoveryInterfaceGetter is how to fetch a new DiscoveryClient when the set
@@ -125,13 +129,13 @@ func Run(ctx context.Context, opts Options) {
 	var parser parse.Runnable
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, mgr.GetClient(),
-			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, mgr.GetClient(),
-			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 	}
 
 	// Right before we start everything, mark the RepoSync as no longer

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -22,6 +23,8 @@ func NewRootParser(
 	pollingFrequency time.Duration,
 	gitDir cmpath.Absolute,
 	policyDir cmpath.Relative,
+	gitRef string,
+	gitRepo string,
 	discoveryInterfaceGetter discovery.ClientGetter,
 ) (Runnable, error) {
 	opts := opts{
@@ -31,6 +34,8 @@ func NewRootParser(
 		files: files{
 			gitDir:    gitDir,
 			policyDir: policyDir,
+			gitRef:    gitRef,
+			gitRepo:   gitRepo,
 		},
 	}
 
@@ -86,6 +91,14 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 	if err != nil {
 		return err
 	}
+
+	commitHash, e := p.CommitHash()
+	if e != nil {
+		err = status.Append(err, e)
+		return err
+	}
+
+	addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitRef, p.gitRepo, commitHash)
 
 	// TODO(b/163053203): Validate RepoSync CRs.
 	return p.update(ctx, cos)

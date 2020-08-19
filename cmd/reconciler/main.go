@@ -25,6 +25,10 @@ var (
 
 	reconcilerScope = flag.String("reconciler-scope", os.Getenv("RECONCILER_SCOPE"), "Scope of the reconciler (either a namespace or ':root').")
 
+	gitRef = flag.String("git-ref", os.Getenv("GIT_REF"), "The git ref of the repo being synced.")
+
+	gitRepo = flag.String("git-repo", os.Getenv("GIT_REPO"), "The git repo being synced.")
+
 	resyncPeriod = flag.Duration("resync_period", time.Hour, "Period of time between forced re-syncs from Git (even without a new commit).")
 
 	gitDir = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
@@ -67,6 +71,8 @@ func main() {
 		ApplierResyncPeriod:      *resyncPeriod,
 		GitPollingFrequency:      *gitPollingPeriod,
 		GitRoot:                  *gitDir,
+		GitRef:                   *gitRef,
+		GitRepo:                  *gitRepo,
 		PolicyDir:                cmpath.RelativeOS(*policyDirRelative),
 		DiscoveryInterfaceGetter: importer.DefaultCLIOptions,
 	}

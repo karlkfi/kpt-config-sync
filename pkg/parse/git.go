@@ -17,6 +17,11 @@ type files struct {
 
 	// policyDir is the path to the directory of policies within the git repository.
 	policyDir cmpath.Relative
+
+	// gitRef is the git revision being synced.
+	gitRef string
+	// gitRepo is the git repo being synced.
+	gitRepo string
 }
 
 // absPolicyDir returns the absolute path to the policyDir, and the list of all
@@ -49,4 +54,14 @@ func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.Multi
 			errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
 	}
 	return policyDir, files, nil
+}
+
+// CommitHash returns the current Git commit hash from the Git directory.
+func (o *files) CommitHash() (string, error) {
+	gitDir, err := o.gitDir.EvalSymlinks()
+	if err != nil {
+		return "", status.PathWrapError(
+			errors.Wrap(err, "evaluating symbolic link to git dir"), o.gitDir.OSPath())
+	}
+	return git.CommitHash(gitDir.OSPath())
 }
