@@ -6,7 +6,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/lifecycle"
+	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,7 +28,7 @@ func TestDiffType(t *testing.T) {
 		},
 		{
 			name:       "in repo only and unmanaged, noop",
-			declared:   fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)),
+			declared:   fake.ClusterRoleObject(syncertesting.ManagementDisabled),
 			expectType: NoOp,
 		},
 		{
@@ -58,19 +61,19 @@ func TestDiffType(t *testing.T) {
 		},
 		{
 			name:       "in both, management disabled unmanage",
-			declared:   fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)),
-			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)),
+			declared:   fake.ClusterRoleObject(syncertesting.ManagementDisabled),
+			actual:     fake.ClusterRoleObject(syncertesting.ManagementEnabled),
 			expectType: Unmanage,
 		},
 		{
 			name:       "in both, management disabled noop",
-			declared:   fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)),
+			declared:   fake.ClusterRoleObject(syncertesting.ManagementDisabled),
 			actual:     fake.ClusterRoleObject(),
 			expectType: NoOp,
 		},
 		{
 			name:       "delete",
-			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)),
+			actual:     fake.ClusterRoleObject(syncertesting.ManagementEnabled),
 			expectType: Delete,
 		},
 		{
@@ -90,16 +93,43 @@ func TestDiffType(t *testing.T) {
 		},
 		{
 			name: "in cluster only and owned, do nothing",
-			actual: fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+			actual: fake.ClusterRoleObject(syncertesting.ManagementEnabled,
 				core.OwnerReference([]metav1.OwnerReference{{}})),
 			expectType: NoOp,
 		},
 		{
 			name: "in cluster only and owned and prevent deletion, unmanage",
-			actual: fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+			actual: fake.ClusterRoleObject(syncertesting.ManagementEnabled,
 				core.OwnerReference([]metav1.OwnerReference{{}}),
 				core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)),
 			expectType: NoOp,
+		},
+		{
+			name:       "in-namespace-repo object managed by correct Namespace reconciler",
+			actual:     fake.RoleObject(syncertesting.ManagementEnabled, difftest.ManagedBy("shipping")),
+			declared:   fake.RoleObject(difftest.ManagedBy("shipping")),
+			expectType: Update,
+		},
+		{
+			// Namespace cannot take over ownership from Root.
+			name:       "in-namespace-repo object managed by Root reconciler",
+			actual:     fake.RoleObject(syncertesting.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
+			declared:   fake.RoleObject(difftest.ManagedBy("shipping")),
+			expectType: ManagementConflict,
+		},
+		// Root always wins.
+		{
+			// Root will take over ownership from Namespace.
+			name:       "in-root-repo object managed by Namespace reconciler",
+			actual:     fake.RoleObject(syncertesting.ManagementEnabled, difftest.ManagedBy("shipping")),
+			declared:   fake.RoleObject(difftest.ManagedBy(declared.RootReconciler)),
+			expectType: Update,
+		},
+		{
+			name:       "in-root-repo object managed by Root reconciler",
+			actual:     fake.RoleObject(syncertesting.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
+			declared:   fake.RoleObject(difftest.ManagedBy(declared.RootReconciler)),
+			expectType: Update,
 		},
 	}
 

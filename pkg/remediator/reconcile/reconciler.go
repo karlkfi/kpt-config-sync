@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -77,7 +76,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		// This is the case where the annotation in the *repository* is invalid.
 		// Should never happen as the Parser would have thrown an error.
 		return nonhierarchical.IllegalManagementAnnotationError(
-			ast.ParseFileObject(d.Declared),
+			d.Declared,
 			d.Declared.GetAnnotations()[v1.ResourceManagementKey],
 		)
 	case diff.Unmanage:

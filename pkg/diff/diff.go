@@ -3,9 +3,13 @@
 package diff
 
 import (
+	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,6 +37,10 @@ const (
 
 	// Unmanage indicates the resource's management annotation should be removed from the API Server.
 	Unmanage = Type("unmanage")
+
+	// ManagementConflict represents the case where Declared and Actual both exist,
+	// but the Actual one is managed by a Reconciler that supersedes this one.
+	ManagementConflict = Type("management-conflict")
 )
 
 // Diff is resource where Declared and Actual do not match.
@@ -54,6 +62,25 @@ func (d Diff) Type() Type {
 		if differ.ManagementUnset(d.Declared) {
 			// The declared resource has no resource management key, so it is managed.
 			if d.Actual != nil {
+				manager := d.Declared.GetAnnotations()[v1.ResourceManagerKey]
+				if manager == "" {
+					// We continue in the case where manager is empty string.
+					// This represents a logic error, and we don't want to put users in a
+					// situation they can't get out of.
+					glog.Error(status.InternalErrorBuilder.Sprintf(
+						// Since d.Declared only exists either in the repo or in-memory,
+						// there shouldn't be a way for a user to manipulate d.Declared.
+						// This case means *we* didn't properly annotate the object after
+						// parsing it from the repo.
+						"missing resource manager annotation").BuildWithResources(d.Declared))
+				}
+
+				if !declared.CanManage(manager, d.Actual) {
+					// The declared object's manager can't manage the resource as it exists
+					// on the cluster.
+					return ManagementConflict
+				}
+
 				// The resource is also in the cluster, so update it.
 				return Update
 			}

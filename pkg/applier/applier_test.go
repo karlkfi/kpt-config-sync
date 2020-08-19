@@ -7,12 +7,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	syncertesting "github.com/google/nomos/pkg/syncer/testing"
 	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,71 +29,96 @@ const (
 // TestApply verifies that the apply can compare the declared resource from git with
 // the previously cached resource and take the right actions.
 func TestApply(t *testing.T) {
-	cases := []struct {
+	tcs := []struct {
 		name string
 		// the git resource to which the applier syncs the state to.
-		declaredResources []ast.FileObject
+		declared []ast.FileObject
 		// The previously cached resource.
-		actualResources []ast.FileObject
+		actual []ast.FileObject
 		// expected changes happened to each resource.
-		expectedActions []Event
+		want []Event
+		// wantErr is the set of errors we want to occur.
+		wantErr status.MultiError
 	}{
 		{
 			name: "Create Test2 - if the resource is missing.",
-			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
 				// shall be created.
-				fake.Namespace("namespace/" + testNs2),
+				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
 			},
-			actualResources: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{
+			want: []Event{
 				{"Update", testNs1},
 				{"Create", testNs2}},
 		},
 		{
 			name: "No-Op - if the resource has the configManagement disabled.",
-			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled),
-				fake.Namespace("namespace/" + testNs2),
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled, difftest.ManagedByRoot),
+				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
 			},
-			actualResources: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
 			},
 			// testNs1 is not touched.
-			expectedActions: []Event{{"Update", testNs2}},
+			want: []Event{{"Update", testNs2}},
 		},
 		{
 			name: "Update Test1 - if the resource is previously cached.",
-			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
 			},
-			actualResources: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{{"Update", testNs1}},
+			want: []Event{{"Update", testNs1}},
 		},
 		{
 			name: "Delete Test2 - if the cached resource is not in the upcoming resource",
-			declaredResources: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
 			},
-			actualResources: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{
+			want: []Event{
 				{"Delete", testNs2},
 				{"Update", testNs1}},
 		},
+		// We don't need to test every possible path here; we've already done that
+		// in diff_test.go. This just ensures we can reach the switch-case branches we expect.
+		{
+			name: "Management Conflict Test1 - declared and actual resource managed by root",
+			declared: []ast.FileObject{
+				fake.Role(core.Name("admin"), difftest.ManagedByRoot),
+			},
+			actual: []ast.FileObject{
+				fake.Role(core.Name("admin"), syncertesting.ManagementEnabled, difftest.ManagedByRoot),
+			},
+			want: []Event{
+				{"Update", "admin"}},
+		},
+		{
+			name: "Management Conflict Test2 - declared managed by Namespace, and actual resource managed by root",
+			declared: []ast.FileObject{
+				fake.Role(core.Name("admin"), difftest.ManagedBy("shipping")),
+			},
+			actual: []ast.FileObject{
+				fake.Role(core.Name("admin"), syncertesting.ManagementEnabled, difftest.ManagedByRoot),
+			},
+			wantErr: ManagementConflictError(fake.Role()),
+		},
 	}
-	for _, test := range cases {
+	for _, tc := range tcs {
 		fakeClient := clientForTest(t)
-		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
+		clientApplier := &FakeApplier{ExpectActions: tc.want}
 		previousCache := make(map[core.ID]core.Object)
 		// Propagate the actual resources.
-		for _, actual := range test.actualResources {
+		for _, actual := range tc.actual {
 			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
 				t.Fatal(err)
 			}
@@ -100,17 +127,20 @@ func TestApply(t *testing.T) {
 		a := NewRootApplier(fakeClient, clientApplier)
 		a.cachedObjects = previousCache
 		// Verify.
-		if err := a.Apply(context.Background(), filesystem.AsCoreObjects(test.declaredResources)); err != nil {
-			t.Errorf("test %q failed: %v", test.name, err)
+		err := a.Apply(context.Background(), filesystem.AsCoreObjects(tc.declared))
+		if err != nil || tc.wantErr != nil {
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got Apply() = error %v, want error %v", err, tc.wantErr)
+			}
+			return
 		}
+
 		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
 			return
 		}
 		if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
 			cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
-			t.Errorf(
-				"test %q failed, diff between expected event and actual events: \n%s",
-				test.name, diff)
+			t.Errorf(diff)
 		}
 	}
 }
@@ -118,83 +148,81 @@ func TestApply(t *testing.T) {
 // TestRefresh verifies that applier Refresh can keep the state in the API server in sync with
 // the git resource in sync.
 func TestRefresh(t *testing.T) {
-	cases := []struct {
+	tcs := []struct {
 		name string
 		// the git resource to which the applier syncs the state to.
-		declaredResources []ast.FileObject
+		declared []ast.FileObject
 		// the API serve resource from which propagates the applier cache.
-		actualResource []ast.FileObject
+		actual []ast.FileObject
 		// expected changes happened to each resource.
-		expectedActions []Event
+		want []Event
 	}{
 		{
 			name: "Create Test1 - if the declared resource is not in the API server.",
-			declaredResources: []ast.FileObject{
+			declared: []ast.FileObject{
 				fake.Namespace("namespace/" + testNs1),
 			},
-			actualResource:  []ast.FileObject{},
-			expectedActions: []Event{{"Create", testNs1}},
+			actual: []ast.FileObject{},
+			want:   []Event{{"Create", testNs1}},
 		},
 		{
 			name: "No-Op - if the declared resource is management disabled changed.",
-			declaredResources: []ast.FileObject{
+			declared: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled),
 			},
-			actualResource:  []ast.FileObject{},
-			expectedActions: []Event{},
+			actual: []ast.FileObject{},
+			want:   []Event{},
 		},
 		{
 			name: "Update Test1 - if the declared resource is in API server.",
-			declaredResources: []ast.FileObject{
+			declared: []ast.FileObject{
 				fake.Namespace("namespace/" + testNs1),
 			},
-			actualResource: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{{"Update", testNs1}},
+			want: []Event{{"Update", testNs1}},
 		},
 		{
 			name: "Delete Test2 - if the resource in API server no longer has upcoming resource",
-			declaredResources: []ast.FileObject{
+			declared: []ast.FileObject{
 				fake.Namespace("namespace/" + testNs1),
 			},
-			actualResource: []ast.FileObject{
+			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
 			},
-			expectedActions: []Event{{"Delete", testNs2}},
+			want: []Event{{"Delete", testNs2}},
 		},
 	}
-	for _, test := range cases {
+	for _, tc := range tcs {
 		fakeClient := clientForTest(t)
 		// Propagate the actual resource to api server
-		for _, actual := range test.actualResource {
+		for _, actual := range tc.actual {
 			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
 				t.Fatal(err)
 			}
 		}
-		clientApplier := &FakeApplier{ExpectActions: test.expectedActions}
+		clientApplier := &FakeApplier{ExpectActions: tc.want}
 		a := NewRootApplier(fakeClient, clientApplier)
 		// The cache is used to store the declared git resource. Assuming it is out of sync
 		// with the state in the API server.
 		a.cachedObjects = make(map[core.ID]core.Object)
-		for _, actual := range test.declaredResources {
+		for _, actual := range tc.declared {
 			a.cachedObjects[core.IDOf(actual)] = actual.Object
 		}
 
 		err := a.Refresh(context.Background())
 		// Verify.
 		if err != nil {
-			t.Errorf("test %q failed: %v", test.name, err)
+			t.Error(err)
 		}
 		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
 			return
 		}
 		if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
 			cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
-			t.Errorf(
-				"test %q failed, diff between expected event and actual events: \n%s",
-				test.name, diff)
+			t.Errorf(diff)
 		}
 	}
 }

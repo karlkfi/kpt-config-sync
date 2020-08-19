@@ -154,6 +154,9 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 			} else {
 				glog.V(4).Infof("unmanaged the resource %v", coreID)
 			}
+		case diff.ManagementConflict:
+			err := ManagementConflictError(d.Declared)
+			errs = status.Append(errs, err)
 		default:
 			err := status.InternalErrorf("diff type not supported: %v", d.Type())
 			errs = status.Append(errs, err)

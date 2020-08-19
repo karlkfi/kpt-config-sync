@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/pkg/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
@@ -111,6 +112,34 @@ func (m *multiError) Errors() []Error {
 		return nil
 	}
 	return m.errs
+}
+
+// Is allows *multiError to be compared to other errors.
+func (m *multiError) Is(target error) bool {
+	other, isMultiError := target.(MultiError)
+	if !isMultiError {
+		return false
+	}
+	// We care about _equivalence_, not that the underlying types are identical.
+	// If the target MultiError has the same set of error IDs as this one, it is
+	// "the same". For example, generally we don't care to check that the resource
+	// in a ResourceError actually contains a specific structure; there are tests
+	// just for that already. This fuzziness makes writing tests that expect
+	// specific errors easier.
+	otherErrs := other.Errors()
+
+	if len(m.errs) != len(otherErrs) {
+		return false
+	}
+
+	// If we ever care about sorting, we should copy the errors into a new slice
+	// and sort.
+	for i := range m.errs {
+		if !errors.Is(m.errs[i], otherErrs[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // FormatError formats the multiple errors using multiline argument.
