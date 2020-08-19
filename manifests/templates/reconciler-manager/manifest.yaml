@@ -3,8 +3,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  labels:
-    configmanagement.gke.io/system: "true"
   name: bookinfo
 ---
 # TODO b/159065780 Remove once integrated with Operator actuation, since
@@ -21,6 +19,9 @@ kind: ServiceAccount
 metadata:
   name: reconciler-manager
   namespace: config-management-system
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -34,6 +35,7 @@ metadata:
   name: configmanagement.gke.io:reconciler-manager
   labels:
     configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 rules:
 - apiGroups:
   - configmanagement.gke.io
@@ -83,6 +85,7 @@ metadata:
   name: configmanagement.gke.io:reconciler-manager
   labels:
     configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -100,6 +103,7 @@ metadata:
   labels:
     monitored: "true"
     configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 spec:
   selector:
     app: reconciler-manager
@@ -120,6 +124,13 @@ metadata:
   namespace: config-management-system
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reconciler-manager-cm
+  namespace: config-management-system
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 data:
   deployment.yaml: |
    apiVersion: apps/v1
@@ -130,6 +141,7 @@ data:
      labels:
        app: git-importer
        configmanagement.gke.io/system: "true"
+       configmanagement.gke.io/arch: "csmr"
    spec:
      minReadySeconds: 10
      replicas: 1
@@ -211,10 +223,6 @@ data:
              defaultMode: 288
          securityContext:
            fsGroup: 65533
-kind: ConfigMap
-metadata:
-  name: reconciler-manager-cm
-  namespace: config-management-system
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -224,6 +232,7 @@ metadata:
   labels:
     app: reconciler-manager
     configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
 spec:
   minReadySeconds: 10
   selector:

@@ -4,6 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
   name: rootsyncs.configmanagement.gke.io
 spec:
   group: configmanagement.gke.io

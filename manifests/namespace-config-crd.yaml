@@ -6,6 +6,7 @@ kind: CustomResourceDefinition
 metadata:
   name: namespaceconfigs.configmanagement.gke.io
   labels:
+    configmanagement.gke.io/arch: "legacy"
     configmanagement.gke.io/system: "true"
 spec:
   group: configmanagement.gke.io

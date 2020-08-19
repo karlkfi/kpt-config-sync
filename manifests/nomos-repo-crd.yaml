@@ -5,6 +5,7 @@ metadata:
   name: repos.configmanagement.gke.io
   labels:
     configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "legacy"
 spec:
   group: configmanagement.gke.io
   scope: Cluster
