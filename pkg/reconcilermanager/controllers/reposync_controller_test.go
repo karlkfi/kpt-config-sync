@@ -301,7 +301,8 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := mutateRepoSyncDeployment(tc.repoSync, tc.actualDeployment, []byte("1234"))
+			declared := tc.actualDeployment.DeepCopyObject().(*appsv1.Deployment)
+			err := mutateRepoSyncDeployment(tc.repoSync, tc.actualDeployment, declared, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {

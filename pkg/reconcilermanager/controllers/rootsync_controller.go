@@ -191,8 +191,16 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	}
 	childDep.Name = buildRootSyncName()
 	childDep.Namespace = v1.NSConfigManagementSystem
+
+	// CreateOrUpdate() first call Get() on the object. If the
+	// object does not exist, Create() will be called. If it does exist, Update()
+	// will be called. Just before calling either Create() or Update(), the mutate
+	// callback will be called.
+	//
+	// We make deep copy first so that we can set the declared fields as needed.
+	declared := childDep.DeepCopyObject().(*appsv1.Deployment)
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		return mutateRootSyncDeployment(rootSync, &childDep, configMapDataHash)
+		return mutateRootSyncDeployment(rootSync, &childDep, declared, configMapDataHash)
 	})
 	if err != nil {
 		return err
@@ -201,10 +209,13 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	return nil
 }
 
-func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment, configMapDataHash []byte) error {
+func mutateRootSyncDeployment(rs v1.RootSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
+	// Update existing template.spec with reconciler template.spec.
+	existing.Spec.Template.Spec = declared.Spec.Template.Spec
+
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding Deployment is also deleted.
-	de.OwnerReferences = ownerReference(
+	existing.OwnerReferences = ownerReference(
 		rs.GroupVersionKind().Kind,
 		rs.Name,
 		rs.UID,
@@ -212,9 +223,9 @@ func mutateRootSyncDeployment(rs v1.RootSync, de *appsv1.Deployment, configMapDa
 
 	// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 	// reconciler creates/updates.
-	core.SetAnnotation(&de.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+	core.SetAnnotation(&existing.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
-	templateSpec := &de.Spec.Template.Spec
+	templateSpec := &existing.Spec.Template.Spec
 
 	var updatedVolumes []corev1.Volume
 	// Mutate secret.secretname to secret reference specified in RepoSync CR.
