@@ -1,0 +1,24 @@
+# Resources in this file are only for development purposes and should not be
+# included in the shipped configsync multi repo.
+# TODO b/159065780 Remove once integrated with Operator actuation, since
+# operator will create the namespace config-management-system.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bookinfo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: importer
+  namespace: config-management-system
+---
+# TODO b/159065780 Remove once integrated with Operator actuation, since
+# operator will create the namespace config-management-system.
+apiVersion: v1
+data:
+  CLUSTER_NAME: gke-cluster
+kind: ConfigMap
+metadata:
+  name: cluster-name
+  namespace: config-management-system

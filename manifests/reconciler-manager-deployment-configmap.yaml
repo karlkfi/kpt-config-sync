@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reconciler-manager-cm
+  namespace: config-management-system
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
+data:
+  deployment.yaml: |
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: git-importer
+     namespace: config-management-system
+     labels:
+       app: git-importer
+       configmanagement.gke.io/system: "true"
+       configmanagement.gke.io/arch: "csmr"
+   spec:
+     minReadySeconds: 10
+     replicas: 1
+     strategy:
+       type: Recreate
+     selector:
+       matchLabels:
+         app: git-importer
+     template:
+       metadata:
+         labels:
+           app: git-importer
+       spec:
+         serviceAccountName: importer
+         containers:
+         - name: importer
+           image: gcr.io/config-management-release/nomos:latest
+           command: ["git-importer"]
+           args:
+           - "--v=0"
+           - "--git-dir=/repo/root/rev"
+           ports:
+             - containerPort: 8675
+               name: metrics-port
+           volumeMounts:
+             - name: repo
+               mountPath: /repo
+               readOnly: true
+           envFrom:
+             - configMapRef:
+                 name: importer
+             - configMapRef:
+                 name: cluster-name
+                 optional: true  # If cluster naming is not used, this config map will be missing.
+             - configMapRef:
+                 name: source-format
+                 optional: true
+           resources:
+             requests:
+               cpu: "150m"
+               memory: "100Mi"
+         - name: fs-watcher
+           image: gcr.io/config-management-release/nomos:latest
+           command: ["git-importer"]
+           args:
+           - "--v=0"
+           - "--watch-directory=/repo"
+           volumeMounts:
+             - name: repo
+               mountPath: /repo
+               readOnly: true
+           envFrom:
+             - configMapRef:
+                 name: importer-fs-watcher # allow user override for WATCH_PERIOD
+                 optional: true
+           resources:
+             requests:
+               cpu: "150m"
+               memory: "100Mi"
+         - name: git-sync
+           image: gcr.io/config-management-release/git-sync:v3.1.6-gke.0__linux_amd64
+           args: ["--root=/repo/root", "--dest=rev", "--max-sync-failures=30", "--v=5"]
+           volumeMounts:
+           - name: repo
+             mountPath: /repo
+           - name: git-creds
+             mountPath: /etc/git-secret
+             readOnly: true
+           securityContext:
+             runAsUser: 65533
+           envFrom:
+           - configMapRef:
+               name: git-sync
+         volumes:
+         - name: repo
+         - name: git-creds
+           secret:
+             secretName: git-creds
+             defaultMode: 288
+         securityContext:
+           fsGroup: 65533

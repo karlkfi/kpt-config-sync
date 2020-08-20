@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+  labels:
+    monitored: "true"
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
+spec:
+  selector:
+    app: reconciler-manager
+  ports:
+  - name: metrics
+    # which port to use ?
+    port: 8675
+    targetPort: metrics-port
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+  labels:
+    app: reconciler-manager
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
+spec:
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: reconciler-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: reconciler-manager
+    spec:
+      serviceAccountName: reconciler-manager
+      containers:
+      - command:
+        - /manager
+        args:
+        - --enable-leader-election
+        image: gcr.io/stolos-dev/RMUSER/reconciler:latest # need to update this.
+        name: reconciler-manager
+        ports:
+        - containerPort: 8675
+          name: metrics-port
+        resources:
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        volumeMounts:
+        - name: configs
+          mountPath: /deployment.yaml
+          subPath: deployment.yaml
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: configs
+        configMap:
+          name: reconciler-manager-cm

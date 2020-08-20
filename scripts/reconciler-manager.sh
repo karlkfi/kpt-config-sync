@@ -16,6 +16,8 @@ docker push gcr.io/stolos-dev/${USER}/reconciler:latest
 
 # Install CRDs for successfully running importer pod.
 # Note: CRD installation will handled by ConfigSync operator in future.
+kubectl apply -f manifests/00-namespace.yaml
+kubectl apply -f manifests/cluster-config-crd.yaml
 kubectl apply -f manifests/cluster-config-crd.yaml
 kubectl apply -f manifests/sync-declaration-crd.yaml
 kubectl apply -f manifests/nomos-repo-crd.yaml
@@ -24,6 +26,8 @@ kubectl apply -f manifests/namespace-config-crd.yaml
 kubectl apply -f manifests/hierarchyconfig-crd.yaml
 kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
+kubectl apply -f manifests/reconciler-manager-service-account.yaml
+kubectl apply -f manifests/reconciler-manager-deployment-configmap.yaml
 
 # Install the CRD's for RootSync and RepoSync types (Verify after installation).
 kubectl apply -f manifests/reposync-crd.yaml
@@ -33,10 +37,11 @@ kubectl apply -f manifests/rootsync-crd.yaml
 
 rm -rf /tmp/reconciler-manager.yaml
 # shellcheck disable=SC2046
-sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager/manifest.yaml > /tmp/reconciler-manager.yaml
+sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager/reconciler-manager.yaml > /tmp/reconciler-manager.yaml
 
 # Apply the reconciler-manager.yaml manifest.
 kubectl apply -f /tmp/reconciler-manager.yaml
+kubectl apply -f ./manifests/templates/reconciler-manager/dev.yaml
 
 # Cleanup exiting git-creds secret.
 kubectl delete secret git-creds -n=config-management-system --ignore-not-found
