@@ -45,7 +45,18 @@ image-nomos: build
 	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
-		-t gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) $(STAGING_DIR)/$(NOMOS_IMAGE)
+		-t $(NOMOS_TAG) \
+		$(STAGING_DIR)/$(NOMOS_IMAGE)
+	@echo "+++ Building the Reconciler image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		-t $(RECONCILER_TAG) \
+		-f build/reconciler/Dockerfile \
+		.
+	@echo "+++ Building the Reconciler Manager image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		-t $(RECONCILER_MANAGER_TAG) \
+		-f build/reconciler-manager/Dockerfile \
+		.
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-nomos: image-nomos
@@ -53,7 +64,9 @@ push-to-gcr-nomos: image-nomos
 	@echo "+++ Using account:"
 	gcloud config get-value account
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	docker push gcr.io/$(GCR_PREFIX)/nomos:$(IMAGE_TAG)
+	docker push $(NOMOS_TAG)
+	docker push $(RECONCILER_TAG)
+	docker push $(RECONCILER_MANAGER_TAG)
 
 ###################################
 # YAML generation
@@ -61,14 +74,35 @@ push-to-gcr-nomos: image-nomos
 
 # Generates the podspec yaml for each component.
 .PHONY: gen-yaml-all
-gen-yaml-all: $(patsubst %,$(GEN_YAML_DIR)/%.yaml,$(ALL_K8S_DEPLOYMENTS))
+gen-yaml-all: \
+		$(GEN_YAML_DIR)/git-importer.yaml \
+		$(GEN_YAML_DIR)/monitor.yaml \
+		$(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml \
+		$(GEN_YAML_DIR)/reconciler-manager.yaml
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
-$(GEN_YAML_DIR)/%.yaml: manifests/templates/%.yaml
+$(GEN_YAML_DIR)/git-importer.yaml: manifests/templates/git-importer.yaml
 	@echo "+++ Generating yaml $*"
 	@mkdir -p $(dir $@)
-	@sed -e 's|IMAGE_NAME|gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)|' < $< > $@
+	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
+
+$(GEN_YAML_DIR)/monitor.yaml: manifests/templates/monitor.yaml
+	@echo "+++ Generating yaml $*"
+	@mkdir -p $(dir $@)
+	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
+
+$(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml: \
+		manifests/templates/reconciler-manager-deployment-configmap.yaml
+	@echo "+++ Generating yaml $*"
+	@mkdir -p $(dir $@)
+	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@
+
+$(GEN_YAML_DIR)/reconciler-manager.yaml: \
+		manifests/templates/reconciler-manager.yaml
+	@echo "+++ Generating yaml $*"
+	@mkdir -p $(dir $@)
+	@sed -e 's|IMAGE_NAME|$(RECONCILER_MANAGER_TAG)|' < $< > $@
 
 ###################################
 # nomos-manifest

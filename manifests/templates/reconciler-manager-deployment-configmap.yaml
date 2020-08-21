@@ -33,7 +33,7 @@ data:
          serviceAccountName: importer
          containers:
          - name: importer
-           image: gcr.io/config-management-release/nomos:latest
+           image: IMAGE_NAME
            command: ["git-importer"]
            args:
            - "--v=0"
@@ -50,7 +50,7 @@ data:
                  name: importer
              - configMapRef:
                  name: cluster-name
-                 optional: true  # If cluster naming is not used, this config map will be missing.
+                 optional: true
              - configMapRef:
                  name: source-format
                  optional: true
@@ -59,7 +59,7 @@ data:
                cpu: "150m"
                memory: "100Mi"
          - name: fs-watcher
-           image: gcr.io/config-management-release/nomos:latest
+           image: IMAGE_NAME
            command: ["git-importer"]
            args:
            - "--v=0"

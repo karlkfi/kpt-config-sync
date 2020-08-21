@@ -92,6 +92,8 @@ ALL_K8S_DEPLOYMENTS := git-importer monitor
 
 # Nomos docker images containing all binaries.
 NOMOS_IMAGE := nomos
+RECONCILER_IMAGE := reconciler
+RECONCILER_MANAGER_IMAGE := reconciler-manager
 
 # nomos binary for local run.
 NOMOS_LOCAL := $(BIN_DIR)/linux_amd64/nomos
@@ -118,6 +120,11 @@ GCLOUD_QUIET := --quiet
 DATE := $(shell date +'%s')
 LATEST_IMAGE_TAG ?= $(shell ./scripts/get-docker-tag.sh)
 IMAGE_TAG ?= $(LATEST_IMAGE_TAG)
+
+# Full image tags as given on gcr.io
+NOMOS_TAG := gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)
+RECONCILER_TAG := gcr.io/$(GCR_PREFIX)/$(RECONCILER_IMAGE):$(IMAGE_TAG)
+RECONCILER_MANAGER_TAG := gcr.io/$(GCR_PREFIX)/$(RECONCILER_MANAGER_IMAGE):$(IMAGE_TAG)
 
 DOCKER_RUN_ARGS = \
 	$(DOCKER_INTERACTIVE)                                              \

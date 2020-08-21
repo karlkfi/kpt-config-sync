@@ -12,7 +12,6 @@ spec:
     app: reconciler-manager
   ports:
   - name: metrics
-    # which port to use ?
     port: 8675
     targetPort: metrics-port
 ---
@@ -42,7 +41,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: gcr.io/stolos-dev/RMUSER/reconciler:latest # need to update this.
+        image: IMAGE_NAME
         name: reconciler-manager
         ports:
         - containerPort: 8675

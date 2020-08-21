@@ -9,10 +9,13 @@ set -euo pipefail
 
 # Setup
 
-# shellcheck disable=SC2086
-docker build -t gcr.io/stolos-dev/${USER}/reconciler:latest . -f build/reconciler-manager/Dockerfile
-# shellcheck disable=SC2086
-docker push gcr.io/stolos-dev/${USER}/reconciler:latest
+MGR_TAG="gcr.io/stolos-dev/${USER}/reconciler-manager:latest"
+REC_TAG="gcr.io/stolos-dev/${USER}/reconciler:latest"
+
+docker build -t "${MGR_TAG}" . -f build/reconciler-manager/Dockerfile
+docker build -t "${REC_TAG}" . -f build/reconciler/Dockerfile
+docker push "${MGR_TAG}"
+docker push "${REC_TAG}"
 
 # Install CRDs for successfully running importer pod.
 # Note: CRD installation will handled by ConfigSync operator in future.
@@ -27,20 +30,22 @@ kubectl apply -f manifests/hierarchyconfig-crd.yaml
 kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
 kubectl apply -f manifests/reconciler-manager-service-account.yaml
-kubectl apply -f manifests/reconciler-manager-deployment-configmap.yaml
+
+# Fill in configmap template
+sed -e "s|IMAGE_NAME|$REC_TAG|" \
+  manifests/templates/reconciler-manager-deployment-configmap.yaml \
+  | tee reconciler-manager-deployment-configmap.generated.yaml \
+  | kubectl apply -f -
 
 # Install the CRD's for RootSync and RepoSync types (Verify after installation).
 kubectl apply -f manifests/reposync-crd.yaml
 kubectl apply -f manifests/rootsync-crd.yaml
 
 # verify if configmanagement.gke.io resources exists with RootSync and RepoSync KIND.
-
-rm -rf /tmp/reconciler-manager.yaml
-# shellcheck disable=SC2046
-sed -e 's,RMUSER,'$(whoami)',g' ./manifests/templates/reconciler-manager/reconciler-manager.yaml > /tmp/reconciler-manager.yaml
-
 # Apply the reconciler-manager.yaml manifest.
-kubectl apply -f /tmp/reconciler-manager.yaml
+sed -e "s|IMAGE_NAME|$MGR_TAG|g" ./manifests/templates/reconciler-manager.yaml \
+  | tee reconciler-manager.generated.yaml \
+  | kubectl apply -f -
 kubectl apply -f ./manifests/templates/reconciler-manager/dev.yaml
 
 # Cleanup exiting root-ssh-key secret.

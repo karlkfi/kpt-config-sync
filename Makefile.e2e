@@ -143,8 +143,12 @@ include Makefile.e2e.ci
 # For use with the Go e2e tests. See e2e/doc.go.
 __push-local-image: image-nomos
 	@bash scripts/docker-registry.sh
-	@docker tag gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG) localhost:5000/nomos:$(LATEST_IMAGE_TAG)
+	@docker tag $(NOMOS_TAG) localhost:5000/nomos:$(LATEST_IMAGE_TAG)
+	@docker tag $(RECONCILER_TAG) localhost:5000/reconciler:$(LATEST_IMAGE_TAG)
+	@docker tag $(RECONCILER_MANAGER_TAG) localhost:5000/reconciler-manager:$(LATEST_IMAGE_TAG)
 	@docker push localhost:5000/nomos:$(LATEST_IMAGE_TAG)
+	@docker push localhost:5000/reconciler:$(LATEST_IMAGE_TAG)
+	@docker push localhost:5000/reconciler-manager:$(LATEST_IMAGE_TAG)
 
 __install-nomos-local:
 	@GO111MODULE=on go install ./cmd/nomos/nomos.go
