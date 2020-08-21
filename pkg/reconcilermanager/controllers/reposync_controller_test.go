@@ -337,7 +337,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	rs := repoSync(branch, core.Name(reposyncName), core.Namespace(reposyncReqNamespace))
 	reqNamespacedName := namespacedName(reposyncName, reposyncReqNamespace)
-	fakeClient, testReconciler := setupNSReconciler(t, rs, secret(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 
 	// Test creating Configmaps and Deployment resources.
 	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
@@ -346,19 +346,19 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, gitSync),
 			gitSyncData(branch, reposyncRepo),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, importer),
 			importerData(reposyncDir),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
@@ -367,7 +367,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	wantDeployment := []*appsv1.Deployment{
 		nsDeploymentWithEnvFrom(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
 			importerDeploymentWithConfigMap(),
 			nsDeploymentAnnotation(),
@@ -416,19 +416,19 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, gitSync),
 			gitSyncData(updatedBranch, reposyncRepo),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, importer),
 			importerData(reposyncDir),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
@@ -437,7 +437,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	wantDeployment = []*appsv1.Deployment{
 		nsDeploymentWithEnvFrom(
-			reposyncReqNamespace,
+			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
 			importerDeploymentWithConfigMap(),
 			nsDeploymentUpdatedAnnotation(),

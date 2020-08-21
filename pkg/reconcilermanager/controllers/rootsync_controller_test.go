@@ -61,7 +61,7 @@ func secretData(t *testing.T, auth string) map[string][]byte {
 	}
 }
 
-func secret(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev1.Secret {
+func secretObj(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev1.Secret {
 	t.Helper()
 	result := fake.SecretObject(name, opts...)
 	result.Data = secretData(t, auth)
@@ -334,7 +334,7 @@ func TestRootSyncReconciler(t *testing.T) {
 
 	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
-	fakeClient := syncerFake.NewClient(t, s, rsResource, secret(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
+	fakeClient := syncerFake.NewClient(t, s, rsResource, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 	testReconciler := NewRootSyncReconciler(
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RootSync"),

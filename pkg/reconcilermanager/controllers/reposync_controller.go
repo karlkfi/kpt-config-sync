@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,6 +72,13 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, nil
 	}
 	log.V(2).Info("secret found, proceeding with installation")
+
+	// Create secret in config-management-system namespace using the
+	// existing secret in the reposync.namespace.
+	if err := secret.Put(ctx, &rs, r.client); err != nil {
+		log.Error(err, "RepoSync failed secret creation")
+		return controllerruntime.Result{}, nil
+	}
 
 	// Overwrite git-importer pod's configmaps.
 	configMapDataHash, err := r.upsertConfigMap(ctx, &rs)
@@ -136,7 +144,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSyn
 	for _, cm := range reconcilerConfigMaps {
 		var childCM corev1.ConfigMap
 		childCM.Name = buildRepoSyncName(rs.Namespace, cm)
-		childCM.Namespace = rs.Namespace
+		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
 			data, err := mutateRepoSyncConfigMap(rs, &childCM)
 			configMapData[childCM.Name] = data
@@ -213,7 +221,7 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSy
 	}
 
 	childDep.Name = buildRepoSyncName(rs.Namespace)
-	childDep.Namespace = rs.Namespace
+	childDep.Namespace = v1.NSConfigManagementSystem
 
 	// CreateOrUpdate() first call Get() on the object. If the
 	// object does not exist, Create() will be called. If it does exist, Update()
@@ -262,7 +270,7 @@ func mutateRepoSyncDeployment(rs *v1.RepoSync, existing, declared *appsv1.Deploy
 	// in the RepoSync CR.
 	for _, volume := range templateSpec.Volumes {
 		if volume.Name == gitCredentialVolume {
-			volume.Secret.SecretName = rs.Spec.SecretRef.Name
+			volume.Secret.SecretName = secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
 		}
 		updatedVolumes = append(updatedVolumes, volume)
 	}

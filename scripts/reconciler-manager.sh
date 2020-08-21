@@ -74,10 +74,8 @@ sleep 10s
 
 # Verify whether respective controllers create various obejcts i.e. Deployments.
 kubectl get all -n config-management-system
-kubectl get all -n bookinfo
 
 # Verify whether config map is created.
 kubectl get cm -n config-management-system
-kubectl get cm -n bookinfo
 
 # End
