@@ -1,26 +1,26 @@
-package kptfile
+package parse
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/parse/kptfile"
 	"github.com/google/nomos/pkg/testing/fake"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/pkg/errors"
 )
 
 func fakeEmptyResourceGroup(labels, annotations map[string]string) core.Object {
 	name := "test-rg"
 	namespace := "test-namespace"
-	return newResourceGroup(name, namespace, labels, annotations, nil)
+	return kptfile.NewResourceGroup(name, namespace, labels, annotations, nil)
 }
 
 func fakeResourceGroup(labels, annotations map[string]string) core.Object {
 	name := "test-rg"
 	namespace := "test-namespace"
-	ids := []ObjMetadata{
+	ids := []kptfile.ObjMetadata{
 		{
 			Name:      "default-name",
 			Namespace: "",
@@ -34,29 +34,17 @@ func fakeResourceGroup(labels, annotations map[string]string) core.Object {
 			Kind:      "ConfigMap",
 		},
 	}
-	return newResourceGroup(name, namespace, labels, annotations, ids)
+	return kptfile.NewResourceGroup(name, namespace, labels, annotations, ids)
 }
 
 func fakeKptfile(labels, annotations map[string]string) core.Object {
-	kptfile := &Kptfile{}
-	kptfile.SetName("name-not-important")
-	kptfile.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   kptGroup,
-		Version: "v1alpha1",
-		Kind:    kptKind,
-	})
-	kptfile.Inventory = Inventory{
+	obj := fake.KptFileObject()
+	obj.Inventory = kptfile.Inventory{
 		Identifier:  "test-rg",
 		Namespace:   "test-namespace",
 		Labels:      labels,
 		Annotations: annotations,
 	}
-	return kptfile
-}
-
-func fakeKptfileWithName(name string) core.Object {
-	obj := fakeKptfile(nil, nil)
-	obj.SetName(name)
 	return obj
 }
 
@@ -65,7 +53,7 @@ func TestGenerateResourceGroup(t *testing.T) {
 		testName string
 		input    []core.Object
 		want     []core.Object
-		err      error
+		wantErr  error
 	}{
 		{
 			testName: "no change when there is no kptfile found",
@@ -98,26 +86,27 @@ func TestGenerateResourceGroup(t *testing.T) {
 		},
 		{
 			testName: "Multiple Kptfiles lead to an error",
-			input:    []core.Object{fakeKptfileWithName("a"), fakeKptfileWithName("b")},
-			err:      fmt.Errorf("KNV1059: Repo must contain at most one Kptfile:\na\nb\n\nFor more information, see https://g.co/cloud/acm-errors#knv1059"),
+			input:    []core.Object{fake.KptFileObject(core.Name("a")), fake.KptFileObject(core.Name("b"))},
+			wantErr:  MultipleKptfilesError(fakeKptfile(nil, nil)),
 		},
 	}
 	for _, tc := range tcs {
-		actual, err := AsResourceGroup(tc.input)
-		if tc.err == nil {
-			if err != nil {
-				t.Errorf("%s:\nunexpected error %v", tc.testName, err)
+		t.Run(tc.testName, func(t *testing.T) {
+			actual, err := AsResourceGroup(tc.input)
+			if tc.wantErr == nil {
+				if err != nil {
+					t.Errorf("got AsResourceGroup() = %v, want nil", err)
+				}
+				if diff := cmp.Diff(actual, tc.want, cmpopts.EquateEmpty()); diff != "" {
+					t.Error(diff)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("got AsResourceGroup() = nil, want %v", tc.wantErr)
+				} else if !errors.Is(err, tc.wantErr) {
+					t.Error(cmp.Diff(tc.wantErr, err))
+				}
 			}
-			if diff := cmp.Diff(actual, tc.want, cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf("%s", diff)
-			}
-		} else {
-			if err == nil {
-				t.Errorf("expected error not happened")
-			}
-			if diff := cmp.Diff(err.Error(), tc.err.Error()); diff != "" {
-				t.Errorf("%s", diff)
-			}
-		}
+		})
 	}
 }

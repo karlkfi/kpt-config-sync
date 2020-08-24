@@ -25,7 +25,7 @@ func repositoryScopeVisitor(scope string) nonhierarchical.Validator {
 		default:
 			// There's an object declaring an invalid metadata.namespace, so this is
 			// an error.
-			return badScopeErr(o, scope)
+			return BadScopeErr(o, scope)
 		}
 		return nil
 	})
@@ -37,7 +37,9 @@ const BadScopeErrCode = "1058"
 
 var badScopeErrBuilder = status.NewErrorBuilder(BadScopeErrCode)
 
-func badScopeErr(resource id.Resource, want string) status.ResourceError {
+// BadScopeErr reports that the passed resource declares a Namespace for a
+// different Namespace repository.
+func BadScopeErr(resource id.Resource, want string) status.ResourceError {
 	return badScopeErrBuilder.
 		Sprintf("Resources in the %q repo must either omit metadata.namespace or declare metadata.namespace=%q", want, want).
 		BuildWithResources(resource)

@@ -1,16 +1,23 @@
 package kptfile
 
 import (
-	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/yaml"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
-	kptGroup = "kpt.dev"
-	kptKind  = "Kptfile"
+	// Group is the kpt API GRoup.
+	Group = "kpt.dev"
+	// Kind is the Kptfile Kind string.
+	Kind = "Kptfile"
 )
+
+// SchemeGroupVersion is the kpt GroupVersion we're compatible with.
+var SchemeGroupVersion = schema.GroupVersion{
+	Group:   Group,
+	Version: "v1alpha1",
+}
 
 // PackageMeta defines the metadata of a package.
 type PackageMeta struct {
@@ -84,18 +91,4 @@ func (in *Kptfile) DeepCopyObject() runtime.Object {
 		return c
 	}
 	return nil
-}
-
-func isKptfile(id core.ID) bool {
-	return id.Group == kptGroup && id.Kind == kptKind
-}
-
-func kptfileFrom(obj core.Object) (*Kptfile, error) {
-	data, err := yaml.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-	kptfile := &Kptfile{}
-	err = yaml.Unmarshal(data, kptfile)
-	return kptfile, err
 }

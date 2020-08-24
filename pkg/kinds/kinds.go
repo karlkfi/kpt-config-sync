@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/parse/kptfile"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -163,11 +164,7 @@ func StatefulSet() schema.GroupVersionKind {
 // ConfigManagement returns the GroupVersionKind for ConfigManagement, an object
 // that does not have other representation than a CRD in the operator library.
 func ConfigManagement() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   "configmanagement.gke.io",
-		Version: "v1",
-		Kind:    "ConfigManagement",
-	}
+	return v1.SchemeGroupVersion.WithKind(configmanagement.OperatorKind)
 }
 
 // RepoSync returns the canonical RepoSync GroupVersionKind.
@@ -193,4 +190,9 @@ func Service() schema.GroupVersionKind {
 // Secret returns the canonical Secret GroupVersionKind.
 func Secret() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Secret")
+}
+
+// KptFile returns the canonical Kptfile GroupVersionKind.
+func KptFile() schema.GroupVersionKind {
+	return kptfile.SchemeGroupVersion.WithKind(kptfile.Kind)
 }

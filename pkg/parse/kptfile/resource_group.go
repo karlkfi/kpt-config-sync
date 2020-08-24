@@ -1,6 +1,7 @@
 package kptfile
 
 import (
+	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -8,10 +9,9 @@ import (
 )
 
 const (
-	group       = "configmanagement.gke.io"
 	version     = "v1beta1"
 	kind        = "ResourceGroup"
-	application = "application"
+	application = "Application"
 )
 
 // ResourceGroupSpec defines the spec of ResourceGroup.
@@ -88,28 +88,29 @@ func (in *ResourceGroup) DeepCopyObject() runtime.Object {
 	return nil
 }
 
-// resourceGroupFromKptFile creates a ResourceGroup based on the inventory field
+// ResourceGroupFromKptFile creates a ResourceGroup based on the inventory field
 // of a KptFile with the following mapping:
 // inventory.identifer -> resourcegroup name
 // inventory.namespace -> resourcegroup namespace
 // inventory.annotations -> resourcegroup annotations
 // inventory.labels -> resourcegroup labels
-func resourceGroupFromKptFile(kpt *Kptfile, ids []ObjMetadata) core.Object {
+func ResourceGroupFromKptFile(kpt *Kptfile, ids []ObjMetadata) core.Object {
 	name := kpt.Inventory.Identifier
 	namespace := kpt.Inventory.Namespace
 	labels := kpt.Inventory.Labels
 	annotations := kpt.Inventory.Annotations
 
-	rg := newResourceGroup(name, namespace, labels, annotations, ids)
+	rg := NewResourceGroup(name, namespace, labels, annotations, ids)
 	return rg
 }
 
-func newResourceGroup(name, namespace string, labels, annotations map[string]string, ids []ObjMetadata) *ResourceGroup {
+// NewResourceGroup constructs a *ResourceGroup from the passed settings.
+func NewResourceGroup(name, namespace string, labels, annotations map[string]string, ids []ObjMetadata) *ResourceGroup {
 	rg := &ResourceGroup{}
 	rg.SetName(name)
 	rg.SetNamespace(namespace)
 	rg.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   group,
+		Group:   configmanagement.GroupName,
 		Version: version,
 		Kind:    kind,
 	})

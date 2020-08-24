@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/parse/kptfile"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -338,6 +339,16 @@ func ToTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {
 // applied.
 func ServiceObject(opts ...core.MetaMutator) *corev1.Service {
 	result := &corev1.Service{TypeMeta: ToTypeMeta(kinds.Service())}
+	defaultMutate(result)
+	mutate(result, opts...)
+
+	return result
+}
+
+// KptFileObject returns a default-initialized Kptfile with the passed opts
+// applied.
+func KptFileObject(opts ...core.MetaMutator) *kptfile.Kptfile {
+	result := &kptfile.Kptfile{TypeMeta: ToTypeMeta(kinds.KptFile())}
 	defaultMutate(result)
 	mutate(result, opts...)
 

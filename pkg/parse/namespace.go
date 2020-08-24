@@ -8,7 +8,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/parse/kptfile"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -83,7 +82,7 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 	}
 
 	// Parse and generate a ResourceGroup from the Kptfile if it exists
-	cos, e := kptfile.AsResourceGroup(cos)
+	cos, e := AsResourceGroup(cos)
 	if e != nil {
 		err = status.Append(err, e)
 		return err

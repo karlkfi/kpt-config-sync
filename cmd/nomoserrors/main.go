@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/nomos/cmd/nomoserrors/examples"
@@ -18,14 +19,39 @@ var rootCmd = &cobra.Command{
 	Short: "List all error codes and example errors",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		examples := examples.Generate()
+		e := examples.Generate()
 
 		if idFlag == "" {
 			printErrorCodes()
 		}
 		idFlag = strings.TrimPrefix(idFlag, "KNV")
-		printErrors(idFlag, examples)
+		printErrors(idFlag, e)
+		printMissingErrors(e)
 	},
+}
+
+func printMissingErrors(e examples.AllExamples) {
+	// Error IDs begin at 1000. Begin at 999 to ensure we catch that KNV1000 has
+	// no examples.
+	previous := 999
+	for _, id := range status.CodeRegistry() {
+		idInt, err := strconv.Atoi(id)
+		if err != nil {
+			fmt.Printf("Non-numeric error ID: %s\n", id)
+			continue
+		}
+		if idInt-previous > 1 && idInt < 2000 {
+			// This detects unexpected gaps in error ids. This can happen when we've just
+			// added a new package that defines new errors, and none of the packages
+			// transitively required by nomoserrors include these errors.
+			// The 2000 and up errors are special cases we don't care about for this.
+			fmt.Printf("KNV%d must be either explicitly marked obsolete, or its package is not imported\n", previous+1)
+		} else if !e[id].Deprecated && len(e[id].Examples) == 0 {
+			// The code isn't deprecated and there aren't any examples for it.
+			fmt.Printf("Missing example(s) for code: %s\n", id)
+		}
+		previous = idInt
+	}
 }
 
 func init() {
@@ -39,10 +65,14 @@ func main() {
 	}
 }
 
-func sortedErrors(e map[string][]status.Error) []status.Error {
+func sortedErrors(e examples.AllExamples) []status.Error {
 	var allErrs []status.Error
 	for _, errs := range e {
-		allErrs = append(allErrs, errs...)
+		if errs.Deprecated {
+			// Ignore explicitly deprecated errors.
+			continue
+		}
+		allErrs = append(allErrs, errs.Examples...)
 	}
 	sort.Slice(allErrs, func(i, j int) bool {
 		return allErrs[i].Error() < allErrs[j].Error()
@@ -58,7 +88,7 @@ func printErrorCodes() {
 	fmt.Println()
 }
 
-func printErrors(id string, e map[string][]status.Error) {
+func printErrors(id string, e examples.AllExamples) {
 	fmt.Println("=== SAMPLE ERRORS ===")
 	fmt.Println()
 	for _, err := range sortedErrors(e) {

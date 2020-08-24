@@ -1,10 +1,10 @@
 package util
 
 import (
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
@@ -12,10 +12,6 @@ import (
 const (
 	// ConfigManagementName is the name of the ConfigManagement object.
 	ConfigManagementName = "config-management"
-	// ConfigManagementGroup is the config management group
-	ConfigManagementGroup = "configmanagement.gke.io"
-	// ConfigManagementKind is the config management kind
-	ConfigManagementKind = "ConfigManagement"
 	// ConfigManagementResource is the config management resource
 	ConfigManagementResource = "configmanagements"
 )
@@ -34,13 +30,7 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 	if err != nil {
 		return nil, err
 	}
-	gvr := schema.GroupVersionResource{
-		Group:   ConfigManagementGroup,
-		Version: "v1",
-		// The dynamic client needs the plural resource form to be able to
-		// construct a correct resource URL.
-		Resource: ConfigManagementResource,
-	}
+	gvr := v1.SchemeGroupVersion.WithResource(ConfigManagementResource)
 	return &ConfigManagementClient{cl.Resource(gvr).Namespace("")}, nil
 }
 

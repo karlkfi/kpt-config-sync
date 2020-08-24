@@ -87,11 +87,11 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 	}
 	cm := &unstructured.Unstructured{}
 	cm.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: util.ConfigManagementGroup,
+		Group: configmanagement.GroupName,
 		// we rely on a specific version implicitly later in the code, so this should
 		// be hardcoded
 		Version: "v1",
-		Kind:    util.ConfigManagementKind,
+		Kind:    configmanagement.OperatorKind,
 	})
 	errorList := []error{}
 	currentk8sContext, err := restconfig.CurrentContextName()
@@ -101,7 +101,7 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 
 	if err := c.Get(ctx, types.NamespacedName{Name: util.ConfigManagementName}, cm); err != nil {
 		if meta.IsNoMatchError(err) {
-			fmt.Println("kind <<" + util.ConfigManagementKind + ">> is not registered with the cluster")
+			fmt.Println("kind <<" + configmanagement.OperatorKind + ">> is not registered with the cluster")
 		} else if errors.IsNotFound(err) {
 			fmt.Println("ConfigManagement object not found")
 		} else {

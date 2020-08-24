@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -20,26 +21,39 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type exampleErrors map[string][]status.Error
+// ExamplesOrDeprecated contains either a list of example errors, or that the
+// id is deprecated.
+type ExamplesOrDeprecated struct {
+	Examples   []status.Error
+	Deprecated bool
+}
+
+// AllExamples is a map from error codes to either example errors, or a mark that
+// the code is deprecated.
+type AllExamples map[string]ExamplesOrDeprecated
 
 // Generate generates example errors for documentation.
-func Generate() map[string][]status.Error {
+func Generate() AllExamples {
 	// exampleErrors is a map of exampleErrors of each error type. For documentation purposes, i.e. for use
 	// in the internal-only nomoserrors command.
-	result := make(exampleErrors)
+	result := make(AllExamples)
 
 	// 1000
 	result.add(status.InternalError("we made a mistake"))
 
 	// 1001 is Deprecated.
+	result.markDeprecated("1001")
 
 	// 1002 is Deprecated.
+	result.markDeprecated("1002")
 
 	// 1003
 	result.add(validation.IllegalNamespaceSubdirectoryError(node("namespaces/foo/bar"), node("namespaces/foo")))
@@ -58,6 +72,7 @@ func Generate() map[string][]status.Error {
 	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/foo/bar/role.yaml")))
 
 	// 1008 is Deprecated.
+	result.markDeprecated("1008")
 
 	// 1009
 	result.add(metadata.IllegalMetadataNamespaceDeclarationError(
@@ -70,6 +85,7 @@ func Generate() map[string][]status.Error {
 	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "label"}))
 
 	// 1012 is Deprecated.
+	result.markDeprecated("1012")
 
 	// 1013
 	result.add(selectors.ObjectHasUnknownClusterSelector(fake.Role(), "undeclared-selector"))
@@ -83,13 +99,16 @@ func Generate() map[string][]status.Error {
 	result.add(selectors.EmptySelectorError(fake.NamespaceSelector()))
 
 	// 1015 is Deprecated.
+	result.markDeprecated("1015")
 
 	// 1016 is Deprecated.
+	result.markDeprecated("1016")
 
 	// 1017
 	result.add(system.MissingRepoError())
 
 	// 1018 is Deprecated.
+	result.markDeprecated("1018")
 
 	// 1019
 	result.add(metadata.IllegalTopLevelNamespaceError(fake.Namespace("namespaces")))
@@ -105,14 +124,19 @@ func Generate() map[string][]status.Error {
 	}, "namespaces/foo/engineer.yaml")))
 
 	// 1022 is Deprecated.
+	result.markDeprecated("1022")
 
 	// 1023 is Deprecated.
+	result.markDeprecated("1023")
 
 	// 1024 is Deprecated.
+	result.markDeprecated("1024")
 
 	// 1025 is Deprecated.
+	result.markDeprecated("1025")
 
 	// 1026 is Deprecated.
+	result.markDeprecated("1026")
 
 	// 1027
 	result.add(system.UnsupportedRepoSpecVersion(fake.Repo(fake.RepoVersion("")), "0.0.0"))
@@ -156,11 +180,13 @@ func Generate() map[string][]status.Error {
 		core.Namespace("namespaces/"+configmanagement.ControllerNamespace))))
 
 	// 1035 is Deprecated.
+	result.markDeprecated("1035")
 
 	// 1036
 	result.add(nonhierarchical.InvalidMetadataNameError(fake.Role(core.Name("ABC"))))
 
 	// 1037 is Deprecated.
+	result.markDeprecated("1037")
 
 	// 1038
 	result.add(syntax.IllegalKindInNamespacesError(fake.NamespaceSelectorAtPath("namespaces/foo/ns-selector.yaml")))
@@ -172,6 +198,7 @@ func Generate() map[string][]status.Error {
 	result.add(validation.ShouldBeInNamespacesError(fake.RoleAtPath("cluster/role.yaml")))
 
 	// 1040 is Deprecated.
+	result.markDeprecated("1040")
 
 	// 1041
 	result.add(hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
@@ -212,6 +239,7 @@ func Generate() map[string][]status.Error {
 	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinitionV1Beta1()))
 
 	// 1049 is Deprecated.
+	result.markDeprecated("1049")
 
 	// 1050
 	result.add(nonhierarchical.DeprecatedGroupKindError(
@@ -222,6 +250,7 @@ func Generate() map[string][]status.Error {
 		}, "namespaces/deployment.yaml"), kinds.Deployment()))
 
 	// 1051 is Deprecated.
+	result.markDeprecated("1051")
 
 	// 1052
 	result.add(nonhierarchical.IllegalNamespaceOnClusterScopedResourceError(fake.ClusterRole(core.Namespace("foo"))))
@@ -241,6 +270,17 @@ func Generate() map[string][]status.Error {
 	// 1057
 	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label" + hnc.DepthSuffix}))
 
+	// 1058
+	result.add(parse.BadScopeErr(fake.Role(core.Namespace("shipping")), "dev"))
+
+	// 1059
+	result.add(parse.MultipleKptfilesError(
+		fake.KptFileObject(core.Name("a")),
+		fake.KptFileObject(core.Name("b"))))
+
+	// 1060
+	result.add(applier.ManagementConflictError(fake.Role()))
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 
@@ -252,6 +292,9 @@ func Generate() map[string][]status.Error {
 
 	// 2004
 	result.add(status.SourceError.Sprint("unable to connect to Git repository").Build())
+
+	// 2005
+	result.add(reconcile.FightWarning(9.5, fake.NamespaceObject("gatekeeper-system")))
 
 	// 2006
 	result.add(status.EmptySourceError(10, "namespaces"))
@@ -272,12 +315,25 @@ func Generate() map[string][]status.Error {
 	return result
 }
 
+func (e *ExamplesOrDeprecated) Add(error status.Error) {
+	e.Examples = append(e.Examples, error)
+}
+
 // add adds example errors for a specific error code for use in documentation.
-func (e *exampleErrors) add(err status.Error) {
+func (e AllExamples) add(err status.Error) {
 	// Ensures example error can be displayed.
 	_ = err.Error()
 	code := err.Code()
-	(*e)[code] = append((*e)[code], err)
+	examples := e[code]
+	examples.Add(err)
+	e[code] = examples
+}
+
+func (e AllExamples) markDeprecated(id string) {
+	e[id] = ExamplesOrDeprecated{
+		Examples:   nil,
+		Deprecated: true,
+	}
 }
 
 type path string
