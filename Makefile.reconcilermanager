@@ -8,7 +8,11 @@ endif
 
 # Generate DeepCopy and runtime.Object implementation methods.
 generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.txt" paths="./pkg/api/configmanagement/v1/reposync_types.go" paths="./pkg/api/configmanagement/v1/rootsync_types.go"
+	$(CONTROLLER_GEN) \
+		object:headerFile="hack/boilerplate.txt" \
+		paths="./pkg/api/configmanagement/v1/reposync_types.go" \
+		paths="./pkg/api/configmanagement/v1/rootsync_types.go" \
+		paths="./pkg/api/configmanagement/v1/multirepo_types.go"
 
 # find or download controller-gen
 # download controller-gen if necessary

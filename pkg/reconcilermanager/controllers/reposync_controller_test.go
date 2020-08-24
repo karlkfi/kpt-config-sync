@@ -387,8 +387,10 @@ func TestRepoSyncReconciler(t *testing.T) {
 	// Verify status updates.
 	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1.RepoSync).Status
 	wantStatus := v1.RepoSyncsStatus{
-		ObservedGeneration: rs.Generation,
-		Reconciler:         buildRepoSyncName(reqNamespacedName.Namespace),
+		MultiRepoSyncStatus: v1.MultiRepoSyncStatus{
+			ObservedGeneration: rs.Generation,
+			Reconciler:         buildRepoSyncName(reqNamespacedName.Namespace),
+		},
 		Conditions: []v1.RepoSyncCondition{
 			{
 				Type:    v1.RepoSyncReconciling,

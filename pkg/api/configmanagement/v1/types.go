@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// TODO(b/166334682): We are no longer able to generate this file.
+
 // These comments must remain outside the package docstring.
 // +genclient
 // +genclient:nonNamespaced

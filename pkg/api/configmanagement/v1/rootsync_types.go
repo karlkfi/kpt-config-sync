@@ -25,30 +25,86 @@ type RootSync struct {
 
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-
-	// SourceFormat specifies how the repository is formatted.
-	// See documentation for specifics of what these options do.
-	//
-	// Must be one of hierarchy, unstructured. Optional. Set to
-	// hierarchy if not specified.
-	//
-	// The validation of this is case-sensitive.
-	// +kubebuilder:validation:Pattern=^(hierarchy|unstructured|)$
-	// +optional
-	SourceFormat string `json:"sourceFormat,omitempty"`
-
-	// Git contains configuration specific to importing policies from a Git repo.
-	// +optional
-	Git `json:"git,omitempty"`
+	MultiRepoSyncSpec
 }
 
 // +kubebuilder:object:generate=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	MultiRepoSyncStatus
+
+	// Conditions represents the latest available observations of the RootSync's
+	// current state.
+	// +optional
+	Conditions []RootSyncCondition `json:"conditions,omitempty"`
+
+	// Source contains fields describing the status of the RootSync's source of
+	// truth.
+	// +optional
+	Source RootSyncSourceStatus `json:"source,omitempty"`
+
+	// Sync contains fields describing the status of syncing resources from the
+	// source of truth to the cluster.
+	// +optional
+	Sync RootSyncSyncStatus `json:"sync,omitempty"`
+}
+
+// RootSyncConditionType is an enum of types of conditions for RootSyncs.
+type RootSyncConditionType string
+
+// These are valid conditions of a RootSync.
+const (
+	// The following conditions are currently recommended as "standard" resource
+	// conditions which are supported by kstatus and kpt:
+	// https://github.com/kubernetes-sigs/cli-utils/tree/master/pkg/kstatus#conditions
+
+	// RootSyncReconciling means that the RootSync's spec has not yet been fully
+	// reconciled/handled by the RootSync controller.
+	RootSyncReconciling RootSyncConditionType = "Reconciling"
+	// RootSyncStalled means that the RootSync controller has not been able to
+	// make progress towards reconciling the RootSync.
+	RootSyncStalled RootSyncConditionType = "Stalled"
+)
+
+// +kubebuilder:object:generate=true
+// +protobuf=true
+
+// RootSyncCondition describes the state of a RootSync at a certain point.
+type RootSyncCondition struct {
+	// Type of RootSync condition.
+	Type RootSyncConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status metav1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	// +optional
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// The reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
+// +kubebuilder:object:generate=true
+// +protobuf=true
+
+// RootSyncSourceStatus describes the status of the RootSync's source of truth.
+type RootSyncSourceStatus struct {
+	MultiRepoSyncSourceStatus
+}
+
+// +kubebuilder:object:generate=true
+// +protobuf=true
+
+// RootSyncSyncStatus describes the status of syncing resources from the source
+// of truth to the cluster.
+type RootSyncSyncStatus struct {
+	MultiRepoSyncSyncStatus
 }
 
 // +kubebuilder:object:root=true
