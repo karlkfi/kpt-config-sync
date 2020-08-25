@@ -4,6 +4,7 @@ metadata:
   name: root-sync
   namespace: config-management-system
 spec:
+  sourceFormat: "hierarchy"
   git:
     repo: https://github.com/GoogleCloudPlatform/csp-config-management/
     revision: 1.0.0

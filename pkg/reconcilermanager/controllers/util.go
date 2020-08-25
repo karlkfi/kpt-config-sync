@@ -22,9 +22,18 @@ func gitSyncData(branch, repo string) map[string]string {
 	return result
 }
 
-func reconcilerData(policydir string) map[string]string {
+// reconcilerData returns configmap data for namespace reconciler.
+func reconcilerData(reconcilerScope, policyDir string) map[string]string {
 	result := make(map[string]string)
-	result["POLICY_DIR"] = policydir
+	result["RECONCILER_SCOPE"] = reconcilerScope
+	result["POLICY_DIR"] = policyDir
+	return result
+}
+
+// rootReconcilerData returns configmap data for root reconciler.
+func rootReconcilerData(reconcilerScope, policyDir, clusterName string) map[string]string {
+	result := reconcilerData(reconcilerScope, policyDir)
+	result["CLUSTER_NAME"] = clusterName
 	return result
 }
 

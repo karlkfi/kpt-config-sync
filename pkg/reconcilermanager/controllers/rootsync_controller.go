@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,17 +24,19 @@ import (
 
 // RootSyncReconciler reconciles a RootSync object
 type RootSyncReconciler struct {
-	client client.Client
-	log    logr.Logger
-	scheme *runtime.Scheme
+	client      client.Client
+	log         logr.Logger
+	scheme      *runtime.Scheme
+	clusterName string
 }
 
 // NewRootSyncReconciler returns a new RootSyncReconciler.
-func NewRootSyncReconciler(c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
+func NewRootSyncReconciler(cn string, c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
 	return &RootSyncReconciler{
-		client: c,
-		log:    l,
-		scheme: s,
+		client:      c,
+		log:         l,
+		scheme:      s,
+		clusterName: cn,
 	}
 }
 
@@ -117,7 +120,7 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 		childCM.Name = buildRootSyncName(cm)
 		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			data, err := mutateRootSyncConfigMap(rootSync, &childCM)
+			data, err := r.mutateRootSyncConfigMap(rootSync, &childCM)
 			configMapData[childCM.Name] = data
 			return err
 		})
@@ -161,7 +164,7 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 	return validateSecretData(rootSync.Spec.Auth, secret)
 }
 
-func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
+func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -172,7 +175,7 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]s
 
 	switch cm.Name {
 	case buildRootSyncName(reconciler):
-		cm.Data = reconcilerData(rs.Spec.Git.Dir)
+		cm.Data = rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName)
 	case buildRootSyncName(SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRootSyncName(gitSync):

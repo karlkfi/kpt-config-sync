@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -26,11 +27,12 @@ const (
 	rootsyncName         = "root-sync"
 	rootsyncRepo         = "https://github.com/test/rootsync/csp-config-management/"
 	rootsyncDir          = "baz-corp"
+	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "6bf5948678680f4326d1aa36c59d186a"
+	rsAnnotation = "593a98c697e266272c08dc2f14fc0406"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "d1010f7cc706d73e63cb0719664dcfb1"
+	rsUpdatedAnnotation = "eb4fb3ecf6bb2d30210e4503906859f5"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -121,6 +123,26 @@ func reconcilerContainer(name string, containerConfigMap map[string][]configMapR
 		container = append(container, *cntr)
 	}
 	return container
+}
+
+func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client, *RootSyncReconciler) {
+	t.Helper()
+	s := runtime.NewScheme()
+	if err := corev1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := appsv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+
+	fakeClient := syncerFake.NewClient(t, s, objs...)
+	testReconciler := NewRootSyncReconciler(
+		rootsyncCluster,
+		fakeClient,
+		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
+		s,
+	)
+	return fakeClient, testReconciler
 }
 
 func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
@@ -215,9 +237,12 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 		},
 	}
 
+	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	_, testReconciler := setupRootReconciler(t, rsResource)
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
+			_, err := testReconciler.mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -323,22 +348,9 @@ func TestRootSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	s := runtime.NewScheme()
-	if err := corev1.AddToScheme(s); err != nil {
-		t.Fatal(err)
-	}
-	if err := appsv1.AddToScheme(s); err != nil {
-		t.Fatal(err)
-	}
-
-	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
-	fakeClient := syncerFake.NewClient(t, s, rsResource, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
-	testReconciler := NewRootSyncReconciler(
-		fakeClient,
-		controllerruntime.Log.WithName("controllers").WithName("RootSync"),
-		s,
-	)
+	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	fakeClient, testReconciler := setupRootReconciler(t, rsResource, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
 	// Test creating Configmaps and Deployment resources.
 	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
@@ -355,7 +367,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			buildRootSyncName(reconciler),
-			reconcilerData(rootsyncDir),
+			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -406,7 +418,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			buildRootSyncName(reconciler),
-			reconcilerData(rootsyncDir),
+			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(

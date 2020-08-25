@@ -16,6 +16,10 @@ import (
 )
 
 var (
+	// Root-Repo-only flag.
+	clusterName = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"),
+		"Cluster name to use for Cluster selection")
+
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
@@ -57,7 +61,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rootSync := controllers.NewRootSyncReconciler(mgr.GetClient(),
+	rootSync := controllers.NewRootSyncReconciler(*clusterName, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
 	if err := rootSync.SetupWithManager(mgr); err != nil {
