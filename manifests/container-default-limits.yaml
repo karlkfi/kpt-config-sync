@@ -3,6 +3,8 @@ kind: LimitRange
 metadata:
   name: container-limits
   namespace: config-management-system
+  labels:
+    configmanagement.gke.io/system: "true"
 spec:
   limits:
   - defaultRequest:
