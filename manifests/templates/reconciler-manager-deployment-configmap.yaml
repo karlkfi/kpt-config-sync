@@ -11,10 +11,10 @@ data:
    apiVersion: apps/v1
    kind: Deployment
    metadata:
-     name: git-importer
+     name: reconciler
      namespace: config-management-system
      labels:
-       app: git-importer
+       app: reconciler
        configmanagement.gke.io/system: "true"
        configmanagement.gke.io/arch: "csmr"
    spec:
@@ -24,17 +24,18 @@ data:
        type: Recreate
      selector:
        matchLabels:
-         app: git-importer
+         app: reconciler
      template:
        metadata:
          labels:
-           app: git-importer
+           app: reconciler
        spec:
-         serviceAccountName: importer
+         serviceAccountName: reconciler
          containers:
-         - name: importer
+         - name: reconciler
            image: IMAGE_NAME
-           command: ["git-importer"]
+           command:
+           - /reconciler
            args:
            - "--v=0"
            - "--git-dir=/repo/root/rev"
@@ -47,30 +48,12 @@ data:
                readOnly: true
            envFrom:
              - configMapRef:
-                 name: importer
+                 name: reconciler
              - configMapRef:
                  name: cluster-name
                  optional: true
              - configMapRef:
                  name: source-format
-                 optional: true
-           resources:
-             requests:
-               cpu: "150m"
-               memory: "100Mi"
-         - name: fs-watcher
-           image: IMAGE_NAME
-           command: ["git-importer"]
-           args:
-           - "--v=0"
-           - "--watch-directory=/repo"
-           volumeMounts:
-             - name: repo
-               mountPath: /repo
-               readOnly: true
-           envFrom:
-             - configMapRef:
-                 name: importer-fs-watcher # allow user override for WATCH_PERIOD
                  optional: true
            resources:
              requests:

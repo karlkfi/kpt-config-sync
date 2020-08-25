@@ -80,7 +80,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, nil
 	}
 
-	// Overwrite git-importer pod's configmaps.
+	// Overwrite reconciler pod's configmaps.
 	configMapDataHash, err := r.upsertConfigMap(ctx, &rs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
@@ -89,7 +89,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
-	// Overwrite git-importer pod deployment.
+	// Overwrite reconciler pod deployment.
 	if err := r.upsertDeployment(ctx, &rs, configMapDataHash); err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
@@ -200,8 +200,8 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 	)
 
 	switch cm.Name {
-	case buildRepoSyncName(rs.Namespace, importer):
-		cm.Data = importerData(rs.Spec.Git.Dir)
+	case buildRepoSyncName(rs.Namespace, reconciler):
+		cm.Data = reconcilerData(rs.Spec.Git.Dir)
 	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRepoSyncName(rs.Namespace, gitSync):
@@ -280,18 +280,17 @@ func mutateRepoSyncDeployment(rs *v1.RepoSync, existing, declared *appsv1.Deploy
 	// Mutate spec.Containers to update name, configmap references and volumemounts.
 	for _, container := range templateSpec.Containers {
 		switch container.Name {
-		case importer:
+		case reconciler:
 			configmapRef := make(map[string]*bool)
-			configmapRef[buildRepoSyncName(rs.Namespace, importer)] = pointer.BoolPtr(false)
+			configmapRef[buildRepoSyncName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
 			configmapRef[buildRepoSyncName(rs.Namespace, SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRepoSyncName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
 			container.EnvFrom = envFromSources(configmapRef)
-		case fsWatcher:
 		default:
-			return errors.Errorf("unsupported Container: %q", container.Name)
+			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 		}
 		updatedContainers = append(updatedContainers, container)
 	}

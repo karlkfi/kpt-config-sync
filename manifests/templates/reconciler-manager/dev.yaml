@@ -10,7 +10,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: importer
+  name: reconciler
   namespace: config-management-system
 ---
 # TODO b/159065780 Remove once integrated with Operator actuation, since

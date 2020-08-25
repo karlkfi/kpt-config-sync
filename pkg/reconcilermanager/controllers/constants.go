@@ -17,22 +17,17 @@ const (
 
 // Configmaps Suffix.
 const (
-	importer = "importer"
-
 	SourceFormat = "source-format"
 
 	gitSync = "git-sync"
-)
 
-// fsWatcher Container Suffix.
-const (
-	fsWatcher = "fs-watcher"
+	reconciler = "reconciler"
 )
 
 // reconcilerConfigMapSuffix contains configmaps which are used to create or update
 // various configmaps required by Root Reconciler and Namespace Reconciler pods.
 var reconcilerConfigMaps = []string{
-	importer,     // Used by importer container.
-	SourceFormat, // Used by importer container.
+	SourceFormat, // Used by reconciler container.
 	gitSync,      // Used by git-sync container.
+	reconciler,   // Used by reconciler container.
 }

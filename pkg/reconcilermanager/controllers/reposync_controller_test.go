@@ -39,9 +39,9 @@ const (
 	unsupportedContainer = "abc"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "a5bae8eb8c52efd2f1648720f794c5d8"
+	nsAnnotation = "c71598667e45977113aba8f0e9f3bb20"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "bacb4d4b3958f97c957187c00cf94253"
+	nsUpdatedAnnotation = "3d104f83f8c962c4cbe6564faedc84f3"
 )
 
 func repoSync(rev string, opts ...core.MetaMutator) *v1.RepoSync {
@@ -67,11 +67,11 @@ func gitSyncConfigMap(containerName string, configmap configMapRef) map[string][
 	return result
 }
 
-func importerDeploymentWithConfigMap() map[string][]configMapRef {
+func reconcilerDeploymentWithConfigMap() map[string][]configMapRef {
 	return map[string][]configMapRef{
-		importer: {
+		reconciler: {
 			{
-				name:     importer,
+				name:     reconciler,
 				optional: pointer.BoolPtr(false),
 			},
 			{
@@ -325,9 +325,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: importer},
+						{Name: reconciler},
 						{Name: gitSync},
-						{Name: fsWatcher},
 					},
 				},
 			},
@@ -353,8 +352,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, importer),
-			importerData(reposyncDir),
+			buildRepoSyncName(reposyncReqNamespace, reconciler),
+			reconcilerData(reposyncDir),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
@@ -369,7 +368,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
-			importerDeploymentWithConfigMap(),
+			reconcilerDeploymentWithConfigMap(),
 			nsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
@@ -423,8 +422,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, importer),
-			importerData(reposyncDir),
+			buildRepoSyncName(reposyncReqNamespace, reconciler),
+			reconcilerData(reposyncDir),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
@@ -439,7 +438,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
-			importerDeploymentWithConfigMap(),
+			reconcilerDeploymentWithConfigMap(),
 			nsDeploymentUpdatedAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),

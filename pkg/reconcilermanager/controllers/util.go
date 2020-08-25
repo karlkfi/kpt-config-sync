@@ -22,7 +22,7 @@ func gitSyncData(branch, repo string) map[string]string {
 	return result
 }
 
-func importerData(policydir string) map[string]string {
+func reconcilerData(policydir string) map[string]string {
 	result := make(map[string]string)
 	result["POLICY_DIR"] = policydir
 	return result

@@ -28,9 +28,9 @@ const (
 	rootsyncDir          = "baz-corp"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "49d0d5da30e10d1759e945f1b9ed61c2"
+	rsAnnotation = "6bf5948678680f4326d1aa36c59d186a"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "d92e449392ac477b84e07e8ea88ed6c5"
+	rsUpdatedAnnotation = "d1010f7cc706d73e63cb0719664dcfb1"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -104,12 +104,12 @@ func rsDeploymentWithEnvFrom(namespace, name string,
 	result.Spec.Template.Annotations = annotation
 
 	result.Spec.Template.Spec = corev1.PodSpec{
-		Containers: importerContainer(name, containerConfigMap),
+		Containers: reconcilerContainer(name, containerConfigMap),
 	}
 	return result
 }
 
-func importerContainer(name string, containerConfigMap map[string][]configMapRef) []corev1.Container {
+func reconcilerContainer(name string, containerConfigMap map[string][]configMapRef) []corev1.Container {
 	var container []corev1.Container
 	for cntrName, cms := range containerConfigMap {
 		cntr := fake.ContainerObject(cntrName)
@@ -314,9 +314,8 @@ func TestRootSyncReconciler(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: importer},
+						{Name: reconciler},
 						{Name: gitSync},
-						{Name: fsWatcher},
 					},
 				},
 			},
@@ -355,8 +354,8 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(importer),
-			importerData(rootsyncDir),
+			buildRootSyncName(reconciler),
+			reconcilerData(rootsyncDir),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -371,7 +370,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rsDeploymentWithEnvFrom(
 			rootsyncReqNamespace,
 			"root-reconciler",
-			importerDeploymentWithConfigMap(),
+			reconcilerDeploymentWithConfigMap(),
 			rsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
@@ -406,8 +405,8 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(importer),
-			importerData(rootsyncDir),
+			buildRootSyncName(reconciler),
+			reconcilerData(rootsyncDir),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -422,7 +421,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			"root-reconciler",
-			importerDeploymentWithConfigMap(),
+			reconcilerDeploymentWithConfigMap(),
 			rsDeploymentUpdatedAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),

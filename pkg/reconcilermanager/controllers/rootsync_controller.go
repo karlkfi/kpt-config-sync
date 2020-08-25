@@ -62,13 +62,13 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 	log.V(2).Info("secret found, proceeding with installation")
 
-	// Overwrite git-importer pod's configmaps.
+	// Overwrite reconciler pod's configmaps.
 	configMapDataHash, err := r.upsertConfigMap(ctx, rootSync)
 	if err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
-	// Overwrite git-importer pod deployment.
+	// Overwrite reconciler pod deployment.
 	if err := r.upsertDeployment(ctx, rootSync, configMapDataHash); err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
@@ -171,8 +171,8 @@ func mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]s
 	)
 
 	switch cm.Name {
-	case buildRootSyncName(importer):
-		cm.Data = importerData(rs.Spec.Git.Dir)
+	case buildRootSyncName(reconciler):
+		cm.Data = reconcilerData(rs.Spec.Git.Dir)
 	case buildRootSyncName(SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRootSyncName(gitSync):
@@ -246,18 +246,17 @@ func mutateRootSyncDeployment(rs v1.RootSync, existing, declared *appsv1.Deploym
 	// ConfigMap references are updated for the respective containers.
 	for _, container := range templateSpec.Containers {
 		switch container.Name {
-		case importer:
+		case reconciler:
 			configmapRef := make(map[string]*bool)
-			configmapRef[buildRootSyncName(importer)] = pointer.BoolPtr(false)
+			configmapRef[buildRootSyncName(reconciler)] = pointer.BoolPtr(false)
 			configmapRef[buildRootSyncName(SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRootSyncName(gitSync)] = pointer.BoolPtr(false)
 			container.EnvFrom = envFromSources(configmapRef)
-		case fsWatcher:
 		default:
-			return errors.Errorf("unsupported Container: %q", container.Name)
+			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 		}
 		updatedContainers = append(updatedContainers, container)
 	}
