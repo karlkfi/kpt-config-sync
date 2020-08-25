@@ -8,7 +8,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/configsync"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -144,14 +143,14 @@ func Run(ctx context.Context, opts Options) {
 
 	// Start the Remediator.
 	stopChan := signals.SetupSignalHandler()
-	rem.Start(configsync.StoppableContext(ctx, stopChan))
+	rem.Start(stoppableContext(ctx, stopChan))
 	// Start the Applier.
 	a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
 	// Start the Parser.
 	// This will not return until:
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
-	parser.Run(configsync.StoppableContext(ctx, stopChan))
+	parser.Run(stoppableContext(ctx, stopChan))
 }
 
 // updateRepoSyncStatus loops (with exponential backoff) until it is able to
@@ -172,4 +171,15 @@ func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace strin
 			cancel()
 		}
 	}, time.Second)
+}
+
+// stoppableContext returns a Context that will be canceled when the given stop
+// channel is closed.
+func stoppableContext(ctx context.Context, stopChannel <-chan struct{}) context.Context {
+	stoppable, cancel := context.WithCancel(ctx)
+	go func() {
+		<-stopChannel
+		cancel()
+	}()
+	return stoppable
 }
