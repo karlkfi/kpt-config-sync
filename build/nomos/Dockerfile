@@ -16,6 +16,9 @@ COPY nomos nomos
 # License file required for on-prem release.
 COPY LICENSE LICENSE
 
+# Copy in golang-lru source (MPL licensed dependency)
+COPY golang-lru/ golang-lru/
+
 # Set up a HOME directory for non-root user
 RUN mkdir -p /nomos
 RUN chown 1000 /nomos

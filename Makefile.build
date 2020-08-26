@@ -44,6 +44,8 @@ image-nomos: build
 	@cp -r ./build/$(NOMOS_IMAGE) $(STAGING_DIR)
 	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
+        # hashicorp/golang-lru is Mozilla Public Licensed, include the source code
+	@cp -r vendor/github.com/hashicorp/golang-lru $(STAGING_DIR)/$(NOMOS_IMAGE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t $(NOMOS_TAG) \
 		$(STAGING_DIR)/$(NOMOS_IMAGE)

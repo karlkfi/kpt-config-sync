@@ -15,4 +15,10 @@ WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nonroot:nonroot
 
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+
+# Copy in golang-lru source (MPL licensed dependency)
+COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
+
 ENTRYPOINT ["/manager"]
