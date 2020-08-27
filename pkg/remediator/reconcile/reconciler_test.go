@@ -8,8 +8,8 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/policycontroller"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
+	"github.com/google/nomos/pkg/syncer/syncertest"
+	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -56,7 +56,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			name:      "delete removed object",
 			version:   "v1",
 			declared:  nil,
-			actual:    fake.ClusterRoleBindingObject(syncertesting.ManagementEnabled),
+			actual:    fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 			want:      nil,
 			wantError: nil,
 		},
@@ -64,7 +64,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		{
 			name:      "don't create unmanaged object",
 			version:   "v1",
-			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementDisabled),
+			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementDisabled),
 			actual:    nil,
 			want:      nil,
 			wantError: nil,
@@ -72,7 +72,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		{
 			name:      "don't update unmanaged object",
 			version:   "v1",
-			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementDisabled),
+			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementDisabled),
 			actual:    fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			want:      fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			wantError: nil,
@@ -89,7 +89,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		{
 			name:      "don't create, and error on bad declared management annotation",
 			version:   "v1",
-			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
+			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
 			actual:    nil,
 			want:      nil,
 			wantError: nonhierarchical.IllegalManagementAnnotationError(fake.Namespace("namespaces/foo"), ""),
@@ -97,7 +97,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 		{
 			name:      "don't update, and error on bad declared management annotation",
 			version:   "v1",
-			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
+			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
 			actual:    fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			want:      fake.ClusterRoleBindingObject(core.Label("actual-label", "bar")),
 			wantError: nonhierarchical.IllegalManagementAnnotationError(fake.Namespace("namespaces/foo"), ""),
@@ -107,7 +107,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			name:      "remove bad actual management annotation",
 			version:   "v1",
 			declared:  fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
-			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
+			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
 			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
 			wantError: nil,
 		},
@@ -115,7 +115,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			name:      "don't delete, and remove bad actual management annotation",
 			version:   "v1",
 			declared:  nil,
-			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertesting.ManagementInvalid),
+			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
 			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
 			wantError: nil,
 		},
@@ -124,28 +124,28 @@ func TestRemediator_Reconcile(t *testing.T) {
 			name:     "don't delete kube-system Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespaceSystem, syncertesting.ManagementEnabled),
+			actual:   fake.NamespaceObject(metav1.NamespaceSystem, syncertest.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespaceSystem),
 		},
 		{
 			name:     "don't delete kube-public Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespacePublic, syncertesting.ManagementEnabled),
+			actual:   fake.NamespaceObject(metav1.NamespacePublic, syncertest.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespacePublic),
 		},
 		{
 			name:     "don't delete default Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespaceDefault, syncertesting.ManagementEnabled),
+			actual:   fake.NamespaceObject(metav1.NamespaceDefault, syncertest.ManagementEnabled),
 			want:     fake.NamespaceObject(metav1.NamespaceDefault),
 		},
 		{
 			name:     "don't delete gatekeeper-system Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(policycontroller.NamespaceSystem, syncertesting.ManagementEnabled),
+			actual:   fake.NamespaceObject(policycontroller.NamespaceSystem, syncertest.ManagementEnabled),
 			want:     fake.NamespaceObject(policycontroller.NamespaceSystem),
 		},
 		// Version difference paths.

@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/testing/parsertest"
@@ -462,7 +463,7 @@ func TestParserVetErrors(t *testing.T) {
 		),
 		parsertest.Failure("Managed resource in unmanaged Namespace",
 			nonhierarchical.ManagedResourceInUnmanagedNamespaceErrorCode,
-			fake.Namespace("namespaces/foo", core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)),
+			fake.Namespace("namespaces/foo", syncertest.ManagementDisabled),
 			fake.Role(core.Namespace("foo")),
 		),
 	)

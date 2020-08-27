@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/testing/fake"
+	"github.com/google/nomos/pkg/syncer/syncertest/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

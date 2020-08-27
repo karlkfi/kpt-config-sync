@@ -18,7 +18,7 @@ type watcherOptions struct {
 	config     *rest.Config
 	resources  *declared.Resources
 	queue      *queue.ObjectQueue
-	reconciler string
+	reconciler declared.Scope
 }
 
 // createWatcherFunc is the type of functions to create watchers

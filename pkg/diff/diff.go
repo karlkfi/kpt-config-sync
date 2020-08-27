@@ -75,7 +75,8 @@ func (d Diff) Type() Type {
 						"missing resource manager annotation").BuildWithResources(d.Declared))
 				}
 
-				if !declared.CanManage(manager, d.Actual) {
+				// TODO(b/166780454): Use the scope of the caller, or validate the scope of the declaration.
+				if !CanManage(declared.Scope(manager), d.Actual) {
 					// The declared object's manager can't manage the resource as it exists
 					// on the cluster.
 					return ManagementConflict

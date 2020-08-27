@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/remediator/queue"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -26,8 +27,8 @@ func TestWrappedWatcher(t *testing.T) {
 	deployment2 := fake.DeploymentObject(core.Name("world"))
 	deployment3 := fake.DeploymentObject(core.Name("nomes"))
 
-	managedDeployment := fake.DeploymentObject(core.Name("not-declared"), core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
-	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), core.Annotation(v1.ResourceManagerKey, declared.RootReconciler))
+	managedDeployment := fake.DeploymentObject(core.Name("not-declared"), syncertest.ManagementEnabled)
+	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), difftest.ManagedByRoot)
 
 	testCases := []struct {
 		name     string

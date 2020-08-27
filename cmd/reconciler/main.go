@@ -17,36 +17,47 @@ import (
 )
 
 var (
+	scope = flag.String("scope", os.Getenv("SCOPE"),
+		"Scope of the reconciler, either a namespace or ':root'.")
+
+	// Git configuration flags. These values originate in the ConfigManagement and
+	//configure git-sync to clone the desired repository/reference we want.
+	gitRepo = flag.String("git-repo", os.Getenv("GIT_REPO"),
+		"The URL of the git repo being synced.")
+	gitRef = flag.String("git-ref", os.Getenv("GIT_REF"),
+		"The git reference we're syncing to in the git repo. Usually a branch, but could be a specific commit.")
+	policyDir = flag.String("policy-dir", os.Getenv("POLICY_DIR"),
+		"Relative path of the root policy directory within the repo.")
+
+	// Performance tuning flags.
+	gitDir = flag.String(flags.gitDir, "/repo/rev",
+		"Absolute path in the container running the Reconciler to the clone of the git repo.")
 	fightDetectionThreshold = flag.Float64(
-		"fight_detection_threshold", 5.0,
+		"fight-detection-threshold", 5.0,
 		"The rate of updates per minute to an API Resource at which the Syncer logs warnings about too many updates to the resource.")
+	resyncPeriod = flag.Duration("resync-period", time.Hour,
+		"Period of time between forced re-syncs from Git (even without a new commit).")
+	workers = flag.Int("workers", 1,
+		"Number of concurrent remediator workers to run at once.")
+	gitPollingPeriod = flag.Duration("git-polling-period", 5*time.Second,
+		"Period of time between checking the filessystem for udpates to the local Git repository.")
 
-	numWorkers = flag.Int("num_workers", 1, "Number of concurrent remediator workers to run at once.")
-
-	reconcilerScope = flag.String("reconciler-scope", os.Getenv("RECONCILER_SCOPE"), "Scope of the reconciler (either a namespace or ':root').")
-
-	gitRef = flag.String("git-ref", os.Getenv("GIT_REF"), "The git ref of the repo being synced.")
-
-	gitRepo = flag.String("git-repo", os.Getenv("GIT_REPO"), "The git repo being synced.")
-
-	resyncPeriod = flag.Duration("resync_period", time.Hour, "Period of time between forced re-syncs from Git (even without a new commit).")
-
-	gitDir = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
-
-	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
-
-	gitPollingPeriod = flag.Duration("git-polling-period", 5*time.Second, "Period of time between checking the filessystem for udpates to the local Git repository.")
-
-	// Root-Repo-only flags. If set for Namespace repos, has no effect.
-	clusterName = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"), "Cluster name to use for Cluster selection")
-
-	sourceFormat = flag.String("source-format", os.Getenv(filesystem.SourceFormatKey), "The format of the repository.")
+	// Root-Repo-only flags. If set for a Namespace-scoped Reconciler, causes the Reconciler to fail immediately.
+	clusterName = flag.String(flags.clusterName, os.Getenv("CLUSTER_NAME"),
+		"Cluster name to use for Cluster selection")
+	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
+		"The format of the repository.")
 )
 
-const (
-	clusterNameFlag  = "cluster-name"
-	sourceFormatFlag = "source-format"
-)
+var flags = struct{
+	gitDir string
+	clusterName string
+	sourceFormat string
+} {
+	gitDir: "git-dir",
+	clusterName: "cluster-name",
+	sourceFormat: "source-format",
+}
 
 func isFlagPassed(name string) bool {
 	passed := false
@@ -64,26 +75,37 @@ func main() {
 
 	go service.ServeMetrics()
 
+	relPolicyDir := cmpath.RelativeOS(*policyDir)
+	absGitDir, err := cmpath.AbsoluteOS(*gitDir)
+	if err != nil {
+		glog.Fatalf("%s must be an absolute path: %v", flags.gitDir, err)
+	}
+
+	err = declared.ValidateScope(*scope)
+	if err != nil {
+		glog.Fatal(err)
+	}
+
 	opts := reconciler.Options{
 		FightDetectionThreshold:  *fightDetectionThreshold,
-		NumWorkers:               *numWorkers,
-		ReconcilerScope:          *reconcilerScope,
+		NumWorkers:               *workers,
+		ReconcilerScope:          declared.Scope(*scope),
 		ApplierResyncPeriod:      *resyncPeriod,
 		GitPollingFrequency:      *gitPollingPeriod,
-		GitRoot:                  *gitDir,
+		GitRoot:                  absGitDir,
 		GitRef:                   *gitRef,
 		GitRepo:                  *gitRepo,
-		PolicyDir:                cmpath.RelativeOS(*policyDirRelative),
+		PolicyDir:                relPolicyDir,
 		DiscoveryInterfaceGetter: importer.DefaultCLIOptions,
 	}
-	if *reconcilerScope == declared.RootReconciler {
+	if declared.Scope(*scope) == declared.RootReconciler {
 		opts.RootOptions = &reconciler.RootOptions{
 			ClusterName:  *clusterName,
 			SourceFormat: filesystem.SourceFormat(*sourceFormat),
 		}
-	} else if isFlagPassed(clusterNameFlag) || isFlagPassed(sourceFormatFlag) {
+	} else if isFlagPassed(flags.clusterName) || isFlagPassed(flags.sourceFormat) {
 		glog.Fatalf("The %s and %s flags must not be passed to a Namespace reconciler",
-			clusterNameFlag, sourceFormatFlag)
+			flags.clusterName, flags.sourceFormat)
 	}
 	reconciler.Run(context.Background(), opts)
 }

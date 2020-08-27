@@ -11,8 +11,8 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	testingfake "github.com/google/nomos/pkg/syncer/testing/fake"
+	"github.com/google/nomos/pkg/syncer/syncertest"
+	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +48,7 @@ func TestApply(t *testing.T) {
 				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Event{
 				{"Update", testNs1},
@@ -57,11 +57,11 @@ func TestApply(t *testing.T) {
 		{
 			name: "No-Op - if the resource has the configManagement disabled.",
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled, difftest.ManagedByRoot),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled, difftest.ManagedByRoot),
 				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			// testNs1 is not touched.
 			want: []Event{{"Update", testNs2}},
@@ -72,7 +72,7 @@ func TestApply(t *testing.T) {
 				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Event{{"Update", testNs1}},
 		},
@@ -82,8 +82,8 @@ func TestApply(t *testing.T) {
 				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
-				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Event{
 				{"Delete", testNs2},
@@ -97,7 +97,7 @@ func TestApply(t *testing.T) {
 				fake.Role(core.Name("admin"), difftest.ManagedByRoot),
 			},
 			actual: []ast.FileObject{
-				fake.Role(core.Name("admin"), syncertesting.ManagementEnabled, difftest.ManagedByRoot),
+				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			},
 			want: []Event{
 				{"Update", "admin"}},
@@ -108,7 +108,7 @@ func TestApply(t *testing.T) {
 				fake.Role(core.Name("admin"), difftest.ManagedBy("shipping")),
 			},
 			actual: []ast.FileObject{
-				fake.Role(core.Name("admin"), syncertesting.ManagementEnabled, difftest.ManagedByRoot),
+				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			},
 			wantErr: ManagementConflictError(fake.Role()),
 		},
@@ -168,7 +168,7 @@ func TestRefresh(t *testing.T) {
 		{
 			name: "No-Op - if the declared resource is management disabled changed.",
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementDisabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
 			},
 			actual: []ast.FileObject{},
 			want:   []Event{},
@@ -179,7 +179,7 @@ func TestRefresh(t *testing.T) {
 				fake.Namespace("namespace/" + testNs1),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Event{{"Update", testNs1}},
 		},
@@ -189,8 +189,8 @@ func TestRefresh(t *testing.T) {
 				fake.Namespace("namespace/" + testNs1),
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertesting.ManagementEnabled),
-				fake.Namespace("namespace/"+testNs2, syncertesting.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Event{{"Delete", testNs2}},
 		},

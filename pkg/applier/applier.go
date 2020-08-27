@@ -32,7 +32,7 @@ type Applier struct {
 	// by root reconcile process or namespace reconcile process.
 	listOptions []client.ListOption
 	// scope is the scope of the applier (eg root or a namespace).
-	scope string
+	scope declared.Scope
 	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
 	mux sync.Mutex
 }
@@ -46,7 +46,7 @@ type Interface interface {
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(c client.Client, applier syncerreconcile.Applier, namespace string) *Applier {
+func NewNamespaceApplier(c client.Client, applier syncerreconcile.Applier, namespace declared.Scope) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	opts := []client.ListOption{
 		client.InNamespace(namespace),

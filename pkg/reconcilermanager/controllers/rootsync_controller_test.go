@@ -14,7 +14,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerFake "github.com/google/nomos/pkg/syncer/testing/fake"
+	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	controllerruntime "sigs.k8s.io/controller-runtime"

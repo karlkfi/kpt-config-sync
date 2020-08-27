@@ -40,8 +40,8 @@ var _ Interface = &Remediator{}
 //
 // It is safe for decls to be modified after they have been passed into the
 // Remediator.
-func New(reconciler string, cfg *rest.Config, applier syncerreconcile.Applier, decls *declared.Resources, numWorkers int) (*Remediator, error) {
-	q := queue.NewNamed(reconciler)
+func New(reconciler declared.Scope, cfg *rest.Config, applier syncerreconcile.Applier, decls *declared.Resources, numWorkers int) (*Remediator, error) {
+	q := queue.NewNamed(string(reconciler))
 	workers := make([]*reconcile.Worker, numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		workers[i] = reconcile.NewWorker(applier, q, decls)

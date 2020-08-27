@@ -8,8 +8,8 @@ import (
 
 // ManagedBy adds the annotation that a resource is managed by a particular
 // Namespace's reconciler.
-func ManagedBy(manager string) core.MetaMutator {
-	return core.Annotation(v1.ResourceManagerKey, manager)
+func ManagedBy(manager declared.Scope) core.MetaMutator {
+	return core.Annotation(v1.ResourceManagerKey, string(manager))
 }
 
 // ManagedByRoot indicates the resource is managed by the Root reconciler.

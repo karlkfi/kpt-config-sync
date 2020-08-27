@@ -12,7 +12,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerFake "github.com/google/nomos/pkg/syncer/testing/fake"
+	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

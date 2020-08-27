@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/reposync"
@@ -17,7 +18,7 @@ import (
 
 // NewNamespaceParser creates a new runnable parser for parsing a Namespace repo.
 func NewNamespaceParser(
-	scope string,
+	scope declared.Scope,
 	fileReader filesystem.Reader,
 	c client.Client,
 	pollingFrequency time.Duration,
@@ -49,7 +50,7 @@ type namespace struct {
 	// scope is the name of the Namespace this parser is for.
 	// It is an error for this parser's repository to contain resources outside of
 	// this Namespace.
-	scope string
+	scope declared.Scope
 }
 
 // Run implements Runnable.

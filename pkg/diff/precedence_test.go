@@ -1,36 +1,38 @@
-package declared
+package diff
 
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff/difftest"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestCanManage(t *testing.T) {
 	testCases := []struct {
 		name       string
-		reconciler string
+		reconciler declared.Scope
 		object     core.Object
 		want       bool
 	}{
 		{
 			"Root can manage unmanaged object",
-			RootReconciler,
+			declared.RootReconciler,
 			fake.DeploymentObject(),
 			true,
 		},
 		{
 			"Root can manage other-managed object",
-			RootReconciler,
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled), core.Annotation(v1.ResourceManagerKey, "foo")),
+			declared.RootReconciler,
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
 			true,
 		},
 		{
 			"Root can manage self-managed object",
-			RootReconciler,
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled), core.Annotation(v1.ResourceManagerKey, RootReconciler)),
+			declared.RootReconciler,
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			true,
 		},
 		{
@@ -42,25 +44,25 @@ func TestCanManage(t *testing.T) {
 		{
 			"Non-root can manage self-managed object",
 			"foo",
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled), core.Annotation(v1.ResourceManagerKey, "foo")),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
 			true,
 		},
 		{
 			"Non-root can manage other-managed object",
 			"foo",
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled), core.Annotation(v1.ResourceManagerKey, "bar")),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedBy("foo")),
 			true,
 		},
 		{
 			"Non-root can NOT manage root-managed object",
 			"foo",
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled), core.Annotation(v1.ResourceManagerKey, RootReconciler)),
+			fake.DeploymentObject(syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			false,
 		},
 		{
 			"Non-root can manage seemingly root-managed object",
 			"foo",
-			fake.DeploymentObject(core.Annotation(v1.ResourceManagerKey, RootReconciler)),
+			fake.DeploymentObject(difftest.ManagedByRoot),
 			true,
 		},
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/remediator/queue"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -25,8 +25,8 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				fake.ClusterRoleObject(core.Label("second", "two")),
 			},
 			toProcess: []core.Object{
-				fake.ClusterRoleBindingObject(syncertesting.ManagementEnabled),
-				fake.ClusterRoleObject(syncertesting.ManagementEnabled),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
 			want: []runtime.Object{
 				// TODO(b/162547054): Figure out why the reconciler is stripping away labels and annotations.
@@ -38,8 +38,8 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			name:     "delete undeclared objects",
 			declared: []core.Object{},
 			toProcess: []core.Object{
-				fake.ClusterRoleBindingObject(syncertesting.ManagementEnabled),
-				fake.ClusterRoleObject(syncertesting.ManagementEnabled),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
 			want: []runtime.Object{},
 		},

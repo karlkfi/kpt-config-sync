@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	nht "github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical/nonhierarchicaltest"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -17,12 +18,12 @@ func TestNewManagedAnnotationValidator(t *testing.T) {
 		),
 		nht.Pass("disabled management passes",
 			fake.Role(
-				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
+				syncertest.ManagementDisabled,
 			),
 		),
 		nht.Fail("enabled management fails",
 			fake.Role(
-				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				syncertest.ManagementEnabled,
 			),
 		),
 		nht.Fail("invalid management fails",

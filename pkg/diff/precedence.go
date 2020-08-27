@@ -1,35 +1,33 @@
-package declared
+package diff
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/syncer/differ"
 )
 
-// RootReconciler is a special constant for a reconciler which is running as the
-// "root reconciler" (vs a namespace reconciler).
-const RootReconciler = ":root"
-
 // CanManage returns true if the given reconciler is allowed to manage the given
 // resource.
-func CanManage(reconciler string, obj core.LabeledAndAnnotated) bool {
-	if reconciler == RootReconciler {
+func CanManage(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
+	if reconciler == declared.RootReconciler {
 		// The root reconciler can always manage any resource.
 		return true
 	}
-	annos := obj.GetAnnotations()
-	if annos == nil {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
 		// If the object somehow has no annotations, it is unmanaged and therefore
 		// can be managed.
 		return true
 	}
-	manager, ok := annos[v1.ResourceManagerKey]
+	// TODO(b/166780454): Validate the resource's current Scope.
+	manager, ok := annotations[v1.ResourceManagerKey]
 	if !ok || !differ.ManagementEnabled(obj) {
 		// Any reconciler can manage any unmanaged resource.
 		return true
 	}
 	switch manager {
-	case RootReconciler:
+	case string(declared.RootReconciler):
 		// Only the root reconciler can manage its own resources.
 		return false
 	default:

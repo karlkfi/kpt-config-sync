@@ -8,8 +8,8 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
-	syncertesting "github.com/google/nomos/pkg/syncer/testing"
-	"github.com/google/nomos/pkg/syncer/testing/fake"
+	"github.com/google/nomos/pkg/syncer/syncertest"
+	"github.com/google/nomos/pkg/syncer/syncertest/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,7 +134,7 @@ func TestReconcile(t *testing.T) {
 				clientFactory: func() (client.Client, error) {
 					return fakeClient, nil
 				},
-				now: syncertesting.Now,
+				now: syncertest.Now,
 			}
 
 			_, err := testReconciler.Reconcile(reconcile.Request{

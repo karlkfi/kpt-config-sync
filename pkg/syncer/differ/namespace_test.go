@@ -7,6 +7,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,8 +24,7 @@ func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
 }
 
 var (
-	enableManaged     = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-	disableManaged    = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	disableManaged    = syncertest.ManagementDisabled
 	managementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
 	preventDeletion   = core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)
 )
@@ -66,7 +66,7 @@ func TestNamespaceDiffType(t *testing.T) {
 		{
 			name:     "in both, management disabled unmanage",
 			declared: namespaceConfig(disableManaged),
-			actual:   fake.NamespaceObject("foo", enableManaged),
+			actual:   fake.NamespaceObject("foo", syncertest.ManagementEnabled),
 
 			expectType: Unmanage,
 		},
@@ -78,19 +78,19 @@ func TestNamespaceDiffType(t *testing.T) {
 		},
 		{
 			name:       "if not in repo but managed in cluster, noop",
-			actual:     fake.NamespaceObject("foo", enableManaged),
+			actual:     fake.NamespaceObject("foo", syncertest.ManagementEnabled),
 			expectType: NoOp,
 		},
 		{
 			name:       "delete",
 			declared:   markForDeletion(namespaceConfig()),
-			actual:     fake.NamespaceObject("foo", enableManaged),
+			actual:     fake.NamespaceObject("foo", syncertest.ManagementEnabled),
 			expectType: Delete,
 		},
 		{
 			name:       "marked for deletion, unmanage if deletion: prevent",
 			declared:   markForDeletion(namespaceConfig()),
-			actual:     fake.NamespaceObject("foo", enableManaged, preventDeletion),
+			actual:     fake.NamespaceObject("foo", syncertest.ManagementEnabled, preventDeletion),
 			expectType: UnmanageNamespace,
 		},
 		{

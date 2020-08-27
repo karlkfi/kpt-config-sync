@@ -14,7 +14,7 @@ import (
 // updates declared resources and get GVKs.
 type Manager struct {
 	// reconciler is the name of the reconciler process running the Manager.
-	reconciler string
+	reconciler declared.Scope
 
 	// cfg is the rest config used to talk to apiserver.
 	cfg *rest.Config
@@ -59,7 +59,7 @@ func DefaultOptions(cfg *rest.Config) (*Options, error) {
 }
 
 // NewManager starts a new watch manager
-func NewManager(reconciler string, cfg *rest.Config, q *queue.ObjectQueue, decls *declared.Resources, options *Options) (*Manager, error) {
+func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueue, decls *declared.Resources, options *Options) (*Manager, error) {
 	if options == nil {
 		var err error
 		options, err = DefaultOptions(cfg)

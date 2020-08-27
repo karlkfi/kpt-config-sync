@@ -37,7 +37,10 @@ type Options struct {
 	// ReconcilerScope is the scope of resources which the reconciler will manage.
 	// Currently this can either be a namespace or the root scope which allows a
 	// cluster admin to manage the entire cluster.
-	ReconcilerScope string
+	//
+	// At most one Reconciler may have a given value for Scope on a cluster. More
+	// than one results in undefined behavior.
+	ReconcilerScope declared.Scope
 	// ApplierResyncPeriod is the period of time between forced re-sync runs of
 	// the Applier. At the end of each period, the Applier will re-apply its
 	// current set of declared resources to the cluster.
@@ -47,7 +50,7 @@ type Options struct {
 	GitPollingFrequency time.Duration
 	// GitRoot is the absolute path to the Git repository.
 	// Usually contains a symlink that must be resolved every time before parsing.
-	GitRoot string
+	GitRoot cmpath.Absolute
 	// GitRef is the git revision being synced.
 	GitRef string
 	// GitRepo is the git repo being synced.
@@ -121,20 +124,16 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	// Configure the Parser.
-	gitRoot, err := cmpath.AbsoluteOS(opts.GitRoot)
-	if err != nil {
-		glog.Fatalf("Validating repository root path %q: %v", opts.GitRoot, err)
-	}
 	var parser parse.Runnable
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, mgr.GetClient(),
-			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, mgr.GetClient(),
-			opts.GitPollingFrequency, gitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 	}
 
 	// Right before we start everything, mark the RepoSync as no longer
@@ -155,7 +154,7 @@ func Run(ctx context.Context, opts Options) {
 
 // updateRepoSyncStatus loops (with exponential backoff) until it is able to
 // remove the Reconciling status from the reconciler's RepoSync.
-func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace string) {
+func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace declared.Scope) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
 		var rs v1.RepoSync

@@ -4,6 +4,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"k8s.io/apimachinery/pkg/watch"
@@ -23,7 +24,7 @@ type filteredWatcher struct {
 	base       watch.Interface
 	resources  *declared.Resources
 	queue      *queue.ObjectQueue
-	reconciler string
+	reconciler declared.Scope
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -79,7 +80,7 @@ func (w *filteredWatcher) Run() {
 // shouldProcess returns true if the given object should be enqueued by the
 // watcher for processing.
 func (w *filteredWatcher) shouldProcess(object core.Object) bool {
-	if !declared.CanManage(w.reconciler, object) {
+	if !diff.CanManage(w.reconciler, object) {
 		return false
 	}
 
