@@ -51,7 +51,6 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 
 	var rs v1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
-		log.Info("unable to fetch RepoSync", "error", err)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -88,6 +87,14 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		reposync.SetStalled(&rs, "ConfigMap", err)
 		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
+	}
+
+	// Overwrite reconciler pod ServiceAccount.
+	if err := r.upsertServiceAccount(ctx, &rs); err != nil {
+		log.Error(err, "Failed to create/update ServiceAccount")
+		reposync.SetStalled(&rs, "ServiceAccount", err)
+		_ = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
 	// Overwrite reconciler pod deployment.
@@ -154,7 +161,9 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSyn
 		if err != nil {
 			return nil, err
 		}
-		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
+		if op != controllerutil.OperationResultNone {
+			r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
+		}
 	}
 
 	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
@@ -163,7 +172,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSyn
 	return hash(configMapData)
 }
 
-// validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
+// validate guarantees the RepoSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
 func (r *RepoSyncReconciler) validate(rs *v1.RepoSync) error {
 	if rs.Name != reposync.Name {
@@ -214,6 +223,34 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 	return cm.Data, nil
 }
 
+func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.RepoSync) error {
+	var childSA corev1.ServiceAccount
+	childSA.Name = buildRepoSyncName(rs.Namespace)
+	childSA.Namespace = v1.NSConfigManagementSystem
+
+	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
+		return mutateRepoSyncServiceAccount(rs, &childSA)
+	})
+	if err != nil {
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
+func mutateRepoSyncServiceAccount(rs *v1.RepoSync, sa *corev1.ServiceAccount) error {
+	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
+	// the corresponding ServiceAccount is also deleted.
+	sa.OwnerReferences = ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+	return nil
+}
+
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
@@ -242,7 +279,9 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSy
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(rs, "Deployment", msg)
 	}
-	r.log.Info("Deployment successfully reconciled", executedOperation, op)
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+	}
 	return nil
 }
 
@@ -263,6 +302,9 @@ func mutateRepoSyncDeployment(rs *v1.RepoSync, existing, declared *appsv1.Deploy
 	core.SetAnnotation(&existing.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 	templateSpec := &existing.Spec.Template.Spec
+
+	// Update ServiceAccountName. eg. ns-reconciler-<namespace>
+	templateSpec.ServiceAccountName = buildRepoSyncName(rs.Namespace)
 
 	var updatedVolumes []corev1.Volume
 	// Mutate secret.secretname to secret reference specified in RepoSync CR.

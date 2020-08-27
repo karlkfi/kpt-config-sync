@@ -7,12 +7,6 @@ kind: Namespace
 metadata:
   name: bookinfo
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: reconciler
-  namespace: config-management-system
----
 # TODO b/159065780 Remove once integrated with Operator actuation, since
 # operator will create the namespace config-management-system.
 apiVersion: v1

@@ -354,3 +354,12 @@ func KptFileObject(opts ...core.MetaMutator) *kptfile.Kptfile {
 
 	return result
 }
+
+// ServiceAccountObject returns an initialized ServiceAccount.
+func ServiceAccountObject(name string, opts ...core.MetaMutator) *corev1.ServiceAccount {
+	result := &corev1.ServiceAccount{TypeMeta: ToTypeMeta(kinds.ServiceAccount())}
+	mutate(result, core.Name(name))
+	mutate(result, opts...)
+
+	return result
+}

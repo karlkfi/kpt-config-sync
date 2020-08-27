@@ -192,6 +192,11 @@ func Secret() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Secret")
 }
 
+// ServiceAccount returns the canonical ServiceAccount GroupVersionKind.
+func ServiceAccount() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("ServiceAccount")
+}
+
 // KptFile returns the canonical Kptfile GroupVersionKind.
 func KptFile() schema.GroupVersionKind {
 	return kptfile.SchemeGroupVersion.WithKind(kptfile.Kind)

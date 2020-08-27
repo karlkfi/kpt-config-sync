@@ -17,6 +17,7 @@ import (
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -50,7 +51,6 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 
 	var rootSync v1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rootSync); err != nil {
-		log.Info("unable to fetch RootSync", "error", err)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -69,6 +69,11 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	configMapDataHash, err := r.upsertConfigMap(ctx, rootSync)
 	if err != nil {
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
+	}
+
+	// Overwrite reconciler pod ServiceAccount.
+	if err := r.upsertServiceAccount(ctx, &rootSync); err != nil {
+		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
 	// Overwrite reconciler pod deployment.
@@ -127,7 +132,9 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 		if err != nil {
 			return nil, err
 		}
-		r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
+		if op != controllerutil.OperationResultNone {
+			r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
+		}
 	}
 
 	// hash return 128 bit FNV-1 hash of data of all the configmaps created by the controller.
@@ -186,6 +193,34 @@ func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.
 	return cm.Data, nil
 }
 
+func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.RootSync) error {
+	var childSA corev1.ServiceAccount
+	childSA.Name = buildRootSyncName()
+	childSA.Namespace = v1.NSConfigManagementSystem
+
+	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
+		return mutateRootSyncServiceAccount(rs, &childSA)
+	})
+	if err != nil {
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
+func mutateRootSyncServiceAccount(rs *v1.RootSync, sa *corev1.ServiceAccount) error {
+	// OwnerReferences, so that when the RootSync CustomResource is deleted,
+	// the corresponding ServiceAccount is also deleted.
+	sa.OwnerReferences = ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+	return nil
+}
+
 func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
@@ -208,7 +243,9 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	if err != nil {
 		return err
 	}
-	r.log.Info("Deployment successfully reconciled", executedOperation, op)
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+	}
 	return nil
 }
 
@@ -230,11 +267,14 @@ func mutateRootSyncDeployment(rs v1.RootSync, existing, declared *appsv1.Deploym
 
 	templateSpec := &existing.Spec.Template.Spec
 
+	// Update ServiceAccountName. eg. root-reconciler.
+	templateSpec.ServiceAccountName = buildRootSyncName()
+
 	var updatedVolumes []corev1.Volume
-	// Mutate secret.secretname to secret reference specified in RepoSync CR.
+	// Mutate secret.secretname to secret reference specified in RootSync CR.
 	// Secret reference is the name of the secret used by git-sync container to
 	// authenticate with the git repository using the authorization method specified
-	// in the RepoSync CR.
+	// in the RootSync CR.
 	for _, volume := range templateSpec.Volumes {
 		if volume.Name == gitCredentialVolume {
 			volume.Secret.SecretName = rs.Spec.SecretRef.Name

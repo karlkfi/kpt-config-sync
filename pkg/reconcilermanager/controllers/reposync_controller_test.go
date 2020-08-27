@@ -122,7 +122,8 @@ func nsDeploymentWithEnvFrom(namespace, name string,
 		container = append(container, *cntr)
 	}
 	result.Spec.Template.Spec = corev1.PodSpec{
-		Containers: container,
+		ServiceAccountName: buildRepoSyncName(name),
+		Containers:         container,
 	}
 	return result
 }
@@ -364,6 +365,12 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 	}
 
+	wantServiceAccount := fake.ServiceAccountObject(
+		buildRepoSyncName(reposyncReqNamespace),
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+	)
+
 	wantDeployment := []*appsv1.Deployment{
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
@@ -376,13 +383,18 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("diff %s", diff)
+			t.Errorf("ConfigMap diff %s", diff)
 		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("Service Account diff %s", diff)
 	}
 
 	// cmpDeployment compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
-	t.Log("ConfigMap and Deployement successfully created")
+	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
 
 	// Verify status updates.
 	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1.RepoSync).Status
@@ -448,7 +460,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("diff %s", diff)
+			t.Errorf("Config Map diff %s", diff)
 		}
 	}
 
@@ -469,7 +481,17 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 	for _, de := range want {
 		actual := fakeClient.Objects[core.IDOf(de)]
 		a := actual.(*appsv1.Deployment)
-		cmpConfigMapAnnotations(t, de.Spec.Template.Annotations, a.Spec.Template.Annotations)
+		// Compare Annotations.
+		if !reflect.DeepEqual(de.Spec.Template.Annotations, a.Spec.Template.Annotations) {
+			t.Errorf("Unexpected Annotation found, got: %s,want: %s",
+				a.Spec.Template.Annotations, de.Spec.Template.Annotations)
+		}
+		// Compare ServiceAccountName.
+		if de.Spec.Template.Spec.ServiceAccountName != a.Spec.Template.Spec.ServiceAccountName {
+			t.Errorf("Unexpected ServiceAccountName found,got: %s,want: %s",
+				a.Spec.Template.Spec.ServiceAccountName, de.Spec.Template.Spec.ServiceAccountName)
+		}
+		// Compare Containers.
 		for _, i := range de.Spec.Template.Spec.Containers {
 			for _, j := range a.Spec.Template.Spec.Containers {
 				if i.Name == j.Name {
@@ -481,13 +503,6 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 				}
 			}
 		}
-	}
-}
-
-func cmpConfigMapAnnotations(t *testing.T, want, got map[string]string) {
-	t.Helper()
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Unexpected Annotation found, got: %s,want: %s", got, want)
 	}
 }
 

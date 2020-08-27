@@ -106,7 +106,8 @@ func rsDeploymentWithEnvFrom(namespace, name string,
 	result.Spec.Template.Annotations = annotation
 
 	result.Spec.Template.Spec = corev1.PodSpec{
-		Containers: reconcilerContainer(name, containerConfigMap),
+		ServiceAccountName: buildRootSyncName(),
+		Containers:         reconcilerContainer(name, containerConfigMap),
 	}
 	return result
 }
@@ -378,6 +379,12 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 	}
 
+	wantServiceAccount := fake.ServiceAccountObject(
+		buildRootSyncName(),
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+	)
+
 	wantDeployment := []*appsv1.Deployment{
 		rsDeploymentWithEnvFrom(
 			rootsyncReqNamespace,
@@ -388,20 +395,26 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 	}
 
+	// compare ConfigMaps.
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("diff %s", diff)
+			t.Errorf("ConfigMap diff %s", diff)
 		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("ServiceAccount diff %s", diff)
 	}
 
 	// Compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
-	t.Log("ConfigMap and Deployement successfully created")
+	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
 
 	// Test updating Configmaps and Deployment resources.
 	rsResource.Spec.Git.Revision = updatedBranch
 	if err := fakeClient.Update(context.Background(), rsResource); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
@@ -441,7 +454,7 @@ func TestRootSyncReconciler(t *testing.T) {
 
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("diff %s", diff)
+			t.Errorf("ConfigMap diff %s", diff)
 		}
 	}
 
