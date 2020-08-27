@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/pointer"
@@ -317,7 +318,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			declared := tc.actualDeployment.DeepCopyObject().(*appsv1.Deployment)
-			err := mutateRootSyncDeployment(*tc.rootSync, tc.actualDeployment, declared, []byte("1234"))
+			err := mutateRootSyncDeployment(tc.rootSync, tc.actualDeployment, declared, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -349,9 +350,9 @@ func TestRootSyncReconciler(t *testing.T) {
 		return nil
 	}
 
+	rs := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
-	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
-	fakeClient, testReconciler := setupRootReconciler(t, rsResource, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
 	// Test creating Configmaps and Deployment resources.
 	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
@@ -411,9 +412,30 @@ func TestRootSyncReconciler(t *testing.T) {
 	cmpDeployment(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
 
+	// Verify status updates.
+	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1.RootSync).Status
+	wantStatus := v1.RootSyncStatus{
+		MultiRepoSyncStatus: v1.MultiRepoSyncStatus{
+			ObservedGeneration: rs.Generation,
+			Reconciler:         buildRootSyncName(),
+		},
+		Conditions: []v1.RootSyncCondition{
+			{
+				Type:    v1.RootSyncReconciling,
+				Status:  metav1.ConditionTrue,
+				Reason:  "Deployment",
+				Message: "Reconciler deployment was created",
+			},
+		},
+	}
+	ignoreTimes := cmpopts.IgnoreFields(wantStatus.Conditions[0], "LastTransitionTime", "LastUpdateTime")
+	if diff := cmp.Diff(wantStatus, gotStatus, ignoreTimes); diff != "" {
+		t.Errorf("Status diff:\n%s", diff)
+	}
+
 	// Test updating Configmaps and Deployment resources.
-	rsResource.Spec.Git.Revision = updatedBranch
-	if err := fakeClient.Update(context.Background(), rsResource); err != nil {
+	rs.Spec.Git.Revision = updatedBranch
+	if err := fakeClient.Update(context.Background(), rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
 	}
 

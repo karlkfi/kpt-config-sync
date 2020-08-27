@@ -37,7 +37,7 @@ type MultiRepoSyncStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Reconciler is the name of the reconciler process which corresponds to the
-	// RepoSync.
+	// RepoSync or RootSync.
 	// +optional
 	Reconciler string `json:"reconciler,omitempty"`
 }

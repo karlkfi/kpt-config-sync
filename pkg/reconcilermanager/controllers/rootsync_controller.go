@@ -9,6 +9,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,39 +50,59 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	ctx := context.TODO()
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 
-	var rootSync v1.RootSync
-	if err := r.client.Get(ctx, req.NamespacedName, &rootSync); err != nil {
+	var rs v1.RootSync
+	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.validate(rootSync); err != nil {
-		log.Error(err, "failed to validate RootSync request")
-		return controllerruntime.Result{}, nil
+	if err := r.validate(&rs); err != nil {
+		log.Error(err, "RootSync failed validation")
+		rootsync.SetStalled(&rs, "Validation", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, err
 	}
 
-	if err := r.validateRootSecret(ctx, &rootSync); err != nil {
+	if err := r.validateRootSecret(ctx, &rs); err != nil {
 		log.Error(err, "RootSync failed Secret validation required for installation")
-		return controllerruntime.Result{}, nil
+		rootsync.SetStalled(&rs, "Secret", err)
+		// We intentionally overwrite the previous error here since we do not want
+		// to return it to the controller runtime.
+		err = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, err
 	}
 	log.V(2).Info("secret found, proceeding with installation")
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMap(ctx, rootSync)
+	configMapDataHash, err := r.upsertConfigMap(ctx, rs)
 	if err != nil {
+		log.Error(err, "Failed to create/update ConfigMap")
+		rootsync.SetStalled(&rs, "ConfigMap", err)
+		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, &rootSync); err != nil {
+	if err := r.upsertServiceAccount(ctx, &rs); err != nil {
+		log.Error(err, "Failed to create/update Service Account")
+		rootsync.SetStalled(&rs, "ServiceAccount", err)
+		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
 	// Overwrite reconciler pod deployment.
-	if err := r.upsertDeployment(ctx, rootSync, configMapDataHash); err != nil {
+	if err := r.upsertDeployment(ctx, &rs, configMapDataHash); err != nil {
+		log.Error(err, "Failed to create/update Deployment")
+		rootsync.SetStalled(&rs, "Deployment", err)
+		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 
-	return controllerruntime.Result{}, nil
+	// Since there were no errors, we can clear any previous Stalled condition.
+	rootsync.ClearCondition(&rs, v1.RootSyncStalled)
+	err = r.updateStatus(ctx, &rs, log)
+	return controllerruntime.Result{}, err
 }
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
@@ -92,7 +113,7 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
 				{NamespacedName: types.NamespacedName{
-					Name:      rootSyncName,
+					Name:      rootsync.Name,
 					Namespace: a.Meta.GetNamespace(),
 				}},
 			}
@@ -145,8 +166,8 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
-func (r *RootSyncReconciler) validate(rs v1.RootSync) error {
-	if rs.Name != rootSyncName {
+func (r *RootSyncReconciler) validate(rs *v1.RootSync) error {
+	if rs.Name != rootsync.Name {
 		// Please don't change the error message.
 		return fmt.Errorf(
 			"there must be exactly one RootSync resource declared. 'meta.name' must be "+
@@ -221,7 +242,7 @@ func mutateRootSyncServiceAccount(rs *v1.RootSync, sa *corev1.ServiceAccount) er
 	return nil
 }
 
-func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.RootSync, configMapDataHash []byte) error {
+func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RootSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := rsParseDeployment(&childDep); err != nil {
@@ -238,18 +259,21 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rootSync v1.R
 	// We make deep copy first so that we can set the declared fields as needed.
 	declared := childDep.DeepCopyObject().(*appsv1.Deployment)
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		return mutateRootSyncDeployment(rootSync, &childDep, declared, configMapDataHash)
+		return mutateRootSyncDeployment(rs, &childDep, declared, configMapDataHash)
 	})
 	if err != nil {
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
 		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+		rs.Status.Reconciler = childDep.Name
+		msg := fmt.Sprintf("Reconciler deployment was %s", op)
+		rootsync.SetReconciling(rs, "Deployment", msg)
 	}
 	return nil
 }
 
-func mutateRootSyncDeployment(rs v1.RootSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
+func mutateRootSyncDeployment(rs *v1.RootSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
 	// Update existing template.spec with reconciler template.spec.
 	existing.Spec.Template.Spec = declared.Spec.Template.Spec
 
@@ -306,4 +330,13 @@ func mutateRootSyncDeployment(rs v1.RootSync, existing, declared *appsv1.Deploym
 	templateSpec.Containers = updatedContainers
 
 	return nil
+}
+
+func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1.RootSync, log logr.Logger) error {
+	rs.Status.ObservedGeneration = rs.Generation
+	err := r.client.Status().Update(ctx, rs)
+	if err != nil {
+		log.Error(err, "failed to update RootSync status")
+	}
+	return err
 }

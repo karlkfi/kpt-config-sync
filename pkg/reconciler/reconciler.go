@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
+	"github.com/google/nomos/pkg/rootsync"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -136,9 +137,13 @@ func Run(ctx context.Context, opts Options) {
 			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 	}
 
-	// Right before we start everything, mark the RepoSync as no longer
+	// Right before we start everything, mark the RootSync or RepoSync as no longer
 	// Reconciling.
-	updateRepoSyncStatus(ctx, mgr.GetClient(), opts.ReconcilerScope)
+	if opts.ReconcilerScope == declared.RootReconciler {
+		removeRootSyncCondition(ctx, mgr.GetClient(), v1.RootSyncReconciling)
+	} else {
+		removeRepoSyncCondition(ctx, mgr.GetClient(), opts.ReconcilerScope, v1.RepoSyncReconciling)
+	}
 
 	// Start the Remediator.
 	stopChan := signals.SetupSignalHandler()
@@ -152,9 +157,9 @@ func Run(ctx context.Context, opts Options) {
 	parser.Run(stoppableContext(ctx, stopChan))
 }
 
-// updateRepoSyncStatus loops (with exponential backoff) until it is able to
-// remove the Reconciling status from the reconciler's RepoSync.
-func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace declared.Scope) {
+// removeRepoSyncCondition loops (with exponential backoff) until it is able to
+// remove a status Condition from the reconciler's RepoSync.
+func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace declared.Scope, cond v1.RepoSyncConditionType) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
 		var rs v1.RepoSync
@@ -163,9 +168,29 @@ func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace decla
 			return
 		}
 
-		reposync.ClearCondition(&rs, v1.RepoSyncReconciling)
+		reposync.ClearCondition(&rs, cond)
 		if err := cl.Status().Update(childCtx, &rs); err != nil {
 			glog.Errorf("Failed to update RepoSync status from %s reconciler: %v", namespace, err)
+		} else {
+			cancel()
+		}
+	}, time.Second)
+}
+
+// removeRootSyncCondition loops (with exponential backoff) until it is able to
+// remove a status Condition from the reconciler's RootSync.
+func removeRootSyncCondition(ctx context.Context, cl client.Client, cond v1.RootSyncConditionType) {
+	childCtx, cancel := context.WithCancel(ctx)
+	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
+		var rs v1.RootSync
+		if err := cl.Get(childCtx, rootsync.ObjectKey(), &rs); err != nil {
+			glog.Errorf("Failed to get RootSync: %v", err)
+			return
+		}
+
+		rootsync.ClearCondition(&rs, cond)
+		if err := cl.Status().Update(childCtx, &rs); err != nil {
+			glog.Errorf("Failed to update RootSync status: %v", err)
 		} else {
 			cancel()
 		}

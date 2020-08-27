@@ -4,8 +4,6 @@ const (
 	repoSyncReconcilerPrefix = "ns-reconciler"
 	rootSyncReconcilerName   = "root-reconciler"
 
-	rootSyncName = "root-sync"
-
 	executedOperation = "operation"
 
 	gitCredentialVolume = "git-creds"
