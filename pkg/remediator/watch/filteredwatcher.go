@@ -90,7 +90,7 @@ func (w *filteredWatcher) shouldProcess(object core.Object) bool {
 		// its declaration. Otherwise we expect to get another event for the same
 		// object but with a matching GVK so we can actually compare it to its
 		// declaration.
-		return object.GroupVersionKind().String() == decl.GroupVersionKind().String()
+		return object.GroupVersionKind() == decl.GroupVersionKind()
 	}
 	// Even if the object is undeclared, we still want to process it if it is
 	// tagged as a managed object.

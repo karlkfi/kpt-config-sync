@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -77,7 +78,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			}
 
 			d := makeDeclared(t, tc.declared...)
-			w := NewWorker(c.Applier(), q, d)
+			w := NewWorker(declared.RootReconciler, c.Applier(), q, d)
 
 			for _, obj := range tc.toProcess {
 				if ok := w.processNextObject(context.Background()); !ok {

@@ -44,7 +44,7 @@ func New(reconciler declared.Scope, cfg *rest.Config, applier syncerreconcile.Ap
 	q := queue.NewNamed(string(reconciler))
 	workers := make([]*reconcile.Worker, numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		workers[i] = reconcile.NewWorker(applier, q, decls)
+		workers[i] = reconcile.NewWorker(reconciler, applier, q, decls)
 	}
 
 	watchMgr, err := watch.NewManager(reconciler, cfg, q, decls, nil)

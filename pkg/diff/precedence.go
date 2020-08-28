@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -20,11 +21,23 @@ func CanManage(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
 		// can be managed.
 		return true
 	}
-	// TODO(b/166780454): Validate the resource's current Scope.
 	manager, ok := annotations[v1alpha1.ResourceManagerKey]
 	if !ok || !differ.ManagementEnabled(obj) {
 		// Any reconciler can manage any unmanaged resource.
 		return true
+	}
+	if manager != "" {
+		// Most objects have no manager, and ValidateScope will return an error in
+		// this case. Explicitly checking for empty string means we don't do this
+		// relatively expensive operation every time we're processing an object.
+		if err := declared.ValidateScope(manager); err != nil {
+			// We don't care if the actual object's manager declaration is invalid.
+			// If it is and it's a managed object, we'll just overwrite it anyway.
+			// If it isn't actually managed, we'll show this message every time the
+			// object is updated - it is on the user to not mess with these annotations
+			// if they don't want to see the error message.
+			glog.Warningf("Invalid manager annotation %s=%q", v1alpha1.ResourceManagerKey, manager)
+		}
 	}
 	switch manager {
 	case string(declared.RootReconciler):

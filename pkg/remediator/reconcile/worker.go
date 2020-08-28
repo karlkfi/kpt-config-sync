@@ -20,10 +20,10 @@ type Worker struct {
 }
 
 // NewWorker returns a new Worker for the given queue and declared resources.
-func NewWorker(a syncerreconcile.Applier, q *queue.ObjectQueue, d *declared.Resources) *Worker {
+func NewWorker(scope declared.Scope, a syncerreconcile.Applier, q *queue.ObjectQueue, d *declared.Resources) *Worker {
 	return &Worker{
 		objectQueue: q,
-		reconciler:  newReconciler(a, d),
+		reconciler:  newReconciler(scope, a, d),
 	}
 }
 

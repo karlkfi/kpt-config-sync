@@ -3,13 +3,10 @@
 package diff
 
 import (
-	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -55,28 +52,13 @@ type Diff struct {
 }
 
 // Type returns the type of the difference between the repository and the API Server.
-func (d Diff) Type() Type {
-
+func (d Diff) Type(manager declared.Scope) Type {
 	if d.Declared != nil {
 		// The resource IS in the repository.
 		if differ.ManagementUnset(d.Declared) {
 			// The declared resource has no resource management key, so it is managed.
 			if d.Actual != nil {
-				manager := d.Declared.GetAnnotations()[v1alpha1.ResourceManagerKey]
-				if manager == "" {
-					// We continue in the case where manager is empty string.
-					// This represents a logic error, and we don't want to put users in a
-					// situation they can't get out of.
-					glog.Error(status.InternalErrorBuilder.Sprintf(
-						// Since d.Declared only exists either in the repo or in-memory,
-						// there shouldn't be a way for a user to manipulate d.Declared.
-						// This case means *we* didn't properly annotate the object after
-						// parsing it from the repo.
-						"missing resource manager annotation").BuildWithResources(d.Declared))
-				}
-
-				// TODO(b/166780454): Use the scope of the caller, or validate the scope of the declaration.
-				if !CanManage(declared.Scope(manager), d.Actual) {
+				if !CanManage(manager, d.Actual) {
 					// The declared object's manager can't manage the resource as it exists
 					// on the cluster.
 					return ManagementConflict

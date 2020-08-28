@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -31,6 +32,8 @@ const (
 func TestApply(t *testing.T) {
 	tcs := []struct {
 		name string
+		// scope is the applier's scope.
+		scope declared.Scope
 		// the git resource to which the applier syncs the state to.
 		declared []ast.FileObject
 		// The previously cached resource.
@@ -41,11 +44,12 @@ func TestApply(t *testing.T) {
 		wantErr status.MultiError
 	}{
 		{
-			name: "Create Test2 - if the resource is missing.",
+			name:  "Create Test2 - if the resource is missing.",
+			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
+				fake.Namespace("namespace/" + testNs1),
 				// shall be created.
-				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
+				fake.Namespace("namespace/" + testNs2),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -55,10 +59,11 @@ func TestApply(t *testing.T) {
 				{"Create", testNs2}},
 		},
 		{
-			name: "No-Op - if the resource has the configManagement disabled.",
+			name:  "No-Op - if the resource has the configManagement disabled.",
+			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled, difftest.ManagedByRoot),
-				fake.Namespace("namespace/"+testNs2, difftest.ManagedByRoot),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
+				fake.Namespace("namespace/" + testNs2),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
@@ -67,9 +72,10 @@ func TestApply(t *testing.T) {
 			want: []Event{{"Update", testNs2}},
 		},
 		{
-			name: "Update Test1 - if the resource is previously cached.",
+			name:  "Update Test1 - if the resource is previously cached.",
+			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -77,9 +83,10 @@ func TestApply(t *testing.T) {
 			want: []Event{{"Update", testNs1}},
 		},
 		{
-			name: "Delete Test2 - if the cached resource is not in the upcoming resource",
+			name:  "Delete Test2 - if the cached resource is not in the upcoming resource",
+			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, difftest.ManagedByRoot),
+				fake.Namespace("namespace/" + testNs1),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -92,9 +99,10 @@ func TestApply(t *testing.T) {
 		// We don't need to test every possible path here; we've already done that
 		// in diff_test.go. This just ensures we can reach the switch-case branches we expect.
 		{
-			name: "Management Conflict Test1 - declared and actual resource managed by root",
+			name:  "Management Conflict Test1 - declared and actual resource managed by root",
+			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Role(core.Name("admin"), difftest.ManagedByRoot),
+				fake.Role(core.Name("admin")),
 			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
@@ -103,45 +111,55 @@ func TestApply(t *testing.T) {
 				{"Update", "admin"}},
 		},
 		{
-			name: "Management Conflict Test2 - declared managed by Namespace, and actual resource managed by root",
+			name:  "Management Conflict Test2 - declared managed by Namespace, and actual resource managed by root",
+			scope: "shipping",
 			declared: []ast.FileObject{
-				fake.Role(core.Name("admin"), difftest.ManagedBy("shipping")),
+				fake.Role(core.Name("admin"), core.Namespace("shipping")),
 			},
 			actual: []ast.FileObject{
-				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
+				fake.Role(core.Name("admin"), core.Namespace("shipping"),
+					syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			},
 			wantErr: ManagementConflictError(fake.Role()),
 		},
 	}
-	for _, tc := range tcs {
-		fakeClient := clientForTest(t)
-		clientApplier := &FakeApplier{ExpectActions: tc.want}
-		previousCache := make(map[core.ID]core.Object)
-		// Propagate the actual resources.
-		for _, actual := range tc.actual {
-			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
-				t.Fatal(err)
-			}
-			previousCache[core.IDOf(actual)] = actual.Object
-		}
-		a := NewRootApplier(fakeClient, clientApplier)
-		a.cachedObjects = previousCache
-		// Verify.
-		err := a.Apply(context.Background(), filesystem.AsCoreObjects(tc.declared))
-		if err != nil || tc.wantErr != nil {
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got Apply() = error %v, want error %v", err, tc.wantErr)
-			}
-			return
-		}
 
-		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
-			return
-		}
-		if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
-			cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
-			t.Errorf(diff)
-		}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := clientForTest(t)
+			clientApplier := &FakeApplier{ExpectActions: tc.want}
+			previousCache := make(map[core.ID]core.Object)
+			// Propagate the actual resources.
+			for _, actual := range tc.actual {
+				if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
+					t.Fatal(err)
+				}
+				previousCache[core.IDOf(actual)] = actual.Object
+			}
+			var a *Applier
+			if tc.scope == declared.RootReconciler {
+				a = NewRootApplier(fakeClient, clientApplier)
+			} else {
+				a = NewNamespaceApplier(fakeClient, clientApplier, tc.scope)
+			}
+			a.cachedObjects = previousCache
+			// Verify.
+			err := a.Apply(context.Background(), filesystem.AsCoreObjects(tc.declared))
+			if err != nil || tc.wantErr != nil {
+				if !errors.Is(err, tc.wantErr) {
+					t.Errorf("got Apply() = error %v, want error %v", err, tc.wantErr)
+				}
+				return
+			}
+
+			if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
+				return
+			}
+			if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
+				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
+				t.Errorf(diff)
+			}
+		})
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 // reconciler ensures objects are consistent with their declared state in the
 // repository.
 type reconciler struct {
+	scope declared.Scope
 	// applier is where to write the declared configuration to.
 	applier syncerreconcile.Applier
 	// declared is the threadsafe in-memory representation of declared configuration.
@@ -23,10 +24,12 @@ type reconciler struct {
 
 // newReconciler instantiates a new reconciler.
 func newReconciler(
+	scope declared.Scope,
 	applier syncerreconcile.Applier,
 	declared *declared.Resources,
 ) *reconciler {
 	return &reconciler{
+		scope:    scope,
 		applier:  applier,
 		declared: declared,
 	}
@@ -35,13 +38,13 @@ func newReconciler(
 // Remediate takes an runtime.Object representing the object to update, and then
 // ensures that the version on the server matches it.
 func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) error {
-	declared, _ := r.declared.Get(id)
+	declU, _ := r.declared.Get(id)
 	var decl core.Object
 	var err error
-	if declared == nil {
+	if declU == nil {
 		decl = nil
 	} else {
-		decl, err = core.ObjectOf(declared)
+		decl, err = core.ObjectOf(declU)
 		if err != nil {
 			return err
 		}
@@ -52,18 +55,18 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		Declared: decl,
 		Actual:   obj,
 	}
-	switch d.Type() {
+	switch t := d.Type(r.scope); t {
 	case diff.NoOp:
 		return nil
 	case diff.Create:
-		_, err = r.applier.Create(ctx, declared)
+		_, err := r.applier.Create(ctx, declU)
 		return err
 	case diff.Update:
 		actual, err := d.UnstructuredActual()
 		if err != nil {
 			return err
 		}
-		_, err = r.applier.Update(ctx, declared, actual)
+		_, err = r.applier.Update(ctx, declU, actual)
 		return err
 	case diff.Delete:
 		actual, err := d.UnstructuredActual()
@@ -88,6 +91,6 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		return err
 	default:
 		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
-		return status.InternalErrorf("diff type not supported: %v", d.Type())
+		return status.InternalErrorf("diff type not supported: %v", t)
 	}
 }

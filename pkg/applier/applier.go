@@ -93,7 +93,7 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		}
 		coreID := core.IDOf(decl)
 
-		switch d.Type() {
+		switch t := d.Type(a.scope); t {
 		case diff.NoOp:
 			continue
 		case diff.Error:
@@ -158,7 +158,7 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 			err := ManagementConflictError(d.Declared)
 			errs = status.Append(errs, err)
 		default:
-			err := status.InternalErrorf("diff type not supported: %v", d.Type())
+			err := status.InternalErrorf("diff type not supported: %v", t)
 			errs = status.Append(errs, err)
 		}
 	}
