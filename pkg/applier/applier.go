@@ -241,3 +241,7 @@ func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVer
 	}
 	return actual, errs
 }
+
+func (a *Applier) isRootApplier() bool {
+	return a.scope == declared.RootReconciler
+}

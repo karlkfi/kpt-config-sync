@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/reposync"
+	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,8 +30,11 @@ func (a *Applier) Run(ctx context.Context, resyncPeriod time.Duration, stopChann
 			glog.V(4).Infoln("applier run succeeded.")
 		}
 		now := time.Now()
-		// TODO(b/157609399): Report errors into RootSync for root applier.
-		a.setRepoSyncErrs(ctx, errs, now)
+		if a.isRootApplier() {
+			a.setRootSyncErrs(ctx, errs, now)
+		} else {
+			a.setRepoSyncErrs(ctx, errs, now)
+		}
 		glog.V(2).Infof("applier run finished at %s", now.Format(time.RFC3339))
 	}
 }
@@ -46,5 +50,19 @@ func (a *Applier) setRepoSyncErrs(ctx context.Context, errs status.MultiError, n
 	rs.Status.Sync.Errors = status.ToCSE(errs)
 	if err := a.client.Status().Update(ctx, &rs); err != nil {
 		glog.Errorf("Failed to update RepoSync status from %s applier refresh: %v", a.scope, err)
+	}
+}
+
+func (a *Applier) setRootSyncErrs(ctx context.Context, errs status.MultiError, now time.Time) {
+	var rs v1.RootSync
+	if err := a.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+		glog.Errorf("Failed to get RootSync for %s applier refresh: %v", a.scope, err)
+		return
+	}
+
+	rs.Status.Sync.LastUpdate = metav1.NewTime(now)
+	rs.Status.Sync.Errors = status.ToCSE(errs)
+	if err := a.client.Status().Update(ctx, &rs); err != nil {
+		glog.Errorf("Failed to update RootSync status from %s applier refresh: %v", a.scope, err)
 	}
 }
