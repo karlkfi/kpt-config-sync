@@ -5,12 +5,15 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -71,6 +74,7 @@ func (p *root) Run(ctx context.Context) {
 			if err != nil {
 				glog.Error(err)
 			}
+			p.setRootSyncErrs(ctx, err)
 		}
 	}
 }
@@ -102,4 +106,18 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 
 	// TODO(b/163053203): Validate RepoSync CRs.
 	return p.update(ctx, cos)
+}
+
+func (p *root) setRootSyncErrs(ctx context.Context, errs status.MultiError) {
+	var rs v1.RootSync
+	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+		glog.Errorf("Failed to get RootSync for parser: %v", err)
+		return
+	}
+
+	rs.Status.Sync.LastUpdate = metav1.Now()
+	rs.Status.Sync.Errors = status.ToCSE(errs)
+	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		glog.Errorf("Failed to update RootSync status from parser: %v", err)
+	}
 }
