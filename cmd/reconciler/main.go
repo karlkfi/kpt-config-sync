@@ -24,8 +24,10 @@ var (
 	//configure git-sync to clone the desired repository/reference we want.
 	gitRepo = flag.String("git-repo", os.Getenv("GIT_REPO"),
 		"The URL of the git repo being synced.")
-	gitRef = flag.String("git-ref", os.Getenv("GIT_REF"),
-		"The git reference we're syncing to in the git repo. Usually a branch, but could be a specific commit.")
+	gitBranch = flag.String("git-branch", os.Getenv("GIT_BRANCH"),
+		"The branch of the git repo being synced.")
+	gitRev = flag.String("git-rev", os.Getenv("GIT_REV"),
+		"The git reference we're syncing to in the git repo. Could be a specific commit.")
 	policyDir = flag.String("policy-dir", os.Getenv("POLICY_DIR"),
 		"Relative path of the root policy directory within the repo.")
 
@@ -93,7 +95,8 @@ func main() {
 		ApplierResyncPeriod:      *resyncPeriod,
 		GitPollingFrequency:      *gitPollingPeriod,
 		GitRoot:                  absGitDir,
-		GitRef:                   *gitRef,
+		GitRev:                   *gitRev,
+		GitBranch:                *gitBranch,
 		GitRepo:                  *gitRepo,
 		PolicyDir:                relPolicyDir,
 		DiscoveryInterfaceGetter: importer.DefaultCLIOptions,

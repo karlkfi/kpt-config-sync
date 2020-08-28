@@ -53,8 +53,10 @@ type Options struct {
 	// GitRoot is the absolute path to the Git repository.
 	// Usually contains a symlink that must be resolved every time before parsing.
 	GitRoot cmpath.Absolute
-	// GitRef is the git revision being synced.
-	GitRef string
+	// GitRev is the git revision being synced.
+	GitRev string
+	// GitBranch is the git branch being synced.
+	GitBranch string
 	// GitRepo is the git repo being synced.
 	GitRepo string
 	// PolicyDir is the relative path to the policies within the Git repository.
@@ -128,13 +130,13 @@ func Run(ctx context.Context, opts Options) {
 	var parser parse.Runnable
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRev, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRev, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer

@@ -32,16 +32,27 @@ func gitSyncData(ref, branch, repo string) map[string]string {
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(reconcilerScope declared.Scope, policyDir string) map[string]string {
+func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranch, gitRev string) map[string]string {
 	result := make(map[string]string)
 	result["SCOPE"] = string(reconcilerScope)
 	result["POLICY_DIR"] = policyDir
+	result["GIT_REPO"] = gitRepo
+	if gitBranch != "" {
+		result["GIT_BRANCH"] = gitBranch
+	} else {
+		result["GIT_BRANCH"] = "master"
+	}
+	if gitRev != "" {
+		result["GIT_REV"] = gitRev
+	} else {
+		result["GIT_REV"] = "HEAD"
+	}
 	return result
 }
 
 // rootReconcilerData returns configmap data for root reconciler.
-func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName string) map[string]string {
-	result := reconcilerData(reconcilerScope, policyDir)
+func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName, gitRepo, gitBranch, gitRev string) map[string]string {
+	result := reconcilerData(reconcilerScope, policyDir, gitRepo, gitBranch, gitRev)
 	result["CLUSTER_NAME"] = clusterName
 	return result
 }

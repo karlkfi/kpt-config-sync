@@ -203,11 +203,11 @@ func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.
 
 	switch cm.Name {
 	case buildRootSyncName(reconciler):
-		cm.Data = rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName)
+		cm.Data = rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision)
 	case buildRootSyncName(SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRootSyncName(gitSync):
-		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo)
+		cm.Data = gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo)
 	default:
 		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
 	}

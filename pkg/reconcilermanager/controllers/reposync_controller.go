@@ -211,7 +211,7 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 
 	switch cm.Name {
 	case buildRepoSyncName(rs.Namespace, reconciler):
-		cm.Data = reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir)
+		cm.Data = reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision)
 	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRepoSyncName(rs.Namespace, gitSync):

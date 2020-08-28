@@ -40,9 +40,9 @@ const (
 	unsupportedContainer = "abc"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "116ce60b630502cd02ad40ee19604119"
+	nsAnnotation = "25f75852c888f43425978dc819f95ce9"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "72355c78156e1a9cb6591f450699d257"
+	nsUpdatedAnnotation = "2818908c6256a6bff5318ab1dbfe8fd5"
 )
 
 func repoSync(ref, branch string, opts ...core.MetaMutator) *v1.RepoSync {
@@ -361,7 +361,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir),
+			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
@@ -444,7 +444,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			buildRepoSyncName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir),
+			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
 		),
 		configMapWithData(
