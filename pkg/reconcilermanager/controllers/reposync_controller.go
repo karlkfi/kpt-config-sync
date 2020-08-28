@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
@@ -201,7 +202,7 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 
 	switch cm.Name {
 	case buildRepoSyncName(rs.Namespace, reconciler):
-		cm.Data = reconcilerData(rs.Namespace, rs.Spec.Dir)
+		cm.Data = reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir)
 	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRepoSyncName(rs.Namespace, gitSync):

@@ -49,13 +49,13 @@ var (
 		"The format of the repository.")
 )
 
-var flags = struct{
-	gitDir string
-	clusterName string
+var flags = struct {
+	gitDir       string
+	clusterName  string
 	sourceFormat string
-} {
-	gitDir: "git-dir",
-	clusterName: "cluster-name",
+}{
+	gitDir:       "git-dir",
+	clusterName:  "cluster-name",
 	sourceFormat: "source-format",
 }
 

@@ -3,6 +3,7 @@ package controllers
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -23,15 +24,15 @@ func gitSyncData(branch, repo string) map[string]string {
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(reconcilerScope, policyDir string) map[string]string {
+func reconcilerData(reconcilerScope declared.Scope, policyDir string) map[string]string {
 	result := make(map[string]string)
-	result["RECONCILER_SCOPE"] = reconcilerScope
+	result["RECONCILER_SCOPE"] = string(reconcilerScope)
 	result["POLICY_DIR"] = policyDir
 	return result
 }
 
 // rootReconcilerData returns configmap data for root reconciler.
-func rootReconcilerData(reconcilerScope, policyDir, clusterName string) map[string]string {
+func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName string) map[string]string {
 	result := reconcilerData(reconcilerScope, policyDir)
 	result["CLUSTER_NAME"] = clusterName
 	return result
