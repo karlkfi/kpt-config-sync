@@ -12,7 +12,11 @@ type Git struct {
 	// Repo is the git repository URL to sync from. Required.
 	Repo string `json:"repo"`
 
-	// Revision is the git revision (tag, branch, ref or commit) to fetch.  Default: "master".
+	// Branch is the git branch to checkout. Default: "master".
+	// +optional
+	Branch string `json:"branch,omitempty"`
+
+	// Revision is the git revision (tag, ref or commit) to fetch.
 	// +optional
 	Revision string `json:"revision,omitempty"`
 

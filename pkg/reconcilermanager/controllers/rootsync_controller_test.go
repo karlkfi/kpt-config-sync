@@ -31,9 +31,9 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "593a98c697e266272c08dc2f14fc0406"
+	rsAnnotation = "5eacd353c1d43372545d7330595779a7"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "eb4fb3ecf6bb2d30210e4503906859f5"
+	rsUpdatedAnnotation = "3d462a80cba42ca903d1af42fc072f29"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -158,11 +158,12 @@ func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
 	}
 }
 
-func rootSync(rev string, opts ...core.MetaMutator) *v1.RootSync {
+func rootSync(ref, branch string, opts ...core.MetaMutator) *v1.RootSync {
 	result := fake.RootSyncObject(opts...)
 	result.Spec.Git = v1.Git{
 		Repo:      rootsyncRepo,
-		Revision:  rev,
+		Revision:  ref,
+		Branch:    branch,
 		Dir:       rootsyncDir,
 		Auth:      auth,
 		SecretRef: v1.SecretReference{Name: rootsyncSSHKey},
@@ -181,7 +182,8 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 		{
 			name: "ConfigMap created",
 			rootSync: rootSync(
-				"1.0.0",
+				gitRevision,
+				branch,
 				core.Name(rootsyncName),
 				core.Namespace(rootsyncReqNamespace),
 				core.UID(uid),
@@ -193,14 +195,15 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 			wantConfigMap: configMapWithData(
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
-				gitSyncData(branch, rootsyncRepo),
+				gitSyncData(gitRevision, branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: false,
 		},
 		{
 			name: "ConfigMap updated with revision number",
 			rootSync: rootSync(
-				"2.0.0",
+				gitUpdatedRevision,
+				branch,
 				core.Name(rootsyncName),
 				core.Namespace(rootsyncReqNamespace),
 				core.UID(uid),
@@ -208,20 +211,21 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 			actualConfigMap: configMapWithData(
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
-				gitSyncData(branch, rootsyncRepo),
+				gitSyncData(gitRevision, branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
 			),
 			wantConfigMap: configMapWithData(
 				v1.NSConfigManagementSystem,
 				buildRootSyncName(gitSync),
-				gitSyncData(updatedBranch, rootsyncRepo),
+				gitSyncData(gitUpdatedRevision, branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: false,
 		},
 		{
 			name: "ConfigMap mutate failed, Unsupported ConfigMap",
 			rootSync: rootSync(
-				"1.0.0",
+				gitRevision,
+				branch,
 				core.Name(rootsyncName),
 				core.Namespace(rootsyncReqNamespace),
 				core.UID(uid),
@@ -233,13 +237,13 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 			wantConfigMap: configMapWithData(
 				v1.NSConfigManagementSystem,
 				unsupportedConfigMap,
-				gitSyncData(branch, rootsyncRepo),
+				gitSyncData(gitRevision, branch, rootsyncRepo),
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: true,
 		},
 	}
 
-	rsResource := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	rsResource := rootSync(gitRevision, branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	_, testReconciler := setupRootReconciler(t, rsResource)
 
 	for _, tc := range testCases {
@@ -271,6 +275,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			name: "Deployment created",
 			rootSync: rootSync(
 				"1.0.0",
+				branch,
 				core.Name(rootsyncName),
 				core.Namespace(rootsyncReqNamespace),
 				core.UID(uid),
@@ -294,6 +299,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			name: "Deployment failed, Unsupported container",
 			rootSync: rootSync(
 				"1.0.0",
+				branch,
 				core.Name(rootsyncName),
 				core.Namespace(rootsyncReqNamespace),
 				core.UID(uid),
@@ -350,7 +356,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	rs := rootSync(branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	rs := rootSync(gitRevision, branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -363,7 +369,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			buildRootSyncName(gitSync),
-			gitSyncData(branch, rootsyncRepo),
+			gitSyncData(gitRevision, branch, rootsyncRepo),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -434,7 +440,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	// Test updating Configmaps and Deployment resources.
-	rs.Spec.Git.Revision = updatedBranch
+	rs.Spec.Git.Revision = gitUpdatedRevision
 	if err := fakeClient.Update(context.Background(), rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
 	}
@@ -447,7 +453,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			buildRootSyncName(gitSync),
-			gitSyncData(updatedBranch, rootsyncRepo),
+			gitSyncData(gitUpdatedRevision, branch, rootsyncRepo),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(

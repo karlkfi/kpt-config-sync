@@ -215,7 +215,7 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 	case buildRepoSyncName(rs.Namespace, SourceFormat):
 		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
 	case buildRepoSyncName(rs.Namespace, gitSync):
-		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Repo)
+		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo)
 	default:
 		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
 	}

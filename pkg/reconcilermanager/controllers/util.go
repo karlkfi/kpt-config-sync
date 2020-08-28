@@ -13,20 +13,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func gitSyncData(branch, repo string) map[string]string {
+// gitSyncData returns configmap for git-sync container.
+func gitSyncData(ref, branch, repo string) map[string]string {
 	result := make(map[string]string)
 	result["GIT_KNOWN_HOSTS"] = "false"
-	result["GIT_SYNC_BRANCH"] = branch
 	result["GIT_SYNC_REPO"] = repo
-	result["GIT_SYNC_REV"] = "HEAD"
 	result["GIT_SYNC_WAIT"] = "15"
+	// When branch and ref not set in RootSync/RepoSync then dont set GIT_SYNC_BRANCH
+	// and GIT_SYNC_REV, git-sync will use the default values for them.
+	if branch != "" {
+		result["GIT_SYNC_BRANCH"] = branch
+	}
+	if ref != "" {
+		result["GIT_SYNC_REV"] = ref
+	}
 	return result
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
 func reconcilerData(reconcilerScope declared.Scope, policyDir string) map[string]string {
 	result := make(map[string]string)
-	result["RECONCILER_SCOPE"] = string(reconcilerScope)
+	result["SCOPE"] = string(reconcilerScope)
 	result["POLICY_DIR"] = policyDir
 	return result
 }
@@ -38,6 +45,7 @@ func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName s
 	return result
 }
 
+// sourceFormatData returns configmap for reconciler.
 func sourceFormatData(format string) map[string]string {
 	result := make(map[string]string)
 	result[filesystem.SourceFormatKey] = format
