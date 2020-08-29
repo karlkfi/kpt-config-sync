@@ -25,7 +25,7 @@ type RepoSync struct {
 
 // RepoSyncSpec defines the desired state of a RepoSync.
 type RepoSyncSpec struct {
-	SyncSpec
+	SyncSpec `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
@@ -33,7 +33,7 @@ type RepoSyncSpec struct {
 
 // RepoSyncStatus defines the observed state of a RepoSync.
 type RepoSyncStatus struct {
-	SyncStatus
+	SyncStatus `json:",inline"`
 
 	// Conditions represents the latest available observations of the RepoSync's
 	// current state.
@@ -96,7 +96,7 @@ type RepoSyncCondition struct {
 
 // RepoSyncSourceStatus describes the status of the RepoSync's source of truth.
 type RepoSyncSourceStatus struct {
-	SyncSourceStatus
+	SyncSourceStatus `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
@@ -105,7 +105,7 @@ type RepoSyncSourceStatus struct {
 // RepoSyncSyncStatus describes the status of syncing resources from the source
 // of truth to the cluster.
 type RepoSyncSyncStatus struct {
-	SyncSyncStatus
+	SyncSyncStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true

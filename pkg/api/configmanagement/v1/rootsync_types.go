@@ -25,14 +25,14 @@ type RootSync struct {
 
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
-	MultiRepoSyncSpec
+	MultiRepoSyncSpec `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
-	MultiRepoSyncStatus
+	MultiRepoSyncStatus `json:",inline"`
 
 	// Conditions represents the latest available observations of the RootSync's
 	// current state.
@@ -95,7 +95,7 @@ type RootSyncCondition struct {
 
 // RootSyncSourceStatus describes the status of the RootSync's source of truth.
 type RootSyncSourceStatus struct {
-	MultiRepoSyncSourceStatus
+	MultiRepoSyncSourceStatus `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
@@ -104,7 +104,7 @@ type RootSyncSourceStatus struct {
 // RootSyncSyncStatus describes the status of syncing resources from the source
 // of truth to the cluster.
 type RootSyncSyncStatus struct {
-	MultiRepoSyncSyncStatus
+	MultiRepoSyncSyncStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
