@@ -5,6 +5,7 @@ import (
 	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -73,6 +74,9 @@ func GetSyncedCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 	s := runtime.NewScheme()
 	if sErr := v1.AddToScheme(s); sErr != nil {
 		return nil, getSyncedCRDsError(sErr, "could not add configmanagement types to scheme")
+	}
+	if sErr := v1alpha1.AddToScheme(s); sErr != nil {
+		return nil, getSyncedCRDsError(sErr, "could not add configsync types to scheme")
 	}
 	c, cErr := client.New(config, client.Options{
 		Scheme: s,

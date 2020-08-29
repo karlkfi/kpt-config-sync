@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/go-logr/glogr"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -31,6 +32,7 @@ func init() {
 
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = configmanagementv1.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

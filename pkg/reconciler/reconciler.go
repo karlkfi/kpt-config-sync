@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
@@ -100,6 +101,10 @@ func Run(ctx context.Context, opts Options) {
 	// Set up Scheme for configmanagement resources.
 	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
+	}
+	// Set up Scheme for configsync resources.
+	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 
 	// Configure the Applier.
