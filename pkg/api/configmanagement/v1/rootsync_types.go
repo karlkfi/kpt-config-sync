@@ -8,6 +8,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // RootSync is the Schema for the rootsyncs API
 type RootSync struct {

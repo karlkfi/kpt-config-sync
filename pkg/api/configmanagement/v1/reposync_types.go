@@ -5,6 +5,7 @@ import (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +protobuf=true
 
 // RepoSync is the Schema for the reposyncs API
