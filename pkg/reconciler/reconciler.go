@@ -20,9 +20,9 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/discovery"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
@@ -86,29 +86,24 @@ func Run(ctx context.Context, opts Options) {
 	// Get a config to talk to the apiserver.
 	cfg, err := restconfig.NewRestConfig()
 	if err != nil {
-		glog.Fatalf("failed to create rest config: %+v", err)
+		glog.Fatalf("failed to create rest config: %v", err)
 	}
 
-	// TODO(b/159068994): Determine if we *actually* need a Manager.
-	// Right now a lot of this is just cargoculted over.
-
-	// Create a new Manager to provide shared dependencies and start components.
-	mgr, err := manager.New(cfg, manager.Options{})
-	if err != nil {
-		glog.Fatalf("Failed to create manager: %v", err)
-	}
-
-	// Set up Scheme for configmanagement resources.
-	if err := v1.AddToScheme(mgr.GetScheme()); err != nil {
+	scheme := runtime.NewScheme()
+	if err := v1.AddToScheme(scheme); err != nil {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
-	// Set up Scheme for configsync resources.
-	if err := v1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := v1alpha1.AddToScheme(scheme); err != nil {
 		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 
+	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		glog.Fatalf("failed to create client: %v", err)
+	}
+
 	// Configure the Applier.
-	genericClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
+	genericClient := syncerclient.New(cl, metrics.APICallDuration)
 	baseApplier, err := reconcile.NewApplier(cfg, genericClient)
 	if err != nil {
 		glog.Fatalf("Instantiating Applier: %v", err)
@@ -116,9 +111,9 @@ func Run(ctx context.Context, opts Options) {
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a = applier.NewRootApplier(mgr.GetClient(), baseApplier)
+		a = applier.NewRootApplier(cl, baseApplier)
 	} else {
-		a = applier.NewNamespaceApplier(mgr.GetClient(), baseApplier, opts.ReconcilerScope)
+		a = applier.NewNamespaceApplier(cl, baseApplier, opts.ReconcilerScope)
 	}
 
 	// Configure the Remediator.
@@ -132,26 +127,26 @@ func Run(ctx context.Context, opts Options) {
 	// Configure the Parser.
 	var parser parse.Runnable
 	if opts.ReconcilerScope == declared.RootReconciler {
-		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, mgr.GetClient(),
+		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
 			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, mgr.GetClient(),
+		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
 			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRef, opts.GitRepo, opts.DiscoveryInterfaceGetter)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
 	// Reconciling.
 	if opts.ReconcilerScope == declared.RootReconciler {
-		removeRootSyncCondition(ctx, mgr.GetClient(), v1.RootSyncReconciling)
+		removeRootSyncCondition(ctx, cl, v1.RootSyncReconciling)
 	} else {
-		removeRepoSyncCondition(ctx, mgr.GetClient(), opts.ReconcilerScope, v1.RepoSyncReconciling)
+		removeRepoSyncCondition(ctx, cl, opts.ReconcilerScope, v1.RepoSyncReconciling)
 	}
 
-	// Start the Remediator.
 	stopChan := signals.SetupSignalHandler()
+	// Start the Remediator.
 	rem.Start(stoppableContext(ctx, stopChan))
 	// Start the Applier.
 	a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
