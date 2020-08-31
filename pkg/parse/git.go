@@ -8,6 +8,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+// FileOptions includes all settings to configure where a Parser reads files from.
+type FileOptions struct {
+	// GitDir is the path to the symbolic link of the git repository.
+	GitDir cmpath.Absolute
+	// PolicyDir is the path to the directory of policies within the git repository.
+	PolicyDir cmpath.Relative
+	// GitRepo is the git repo to sync.
+	GitRepo string
+	// GitBranch is the branch of the git repo to sync.
+	GitBranch string
+	// GitRev is the revision of the git repo to sync.
+	GitRev string
+}
+
 // files lists files in a repository and ensures the Git repository hasn't been
 // modified from HEAD.
 type files struct {
@@ -15,14 +29,12 @@ type files struct {
 	// git-sync updates the destination of the symbolic link, so we have to check
 	// it every time.
 	gitDir cmpath.Absolute
-
 	// policyDir is the path to the directory of policies within the git repository.
 	policyDir cmpath.Relative
-
-	// gitRef is the git revision being synced.
-	gitRef string
 	// gitRepo is the git repo being synced.
 	gitRepo string
+	// gitRev is the git revision being synced.
+	gitRev string
 
 	// currentPolicyDir is the directory (including git commit hash) last seen by the Parser.
 	currentPolicyDir string

@@ -6,9 +6,10 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -24,21 +25,24 @@ func NewRootParser(
 	fileReader filesystem.Reader,
 	c client.Client,
 	pollingFrequency time.Duration,
-	gitDir cmpath.Absolute,
-	policyDir cmpath.Relative,
-	gitRef string,
-	gitRepo string,
+	fo FileOptions,
 	discoveryInterfaceGetter discovery.ClientGetter,
+	app applier.Interface,
+	rem remediator.Interface,
 ) (Runnable, error) {
 	opts := opts{
 		clusterName:      clusterName,
 		client:           c,
 		pollingFrequency: pollingFrequency,
 		files: files{
-			gitDir:    gitDir,
-			policyDir: policyDir,
-			gitRef:    gitRef,
-			gitRepo:   gitRepo,
+			gitDir:    fo.GitDir,
+			policyDir: fo.PolicyDir,
+			gitRev:    fo.GitRev,
+			gitRepo:   fo.GitRepo,
+		},
+		updater: updater{
+			applier:    app,
+			remediator: rem,
 		},
 	}
 
@@ -107,7 +111,7 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitRef, p.gitRepo, commitHash)
+	addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitRev, p.gitRepo, commitHash)
 
 	// TODO(b/163053203): Validate RepoSync CRs.
 	err = p.update(ctx, cos)

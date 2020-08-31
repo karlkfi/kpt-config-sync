@@ -6,9 +6,10 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -22,23 +23,26 @@ func NewNamespaceParser(
 	fileReader filesystem.Reader,
 	c client.Client,
 	pollingFrequency time.Duration,
-	gitDir cmpath.Absolute,
-	policyDir cmpath.Relative,
-	gitRef string,
-	gitRepo string,
+	fo FileOptions,
 	discoveryInterfaceGetter discovery.ClientGetter,
+	app applier.Interface,
+	rem remediator.Interface,
 ) Runnable {
 	return &namespace{
 		opts: opts{
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files: files{
-				gitDir:    gitDir,
-				policyDir: policyDir,
-				gitRef:    gitRef,
-				gitRepo:   gitRepo,
+				gitDir:    fo.GitDir,
+				policyDir: fo.PolicyDir,
+				gitRev:    fo.GitRev,
+				gitRepo:   fo.GitRepo,
 			},
 			parser: filesystem.NewRawParser(fileReader, discoveryInterfaceGetter),
+			updater: updater{
+				applier:    app,
+				remediator: rem,
+			},
 		},
 		scope: scope,
 	}
@@ -98,7 +102,7 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		err = status.Append(err, e)
 		return err
 	}
-	addAnnotationsAndLabels(cos, p.scope, p.gitRef, p.gitRepo, commitHash)
+	addAnnotationsAndLabels(cos, p.scope, p.gitRev, p.gitRepo, commitHash)
 
 	objs := filesystem.AsFileObjects(cos)
 

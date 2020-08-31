@@ -20,8 +20,8 @@ import (
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -91,15 +91,15 @@ func Run(ctx context.Context, opts Options) {
 		glog.Fatalf("failed to create rest config: %v", err)
 	}
 
-	scheme := runtime.NewScheme()
-	if err := v1.AddToScheme(scheme); err != nil {
+	s := scheme.Scheme
+	if err := v1.AddToScheme(s); err != nil {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	if err := v1alpha1.AddToScheme(s); err != nil {
 		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 
-	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	cl, err := client.New(cfg, client.Options{Scheme: s})
 	if err != nil {
 		glog.Fatalf("failed to create client: %v", err)
 	}
@@ -128,15 +128,22 @@ func Run(ctx context.Context, opts Options) {
 
 	// Configure the Parser.
 	var parser parse.Runnable
+	fo := parse.FileOptions{
+		GitDir:    opts.GitRoot,
+		PolicyDir: opts.PolicyDir,
+		GitRepo:   opts.GitRepo,
+		GitBranch: opts.GitBranch,
+		GitRev:    opts.GitRev,
+	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRev, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, fo, opts.DiscoveryInterfaceGetter, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, opts.GitRoot, opts.PolicyDir, opts.GitRev, opts.GitRepo, opts.DiscoveryInterfaceGetter)
+			opts.GitPollingFrequency, fo, opts.DiscoveryInterfaceGetter, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
