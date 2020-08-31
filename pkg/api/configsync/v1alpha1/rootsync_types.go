@@ -4,9 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +protobuf=true
 
 // RootSync is the Schema for the rootsyncs API
 type RootSync struct {
@@ -21,19 +23,17 @@ type RootSync struct {
 }
 
 // +kubebuilder:object:generate=true
-// +protobuf=true
 
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
-	SyncSpec `json:",inline"`
+	MultiRepoSyncSpec `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
-// +protobuf=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
-	SyncStatus `json:",inline"`
+	MultiRepoSyncStatus `json:",inline"`
 
 	// Conditions represents the latest available observations of the RootSync's
 	// current state.
@@ -96,7 +96,7 @@ type RootSyncCondition struct {
 
 // RootSyncSourceStatus describes the status of the RootSync's source of truth.
 type RootSyncSourceStatus struct {
-	SyncSourceStatus `json:",inline"`
+	MultiRepoSyncSourceStatus `json:",inline"`
 }
 
 // +kubebuilder:object:generate=true
@@ -105,7 +105,7 @@ type RootSyncSourceStatus struct {
 // RootSyncSyncStatus describes the status of syncing resources from the source
 // of truth to the cluster.
 type RootSyncSyncStatus struct {
-	SyncSyncStatus `json:",inline"`
+	MultiRepoSyncSyncStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true

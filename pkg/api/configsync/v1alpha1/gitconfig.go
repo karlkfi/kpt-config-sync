@@ -4,8 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Git contains the configs which specify how to connect to and read from a Git
-// repository.
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// Git contains the configs needed by GitPolicyImporter.
 type Git struct {
 	// Repo is the git repository URL to sync from. Required.
 	Repo string `json:"repo"`
