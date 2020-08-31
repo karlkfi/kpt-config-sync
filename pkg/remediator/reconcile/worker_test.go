@@ -63,7 +63,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			q := queue.NewNamed("test")
+			q := queue.New("test")
 			for _, obj := range tc.toProcess {
 				q.Add(obj)
 			}

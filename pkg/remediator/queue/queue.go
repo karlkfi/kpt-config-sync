@@ -28,12 +28,12 @@ func gvknnOfObject(obj core.Object) GVKNN {
 	}
 }
 
-// objectQueue is a wrapper around workqueue.RateLimitingInterface for use with
+// ObjectQueue is a wrapper around workqueue.RateLimitingInterface for use with
 // declared resources. It deduplicates work items by their GVKNN.
-type objectQueue struct {
+type ObjectQueue struct {
 	// The workqueue contains work item keys so that it can maintain the order in
 	// which those items should be worked on.
-	workqueue.RateLimitingInterface
+	underlying workqueue.RateLimitingInterface
 	// objects is a map of actual work items which need to be processed.
 	objects map[GVKNN]core.Object
 	// dirty is a map of object keys which will need to be reprocessed even if
@@ -43,26 +43,19 @@ type objectQueue struct {
 	objectLock sync.Mutex
 }
 
-// named creates a new work queue for use in signalling objects that may need
+// New creates a new work queue for use in signalling objects that may need
 // remediation.
-func named(name string) *objectQueue {
-	return &objectQueue{
-		RateLimitingInterface: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), name),
-		objects:               map[GVKNN]core.Object{},
-		dirty:                 map[GVKNN]bool{},
+func New(name string) *ObjectQueue {
+	return &ObjectQueue{
+		underlying: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), name),
+		objects:    map[GVKNN]core.Object{},
+		dirty:      map[GVKNN]bool{},
 	}
 }
 
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
-func (q *objectQueue) Add(item interface{}) {
-	obj, ok := item.(core.Object)
-	if !ok {
-		glog.Errorf("Add() received non-core.Object item: %v", item)
-		q.Forget(item)
-		return
-	}
-
+func (q *ObjectQueue) Add(obj core.Object) {
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 
@@ -94,7 +87,21 @@ func (q *objectQueue) Add(item interface{}) {
 	glog.V(2).Infof("Upserting object into queue: %v", obj)
 	q.objects[gvknn] = obj
 	q.dirty[gvknn] = true
-	q.RateLimitingInterface.Add(gvknn)
+	q.underlying.Add(gvknn)
+}
+
+// Retry schedules the object to be requeued using the rate limiter.
+//
+// It is possible that the object has been updated since processing began, so we
+// don't want to overwrite the changes but we do want to signal that we want
+// the object to be processed again.
+func (q *ObjectQueue) Retry(obj core.Object) {
+	q.objectLock.Lock()
+	defer q.objectLock.Unlock()
+
+	gvknn := gvknnOfObject(obj)
+	q.dirty[gvknn] = true
+	q.underlying.AddRateLimited(gvknn)
 }
 
 // Get blocks until it can return an item to be processed.
@@ -106,10 +113,10 @@ func (q *objectQueue) Add(item interface{}) {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *objectQueue) Get() (interface{}, bool) {
+func (q *ObjectQueue) Get() (core.Object, bool) {
 	// This call is a yielding block that will allow Add() and Done() to be called
 	// while it blocks.
-	item, shutdown := q.RateLimitingInterface.Get()
+	item, shutdown := q.underlying.Get()
 	if item == nil || shutdown {
 		return nil, shutdown
 	}
@@ -122,7 +129,7 @@ func (q *objectQueue) Get() (interface{}, bool) {
 	gvknn, isID := item.(GVKNN)
 	if !isID {
 		glog.Warningf("Got non GVKNN from work queue: %v", item)
-		q.Forget(item)
+		q.underlying.Forget(item)
 		return nil, false
 	}
 
@@ -135,19 +142,12 @@ func (q *objectQueue) Get() (interface{}, bool) {
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *objectQueue) Done(item interface{}) {
-	obj, ok := item.(core.Object)
-	if !ok {
-		glog.Errorf("Done() received non-core.Object item: %v", item)
-		q.Forget(item)
-		return
-	}
-
+func (q *ObjectQueue) Done(obj core.Object) {
 	q.objectLock.Lock()
 	defer q.objectLock.Unlock()
 
 	gvknn := gvknnOfObject(obj)
-	q.RateLimitingInterface.Done(gvknn)
+	q.underlying.Done(gvknn)
 
 	if q.dirty[gvknn] {
 		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
@@ -155,4 +155,21 @@ func (q *objectQueue) Done(item interface{}) {
 		glog.V(2).Infof("Removing clean object reference: %v", q.objects[gvknn])
 		delete(q.objects, gvknn)
 	}
+}
+
+// Forget is a convenience method that allows callers to directly tell the
+// RateLimitingInterface to forget a specific core.Object.
+func (q *ObjectQueue) Forget(obj core.Object) {
+	gvknn := gvknnOfObject(obj)
+	q.underlying.Forget(gvknn)
+}
+
+// Len returns the length of the underlying queue.
+func (q *ObjectQueue) Len() int {
+	return q.underlying.Len()
+}
+
+// ShutDown shuts down the object queue.
+func (q *ObjectQueue) ShutDown() {
+	q.underlying.ShutDown()
 }

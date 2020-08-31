@@ -34,6 +34,7 @@ func (w *Worker) Run(ctx context.Context) {
 		for w.processNextObject(ctx) {
 		}
 	}, 1*time.Second)
+	w.objectQueue.ShutDown()
 }
 
 func (w *Worker) processNextObject(ctx context.Context) bool {
@@ -58,7 +59,7 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 
 	if err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate); err != nil {
 		glog.Errorf("Worker received an error while reconciling %q: %v", core.IDOf(obj), err)
-		w.objectQueue.AddRateLimited(obj)
+		w.objectQueue.Retry(obj)
 		return false
 	}
 

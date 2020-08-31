@@ -154,7 +154,7 @@ func TestWrappedWatcher(t *testing.T) {
 				base.Action(a.event, a.obj)
 			}
 
-			q := queue.NewNamed("test")
+			q := queue.New("test")
 			w := filteredWatcher{
 				resources:  dr,
 				base:       base,
