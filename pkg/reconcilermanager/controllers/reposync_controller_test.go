@@ -507,6 +507,11 @@ func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFa
 						cmpopts.SortSlices(func(x, y corev1.EnvFromSource) bool { return x.ConfigMapRef.Name < y.ConfigMapRef.Name })); diff != "" {
 						t.Errorf("Unexpected configMapRef found, diff %s", diff)
 					}
+					// Compare VolumeMount fields in the container.
+					if diff := cmp.Diff(i.VolumeMounts, j.VolumeMounts,
+						cmpopts.SortSlices(func(x, y corev1.VolumeMount) bool { return x.Name < y.Name })); diff != "" {
+						t.Errorf("Unexpected volumeMount found, diff %s", diff)
+					}
 				}
 			}
 		}

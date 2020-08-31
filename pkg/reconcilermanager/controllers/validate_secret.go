@@ -47,8 +47,8 @@ func validateSecretData(auth string, secret *corev1.Secret) error {
 		if _, ok := secret.Data["username"]; !ok {
 			return fmt.Errorf("git secretType was set as \"token\" but username key is not present in %v secret", secret.Name)
 		}
-	case "none":
-	case "gcenode":
+	case gitSecretNone:
+	case gitSecretGCENode:
 	default:
 		return fmt.Errorf("git secretType is set to unsupported value: %q", auth)
 	}

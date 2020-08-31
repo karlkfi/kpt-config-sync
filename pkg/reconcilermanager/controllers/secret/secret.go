@@ -19,6 +19,11 @@ import (
 // Put secret in config-management-system namespace using the
 // existing secret in the reposync.namespace.
 func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
+	// Secret is only created if auth is not 'none' or 'gcenode'.
+	if SkipForAuth(rs.Spec.Auth) {
+		return nil
+	}
+
 	// namespaceSecret represent secret in reposync.namespace.
 	namespaceSecret := &corev1.Secret{}
 	if err := get(ctx, rs.Spec.SecretRef.Name, rs.Namespace, namespaceSecret, c); err != nil {
@@ -118,4 +123,10 @@ const (
 func RepoSyncSecretName(namespace, name string) string {
 	prefix := []string{RepoSyncSecret}
 	return strings.Join(append(prefix, namespace, name), "-")
+}
+
+// SkipForAuth returns true if the passed auth is either 'none' or 'gcenode'.
+func SkipForAuth(auth string) bool {
+	auth = strings.ToLower(auth)
+	return auth == "none" || auth == "gcenode"
 }

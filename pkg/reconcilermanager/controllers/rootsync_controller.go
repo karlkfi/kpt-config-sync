@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -302,6 +303,10 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 	// in the RootSync CR.
 	for _, volume := range templateSpec.Volumes {
 		if volume.Name == gitCredentialVolume {
+			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
+			if secret.SkipForAuth(rs.Spec.Auth) {
+				continue
+			}
 			volume.Secret.SecretName = rs.Spec.SecretRef.Name
 		}
 		updatedVolumes = append(updatedVolumes, volume)
@@ -323,6 +328,9 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRootSyncName(gitSync)] = pointer.BoolPtr(false)
 			container.EnvFrom = envFromSources(configmapRef)
+			// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
+			container.VolumeMounts = volumeMounts(rs.Spec.Auth,
+				container.VolumeMounts)
 		default:
 			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 		}

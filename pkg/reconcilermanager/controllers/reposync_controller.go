@@ -77,7 +77,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
 	if err := secret.Put(ctx, &rs, r.client); err != nil {
-		log.Error(err, "RepoSync failed secret creation")
+		log.Error(err, "RepoSync failed secret creation", "auth", rs.Spec.Auth)
 		return controllerruntime.Result{}, nil
 	}
 
@@ -314,6 +314,10 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 	// in the RepoSync CR.
 	for _, volume := range templateSpec.Volumes {
 		if volume.Name == gitCredentialVolume {
+			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
+			if secret.SkipForAuth(rs.Spec.Auth) {
+				continue
+			}
 			volume.Secret.SecretName = secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
 		}
 		updatedVolumes = append(updatedVolumes, volume)
@@ -333,6 +337,9 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 			configmapRef := make(map[string]*bool)
 			configmapRef[buildRepoSyncName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
 			container.EnvFrom = envFromSources(configmapRef)
+			// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
+			container.VolumeMounts = volumeMounts(rs.Spec.Auth,
+				container.VolumeMounts)
 		default:
 			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 		}
