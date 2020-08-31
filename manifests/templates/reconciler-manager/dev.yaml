@@ -6,13 +6,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: bookinfo
----
-# TODO b/159065780 Remove once integrated with Operator actuation, since
-# operator will create the namespace config-management-system.
-apiVersion: v1
-data:
-  CLUSTER_NAME: gke-cluster
-kind: ConfigMap
-metadata:
-  name: cluster-name
-  namespace: config-management-system

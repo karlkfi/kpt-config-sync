@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/google/nomos/pkg/declared"
@@ -66,14 +67,22 @@ func ownerReference(kind, name string, uid types.UID) []metav1.OwnerReference {
 }
 
 func envFromSources(configmapRef map[string]*bool) []corev1.EnvFromSource {
+	var names []string
+	for name := range configmapRef {
+		names = append(names, name)
+	}
+	// We must sort the entries or else the Deployment's Pods will constantly get
+	// reloaded due to random ordering of the spec.template.spec.envFrom field.
+	sort.Strings(names)
+
 	var envFromSource []corev1.EnvFromSource
-	for name, optional := range configmapRef {
+	for _, name := range names {
 		cfgMap := corev1.EnvFromSource{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: name,
 				},
-				Optional: optional,
+				Optional: configmapRef[name],
 			},
 		}
 		envFromSource = append(envFromSource, cfgMap)

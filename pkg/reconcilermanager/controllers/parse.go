@@ -26,7 +26,7 @@ var rsParseDeployment = func(de *appsv1.Deployment) error {
 }
 
 func parseDeploymentFromConfig(config string, de *appsv1.Deployment) error {
-	// config is defined in manifests/templates/reconciler-manager/manifest.yaml
+	// config is defined in manifests/templates/reconciler-manager-deployment-configmap.yaml
 	yamlDep, err := ioutil.ReadFile(config)
 	if err != nil {
 		return err

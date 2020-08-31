@@ -23,6 +23,10 @@ type opts struct {
 	// For tests, use zero as it will poll continuously.
 	pollingFrequency time.Duration
 
+	// lastApplied is the directory (including git commit hash) last successfully
+	// applied by the Applier.
+	lastApplied string //nolint:structcheck
+
 	files
 	updater
 }

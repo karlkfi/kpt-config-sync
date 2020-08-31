@@ -50,9 +50,6 @@ data:
              - configMapRef:
                  name: reconciler
              - configMapRef:
-                 name: cluster-name
-                 optional: true
-             - configMapRef:
                  name: source-format
                  optional: true
            resources:

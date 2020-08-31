@@ -146,11 +146,11 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	stopChan := signals.SetupSignalHandler()
-	// Start the Remediator.
+	// Start the Remediator (non-blocking).
 	rem.Start(stoppableContext(ctx, stopChan))
-	// Start the Applier.
-	a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
-	// Start the Parser.
+	// Start the Applier (blocking, so using goroutine).
+	go a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
+	// Start the Parser (blocking).
 	// This will not return until:
 	// - the Context is cancelled, or
 	// - its Done channel is closed.

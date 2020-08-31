@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/status"
@@ -22,6 +23,9 @@ type files struct {
 	gitRef string
 	// gitRepo is the git repo being synced.
 	gitRepo string
+
+	// currentPolicyDir is the directory (including git commit hash) last seen by the Parser.
+	currentPolicyDir string
 }
 
 // absPolicyDir returns the absolute path to the policyDir, and the list of all
@@ -46,6 +50,13 @@ func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.Multi
 	if err != nil {
 		return cmpath.Absolute{}, nil, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
+	}
+
+	if policyDir.OSPath() == o.currentPolicyDir {
+		glog.V(4).Infof("Git directory is unchanged: %s", policyDir.OSPath())
+	} else {
+		glog.Infof("Reading updated git dir: %s", policyDir.OSPath())
+		o.currentPolicyDir = policyDir.OSPath()
 	}
 
 	files, err := git.ListFiles(policyDir)

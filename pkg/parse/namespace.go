@@ -76,7 +76,11 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 	if err != nil {
 		return err
 	}
+	if p.lastApplied == policyDir.OSPath() {
+		return nil
+	}
 
+	glog.Infof("Parsing files from git dir: %s", policyDir.OSPath())
 	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), policyDir, wantFiles)
 	if err != nil {
 		return err
@@ -116,7 +120,12 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	return p.update(ctx, cos)
+	err = p.update(ctx, cos)
+	if err == nil {
+		glog.V(4).Infof("Successfully applied all files from git dir: %s", policyDir.OSPath())
+		p.lastApplied = policyDir.OSPath()
+	}
+	return err
 }
 
 func (p *namespace) buildScoper(ctx context.Context) (discovery.Scoper, status.MultiError) {

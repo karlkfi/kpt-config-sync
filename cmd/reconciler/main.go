@@ -99,13 +99,19 @@ func main() {
 		DiscoveryInterfaceGetter: importer.DefaultCLIOptions,
 	}
 	if declared.Scope(*scope) == declared.RootReconciler {
+		glog.Info("Starting reconciler for: root")
 		opts.RootOptions = &reconciler.RootOptions{
 			ClusterName:  *clusterName,
 			SourceFormat: filesystem.SourceFormat(*sourceFormat),
 		}
-	} else if isFlagPassed(flags.clusterName) || isFlagPassed(flags.sourceFormat) {
-		glog.Fatalf("The %s and %s flags must not be passed to a Namespace reconciler",
-			flags.clusterName, flags.sourceFormat)
+	} else {
+		glog.Infof("Starting reconciler for: %s", *scope)
+
+		// TODO(b/167138947): This check needs to be fixed.
+		if isFlagPassed(flags.clusterName) || isFlagPassed(flags.sourceFormat) {
+			glog.Fatalf("The %s and %s flags must not be passed to a Namespace reconciler",
+				flags.clusterName, flags.sourceFormat)
+		}
 	}
 	reconciler.Run(context.Background(), opts)
 }
