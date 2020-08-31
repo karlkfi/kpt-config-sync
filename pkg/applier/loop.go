@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
@@ -40,7 +40,7 @@ func (a *Applier) Run(ctx context.Context, resyncPeriod time.Duration, stopChann
 }
 
 func (a *Applier) setRepoSyncErrs(ctx context.Context, errs status.MultiError, now time.Time) {
-	var rs v1.RepoSync
+	var rs v1alpha1.RepoSync
 	if err := a.client.Get(ctx, reposync.ObjectKey(a.scope), &rs); err != nil {
 		glog.Errorf("Failed to get RepoSync for %s applier refresh: %v", a.scope, err)
 		return
@@ -54,7 +54,7 @@ func (a *Applier) setRepoSyncErrs(ctx context.Context, errs status.MultiError, n
 }
 
 func (a *Applier) setRootSyncErrs(ctx context.Context, errs status.MultiError, now time.Time) {
-	var rs v1.RootSync
+	var rs v1alpha1.RootSync
 	if err := a.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		glog.Errorf("Failed to get RootSync for %s applier refresh: %v", a.scope, err)
 		return

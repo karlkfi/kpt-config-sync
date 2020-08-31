@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,15 +14,15 @@ import (
 
 var testNow = metav1.Date(1, time.February, 3, 4, 5, 6, 7, time.Local)
 
-func withConditions(conds ...v1.RepoSyncCondition) core.MetaMutator {
+func withConditions(conds ...v1alpha1.RepoSyncCondition) core.MetaMutator {
 	return func(o core.Object) {
-		rs := o.(*v1.RepoSync)
+		rs := o.(*v1alpha1.RepoSync)
 		rs.Status.Conditions = append(rs.Status.Conditions, conds...)
 	}
 }
 
-func fakeCondition(condType v1.RepoSyncConditionType, status metav1.ConditionStatus, strs ...string) v1.RepoSyncCondition {
-	rsc := v1.RepoSyncCondition{
+func fakeCondition(condType v1alpha1.RepoSyncConditionType, status metav1.ConditionStatus, strs ...string) v1alpha1.RepoSyncCondition {
+	rsc := v1alpha1.RepoSyncCondition{
 		Type:               condType,
 		Status:             status,
 		Reason:             "Test",
@@ -45,32 +45,32 @@ func TestClearCondition(t *testing.T) {
 	}
 	testCases := []struct {
 		name    string
-		rs      *v1.RepoSync
-		toClear v1.RepoSyncConditionType
-		want    []v1.RepoSyncCondition
+		rs      *v1alpha1.RepoSync
+		toClear v1alpha1.RepoSyncConditionType
+		want    []v1alpha1.RepoSyncCondition
 	}{
 		{
 			"Clear existing true condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1.RepoSyncStalled, metav1.ConditionTrue))),
-			v1.RepoSyncStalled,
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse, "", ""),
+			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue))),
+			v1alpha1.RepoSyncStalled,
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse, "", ""),
 			},
 		},
 		{
 			"Ignore existing false condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse))),
-			v1.RepoSyncStalled,
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse),
+			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			v1alpha1.RepoSyncStalled,
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse),
 			},
 		},
 		{
 			"Handle empty conditions",
 			fake.RepoSyncObject(),
-			v1.RepoSyncStalled,
+			v1alpha1.RepoSyncStalled,
 			nil,
 		},
 	}
@@ -90,28 +90,28 @@ func TestSetReconciling(t *testing.T) {
 	}
 	testCases := []struct {
 		name    string
-		rs      *v1.RepoSync
+		rs      *v1alpha1.RepoSync
 		reason  string
 		message string
-		want    []v1.RepoSyncCondition
+		want    []v1alpha1.RepoSyncCondition
 	}{
 		{
 			"Set new reconciling condition",
 			fake.RepoSyncObject(),
 			"Test1",
 			"This is test 1",
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue, "Test1", "This is test 1"),
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue, "Test1", "This is test 1"),
 			},
 		},
 		{
 			"Update existing reconciling condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
 			"Test2",
 			"This is test 2",
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue, "Test2", "This is test 2"),
-				fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse),
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue, "Test2", "This is test 2"),
+				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse),
 			},
 		},
 	}
@@ -128,28 +128,28 @@ func TestSetReconciling(t *testing.T) {
 func TestSetStalled(t *testing.T) {
 	testCases := []struct {
 		name   string
-		rs     *v1.RepoSync
+		rs     *v1alpha1.RepoSync
 		reason string
 		err    error
-		want   []v1.RepoSyncCondition
+		want   []v1alpha1.RepoSyncCondition
 	}{
 		{
 			"Set new stalled condition",
 			fake.RepoSyncObject(),
 			"Error1",
 			errors.New("this is error 1"),
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncStalled, metav1.ConditionTrue, "Error1", "this is error 1"),
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue, "Error1", "this is error 1"),
 			},
 		},
 		{
 			"Update existing stalled condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
 			"Error2",
 			errors.New("this is error 2"),
-			[]v1.RepoSyncCondition{
-				fakeCondition(v1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1.RepoSyncStalled, metav1.ConditionTrue, "Error2", "this is error 2"),
+			[]v1alpha1.RepoSyncCondition{
+				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue, "Error2", "this is error 2"),
 			},
 		},
 	}

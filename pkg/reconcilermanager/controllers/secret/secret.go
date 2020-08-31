@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +18,7 @@ import (
 
 // Put secret in config-management-system namespace using the
 // existing secret in the reposync.namespace.
-func Put(ctx context.Context, rs *v1.RepoSync, c client.Client) error {
+func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
 	// namespaceSecret represent secret in reposync.namespace.
 	namespaceSecret := &corev1.Secret{}
 	if err := get(ctx, rs.Spec.SecretRef.Name, rs.Namespace, namespaceSecret, c); err != nil {
@@ -64,7 +65,7 @@ func get(ctx context.Context, name, namespace string, secret *corev1.Secret, c c
 
 // create secret get the existing secret in reposync.namespace and use secret.data and
 // secret.type to create a new secret in config-management-system namespace.
-func create(ctx context.Context, reposync *v1.RepoSync, namespaceSecret *corev1.Secret, c client.Client) error {
+func create(ctx context.Context, reposync *v1alpha1.RepoSync, namespaceSecret *corev1.Secret, c client.Client) error {
 	newSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds.Secret().Kind,

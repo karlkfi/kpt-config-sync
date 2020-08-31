@@ -8,18 +8,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -45,15 +45,15 @@ const (
 	nsUpdatedAnnotation = "2818908c6256a6bff5318ab1dbfe8fd5"
 )
 
-func repoSync(ref, branch string, opts ...core.MetaMutator) *v1.RepoSync {
+func repoSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := fake.RepoSyncObject(opts...)
-	result.Spec.Git = v1.Git{
+	result.Spec.Git = v1alpha1.Git{
 		Repo:      reposyncRepo,
 		Revision:  ref,
 		Branch:    branch,
 		Dir:       reposyncDir,
 		Auth:      auth,
-		SecretRef: v1.SecretReference{Name: reposyncSSHKey},
+		SecretRef: v1alpha1.SecretReference{Name: reposyncSSHKey},
 	}
 	return result
 }
@@ -163,7 +163,7 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 func TestRepoSyncMutateConfigMap(t *testing.T) {
 	testCases := []struct {
 		name            string
-		repoSync        *v1.RepoSync
+		repoSync        *v1alpha1.RepoSync
 		actualConfigMap *corev1.ConfigMap
 		wantConfigMap   *corev1.ConfigMap
 		wantErr         bool
@@ -252,7 +252,7 @@ func TestRepoSyncMutateConfigMap(t *testing.T) {
 func TestRepoSyncMutateDeployment(t *testing.T) {
 	testCases := []struct {
 		name             string
-		repoSync         *v1.RepoSync
+		repoSync         *v1alpha1.RepoSync
 		actualDeployment *appsv1.Deployment
 		wantDeployment   *appsv1.Deployment
 		wantErr          bool
@@ -404,15 +404,15 @@ func TestRepoSyncReconciler(t *testing.T) {
 	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
 
 	// Verify status updates.
-	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1.RepoSync).Status
-	wantStatus := v1.RepoSyncsStatus{
-		MultiRepoSyncStatus: v1.MultiRepoSyncStatus{
+	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RepoSync).Status
+	wantStatus := v1alpha1.RepoSyncsStatus{
+		MultiRepoSyncStatus: v1alpha1.MultiRepoSyncStatus{
 			ObservedGeneration: rs.Generation,
 			Reconciler:         buildRepoSyncName(reqNamespacedName.Namespace),
 		},
-		Conditions: []v1.RepoSyncCondition{
+		Conditions: []v1alpha1.RepoSyncCondition{
 			{
-				Type:    v1.RepoSyncReconciling,
+				Type:    v1alpha1.RepoSyncReconciling,
 				Status:  metav1.ConditionTrue,
 				Reason:  "Deployment",
 				Message: "Reconciler deployment was created",
@@ -476,7 +476,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	t.Log("ConfigMap and Deployement successfully updated")
 
 	// Verify status updates.
-	gotStatus = fakeClient.Objects[core.IDOf(rs)].(*v1.RepoSync).Status
+	gotStatus = fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RepoSync).Status
 	wantStatus.Conditions[0].Message = "Reconciler deployment was updated"
 	if diff := cmp.Diff(wantStatus, gotStatus, ignoreTimes); diff != "" {
 		t.Errorf("Status diff:\n%s", diff)

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -149,7 +149,7 @@ func (p *namespace) buildScoper(ctx context.Context) (discovery.Scoper, status.M
 }
 
 func (p *namespace) setRepoSyncErrs(ctx context.Context, errs status.MultiError) {
-	var rs v1.RepoSync
+	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		glog.Errorf("Failed to get RepoSync for %s parser: %v", p.scope, err)
 		return

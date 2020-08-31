@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/id"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +36,7 @@ type Error interface {
 	ToCME() v1.ConfigManagementError
 	// ToCSE converts the implementor into ConfigSyncError, preserving structured
 	// information.
-	ToCSE() v1.ConfigSyncError
+	ToCSE() v1alpha1.ConfigSyncError
 	// Code is the unique identifier of the error to help users find documentation.
 	Code() string
 	// Body is the body of the error to be printed.
@@ -175,9 +176,9 @@ func fromResourceError(err ResourceError) v1.ConfigManagementError {
 	return cme
 }
 
-func toResourceRef(r id.Resource) v1.ResourceRef {
+func toResourceRef(r id.Resource) v1alpha1.ResourceRef {
 	gvk := r.GroupVersionKind()
-	return v1.ResourceRef{
+	return v1alpha1.ResourceRef{
 		SourcePath: id.GetSourceAnnotation(r),
 		Name:       r.GetName(),
 		Namespace:  r.GetNamespace(),
@@ -189,24 +190,24 @@ func toResourceRef(r id.Resource) v1.ResourceRef {
 	}
 }
 
-func cseFromError(err Error) v1.ConfigSyncError {
-	return v1.ConfigSyncError{
+func cseFromError(err Error) v1alpha1.ConfigSyncError {
+	return v1alpha1.ConfigSyncError{
 		Code:         err.Code(),
 		ErrorMessage: err.Error(),
 	}
 }
 
-func cseFromPathError(err PathError) v1.ConfigSyncError {
+func cseFromPathError(err PathError) v1alpha1.ConfigSyncError {
 	cse := cseFromError(err)
 	for _, path := range err.RelativePaths() {
-		cse.Resources = append(cse.Resources, v1.ResourceRef{
+		cse.Resources = append(cse.Resources, v1alpha1.ResourceRef{
 			SourcePath: path.SlashPath(),
 		})
 	}
 	return cse
 }
 
-func cseFromResourceError(err ResourceError) v1.ConfigSyncError {
+func cseFromResourceError(err ResourceError) v1alpha1.ConfigSyncError {
 	cse := cseFromError(err)
 	for _, r := range err.Resources() {
 		cse.Resources = append(cse.Resources, toResourceRef(r))

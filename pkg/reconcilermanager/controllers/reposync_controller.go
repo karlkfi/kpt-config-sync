@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
@@ -49,7 +50,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	ctx := context.TODO()
 	log := r.log.WithValues("reposync", req.NamespacedName)
 
-	var rs v1.RepoSync
+	var rs v1alpha1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
@@ -106,7 +107,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Since there were no errors, we can clear any previous Stalled condition.
-	reposync.ClearCondition(&rs, v1.RepoSyncStalled)
+	reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
 	err = r.updateStatus(ctx, &rs, log)
 	return controllerruntime.Result{}, err
 }
@@ -126,7 +127,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		})
 
 	return controllerruntime.NewControllerManagedBy(mgr).
-		For(&v1.RepoSync{}).
+		For(&v1alpha1.RepoSync{}).
 		// Watch Secrets and trigger Reconciles for RepoSync object.
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync}).
 		Owns(&corev1.ConfigMap{}).
@@ -135,7 +136,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 }
 
 // TODO b/163405299 De-duplicate RepoSyncReconciler.upsertConfigMap() and RootSyncReconciler.upsertConfigMap().
-func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSync) ([]byte, error) {
+func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1alpha1.RepoSync) ([]byte, error) {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
 	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
@@ -174,7 +175,7 @@ func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1.RepoSyn
 
 // validate guarantees the RepoSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
-func (r *RepoSyncReconciler) validate(rs *v1.RepoSync) error {
+func (r *RepoSyncReconciler) validate(rs *v1alpha1.RepoSync) error {
 	if rs.Name != reposync.Name {
 		// Please don't change the error message.
 		return fmt.Errorf(
@@ -185,7 +186,7 @@ func (r *RepoSyncReconciler) validate(rs *v1.RepoSync) error {
 }
 
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
-func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1.RepoSync) error {
+func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1alpha1.RepoSync) error {
 	if strings.ToLower(repoSync.Spec.Auth) == gitSecretNone || strings.ToLower(repoSync.Spec.Auth) == gitSecretGCENode {
 		// There is no Secret to check for the Config object.
 		return nil
@@ -200,7 +201,7 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 	return validateSecretData(repoSync.Spec.Auth, secret)
 }
 
-func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
+func mutateRepoSyncConfigMap(rs *v1alpha1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -223,7 +224,7 @@ func mutateRepoSyncConfigMap(rs *v1.RepoSync, cm *corev1.ConfigMap) (map[string]
 	return cm.Data, nil
 }
 
-func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.RepoSync) error {
+func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RepoSync) error {
 	var childSA corev1.ServiceAccount
 	childSA.Name = buildRepoSyncName(rs.Namespace)
 	childSA.Namespace = v1.NSConfigManagementSystem
@@ -240,7 +241,7 @@ func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.Re
 	return nil
 }
 
-func mutateRepoSyncServiceAccount(rs *v1.RepoSync, sa *corev1.ServiceAccount) error {
+func mutateRepoSyncServiceAccount(rs *v1alpha1.RepoSync, sa *corev1.ServiceAccount) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ServiceAccount is also deleted.
 	sa.OwnerReferences = ownerReference(
@@ -251,7 +252,7 @@ func mutateRepoSyncServiceAccount(rs *v1.RepoSync, sa *corev1.ServiceAccount) er
 	return nil
 }
 
-func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSync, configMapDataHash []byte) error {
+func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.RepoSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := nsParseDeployment(&childDep); err != nil {
@@ -285,7 +286,7 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RepoSy
 	return nil
 }
 
-func mutateRepoSyncDeployment(rs *v1.RepoSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
+func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
 	// Update existing template.spec with reconciler template.spec.
 	existing.Spec.Template.Spec = declared.Spec.Template.Spec
 
@@ -341,7 +342,7 @@ func mutateRepoSyncDeployment(rs *v1.RepoSync, existing, declared *appsv1.Deploy
 	return nil
 }
 
-func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1.RepoSync, log logr.Logger) error {
+func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.RepoSync, log logr.Logger) error {
 	rs.Status.ObservedGeneration = rs.Generation
 	err := r.client.Status().Update(ctx, rs)
 	if err != nil {

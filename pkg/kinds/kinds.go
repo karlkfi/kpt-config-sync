@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/parse/kptfile"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -169,12 +170,12 @@ func ConfigManagement() schema.GroupVersionKind {
 
 // RepoSync returns the canonical RepoSync GroupVersionKind.
 func RepoSync() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("RepoSync")
+	return v1alpha1.SchemeGroupVersion.WithKind("RepoSync")
 }
 
 // RootSync returns the canonical RootSync GroupVersionKind.
 func RootSync() schema.GroupVersionKind {
-	return v1.SchemeGroupVersion.WithKind("RootSync")
+	return v1alpha1.SchemeGroupVersion.WithKind("RootSync")
 }
 
 // ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.

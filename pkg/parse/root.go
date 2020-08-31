@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -123,7 +123,7 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 }
 
 func (p *root) setRootSyncErrs(ctx context.Context, errs status.MultiError) {
-	var rs v1.RootSync
+	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		glog.Errorf("Failed to get RootSync for parser: %v", err)
 		return

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/pkg/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -62,8 +63,8 @@ func ToCME(m MultiError) []v1.ConfigManagementError {
 }
 
 // ToCSE converts a MultiError to ConfigSyncErrors.
-func ToCSE(m MultiError) []v1.ConfigSyncError {
-	var cses []v1.ConfigSyncError
+func ToCSE(m MultiError) []v1alpha1.ConfigSyncError {
+	var cses []v1alpha1.ConfigSyncError
 
 	if m != nil {
 		for _, err := range m.Errors() {

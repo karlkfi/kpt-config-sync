@@ -149,9 +149,9 @@ func Run(ctx context.Context, opts Options) {
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
 	// Reconciling.
 	if opts.ReconcilerScope == declared.RootReconciler {
-		removeRootSyncCondition(ctx, cl, v1.RootSyncReconciling)
+		removeRootSyncCondition(ctx, cl, v1alpha1.RootSyncReconciling)
 	} else {
-		removeRepoSyncCondition(ctx, cl, opts.ReconcilerScope, v1.RepoSyncReconciling)
+		removeRepoSyncCondition(ctx, cl, opts.ReconcilerScope, v1alpha1.RepoSyncReconciling)
 	}
 
 	stopChan := signals.SetupSignalHandler()
@@ -168,10 +168,10 @@ func Run(ctx context.Context, opts Options) {
 
 // removeRepoSyncCondition loops (with exponential backoff) until it is able to
 // remove a status Condition from the reconciler's RepoSync.
-func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace declared.Scope, cond v1.RepoSyncConditionType) {
+func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace declared.Scope, cond v1alpha1.RepoSyncConditionType) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
-		var rs v1.RepoSync
+		var rs v1alpha1.RepoSync
 		if err := cl.Get(childCtx, reposync.ObjectKey(namespace), &rs); err != nil {
 			glog.Errorf("Failed to get RepoSync for %s reconciler: %v", namespace, err)
 			return
@@ -188,10 +188,10 @@ func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace de
 
 // removeRootSyncCondition loops (with exponential backoff) until it is able to
 // remove a status Condition from the reconciler's RootSync.
-func removeRootSyncCondition(ctx context.Context, cl client.Client, cond v1.RootSyncConditionType) {
+func removeRootSyncCondition(ctx context.Context, cl client.Client, cond v1alpha1.RootSyncConditionType) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
-		var rs v1.RootSync
+		var rs v1alpha1.RootSync
 		if err := cl.Get(childCtx, rootsync.ObjectKey(), &rs); err != nil {
 			glog.Errorf("Failed to get RootSync: %v", err)
 			return

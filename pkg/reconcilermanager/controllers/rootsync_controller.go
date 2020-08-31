@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/rootsync"
@@ -50,7 +51,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	ctx := context.TODO()
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 
-	var rs v1.RootSync
+	var rs v1alpha1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
@@ -100,7 +101,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Since there were no errors, we can clear any previous Stalled condition.
-	rootsync.ClearCondition(&rs, v1.RootSyncStalled)
+	rootsync.ClearCondition(&rs, v1alpha1.RootSyncStalled)
 	err = r.updateStatus(ctx, &rs, log)
 	return controllerruntime.Result{}, err
 }
@@ -120,14 +121,14 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		})
 
 	return controllerruntime.NewControllerManagedBy(mgr).
-		For(&v1.RootSync{}).
+		For(&v1alpha1.RootSync{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRootSync}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.RootSync) ([]byte, error) {
+func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1alpha1.RootSync) ([]byte, error) {
 	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
 	// the object must be performed.
 	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
@@ -166,7 +167,7 @@ func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1.Ro
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
-func (r *RootSyncReconciler) validate(rs *v1.RootSync) error {
+func (r *RootSyncReconciler) validate(rs *v1alpha1.RootSync) error {
 	if rs.Name != rootsync.Name {
 		// Please don't change the error message.
 		return fmt.Errorf(
@@ -177,7 +178,7 @@ func (r *RootSyncReconciler) validate(rs *v1.RootSync) error {
 }
 
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
-func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1.RootSync) error {
+func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1alpha1.RootSync) error {
 	if strings.ToLower(rootSync.Spec.Auth) == gitSecretNone || strings.ToLower(rootSync.Spec.Auth) == gitSecretGCENode {
 		// There is no Secret to check for the Config object.
 		return nil
@@ -192,7 +193,7 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 	return validateSecretData(rootSync.Spec.Auth, secret)
 }
 
-func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
+func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1alpha1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding ConfigMap is also deleted.
 	cm.OwnerReferences = ownerReference(
@@ -214,7 +215,7 @@ func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1.RootSync, cm *corev1.
 	return cm.Data, nil
 }
 
-func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.RootSync) error {
+func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RootSync) error {
 	var childSA corev1.ServiceAccount
 	childSA.Name = buildRootSyncName()
 	childSA.Namespace = v1.NSConfigManagementSystem
@@ -231,7 +232,7 @@ func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1.Ro
 	return nil
 }
 
-func mutateRootSyncServiceAccount(rs *v1.RootSync, sa *corev1.ServiceAccount) error {
+func mutateRootSyncServiceAccount(rs *v1alpha1.RootSync, sa *corev1.ServiceAccount) error {
 	// OwnerReferences, so that when the RootSync CustomResource is deleted,
 	// the corresponding ServiceAccount is also deleted.
 	sa.OwnerReferences = ownerReference(
@@ -242,7 +243,7 @@ func mutateRootSyncServiceAccount(rs *v1.RootSync, sa *corev1.ServiceAccount) er
 	return nil
 }
 
-func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RootSync, configMapDataHash []byte) error {
+func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.RootSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
 	if err := rsParseDeployment(&childDep); err != nil {
@@ -273,7 +274,7 @@ func (r *RootSyncReconciler) upsertDeployment(ctx context.Context, rs *v1.RootSy
 	return nil
 }
 
-func mutateRootSyncDeployment(rs *v1.RootSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
+func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
 	// Update existing template.spec with reconciler template.spec.
 	existing.Spec.Template.Spec = declared.Spec.Template.Spec
 
@@ -332,7 +333,7 @@ func mutateRootSyncDeployment(rs *v1.RootSync, existing, declared *appsv1.Deploy
 	return nil
 }
 
-func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1.RootSync, log logr.Logger) error {
+func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.RootSync, log logr.Logger) error {
 	rs.Status.ObservedGeneration = rs.Generation
 	err := r.client.Status().Update(ctx, rs)
 	if err != nil {

@@ -4,20 +4,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/pointer"
-
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
@@ -158,15 +159,15 @@ func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
 	}
 }
 
-func rootSync(ref, branch string, opts ...core.MetaMutator) *v1.RootSync {
+func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 	result := fake.RootSyncObject(opts...)
-	result.Spec.Git = v1.Git{
+	result.Spec.Git = v1alpha1.Git{
 		Repo:      rootsyncRepo,
 		Revision:  ref,
 		Branch:    branch,
 		Dir:       rootsyncDir,
 		Auth:      auth,
-		SecretRef: v1.SecretReference{Name: rootsyncSSHKey},
+		SecretRef: v1alpha1.SecretReference{Name: rootsyncSSHKey},
 	}
 	return result
 }
@@ -174,7 +175,7 @@ func rootSync(ref, branch string, opts ...core.MetaMutator) *v1.RootSync {
 func TestRootSyncMutateConfigMap(t *testing.T) {
 	testCases := []struct {
 		name            string
-		rootSync        *v1.RootSync
+		rootSync        *v1alpha1.RootSync
 		actualConfigMap *corev1.ConfigMap
 		wantConfigMap   *corev1.ConfigMap
 		wantErr         bool
@@ -266,7 +267,7 @@ func TestRootSyncMutateConfigMap(t *testing.T) {
 func TestRootSyncMutateDeployment(t *testing.T) {
 	testCases := []struct {
 		name             string
-		rootSync         *v1.RootSync
+		rootSync         *v1alpha1.RootSync
 		actualDeployment *appsv1.Deployment
 		wantDeployment   *appsv1.Deployment
 		wantErr          bool
@@ -419,15 +420,15 @@ func TestRootSyncReconciler(t *testing.T) {
 	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
 
 	// Verify status updates.
-	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1.RootSync).Status
-	wantStatus := v1.RootSyncStatus{
-		MultiRepoSyncStatus: v1.MultiRepoSyncStatus{
+	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RootSync).Status
+	wantStatus := v1alpha1.RootSyncStatus{
+		MultiRepoSyncStatus: v1alpha1.MultiRepoSyncStatus{
 			ObservedGeneration: rs.Generation,
 			Reconciler:         buildRootSyncName(),
 		},
-		Conditions: []v1.RootSyncCondition{
+		Conditions: []v1alpha1.RootSyncCondition{
 			{
-				Type:    v1.RootSyncReconciling,
+				Type:    v1alpha1.RootSyncReconciling,
 				Status:  metav1.ConditionTrue,
 				Reason:  "Deployment",
 				Message: "Reconciler deployment was created",
