@@ -14,13 +14,6 @@ generate: controller-gen
 		paths="./pkg/api/configsync/v1alpha1/rootsync_types.go" \
 		paths="./pkg/api/configsync/v1alpha1/multirepo_types.go"
 
-generate-deprecated: controller-gen
-	$(CONTROLLER_GEN) \
-		object:headerFile="hack/boilerplate.txt" \
-		paths="./pkg/api/configmanagement/v1/reposync_types.go" \
-		paths="./pkg/api/configmanagement/v1/rootsync_types.go" \
-		paths="./pkg/api/configmanagement/v1/multirepo_types.go"
-
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:

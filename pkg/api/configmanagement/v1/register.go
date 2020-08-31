@@ -37,10 +37,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SyncList{},
 		&HierarchyConfig{},
 		&HierarchyConfigList{},
-		&RepoSync{},
-		&RepoSyncList{},
-		&RootSync{},
-		&RootSyncList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
