@@ -89,10 +89,14 @@ type GitStatus struct {
 	// Repo is the git repository URL being synced from.
 	Repo string `json:"repo"`
 
-	// Revision is the git revision (tag, branch, ref or commit) being fetched.
+	// Revision is the git revision (tag, ref, or commit) being fetched.
 	Revision string `json:"revision"`
 
-	// Dir is the absolute path of the directory that contains the local policy.
+	// Branch is the git branch being fetched
+	Branch string `json:"branch"`
+
+	// Dir is the path within the Git repository that represents the top level of the repo to sync.
+	// Default: the root directory of the repository
 	Dir string `json:"dir"`
 }
 

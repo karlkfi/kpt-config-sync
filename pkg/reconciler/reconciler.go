@@ -149,9 +149,9 @@ func Run(ctx context.Context, opts Options) {
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
 	// Reconciling.
 	if opts.ReconcilerScope == declared.RootReconciler {
-		removeRootSyncCondition(ctx, cl, v1alpha1.RootSyncReconciling)
+		updateRootSyncStatus(ctx, cl, opts)
 	} else {
-		removeRepoSyncCondition(ctx, cl, opts.ReconcilerScope, v1alpha1.RepoSyncReconciling)
+		updateRepoSyncStatus(ctx, cl, opts.ReconcilerScope, opts)
 	}
 
 	stopChan := signals.SetupSignalHandler()
@@ -166,9 +166,9 @@ func Run(ctx context.Context, opts Options) {
 	parser.Run(stoppableContext(ctx, stopChan))
 }
 
-// removeRepoSyncCondition loops (with exponential backoff) until it is able to
-// remove a status Condition from the reconciler's RepoSync.
-func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace declared.Scope, cond v1alpha1.RepoSyncConditionType) {
+// updateRepoSyncStatus loops (with exponential backoff) until it is able to
+// update the status of the RepoSync.
+func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace declared.Scope, opts Options) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
 		var rs v1alpha1.RepoSync
@@ -177,7 +177,14 @@ func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace de
 			return
 		}
 
-		reposync.ClearCondition(&rs, cond)
+		reposync.ClearCondition(&rs, v1alpha1.RepoSyncReconciling)
+		rs.Status.Source.Git = v1alpha1.GitStatus{
+			Repo:     opts.GitRepo,
+			Revision: opts.GitRev,
+			Branch:   opts.GitBranch,
+			Dir:      opts.PolicyDir.SlashPath(),
+		}
+
 		if err := cl.Status().Update(childCtx, &rs); err != nil {
 			glog.Errorf("Failed to update RepoSync status from %s reconciler: %v", namespace, err)
 		} else {
@@ -186,9 +193,9 @@ func removeRepoSyncCondition(ctx context.Context, cl client.Client, namespace de
 	}, time.Second)
 }
 
-// removeRootSyncCondition loops (with exponential backoff) until it is able to
-// remove a status Condition from the reconciler's RootSync.
-func removeRootSyncCondition(ctx context.Context, cl client.Client, cond v1alpha1.RootSyncConditionType) {
+// updateRootSyncStatus loops (with exponential backoff) until it is able to
+// update the status of the RootSync.
+func updateRootSyncStatus(ctx context.Context, cl client.Client, opts Options) {
 	childCtx, cancel := context.WithCancel(ctx)
 	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
 		var rs v1alpha1.RootSync
@@ -197,7 +204,14 @@ func removeRootSyncCondition(ctx context.Context, cl client.Client, cond v1alpha
 			return
 		}
 
-		rootsync.ClearCondition(&rs, cond)
+		rootsync.ClearCondition(&rs, v1alpha1.RootSyncReconciling)
+		rs.Status.Source.Git = v1alpha1.GitStatus{
+			Repo:     opts.GitRepo,
+			Revision: opts.GitRev,
+			Branch:   opts.GitBranch,
+			Dir:      opts.PolicyDir.SlashPath(),
+		}
+
 		if err := cl.Status().Update(childCtx, &rs); err != nil {
 			glog.Errorf("Failed to update RootSync status: %v", err)
 		} else {
