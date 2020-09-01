@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -15,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -98,6 +100,14 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
+	// Overwrite reconciler rolebinding.
+	if err := r.upsertRoleBinding(ctx, &rs); err != nil {
+		log.Error(err, "Failed to create/update RoleBinding")
+		reposync.SetStalled(&rs, "RoleBinding", err)
+		_ = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
+	}
+
 	// Overwrite reconciler pod deployment.
 	if err := r.upsertDeployment(ctx, &rs, configMapDataHash); err != nil {
 		log.Error(err, "Failed to create/update Deployment")
@@ -151,15 +161,15 @@ func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.
 		data   map[string]string
 	}{
 		{
-			cmName: buildRepoSyncName(rs.Namespace, SourceFormat),
+			cmName: repoSyncResourceName(rs.Namespace, SourceFormat),
 			data:   sourceFormatData(rs.Spec.SourceFormat),
 		},
 		{
-			cmName: buildRepoSyncName(rs.Namespace, gitSync),
+			cmName: repoSyncResourceName(rs.Namespace, gitSync),
 			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo),
 		},
 		{
-			cmName: buildRepoSyncName(rs.Namespace, reconciler),
+			cmName: repoSyncResourceName(rs.Namespace, reconciler),
 			data:   reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
 		},
 	}
@@ -215,7 +225,7 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 
 func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RepoSync) error {
 	var childSA corev1.ServiceAccount
-	childSA.Name = buildRepoSyncName(rs.Namespace)
+	childSA.Name = repoSyncName(rs.Namespace)
 	childSA.Namespace = v1.NSConfigManagementSystem
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
@@ -241,6 +251,45 @@ func mutateRepoSyncServiceAccount(rs *v1alpha1.RepoSync, sa *corev1.ServiceAccou
 	return nil
 }
 
+func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1.RepoSync) error {
+	var childRB rbacv1.RoleBinding
+	childRB.Name = repoSyncPermissionsName()
+	childRB.Namespace = rs.Namespace
+
+	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childRB, func() error {
+		return mutateRoleBinding(rs, &childRB)
+	})
+	if err != nil {
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("RoleBinding successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
+func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
+	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
+	// the corresponding RoleBinding is also deleted.
+	rb.OwnerReferences = ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+
+	// Update rolereference.
+	rb.RoleRef = rolereference(repoSyncPermissionsName(), "ClusterRole")
+
+	var subjects []rbacv1.Subject
+	subjects = append(subjects, subject(repoSyncName(rs.Namespace),
+		configsync.ControllerNamespace,
+		"ServiceAccount"))
+	// Update subject.
+	rb.Subjects = subjects
+
+	return nil
+}
+
 func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.RepoSync, configMapDataHash []byte) error {
 	var childDep appsv1.Deployment
 	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
@@ -248,7 +297,7 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.
 		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}
 
-	childDep.Name = buildRepoSyncName(rs.Namespace)
+	childDep.Name = repoSyncName(rs.Namespace)
 	childDep.Namespace = v1.NSConfigManagementSystem
 
 	// CreateOrUpdate() first call Get() on the object. If the
@@ -294,7 +343,7 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 	templateSpec := &existing.Spec.Template.Spec
 
 	// Update ServiceAccountName. eg. ns-reconciler-<namespace>
-	templateSpec.ServiceAccountName = buildRepoSyncName(rs.Namespace)
+	templateSpec.ServiceAccountName = repoSyncName(rs.Namespace)
 
 	var updatedVolumes []corev1.Volume
 	// Mutate secret.secretname to secret reference specified in RepoSync CR.
@@ -319,12 +368,12 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 		switch container.Name {
 		case reconciler:
 			configmapRef := make(map[string]*bool)
-			configmapRef[buildRepoSyncName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
-			configmapRef[buildRepoSyncName(rs.Namespace, SourceFormat)] = pointer.BoolPtr(true)
+			configmapRef[repoSyncResourceName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
+			configmapRef[repoSyncResourceName(rs.Namespace, SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)
-			configmapRef[buildRepoSyncName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
+			configmapRef[repoSyncResourceName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
 			container.EnvFrom = envFromSources(configmapRef)
 			// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 			container.VolumeMounts = volumeMounts(rs.Spec.Auth,

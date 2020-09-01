@@ -8,12 +8,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,7 +33,7 @@ const (
 
 	reposyncReqNamespace = "bookinfo"
 	reposyncKind         = "RepoSync"
-	reposyncName         = "repo-sync"
+	reposyncCRName       = "repo-sync"
 	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
 	reposyncDir          = "foo-corp"
 	reposyncSSHKey       = "ssh-key"
@@ -54,6 +56,23 @@ func repoSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 		Auth:      auth,
 		SecretRef: v1alpha1.SecretReference{Name: reposyncSSHKey},
 	}
+	return result
+}
+
+func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleBinding {
+	result := fake.RoleBindingObject(opts...)
+	result.Name = name
+
+	result.RoleRef.Name = repoSyncPermissionsName()
+	result.RoleRef.Kind = "ClusterRole"
+	result.RoleRef.APIGroup = "rbac.authorization.k8s.io"
+
+	var sub rbacv1.Subject
+	sub.Kind = "ServiceAccount"
+	sub.Name = repoSyncName(namespace)
+	sub.Namespace = configsync.ControllerNamespace
+	result.Subjects = append(result.Subjects, sub)
+
 	return result
 }
 
@@ -109,7 +128,7 @@ func nsDeploymentWithEnvFrom(namespace, name string,
 	opts ...core.MetaMutator) *appsv1.Deployment {
 	result := fake.DeploymentObject(opts...)
 	result.Namespace = namespace
-	result.Name = buildRepoSyncName(name)
+	result.Name = repoSyncName(name)
 	result.Spec.Template.Annotations = annotation
 
 	var container []corev1.Container
@@ -123,7 +142,7 @@ func nsDeploymentWithEnvFrom(namespace, name string,
 		container = append(container, *cntr)
 	}
 	result.Spec.Template.Spec = corev1.PodSpec{
-		ServiceAccountName: buildRepoSyncName(name),
+		ServiceAccountName: repoSyncName(name),
 		Containers:         container,
 	}
 	return result
@@ -133,7 +152,7 @@ func envFromSource(name string, configMap configMapRef) corev1.EnvFromSource {
 	return corev1.EnvFromSource{
 		ConfigMapRef: &corev1.ConfigMapEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: buildRepoSyncName(name, configMap.name),
+				Name: repoSyncResourceName(name, configMap.name),
 			},
 			Optional: configMap.optional,
 		},
@@ -147,6 +166,9 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 		t.Fatal(err)
 	}
 	if err := appsv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := rbacv1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -172,13 +194,13 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			repoSync: repoSync(
 				gitRevision,
 				branch,
-				core.Name(reposyncName),
+				core.Name(reposyncCRName),
 				core.Namespace(reposyncReqNamespace),
 				core.UID(uid),
 			),
 			actualDeployment: deployment(
 				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace),
+				repoSyncName(reposyncReqNamespace),
 				"git-sync"),
 			wantDeployment: nsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
@@ -188,7 +210,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 					optional: pointer.BoolPtr(false),
 				}),
 				map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"},
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
+				core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, uid))),
 			wantErr: false,
 		},
 		{
@@ -196,13 +218,13 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			repoSync: repoSync(
 				gitRevision,
 				branch,
-				core.Name(reposyncName),
+				core.Name(reposyncCRName),
 				core.Namespace(reposyncReqNamespace),
 				core.UID(uid),
 			),
 			actualDeployment: deployment(
 				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace),
+				repoSyncName(reposyncReqNamespace),
 				unsupportedContainer),
 			wantDeployment: nsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
@@ -212,7 +234,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 					optional: pointer.BoolPtr(false),
 				}),
 				nil,
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
+				core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, uid))),
 			wantErr: true,
 		},
 	}
@@ -252,8 +274,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	rs := repoSync(gitRevision, branch, core.Name(reposyncName), core.Namespace(reposyncReqNamespace))
-	reqNamespacedName := namespacedName(reposyncName, reposyncReqNamespace)
+	rs := repoSync(gitRevision, branch, core.Name(reposyncCRName), core.Namespace(reposyncReqNamespace))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 
 	// Test creating Configmaps and Deployment resources.
@@ -264,28 +286,35 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, gitSync),
+			repoSyncResourceName(reposyncReqNamespace, gitSync),
 			gitSyncData(gitRevision, branch, reposyncRepo),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, reconciler),
+			repoSyncResourceName(reposyncReqNamespace, reconciler),
 			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
+			repoSyncResourceName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		buildRepoSyncName(reposyncReqNamespace),
+		repoSyncName(reposyncReqNamespace),
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
+	)
+
+	wantRoleBinding := rolebinding(
+		repoSyncPermissionsName(),
+		reposyncReqNamespace,
+		core.Namespace(reposyncReqNamespace),
+		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
 
 	wantDeployment := []*appsv1.Deployment{
@@ -294,10 +323,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 			reposyncReqNamespace,
 			reconcilerDeploymentWithConfigMap(),
 			nsDeploymentAnnotation(),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 
+	// compare ConfigMaps.
 	for _, cm := range wantConfigMap {
 		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("ConfigMap diff %s", diff)
@@ -309,16 +339,21 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Errorf("Service Account diff %s", diff)
 	}
 
+	// compare RoleBinding.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantRoleBinding)], wantRoleBinding, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("RoleBinding diff %s", diff)
+	}
+
 	// cmpDeployment compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
-	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
+	t.Log("ConfigMap, ServiceAccount, RoleBinding and Deployment successfully created")
 
 	// Verify status updates.
 	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RepoSync).Status
 	wantStatus := v1alpha1.RepoSyncStatus{
 		SyncStatus: v1alpha1.SyncStatus{
 			ObservedGeneration: rs.Generation,
-			Reconciler:         buildRepoSyncName(reqNamespacedName.Namespace),
+			Reconciler:         repoSyncName(reqNamespacedName.Namespace),
 		},
 		Conditions: []v1alpha1.RepoSyncCondition{
 			{
@@ -347,21 +382,21 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, gitSync),
+			repoSyncResourceName(reposyncReqNamespace, gitSync),
 			gitSyncData(gitUpdatedRevision, branch, reposyncRepo),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, reconciler),
+			repoSyncResourceName(reposyncReqNamespace, reconciler),
 			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			buildRepoSyncName(reposyncReqNamespace, SourceFormat),
+			repoSyncResourceName(reposyncReqNamespace, SourceFormat),
 			sourceFormatData(""),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 
@@ -371,7 +406,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 			reposyncReqNamespace,
 			reconcilerDeploymentWithConfigMap(),
 			nsDeploymentUpdatedAnnotation(),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 

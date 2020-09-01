@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 
 	"github.com/google/go-cmp/cmp"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -38,6 +40,23 @@ const (
 
 	rootsyncSSHKey = "root-ssh-key"
 )
+
+func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
+	result := fake.ClusterRoleBindingObject(opts...)
+	result.Name = name
+
+	result.RoleRef.Name = "cluster-admin"
+	result.RoleRef.Kind = "ClusterRole"
+	result.RoleRef.APIGroup = "rbac.authorization.k8s.io"
+
+	var sub rbacv1.Subject
+	sub.Kind = "ServiceAccount"
+	sub.Name = rootSyncReconcilerName
+	sub.Namespace = configsync.ControllerNamespace
+	result.Subjects = append(result.Subjects, sub)
+
+	return result
+}
 
 func configMapWithData(namespace, name string, data map[string]string, opts ...core.MetaMutator) *corev1.ConfigMap {
 	result := fake.ConfigMapObject(opts...)
@@ -101,7 +120,7 @@ func rsDeploymentWithEnvFrom(namespace, name string,
 	result.Spec.Template.Annotations = annotation
 
 	result.Spec.Template.Spec = corev1.PodSpec{
-		ServiceAccountName: buildRootSyncName(),
+		ServiceAccountName: rootSyncReconcilerName,
 		Containers:         reconcilerContainer(name, containerConfigMap),
 	}
 	return result
@@ -130,6 +149,9 @@ func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Clie
 	if err := appsv1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
+	if err := rbacv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
 	testReconciler := NewRootSyncReconciler(
@@ -145,7 +167,7 @@ func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
 	return corev1.EnvFromSource{
 		ConfigMapRef: &corev1.ConfigMapEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{
-				Name: buildRootSyncName(configMap.name),
+				Name: rootSyncResourceName(configMap.name),
 			},
 			Optional: configMap.optional,
 		},
@@ -184,11 +206,11 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			),
 			actualDeployment: deployment(
 				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
+				rootSyncResourceName(gitSync),
 				gitSync),
 			wantDeployment: rsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
+				rootSyncResourceName(gitSync),
 				gitSyncConfigMap(gitSync, configMapRef{
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
@@ -208,7 +230,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			),
 			actualDeployment: deployment(
 				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
+				rootSyncResourceName(gitSync),
 				unsupportedContainer),
 			wantDeployment: rsDeploymentWithEnvFrom(
 				v1.NSConfigManagementSystem,
@@ -270,27 +292,32 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(gitSync),
+			rootSyncResourceName(gitSync),
 			gitSyncData(gitRevision, branch, rootsyncRepo),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(reconciler),
+			rootSyncResourceName(reconciler),
 			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitRevision),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(SourceFormat),
+			rootSyncResourceName(SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		buildRootSyncName(),
+		rootSyncReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
+		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+	)
+
+	wantClusterRoleBinding := clusterrolebinding(
+		rootSyncPermissionsName(),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
 
@@ -316,16 +343,21 @@ func TestRootSyncReconciler(t *testing.T) {
 		t.Errorf("ServiceAccount diff %s", diff)
 	}
 
+	// compare RoleBinding.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantClusterRoleBinding)], wantClusterRoleBinding, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("ClusterRoleBinding diff %s", diff)
+	}
+
 	// Compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
-	t.Log("ConfigMap, Deployement and ServiceAccount successfully created")
+	t.Log("ConfigMap, ServiceAccount, ClusterRoleBinding and Deployment successfully created")
 
 	// Verify status updates.
 	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RootSync).Status
 	wantStatus := v1alpha1.RootSyncStatus{
 		SyncStatus: v1alpha1.SyncStatus{
 			ObservedGeneration: rs.Generation,
-			Reconciler:         buildRootSyncName(),
+			Reconciler:         rootSyncReconcilerName,
 		},
 		Conditions: []v1alpha1.RootSyncCondition{
 			{
@@ -354,19 +386,19 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(gitSync),
+			rootSyncResourceName(gitSync),
 			gitSyncData(gitUpdatedRevision, branch, rootsyncRepo),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(reconciler),
+			rootSyncResourceName(reconciler),
 			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitUpdatedRevision),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			buildRootSyncName(SourceFormat),
+			rootSyncResourceName(SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
@@ -378,7 +410,7 @@ func TestRootSyncReconciler(t *testing.T) {
 			"root-reconciler",
 			reconcilerDeploymentWithConfigMap(),
 			rsDeploymentUpdatedAnnotation(),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncName, "")),
+			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 	}
 

@@ -62,14 +62,15 @@ kubectl delete secret ssh-key -n=bookinfo --ignore-not-found
 kubectl create secret generic ssh-key -n=bookinfo \
       --from-file=ssh=${HOME}/.ssh/id_rsa.nomos
 
+# Apply namespace reconciler ClusterRole.
+kubectl apply -f manifests/ns-reconciler-cluster-role.yaml
+
 # Verify reconciler-manager pod is running.
 
 # Apply RootSync CR.
-kubectl apply -f e2e/testdata/reconciler-manager/root-reconciler-rb.yaml
 kubectl apply -f e2e/testdata/reconciler-manager/rootsync-sample.yaml
 
 # Apply RepoSync CR.
-kubectl apply -f e2e/testdata/reconciler-manager/ns-reconciler-rb.yaml
 kubectl apply -f e2e/testdata/reconciler-manager/reposync-sample.yaml
 
 sleep 10s

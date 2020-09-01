@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -99,14 +98,4 @@ func envFromSources(configmapRef map[string]*bool) []corev1.EnvFromSource {
 		envFromSource = append(envFromSource, cfgMap)
 	}
 	return envFromSource
-}
-
-func buildRepoSyncName(names ...string) string {
-	prefix := []string{repoSyncReconcilerPrefix}
-	return strings.Join(append(prefix, names...), "-")
-}
-
-func buildRootSyncName(names ...string) string {
-	prefix := []string{rootSyncReconcilerName}
-	return strings.Join(append(prefix, names...), "-")
 }
