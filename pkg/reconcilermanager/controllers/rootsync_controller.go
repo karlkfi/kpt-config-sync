@@ -28,18 +28,18 @@ import (
 
 // RootSyncReconciler reconciles a RootSync object
 type RootSyncReconciler struct {
-	client      client.Client
-	log         logr.Logger
-	scheme      *runtime.Scheme
+	reconcilerBase
 	clusterName string
 }
 
 // NewRootSyncReconciler returns a new RootSyncReconciler.
 func NewRootSyncReconciler(cn string, c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
 	return &RootSyncReconciler{
-		client:      c,
-		log:         l,
-		scheme:      s,
+		reconcilerBase: reconcilerBase{
+			client: c,
+			log:    l,
+			scheme: s,
+		},
 		clusterName: cn,
 	}
 }
@@ -77,7 +77,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	log.V(2).Info("secret found, proceeding with installation")
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMap(ctx, rs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, rs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)
@@ -129,40 +129,51 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) upsertConfigMap(ctx context.Context, rootSync v1alpha1.RootSync) ([]byte, error) {
-	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
-	// the object must be performed.
-	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
-	//
-	// Under the hood, CreateOrUpdate() first calls Get() on the object. If the
-	// object does not exist, Create() will be called. If it does exist, Update()
-	// will be called. Just before calling either Create() or Update(), the mutate
-	// callback will be called.
+func (r *RootSyncReconciler) upsertConfigMaps(ctx context.Context, rs v1alpha1.RootSync) ([]byte, error) {
+	ownRefs := ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
 
-	// configMapData contain ConfigMap data.
 	configMapData := make(map[string]map[string]string)
 
-	// CreateOrUpdate configmaps for Root Reconciler.
-	for _, cm := range reconcilerConfigMaps {
-		var childCM corev1.ConfigMap
-		childCM.Name = buildRootSyncName(cm)
-		childCM.Namespace = v1.NSConfigManagementSystem
-		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			data, err := r.mutateRootSyncConfigMap(rootSync, &childCM)
-			configMapData[childCM.Name] = data
-			return err
-		})
+	mutations := []struct {
+		cmName string
+		data   map[string]string
+	}{
+		{
+			cmName: buildRootSyncName(SourceFormat),
+			data:   sourceFormatData(rs.Spec.SourceFormat),
+		},
+		{
+			cmName: buildRootSyncName(gitSync),
+			data:   gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo),
+		},
+		{
+			cmName: buildRootSyncName(reconciler),
+			data:   rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
+		},
+	}
+
+	for _, mutation := range mutations {
+		mut := func(cm *corev1.ConfigMap) error {
+			cm.OwnerReferences = ownRefs
+			cm.Data = mutation.data
+			return nil
+		}
+
+		err := r.upsertConfigMap(ctx, mutation.cmName, mut)
 		if err != nil {
 			return nil, err
 		}
-		if op != controllerutil.OperationResultNone {
-			r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
-		}
+
+		configMapData[mutation.cmName] = mutation.data
 	}
 
-	// hash return 128 bit FNV-1 hash of data of all the configmaps created by the controller.
-	// Reconciler deployment's template.spec annotated with the hash. Deployment is recreated in the
-	// event of configmap update. More information go/csmr-update-deployment
+	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
+	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
+	// deployment in the event of configmap update. More information: go/csmr-update-deployment.
 	return hash(configMapData)
 }
 
@@ -192,28 +203,6 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 		return err
 	}
 	return validateSecretData(rootSync.Spec.Auth, secret)
-}
-
-func (r *RootSyncReconciler) mutateRootSyncConfigMap(rs v1alpha1.RootSync, cm *corev1.ConfigMap) (map[string]string, error) {
-	// OwnerReferences, so that when the RootSync CustomResource is deleted,
-	// the corresponding ConfigMap is also deleted.
-	cm.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
-	switch cm.Name {
-	case buildRootSyncName(reconciler):
-		cm.Data = rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision)
-	case buildRootSyncName(SourceFormat):
-		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
-	case buildRootSyncName(gitSync):
-		cm.Data = gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo)
-	default:
-		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
-	}
-	return cm.Data, nil
 }
 
 func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RootSync) error {

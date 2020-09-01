@@ -36,7 +36,6 @@ const (
 	reposyncDir          = "foo-corp"
 	reposyncSSHKey       = "ssh-key"
 
-	unsupportedConfigMap = "xyz"
 	unsupportedContainer = "abc"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
@@ -158,95 +157,6 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 		s,
 	)
 	return fakeClient, testReconciler
-}
-
-func TestRepoSyncMutateConfigMap(t *testing.T) {
-	testCases := []struct {
-		name            string
-		repoSync        *v1alpha1.RepoSync
-		actualConfigMap *corev1.ConfigMap
-		wantConfigMap   *corev1.ConfigMap
-		wantErr         bool
-	}{
-		{
-			name: "ConfigMap created",
-			repoSync: repoSync(
-				gitRevision,
-				branch,
-				core.Name(reposyncName),
-				core.Namespace(reposyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMap(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, gitSync),
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, gitSync),
-				gitSyncData(gitRevision, branch, reposyncRepo),
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
-			wantErr: false,
-		},
-		{
-			name: "ConfigMap updated with revision number",
-			repoSync: repoSync(
-				gitUpdatedRevision,
-				branch,
-				core.Name(reposyncName),
-				core.Namespace(reposyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, gitSync),
-				gitSyncData(gitRevision, branch, reposyncRepo),
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid)),
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, gitSync),
-				gitSyncData(gitUpdatedRevision, branch, reposyncRepo),
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
-			wantErr: false,
-		},
-		{
-			name: "ConfigMap mutate failed, Unsupported ConfigMap",
-			repoSync: repoSync(
-				gitRevision,
-				branch,
-				core.Name(reposyncName),
-				core.Namespace(reposyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMap(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, unsupportedConfigMap),
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRepoSyncName(reposyncReqNamespace, unsupportedConfigMap),
-				gitSyncData(gitRevision, branch, reposyncRepo),
-				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := mutateRepoSyncConfigMap(tc.repoSync, tc.actualConfigMap)
-			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error", err)
-			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncConfigMap() got error: %q, want error: nil", err)
-			}
-			if !tc.wantErr {
-				if diff := cmp.Diff(tc.actualConfigMap, tc.wantConfigMap); diff != "" {
-					t.Errorf("mutateRepoSyncConfigMap() got diff: %v\nwant: nil", diff)
-				}
-			}
-		})
-	}
 }
 
 func TestRepoSyncMutateDeployment(t *testing.T) {

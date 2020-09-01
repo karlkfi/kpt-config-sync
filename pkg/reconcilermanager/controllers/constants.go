@@ -6,6 +6,9 @@ const (
 
 	executedOperation = "operation"
 
+	// This is used as a key in a call to r.log.Info
+	operationSubjectName = "name"
+
 	gitCredentialVolume = "git-creds"
 
 	gitSecretNone = "none"
@@ -21,11 +24,3 @@ const (
 
 	reconciler = "reconciler"
 )
-
-// reconcilerConfigMapSuffix contains configmaps which are used to create or update
-// various configmaps required by Root Reconciler and Namespace Reconciler pods.
-var reconcilerConfigMaps = []string{
-	SourceFormat, // Used by reconciler container.
-	gitSync,      // Used by git-sync container.
-	reconciler,   // Used by reconciler container.
-}

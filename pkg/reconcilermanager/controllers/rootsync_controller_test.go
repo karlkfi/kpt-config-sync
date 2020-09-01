@@ -39,13 +39,6 @@ const (
 	rootsyncSSHKey = "root-ssh-key"
 )
 
-func configMap(namespace, name string, opts ...core.MetaMutator) *corev1.ConfigMap {
-	result := fake.ConfigMapObject(opts...)
-	result.Namespace = namespace
-	result.Name = name
-	return result
-}
-
 func configMapWithData(namespace, name string, data map[string]string, opts ...core.MetaMutator) *corev1.ConfigMap {
 	result := fake.ConfigMapObject(opts...)
 	result.Namespace = namespace
@@ -170,98 +163,6 @@ func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 		SecretRef: v1alpha1.SecretReference{Name: rootsyncSSHKey},
 	}
 	return result
-}
-
-func TestRootSyncMutateConfigMap(t *testing.T) {
-	testCases := []struct {
-		name            string
-		rootSync        *v1alpha1.RootSync
-		actualConfigMap *corev1.ConfigMap
-		wantConfigMap   *corev1.ConfigMap
-		wantErr         bool
-	}{
-		{
-			name: "ConfigMap created",
-			rootSync: rootSync(
-				gitRevision,
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMap(
-				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
-				gitSyncData(gitRevision, branch, rootsyncRepo),
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
-			wantErr: false,
-		},
-		{
-			name: "ConfigMap updated with revision number",
-			rootSync: rootSync(
-				gitUpdatedRevision,
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
-				gitSyncData(gitRevision, branch, rootsyncRepo),
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				buildRootSyncName(gitSync),
-				gitSyncData(gitUpdatedRevision, branch, rootsyncRepo),
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
-			wantErr: false,
-		},
-		{
-			name: "ConfigMap mutate failed, Unsupported ConfigMap",
-			rootSync: rootSync(
-				gitRevision,
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
-			),
-			actualConfigMap: configMap(
-				v1.NSConfigManagementSystem,
-				unsupportedConfigMap,
-			),
-			wantConfigMap: configMapWithData(
-				v1.NSConfigManagementSystem,
-				unsupportedConfigMap,
-				gitSyncData(gitRevision, branch, rootsyncRepo),
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
-			wantErr: true,
-		},
-	}
-
-	rsResource := rootSync(gitRevision, branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
-	_, testReconciler := setupRootReconciler(t, rsResource)
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := testReconciler.mutateRootSyncConfigMap(*tc.rootSync, tc.actualConfigMap)
-			if tc.wantErr && err == nil {
-				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error", err)
-			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRootSyncConfigMap() got error: %q, want error: nil", err)
-			}
-			if !tc.wantErr {
-				if diff := cmp.Diff(tc.actualConfigMap, tc.wantConfigMap); diff != "" {
-					t.Errorf("mutateRootSyncConfigMap() got diff: %v\nwant: nil", diff)
-				}
-			}
-		})
-	}
 }
 
 func TestRootSyncMutateDeployment(t *testing.T) {

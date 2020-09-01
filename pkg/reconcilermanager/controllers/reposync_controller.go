@@ -28,17 +28,17 @@ import (
 
 // RepoSyncReconciler reconciles a RepoSync object.
 type RepoSyncReconciler struct {
-	client client.Client
-	log    logr.Logger
-	scheme *runtime.Scheme
+	reconcilerBase
 }
 
 // NewRepoSyncReconciler returns a new RepoSyncReconciler.
 func NewRepoSyncReconciler(c client.Client, l logr.Logger, s *runtime.Scheme) *RepoSyncReconciler {
 	return &RepoSyncReconciler{
-		client: c,
-		log:    l,
-		scheme: s,
+		reconcilerBase: reconcilerBase{
+			client: c,
+			log:    l,
+			scheme: s,
+		},
 	}
 }
 
@@ -82,7 +82,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMap(ctx, &rs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, &rs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -135,36 +135,48 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-// TODO b/163405299 De-duplicate RepoSyncReconciler.upsertConfigMap() and RootSyncReconciler.upsertConfigMap().
-func (r *RepoSyncReconciler) upsertConfigMap(ctx context.Context, rs *v1alpha1.RepoSync) ([]byte, error) {
-	// CreateOrUpdate() takes a callback, “mutate”, which is where all changes to
-	// the object must be performed.
-	// The name and namespace  must be filled in prior to calling CreateOrUpdate()
-	//
-	// Under the hood, CreateOrUpdate() first calls Get() on the object. If the
-	// object does not exist, Create() will be called. If it does exist, Update()
-	// will be called. Just before calling either Create() or Update(), the mutate
-	// callback will be called.
+// TODO(b/167602253): The SourceFormat configmap is unnecessary for NS reconcilers, as they run in
+// `unstructured` mode by default
+func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.RepoSync) ([]byte, error) {
+	ownRefs := ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
 
-	// configMapDataHash contain ConfigMap data.
 	configMapData := make(map[string]map[string]string)
 
-	// CreateOrUpdate configmaps for Namespace Reconciler.
-	for _, cm := range reconcilerConfigMaps {
-		var childCM corev1.ConfigMap
-		childCM.Name = buildRepoSyncName(rs.Namespace, cm)
-		childCM.Namespace = v1.NSConfigManagementSystem
-		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			data, err := mutateRepoSyncConfigMap(rs, &childCM)
-			configMapData[childCM.Name] = data
-			return err
-		})
+	mutations := []struct {
+		cmName string
+		data   map[string]string
+	}{
+		{
+			cmName: buildRepoSyncName(rs.Namespace, SourceFormat),
+			data:   sourceFormatData(rs.Spec.SourceFormat),
+		},
+		{
+			cmName: buildRepoSyncName(rs.Namespace, gitSync),
+			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo),
+		},
+		{
+			cmName: buildRepoSyncName(rs.Namespace, reconciler),
+			data:   reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
+		},
+	}
+
+	for _, mutation := range mutations {
+		mut := func(cm *corev1.ConfigMap) error {
+			cm.OwnerReferences = ownRefs
+			cm.Data = mutation.data
+			return nil
+		}
+
+		err := r.upsertConfigMap(ctx, mutation.cmName, mut)
 		if err != nil {
 			return nil, err
 		}
-		if op != controllerutil.OperationResultNone {
-			r.log.Info("ConfigMap successfully reconciled", executedOperation, op)
-		}
+
+		configMapData[mutation.cmName] = mutation.data
 	}
 
 	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
@@ -199,29 +211,6 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 		return err
 	}
 	return validateSecretData(repoSync.Spec.Auth, secret)
-}
-
-func mutateRepoSyncConfigMap(rs *v1alpha1.RepoSync, cm *corev1.ConfigMap) (map[string]string, error) {
-	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the corresponding ConfigMap is also deleted.
-	cm.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
-	switch cm.Name {
-	case buildRepoSyncName(rs.Namespace, reconciler):
-		cm.Data = reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision)
-	case buildRepoSyncName(rs.Namespace, SourceFormat):
-		cm.Data = sourceFormatData(rs.Spec.SourceFormat)
-	case buildRepoSyncName(rs.Namespace, gitSync):
-		cm.Data = gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo)
-	default:
-		return nil, errors.Errorf("unsupported ConfigMap: %q", cm.Name)
-	}
-
-	return cm.Data, nil
 }
 
 func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RepoSync) error {
