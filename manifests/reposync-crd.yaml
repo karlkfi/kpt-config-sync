@@ -7,9 +7,9 @@ metadata:
   labels:
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
-  name: reposyncs.configmanagement.gke.io
+  name: reposyncs.configsync.gke.io
 spec:
-  group: configmanagement.gke.io
+  group: configsync.gke.io
   names:
     kind: RepoSync
     listKind: RepoSyncList
@@ -87,9 +87,9 @@ spec:
           description: ReposSyncStatus defines the observed state of RepoSync
           type: object
       type: object
-  version: v1
+  version: v1alpha1
   versions:
-  - name: v1
+  - name: v1alpha1
     served: true
     storage: true
   subresources:
