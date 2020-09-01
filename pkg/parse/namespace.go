@@ -23,7 +23,7 @@ func NewNamespaceParser(
 	fileReader filesystem.Reader,
 	c client.Client,
 	pollingFrequency time.Duration,
-	fo FileOptions,
+	fs FileSource,
 	discoveryInterfaceGetter discovery.ClientGetter,
 	app applier.Interface,
 	rem remediator.Interface,
@@ -32,13 +32,8 @@ func NewNamespaceParser(
 		opts: opts{
 			client:           c,
 			pollingFrequency: pollingFrequency,
-			files: files{
-				gitDir:    fo.GitDir,
-				policyDir: fo.PolicyDir,
-				gitRev:    fo.GitRev,
-				gitRepo:   fo.GitRepo,
-			},
-			parser: filesystem.NewRawParser(fileReader, discoveryInterfaceGetter),
+			files:            files{FileSource: fs},
+			parser:           filesystem.NewRawParser(fileReader, discoveryInterfaceGetter),
 			updater: updater{
 				applier:    app,
 				remediator: rem,
@@ -99,10 +94,15 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 
 	commitHash, e := p.CommitHash()
 	if e != nil {
-		err = status.Append(err, e)
+		err = status.Append(err, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build())
 		return err
 	}
-	addAnnotationsAndLabels(cos, p.scope, p.gitRev, p.gitRepo, commitHash)
+
+	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), commitHash)
+	if e != nil {
+		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
+		return err
+	}
 
 	objs := filesystem.AsFileObjects(cos)
 

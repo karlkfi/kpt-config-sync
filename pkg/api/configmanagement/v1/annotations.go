@@ -42,10 +42,6 @@ const (
 	// Nomos will not manage content and lifecycle for the given resource.
 	ResourceManagementDisabled = "disabled"
 
-	// ResourceManagerKey is the annotation that indicates which multi-repo reconciler is managing
-	// the resource.
-	ResourceManagerKey = ConfigManagementPrefix + "manager"
-
 	// The following annotations implement the extended resource status specification.
 
 	// ResourceStatusErrorsKey is the annotation that indicates any errors, encoded as a JSON array.
@@ -54,16 +50,6 @@ const (
 	// ResourceStatusReconcilingKey is the annotation that indicates reasons why a resource is
 	// reconciling, encoded as a JSON array.
 	ResourceStatusReconcilingKey = ConfigManagementPrefix + "reconciling"
-
-	// ConfigMapAnnotationKey is the annotation key representing the hash of all the configmaps
-	// required to run root reconciler and namespace reconciler process.
-	ConfigMapAnnotationKey = ConfigManagementPrefix + "configmap"
-
-	// GitRefKey is the annotation key for the git ref of a RepoSync or RootSync.
-	GitRefKey = ConfigManagementPrefix + "git-ref"
-
-	// GitRepoKey is the annotation key for the git repo specified in a RepoSync or RootSync.
-	GitRepoKey = ConfigManagementPrefix + "git-repo"
 )
 
 // SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.
@@ -76,7 +62,6 @@ func SyncerAnnotations() []string {
 		SourcePathAnnotationKey,
 		SyncTokenAnnotationKey,
 		ResourceManagementKey,
-		ResourceManagerKey,
 		ResourceStatusErrorsKey,
 		ResourceStatusReconcilingKey,
 	}

@@ -1,7 +1,7 @@
 package diff
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/syncer/differ"
@@ -21,7 +21,7 @@ func CanManage(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
 		return true
 	}
 	// TODO(b/166780454): Validate the resource's current Scope.
-	manager, ok := annotations[v1.ResourceManagerKey]
+	manager, ok := annotations[v1alpha1.ResourceManagerKey]
 	if !ok || !differ.ManagementEnabled(obj) {
 		// Any reconciler can manage any unmanaged resource.
 		return true

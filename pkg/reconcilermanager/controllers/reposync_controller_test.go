@@ -92,13 +92,13 @@ func reconcilerDeploymentWithConfigMap() map[string][]configMapRef {
 
 func nsDeploymentAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": nsAnnotation,
+		v1alpha1.ConfigMapAnnotationKey: nsAnnotation,
 	}
 }
 
 func nsDeploymentUpdatedAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": nsUpdatedAnnotation,
+		v1alpha1.ConfigMapAnnotationKey: nsUpdatedAnnotation,
 	}
 }
 
@@ -277,7 +277,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),
-				map[string]string{"configmanagement.gke.io/configmap": "31323334"},
+				map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"},
 				core.OwnerReference(ownerReference(reposyncKind, reposyncName, uid))),
 			wantErr: false,
 		},

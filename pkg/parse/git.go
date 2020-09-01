@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FileOptions includes all settings to configure where a Parser reads files from.
-type FileOptions struct {
+// FileSource includes all settings to configure where a Parser reads files from.
+type FileSource struct {
 	// GitDir is the path to the symbolic link of the git repository.
 	GitDir cmpath.Absolute
 	// PolicyDir is the path to the directory of policies within the git repository.
@@ -25,16 +25,7 @@ type FileOptions struct {
 // files lists files in a repository and ensures the Git repository hasn't been
 // modified from HEAD.
 type files struct {
-	// gitDir is the path to the symbolic link of the git repository.
-	// git-sync updates the destination of the symbolic link, so we have to check
-	// it every time.
-	gitDir cmpath.Absolute
-	// policyDir is the path to the directory of policies within the git repository.
-	policyDir cmpath.Relative
-	// gitRepo is the git repo being synced.
-	gitRepo string
-	// gitRev is the git revision being synced.
-	gitRev string
+	FileSource
 
 	// currentPolicyDir is the directory (including git commit hash) last seen by the Parser.
 	currentPolicyDir string
@@ -46,18 +37,18 @@ type files struct {
 // Returns an error if there is some problem resolving symbolic links or in
 // listing the files.
 func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.MultiError) {
-	gitDir, err := o.gitDir.EvalSymlinks()
+	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
 		return cmpath.Absolute{}, nil, status.PathWrapError(
-			errors.Wrap(err, "evaluating symbolic link to git dir"), o.gitDir.OSPath())
+			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
 	}
 	err = git.CheckClean(gitDir.OSPath())
 	if err != nil {
 		return cmpath.Absolute{}, nil, status.PathWrapError(
-			errors.Wrap(err, "checking that the git repository has no changes"), o.gitDir.OSPath())
+			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
 	}
 
-	relPolicyDir := gitDir.Join(o.policyDir)
+	relPolicyDir := gitDir.Join(o.PolicyDir)
 	policyDir, err := relPolicyDir.EvalSymlinks()
 	if err != nil {
 		return cmpath.Absolute{}, nil, status.PathWrapError(
@@ -81,10 +72,18 @@ func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.Multi
 
 // CommitHash returns the current Git commit hash from the Git directory.
 func (o *files) CommitHash() (string, error) {
-	gitDir, err := o.gitDir.EvalSymlinks()
+	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
 		return "", status.PathWrapError(
-			errors.Wrap(err, "evaluating symbolic link to git dir"), o.gitDir.OSPath())
+			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
 	}
 	return git.CommitHash(gitDir.OSPath())
+}
+
+func (o *files) gitContext() gitContext {
+	return gitContext{
+		Repo:   o.GitRepo,
+		Branch: o.GitBranch,
+		Rev:    o.GitRev,
+	}
 }

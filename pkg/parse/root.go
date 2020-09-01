@@ -25,7 +25,7 @@ func NewRootParser(
 	fileReader filesystem.Reader,
 	c client.Client,
 	pollingFrequency time.Duration,
-	fo FileOptions,
+	fs FileSource,
 	discoveryInterfaceGetter discovery.ClientGetter,
 	app applier.Interface,
 	rem remediator.Interface,
@@ -34,12 +34,7 @@ func NewRootParser(
 		clusterName:      clusterName,
 		client:           c,
 		pollingFrequency: pollingFrequency,
-		files: files{
-			gitDir:    fo.GitDir,
-			policyDir: fo.PolicyDir,
-			gitRev:    fo.GitRev,
-			gitRepo:   fo.GitRepo,
-		},
+		files:            files{FileSource: fs},
 		updater: updater{
 			applier:    app,
 			remediator: rem,
@@ -107,11 +102,15 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 
 	commitHash, e := p.CommitHash()
 	if e != nil {
-		err = status.Append(err, e)
+		err = status.Append(err, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build())
 		return err
 	}
 
-	addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitRev, p.gitRepo, commitHash)
+	e = addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), commitHash)
+	if e != nil {
+		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
+		return err
+	}
 
 	// TODO(b/163053203): Validate RepoSync CRs.
 	err = p.update(ctx, cos)

@@ -1,7 +1,7 @@
 package applier
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -17,6 +17,6 @@ func ManagementConflictError(resource id.Resource) status.Error {
 	return managementConflictErrorBuilder.
 		Sprintf("The %q reconciler cannot manage resources declared in the Root repository. "+
 			"Remove the declaration for this resource from either the Namespace repository, or the Root repository.",
-			resource.GetAnnotations()[v1.ResourceManagerKey]).
+			resource.GetAnnotations()[v1alpha1.ResourceManagerKey]).
 		BuildWithResources(resource)
 }

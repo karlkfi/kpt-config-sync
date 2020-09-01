@@ -288,7 +288,7 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 
 	// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 	// reconciler creates/updates.
-	core.SetAnnotation(&existing.Spec.Template, v1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+	core.SetAnnotation(&existing.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 	templateSpec := &existing.Spec.Template.Spec
 

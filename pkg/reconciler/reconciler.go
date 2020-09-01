@@ -128,7 +128,7 @@ func Run(ctx context.Context, opts Options) {
 
 	// Configure the Parser.
 	var parser parse.Runnable
-	fo := parse.FileOptions{
+	fs := parse.FileSource{
 		GitDir:    opts.GitRoot,
 		PolicyDir: opts.PolicyDir,
 		GitRepo:   opts.GitRepo,
@@ -137,13 +137,13 @@ func Run(ctx context.Context, opts Options) {
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fo, opts.DiscoveryInterfaceGetter, a, rem)
+			opts.GitPollingFrequency, fs, opts.DiscoveryInterfaceGetter, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fo, opts.DiscoveryInterfaceGetter, a, rem)
+			opts.GitPollingFrequency, fs, opts.DiscoveryInterfaceGetter, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer

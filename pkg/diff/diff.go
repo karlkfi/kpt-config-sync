@@ -4,7 +4,7 @@ package diff
 
 import (
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
@@ -62,7 +62,7 @@ func (d Diff) Type() Type {
 		if differ.ManagementUnset(d.Declared) {
 			// The declared resource has no resource management key, so it is managed.
 			if d.Actual != nil {
-				manager := d.Declared.GetAnnotations()[v1.ResourceManagerKey]
+				manager := d.Declared.GetAnnotations()[v1alpha1.ResourceManagerKey]
 				if manager == "" {
 					// We continue in the case where manager is empty string.
 					// This represents a logic error, and we don't want to put users in a

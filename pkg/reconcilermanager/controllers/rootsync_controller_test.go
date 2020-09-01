@@ -86,13 +86,13 @@ func deployment(namespace, name string, containerName string, opts ...core.MetaM
 
 func rsDeploymentAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": rsAnnotation,
+		v1alpha1.ConfigMapAnnotationKey: rsAnnotation,
 	}
 }
 
 func rsDeploymentUpdatedAnnotation() map[string]string {
 	return map[string]string{
-		"configmanagement.gke.io/configmap": rsUpdatedAnnotation,
+		v1alpha1.ConfigMapAnnotationKey: rsUpdatedAnnotation,
 	}
 }
 
@@ -292,7 +292,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 					name:     gitSync,
 					optional: pointer.BoolPtr(false),
 				}),
-				map[string]string{"configmanagement.gke.io/configmap": "31323334"},
+				map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"},
 				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: false,
 		},
