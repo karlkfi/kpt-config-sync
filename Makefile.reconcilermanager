@@ -12,7 +12,7 @@ generate: controller-gen
 		object:headerFile="hack/boilerplate.txt" \
 		paths="./pkg/api/configsync/v1alpha1/reposync_types.go" \
 		paths="./pkg/api/configsync/v1alpha1/rootsync_types.go" \
-		paths="./pkg/api/configsync/v1alpha1/multirepo_types.go"
+		paths="./pkg/api/configsync/v1alpha1/sync_types.go"
 
 # find or download controller-gen
 # download controller-gen if necessary

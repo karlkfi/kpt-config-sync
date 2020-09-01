@@ -7,8 +7,8 @@ import (
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// MultiRepoSyncSpec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec
-type MultiRepoSyncSpec struct {
+// SyncSpec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec.
+type SyncSpec struct {
 	// SourceFormat specifies how the repository is formatted.
 	// See documentation for specifics of what these options do.
 	//
@@ -28,16 +28,15 @@ type MultiRepoSyncSpec struct {
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// MultiRepoSyncStatus provides a common type that is embedded in RepoSyncsStatus and RootSyncStatus
-type MultiRepoSyncStatus struct {
-	// ObservedGeneration is the most recent generation observed for the RepoSync.
-	// It corresponds to the RepoSync's generation, which is updated on mutation
-	// by the API Server.
+// SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
+type SyncStatus struct {
+	// ObservedGeneration is the most recent generation observed for the sync resource.
+	// It corresponds to the it's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Reconciler is the name of the reconciler process which corresponds to the
-	// RepoSync or RootSync.
+	// sync resource.
 	// +optional
 	Reconciler string `json:"reconciler,omitempty"`
 }
@@ -45,8 +44,8 @@ type MultiRepoSyncStatus struct {
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// MultiRepoSyncSourceStatus provides a common type that is embedded in RepoSyncSourceStatus and RootSyncSourceStatus
-type MultiRepoSyncSourceStatus struct {
+// SyncSourceStatus provides a common type that is embedded in RepoSyncSourceStatus and RootSyncSourceStatus
+type SyncSourceStatus struct {
 	// Git contains fields describing the status of a Git source of truth.
 	// +optional
 	Git GitStatus `json:"gitStatus,omitempty"`
@@ -63,8 +62,8 @@ type MultiRepoSyncSourceStatus struct {
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// MultiRepoSyncSyncStatus provides a common type that is embedded in RepoSyncSyncStatus and RootSyncSyncStatus
-type MultiRepoSyncSyncStatus struct {
+// SyncSyncStatus provides a common type that is embedded in RepoSyncSyncStatus and RootSyncSyncStatus
+type SyncSyncStatus struct {
 	// Commit is the hash of the most recent commit that was synced to the
 	// cluster. This value is updated even when a commit is only partially synced
 	// due to an  error.
@@ -101,9 +100,7 @@ type GitStatus struct {
 // +protobuf=true
 
 // ConfigSyncError represents an error that occurs while parsing, applying, or
-// remediating a resource. We can't re-use the existing ConfigManagementError
-// type because it relies on schema.GroupVersionKind which does not have JSON
-// encoding annotations.
+// remediating a resource.
 type ConfigSyncError struct {
 	// Code is the error code of this particular error.  Error codes are numeric strings,
 	// like "1012".
