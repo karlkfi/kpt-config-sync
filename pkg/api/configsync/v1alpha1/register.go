@@ -8,7 +8,7 @@ import (
 )
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: configsync.GroupName, Version: "v1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: configsync.GroupName, Version: "v1alpha1"}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
