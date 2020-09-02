@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
@@ -57,7 +57,8 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.validate(&rs); err != nil {
+	var err error
+	if err = parse.ValidateRepoSync(&rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
 		reposync.SetStalled(&rs, "Validation", err)
 		// We intentionally overwrite the previous error here since we do not want
@@ -195,21 +196,9 @@ func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.
 	return hash(configMapData)
 }
 
-// validate guarantees the RepoSync CR is correct. See go/config-sync-multi-repo-user-guide for
-// details.
-func (r *RepoSyncReconciler) validate(rs *v1alpha1.RepoSync) error {
-	if rs.Name != reposync.Name {
-		// Please don't change the error message.
-		return fmt.Errorf(
-			"there must be at most one RepoSync resource declared per namespace. "+
-				"'meta.name' must be 'repo-sync'. Instead found %q", rs.Name)
-	}
-	return nil
-}
-
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
 func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1alpha1.RepoSync) error {
-	if strings.ToLower(repoSync.Spec.Auth) == gitSecretNone || strings.ToLower(repoSync.Spec.Auth) == gitSecretGCENode {
+	if secret.SkipForAuth(repoSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
 	}

@@ -125,7 +125,11 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 		return err
 	}
 
-	// TODO(b/163053203): Validate RepoSync CRs.
+	err = status.Append(err, ValidateRepoSyncs.Validate(filesystem.AsFileObjects(cos)))
+	if err != nil {
+		return err
+	}
+
 	err = p.update(ctx, cos)
 	if err == nil {
 		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())

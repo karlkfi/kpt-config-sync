@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -201,7 +200,7 @@ func (r *RootSyncReconciler) validate(rs *v1alpha1.RootSync) error {
 
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
 func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1alpha1.RootSync) error {
-	if strings.ToLower(rootSync.Spec.Auth) == gitSecretNone || strings.ToLower(rootSync.Spec.Auth) == gitSecretGCENode {
+	if rootSync.Spec.Auth == gitSecretNone || rootSync.Spec.Auth == gitSecretGCENode {
 		// There is no Secret to check for the Config object.
 		return nil
 	}

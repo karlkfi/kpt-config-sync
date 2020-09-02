@@ -127,6 +127,5 @@ func RepoSyncSecretName(namespace, name string) string {
 
 // SkipForAuth returns true if the passed auth is either 'none' or 'gcenode'.
 func SkipForAuth(auth string) bool {
-	auth = strings.ToLower(auth)
 	return auth == "none" || auth == "gcenode"
 }
