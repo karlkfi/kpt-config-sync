@@ -66,6 +66,27 @@ func configMapWithData(namespace, name string, data map[string]string, opts ...c
 	return result
 }
 
+func rootSyncReconcilerConfigMapRef() map[string][]configMapRef {
+	return map[string][]configMapRef{
+		reconciler: {
+			{
+				name:     reconciler,
+				optional: pointer.BoolPtr(false),
+			},
+			{
+				name:     SourceFormat,
+				optional: pointer.BoolPtr(true),
+			},
+		},
+		gitSync: {
+			{
+				name:     gitSync,
+				optional: pointer.BoolPtr(false),
+			},
+		},
+	}
+}
+
 func secretData(t *testing.T, auth string) map[string][]byte {
 	t.Helper()
 	key, err := json.Marshal("test-key")
@@ -325,7 +346,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rsDeploymentWithEnvFrom(
 			rootsyncReqNamespace,
 			"root-reconciler",
-			reconcilerDeploymentWithConfigMap(),
+			rootSyncReconcilerConfigMapRef(),
 			rsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
@@ -408,7 +429,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			"root-reconciler",
-			reconcilerDeploymentWithConfigMap(),
+			rootSyncReconcilerConfigMapRef(),
 			rsDeploymentUpdatedAnnotation(),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),

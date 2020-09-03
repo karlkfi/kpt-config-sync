@@ -41,9 +41,9 @@ const (
 	unsupportedContainer = "abc"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "25f75852c888f43425978dc819f95ce9"
+	nsAnnotation = "0aa0b2b4b9109fffd8500509329b70da"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "2818908c6256a6bff5318ab1dbfe8fd5"
+	nsUpdatedAnnotation = "78d51d3ac613da3303edacd4640f8f06"
 )
 
 func repoSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
@@ -87,16 +87,12 @@ func gitSyncConfigMap(containerName string, configmap configMapRef) map[string][
 	return result
 }
 
-func reconcilerDeploymentWithConfigMap() map[string][]configMapRef {
+func repoSyncReconcilerConfigMapRef() map[string][]configMapRef {
 	return map[string][]configMapRef{
 		reconciler: {
 			{
 				name:     reconciler,
 				optional: pointer.BoolPtr(false),
-			},
-			{
-				name:     SourceFormat,
-				optional: pointer.BoolPtr(true),
 			},
 		},
 		gitSync: {
@@ -296,12 +292,6 @@ func TestRepoSyncReconciler(t *testing.T) {
 			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
-		configMapWithData(
-			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, SourceFormat),
-			sourceFormatData(""),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
-		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
@@ -321,7 +311,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
-			reconcilerDeploymentWithConfigMap(),
+			repoSyncReconcilerConfigMapRef(),
 			nsDeploymentAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
@@ -392,19 +382,13 @@ func TestRepoSyncReconciler(t *testing.T) {
 			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
-		configMapWithData(
-			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, SourceFormat),
-			sourceFormatData(""),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
-		),
 	}
 
 	wantDeployment = []*appsv1.Deployment{
 		nsDeploymentWithEnvFrom(
 			v1.NSConfigManagementSystem,
 			reposyncReqNamespace,
-			reconcilerDeploymentWithConfigMap(),
+			repoSyncReconcilerConfigMapRef(),
 			nsDeploymentUpdatedAnnotation(),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),

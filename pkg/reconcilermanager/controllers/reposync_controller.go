@@ -162,10 +162,6 @@ func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.
 		data   map[string]string
 	}{
 		{
-			cmName: repoSyncResourceName(rs.Namespace, SourceFormat),
-			data:   sourceFormatData(rs.Spec.SourceFormat),
-		},
-		{
 			cmName: repoSyncResourceName(rs.Namespace, gitSync),
 			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo),
 		},
@@ -358,7 +354,6 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 		case reconciler:
 			configmapRef := make(map[string]*bool)
 			configmapRef[repoSyncResourceName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
-			configmapRef[repoSyncResourceName(rs.Namespace, SourceFormat)] = pointer.BoolPtr(true)
 			container.EnvFrom = envFromSources(configmapRef)
 		case gitSync:
 			configmapRef := make(map[string]*bool)
