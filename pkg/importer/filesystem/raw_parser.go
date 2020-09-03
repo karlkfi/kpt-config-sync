@@ -49,7 +49,7 @@ func (p *rawParser) Parse(
 		return nil, crdErrs
 	}
 
-	scoper, syncedCRDs, scoperErr := buildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErr := BuildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErr != nil {
 		return nil, scoperErr
 	}

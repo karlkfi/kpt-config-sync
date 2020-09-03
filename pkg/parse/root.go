@@ -26,7 +26,7 @@ func NewRootParser(
 	c client.Client,
 	pollingFrequency time.Duration,
 	fs FileSource,
-	discoveryInterface discovery.ServerResourcer,
+	dc discovery.ServerResourcer,
 	app applier.Interface,
 	rem remediator.Interface,
 ) (Runnable, error) {
@@ -39,13 +39,14 @@ func NewRootParser(
 			applier:    app,
 			remediator: rem,
 		},
+		discoveryInterface: dc,
 	}
 
 	switch format {
 	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewParser(fileReader, discoveryInterface)
+		opts.parser = filesystem.NewParser(fileReader, dc)
 	case filesystem.SourceFormatHierarchy:
-		opts.parser = filesystem.NewRawParser(fileReader, discoveryInterface)
+		opts.parser = filesystem.NewRawParser(fileReader, dc)
 	default:
 		return nil, errors.Errorf("unknown SourceFormat %q", format)
 	}
@@ -114,7 +115,7 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 	}
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), state.policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, wantFiles)
 	if err != nil {
 		return err
 	}
@@ -125,6 +126,7 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 		return err
 	}
 
+	// TODO(b/167700852): Allow passing these validators into the Parser.
 	err = status.Append(err, ValidateRepoSyncs.Validate(filesystem.AsFileObjects(cos)))
 	if err != nil {
 		return err

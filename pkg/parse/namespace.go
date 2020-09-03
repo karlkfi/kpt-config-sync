@@ -24,7 +24,7 @@ func NewNamespaceParser(
 	c client.Client,
 	pollingFrequency time.Duration,
 	fs FileSource,
-	discoveryInterface discovery.ServerResourcer,
+	dc discovery.ServerResourcer,
 	app applier.Interface,
 	rem remediator.Interface,
 ) Runnable {
@@ -33,11 +33,12 @@ func NewNamespaceParser(
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},
-			parser:           filesystem.NewRawParser(fileReader, discoveryInterface),
+			parser:           filesystem.NewRawParser(fileReader, dc),
 			updater: updater{
 				applier:    app,
 				remediator: rem,
 			},
+			discoveryInterface: dc,
 		},
 		scope: scope,
 	}
@@ -77,6 +78,8 @@ func (p *namespace) Run(ctx context.Context) {
 // Read implements Runnable.
 func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
+	// TODO(b/168018895): The below will panic if state is nil, and state is nil
+	//  if err is non-nil.
 	p.setSourceStatus(ctx, state.commit, err)
 	if err != nil {
 		return nil, err
@@ -96,7 +99,7 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 	}()
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), state.policyDir, state.files)
+	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, state.files)
 	if err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 
 	objs := filesystem.AsFileObjects(cos)
 
-	scoper, err := p.buildScoper(ctx)
+	scoper, _, err := filesystem.BuildScoper(p.discoveryInterface, true, objs, nil, filesystem.NoSyncedCRDs)
 	if err != nil {
 		return err
 	}
@@ -140,22 +143,6 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 		p.lastApplied = state.policyDir.OSPath()
 	}
 	return err
-}
-
-func (p *namespace) buildScoper(ctx context.Context) (discovery.Scoper, status.MultiError) {
-	// Initialize the scoper with the core Kubernetes types.
-	scoper := discovery.CoreScoper()
-	// Add any CRDs currently available on the cluster.
-	//
-	// There is a race condition here, as we can't guarantee the Root parser has
-	// fully synced all declared CRDs. Recall that the namespace parsers are
-	// running asynchronously.
-	crds, err := listCrds(ctx, p.client)()
-	if err != nil {
-		return nil, err
-	}
-	scoper.AddCustomResources(crds)
-	return scoper, nil
 }
 
 func (p *namespace) setSourceStatus(ctx context.Context, commit string, errs status.MultiError) {

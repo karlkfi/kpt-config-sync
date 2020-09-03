@@ -127,7 +127,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 
 	// We can't continue with hierarchical logic processing if there is any issue
 	// establishing the scope of all declared resources.
-	scoper, syncedCRDs, scoperErrs := buildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErrs := BuildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErrs != nil {
 		p.errors = status.Append(p.errors, err)
 		return nil

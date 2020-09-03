@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // GetSyncedCRDs is a callback that can be used to list the CRDs on a cluster.
@@ -13,6 +14,12 @@ import (
 // declares a non-base Kubernetes type, doesn't have a CRD for it, and the
 // caller has not disabled API Server checks.
 type GetSyncedCRDs func() ([]*v1beta1.CustomResourceDefinition, status.MultiError)
+
+// NoSyncedCRDs is a no-op GetSyncedCRDs.
+// CSMR doesn't use ClusterConfigs, so it is unnecessary.
+var NoSyncedCRDs GetSyncedCRDs = func() ([]*apiextensionsv1beta1.CustomResourceDefinition, status.MultiError) {
+	return nil, nil
+}
 
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
 // configs from a filesystem.

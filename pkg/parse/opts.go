@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -26,6 +27,10 @@ type opts struct {
 	// lastApplied is the directory (including git commit hash) last successfully
 	// applied by the Applier.
 	lastApplied string //nolint:structcheck
+
+	// discoveryInterface is how the parser learns what types are currently
+	// available on the cluster.
+	discoveryInterface discovery.ServerResourcer
 
 	files
 	updater

@@ -7,13 +7,13 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
-// buildScoper constructs a Scoper to use to get the scope of any type declared
+// BuildScoper constructs a Scoper to use to get the scope of any type declared
 // in the repository.
 //
-// buildScoper only contacts the API Server if both:
+// BuildScoper only contacts the API Server if both:
 // 1. useAPIServer is true, and
 // 2. there are declared types we can't establish the scope of.
-func buildScoper(
+func BuildScoper(
 	dc utildiscovery.ServerResourcer,
 	// if false, don't contact the API Server.
 	useAPIServer bool,
