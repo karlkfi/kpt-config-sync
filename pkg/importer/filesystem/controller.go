@@ -11,7 +11,6 @@ import (
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/syncer/decode"
 
 	"github.com/golang/glog"
@@ -46,13 +45,13 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	glog.Infof("Policy dir: %s", path.Join(gitDir, policyDirRelative))
 
 	var err error
-	if err = ValidateInstallation(importer.DefaultCLIOptions); err != nil {
-		return err
-	}
-
 	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create discoveryclient")
+	}
+
+	if err = ValidateInstallation(dc); err != nil {
+		return err
 	}
 
 	// If SOURCE_FORMAT is invalid, assume hierarchy.
@@ -61,9 +60,9 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	switch format {
 	case SourceFormatUnstructured:
 		// SourceFormat is unstructured, so use the RawParser.
-		cfgParser = NewRawParser(&FileReader{}, importer.DefaultCLIOptions)
+		cfgParser = NewRawParser(&FileReader{}, dc)
 	case SourceFormatHierarchy, "":
-		cfgParser = NewParser(&FileReader{}, importer.DefaultCLIOptions)
+		cfgParser = NewParser(&FileReader{}, dc)
 		format = SourceFormatHierarchy
 	default:
 		return errors.Errorf("unknown SOURCE_FORMAT type %q", string(format))
@@ -107,8 +106,8 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 // ValidateInstallation checks to see if Nomos is installed on a server,
 // given a client that returns a CachedDiscoveryInterface.
 // TODO(b/123598820): Server-side validation for this check.
-func ValidateInstallation(client utildiscovery.ClientGetter) status.MultiError {
-	lists, err := utildiscovery.GetResourcesFromClientGetter(client)
+func ValidateInstallation(dc utildiscovery.ServerResourcer) status.MultiError {
+	lists, err := utildiscovery.GetResources(dc)
 	if err != nil {
 		return status.APIServerError(err, "could not get discovery client")
 	}

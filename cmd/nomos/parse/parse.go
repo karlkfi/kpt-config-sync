@@ -7,16 +7,13 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
-	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,32 +23,8 @@ import (
 const timeout = time.Second * 15
 
 // NewParser returns a new default-initialized Parser for the CLI.
-func NewParser() *filesystem.Parser {
-	return filesystem.NewParser(&filesystem.FileReader{}, importer.DefaultCLIOptions)
-}
-
-// Parse parses a GKE Policy Directory with a Parser using the specified Parser optional arguments.
-// Exits early if it encounters parsing/validation errors.
-func Parse(clusterName string, root cmpath.Absolute, enableAPIServerChecks bool) (*namespaceconfig.AllConfigs, error) {
-	p := NewParser()
-
-	if err := filesystem.ValidateInstallation(importer.DefaultCLIOptions); err != nil {
-		return nil, errors.Wrap(err, "Found issues")
-	}
-
-	trackedFiles, err := FindFiles(root)
-	if err != nil {
-		return nil, err
-	}
-
-	coreObjects, mErr := p.Parse(clusterName, enableAPIServerChecks, GetSyncedCRDs,
-		root, filesystem.FilterHierarchyFiles(root, trackedFiles))
-	if mErr != nil {
-		return nil, errors.Wrap(mErr, "Found issues")
-	}
-	fileObjects := filesystem.AsFileObjects(coreObjects)
-
-	return namespaceconfig.NewAllConfigs("", metav1.Time{}, fileObjects), nil
+func NewParser(dc discovery.ServerResourcer) *filesystem.Parser {
+	return filesystem.NewParser(&filesystem.FileReader{}, dc)
 }
 
 // GetSyncedCRDs returns the CRDs synced to the cluster in the current context.

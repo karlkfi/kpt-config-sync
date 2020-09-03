@@ -158,7 +158,7 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 
 // newTestParser creates a parser that processes the passed FileObjects.
 func newTestParser(reader filesystem.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
-	f := ft.NewTestClientGetter(CRDsToAPIGroupResources(syncedCRDs))
+	f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(syncedCRDs))
 
 	return filesystem.NewParser(reader, f)
 }

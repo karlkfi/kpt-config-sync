@@ -50,13 +50,19 @@ func vet(
 	if err != nil {
 		return err
 	}
+
+	dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
+	if err != nil {
+		return err
+	}
+
 	var parser filesystem.ConfigParser
 	switch sourceFormat {
 	case hierarchyFormat:
-		parser = parse.NewParser()
+		parser = parse.NewParser(dc)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case unstructuredFormat:
-		parser = filesystem.NewRawParser(&filesystem.FileReader{}, importer.DefaultCLIOptions)
+		parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc)
 	default:
 		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 	}

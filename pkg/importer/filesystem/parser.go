@@ -37,18 +37,18 @@ func init() {
 
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
-	clientGetter utildiscovery.ClientGetter
-	reader       Reader
-	errors       status.MultiError
+	dc     utildiscovery.ServerResourcer
+	reader Reader
+	errors status.MultiError
 }
 
 var _ ConfigParser = &Parser{}
 
-// NewParser creates a new Parser using the specified RESTClientGetter and parser options.
-func NewParser(reader Reader, c utildiscovery.ClientGetter) *Parser {
+// NewParser creates a new Parser using the specified DiscoveryClient and parser options.
+func NewParser(reader Reader, dc utildiscovery.ServerResourcer) *Parser {
 	return &Parser{
-		clientGetter: c,
-		reader:       reader,
+		dc:     dc,
+		reader: reader,
 	}
 }
 
@@ -127,7 +127,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 
 	// We can't continue with hierarchical logic processing if there is any issue
 	// establishing the scope of all declared resources.
-	scoper, syncedCRDs, scoperErrs := buildScoper(p.clientGetter, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErrs := buildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErrs != nil {
 		p.errors = status.Append(p.errors, err)
 		return nil

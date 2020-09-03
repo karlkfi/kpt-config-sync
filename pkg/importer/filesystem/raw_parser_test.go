@@ -119,7 +119,7 @@ func TestRawParser_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			f := ft.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
+			f := ft.NewTestDiscoveryClient(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
 			root, err := cmpath.AbsoluteSlash("/")
 			if err != nil {
@@ -172,7 +172,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := ft.NewTestClientGetter(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
+			f := ft.NewTestDiscoveryClient(parsertest.CRDsToAPIGroupResources(tc.syncedCRDs))
 
 			root, err := cmpath.AbsoluteSlash("/")
 			if err != nil {

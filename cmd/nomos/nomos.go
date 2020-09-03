@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/google/nomos/cmd/nomos/bugreport"
 	"github.com/google/nomos/cmd/nomos/hydrate"
 	"github.com/google/nomos/cmd/nomos/initialize"
 	"github.com/google/nomos/cmd/nomos/status"
-	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/cmd/nomos/version"
 	"github.com/google/nomos/cmd/nomos/vet"
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -36,10 +36,12 @@ func init() {
 func main() {
 	// glog gripes if you don't parse flags before making any logging statements.
 	if err := flag.CommandLine.Parse([]string{}); err != nil {
-		util.PrintErrAndDie(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		util.PrintErrAndDie(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

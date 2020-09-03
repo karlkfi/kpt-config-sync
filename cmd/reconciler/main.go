@@ -88,18 +88,23 @@ func main() {
 		glog.Fatal(err)
 	}
 
+	dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
+	if err != nil {
+		glog.Fatalf("Failed to get DiscoveryClient: %v", err)
+	}
+
 	opts := reconciler.Options{
-		FightDetectionThreshold:  *fightDetectionThreshold,
-		NumWorkers:               *workers,
-		ReconcilerScope:          declared.Scope(*scope),
-		ApplierResyncPeriod:      *resyncPeriod,
-		GitPollingFrequency:      *gitPollingPeriod,
-		GitRoot:                  absGitDir,
-		GitRev:                   *gitRev,
-		GitBranch:                *gitBranch,
-		GitRepo:                  *gitRepo,
-		PolicyDir:                relPolicyDir,
-		DiscoveryInterfaceGetter: importer.DefaultCLIOptions,
+		FightDetectionThreshold: *fightDetectionThreshold,
+		NumWorkers:              *workers,
+		ReconcilerScope:         declared.Scope(*scope),
+		ApplierResyncPeriod:     *resyncPeriod,
+		GitPollingFrequency:     *gitPollingPeriod,
+		GitRoot:                 absGitDir,
+		GitRev:                  *gitRev,
+		GitBranch:               *gitBranch,
+		GitRepo:                 *gitRepo,
+		PolicyDir:               relPolicyDir,
+		DiscoveryClient:         dc,
 	}
 	if declared.Scope(*scope) == declared.RootReconciler {
 		glog.Info("Starting reconciler for: root")

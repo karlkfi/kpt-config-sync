@@ -16,17 +16,17 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
-	reader       Reader
-	clientGetter utildiscovery.ClientGetter
+	reader Reader
+	dc     utildiscovery.ServerResourcer
 }
 
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(reader Reader, client utildiscovery.ClientGetter) ConfigParser {
+func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer) ConfigParser {
 	return &rawParser{
-		reader:       reader,
-		clientGetter: client,
+		reader: reader,
+		dc:     dc,
 	}
 }
 
@@ -49,7 +49,7 @@ func (p *rawParser) Parse(
 		return nil, crdErrs
 	}
 
-	scoper, syncedCRDs, scoperErr := buildScoper(p.clientGetter, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErr := buildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErr != nil {
 		return nil, scoperErr
 	}

@@ -14,7 +14,7 @@ import (
 // 1. useAPIServer is true, and
 // 2. there are declared types we can't establish the scope of.
 func buildScoper(
-	clientGetter utildiscovery.ClientGetter,
+	dc utildiscovery.ServerResourcer,
 	// if false, don't contact the API Server.
 	useAPIServer bool,
 	// The list of declared FileObjects. Used to determine if API Server calls are necessary.
@@ -35,7 +35,7 @@ func buildScoper(
 	if useAPIServer && !scoper.HasScopesFor(fileObjects) {
 		// We're allowed to talk to the API Server, and we don't have the scopes
 		// for some types.
-		return addSyncedCRDs(scoper, clientGetter, getSyncedCRDs)
+		return addSyncedCRDs(scoper, dc, getSyncedCRDs)
 	}
 
 	// Note that we return declaredCRDs as syncedCRDs in this case. We've
@@ -46,7 +46,7 @@ func buildScoper(
 	return scoper, declaredCRDs, nil
 }
 
-func addSyncedCRDs(scoper utildiscovery.Scoper, clientGetter utildiscovery.ClientGetter, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
+func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
 	// Add CRDs from the ClusterConfig first since those may overwrites ones on
 	// the API Server in the future.
 	syncedCRDs, err := getSyncedCRDs()
@@ -56,7 +56,7 @@ func addSyncedCRDs(scoper utildiscovery.Scoper, clientGetter utildiscovery.Clien
 	scoper.AddCustomResources(syncedCRDs)
 
 	// List the APIResources from the API Server.
-	lists, discoveryErr := utildiscovery.GetResourcesFromClientGetter(clientGetter)
+	lists, discoveryErr := utildiscovery.GetResources(dc)
 	if discoveryErr != nil {
 		return nil, nil, discoveryErr
 	}

@@ -61,12 +61,9 @@ type Options struct {
 	GitRepo string
 	// PolicyDir is the relative path to the policies within the Git repository.
 	PolicyDir cmpath.Relative
-	// DiscoveryInterfaceGetter is how to fetch a new DiscoveryClient when the set
-	// of available CRDs may have changed.
-	// TODO(b/162958883): Determine if we can actually just used a
-	//  CachedDiscoveryClient and just invalidate it each time, since that's
-	//  simpler.
-	DiscoveryInterfaceGetter discovery.ClientGetter
+	// DiscoveryClient is the minimal subinterface of DiscoveryClient we actually
+	// need.
+	DiscoveryClient discovery.ServerResourcer
 	// RootOptions is the set of options to fill in if this is configuring the
 	// Root reconciler.
 	// Unset for Namespace repositories.
@@ -137,13 +134,13 @@ func Run(ctx context.Context, opts Options) {
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fs, opts.DiscoveryInterfaceGetter, a, rem)
+			opts.GitPollingFrequency, fs, opts.DiscoveryClient, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fs, opts.DiscoveryInterfaceGetter, a, rem)
+			opts.GitPollingFrequency, fs, opts.DiscoveryClient, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer

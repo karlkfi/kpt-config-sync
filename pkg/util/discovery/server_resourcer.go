@@ -15,21 +15,6 @@ type ServerResourcer interface {
 	ServerResources() ([]*metav1.APIResourceList, error)
 }
 
-// ClientGetter is a client which can return a CachedDiscoveryInterface.
-type ClientGetter interface {
-	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
-}
-
-// GetResourcesFromClientGetter gets the APIResourceLists from a client's DiscoveryClient.
-func GetResourcesFromClientGetter(client ClientGetter) ([]*metav1.APIResourceList, status.MultiError) {
-	// Get all known API resources from the server.
-	dc, err := client.ToDiscoveryClient()
-	if err != nil {
-		return nil, status.APIServerError(err, "failed to get discovery client")
-	}
-	return GetResources(dc)
-}
-
 type invalidatable interface {
 	Invalidate()
 }

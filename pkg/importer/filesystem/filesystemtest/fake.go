@@ -1,5 +1,5 @@
 // Package filesystemtest contains fake implementation of the API discovery mechanisms,
-// seeded with the types used in Nomos.  Use NewTestClientGetter first to create
+// seeded with the types used in Nomos.  Use NewTestDiscoveryClient first to create
 // a new instance and work from there.
 package filesystemtest
 
@@ -15,19 +15,9 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-// NewTestClientGetter returns a new test RESTClientGetter that has mappings for test and provided resources.
-func NewTestClientGetter(extraResources []*restmapper.APIGroupResources) utildiscovery.ClientGetter {
-	return &fakeRESTClientGetter{newFakeCachedDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))}
-}
-
-// fakeRESTClientGetter implements utildiscovery.ClientGetter.
-type fakeRESTClientGetter struct {
-	DiscoveryClient discovery.CachedDiscoveryInterface
-}
-
-// ToDiscoveryClient returns discovery client
-func (g *fakeRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-	return g.DiscoveryClient, nil
+// NewTestDiscoveryClient returns a new test DiscoveryClient that has mappings for test and provided resources.
+func NewTestDiscoveryClient(extraResources []*restmapper.APIGroupResources) utildiscovery.ServerResourcer {
+	return newFakeCachedDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))
 }
 
 // fakeCachedDiscoveryClient is a DiscoveryClient with stubbed API Resources.

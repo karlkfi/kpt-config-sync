@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -67,30 +68,34 @@ clusters without declarations. Each directory holds the full set of manifests wh
 kubectl apply -fR to the cluster, and is equivalent to the state ConfigManagement maintains on your
 clusters.`,
 	Args: cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		switch extension {
 		case "yaml", "json": // do nothing
 		default:
-			util.PrintErrAndDie(errors.New("format must argument be 'yaml' or 'json'"))
+			return errors.New("format must argument be 'yaml' or 'json'")
 		}
 
 		abs, err := filepath.Abs(flags.Path)
 		if err != nil {
-			util.PrintErrAndDie(err)
+			return err
 		}
 		rootDir, err := cmpath.AbsoluteOS(abs)
 		if err != nil {
-			util.PrintErrAndDie(err)
+			return err
 		}
 
 		files, err := parse.FindFiles(rootDir)
 		if err != nil {
-			util.PrintErrAndDie(err)
+			return err
 		}
 		// Hydrate is only used in hierarchical mode.
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 
-		parser := parse.NewParser()
+		dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
+		if err != nil {
+			return err
+		}
+		parser := parse.NewParser(dc)
 
 		var allObjects []ast.FileObject
 
@@ -123,93 +128,113 @@ clusters.`,
 		multiCluster := numClusters > 1
 		fileObjects := hydrate.GenerateUniqueFileNames(extension, multiCluster, allObjects...)
 		if flat {
-			printFlatOutput(fileObjects)
+			err = printFlatOutput(fileObjects)
 		} else {
-			printDirectoryOutput(fileObjects)
+			err = printDirectoryOutput(fileObjects)
+		}
+		if err != nil {
+			return err
 		}
 
 		if encounteredError {
 			os.Exit(1)
 		}
+
+		return nil
 	},
 }
 
-func printFlatOutput(fileObjects []ast.FileObject) {
+func printFlatOutput(fileObjects []ast.FileObject) error {
 	var objects []*unstructured.Unstructured
 	for _, o := range fileObjects {
-		objects = append(objects, toUnstructured(o.Object))
+		u, err := toUnstructured(o)
+		if err != nil {
+			return err
+		}
+		objects = append(objects, u)
 	}
 
-	printFile(outPath, objects)
+	return printFile(outPath, objects)
 }
 
-func printDirectoryOutput(fileObjects []ast.FileObject) {
+func printDirectoryOutput(fileObjects []ast.FileObject) error {
 	files := make(map[string][]*unstructured.Unstructured)
 	for _, obj := range fileObjects {
-		files[obj.SlashPath()] = append(files[obj.SlashPath()], toUnstructured(obj.Object))
+		u, err := toUnstructured(obj.Object)
+		if err != nil {
+			return err
+		}
+		files[obj.SlashPath()] = append(files[obj.SlashPath()], u)
 	}
 
 	for file, objects := range files {
-		printFile(filepath.Join(outPath, file), objects)
+		err := printFile(filepath.Join(outPath, file), objects)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func toUnstructured(o core.Object) *unstructured.Unstructured {
+func toUnstructured(o core.Object) (*unstructured.Unstructured, error) {
 	// Must convert or else fields like status automatically get written.
 	unstructuredObject, err2 := converter.ToUnstructured(o)
 	if err2 != nil {
-		util.PrintErrAndDie(err2)
+		return nil, err2
 	}
 	u := &unstructured.Unstructured{Object: unstructuredObject}
 	rmBadFields(u)
-	return u
+	return u, nil
 }
 
-func printFile(file string, objects []*unstructured.Unstructured) {
-	err := os.MkdirAll(filepath.Dir(file), os.ModePerm)
+func printFile(file string, objects []*unstructured.Unstructured) (err error) {
+	err = os.MkdirAll(filepath.Dir(file), os.ModePerm)
 	if err != nil {
-		util.PrintErrAndDie(err)
+		return err
 	}
 
 	outFile, err := os.Create(file)
 	if err != nil {
-		util.PrintErrAndDie(err)
+		return err
 	}
 
 	defer func() {
 		err2 := outFile.Close()
-		if err2 != nil {
-			util.PrintErrAndDie(err2)
+		if err2 != nil && err == nil {
+			// Assign the named parameter since there's no other way to ensure we get
+			// the error from the deferred Close.
+			err = err2
 		}
 	}()
 
 	var content string
 	switch extension {
 	case "yaml":
-		content = toYAML(objects)
+		content, err = toYAML(objects)
 	case "json":
-		content = toJSON(objects)
+		content, err = toJSON(objects)
 	}
-	_, err3 := outFile.WriteString(content)
-	if err3 != nil {
-		util.PrintErrAndDie(err3)
+	if err != nil {
+		return err
 	}
+	_, err = outFile.WriteString(content)
+	return err
 }
 
-func toYAML(objects []*unstructured.Unstructured) string {
+func toYAML(objects []*unstructured.Unstructured) (string, error) {
 	content := strings.Builder{}
 	for _, o := range objects {
 		content.WriteString("---\n")
-		bytes, err2 := yaml.Marshal(o.Object)
-		if err2 != nil {
-			util.PrintErrAndDie(err2)
+		bytes, err := yaml.Marshal(o.Object)
+		if err != nil {
+			return "", err
 		}
 		content.Write(bytes)
 	}
-	return content.String()
+	return content.String(), nil
 }
 
-func toJSON(objects []*unstructured.Unstructured) string {
+func toJSON(objects []*unstructured.Unstructured) (string, error) {
 	list := &corev1.List{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "List",
@@ -217,19 +242,22 @@ func toJSON(objects []*unstructured.Unstructured) string {
 		},
 	}
 	for _, obj := range objects {
-		u := toUnstructured(obj)
+		u, err := toUnstructured(obj)
+		if err != nil {
+			return "", err
+		}
 		raw := runtime.RawExtension{Object: u}
 		list.Items = append(list.Items, raw)
 	}
 	unstructuredList, err := converter.ToUnstructured(list)
 	if err != nil {
-		util.PrintErrAndDie(err)
+		return "", err
 	}
 	content, err := json.MarshalIndent(unstructuredList, "", "\t")
 	if err != nil {
-		util.PrintErrAndDie(err)
+		return "", err
 	}
-	return string(content)
+	return string(content), nil
 }
 
 func rmBadFields(u *unstructured.Unstructured) {

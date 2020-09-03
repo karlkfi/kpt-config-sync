@@ -26,7 +26,7 @@ func NewRootParser(
 	c client.Client,
 	pollingFrequency time.Duration,
 	fs FileSource,
-	discoveryInterfaceGetter discovery.ClientGetter,
+	discoveryInterface discovery.ServerResourcer,
 	app applier.Interface,
 	rem remediator.Interface,
 ) (Runnable, error) {
@@ -43,9 +43,9 @@ func NewRootParser(
 
 	switch format {
 	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewParser(fileReader, discoveryInterfaceGetter)
+		opts.parser = filesystem.NewParser(fileReader, discoveryInterface)
 	case filesystem.SourceFormatHierarchy:
-		opts.parser = filesystem.NewRawParser(fileReader, discoveryInterfaceGetter)
+		opts.parser = filesystem.NewRawParser(fileReader, discoveryInterface)
 	default:
 		return nil, errors.Errorf("unknown SourceFormat %q", format)
 	}
