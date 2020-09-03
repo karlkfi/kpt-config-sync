@@ -69,44 +69,57 @@ func (p *root) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C: // every clock tick
-			err := p.Parse(ctx)
+			state, err := p.Read(ctx)
+			if err != nil {
+				glog.Error(err)
+				continue
+			}
+
+			err = p.Parse(ctx, state)
 			if err != nil {
 				glog.Error(err)
 			}
-			p.setRootSyncErrs(ctx, err)
 		}
 	}
 }
 
-// Parse implements Runnable.
-func (p *root) Parse(ctx context.Context) status.MultiError {
-	policyDir, wantFiles, err := p.absPolicyDir()
+// Read implements Runnable.
+func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
+	state, err := p.readGitState()
 	if err != nil {
-		return err
+		p.setSourceStatus(ctx, "", err)
+		return nil, err
 	}
-	if p.lastApplied == policyDir.OSPath() {
+	p.setSourceStatus(ctx, state.commit, err)
+	return state, nil
+}
+
+// Parse implements Runnable.
+// TODO(b/167677315): DRY this with the namespace version.
+func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
+	if p.lastApplied == state.policyDir.OSPath() {
 		return nil
 	}
 
+	var err status.MultiError
+	defer func() {
+		p.setSyncStatus(ctx, state.commit, err)
+	}()
+
+	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
 		// outside of the allowed directories.
-		wantFiles = filesystem.FilterHierarchyFiles(policyDir, wantFiles)
+		wantFiles = filesystem.FilterHierarchyFiles(state.policyDir, wantFiles)
 	}
 
-	glog.Infof("Parsing files from git dir: %s", policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), policyDir, wantFiles)
+	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), state.policyDir, wantFiles)
 	if err != nil {
 		return err
 	}
 
-	commitHash, e := p.CommitHash()
-	if e != nil {
-		err = status.Append(err, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build())
-		return err
-	}
-
-	e = addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), commitHash)
+	e := addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return err
@@ -115,21 +128,48 @@ func (p *root) Parse(ctx context.Context) status.MultiError {
 	// TODO(b/163053203): Validate RepoSync CRs.
 	err = p.update(ctx, cos)
 	if err == nil {
-		glog.V(4).Infof("Successfully applied all files from git dir: %s", policyDir.OSPath())
-		p.lastApplied = policyDir.OSPath()
+		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
+		p.lastApplied = state.policyDir.OSPath()
 	}
 	return err
 }
 
-func (p *root) setRootSyncErrs(ctx context.Context, errs status.MultiError) {
+func (p *root) setSourceStatus(ctx context.Context, commit string, errs status.MultiError) {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		glog.Errorf("Failed to get RootSync for parser: %v", err)
 		return
 	}
 
-	rs.Status.Sync.LastUpdate = metav1.Now()
+	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Source.Errors) > 0
+	if rs.Status.Source.Commit == commit && !hasErrs {
+		return
+	}
+
+	rs.Status.Source.Commit = commit
+	rs.Status.Source.Errors = status.ToCSE(errs)
+
+	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		glog.Errorf("Failed to update RootSync status from parser: %v", err)
+	}
+}
+
+func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) {
+	var rs v1alpha1.RootSync
+	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+		glog.Errorf("Failed to get RootSync for parser: %v", err)
+		return
+	}
+
+	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Sync.Errors) > 0
+	if rs.Status.Sync.Commit == commit && !hasErrs {
+		return
+	}
+
+	rs.Status.Sync.Commit = commit
 	rs.Status.Sync.Errors = status.ToCSE(errs)
+	rs.Status.Sync.LastUpdate = metav1.Now()
+
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		glog.Errorf("Failed to update RootSync status from parser: %v", err)
 	}

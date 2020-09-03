@@ -31,27 +31,36 @@ type files struct {
 	currentPolicyDir string
 }
 
-// absPolicyDir returns the absolute path to the policyDir, and the list of all
-// observed files in that directory (recursively).
+// gitState contains all state read from the mounted Git repo.
+type gitState struct {
+	// commit is the Git commit hash read from the Git repo.
+	commit string
+	// policyDir is the absolute path to the policy directory.
+	policyDir cmpath.Absolute
+	// files is the list of all observed files in the policy directory (recursively).
+	files []cmpath.Absolute
+}
+
+// readGitState returns the current state read from the mounted Git repo.
 //
 // Returns an error if there is some problem resolving symbolic links or in
 // listing the files.
-func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.MultiError) {
+func (o *files) readGitState() (*gitState, status.Error) {
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
-		return cmpath.Absolute{}, nil, status.PathWrapError(
+		return nil, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
 	}
 	err = git.CheckClean(gitDir.OSPath())
 	if err != nil {
-		return cmpath.Absolute{}, nil, status.PathWrapError(
+		return nil, status.PathWrapError(
 			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
 	}
 
 	relPolicyDir := gitDir.Join(o.PolicyDir)
 	policyDir, err := relPolicyDir.EvalSymlinks()
 	if err != nil {
-		return cmpath.Absolute{}, nil, status.PathWrapError(
+		return nil, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
 	}
 
@@ -64,20 +73,16 @@ func (o *files) absPolicyDir() (cmpath.Absolute, []cmpath.Absolute, status.Multi
 
 	files, err := git.ListFiles(policyDir)
 	if err != nil {
-		return cmpath.Absolute{}, nil, status.PathWrapError(
+		return nil, status.PathWrapError(
 			errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
 	}
-	return policyDir, files, nil
-}
 
-// CommitHash returns the current Git commit hash from the Git directory.
-func (o *files) CommitHash() (string, error) {
-	gitDir, err := o.GitDir.EvalSymlinks()
-	if err != nil {
-		return "", status.PathWrapError(
-			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
+	commit, e := git.CommitHash(gitDir.OSPath())
+	if e != nil {
+		return nil, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build()
 	}
-	return git.CommitHash(gitDir.OSPath())
+
+	return &gitState{commit, policyDir, files}, nil
 }
 
 func (o *files) gitContext() gitContext {

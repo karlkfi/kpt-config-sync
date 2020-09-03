@@ -60,27 +60,43 @@ func (p *namespace) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C: // every clock tick
-			err := p.Parse(ctx)
+			state, err := p.Read(ctx)
+			if err != nil {
+				glog.Error(err)
+				continue
+			}
+
+			err = p.Parse(ctx, state)
 			if err != nil {
 				glog.Error(err)
 			}
-			p.setRepoSyncErrs(ctx, err)
 		}
 	}
 }
 
-// Parse implements Runnable.
-func (p *namespace) Parse(ctx context.Context) status.MultiError {
-	policyDir, wantFiles, err := p.absPolicyDir()
+// Read implements Runnable.
+func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
+	state, err := p.readGitState()
+	p.setSourceStatus(ctx, state.commit, err)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if p.lastApplied == policyDir.OSPath() {
+	return state, nil
+}
+
+// Parse implements Runnable.
+func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiError {
+	if p.lastApplied == state.policyDir.OSPath() {
 		return nil
 	}
 
-	glog.Infof("Parsing files from git dir: %s", policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), policyDir, wantFiles)
+	var err status.MultiError
+	defer func() {
+		p.setSyncStatus(ctx, state.commit, err)
+	}()
+
+	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	cos, err := p.parser.Parse(p.clusterName, true, listCrds(ctx, p.client), state.policyDir, state.files)
 	if err != nil {
 		return err
 	}
@@ -92,13 +108,7 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 		return err
 	}
 
-	commitHash, e := p.CommitHash()
-	if e != nil {
-		err = status.Append(err, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build())
-		return err
-	}
-
-	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), commitHash)
+	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return err
@@ -126,8 +136,8 @@ func (p *namespace) Parse(ctx context.Context) status.MultiError {
 
 	err = p.update(ctx, cos)
 	if err == nil {
-		glog.V(4).Infof("Successfully applied all files from git dir: %s", policyDir.OSPath())
-		p.lastApplied = policyDir.OSPath()
+		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
+		p.lastApplied = state.policyDir.OSPath()
 	}
 	return err
 }
@@ -148,16 +158,45 @@ func (p *namespace) buildScoper(ctx context.Context) (discovery.Scoper, status.M
 	return scoper, nil
 }
 
-func (p *namespace) setRepoSyncErrs(ctx context.Context, errs status.MultiError) {
+func (p *namespace) setSourceStatus(ctx context.Context, commit string, errs status.MultiError) {
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		glog.Errorf("Failed to get RepoSync for %s parser: %v", p.scope, err)
+		glog.Errorf("Failed to get RepoSync for parser: %v", err)
 		return
 	}
 
-	rs.Status.Sync.LastUpdate = metav1.Now()
-	rs.Status.Sync.Errors = status.ToCSE(errs)
+	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Source.Errors) > 0
+	if rs.Status.Source.Commit == commit && !hasErrs {
+		return
+	}
+
+	if errs == nil {
+		rs.Status.Source.Commit = commit
+	}
+	rs.Status.Source.Errors = status.ToCSE(errs)
+
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		glog.Errorf("Failed to update RepoSync status from %s parser: %v", p.scope, err)
+		glog.Errorf("Failed to update RepoSync status from parser: %v", err)
+	}
+}
+
+func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) {
+	var rs v1alpha1.RepoSync
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+		glog.Errorf("Failed to get RepoSync for parser: %v", err)
+		return
+	}
+
+	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Sync.Errors) > 0
+	if rs.Status.Sync.Commit == commit && !hasErrs {
+		return
+	}
+
+	rs.Status.Sync.Commit = commit
+	rs.Status.Sync.Errors = status.ToCSE(errs)
+	rs.Status.Sync.LastUpdate = metav1.Now()
+
+	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		glog.Errorf("Failed to update RepoSync status from parser: %v", err)
 	}
 }
