@@ -210,75 +210,52 @@ func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 
 func TestRootSyncMutateDeployment(t *testing.T) {
 	testCases := []struct {
-		name             string
-		rootSync         *v1alpha1.RootSync
-		actualDeployment *appsv1.Deployment
-		wantDeployment   *appsv1.Deployment
-		wantErr          bool
+		name     string
+		actual   *appsv1.Deployment
+		expected *appsv1.Deployment
+		wantErr  bool
 	}{
 		{
 			name: "Deployment created",
-			rootSync: rootSync(
-				"1.0.0",
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
+			actual: rootSyncDeployment(
+				setContainers(fake.ContainerObject(gitSync)),
 			),
-			actualDeployment: deployment(
-				v1.NSConfigManagementSystem,
-				rootSyncResourceName(gitSync),
-				gitSync),
-			wantDeployment: rsDeploymentWithEnvFrom(
-				v1.NSConfigManagementSystem,
-				rootSyncResourceName(gitSync),
-				gitSyncConfigMap(gitSync, configMapRef{
-					name:     gitSync,
-					optional: pointer.BoolPtr(false),
-				}),
-				map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"},
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
+			expected: rootSyncDeployment(
+				setContainers(mutatedGitSyncContainer()),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(rootSyncReconcilerName),
+			),
 			wantErr: false,
 		},
 		{
 			name: "Deployment failed, Unsupported container",
-			rootSync: rootSync(
-				"1.0.0",
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
+			actual: rootSyncDeployment(
+				setContainers(fake.ContainerObject(unsupportedContainer)),
 			),
-			actualDeployment: deployment(
-				v1.NSConfigManagementSystem,
-				rootSyncResourceName(gitSync),
-				unsupportedContainer),
-			wantDeployment: rsDeploymentWithEnvFrom(
-				v1.NSConfigManagementSystem,
-				gitSync,
-				gitSyncConfigMap(gitSync, configMapRef{
-					name:     gitSync,
-					optional: pointer.BoolPtr(false),
-				}),
-				nil,
-				core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid))),
 			wantErr: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			declared := tc.actualDeployment.DeepCopyObject().(*appsv1.Deployment)
-			err := mutateRootSyncDeployment(tc.rootSync, tc.actualDeployment, declared, []byte("1234"))
+			declared := tc.actual.DeepCopyObject().(*appsv1.Deployment)
+			testRS := rootSync(
+				"1.0.0",
+				branch,
+				core.Name(rootsyncName),
+				core.Namespace(rootsyncReqNamespace),
+				core.UID(uid),
+			)
+			err := mutateRootSyncDeployment(testRS, tc.actual, declared, []byte("1234"))
 			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
+				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: nil", err)
+				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error: nil", err)
 			}
 			if !tc.wantErr {
-				diff := cmp.Diff(tc.actualDeployment, tc.wantDeployment)
+				diff := cmp.Diff(tc.actual, tc.expected)
 				if diff != "" {
-					t.Errorf("mutateRepoSyncDeployment() got diff: %v\nwant: nil", diff)
+					t.Errorf("Deployment diff: %v", diff)
 				}
 			}
 		})
@@ -444,4 +421,54 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Compare ConfigMapRef field in containers.
 	cmpDeployment(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
+}
+
+type depMutator func(*appsv1.Deployment)
+
+func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
+	dep := fake.DeploymentObject(
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.Name(rootSyncReconcilerName),
+		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
+	)
+
+	for _, mut := range muts {
+		mut(dep)
+	}
+
+	return dep
+}
+
+func setContainers(conts ...*corev1.Container) depMutator {
+	return func(dep *appsv1.Deployment) {
+		var templateContainers []corev1.Container
+		for _, cont := range conts {
+			templateContainers = append(templateContainers, *cont)
+		}
+		dep.Spec.Template.Spec.Containers = templateContainers
+	}
+}
+
+func setServiceAccountName(name string) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.Spec.Template.Spec.ServiceAccountName = name
+	}
+}
+
+func setAnnotations(annotations map[string]string) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.Spec.Template.Annotations = annotations
+	}
+}
+
+func mutatedGitSyncContainer() *corev1.Container {
+	return &corev1.Container{
+		Name: gitSync,
+		EnvFrom: []corev1.EnvFromSource{
+			rsEnvFromSource(configMapRef{
+				name:     gitSync,
+				optional: pointer.BoolPtr(false),
+			}),
+		},
+	}
 }
