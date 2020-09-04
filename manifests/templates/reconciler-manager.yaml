@@ -57,6 +57,10 @@ spec:
         - name: configs
           mountPath: /deployment.yaml
           subPath: deployment.yaml
+        envFrom:
+          - configMapRef:
+              name: reconciler-manager
+              optional: true  # Currently nothing mandatory in the ConfigMap
       terminationGracePeriodSeconds: 10
       volumes:
       - name: configs

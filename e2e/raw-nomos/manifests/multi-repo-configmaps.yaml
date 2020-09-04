@@ -1,0 +1,13 @@
+# This is meant to be a sane, default configuration with which the ConfigSync components can be
+# installed for e2e testing.  The assumption is that an individual test will override these
+# ConfigMaps and restart their associated pods.
+
+# First off, we need to deploy a set of configMaps to replace those that the operator would
+# normally deploy for us.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reconciler-manager
+  namespace: config-management-system
+data:
+  CLUSTER_NAME: e2e-test-cluster

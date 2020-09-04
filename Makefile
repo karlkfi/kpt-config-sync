@@ -198,6 +198,8 @@ test-all-local: test test-e2e
 fmt-go: $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
+	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w e2e
+	@docker run $(DOCKER_RUN_ARGS) goimports -w e2e
 
 lint: lint-go lint-bash lint-yaml lint-license
 

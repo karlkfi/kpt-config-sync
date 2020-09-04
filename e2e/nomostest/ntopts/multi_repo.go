@@ -4,6 +4,10 @@ package ntopts
 // If NotRootRepos is non-empty, the test is assumed to be running in
 // multi-repo mode.
 type MultiRepo struct {
+	// Enabled indicates that NT should setup and test multi-repo behavior rather
+	// than mono-repo behavior.s
+	Enabled bool
+
 	// NotRootRepos is the (potential) set of repos pointed to by the RepoSyncs.
 	//
 	// Names are primarily for human-identification and have little functional
