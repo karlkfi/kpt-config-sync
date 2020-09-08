@@ -84,18 +84,6 @@ func secretObj(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev
 	return result
 }
 
-func deployment(namespace, name string, containerName string, opts ...core.MetaMutator) *appsv1.Deployment {
-	result := fake.DeploymentObject(opts...)
-	result.Namespace = namespace
-	result.Name = name
-	result.Spec.Template.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			*fake.ContainerObject(containerName),
-		},
-	}
-	return result
-}
-
 func rsDeploymentAnnotation() map[string]string {
 	return map[string]string{
 		v1alpha1.ConfigMapAnnotationKey: rsAnnotation,
@@ -157,7 +145,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				setContainers(fake.ContainerObject(gitSync)),
 			),
 			expected: rootSyncDeployment(
-				setContainers(mutatedGitSyncContainer()),
+				setContainers(rootGitSyncContainer()),
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(rootSyncReconcilerName),
 			),
@@ -279,8 +267,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		t.Errorf("ClusterRoleBinding diff %s", diff)
 	}
 
-	// Compare ConfigMapRef field in containers.
-	cmpDeployments(t, wantDeployments, fakeClient)
+	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, ClusterRoleBinding and Deployment successfully created")
 
 	// Verify status updates.
@@ -348,8 +335,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		}
 	}
 
-	// Compare ConfigMapRef field in containers.
-	cmpDeployments(t, wantDeployments, fakeClient)
+	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
 }
 
@@ -391,18 +377,22 @@ func setAnnotations(annotations map[string]string) depMutator {
 	}
 }
 
-func mutatedGitSyncContainer() *corev1.Container {
+func mutatedGitSyncContainer(objRef corev1.LocalObjectReference) *corev1.Container {
 	return &corev1.Container{
 		Name: gitSync,
 		EnvFrom: []corev1.EnvFromSource{
 			{
 				ConfigMapRef: &corev1.ConfigMapEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: rootSyncResourceName(gitSync),
-					},
-					Optional: pointer.BoolPtr(false),
+					LocalObjectReference: objRef,
+					Optional:             pointer.BoolPtr(false),
 				},
 			},
 		},
 	}
+}
+
+func rootGitSyncContainer() *corev1.Container {
+	return mutatedGitSyncContainer(corev1.LocalObjectReference{
+		Name: rootSyncResourceName(gitSync),
+	})
 }

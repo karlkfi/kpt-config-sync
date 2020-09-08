@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -19,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -76,34 +74,6 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 	return result
 }
 
-type configMapRef struct {
-	name     string
-	optional *bool
-}
-
-func gitSyncConfigMap(containerName string, configmap configMapRef) map[string][]configMapRef {
-	result := make(map[string][]configMapRef)
-	result[containerName] = []configMapRef{configmap}
-	return result
-}
-
-func repoSyncReconcilerConfigMapRef() map[string][]configMapRef {
-	return map[string][]configMapRef{
-		reconciler: {
-			{
-				name:     reconciler,
-				optional: pointer.BoolPtr(false),
-			},
-		},
-		gitSync: {
-			{
-				name:     gitSync,
-				optional: pointer.BoolPtr(false),
-			},
-		},
-	}
-}
-
 func nsDeploymentAnnotation() map[string]string {
 	return map[string]string{
 		v1alpha1.ConfigMapAnnotationKey: nsAnnotation,
@@ -113,45 +83,6 @@ func nsDeploymentAnnotation() map[string]string {
 func nsDeploymentUpdatedAnnotation() map[string]string {
 	return map[string]string{
 		v1alpha1.ConfigMapAnnotationKey: nsUpdatedAnnotation,
-	}
-}
-
-// nsDeploymentWithEnvFrom returns appsv1.Deployment
-// containerConfigMap contains map of container name and their respective configmaps.
-func nsDeploymentWithEnvFrom(namespace, name string,
-	containerConfigMap map[string][]configMapRef,
-	annotation map[string]string,
-	opts ...core.MetaMutator) *appsv1.Deployment {
-	result := fake.DeploymentObject(opts...)
-	result.Namespace = namespace
-	result.Name = repoSyncName(name)
-	result.Spec.Template.Annotations = annotation
-
-	var container []corev1.Container
-	for cntrName, cms := range containerConfigMap {
-		cntr := fake.ContainerObject(cntrName)
-		var eFromSource []corev1.EnvFromSource
-		for _, cm := range cms {
-			eFromSource = append(eFromSource, envFromSource(name, cm))
-		}
-		cntr.EnvFrom = append(cntr.EnvFrom, eFromSource...)
-		container = append(container, *cntr)
-	}
-	result.Spec.Template.Spec = corev1.PodSpec{
-		ServiceAccountName: repoSyncName(name),
-		Containers:         container,
-	}
-	return result
-}
-
-func envFromSource(name string, configMap configMapRef) corev1.EnvFromSource {
-	return corev1.EnvFromSource{
-		ConfigMapRef: &corev1.ConfigMapEnvSource{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: repoSyncResourceName(name, configMap.name),
-			},
-			Optional: configMap.optional,
-		},
 	}
 }
 
@@ -178,6 +109,14 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 }
 
 func TestRepoSyncMutateDeployment(t *testing.T) {
+	rs := repoSync(
+		gitRevision,
+		branch,
+		core.Name(reposyncCRName),
+		core.Namespace(reposyncReqNamespace),
+		core.UID(uid),
+	)
+
 	testCases := []struct {
 		name             string
 		repoSync         *v1alpha1.RepoSync
@@ -186,51 +125,27 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 		wantErr          bool
 	}{
 		{
-			name: "Deployment created",
-			repoSync: repoSync(
-				gitRevision,
-				branch,
-				core.Name(reposyncCRName),
-				core.Namespace(reposyncReqNamespace),
-				core.UID(uid),
+			name:     "Deployment created",
+			repoSync: rs,
+			actualDeployment: repoSyncDeployment(
+				rs,
+				setContainers(fake.ContainerObject(gitSync)),
 			),
-			actualDeployment: deployment(
-				v1.NSConfigManagementSystem,
-				repoSyncName(reposyncReqNamespace),
-				"git-sync"),
-			wantDeployment: nsDeploymentWithEnvFrom(
-				v1.NSConfigManagementSystem,
-				reposyncReqNamespace,
-				gitSyncConfigMap(gitSync, configMapRef{
-					name:     gitSync,
-					optional: pointer.BoolPtr(false),
-				}),
-				map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"},
-				core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, uid))),
+			wantDeployment: repoSyncDeployment(
+				rs,
+				setContainers(repoGitSyncContainer(rs)),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(repoSyncName(rs.Namespace)),
+			),
 			wantErr: false,
 		},
 		{
-			name: "Deployment failed, Unsupported container",
-			repoSync: repoSync(
-				gitRevision,
-				branch,
-				core.Name(reposyncCRName),
-				core.Namespace(reposyncReqNamespace),
-				core.UID(uid),
+			name:     "Deployment failed, Unsupported container",
+			repoSync: rs,
+			actualDeployment: repoSyncDeployment(
+				rs,
+				setContainers(fake.ContainerObject(unsupportedContainer)),
 			),
-			actualDeployment: deployment(
-				v1.NSConfigManagementSystem,
-				repoSyncName(reposyncReqNamespace),
-				unsupportedContainer),
-			wantDeployment: nsDeploymentWithEnvFrom(
-				v1.NSConfigManagementSystem,
-				reposyncReqNamespace,
-				gitSyncConfigMap(gitSync, configMapRef{
-					name:     gitSync,
-					optional: pointer.BoolPtr(false),
-				}),
-				nil,
-				core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, uid))),
 			wantErr: true,
 		},
 	}
@@ -307,13 +222,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
 
-	wantDeployment := []*appsv1.Deployment{
-		nsDeploymentWithEnvFrom(
-			v1.NSConfigManagementSystem,
-			reposyncReqNamespace,
-			repoSyncReconcilerConfigMapRef(),
-			nsDeploymentAnnotation(),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(nsDeploymentAnnotation()),
+			setServiceAccountName(repoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -334,8 +247,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Errorf("RoleBinding diff %s", diff)
 	}
 
-	// cmpDeployment compare ConfigMapRef field in containers.
-	cmpDeployments(t, wantDeployment, fakeClient)
+	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, RoleBinding and Deployment successfully created")
 
 	// Verify status updates.
@@ -384,13 +296,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 	}
 
-	wantDeployment = []*appsv1.Deployment{
-		nsDeploymentWithEnvFrom(
-			v1.NSConfigManagementSystem,
-			reposyncReqNamespace,
-			repoSyncReconcilerConfigMapRef(),
-			nsDeploymentUpdatedAnnotation(),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(nsDeploymentUpdatedAnnotation()),
+			setServiceAccountName(repoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -400,8 +310,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		}
 	}
 
-	// cmpDeployments compares the ConfigMapRef field in containers.
-	cmpDeployments(t, wantDeployment, fakeClient)
+	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
 
 	// Verify status updates.
@@ -412,24 +321,26 @@ func TestRepoSyncReconciler(t *testing.T) {
 	}
 }
 
-func cmpDeployments(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFake.Client) {
+// validateDeployments validates that important fields in the `wants` deployments match those same fields in the deployments found in the fakeClient
+func validateDeployments(t *testing.T, wants []*appsv1.Deployment, fakeClient *syncerFake.Client) {
 	t.Helper()
-	for _, de := range want {
-		actual := fakeClient.Objects[core.IDOf(de)]
-		a := actual.(*appsv1.Deployment)
+	for _, want := range wants {
+		gotCoreObject := fakeClient.Objects[core.IDOf(want)]
+		got := gotCoreObject.(*appsv1.Deployment)
+
 		// Compare Annotations.
-		if !reflect.DeepEqual(de.Spec.Template.Annotations, a.Spec.Template.Annotations) {
-			t.Errorf("Unexpected Annotation found, got: %s,want: %s",
-				a.Spec.Template.Annotations, de.Spec.Template.Annotations)
+		if diff := cmp.Diff(want.Spec.Template.Annotations, got.Spec.Template.Annotations); diff != "" {
+			t.Errorf("Unexpected Annotations found. Diff: %v", diff)
 		}
+
 		// Compare ServiceAccountName.
-		if de.Spec.Template.Spec.ServiceAccountName != a.Spec.Template.Spec.ServiceAccountName {
-			t.Errorf("Unexpected ServiceAccountName found,got: %s,want: %s",
-				a.Spec.Template.Spec.ServiceAccountName, de.Spec.Template.Spec.ServiceAccountName)
+		if diff := cmp.Diff(want.Spec.Template.Spec.ServiceAccountName, got.Spec.Template.Spec.ServiceAccountName); diff != "" {
+			t.Errorf("Unexpected ServiceAccountName. Diff: %v", diff)
 		}
+
 		// Compare Containers.
-		for _, i := range de.Spec.Template.Spec.Containers {
-			for _, j := range a.Spec.Template.Spec.Containers {
+		for _, i := range want.Spec.Template.Spec.Containers {
+			for _, j := range got.Spec.Template.Spec.Containers {
 				if i.Name == j.Name {
 					// Compare EnvFrom fields in the container.
 					if diff := cmp.Diff(i.EnvFrom, j.EnvFrom,
@@ -454,4 +365,29 @@ func namespacedName(name, namespace string) reconcile.Request {
 			Name:      name,
 		},
 	}
+}
+
+func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deployment {
+	oRefs := ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+	dep := fake.DeploymentObject(
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.Name(repoSyncName(rs.Namespace)),
+		core.OwnerReference(oRefs),
+	)
+
+	for _, mut := range muts {
+		mut(dep)
+	}
+
+	return dep
+}
+
+func repoGitSyncContainer(rs *v1alpha1.RepoSync) *corev1.Container {
+	return mutatedGitSyncContainer(corev1.LocalObjectReference{
+		Name: repoSyncResourceName(rs.Namespace, gitSync),
+	})
 }
