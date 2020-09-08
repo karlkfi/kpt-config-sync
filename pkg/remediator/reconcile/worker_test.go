@@ -22,8 +22,10 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 		{
 			name: "update actual objects",
 			declared: []core.Object{
-				fake.ClusterRoleBindingObject(core.Label("first", "one")),
-				fake.ClusterRoleObject(core.Label("second", "two")),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+					core.Label("first", "one")),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled,
+					core.Label("second", "two")),
 			},
 			toProcess: []core.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
@@ -31,8 +33,10 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			},
 			want: []runtime.Object{
 				// TODO(b/162547054): Figure out why the reconciler is stripping away labels and annotations.
-				fake.ClusterRoleBindingObject(core.Label("first", "one")),
-				fake.ClusterRoleObject(core.Label("second", "two")),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+					core.Label("first", "one")),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled,
+					core.Label("second", "two")),
 			},
 		},
 		{
@@ -47,16 +51,16 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 		{
 			name: "create missing objects",
 			declared: []core.Object{
-				fake.ClusterRoleBindingObject(),
-				fake.ClusterRoleObject(),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
 			toProcess: []core.Object{
 				queue.MarkDeleted(fake.ClusterRoleBindingObject()),
 				queue.MarkDeleted(fake.ClusterRoleObject()),
 			},
 			want: []runtime.Object{
-				fake.ClusterRoleBindingObject(),
-				fake.ClusterRoleObject(),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
 		},
 	}

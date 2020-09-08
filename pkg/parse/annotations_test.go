@@ -43,11 +43,13 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		if err := addAnnotationsAndLabels(tc.actual, "some-namespace", tc.gc, tc.commitHash); err != nil {
-			t.Fatalf("Failed to add annotations and labels: %v", err)
-		}
-		if diff := cmp.Diff(tc.expected, tc.actual); diff != "" {
-			t.Errorf(diff)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			if err := addAnnotationsAndLabels(tc.actual, "some-namespace", tc.gc, tc.commitHash); err != nil {
+				t.Fatalf("Failed to add annotations and labels: %v", err)
+			}
+			if diff := cmp.Diff(tc.expected, tc.actual); diff != "" {
+				t.Errorf(diff)
+			}
+		})
 	}
 }

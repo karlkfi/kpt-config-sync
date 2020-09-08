@@ -25,7 +25,7 @@ func TestDiffType(t *testing.T) {
 		{
 			name:       "in repo, create",
 			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(),
+			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			expectType: Create,
 		},
 		{
@@ -49,21 +49,21 @@ func TestDiffType(t *testing.T) {
 		{
 			name:       "in both, update",
 			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(),
-			actual:     fake.ClusterRoleObject(),
+			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
+			actual:     fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			expectType: Update,
 		},
 		{
 			name:       "in both and owned, update",
 			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(),
+			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			actual:     fake.ClusterRoleObject(core.OwnerReference([]metav1.OwnerReference{{}})),
 			expectType: Update,
 		},
 		{
 			name:       "in both, update even though cluster has invalid annotation",
 			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(),
+			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "invalid")),
 			expectType: Update,
 		},
@@ -123,16 +123,16 @@ func TestDiffType(t *testing.T) {
 		{
 			name:       "in-namespace-repo object managed by correct Namespace reconciler",
 			scope:      "shipping",
+			declared:   fake.RoleObject(syncertest.ManagementEnabled),
 			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy("shipping")),
-			declared:   fake.RoleObject(),
 			expectType: Update,
 		},
 		{
 			// Namespace cannot take over ownership from Root.
 			name:       "in-namespace-repo object managed by Root reconciler",
 			scope:      "shipping",
+			declared:   fake.RoleObject(syncertest.ManagementEnabled),
 			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			declared:   fake.RoleObject(),
 			expectType: ManagementConflict,
 		},
 		// Root always wins.
@@ -140,15 +140,15 @@ func TestDiffType(t *testing.T) {
 			// Root will take over ownership from Namespace.
 			name:       "in-root-repo object managed by Namespace reconciler",
 			scope:      declared.RootReconciler,
+			declared:   fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
 			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy("shipping")),
-			declared:   fake.RoleObject(difftest.ManagedBy(declared.RootReconciler)),
 			expectType: Update,
 		},
 		{
 			name:       "in-root-repo object managed by Root reconciler",
 			scope:      declared.RootReconciler,
+			declared:   fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
 			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			declared:   fake.RoleObject(difftest.ManagedBy(declared.RootReconciler)),
 			expectType: Update,
 		},
 	}

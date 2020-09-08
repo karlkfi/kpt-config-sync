@@ -47,9 +47,9 @@ func TestApply(t *testing.T) {
 			name:  "Create Test2 - if the resource is missing.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				// shall be created.
-				fake.Namespace("namespace/" + testNs2),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -63,7 +63,7 @@ func TestApply(t *testing.T) {
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
-				fake.Namespace("namespace/" + testNs2),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
@@ -75,7 +75,7 @@ func TestApply(t *testing.T) {
 			name:  "Update Test1 - if the resource is previously cached.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -86,7 +86,7 @@ func TestApply(t *testing.T) {
 			name:  "Delete Test2 - if the cached resource is not in the upcoming resource",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -102,7 +102,7 @@ func TestApply(t *testing.T) {
 			name:  "Management Conflict Test1 - declared and actual resource managed by root",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Role(core.Name("admin")),
+				fake.Role(core.Name("admin"), syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
@@ -114,7 +114,8 @@ func TestApply(t *testing.T) {
 			name:  "Management Conflict Test2 - declared managed by Namespace, and actual resource managed by root",
 			scope: "shipping",
 			declared: []ast.FileObject{
-				fake.Role(core.Name("admin"), core.Namespace("shipping")),
+				fake.Role(core.Name("admin"), core.Namespace("shipping"),
+					syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), core.Namespace("shipping"),
@@ -127,7 +128,7 @@ func TestApply(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := clientForTest(t)
-			clientApplier := &FakeApplier{ExpectActions: tc.want}
+			clientApplier := &FakeApplier{WantActions: tc.want}
 			previousCache := make(map[core.ID]core.Object)
 			// Propagate the actual resources.
 			for _, actual := range tc.actual {
@@ -152,10 +153,10 @@ func TestApply(t *testing.T) {
 				return
 			}
 
-			if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
+			if len(clientApplier.WantActions) == 0 && len(clientApplier.GotActions) == 0 {
 				return
 			}
-			if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
+			if diff := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
 				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
 				t.Errorf(diff)
 			}
@@ -178,7 +179,7 @@ func TestRefresh(t *testing.T) {
 		{
 			name: "Create Test1 - if the declared resource is not in the API server.",
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{},
 			want:   []Event{{"Create", testNs1}},
@@ -194,7 +195,7 @@ func TestRefresh(t *testing.T) {
 		{
 			name: "Update Test1 - if the declared resource is in API server.",
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
@@ -202,52 +203,51 @@ func TestRefresh(t *testing.T) {
 			want: []Event{{"Update", testNs1}},
 		},
 		{
-			name: "Delete Test2 - if the resource in API server no longer has upcoming resource",
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-			},
+			name:     "Delete Test2 - applier refresh cannot delete resources.",
+			declared: []ast.FileObject{},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			want: []Event{{"Delete", testNs2}},
+			want: []Event{},
 		},
 	}
-	for _, tc := range tcs {
-		fakeClient := clientForTest(t)
-		// Propagate the actual resource to api server
-		for _, actual := range tc.actual {
-			if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
-				t.Fatal(err)
-			}
-		}
-		clientApplier := &FakeApplier{ExpectActions: tc.want}
-		a := NewRootApplier(fakeClient, clientApplier)
-		// The cache is used to store the declared git resource. Assuming it is out of sync
-		// with the state in the API server.
-		a.cachedObjects = make(map[core.ID]core.Object)
-		for _, actual := range tc.declared {
-			a.cachedObjects[core.IDOf(actual)] = actual.Object
-		}
 
-		err := a.Refresh(context.Background())
-		// Verify.
-		if err != nil {
-			t.Error(err)
-		}
-		if len(clientApplier.ExpectActions) == 0 && len(clientApplier.ActualActions) == 0 {
-			return
-		}
-		if diff := cmp.Diff(clientApplier.ExpectActions, clientApplier.ActualActions,
-			cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
-			t.Errorf(diff)
-		}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := clientForTest(t)
+			// Propagate the actual resource to api server
+			for _, actual := range tc.actual {
+				if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
+					t.Fatal(err)
+				}
+			}
+			clientApplier := &FakeApplier{WantActions: tc.want}
+			a := NewRootApplier(fakeClient, clientApplier)
+			// The cache is used to store the declared git resource. Assuming it is out of sync
+			// with the state in the API server.
+			a.cachedObjects = make(map[core.ID]core.Object)
+			for _, actual := range tc.declared {
+				a.cachedObjects[core.IDOf(actual)] = actual.Object
+			}
+
+			err := a.Refresh(context.Background())
+			// Verify.
+			if err != nil {
+				t.Error(err)
+			}
+
+			if diff := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
+				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action }),
+				cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf(diff)
+			}
+		})
 	}
 }
 
 type FakeApplier struct {
-	ExpectActions []Event
-	ActualActions []Event
+	WantActions []Event
+	GotActions  []Event
 }
 
 type Event struct {
@@ -255,27 +255,28 @@ type Event struct {
 	Name   string
 }
 
-func (a *FakeApplier) Create(ctx context.Context, obj *unstructured.Unstructured) (
+func (a *FakeApplier) Create(_ context.Context, obj *unstructured.Unstructured) (
 	bool, status.Error) {
-	a.ActualActions = append(a.ActualActions, Event{"Create", obj.GetName()})
+	a.GotActions = append(a.GotActions, Event{"Create", obj.GetName()})
 	return true, nil
 }
 
-func (a *FakeApplier) Update(ctx context.Context, i, c *unstructured.Unstructured) (
+func (a *FakeApplier) Update(_ context.Context, i, _ *unstructured.Unstructured) (
 	bool, status.Error) {
-	a.ActualActions = append(a.ActualActions, Event{"Update", i.GetName()})
+	a.GotActions = append(a.GotActions, Event{"Update", i.GetName()})
 	return true, nil
 }
 
-func (a *FakeApplier) RemoveNomosMeta(ctx context.Context, intent *unstructured.Unstructured) (
+func (a *FakeApplier) RemoveNomosMeta(_ context.Context, intent *unstructured.Unstructured) (
 	bool, status.Error) {
-	a.ActualActions = append(a.ActualActions, Event{"RemoveNomosMeta",
+	a.GotActions = append(a.GotActions, Event{"RemoveNomosMeta",
 		intent.GetName()})
 	return true, nil
 }
-func (a *FakeApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (
+
+func (a *FakeApplier) Delete(_ context.Context, obj *unstructured.Unstructured) (
 	bool, status.Error) {
-	a.ActualActions = append(a.ActualActions, Event{"Delete", obj.GetName()})
+	a.GotActions = append(a.GotActions, Event{"Delete", obj.GetName()})
 	return true, nil
 }
 

@@ -55,8 +55,10 @@ type Diff struct {
 func (d Diff) Type(manager declared.Scope) Type {
 	if d.Declared != nil {
 		// The resource IS in the repository.
-		if differ.ManagementUnset(d.Declared) {
-			// The declared resource has no resource management key, so it is managed.
+		if differ.ManagementEnabled(d.Declared) {
+			// The declared resource has been annotated as managed.
+			// We do this automatically when parsing objects, before they get to the
+			// Applier.
 			if d.Actual != nil {
 				if !CanManage(manager, d.Actual) {
 					// The declared object's manager can't manage the resource as it exists
