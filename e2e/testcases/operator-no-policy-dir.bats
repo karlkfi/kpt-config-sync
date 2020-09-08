@@ -22,7 +22,7 @@ test_setup() {
 test_teardown() {
   setup::git::remove_all acme
 
-  kubectl apply -f "${MANIFEST_DIR}/default-configmaps.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
   nomos::restart_pods
 
 }

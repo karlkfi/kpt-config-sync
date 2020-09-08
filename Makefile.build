@@ -142,7 +142,7 @@ config-sync-manifest-e2e: config-sync-manifest
 	scripts/append-manifests.sh \
 		e2e/raw-nomos/manifests \
 		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
-		default-configmaps # only this single file (pattern match)
+		mono-repo-configmaps # only this single file (pattern match)
 
 ###################################
 # E2E Git Server

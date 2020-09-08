@@ -76,6 +76,6 @@ test_teardown() {
 }
 
 function repair_state() {
-  kubectl apply -f "${MANIFEST_DIR}/default-configmaps.yaml"
+  kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
   nomos::restart_pods
 }
