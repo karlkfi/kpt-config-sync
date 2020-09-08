@@ -92,7 +92,7 @@ func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
 		return nil, err
 	}
 	p.setSourceStatus(ctx, state.commit, err)
-	return state, nil
+	return &state, nil
 }
 
 // Parse implements Runnable.
@@ -147,7 +147,7 @@ func (p *root) setSourceStatus(ctx context.Context, commit string, errs status.M
 		return
 	}
 
-	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Source.Errors) > 0
+	hasErrs := status.HasErrors(errs) || len(rs.Status.Source.Errors) > 0
 	if rs.Status.Source.Commit == commit && !hasErrs {
 		return
 	}
@@ -167,7 +167,7 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 		return
 	}
 
-	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Sync.Errors) > 0
+	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
 		return
 	}

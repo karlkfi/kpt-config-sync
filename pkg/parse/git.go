@@ -44,25 +44,36 @@ type gitState struct {
 // readGitState returns the current state read from the mounted Git repo.
 //
 // Returns an error if there is some problem resolving symbolic links or in
-// listing the files.
-func (o *files) readGitState() (*gitState, status.Error) {
+// listing the files. Returns as much information as possible about the state
+// of the git repo on error.
+func (o *files) readGitState() (gitState, status.Error) {
+	result := gitState{}
+
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
-		return nil, status.PathWrapError(
+		return result, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
 	}
+
+	commit, e := git.CommitHash(gitDir.OSPath())
+	if e != nil {
+		return result, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build()
+	}
+	result.commit = commit
+
 	err = git.CheckClean(gitDir.OSPath())
 	if err != nil {
-		return nil, status.PathWrapError(
+		return result, status.PathWrapError(
 			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
 	}
 
 	relPolicyDir := gitDir.Join(o.PolicyDir)
 	policyDir, err := relPolicyDir.EvalSymlinks()
 	if err != nil {
-		return nil, status.PathWrapError(
+		return result, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
 	}
+	result.policyDir = policyDir
 
 	if policyDir.OSPath() == o.currentPolicyDir {
 		glog.V(4).Infof("Git directory is unchanged: %s", policyDir.OSPath())
@@ -73,16 +84,12 @@ func (o *files) readGitState() (*gitState, status.Error) {
 
 	files, err := git.ListFiles(policyDir)
 	if err != nil {
-		return nil, status.PathWrapError(
+		return result, status.PathWrapError(
 			errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
 	}
+	result.files = files
 
-	commit, e := git.CommitHash(gitDir.OSPath())
-	if e != nil {
-		return nil, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build()
-	}
-
-	return &gitState{commit, policyDir, files}, nil
+	return result, nil
 }
 
 func (o *files) gitContext() gitContext {

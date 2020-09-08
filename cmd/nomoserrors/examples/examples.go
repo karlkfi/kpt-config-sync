@@ -281,6 +281,9 @@ func Generate() AllExamples {
 	// 1060
 	result.add(applier.ManagementConflictError(fake.Role()))
 
+	// 1061
+	result.add(parse.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 

@@ -78,13 +78,13 @@ func (p *namespace) Run(ctx context.Context) {
 // Read implements Runnable.
 func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
-	// TODO(b/168018895): The below will panic if state is nil, and state is nil
-	//  if err is non-nil.
-	p.setSourceStatus(ctx, state.commit, err)
+	// We don't want to bail out immediately as we want to surface this error to
+	// the user in the RepoSync's status field.
+	p.setSourceStatus(ctx, state, err)
 	if err != nil {
 		return nil, err
 	}
-	return state, nil
+	return &state, nil
 }
 
 // Parse implements Runnable.
@@ -145,21 +145,31 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 	return err
 }
 
-func (p *namespace) setSourceStatus(ctx context.Context, commit string, errs status.MultiError) {
+func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) {
+	// The main idea here is an error-robust way of surfacing to the user that
+	// we're having problems reading from our local clone of their git repository.
+	// This can happen when Kubernetes does weird things with mounted filesystems,
+	// or if an attacker tried to maliciously change the cluster's record of the
+	// source of truth.
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		glog.Errorf("Failed to get RepoSync for parser: %v", err)
 		return
 	}
 
-	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Source.Errors) > 0
-	if rs.Status.Source.Commit == commit && !hasErrs {
-		return
+	if !status.HasErrors(errs) {
+		// There were no errors getting the git state.
+		hasErrs := len(rs.Status.Source.Errors) > 0
+		if rs.Status.Source.Commit == state.commit && !hasErrs {
+			// We're already synced to this commit and there are no errors to report,
+			// so no need to do anything.
+			return
+		}
 	}
-
-	if errs == nil {
-		rs.Status.Source.Commit = commit
-	}
+	// If we weren't able to get the commit hash, this replaces the value with
+	// empty string.
+	rs.Status.Source.Commit = state.commit
+	// Replace the previous set of errors getting the git state with the current set.
 	rs.Status.Source.Errors = status.ToCSE(errs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -174,7 +184,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs statu
 		return
 	}
 
-	hasErrs := (errs != nil && len(errs.Errors()) > 0) || len(rs.Status.Sync.Errors) > 0
+	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
 		return
 	}
