@@ -14,6 +14,10 @@ const (
 	gitSecretNone = "none"
 
 	gitSecretGCENode = "gcenode"
+
+	// ClusterNameKey is the OS env variable and ConfigMap key for the name
+	// of the cluster.
+	ClusterNameKey = "CLUSTER_NAME"
 )
 
 // Configmaps Suffix.

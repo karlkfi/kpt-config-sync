@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
 )
@@ -61,16 +62,6 @@ var flags = struct {
 	sourceFormat: "source-format",
 }
 
-func isFlagPassed(name string) bool {
-	passed := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			passed = true
-		}
-	})
-	return passed
-}
-
 func main() {
 	flag.Parse()
 	log.Setup()
@@ -115,10 +106,9 @@ func main() {
 	} else {
 		glog.Infof("Starting reconciler for: %s", *scope)
 
-		// TODO(b/167138947): This check needs to be fixed.
-		if isFlagPassed(flags.clusterName) || isFlagPassed(flags.sourceFormat) {
-			glog.Fatalf("The %s and %s flags must not be passed to a Namespace reconciler",
-				flags.clusterName, flags.sourceFormat)
+		if *clusterName != "" || *sourceFormat != "" {
+			glog.Fatalf("Flags %s and %s and Environment variables %q and %q must not be passed to a Namespace reconciler",
+				flags.clusterName, flags.sourceFormat, controllers.ClusterNameKey, filesystem.SourceFormatKey)
 		}
 	}
 	reconciler.Run(context.Background(), opts)
