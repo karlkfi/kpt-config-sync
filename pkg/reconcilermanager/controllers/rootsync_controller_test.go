@@ -66,27 +66,6 @@ func configMapWithData(namespace, name string, data map[string]string, opts ...c
 	return result
 }
 
-func rootSyncReconcilerConfigMapRef() map[string][]configMapRef {
-	return map[string][]configMapRef{
-		reconciler: {
-			{
-				name:     reconciler,
-				optional: pointer.BoolPtr(false),
-			},
-			{
-				name:     SourceFormat,
-				optional: pointer.BoolPtr(true),
-			},
-		},
-		gitSync: {
-			{
-				name:     gitSync,
-				optional: pointer.BoolPtr(false),
-			},
-		},
-	}
-}
-
 func secretData(t *testing.T, auth string) map[string][]byte {
 	t.Helper()
 	key, err := json.Marshal("test-key")
@@ -129,38 +108,6 @@ func rsDeploymentUpdatedAnnotation() map[string]string {
 	}
 }
 
-// rsDeploymentWithEnvFrom returns appsv1.Deployment
-// containerConfigMap contains map of container name and their respective configmaps.
-func rsDeploymentWithEnvFrom(namespace, name string,
-	containerConfigMap map[string][]configMapRef,
-	annotation map[string]string,
-	opts ...core.MetaMutator) *appsv1.Deployment {
-	result := fake.DeploymentObject(opts...)
-	result.Namespace = namespace
-	result.Name = name
-	result.Spec.Template.Annotations = annotation
-
-	result.Spec.Template.Spec = corev1.PodSpec{
-		ServiceAccountName: rootSyncReconcilerName,
-		Containers:         reconcilerContainer(name, containerConfigMap),
-	}
-	return result
-}
-
-func reconcilerContainer(name string, containerConfigMap map[string][]configMapRef) []corev1.Container {
-	var container []corev1.Container
-	for cntrName, cms := range containerConfigMap {
-		cntr := fake.ContainerObject(cntrName)
-		var eFromSource []corev1.EnvFromSource
-		for _, cm := range cms {
-			eFromSource = append(eFromSource, rsEnvFromSource(cm))
-		}
-		cntr.EnvFrom = append(cntr.EnvFrom, eFromSource...)
-		container = append(container, *cntr)
-	}
-	return container
-}
-
 func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client, *RootSyncReconciler) {
 	t.Helper()
 	s := runtime.NewScheme()
@@ -182,17 +129,6 @@ func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Clie
 		s,
 	)
 	return fakeClient, testReconciler
-}
-
-func rsEnvFromSource(configMap configMapRef) corev1.EnvFromSource {
-	return corev1.EnvFromSource{
-		ConfigMapRef: &corev1.ConfigMapEnvSource{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: rootSyncResourceName(configMap.name),
-			},
-			Optional: configMap.optional,
-		},
-	}
 }
 
 func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
@@ -319,13 +255,10 @@ func TestRootSyncReconciler(t *testing.T) {
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
 
-	wantDeployment := []*appsv1.Deployment{
-		rsDeploymentWithEnvFrom(
-			rootsyncReqNamespace,
-			"root-reconciler",
-			rootSyncReconcilerConfigMapRef(),
-			rsDeploymentAnnotation(),
-			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(rsDeploymentAnnotation()),
+			setServiceAccountName(rootSyncReconcilerName),
 		),
 	}
 
@@ -347,7 +280,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	// Compare ConfigMapRef field in containers.
-	cmpDeployment(t, wantDeployment, fakeClient)
+	cmpDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, ClusterRoleBinding and Deployment successfully created")
 
 	// Verify status updates.
@@ -402,13 +335,10 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 	}
 
-	wantDeployment = []*appsv1.Deployment{
-		rsDeploymentWithEnvFrom(
-			v1.NSConfigManagementSystem,
-			"root-reconciler",
-			rootSyncReconcilerConfigMapRef(),
-			rsDeploymentUpdatedAnnotation(),
-			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
+	wantDeployments = []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(rsDeploymentUpdatedAnnotation()),
+			setServiceAccountName(rootSyncReconcilerName),
 		),
 	}
 
@@ -419,7 +349,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	// Compare ConfigMapRef field in containers.
-	cmpDeployment(t, wantDeployment, fakeClient)
+	cmpDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
 }
 
@@ -465,10 +395,14 @@ func mutatedGitSyncContainer() *corev1.Container {
 	return &corev1.Container{
 		Name: gitSync,
 		EnvFrom: []corev1.EnvFromSource{
-			rsEnvFromSource(configMapRef{
-				name:     gitSync,
-				optional: pointer.BoolPtr(false),
-			}),
+			{
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: rootSyncResourceName(gitSync),
+					},
+					Optional: pointer.BoolPtr(false),
+				},
+			},
 		},
 	}
 }

@@ -335,7 +335,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	}
 
 	// cmpDeployment compare ConfigMapRef field in containers.
-	cmpDeployment(t, wantDeployment, fakeClient)
+	cmpDeployments(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, RoleBinding and Deployment successfully created")
 
 	// Verify status updates.
@@ -400,8 +400,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 		}
 	}
 
-	// cmpDeployment compare ConfigMapRef field in containers.
-	cmpDeployment(t, wantDeployment, fakeClient)
+	// cmpDeployments compares the ConfigMapRef field in containers.
+	cmpDeployments(t, wantDeployment, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
 
 	// Verify status updates.
@@ -412,7 +412,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	}
 }
 
-func cmpDeployment(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFake.Client) {
+func cmpDeployments(t *testing.T, want []*appsv1.Deployment, fakeClient *syncerFake.Client) {
 	t.Helper()
 	for _, de := range want {
 		actual := fakeClient.Objects[core.IDOf(de)]
