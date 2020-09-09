@@ -330,22 +330,12 @@ func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.
 	// Update ServiceAccountName. eg. ns-reconciler-<namespace>
 	templateSpec.ServiceAccountName = repoSyncName(rs.Namespace)
 
-	var updatedVolumes []corev1.Volume
 	// Mutate secret.secretname to secret reference specified in RepoSync CR.
 	// Secret reference is the name of the secret used by git-sync container to
 	// authenticate with the git repository using the authorization method specified
 	// in the RepoSync CR.
-	for _, volume := range templateSpec.Volumes {
-		if volume.Name == gitCredentialVolume {
-			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
-			if secret.SkipForAuth(rs.Spec.Auth) {
-				continue
-			}
-			volume.Secret.SecretName = secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
-		}
-		updatedVolumes = append(updatedVolumes, volume)
-	}
-	templateSpec.Volumes = updatedVolumes
+	secretName := secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
+	templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
 
 	var updatedContainers []corev1.Container
 	// Mutate spec.Containers to update name, configmap references and volumemounts.

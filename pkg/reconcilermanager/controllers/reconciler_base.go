@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -49,4 +50,21 @@ func (r *reconcilerBase) upsertConfigMap(ctx context.Context, name string, cmMut
 	}
 
 	return nil
+}
+
+func filterVolumes(existing []corev1.Volume, authType string, secretName string) []corev1.Volume {
+	var updatedVolumes []corev1.Volume
+
+	for _, volume := range existing {
+		if volume.Name == gitCredentialVolume {
+			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
+			if secret.SkipForAuth(authType) {
+				continue
+			}
+			volume.Secret.SecretName = secretName
+		}
+		updatedVolumes = append(updatedVolumes, volume)
+	}
+
+	return updatedVolumes
 }

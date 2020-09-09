@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -130,12 +131,14 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			actualDeployment: repoSyncDeployment(
 				rs,
 				setContainers(fake.ContainerObject(gitSync)),
+				setVolumes(gitSyncVolume("")),
 			),
 			wantDeployment: repoSyncDeployment(
 				rs,
 				setContainers(repoGitSyncContainer(rs)),
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(repoSyncName(rs.Namespace)),
+				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))),
 			),
 			wantErr: false,
 		},

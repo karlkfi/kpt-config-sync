@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -332,22 +331,11 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 	// Update ServiceAccountName.
 	templateSpec.ServiceAccountName = rootSyncReconcilerName
 
-	var updatedVolumes []corev1.Volume
 	// Mutate secret.secretname to secret reference specified in RootSync CR.
 	// Secret reference is the name of the secret used by git-sync container to
 	// authenticate with the git repository using the authorization method specified
 	// in the RootSync CR.
-	for _, volume := range templateSpec.Volumes {
-		if volume.Name == gitCredentialVolume {
-			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
-			if secret.SkipForAuth(rs.Spec.Auth) {
-				continue
-			}
-			volume.Secret.SecretName = rs.Spec.SecretRef.Name
-		}
-		updatedVolumes = append(updatedVolumes, volume)
-	}
-	templateSpec.Volumes = updatedVolumes
+	templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, rs.Spec.SecretRef.Name)
 
 	var updatedContainers []corev1.Container
 	// Mutate spec.Containers to update configmap references.

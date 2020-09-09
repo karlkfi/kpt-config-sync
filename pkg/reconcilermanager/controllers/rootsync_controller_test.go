@@ -143,11 +143,13 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			name: "Deployment created",
 			actual: rootSyncDeployment(
 				setContainers(fake.ContainerObject(gitSync)),
+				setVolumes(gitSyncVolume("")),
 			),
 			expected: rootSyncDeployment(
 				setContainers(rootGitSyncContainer()),
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(rootSyncReconcilerName),
+				setVolumes(gitSyncVolume(rootsyncSSHKey)),
 			),
 			wantErr: false,
 		},
@@ -374,6 +376,23 @@ func setServiceAccountName(name string) depMutator {
 func setAnnotations(annotations map[string]string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Annotations = annotations
+	}
+}
+
+func setVolumes(vols ...corev1.Volume) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.Spec.Template.Spec.Volumes = vols
+	}
+}
+
+func gitSyncVolume(secretName string) corev1.Volume {
+	return corev1.Volume{
+		Name: gitCredentialVolume,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretName,
+			},
+		},
 	}
 }
 
