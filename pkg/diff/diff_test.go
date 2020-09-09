@@ -4,14 +4,21 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	testNs1 = "fake-namespace-1"
+	testNs2 = "fake-namespace-2"
 )
 
 func TestDiffType(t *testing.T) {
@@ -162,6 +169,251 @@ func TestDiffType(t *testing.T) {
 
 			if d := cmp.Diff(tc.expectType, diff.Type(tc.scope)); d != "" {
 				t.Fatal(d)
+			}
+		})
+	}
+}
+
+func TestThreeWay(t *testing.T) {
+	tcs := []struct {
+		name string
+		// the git resource to which the applier syncs the state to.
+		newDeclared []ast.FileObject
+		// the previously declared resources.
+		previousDeclared []ast.FileObject
+		// The actual state of the resources.
+		actual []ast.FileObject
+		// expected diff.
+		want []Diff
+	}{
+		{
+			name: "Update and Create - no previously declared",
+			newDeclared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: fake.Namespace("namespace/" + testNs2),
+					Actual:   nil,
+				},
+			},
+		},
+		{
+			name: "Update and Create - no actual",
+			newDeclared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			previousDeclared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   nil,
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: fake.Namespace("namespace/" + testNs2),
+					Actual:   nil,
+				},
+			},
+		},
+		{
+			name: "Update and Create - with previousDeclared and actual",
+			newDeclared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			previousDeclared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   nil,
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: fake.Namespace("namespace/" + testNs2),
+					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				},
+			},
+		},
+		{
+			name:        "Noop - with actual and no declared",
+			newDeclared: []ast.FileObject{},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			want: nil,
+		},
+		{
+			name: "Delete - no actual",
+			newDeclared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+			},
+			previousDeclared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   nil,
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: nil,
+					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				},
+			},
+		},
+		{
+			name: "Delete - with previous declared and actual",
+			newDeclared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+			},
+			previousDeclared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   fake.Namespace("namespace/" + testNs1),
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: nil,
+					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			newDeclared := make(map[core.ID]core.Object)
+			previousDeclared := make(map[core.ID]core.Object)
+			actual := make(map[core.ID]core.Object)
+
+			for _, d := range tc.newDeclared {
+				newDeclared[core.IDOf(d)] = d
+			}
+			for _, pd := range tc.previousDeclared {
+				previousDeclared[core.IDOf(pd)] = pd
+			}
+			for _, a := range tc.actual {
+				actual[core.IDOf(a)] = a
+			}
+
+			diffs := ThreeWay(newDeclared, previousDeclared, actual)
+			if diff := cmp.Diff(diffs, tc.want,
+				cmpopts.SortSlices(func(x, y Diff) bool { return x.Name < y.Name })); diff != "" {
+				t.Errorf(diff)
+			}
+		})
+	}
+}
+
+func TestTwoWay(t *testing.T) {
+	tcs := []struct {
+		name string
+		// the git resource to which the applier syncs the state to.
+		declared []ast.FileObject
+		// The actual state of the resources.
+		actual []ast.FileObject
+		// expected diff.
+		want []Diff
+	}{
+		{
+			name: "No Diff when declared is nil",
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			want: nil,
+		},
+		{
+			name: "Diff - no actual",
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   nil,
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: fake.Namespace("namespace/" + testNs2),
+					Actual:   nil,
+				},
+			},
+		},
+		{
+			name: "Diff for update- with previousDeclared and actual",
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/" + testNs1),
+				fake.Namespace("namespace/" + testNs2),
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			want: []Diff{
+				{
+					Name:     "Namespace, /" + testNs1,
+					Declared: fake.Namespace("namespace/" + testNs1),
+					Actual:   nil,
+				},
+				{
+					Name:     "Namespace, /" + testNs2,
+					Declared: fake.Namespace("namespace/" + testNs2),
+					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			declared := make(map[core.ID]core.Object)
+			actual := make(map[core.ID]core.Object)
+
+			for _, d := range tc.declared {
+				declared[core.IDOf(d)] = d
+			}
+			for _, a := range tc.actual {
+				actual[core.IDOf(a)] = a
+			}
+
+			diffs := TwoWay(declared, actual)
+			if diff := cmp.Diff(diffs, tc.want,
+				cmpopts.SortSlices(func(x, y Diff) bool { return x.Name < y.Name })); diff != "" {
+				t.Errorf(diff)
 			}
 		})
 	}
