@@ -9,16 +9,19 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
+	acmeDir   = "acme"
 	manifests = "manifests"
 
 	// e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
@@ -86,13 +89,23 @@ var (
 
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
-func installConfigSync(nt *NT, nomos ntopts.Nomos) func() error {
+func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
 	objs := installationManifests(nt, tmpManifestsDir)
 	if nomos.MultiRepo {
 		objs = multiRepoObjects(objs)
+		// Create a RootSync to initialize the root reconciler along with the
+		// reconciler manager.
+		rs := fake.RootSyncObject()
+		rs.Spec.Git = v1alpha1.Git{
+			Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",
+			Dir:       acmeDir,
+			Auth:      "ssh",
+			SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
+		}
+		objs = append(objs, rs)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -109,22 +122,10 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func() error {
 		}
 	}
 
-	return func() error {
-		took, err := Retry(60*time.Second, func() error {
-			err := nt.Validate("monitor", configmanagement.ControllerNamespace,
-				&appsv1.Deployment{}, isAvailableDeployment)
-			if err != nil {
-				return err
-			}
-			return nt.Validate("git-importer", configmanagement.ControllerNamespace,
-				&appsv1.Deployment{}, isAvailableDeployment)
-		})
-		if err != nil {
-			return err
-		}
-		nt.T.Logf("took %v to wait for monitor and git-importer", took)
-		return nil
+	if nomos.MultiRepo {
+		return validateMultiRepoDeployments
 	}
+	return validateMonoRepoDeployments
 }
 
 func copyFile(src, dst string) error {
@@ -246,4 +247,38 @@ func multiRepoObjects(objects []core.Object) []core.Object {
 		}
 	}
 	return filtered
+}
+
+func validateMonoRepoDeployments(nt *NT) error {
+	took, err := Retry(60*time.Second, func() error {
+		err := nt.Validate("monitor", configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+		if err != nil {
+			return err
+		}
+		return nt.Validate("git-importer", configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+	})
+	if err != nil {
+		return err
+	}
+	nt.T.Logf("took %v to wait for monitor and git-importer", took)
+	return nil
+}
+
+func validateMultiRepoDeployments(nt *NT) error {
+	took, err := Retry(60*time.Second, func() error {
+		err := nt.Validate("reconciler-manager", configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+		if err != nil {
+			return err
+		}
+		return nt.Validate("root-reconciler", configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+	})
+	if err != nil {
+		return err
+	}
+	nt.T.Logf("took %v to wait for reconciler-manager and root-reconciler", took)
+	return nil
 }

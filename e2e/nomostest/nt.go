@@ -9,6 +9,7 @@ import (
 	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,6 +57,9 @@ type NT struct {
 
 	// kubeconfigPath is the path to the kubeconfig file for the kind cluster
 	kubeconfigPath string
+
+	// multiRepo indicates that the test case is for multi-repo Config Sync.
+	multiRepo bool
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -163,7 +167,12 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 func (nt *NT) WaitForRepoSync() {
 	nt.T.Helper()
 
-	nt.WaitForSync(func() core.Object { return &v1.Repo{} }, "repo", RepoHasStatusSyncLatestToken)
+	if nt.multiRepo {
+		// TODO(b/167580665): also wait for any RepoSyncs to be synced.
+		nt.WaitForSync(func() core.Object { return &v1alpha1.RootSync{} }, "root-sync", RootSyncHasStatusSyncCommit)
+	} else {
+		nt.WaitForSync(func() core.Object { return &v1.Repo{} }, "repo", RepoHasStatusSyncLatestToken)
+	}
 }
 
 // WaitForSync waits for the passed object to

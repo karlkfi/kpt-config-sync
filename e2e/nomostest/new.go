@@ -87,6 +87,7 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		Config:         cfg,
 		Client:         c,
 		kubeconfigPath: kubeconfigPath,
+		multiRepo:      opts.Nomos.MultiRepo,
 	}
 
 	connectToLocalRegistry(nt)
@@ -118,7 +119,7 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
 	}
 
-	err = waitForConfigSync()
+	err = waitForConfigSync(nt)
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}

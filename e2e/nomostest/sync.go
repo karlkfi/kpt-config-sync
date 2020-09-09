@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 )
 
@@ -74,6 +75,25 @@ func ClusterConfigHasStatusToken(sha1 string) Predicate {
 		if token := cc.Status.Token; token != sha1 {
 			return fmt.Errorf("status.token %q does not match git revision %q",
 				token, sha1)
+		}
+		return nil
+	}
+}
+
+// RootSyncHasStatusSyncCommit creates a Predicate that ensures that the
+// .status.sync.commit field on the passed RootSync matches sha1.
+func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
+	return func(o core.Object) error {
+		rs, ok := o.(*v1alpha1.RootSync)
+		if !ok {
+			return WrongTypeErr(o, &v1alpha1.RootSync{})
+		}
+
+		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
+			return fmt.Errorf("status.sync.errors contains %d errors", errCount)
+		}
+		if commit := rs.Status.Sync.Commit; commit != sha1 {
+			return fmt.Errorf("status.sync.commit %q does not match git revision %q", commit, sha1)
 		}
 		return nil
 	}
