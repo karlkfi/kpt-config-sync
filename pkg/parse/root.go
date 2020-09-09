@@ -48,7 +48,8 @@ func NewRootParser(
 	case filesystem.SourceFormatHierarchy:
 		opts.parser = filesystem.NewRawParser(fileReader, dc)
 	default:
-		return nil, errors.Errorf("unknown SourceFormat %q", format)
+		return nil, errors.Errorf("unknown SourceFormat %q, must be one of %s or %s",
+			format, filesystem.SourceFormatUnstructured, filesystem.SourceFormatHierarchy)
 	}
 	return &root{opts: opts, sourceFormat: format}, nil
 }
