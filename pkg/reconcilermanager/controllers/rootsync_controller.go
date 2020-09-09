@@ -199,7 +199,7 @@ func (r *RootSyncReconciler) validate(rs *v1alpha1.RootSync) error {
 
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
 func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1alpha1.RootSync) error {
-	if rootSync.Spec.Auth == gitSecretNone || rootSync.Spec.Auth == gitSecretGCENode {
+	if rootSync.Spec.Auth == v1alpha1.GitSecretNone || rootSync.Spec.Auth == v1alpha1.GitSecretGCENode {
 		// There is no Secret to check for the Config object.
 		return nil
 	}

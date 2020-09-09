@@ -18,11 +18,11 @@ var ValidateRepoSyncs = nonhierarchical.PerObjectValidator(func(o ast.FileObject
 })
 
 var (
-	authSSH        = "ssh"
-	authCookiefile = "cookiefile"
-	authGCENode    = "gcenode"
-	authToken      = "token"
-	authNone       = "none"
+	authSSH        = v1alpha1.GitSecretSSH
+	authCookiefile = v1alpha1.GitSecretCookieFile
+	authGCENode    = v1alpha1.GitSecretGCENode
+	authToken      = v1alpha1.GitSecretToken
+	authNone       = v1alpha1.GitSecretNone
 )
 
 // ValidateRepoSync validates the content and structure of a RepoSync for any

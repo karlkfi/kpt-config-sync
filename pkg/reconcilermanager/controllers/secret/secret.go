@@ -4,16 +4,15 @@ import (
 	"context"
 	"strings"
 
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/pkg/errors"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Put secret in config-management-system namespace using the
@@ -127,5 +126,5 @@ func RepoSyncSecretName(namespace, name string) string {
 
 // SkipForAuth returns true if the passed auth is either 'none' or 'gcenode'.
 func SkipForAuth(auth string) bool {
-	return auth == "none" || auth == "gcenode"
+	return auth == v1alpha1.GitSecretNone || auth == v1alpha1.GitSecretGCENode
 }
