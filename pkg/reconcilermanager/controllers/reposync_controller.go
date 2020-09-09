@@ -163,7 +163,7 @@ func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.
 	}{
 		{
 			cmName: repoSyncResourceName(rs.Namespace, gitSync),
-			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo),
+			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo, rs.Spec.Git.Auth),
 		},
 		{
 			cmName: repoSyncResourceName(rs.Namespace, reconciler),

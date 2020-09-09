@@ -34,9 +34,9 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "a91d9249d38347b60946f37d74ba2bd1"
+	rsAnnotation = "b9988b86445db10418ab39826e1d565f"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "7890479a192ca90f82457814368324c9"
+	rsUpdatedAnnotation = "e0edd9bf8d51da7d61e209dd08cf538b"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
@@ -217,7 +217,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(gitSync),
-			gitSyncData(gitRevision, branch, rootsyncRepo),
+			gitSyncData(gitRevision, branch, rootsyncRepo, "ssh"),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -307,7 +307,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(gitSync),
-			gitSyncData(gitUpdatedRevision, branch, rootsyncRepo),
+			gitSyncData(gitUpdatedRevision, branch, rootsyncRepo, "ssh"),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(

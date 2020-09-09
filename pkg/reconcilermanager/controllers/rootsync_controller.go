@@ -156,7 +156,7 @@ func (r *RootSyncReconciler) upsertConfigMaps(ctx context.Context, rs v1alpha1.R
 		},
 		{
 			cmName: rootSyncResourceName(gitSync),
-			data:   gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo),
+			data:   gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo, rs.Spec.Git.Auth),
 		},
 		{
 			cmName: rootSyncResourceName(reconciler),
