@@ -133,6 +133,14 @@ func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 }
 
 func TestRootSyncMutateDeployment(t *testing.T) {
+	rs := rootSync(
+		"1.0.0",
+		branch,
+		core.Name(rootsyncName),
+		core.Namespace(rootsyncReqNamespace),
+		core.UID(uid),
+	)
+
 	testCases := []struct {
 		name     string
 		actual   *appsv1.Deployment
@@ -146,6 +154,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				setVolumes(gitSyncVolume("")),
 			),
 			expected: rootSyncDeployment(
+				setRootSyncOwnerRefs(rs),
 				setContainers(rootGitSyncContainer()),
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(rootSyncReconcilerName),
@@ -165,14 +174,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			declared := tc.actual.DeepCopyObject().(*appsv1.Deployment)
-			testRS := rootSync(
-				"1.0.0",
-				branch,
-				core.Name(rootsyncName),
-				core.Namespace(rootsyncReqNamespace),
-				core.UID(uid),
-			)
-			err := mutateRootSyncDeployment(testRS, tc.actual, declared, []byte("1234"))
+			err := mutateRootSyncDeployment(rs, tc.actual, declared, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -347,7 +349,6 @@ func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Name(rootSyncReconcilerName),
-		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, uid)),
 	)
 
 	for _, mut := range muts {
@@ -382,6 +383,16 @@ func setAnnotations(annotations map[string]string) depMutator {
 func setVolumes(vols ...corev1.Volume) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.Volumes = vols
+	}
+}
+
+func setRootSyncOwnerRefs(rs *v1alpha1.RootSync) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.OwnerReferences = ownerReference(
+			rs.GroupVersionKind().Kind,
+			rs.Name,
+			rs.UID,
+		)
 	}
 }
 

@@ -57,6 +57,12 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
+	owRefs := ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+
 	var err error
 	if err = parse.ValidateRepoSync(&rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
@@ -85,7 +91,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, &rs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, repoConfigMapMutations(&rs), owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -94,7 +100,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, &rs); err != nil {
+	if err := r.upsertServiceAccount(ctx, repoSyncName(rs.Namespace), owRefs); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -146,21 +152,8 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-// TODO(b/167602253): The SourceFormat configmap is unnecessary for NS reconcilers, as they run in
-// `unstructured` mode by default
-func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.RepoSync) ([]byte, error) {
-	ownRefs := ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
-	configMapData := make(map[string]map[string]string)
-
-	mutations := []struct {
-		cmName string
-		data   map[string]string
-	}{
+func repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
+	return []configMapMutation{
 		{
 			cmName: repoSyncResourceName(rs.Namespace, gitSync),
 			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo, rs.Spec.Git.Auth),
@@ -170,26 +163,6 @@ func (r *RepoSyncReconciler) upsertConfigMaps(ctx context.Context, rs *v1alpha1.
 			data:   reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
 		},
 	}
-
-	for _, mutation := range mutations {
-		mut := func(cm *corev1.ConfigMap) error {
-			cm.OwnerReferences = ownRefs
-			cm.Data = mutation.data
-			return nil
-		}
-
-		err := r.upsertConfigMap(ctx, mutation.cmName, mut)
-		if err != nil {
-			return nil, err
-		}
-
-		configMapData[mutation.cmName] = mutation.data
-	}
-
-	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
-	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
-	// deployment in the event of configmap update. More information: go/csmr-update-deployment.
-	return hash(configMapData)
 }
 
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
@@ -206,34 +179,6 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 		return err
 	}
 	return validateSecretData(repoSync.Spec.Auth, secret)
-}
-
-func (r *RepoSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RepoSync) error {
-	var childSA corev1.ServiceAccount
-	childSA.Name = repoSyncName(rs.Namespace)
-	childSA.Namespace = v1.NSConfigManagementSystem
-
-	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
-		return mutateRepoSyncServiceAccount(rs, &childSA)
-	})
-	if err != nil {
-		return err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
-	}
-	return nil
-}
-
-func mutateRepoSyncServiceAccount(rs *v1alpha1.RepoSync, sa *corev1.ServiceAccount) error {
-	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the corresponding ServiceAccount is also deleted.
-	sa.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-	return nil
 }
 
 func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1.RepoSync) error {
@@ -299,12 +244,10 @@ func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
+		r.log.Info("Deployment successfully reconciled", executedOperation, op)
 		rs.Status.Reconciler = childDep.Name
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(rs, "Deployment", msg)
-	}
-	if op != controllerutil.OperationResultNone {
-		r.log.Info("Deployment successfully reconciled", executedOperation, op)
 	}
 	return nil
 }

@@ -57,6 +57,12 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
+	owRefs := ownerReference(
+		rs.GroupVersionKind().Kind,
+		rs.Name,
+		rs.UID,
+	)
+
 	if err := r.validate(&rs); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
@@ -77,7 +83,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	log.V(2).Info("secret found, proceeding with installation")
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, rs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.rootConfigMapMutations(&rs), owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)
@@ -86,7 +92,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, &rs); err != nil {
+	if err := r.upsertServiceAccount(ctx, rootSyncReconcilerName, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -137,19 +143,8 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) upsertConfigMaps(ctx context.Context, rs v1alpha1.RootSync) ([]byte, error) {
-	ownRefs := ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
-	configMapData := make(map[string]map[string]string)
-
-	mutations := []struct {
-		cmName string
-		data   map[string]string
-	}{
+func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []configMapMutation {
+	return []configMapMutation{
 		{
 			cmName: rootSyncResourceName(SourceFormat),
 			data:   sourceFormatData(rs.Spec.SourceFormat),
@@ -163,26 +158,6 @@ func (r *RootSyncReconciler) upsertConfigMaps(ctx context.Context, rs v1alpha1.R
 			data:   rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
 		},
 	}
-
-	for _, mutation := range mutations {
-		mut := func(cm *corev1.ConfigMap) error {
-			cm.OwnerReferences = ownRefs
-			cm.Data = mutation.data
-			return nil
-		}
-
-		err := r.upsertConfigMap(ctx, mutation.cmName, mut)
-		if err != nil {
-			return nil, err
-		}
-
-		configMapData[mutation.cmName] = mutation.data
-	}
-
-	// hash return 128 bit FNV-1 hash of data of the configmaps created by the controller.
-	// Reconciler deployment's spec.template.annotation updated with the hash to recreate the
-	// deployment in the event of configmap update. More information: go/csmr-update-deployment.
-	return hash(configMapData)
 }
 
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
@@ -211,34 +186,6 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 		return err
 	}
 	return validateSecretData(rootSync.Spec.Auth, secret)
-}
-
-func (r *RootSyncReconciler) upsertServiceAccount(ctx context.Context, rs *v1alpha1.RootSync) error {
-	var childSA corev1.ServiceAccount
-	childSA.Name = rootSyncReconcilerName
-	childSA.Namespace = v1.NSConfigManagementSystem
-
-	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
-		return mutateRootSyncServiceAccount(rs, &childSA)
-	})
-	if err != nil {
-		return err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
-	}
-	return nil
-}
-
-func mutateRootSyncServiceAccount(rs *v1alpha1.RootSync, sa *corev1.ServiceAccount) error {
-	// OwnerReferences, so that when the RootSync CustomResource is deleted,
-	// the corresponding ServiceAccount is also deleted.
-	sa.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-	return nil
 }
 
 func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v1alpha1.RootSync) error {

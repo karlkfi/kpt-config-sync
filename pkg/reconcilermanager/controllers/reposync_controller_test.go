@@ -135,6 +135,7 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 			),
 			wantDeployment: repoSyncDeployment(
 				rs,
+				setRepoSyncOwnerRefs(rs),
 				setContainers(repoGitSyncContainer(rs)),
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(repoSyncName(rs.Namespace)),
@@ -371,15 +372,9 @@ func namespacedName(name, namespace string) reconcile.Request {
 }
 
 func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deployment {
-	oRefs := ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Name(repoSyncName(rs.Namespace)),
-		core.OwnerReference(oRefs),
 	)
 
 	for _, mut := range muts {
@@ -387,6 +382,16 @@ func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deplo
 	}
 
 	return dep
+}
+
+func setRepoSyncOwnerRefs(rs *v1alpha1.RepoSync) depMutator {
+	return func(dep *appsv1.Deployment) {
+		dep.OwnerReferences = ownerReference(
+			rs.GroupVersionKind().Kind,
+			rs.Name,
+			rs.UID,
+		)
+	}
 }
 
 func repoGitSyncContainer(rs *v1alpha1.RepoSync) *corev1.Container {
