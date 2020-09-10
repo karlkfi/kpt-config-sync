@@ -136,7 +136,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSync()
 	// Validate ClusterConfig behavior.
-	nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName,
+	nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
 		nomostest.ClusterConfigHasSpecToken,
 		nomostest.ClusterConfigHasStatusToken,
 	)

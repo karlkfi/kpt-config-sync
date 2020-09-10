@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
@@ -169,9 +170,11 @@ func (nt *NT) WaitForRepoSync() {
 
 	if nt.multiRepo {
 		// TODO(b/167580665): also wait for any RepoSyncs to be synced.
-		nt.WaitForSync(func() core.Object { return &v1alpha1.RootSync{} }, "root-sync", RootSyncHasStatusSyncCommit)
+		nt.WaitForSync(func() core.Object { return &v1alpha1.RootSync{} },
+			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
 	} else {
-		nt.WaitForSync(func() core.Object { return &v1.Repo{} }, "repo", RepoHasStatusSyncLatestToken)
+		nt.WaitForSync(func() core.Object { return &v1.Repo{} },
+			"repo", "", RepoHasStatusSyncLatestToken)
 	}
 }
 
@@ -185,7 +188,7 @@ func (nt *NT) WaitForRepoSync() {
 // o returns a new object of the type to check is synced. It can't just be a
 // struct pointer as calling .Get on the same struct pointer multiple times
 // has undefined behavior.
-func (nt *NT) WaitForSync(o func() core.Object, name string, syncedTo ...func(sha1 string) Predicate) {
+func (nt *NT) WaitForSync(o func() core.Object, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	sha1 := nt.Root.Hash()
@@ -197,7 +200,7 @@ func (nt *NT) WaitForSync(o func() core.Object, name string, syncedTo ...func(sh
 	// Wait for the repository to report it is synced.
 	took, err := Retry(120*time.Second, func() error {
 		obj := o()
-		return nt.Validate(name, "", obj, isSynced...)
+		return nt.Validate(name, namespace, obj, isSynced...)
 	})
 	if err != nil {
 		nt.T.Logf("failed after %v to wait for sync", took)

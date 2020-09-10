@@ -174,3 +174,9 @@ test-e2e-go-ephemeral: __push-local-image
 	# The .sock volume allows you to connect to the Docker daemon of the host.
 	# Part of the docker-in-docker pattern.
 	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" prow-image make __test-e2e-go-nobuild-prow
+
+# Runs the Go e2e tests against multi-repo Config Sync.
+# Rebuilds the nomos image, so use this when you're actively modifying the Nomos
+# code between test runs.
+test-e2e-go-multirepo: __push-local-image __install-nomos-local
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m --multirepo

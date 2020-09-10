@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -96,16 +97,6 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	objs := installationManifests(nt, tmpManifestsDir)
 	if nomos.MultiRepo {
 		objs = multiRepoObjects(objs)
-		// Create a RootSync to initialize the root reconciler along with the
-		// reconciler manager.
-		rs := fake.RootSyncObject()
-		rs.Spec.Git = v1alpha1.Git{
-			Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",
-			Dir:       acmeDir,
-			Auth:      "ssh",
-			SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
-		}
-		objs = append(objs, rs)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -267,6 +258,19 @@ func validateMonoRepoDeployments(nt *NT) error {
 }
 
 func validateMultiRepoDeployments(nt *NT) error {
+	// Create a RootSync to initialize the root reconciler.
+	rs := fake.RootSyncObject(core.Name(rootsync.Name), core.Namespace(configmanagement.ControllerNamespace))
+	rs.Spec.SourceFormat = string(filesystem.SourceFormatHierarchy)
+	rs.Spec.Git = v1alpha1.Git{
+		Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",
+		Dir:       acmeDir,
+		Auth:      "ssh",
+		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
+	}
+	if err := nt.Create(rs); err != nil {
+		nt.T.Fatal(err)
+	}
+
 	took, err := Retry(60*time.Second, func() error {
 		err := nt.Validate("reconciler-manager", configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)

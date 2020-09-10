@@ -26,3 +26,7 @@ var Debug = flag.Bool("debug", false,
 // when testing against test-created Kind clusters.
 var KubernetesVersion = flag.String("kubernetes-version", "1.16",
 	"The version of Kubernetes to create")
+
+// MultiRepo enables running the tests against multi-repo Config Sync.
+var MultiRepo = flag.Bool("multirepo", false,
+	"If true, configure multi-repo Config Sync. Otherwise configure mono-repo.")

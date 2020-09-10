@@ -71,6 +71,9 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		opts.Nomos.SourceFormat = filesystem.SourceFormatHierarchy
 	}
 
+	// Set multi-repo based upon flag value.
+	opts.Nomos.MultiRepo = *e2e.MultiRepo
+
 	// TODO(willbeason): Support connecting to:
 	//  1) A user-specified cluster.
 	//  2) One of a set of already-set-up clusters?
@@ -119,16 +122,27 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
 	}
 
+	// First wait for CRDs to be established.
+	if nt.multiRepo {
+		err = waitForCRDs(nt, multiRepoCRDs)
+	} else {
+		err = waitForCRDs(nt, monoRepoCRDs)
+	}
+	if err != nil {
+		t.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
+	}
+
+	// ConfigSync custom types weren't available when the cluster was initially
+	// created. Create a new Client, since it'll automatically be configured to
+	// understand the Repo and RootSync types as ConfigSync is now installed.
+	nt.RenewClient()
+
 	err = waitForConfigSync(nt)
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
-	// The Repo type wasn't available when the cluster was initially created.
-	// Create a new Client, since it'll automatically be configured to understand
-	// the Repo type as ConfigSync is now installed.
-	nt.RenewClient()
-	nt.WaitForRepoSync()
 
+	nt.WaitForRepoSync()
 	return nt
 }
 
