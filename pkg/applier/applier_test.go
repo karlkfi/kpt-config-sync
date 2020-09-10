@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -19,12 +20,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const (
 	testNs1 = "fake-namespace-1"
 	testNs2 = "fake-namespace-2"
+	testNs3 = "fake-namespace-3"
 )
 
 // TestApply verifies that the apply can compare the declared resource from git with
@@ -36,6 +39,8 @@ func TestApply(t *testing.T) {
 		scope declared.Scope
 		// the git resource to which the applier syncs the state to.
 		declared []ast.FileObject
+		// watched is the set of types we are currently watching.
+		watched map[schema.GroupVersionKind]bool
 		// The previously cached resource.
 		actual []ast.FileObject
 		// expected changes happened to each resource.
@@ -44,57 +49,90 @@ func TestApply(t *testing.T) {
 		wantErr status.MultiError
 	}{
 		{
-			name:  "Create Test2 - if the resource is missing.",
+			name:  "Create Test - if the resource is missing.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				// shall be created.
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
-			},
-			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+			},
+			actual: []ast.FileObject{},
 			want: []Event{
-				{"Update", testNs1},
-				{"Create", testNs2}},
+				{"Create", testNs1}},
 		},
 		{
-			name:  "No-Op - if the resource has the configManagement disabled.",
+			name:  "Update Test - if the resource is previously cached.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
 			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			// testNs1 is not touched.
 			want: []Event{{"Update", testNs2}},
 		},
 		{
-			name:  "Update Test1 - if the resource is previously cached.",
-			scope: declared.RootReconciler,
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			name:     "Delete Test - if the cached resource is not in the upcoming resource",
+			scope:    declared.RootReconciler,
+			declared: []ast.FileObject{},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
 			},
 			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
-			want: []Event{{"Update", testNs1}},
+			want: []Event{
+				{"Delete", testNs3},
+			},
 		},
 		{
-			name:  "Delete Test2 - if the cached resource is not in the upcoming resource",
+			name:  "CUD Test - all three at once",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
-			},
-			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
+			},
 			want: []Event{
-				{"Delete", testNs2},
-				{"Update", testNs1}},
+				{"Create", testNs1},
+				{"Update", testNs2},
+				{"Delete", testNs3},
+			},
+		},
+		{
+			name:  "Ignore Test 1 - if the resource has the configManagement disabled.",
+			scope: declared.RootReconciler,
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
+			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+			},
+			actual: []ast.FileObject{},
+			// testNs1 is not touched.
+			want: []Event{},
+		},
+		{
+			name:  "Ignore Test 2 - if the resource type is not watched.",
+			scope: declared.RootReconciler,
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
+			watched: map[schema.GroupVersionKind]bool{},
+			actual:  []ast.FileObject{},
+			// testNs1 is not touched.
+			want: []Event{},
 		},
 		// We don't need to test every possible path here; we've already done that
 		// in diff_test.go. This just ensures we can reach the switch-case branches we expect.
@@ -103,6 +141,9 @@ func TestApply(t *testing.T) {
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled),
+			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Role(): true,
 			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
@@ -116,6 +157,9 @@ func TestApply(t *testing.T) {
 			declared: []ast.FileObject{
 				fake.Role(core.Name("admin"), core.Namespace("shipping"),
 					syncertest.ManagementEnabled),
+			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Role(): true,
 			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), core.Namespace("shipping"),
@@ -145,7 +189,7 @@ func TestApply(t *testing.T) {
 			}
 			a.cachedObjects = previousCache
 			// Verify.
-			err := a.Apply(context.Background(), filesystem.AsCoreObjects(tc.declared))
+			err := a.Apply(context.Background(), tc.watched, filesystem.AsCoreObjects(tc.declared))
 			if err != nil || tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got Apply() = error %v, want error %v", err, tc.wantErr)

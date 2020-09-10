@@ -7,146 +7,158 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/rest"
 )
 
-func fakeRunnable(opts watcherOptions) (Runnable, error) {
+func fakeRunnable() Runnable {
 	return &filteredWatcher{
 		base:      watch.NewFake(),
 		resources: nil,
 		queue:     nil,
-	}, nil
-}
-
-func TestManager(t *testing.T) {
-	var config *rest.Config
-	options := &Options{
-		watcherFunc: fakeRunnable,
-	}
-	m, err := NewManager(":test", config, nil, declared.NewResources(), options)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	obj1 := fake.DeploymentObject()
-	obj2 := fake.ConfigMapObject()
-	objects := []core.Object{obj1, obj2}
-
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	want := map[schema.GroupVersionKind]Runnable{
-		obj1.GroupVersionKind(): nil,
-		obj2.GroupVersionKind(): nil,
-	}
-
-	compare(t, want, m.watcherMap)
-
-	deploymentOtherVersion := obj1.DeepCopy()
-	deploymentOtherVersion.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "apps",
-		Version: "v1beta1",
-		Kind:    "Deployment",
-	})
-	objects = []core.Object{obj1, obj2, deploymentOtherVersion}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	want = map[schema.GroupVersionKind]Runnable{
-		obj2.GroupVersionKind():                   nil,
-		deploymentOtherVersion.GroupVersionKind(): nil,
-	}
-
-	compare(t, want, m.watcherMap)
-
-	objects = []core.Object{}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	var emptyWatchers = map[schema.GroupVersionKind]Runnable{}
-	if diff := cmp.Diff(emptyWatchers, m.watcherMap, cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("not all watchers were stopped:\n%s", diff)
 	}
 }
 
-func TestManagerDifferentVersions(t *testing.T) {
-	var config *rest.Config
-	options := &Options{
-		watcherFunc: fakeRunnable,
-	}
-	m, err := NewManager(":test", config, nil, declared.NewResources(), options)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	deploymentv1 := fake.DeploymentObject()
-	deploymentv1beta1 := deploymentv1.DeepCopy()
-	deploymentv1beta1.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "apps",
-		Version: "v1beta1",
-		Kind:    "Deployment",
-	})
-
-	objects := []core.Object{deploymentv1}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	objects = []core.Object{deploymentv1beta1}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	want := map[schema.GroupVersionKind]Runnable{
-		deploymentv1beta1.GroupVersionKind(): nil,
-	}
-	compare(t, want, m.watcherMap)
-
-	// update the manager to stop all watchers
-	objects = []core.Object{}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	objects = []core.Object{deploymentv1beta1}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	objects = []core.Object{deploymentv1}
-	err = m.Update(objects)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	want = map[schema.GroupVersionKind]Runnable{
-		deploymentv1.GroupVersionKind(): nil,
-	}
-
-	compare(t, want, m.watcherMap)
-}
-
-func compare(t *testing.T, a, b map[schema.GroupVersionKind]Runnable) {
-	if diff := cmp.Diff(a, b,
-		cmpopts.SortMaps(lessFunc),
-		cmpopts.IgnoreInterfaces(struct{ Runnable }{})); diff != "" {
-		t.Errorf(diff)
+func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(watcherOptions) (Runnable, status.Error) {
+	return func(options watcherOptions) (runnable Runnable, err status.Error) {
+		if errOnType[options.gvk] {
+			return nil, FailedToStartWatcher(
+				errors.Errorf("error creating watcher for %v", options.gvk),
+			)
+		}
+		return fakeRunnable(), nil
 	}
 }
 
-func lessFunc(a, b schema.GroupVersionKind) bool {
-	return a.String() < b.String()
+var ignoreRunnables = cmpopts.IgnoreInterfaces(struct{ Runnable }{})
+
+func TestManager_Update(t *testing.T) {
+	testCases := []struct {
+		name string
+		// watcherMap is the manager's map of watchers before the test begins.
+		watcherMap map[schema.GroupVersionKind]Runnable
+		// failedWatchers is the set of watchers which, if attempted to be
+		// initialized, fail.
+		failedWatchers map[schema.GroupVersionKind]bool
+		// objects is the list of objects to update.
+		objects []core.Object
+		// wantWatchedTypes is the set of types we want the Manager to report it is
+		// watching. This set is equivalent to the set of keys we expect the
+		// watcherMap to have at the end of the test.
+		wantWatchedTypes map[schema.GroupVersionKind]bool
+		// wantErr, if non-nil, reports that we want Update to return an error.
+		wantErr error
+	}{
+		// Base Case.
+		{
+			name:             "no watchers and nothing declared",
+			watcherMap:       map[schema.GroupVersionKind]Runnable{},
+			failedWatchers:   map[schema.GroupVersionKind]bool{},
+			objects:          []core.Object{},
+			wantWatchedTypes: map[schema.GroupVersionKind]bool{},
+			wantErr:          nil,
+		},
+		// Watcher set mutations.
+		{
+			name:       "add watchers if declared",
+			watcherMap: map[schema.GroupVersionKind]Runnable{},
+			objects: []core.Object{
+				fake.NamespaceObject("shipping"),
+				fake.RoleObject(),
+			},
+			wantWatchedTypes: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+				kinds.Role():      true,
+			},
+		},
+		{
+			name: "keep watchers if still declared",
+			watcherMap: map[schema.GroupVersionKind]Runnable{
+				kinds.Namespace(): fakeRunnable(),
+				kinds.Role():      fakeRunnable(),
+			},
+			objects: []core.Object{
+				fake.NamespaceObject("shipping"),
+				fake.RoleObject(),
+			},
+			wantWatchedTypes: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+				kinds.Role():      true,
+			},
+		},
+		{
+			name: "delete watchers if nothing declared",
+			watcherMap: map[schema.GroupVersionKind]Runnable{
+				kinds.Namespace(): fakeRunnable(),
+				kinds.Role():      fakeRunnable(),
+			},
+			objects: []core.Object{},
+		},
+		{
+			name: "add/keep/delete watchers",
+			watcherMap: map[schema.GroupVersionKind]Runnable{
+				kinds.Role():        fakeRunnable(),
+				kinds.RoleBinding(): fakeRunnable(),
+			},
+			objects: []core.Object{
+				fake.NamespaceObject("shipping"),
+				fake.RoleObject(),
+			},
+			wantWatchedTypes: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): true,
+				kinds.Role():      true,
+			},
+		},
+		// Error case.
+		{
+			name:       "error on starting watcher",
+			watcherMap: map[schema.GroupVersionKind]Runnable{},
+			failedWatchers: map[schema.GroupVersionKind]bool{
+				kinds.Role(): true,
+			},
+			objects: []core.Object{
+				fake.RoleObject(),
+			},
+			wantWatchedTypes: map[schema.GroupVersionKind]bool{
+				kinds.Role(): false,
+			},
+			wantErr: FailedToStartWatcher(errors.New("failed")),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			options := &Options{
+				watcherFunc: testRunnables(tc.failedWatchers),
+			}
+			m, err := NewManager(":test", nil, nil, declared.NewResources(), options)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			watched, err := m.Update(tc.objects)
+
+			wantErr := status.Append(nil, tc.wantErr)
+			if !errors.Is(wantErr, err) {
+				t.Errorf("got Update() error = %v, want %v", err, tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantWatchedTypes, watched, cmpopts.EquateEmpty()); diff != "" {
+				t.Error(diff)
+			}
+
+			wantWatchers := make(map[schema.GroupVersionKind]Runnable)
+			for gvk, want := range tc.wantWatchedTypes {
+				if want {
+					wantWatchers[gvk] = nil
+				}
+			}
+			if diff := cmp.Diff(wantWatchers, m.watcherMap, ignoreRunnables, cmpopts.EquateEmpty()); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
 }

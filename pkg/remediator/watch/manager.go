@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
+	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -84,34 +85,43 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 //   resource list, but weren't present in previous resource list.
 // - stop watchers for any GroupVersionKind that is not present
 //   in the new resource list
-func (m *Manager) Update(objects []core.Object) error {
+//
+// Returns a map from the each declared type to whether we have a watcher for
+// that type.
+func (m *Manager) Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError) {
 	err := m.resources.Update(objects)
 	if err != nil {
-		return err
+		// This only fails if we've made a coding mistake.
+		return nil, err
 	}
 
-	gvkSet := m.resources.GVKSet()
+	watched := m.resources.GVKSet()
 
-	// Stop obsolete watchers
+	// Stop obsolete watchers.
 	for gvk := range m.watcherMap {
-		if _, found := gvkSet[gvk]; !found {
+		if !watched[gvk] {
+			// We were watching the type, but no longer have declarations for it.
+			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
-		} else {
-			// We can remove this GVK from gvkSet because we know
-			// it is present in watcherMap so we won't need to start a new watcher for it below.
-			delete(gvkSet, gvk)
 		}
 	}
 
 	// Start new watchers
-	for gvk := range gvkSet {
+	var errs status.MultiError
+	for gvk := range watched {
 		if _, found := m.watcherMap[gvk]; !found {
+			// We don't have a watcher for this type, so add a watcher for it.
 			if err := m.startWatcher(gvk); err != nil {
-				return err
+				// We'll try to start the watcher next time - the type may be temporarily
+				// unavailable.
+				errs = status.Append(errs, err)
+				// We aren't watching the type since launching the watcher failed.
+				watched[gvk] = false
 			}
 		}
 	}
-	return nil
+
+	return watched, errs
 }
 
 // startWatcher starts a watcher for a GVK

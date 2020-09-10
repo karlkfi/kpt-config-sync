@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -32,7 +32,7 @@ func NewResources() *Resources {
 }
 
 // Update performs an atomic update on the resource declaration set.
-func (r *Resources) Update(objects []core.Object) error {
+func (r *Resources) Update(objects []core.Object) status.Error {
 	// First build up the new map using a local pointer/reference.
 	newSet := make(map[core.ID]*unstructured.Unstructured)
 	for _, obj := range objects {
@@ -45,7 +45,8 @@ func (r *Resources) Update(objects []core.Object) error {
 		u, err := reconcile.AsUnstructuredSanitized(obj)
 		if err != nil {
 			// This should never happen.
-			return errors.Wrapf(err, "converting %v to unstructured.Unstructured", id)
+			return status.InternalErrorBuilder.Wrap(err).
+				Sprintf("converting %v to unstructured.Unstructured", id).Build()
 		}
 		newSet[id] = u
 	}
@@ -85,18 +86,18 @@ func (r *Resources) Declarations() []*unstructured.Unstructured {
 }
 
 // GVKSet returns the set of all GroupVersionKind found in the git repo.
-func (r *Resources) GVKSet() map[schema.GroupVersionKind]struct{} {
-	gvkSet := make(map[schema.GroupVersionKind]struct{})
+func (r *Resources) GVKSet() map[schema.GroupVersionKind]bool {
+	gvkSet := make(map[schema.GroupVersionKind]bool)
 	r.mutex.RLock()
 	objSet := r.objectSet
 	r.mutex.RUnlock()
 
-	// A local reference to the map is threadsafe since only the struct reference
-	// is replaced on update.
+	// A local reference to the objSet map is threadsafe since only the pointer to
+	// the map is replaced on update.
 	for _, obj := range objSet {
 		gvk := obj.GroupVersionKind()
-		if _, ok := gvkSet[gvk]; !ok {
-			gvkSet[gvk] = struct{}{}
+		if !gvkSet[gvk] {
+			gvkSet[gvk] = true
 		}
 	}
 	return gvkSet

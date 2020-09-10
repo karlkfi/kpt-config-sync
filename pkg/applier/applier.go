@@ -41,7 +41,7 @@ type Applier struct {
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
-	Apply(ctx context.Context, desiredResource []core.Object) status.MultiError
+	Apply(ctx context.Context, watched map[schema.GroupVersionKind]bool, desiredResource []core.Object) status.MultiError
 }
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
@@ -101,19 +101,19 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				decl.GetAnnotations()[v1.ResourceManagementKey])
 			errs = status.Append(errs, err)
 		case diff.Create:
-			declared, err := d.UnstructuredDeclared()
+			u, err := d.UnstructuredDeclared()
 			if err != nil {
 				errs = status.Append(errs, syntax.ObjectParseError(d.Declared, err))
 				continue
 			}
-			if _, e := a.applier.Create(ctx, declared); e != nil {
+			if _, e := a.applier.Create(ctx, u); e != nil {
 				err := status.ResourceWrap(e, "unable to create resource %s", decl)
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("created resource %v", coreID)
 			}
 		case diff.Update:
-			declared, err := d.UnstructuredDeclared()
+			u, err := d.UnstructuredDeclared()
 			if err != nil {
 				errs = status.Append(errs, syntax.ObjectParseError(d.Declared, err))
 				continue
@@ -123,7 +123,7 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				errs = status.Append(errs, syntax.ObjectParseError(d.Actual, err))
 				continue
 			}
-			if _, e := a.applier.Update(ctx, declared, actual); e != nil {
+			if _, e := a.applier.Update(ctx, u, actual); e != nil {
 				err := status.ResourceWrap(e, "unable to update resource %s", decl)
 				errs = status.Append(errs, err)
 			} else {
@@ -168,21 +168,27 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 
 // Apply updates the resource API server with the latest parsed git resource. This is called
 // when a new change in the git resource is detected.
-func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) status.MultiError {
+func (a *Applier) Apply(ctx context.Context, watched map[schema.GroupVersionKind]bool, desiredResource []core.Object) status.MultiError {
 	// create the new cache showing the new declared resource.
 	newCache := make(map[core.ID]core.Object)
-	gvks := make(map[schema.GroupVersionKind]bool)
 	for _, desired := range desiredResource {
+		if !watched[desired.GroupVersionKind()] {
+			// We aren't watching this type yet, so ignore this declaration.
+			// We already show an error as we were unable to launch the watcher, so it
+			// isn't necessary to show the error again here.
+			continue
+		}
 		newCache[core.IDOf(desired)] = desired
-		gvks[desired.GroupVersionKind()] = true
 	}
 
 	a.mux.Lock()
 	defer a.mux.Unlock()
 
 	// pull the actual resource from the API server.
-	actualObjects, err := a.getActualObjects(ctx, gvks)
+	// Only pull the types we're watching.
+	actualObjects, err := a.getActualObjects(ctx, watched)
 	if err != nil {
+		// This fails if we fail to list _any single_ type we're expecting.
 		return err
 	}
 	// TODO(b/165081629): Enable prune on startup (eg when cachedObjects is nil)
@@ -231,12 +237,9 @@ func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVer
 			continue
 		}
 		for _, res := range resources.Items {
-			obj := res.DeepCopyObject().(core.Object)
-			if coreID, err := core.IDOfRuntime(obj); err != nil {
-				errs = status.Append(errs, err)
-			} else {
-				actual[coreID] = obj
-			}
+			obj := res.DeepCopy()
+			coreID := core.IDOf(obj)
+			actual[coreID] = obj
 		}
 	}
 	return actual, errs

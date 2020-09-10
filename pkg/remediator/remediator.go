@@ -8,8 +8,10 @@ import (
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/remediator/reconcile"
 	"github.com/google/nomos/pkg/remediator/watch"
+	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 )
 
@@ -30,7 +32,7 @@ type Remediator struct {
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
-	Update(objects []core.Object) error
+	Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError)
 }
 
 var _ Interface = &Remediator{}
@@ -71,6 +73,6 @@ func (r *Remediator) Start(ctx context.Context) {
 
 // Update updates the declared resources for all reconcile workers and
 // potentially starts/stops server-side watches.
-func (r *Remediator) Update(objects []core.Object) error {
+func (r *Remediator) Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError) {
 	return r.watchMgr.Update(objects)
 }
