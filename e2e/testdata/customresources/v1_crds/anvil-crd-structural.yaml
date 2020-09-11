@@ -5,21 +5,24 @@ metadata:
   name: anvils.acme.com
 spec:
   group: acme.com
-  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required:
+            - lbs
+            properties:
+              lbs:
+                type: integer
   scope: Namespaced
   names:
     plural: anvils
     singular: anvil
     kind: Anvil
   preserveUnknownFields: false
-  validation:
-    openAPIV3Schema:
-      type: object
-      properties:
-        spec:
-          type: object
-          required:
-          - lbs
-          properties:
-            lbs:
-              type: integer

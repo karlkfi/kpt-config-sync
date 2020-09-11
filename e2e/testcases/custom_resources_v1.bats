@@ -82,13 +82,6 @@ test_teardown() {
   debug::log "Adding CRD out of band"
   run kubectl apply -f "${YAML_DIR}/customresources/v1_crds/anvil-crd-structural.yaml"
 
-  # shellcheck disable=SC2154
-  if [[ "$status" -eq 1 ]]; then
-    # TODO(b/149864521): Remove this conditional skip once we no longer support 1.14 or below.
-    debug::log "Unable to add structural CRD to cluster. This is expected for k8s < 1.15"
-    skip
-  fi
-
   resource::check crd anvils.acme.com
 
   debug::log "Updating repo with custom resource"
