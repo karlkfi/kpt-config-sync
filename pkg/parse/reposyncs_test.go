@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -40,7 +39,7 @@ func missingRepo(rs *v1alpha1.RepoSync) {
 }
 
 func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
-	rs := fake.RepoSyncObject(core.Name(reposync.Name))
+	rs := fake.RepoSyncObject()
 	rs.Spec.Git.Repo = "fake repo"
 	for _, opt := range opts {
 		opt(rs)

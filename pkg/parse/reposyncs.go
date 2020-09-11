@@ -8,7 +8,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -32,7 +31,7 @@ func ValidateRepoSync(o core.Object) status.Error {
 		return nil
 	}
 
-	if o.GetName() != reposync.Name {
+	if o.GetName() != v1alpha1.RepoSyncName {
 		return InvalidRepoSyncName(o)
 	}
 	rs, ok := o.(*v1alpha1.RepoSync)
@@ -89,7 +88,7 @@ func InvalidRepoSyncName(o core.Object) status.Error {
 	namespace := o.GetNamespace()
 	return invalidRepoSyncBuilder.
 		Sprintf("RepoSyncs must be named %q, but the RepoSync for Namespace %q is named %q",
-			reposync.Name, namespace, name).
+			v1alpha1.RepoSyncName, namespace, name).
 		BuildWithResources(o)
 }
 

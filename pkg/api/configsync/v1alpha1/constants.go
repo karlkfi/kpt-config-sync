@@ -1,5 +1,13 @@
 package v1alpha1
 
+// API type constants
+const (
+	// RepoSyncName is the expected name of any RepoSync CR.
+	RepoSyncName = "repo-sync"
+	// RootSyncName is the expected name of any RootSync CR.
+	RootSyncName = "root-sync"
+)
+
 // Git secret values
 const (
 	// GitSecretGCENode indicates we will use gcenode for getting the git secret

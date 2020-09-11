@@ -43,6 +43,7 @@ func secret(t *testing.T, name, data, auth string, opts ...core.MetaMutator) *co
 		{
 			APIVersion:         v1.SchemeGroupVersion.String(),
 			Kind:               "RepoSync",
+			Name:               v1alpha1.RepoSyncName,
 			Controller:         pointer.BoolPtr(true),
 			BlockOwnerDeletion: pointer.BoolPtr(true),
 		},
@@ -116,7 +117,7 @@ func TestCreate(t *testing.T) {
 			}
 			if !tc.wantError {
 				if diff := cmp.Diff(tc.client.Objects[core.IDOf(tc.wantSecret)], tc.wantSecret); diff != "" {
-					t.Errorf("Uexpected secret found, diff: %s", diff)
+					t.Error(diff)
 				}
 			}
 		})

@@ -137,7 +137,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
 				{NamespacedName: types.NamespacedName{
-					Name:      reposync.Name,
+					Name:      v1alpha1.RepoSyncName,
 					Namespace: a.Meta.GetNamespace(),
 				}},
 			}

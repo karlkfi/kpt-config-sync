@@ -110,13 +110,7 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 }
 
 func TestRepoSyncMutateDeployment(t *testing.T) {
-	rs := repoSync(
-		gitRevision,
-		branch,
-		core.Name(reposyncCRName),
-		core.Namespace(reposyncReqNamespace),
-		core.UID(uid),
-	)
+	rs := repoSync(gitRevision, branch, core.Namespace(reposyncReqNamespace), core.UID(uid))
 
 	testCases := []struct {
 		name             string
@@ -189,7 +183,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	rs := repoSync(gitRevision, branch, core.Name(reposyncCRName), core.Namespace(reposyncReqNamespace))
+	rs := repoSync(gitRevision, branch, core.Namespace(reposyncReqNamespace))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 

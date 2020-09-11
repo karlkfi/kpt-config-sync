@@ -15,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
-	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -259,7 +258,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 
 func validateMultiRepoDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
-	rs := fake.RootSyncObject(core.Name(rootsync.Name), core.Namespace(configmanagement.ControllerNamespace))
+	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(filesystem.SourceFormatHierarchy)
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",

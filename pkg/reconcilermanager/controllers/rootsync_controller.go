@@ -129,7 +129,7 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
 				{NamespacedName: types.NamespacedName{
-					Name:      rootsync.Name,
+					Name:      v1alpha1.RootSyncName,
 					Namespace: a.Meta.GetNamespace(),
 				}},
 			}
@@ -163,7 +163,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 // validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
 // details.
 func (r *RootSyncReconciler) validate(rs *v1alpha1.RootSync) error {
-	if rs.Name != rootsync.Name {
+	if rs.Name != v1alpha1.RootSyncName {
 		// Please don't change the error message.
 		return fmt.Errorf(
 			"there must be exactly one RootSync resource declared. 'meta.name' must be "+
