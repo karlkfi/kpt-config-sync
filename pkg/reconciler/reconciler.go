@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
@@ -96,7 +97,17 @@ func Run(ctx context.Context, opts Options) {
 		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 
-	cl, err := client.New(cfg, client.Options{Scheme: s})
+	// Use the DynamicRESTMapper as the default RESTMapper does not detect when
+	// new types become available.
+	mapper, err := apiutil.NewDynamicRESTMapper(cfg)
+	if err != nil {
+		glog.Fatalf("Creating DynamicRESTMapper")
+	}
+
+	cl, err := client.New(cfg, client.Options{
+		Scheme: s,
+		Mapper: mapper,
+	})
 	if err != nil {
 		glog.Fatalf("failed to create client: %v", err)
 	}

@@ -39,7 +39,7 @@ func GetSyncedCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 		return nil, getSyncedCRDsError(err, "failed to create rest config: %+v")
 	}
 
-	mapper, err := apiutil.NewDiscoveryRESTMapper(config)
+	mapper, err := apiutil.NewDynamicRESTMapper(config)
 	if err != nil {
 		return nil, getSyncedCRDsError(err, "failed to create mapper")
 	}

@@ -33,7 +33,7 @@ func AddController(mgr manager.Manager, rc RestartChannel) error {
 	// Set up a meta controller that restarts GenericResource controllers when Syncs change.
 	clientFactory := func() (client.Client, error) {
 		cfg := mgr.GetConfig()
-		mapper, err2 := apiutil.NewDiscoveryRESTMapper(cfg)
+		mapper, err2 := apiutil.NewDynamicRESTMapper(cfg)
 		if err2 != nil {
 			return nil, errors.Wrapf(err2, "failed to create mapper during gc")
 		}

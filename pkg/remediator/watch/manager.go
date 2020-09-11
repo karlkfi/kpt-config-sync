@@ -48,7 +48,7 @@ type Options struct {
 // - create discovery RESTmapper from the passed rest.Config
 // - use createWatcher to create watchers
 func DefaultOptions(cfg *rest.Config) (*Options, error) {
-	mapper, err := apiutil.NewDiscoveryRESTMapper(cfg)
+	mapper, err := apiutil.NewDynamicRESTMapper(cfg)
 	if err != nil {
 		return nil, err
 	}
