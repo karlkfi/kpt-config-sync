@@ -151,7 +151,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 		},
 		{
 			cmName: rootSyncResourceName(gitSync),
-			data:   gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo, rs.Spec.Git.Auth),
+			data:   gitSyncData(rs.Spec.Revision, rs.Spec.Branch, rs.Spec.Repo, rs.Spec.Git.Auth, v1alpha1.GetPeriodSecs(&rs.Spec.Git)),
 		},
 		{
 			cmName: rootSyncResourceName(reconciler),

@@ -33,3 +33,9 @@ const (
 	// GitSecretConfigKeyTokenUsername is the key at which a token's username is stored
 	GitSecretConfigKeyTokenUsername = "username"
 )
+
+// GitSync period value.
+const (
+	// DefaultPeriodSecs is the default value in seconds between consecutive syncs.
+	DefaultPeriodSecs = 15
+)
