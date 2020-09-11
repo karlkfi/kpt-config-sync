@@ -215,7 +215,6 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 	actualObjects, err := a.getActualObjects(ctx, gvks)
 	if err != nil {
 		return err
-
 	}
 	// Two way merge. Compare between the cached declared and the actual states to decide the create and update.
 	diffs := diff.TwoWay(a.cachedObjects, actualObjects)
@@ -229,7 +228,11 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVersionKind]bool) (map[core.ID]core.Object, status.MultiError) {
 	var errs status.MultiError
 	actual := make(map[core.ID]core.Object)
-	for gvk := range gvks {
+	for gvk, watched := range gvks {
+		if !watched {
+			// Don't try to get unwatched types.
+			continue
+		}
 		resources := &unstructured.UnstructuredList{}
 		resources.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
 		if err := a.client.List(ctx, resources, a.listOptions...); err != nil {

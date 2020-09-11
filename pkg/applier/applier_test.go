@@ -39,9 +39,11 @@ func TestApply(t *testing.T) {
 		scope declared.Scope
 		// the git resource to which the applier syncs the state to.
 		declared []ast.FileObject
+		// cached is the cache of the set of previously-declared objects.
+		cached []ast.FileObject
 		// watched is the set of types we are currently watching.
 		watched map[schema.GroupVersionKind]bool
-		// The previously cached resource.
+		// actual is the objects currently on the cluster.
 		actual []ast.FileObject
 		// expected changes happened to each resource.
 		want []Event
@@ -55,6 +57,7 @@ func TestApply(t *testing.T) {
 				// shall be created.
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
+			cached: []ast.FileObject{},
 			watched: map[schema.GroupVersionKind]bool{
 				kinds.Namespace(): true,
 			},
@@ -66,6 +69,9 @@ func TestApply(t *testing.T) {
 			name:  "Update Test - if the resource is previously cached.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			cached: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			watched: map[schema.GroupVersionKind]bool{
@@ -80,6 +86,9 @@ func TestApply(t *testing.T) {
 			name:     "Delete Test - if the cached resource is not in the upcoming resource",
 			scope:    declared.RootReconciler,
 			declared: []ast.FileObject{},
+			cached: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
+			},
 			watched: map[schema.GroupVersionKind]bool{
 				kinds.Namespace(): true,
 			},
@@ -96,6 +105,10 @@ func TestApply(t *testing.T) {
 			declared: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			cached: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
 			watched: map[schema.GroupVersionKind]bool{
 				kinds.Namespace(): true,
@@ -129,8 +142,31 @@ func TestApply(t *testing.T) {
 			declared: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{},
-			actual:  []ast.FileObject{},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): false,
+			},
+			actual: []ast.FileObject{},
+			// testNs1 is not touched.
+			want: []Event{},
+		},
+		{
+			name:  "Ignore Test 3 - don't delete unwatched types.",
+			scope: declared.RootReconciler,
+			declared: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			},
+			cached: []ast.FileObject{
+				// We don't cache unwatched types.
+				// We don't kill watchers until the user has removed all instances of
+				// the type from the repo, and we don't cache types until we have
+				// successfully launched a watcher for that type.
+			},
+			watched: map[schema.GroupVersionKind]bool{
+				kinds.Namespace(): false,
+			},
+			actual: []ast.FileObject{
+				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			},
 			// testNs1 is not touched.
 			want: []Event{},
 		},
@@ -173,13 +209,15 @@ func TestApply(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := clientForTest(t)
 			clientApplier := &FakeApplier{WantActions: tc.want}
-			previousCache := make(map[core.ID]core.Object)
 			// Propagate the actual resources.
 			for _, actual := range tc.actual {
 				if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
 					t.Fatal(err)
 				}
-				previousCache[core.IDOf(actual)] = actual.Object
+			}
+			previousCache := make(map[core.ID]core.Object)
+			for _, cached := range tc.cached {
+				previousCache[core.IDOf(cached)] = cached.Object
 			}
 			var a *Applier
 			if tc.scope == declared.RootReconciler {
