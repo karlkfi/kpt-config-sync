@@ -88,11 +88,12 @@ func (p *root) Run(ctx context.Context) {
 // Read implements Runnable.
 func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
+	if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
+		return nil, status.APIServerError(err2, "setting source status")
+	}
 	if err != nil {
-		p.setSourceStatus(ctx, "", err)
 		return nil, err
 	}
-	p.setSourceStatus(ctx, state.commit, err)
 	return &state, nil
 }
 
@@ -105,7 +106,12 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 
 	var err status.MultiError
 	defer func() {
-		p.setSyncStatus(ctx, state.commit, err)
+		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
+			glog.Errorf("Failed to set sync status: %v", err2)
+		} else if err == nil {
+			// Only set lastApplied if *everything* succeeded, including status update.
+			p.lastApplied = state.policyDir.OSPath()
+		}
 	}()
 
 	wantFiles := state.files
@@ -136,41 +142,44 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 	err = p.update(ctx, cos)
 	if err == nil {
 		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-		p.lastApplied = state.policyDir.OSPath()
 	}
 	return err
 }
 
-func (p *root) setSourceStatus(ctx context.Context, commit string, errs status.MultiError) {
+func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
-		glog.Errorf("Failed to get RootSync for parser: %v", err)
-		return
+		return errors.Wrap(err, "failed to get RootSync for parser")
 	}
 
-	hasErrs := status.HasErrors(errs) || len(rs.Status.Source.Errors) > 0
-	if rs.Status.Source.Commit == commit && !hasErrs {
-		return
+	if !status.HasErrors(errs) {
+		// There were no errors getting the git state.
+		hasErrs := len(rs.Status.Source.Errors) > 0
+		if rs.Status.Source.Commit == state.commit && !hasErrs {
+			// We're already synced to this commit and there are no errors to report,
+			// so no need to do anything.
+			return nil
+		}
 	}
 
-	rs.Status.Source.Commit = commit
+	rs.Status.Source.Commit = state.commit
 	rs.Status.Source.Errors = status.ToCSE(errs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		glog.Errorf("Failed to update RootSync status from parser: %v", err)
+		return errors.Wrap(err, "failed to update RootSync source status from parser")
 	}
+	return nil
 }
 
-func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) {
+func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
-		glog.Errorf("Failed to get RootSync for parser: %v", err)
-		return
+		return errors.Wrap(err, "failed to get RootSync for parser")
 	}
 
 	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
-		return
+		return nil
 	}
 
 	rs.Status.Sync.Commit = commit
@@ -178,6 +187,7 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 	rs.Status.Sync.LastUpdate = metav1.Now()
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		glog.Errorf("Failed to update RootSync status from parser: %v", err)
+		return errors.Wrap(err, "failed to update RootSync sync status from parser")
 	}
+	return nil
 }

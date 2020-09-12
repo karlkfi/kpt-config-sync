@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -80,7 +81,9 @@ func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
 	// We don't want to bail out immediately as we want to surface this error to
 	// the user in the RepoSync's status field.
-	p.setSourceStatus(ctx, state, err)
+	if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
+		return nil, status.APIServerError(err2, "setting source status")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +98,12 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 
 	var err status.MultiError
 	defer func() {
-		p.setSyncStatus(ctx, state.commit, err)
+		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
+			glog.Errorf("Failed to set sync status: %v", err2)
+		} else if err == nil {
+			// Only set lastApplied if *everything* succeeded, including status update.
+			p.lastApplied = state.policyDir.OSPath()
+		}
 	}()
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
@@ -140,12 +148,11 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 	err = p.update(ctx, cos)
 	if err == nil {
 		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-		p.lastApplied = state.policyDir.OSPath()
 	}
 	return err
 }
 
-func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) {
+func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
 	// The main idea here is an error-robust way of surfacing to the user that
 	// we're having problems reading from our local clone of their git repository.
 	// This can happen when Kubernetes does weird things with mounted filesystems,
@@ -153,8 +160,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	// source of truth.
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		glog.Errorf("Failed to get RepoSync for parser: %v", err)
-		return
+		return errors.Wrap(err, "failed to get RepoSync for parser")
 	}
 
 	if !status.HasErrors(errs) {
@@ -163,7 +169,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 		if rs.Status.Source.Commit == state.commit && !hasErrs {
 			// We're already synced to this commit and there are no errors to report,
 			// so no need to do anything.
-			return
+			return nil
 		}
 	}
 	// If we weren't able to get the commit hash, this replaces the value with
@@ -173,20 +179,20 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	rs.Status.Source.Errors = status.ToCSE(errs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		glog.Errorf("Failed to update RepoSync status from parser: %v", err)
+		return errors.Wrap(err, "failed to update RepoSync source status from parser")
 	}
+	return nil
 }
 
-func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) {
+func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		glog.Errorf("Failed to get RepoSync for parser: %v", err)
-		return
+		return errors.Wrap(err, "failed to get RepoSync for parser")
 	}
 
 	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
-		return
+		return nil
 	}
 
 	rs.Status.Sync.Commit = commit
@@ -194,6 +200,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs statu
 	rs.Status.Sync.LastUpdate = metav1.Now()
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		glog.Errorf("Failed to update RepoSync status from parser: %v", err)
+		return errors.Wrap(err, "failed to update RepoSync sync status from parser")
 	}
+	return nil
 }
