@@ -1,11 +1,8 @@
 package controllers
 
 import (
-	"fmt"
 	"sort"
 
-	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,35 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// gitSyncData returns configmap for git-sync container.
-func gitSyncData(ref, branch, repo, secretType string, period float64) map[string]string {
-	result := make(map[string]string)
-	result["GIT_SYNC_REPO"] = repo
-	result["GIT_KNOWN_HOSTS"] = "false" // disable known_hosts checking because it provides no benefit for our use case.
-	result["GIT_SYNC_DEPTH"] = "1"      // git history provides no benefit either.
-	result["GIT_SYNC_WAIT"] = fmt.Sprintf("%f", period)
-	// When branch and ref not set in RootSync/RepoSync then dont set GIT_SYNC_BRANCH
-	// and GIT_SYNC_REV, git-sync will use the default values for them.
-	if branch != "" {
-		result["GIT_SYNC_BRANCH"] = branch
-	}
-	if ref != "" {
-		result["GIT_SYNC_REV"] = ref
-	}
-	switch secretType {
-	case v1alpha1.GitSecretGCENode, v1alpha1.GitSecretNone, v1alpha1.GitSecretToken, v1alpha1.GitSecretCookieFile:
-		// TODO(b/168143966)
-		// TODO(b/168144072)
-		// TODO(b/168144152)
-		glog.Errorf("secret type %s not implemented", secretType)
-	case v1alpha1.GitSecretSSH:
-		result["GIT_SYNC_SSH"] = "true"
-	default:
-		glog.Errorf("Unrecognized secret type %s", secretType)
-	}
-	return result
-}
 
 // reconcilerData returns configmap data for namespace reconciler.
 func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranch, gitRev string) map[string]string {

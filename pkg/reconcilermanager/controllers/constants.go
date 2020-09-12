@@ -1,5 +1,9 @@
 package controllers
 
+import (
+	"fmt"
+)
+
 const (
 	repoSyncReconcilerPrefix = "ns-reconciler"
 	rootSyncReconcilerName   = "root-reconciler"
@@ -24,3 +28,10 @@ const (
 
 	reconciler = "reconciler"
 )
+
+// gceNode specific value.
+const (
+	gceNodeAskpassPort = 9102
+)
+
+var gceNodeAskpassURL = fmt.Sprintf("http://localhost:%v/git_askpass", gceNodeAskpassPort)

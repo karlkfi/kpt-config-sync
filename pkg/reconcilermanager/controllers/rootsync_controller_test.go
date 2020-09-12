@@ -219,7 +219,14 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(gitSync),
-			gitSyncData(gitRevision, branch, rootsyncRepo, "ssh", v1alpha1.DefaultPeriodSecs),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: "ssh",
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -309,7 +316,14 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(gitSync),
-			gitSyncData(gitUpdatedRevision, branch, rootsyncRepo, "ssh", v1alpha1.DefaultPeriodSecs),
+			gitSyncData(options{
+				ref:        gitUpdatedRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: "ssh",
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(

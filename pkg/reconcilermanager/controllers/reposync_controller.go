@@ -156,7 +156,14 @@ func repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: repoSyncResourceName(rs.Namespace, gitSync),
-			data:   gitSyncData(rs.Spec.Git.Revision, rs.Spec.Git.Branch, rs.Spec.Git.Repo, rs.Spec.Git.Auth, v1alpha1.GetPeriodSecs(&rs.Spec.Git)),
+			data: gitSyncData(options{
+				ref:        rs.Spec.Git.Revision,
+				branch:     rs.Spec.Git.Branch,
+				repo:       rs.Spec.Git.Repo,
+				secretType: rs.Spec.Git.Auth,
+				period:     v1alpha1.GetPeriodSecs(&rs.Spec.Git),
+				proxy:      rs.Spec.Proxy,
+			}),
 		},
 		{
 			cmName: repoSyncResourceName(rs.Namespace, reconciler),

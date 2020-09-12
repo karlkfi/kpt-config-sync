@@ -196,7 +196,14 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, gitSync),
-			gitSyncData(gitRevision, branch, reposyncRepo, "ssh", v1alpha1.DefaultPeriodSecs),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
@@ -283,7 +290,14 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, gitSync),
-			gitSyncData(gitUpdatedRevision, branch, reposyncRepo, "ssh", v1alpha1.DefaultPeriodSecs),
+			gitSyncData(options{
+				ref:        gitUpdatedRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
