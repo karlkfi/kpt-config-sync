@@ -135,11 +135,14 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSync()
-	// Validate ClusterConfig behavior.
-	nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
-		nomostest.ClusterConfigHasSpecToken,
-		nomostest.ClusterConfigHasStatusToken,
-	)
+
+	if !nt.MultiRepo {
+		// Validate ClusterConfig behavior.
+		nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
+			nomostest.ClusterConfigHasSpecToken,
+			nomostest.ClusterConfigHasStatusToken,
+		)
+	}
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
 		hasRules(declaredRules))

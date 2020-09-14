@@ -90,7 +90,7 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		Config:         cfg,
 		Client:         c,
 		kubeconfigPath: kubeconfigPath,
-		multiRepo:      opts.Nomos.MultiRepo,
+		MultiRepo:      opts.Nomos.MultiRepo,
 	}
 
 	connectToLocalRegistry(nt)
@@ -123,7 +123,7 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 	}
 
 	// First wait for CRDs to be established.
-	if nt.multiRepo {
+	if nt.MultiRepo {
 		err = waitForCRDs(nt, multiRepoCRDs)
 	} else {
 		err = waitForCRDs(nt, monoRepoCRDs)

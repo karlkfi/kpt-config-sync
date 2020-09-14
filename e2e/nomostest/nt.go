@@ -46,6 +46,9 @@ type NT struct {
 	// Root is the root repository the cluster is syncing to.
 	Root *Repository
 
+	// MultiRepo indicates that the test case is for multi-repo Config Sync.
+	MultiRepo bool
+
 	// NonRootRepos is the Namespace repositories the cluster is syncing to.
 	// Only used in multi-repo tests.
 	NonRootRepos map[string]*Repository
@@ -58,9 +61,6 @@ type NT struct {
 
 	// kubeconfigPath is the path to the kubeconfig file for the kind cluster
 	kubeconfigPath string
-
-	// multiRepo indicates that the test case is for multi-repo Config Sync.
-	multiRepo bool
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -168,7 +168,7 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 func (nt *NT) WaitForRepoSync() {
 	nt.T.Helper()
 
-	if nt.multiRepo {
+	if nt.MultiRepo {
 		// TODO(b/167580665): also wait for any RepoSyncs to be synced.
 		nt.WaitForSync(func() core.Object { return &v1alpha1.RootSync{} },
 			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)

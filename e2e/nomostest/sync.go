@@ -1,6 +1,7 @@
 package nomostest
 
 import (
+	"encoding/json"
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -89,11 +90,17 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 			return WrongTypeErr(o, &v1alpha1.RootSync{})
 		}
 
+		// On error, display the full state of the RootSync to aid in debugging.
+		jsn, err := json.MarshalIndent(rs, "", "  ")
+		if err != nil {
+			return err
+		}
+
 		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors", errCount)
+			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, jsn)
 		}
 		if commit := rs.Status.Sync.Commit; commit != sha1 {
-			return fmt.Errorf("status.sync.commit %q does not match git revision %q", commit, sha1)
+			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, jsn)
 		}
 		return nil
 	}
