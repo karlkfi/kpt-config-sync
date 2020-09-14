@@ -136,7 +136,7 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 	obj := q.objects[gvknn]
 	delete(q.dirty, gvknn)
 	glog.V(4).Infof("Fetched object for processing: %v", obj)
-	return obj, false
+	return obj.DeepCopyObject().(core.Object), false
 }
 
 // Done marks item as done processing, and if it has been marked as dirty again

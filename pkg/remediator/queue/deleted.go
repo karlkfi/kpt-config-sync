@@ -3,10 +3,18 @@ package queue
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type deleted struct {
 	core.Object
+}
+
+// DeepCopyObject implements runtime.Object.
+//
+// This ensures when we deepcopy a deleted object, we retain that it is deleted.
+func (d *deleted) DeepCopyObject() runtime.Object {
+	return &deleted{Object: d.Object.DeepCopyObject().(core.Object)}
 }
 
 // MarkDeleted marks the given Object as having been deleted from the cluster.

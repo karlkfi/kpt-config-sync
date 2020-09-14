@@ -143,7 +143,9 @@ func (d Diff) UnstructuredActual() (*unstructured.Unstructured, error) {
 	if d.Actual == nil {
 		return nil, nil
 	}
-	return reconcile.AsUnstructuredSanitized(d.Actual)
+	// We just want Unstructured, NOT sanitized. Sanitized removes required fields
+	// such as resourceVersion, which are required for updates.
+	return reconcile.AsUnstructured(d.Actual)
 }
 
 // UnstructuredDeclared returns the declared as an unstructured object.
