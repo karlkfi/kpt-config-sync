@@ -144,7 +144,7 @@ func TestWrappedWatcher(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dr := declared.NewResources()
+			dr := &declared.Resources{}
 			if err := dr.Update(tc.declared); err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}

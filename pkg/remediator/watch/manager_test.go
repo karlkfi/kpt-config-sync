@@ -135,7 +135,7 @@ func TestManager_Update(t *testing.T) {
 			options := &Options{
 				watcherFunc: testRunnables(tc.failedWatchers),
 			}
-			m, err := NewManager(":test", nil, nil, declared.NewResources(), options)
+			m, err := NewManager(":test", nil, nil, &declared.Resources{}, options)
 			if err != nil {
 				t.Fatal(err)
 			}

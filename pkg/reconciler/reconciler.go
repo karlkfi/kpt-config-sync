@@ -127,7 +127,7 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	// Configure the Remediator.
-	decls := declared.NewResources()
+	decls := &declared.Resources{}
 
 	rem, err := remediator.New(opts.ReconcilerScope, cfg, baseApplier, decls, opts.NumWorkers)
 	if err != nil {

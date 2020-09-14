@@ -24,13 +24,6 @@ type Resources struct {
 	objectSet map[core.ID]*unstructured.Unstructured
 }
 
-// NewResources creates an instance of Resources.
-func NewResources() *Resources {
-	return &Resources{
-		mutex: sync.RWMutex{},
-	}
-}
-
 // Update performs an atomic update on the resource declaration set.
 func (r *Resources) Update(objects []core.Object) status.Error {
 	// First build up the new map using a local pointer/reference.
@@ -58,7 +51,7 @@ func (r *Resources) Update(objects []core.Object) status.Error {
 	return nil
 }
 
-// Get returns the resource declaration as read from Git
+// Get returns a copy of the resource declaration as read from Git
 func (r *Resources) Get(id core.ID) (*unstructured.Unstructured, bool) {
 	r.mutex.RLock()
 	objSet := r.objectSet
@@ -67,7 +60,11 @@ func (r *Resources) Get(id core.ID) (*unstructured.Unstructured, bool) {
 	// A local reference to the map is threadsafe since only the struct reference
 	// is replaced on update.
 	u, found := objSet[id]
-	return u, found
+	// We return a copy of the Unstructured, as
+	// 1) client.Client methods mutate the objects passed into them.
+	// 2) We don't want to persist any changes made to an object we retrieved
+	//  from a declared.Resources.
+	return u.DeepCopy(), found
 }
 
 // Declarations returns all resource declarations from Git.

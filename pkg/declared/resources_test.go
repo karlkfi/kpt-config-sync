@@ -2,7 +2,6 @@ package declared
 
 import (
 	"sort"
-	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -22,9 +21,7 @@ var (
 )
 
 func TestUpdate(t *testing.T) {
-	dr := Resources{
-		mutex: sync.RWMutex{},
-	}
+	dr := Resources{}
 	objects := testSet
 	expectedIDs := getIDs(objects)
 
@@ -37,6 +34,32 @@ func TestUpdate(t *testing.T) {
 		if _, ok := dr.objectSet[id]; !ok {
 			t.Errorf("ID %v not found in the declared resource", id)
 		}
+	}
+}
+
+func TestMutateImpossible(t *testing.T) {
+	wantResourceVersion := "version 1"
+
+	dr := Resources{}
+	o1 := fake.RoleObject(core.Name("foo"), core.Namespace("bar"))
+	o1.SetResourceVersion(wantResourceVersion)
+	err := dr.Update([]core.Object{o1})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	o2, found := dr.Get(core.IDOf(o1))
+	if !found {
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", o2, found)
+	}
+	o2.SetResourceVersion("version 2")
+
+	o3, found := dr.Get(core.IDOf(o1))
+	if !found {
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", o2, found)
+	}
+	if diff := cmp.Diff(wantResourceVersion, o3.GetResourceVersion()); diff != "" {
+		t.Error(diff)
 	}
 }
 
