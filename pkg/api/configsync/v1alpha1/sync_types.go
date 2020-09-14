@@ -39,13 +39,23 @@ type SyncStatus struct {
 	// sync resource.
 	// +optional
 	Reconciler string `json:"reconciler,omitempty"`
+
+	// Source contains fields describing the status of a *Sync's source of
+	// truth.
+	// +optional
+	Source GitSourceStatus `json:"source,omitempty"`
+
+	// Sync contains fields describing the status of syncing resources from the
+	// source of truth to the cluster.
+	// +optional
+	Sync GitSyncStatus `json:"sync,omitempty"`
 }
 
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// SyncSourceStatus provides a common type that is embedded in RepoSyncSourceStatus and RootSyncSourceStatus
-type SyncSourceStatus struct {
+// GitSourceStatus describes the status of a git source-of-truth
+type GitSourceStatus struct {
 	// Git contains fields describing the status of a Git source of truth.
 	// +optional
 	Git GitStatus `json:"gitStatus,omitempty"`
@@ -62,8 +72,8 @@ type SyncSourceStatus struct {
 // +kubebuilder:object:generate=true
 // +protobuf=true
 
-// SyncSyncStatus provides a common type that is embedded in RepoSyncSyncStatus and RootSyncSyncStatus
-type SyncSyncStatus struct {
+// GitSyncStatus provides the status of the syncing of resources from a git source-of-truth on to the cluster
+type GitSyncStatus struct {
 	// Commit is the hash of the most recent commit that was synced to the
 	// cluster. This value is updated even when a commit is only partially synced
 	// due to an  error.

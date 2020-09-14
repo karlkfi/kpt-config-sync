@@ -39,16 +39,6 @@ type RepoSyncStatus struct {
 	// current state.
 	// +optional
 	Conditions []RepoSyncCondition `json:"conditions,omitempty"`
-
-	// Source contains fields describing the status of the RepoSync's source of
-	// truth.
-	// +optional
-	Source RepoSyncSourceStatus `json:"source,omitempty"`
-
-	// Sync contains fields describing the status of syncing resources from the
-	// source of truth to the cluster.
-	// +optional
-	Sync RepoSyncSyncStatus `json:"sync,omitempty"`
 }
 
 // RepoSyncConditionType is an enum of types of conditions for RepoSyncs.
@@ -89,23 +79,6 @@ type RepoSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
-}
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
-// RepoSyncSourceStatus describes the status of the RepoSync's source of truth.
-type RepoSyncSourceStatus struct {
-	SyncSourceStatus `json:",inline"`
-}
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
-// RepoSyncSyncStatus describes the status of syncing resources from the source
-// of truth to the cluster.
-type RepoSyncSyncStatus struct {
-	SyncSyncStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true

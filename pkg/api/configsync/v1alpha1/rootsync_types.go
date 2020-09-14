@@ -39,16 +39,6 @@ type RootSyncStatus struct {
 	// current state.
 	// +optional
 	Conditions []RootSyncCondition `json:"conditions,omitempty"`
-
-	// Source contains fields describing the status of the RootSync's source of
-	// truth.
-	// +optional
-	Source RootSyncSourceStatus `json:"source,omitempty"`
-
-	// Sync contains fields describing the status of syncing resources from the
-	// source of truth to the cluster.
-	// +optional
-	Sync RootSyncSyncStatus `json:"sync,omitempty"`
 }
 
 // RootSyncConditionType is an enum of types of conditions for RootSyncs.
@@ -89,23 +79,6 @@ type RootSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
-}
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
-// RootSyncSourceStatus describes the status of the RootSync's source of truth.
-type RootSyncSourceStatus struct {
-	SyncSourceStatus `json:",inline"`
-}
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
-// RootSyncSyncStatus describes the status of syncing resources from the source
-// of truth to the cluster.
-type RootSyncSyncStatus struct {
-	SyncSyncStatus `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
