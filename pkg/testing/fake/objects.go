@@ -345,6 +345,12 @@ func ServiceObject(opts ...core.MetaMutator) *corev1.Service {
 	return result
 }
 
+// KptFile returns a default-initialized Kptfile with the passed opts
+// applied and path.
+func KptFile(path string, opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(KptFileObject(opts...), path)
+}
+
 // KptFileObject returns a default-initialized Kptfile with the passed opts
 // applied.
 func KptFileObject(opts ...core.MetaMutator) *kptfile.Kptfile {

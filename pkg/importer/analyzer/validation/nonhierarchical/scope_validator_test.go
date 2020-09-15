@@ -30,6 +30,8 @@ func TestScopeValidator(t *testing.T) {
 		nht.Pass("Namespace-scoped object without metadata.namespace with namespace-selector",
 			fake.Role(core.Namespace(""), core.Annotation(v1.NamespaceSelectorAnnotationKey, "value")),
 		),
+		nht.Pass("Kptfile", fake.KptFile("Kptfile", core.Namespace(""))),
+		nht.Pass("Kptfile", fake.KptFile("Kptfile", core.Namespace("backend"))),
 		nht.Fail("Namespace-scoped object with metadata.namespace and namespace-selector",
 			fake.Role(core.Namespace("backend"), core.Annotation(v1.NamespaceSelectorAnnotationKey, "value")),
 		),

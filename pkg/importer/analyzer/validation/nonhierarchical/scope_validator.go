@@ -4,6 +4,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +54,12 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 // it is automatically assigned to the "default" Namespace.
 func ScopeValidator(scoper discovery.Scoper) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
+		// Skip the validation when it is a Kptfile.
+		// Kptfile is only for client side. A ResourceGroup CR will be generated from it
+		// in subsequent program in pkg/parse.
+		if o.GroupVersionKind().GroupKind() == kinds.KptFile().GroupKind() {
+			return nil
+		}
 		isNamespaced, err := scoper.GetObjectScope(o)
 		if err != nil {
 			return err

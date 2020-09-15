@@ -43,6 +43,8 @@ func TestClusterSelectorAnnotationValidator(t *testing.T) {
 		nht.Pass("Cluster without annotation",
 			fake.Cluster(),
 		),
+		nht.Pass("Kptfile",
+			fake.KptFile("Kptfile", namespaceSelectorAnnotation, clusterSelectorAnnotation)),
 		nht.Fail("Cluster with cluster-selector",
 			fake.Cluster(clusterSelectorAnnotation),
 		),

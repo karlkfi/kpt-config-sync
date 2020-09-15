@@ -89,6 +89,16 @@ func TestGenerateResourceGroup(t *testing.T) {
 			input:    []core.Object{fake.KptFileObject(core.Name("a")), fake.KptFileObject(core.Name("b"))},
 			wantErr:  MultipleKptfilesError(fakeKptfile(nil, nil)),
 		},
+		{
+			testName: "One Kptfile inventory without namespace",
+			input:    []core.Object{fake.KptFileObject(inventoryNamespace(""))},
+			wantErr:  InvalidKptfileError(".inventory.namespace shouldn't be empty", fake.KptFileObject(inventoryNamespace(""))),
+		},
+		{
+			testName: "One Kptfile inventory without identifier",
+			input:    []core.Object{fake.KptFileObject(inventoryIdentifier(""))},
+			wantErr:  InvalidKptfileError(".inventory.identifier shouldn't be empty", fake.KptFileObject(inventoryIdentifier(""))),
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -108,5 +118,21 @@ func TestGenerateResourceGroup(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func inventoryNamespace(namespace string) core.MetaMutator {
+	return func(o core.Object) {
+		if result, isKptfile := o.(*kptfile.Kptfile); isKptfile {
+			result.Inventory.Namespace = namespace
+		}
+	}
+}
+
+func inventoryIdentifier(identifier string) core.MetaMutator {
+	return func(o core.Object) {
+		if result, isKptfile := o.(*kptfile.Kptfile); isKptfile {
+			result.Inventory.Identifier = identifier
+		}
 	}
 }

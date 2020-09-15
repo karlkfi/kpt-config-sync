@@ -38,6 +38,13 @@ func validateClusterSelectorAnnotation(o ast.FileObject) status.Error {
 
 func validateNamespaceSelectorAnnotation(scoper discovery.Scoper, o ast.FileObject, errOnUnknown bool) status.Error {
 	// Namespace-scoped objects may declare the namespace-selector annotation.
+
+	// Skip the validation when it is a Kptfile.
+	// Kptfile is only for client side. A ResourceGroup CR will be generated from it
+	// in subsequent program in pkg/parse.
+	if o.GroupVersionKind().GroupKind() == kinds.KptFile().GroupKind() {
+		return nil
+	}
 	if !forbidsSelectors(o) {
 		isNamespaced, err := scoper.GetObjectScope(o)
 		if err != nil {

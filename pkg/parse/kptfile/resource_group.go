@@ -1,7 +1,7 @@
 package kptfile
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	version     = "v1beta1"
+	version     = "v1alpha1"
 	kind        = "ResourceGroup"
 	application = "Application"
 )
@@ -39,7 +39,7 @@ type Descriptor struct {
 //  https://gke-internal.googlesource.com/GoogleCloudPlatform/resource-group/+/f8e2a2f575e5d8b9bf336a2cfadc0c95ea98db9e/api/v1beta1/resourcegroup_types.go.
 // Here only spec is defined and status is ignored.
 // Here is an example of ResourceGroup:
-//    apiVersion: configmanagement.gke.io/v1beta1
+//    apiVersion: configsync.gke.io/v1alpha1
 //    kind: ResourceGroup
 //    metadata:
 //      name: resourcegroup-sample
@@ -110,7 +110,7 @@ func NewResourceGroup(name, namespace string, labels, annotations map[string]str
 	rg.SetName(name)
 	rg.SetNamespace(namespace)
 	rg.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   configmanagement.GroupName,
+		Group:   configsync.GroupName,
 		Version: version,
 		Kind:    kind,
 	})

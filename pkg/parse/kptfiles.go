@@ -25,6 +25,10 @@ func AsResourceGroup(objs []core.Object) ([]core.Object, error) {
 		if err != nil {
 			return nil, err
 		}
+		err = validateKptfile(kpt)
+		if err != nil {
+			return nil, err
+		}
 		rg := kptfile.ResourceGroupFromKptFile(kpt, getIDs(resources))
 		return append(resources, rg), nil
 	default:
@@ -75,6 +79,18 @@ func MultipleKptfilesError(kptfiles ...core.Object) status.Error {
 		BuildWithResources(resources...)
 }
 
+// InvalidKptfileErrorCode is the error code for an invalid Kptfile.
+const InvalidKptfileErrorCode = "1062"
+
+var invalidKptfileError = status.NewErrorBuilder(InvalidKptfileErrorCode)
+
+// InvalidKptfileError reports that there is an invalid Inventory inside a Kptfile.
+func InvalidKptfileError(s string, kptfiles core.Object) status.Error {
+	return invalidKptfileError.
+		Sprintf("Invalid inventory %s", s).
+		BuildWithResources(kptfiles)
+}
+
 // isKptfile returns true if the object is a Kptfile.
 func isKptfile(id core.Object) bool {
 	return id.GroupVersionKind().GroupKind() == kinds.KptFile().GroupKind()
@@ -95,4 +111,17 @@ func fromKptfile(obj core.Object) (*kptfile.Kptfile, error) {
 	result := &kptfile.Kptfile{}
 	err = yaml.Unmarshal(data, result)
 	return result, err
+}
+
+func validateKptfile(kf *kptfile.Kptfile) status.Error {
+	if kf == nil {
+		return InvalidKptfileError("Kptfile shouldn't be nil", kf)
+	}
+	if kf.Inventory.Namespace == "" {
+		return InvalidKptfileError(".inventory.namespace shouldn't be empty", kf)
+	}
+	if kf.Inventory.Identifier == "" {
+		return InvalidKptfileError(".inventory.identifier shouldn't be empty", kf)
+	}
+	return nil
 }

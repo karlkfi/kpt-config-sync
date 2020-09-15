@@ -2,12 +2,14 @@ package filesystem
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -18,6 +20,16 @@ const yamlWhitespace = " \t"
 func parseFile(path string) ([]*unstructured.Unstructured, error) {
 	if !filepath.IsAbs(path) {
 		return nil, errors.New("attempted to read relative path")
+	}
+
+	if filepath.Base(path) == "Kptfile" {
+		contents, err := ioutil.ReadFile(path)
+		if err != nil {
+			glog.Errorf("Failed to read Kptfile declared in git from mounted filesystem: %s", path)
+			importer.Metrics.Violations.Inc()
+			return nil, err
+		}
+		return parseKptfile(contents)
 	}
 
 	switch filepath.Ext(path) {
@@ -91,4 +103,22 @@ func parseJSONFile(contents []byte) ([]*unstructured.Unstructured, error) {
 	var u unstructured.Unstructured
 	err := u.UnmarshalJSON(contents)
 	return []*unstructured.Unstructured{&u}, err
+}
+
+func parseKptfile(contents []byte) ([]*unstructured.Unstructured, error) {
+	unstructs, err := parseYAMLFile(contents)
+	if err != nil {
+		return nil, err
+	}
+	switch len(unstructs) {
+	case 0:
+		return nil, nil
+	case 1:
+		if unstructs[0].GroupVersionKind().GroupKind() != kinds.KptFile().GroupKind() {
+			return nil, fmt.Errorf("only one resource of type Kptfile allowed in Kptfile")
+		}
+		return unstructs, nil
+	default:
+		return nil, fmt.Errorf("only one resource of type Kptfile allowed in Kptfile")
+	}
 }
