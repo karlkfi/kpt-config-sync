@@ -8,6 +8,8 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestAsUnstructured_AddsStatus(t *testing.T) {
@@ -88,4 +90,50 @@ func TestAsUnstructuredSanitized_DoesNotAddStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAsUnstructuredSanitized_DeepCopy(t *testing.T) {
+	wantName := "foo"
+
+	testCases := []struct {
+		name string
+		obj  core.Object
+	}{
+		{
+			name: "Namespace as object",
+			obj:  &corev1.Namespace{TypeMeta: fake.ToTypeMeta(kinds.Namespace())},
+		},
+		{
+			name: "Namespace as unstructured",
+			obj:  newUnstructured(kinds.Namespace()),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.obj.SetName(wantName)
+
+			u, err := AsUnstructuredSanitized(tc.obj)
+			if err != nil {
+				t.Error(err)
+				t.Fatalf("unable to convert %T to Unstructured", tc.obj)
+			}
+			// Verify the name was unchanged by conversion to unstructured.
+			if u.GetName() != wantName {
+				t.Errorf("got name %q, want name %q", u.GetName(), wantName)
+			}
+
+			// Modify the original name and verify the unstructured name is still unchanged.
+			tc.obj.SetName("bar")
+			if u.GetName() != wantName {
+				t.Errorf("got name %q, want name %q", u.GetName(), wantName)
+			}
+		})
+	}
+}
+
+func newUnstructured(gvk schema.GroupVersionKind) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(gvk)
+	return u
 }

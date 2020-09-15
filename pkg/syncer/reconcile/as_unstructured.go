@@ -14,7 +14,9 @@ import (
 //  if possible.
 func AsUnstructured(o runtime.Object) (*unstructured.Unstructured, error) {
 	if u, isUnstructured := o.(*unstructured.Unstructured); isUnstructured {
-		return u, nil
+		// The path below returns a deep copy, so we want to make sure we return a
+		// deep copy here as well (for symmetry and to avoid subtle bugs).
+		return u.DeepCopy(), nil
 	}
 
 	jsn, err := json.Marshal(o)

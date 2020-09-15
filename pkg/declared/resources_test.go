@@ -43,22 +43,48 @@ func TestMutateImpossible(t *testing.T) {
 	dr := Resources{}
 	o1 := fake.RoleObject(core.Name("foo"), core.Namespace("bar"))
 	o1.SetResourceVersion(wantResourceVersion)
-	err := dr.Update([]core.Object{o1})
+	o2 := asUnstructured(t, fake.RoleObject(core.Name("baz"), core.Namespace("bar")))
+	o2.SetResourceVersion(wantResourceVersion)
+	err := dr.Update([]core.Object{o1, o2})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	o2, found := dr.Get(core.IDOf(o1))
-	if !found {
-		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", o2, found)
-	}
-	o2.SetResourceVersion("version 2")
+	// Modify the original resources and ensure the stored resources are preserved.
+	o1.SetResourceVersion("version 1++")
+	o2.SetResourceVersion("version 1++")
 
-	o3, found := dr.Get(core.IDOf(o1))
+	got1, found := dr.Get(core.IDOf(o1))
 	if !found {
-		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", o2, found)
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", got1, found)
 	}
-	if diff := cmp.Diff(wantResourceVersion, o3.GetResourceVersion()); diff != "" {
+	if diff := cmp.Diff(wantResourceVersion, got1.GetResourceVersion()); diff != "" {
+		t.Error(diff)
+	}
+	got2, found := dr.Get(core.IDOf(o2))
+	if !found {
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", got2, found)
+	}
+	if diff := cmp.Diff(wantResourceVersion, got2.GetResourceVersion()); diff != "" {
+		t.Error(diff)
+	}
+
+	// Modify the fetched resource and ensure the stored resource is preserved.
+	got1.SetResourceVersion("version 2")
+	got2.SetResourceVersion("version 2")
+
+	got3, found := dr.Get(core.IDOf(o1))
+	if !found {
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", got3, found)
+	}
+	if diff := cmp.Diff(wantResourceVersion, got3.GetResourceVersion()); diff != "" {
+		t.Error(diff)
+	}
+	got4, found := dr.Get(core.IDOf(o2))
+	if !found {
+		t.Fatalf("got dr.Get = %v, %t, want dr.Get = obj, true", got4, found)
+	}
+	if diff := cmp.Diff(wantResourceVersion, got4.GetResourceVersion()); diff != "" {
 		t.Error(diff)
 	}
 }

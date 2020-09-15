@@ -253,13 +253,13 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 		"match": map[string]interface{}{
 			"kinds": []interface{}{
 				map[string]interface{}{
-					"apiGroups": []string{""},
-					"kinds":     []string{"Pod"},
+					"apiGroups": []interface{}{""},
+					"kinds":     []interface{}{"Pod"},
 				},
 			},
 		},
 		"parameters": map[string]interface{}{
-			"repos": []string{"only-this-repo"},
+			"repos": []interface{}{"only-this-repo"},
 		},
 	}
 	nt.Root.Add("acme/cluster/constraint.yaml", constraint)
