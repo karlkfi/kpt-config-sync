@@ -30,12 +30,13 @@ const (
 	gitRevision        = "1.0.0.rc.8"
 	gitUpdatedRevision = "1.1.0.rc.1"
 
-	reposyncReqNamespace = "bookinfo"
-	reposyncKind         = "RepoSync"
-	reposyncCRName       = "repo-sync"
-	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
-	reposyncDir          = "foo-corp"
-	reposyncSSHKey       = "ssh-key"
+	reposyncReqNamespace       = "bookinfo"
+	reposyncKind               = "RepoSync"
+	reposyncCRName             = "repo-sync"
+	reposyncRepo               = "https://github.com/test/reposync/csp-config-management/"
+	reposyncDir                = "foo-corp"
+	reposyncSSHKey             = "ssh-key"
+	reposynTokenAuthSecretName = "namespace-token"
 
 	unsupportedContainer = "abc"
 
@@ -45,15 +46,15 @@ const (
 	nsUpdatedAnnotation = "5e66d1e08ef85751beb3f67654dab316"
 )
 
-func repoSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
+func repoSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := fake.RepoSyncObject(opts...)
 	result.Spec.Git = v1alpha1.Git{
 		Repo:      reposyncRepo,
 		Revision:  ref,
 		Branch:    branch,
 		Dir:       reposyncDir,
-		Auth:      auth,
-		SecretRef: v1alpha1.SecretReference{Name: reposyncSSHKey},
+		Auth:      secretType,
+		SecretRef: v1alpha1.SecretReference{Name: secretRef},
 	}
 	return result
 }
@@ -110,7 +111,9 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 }
 
 func TestRepoSyncMutateDeployment(t *testing.T) {
-	rs := repoSync(gitRevision, branch, core.Namespace(reposyncReqNamespace), core.UID(uid))
+	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace), core.UID(uid))
+	rsSecretTypeToken := repoSync(gitRevision, branch, v1alpha1.GitSecretConfigKeyToken,
+		reposynTokenAuthSecretName, core.Namespace(reposyncReqNamespace), core.UID(uid))
 
 	testCases := []struct {
 		name             string
@@ -134,6 +137,24 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(repoSyncName(rs.Namespace)),
 				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))),
+			),
+			wantErr: false,
+		},
+		{
+			name:     "Deployment created with Secret type Token",
+			repoSync: rsSecretTypeToken,
+			actualDeployment: repoSyncDeployment(
+				rsSecretTypeToken,
+				setContainers(fake.ContainerObject(gitSync)),
+				setVolumes(gitSyncVolume("")),
+			),
+			wantDeployment: repoSyncDeployment(
+				rsSecretTypeToken,
+				setRepoSyncOwnerRefs(rsSecretTypeToken),
+				setContainers(repoGitSyncContainer(rsSecretTypeToken, setGitSyncEnv(gitSyncTokenAuthEnv(secret.RepoSyncSecretName(rsSecretTypeToken.Namespace, rsSecretTypeToken.Spec.SecretRef.Name))))),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(repoSyncName(rsSecretTypeToken.Namespace)),
+				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rsSecretTypeToken.Namespace, rsSecretTypeToken.Spec.SecretRef.Name))),
 			),
 			wantErr: false,
 		},
@@ -183,7 +204,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	rs := repoSync(gitRevision, branch, core.Namespace(reposyncReqNamespace))
+	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 
@@ -402,8 +423,20 @@ func setRepoSyncOwnerRefs(rs *v1alpha1.RepoSync) depMutator {
 	}
 }
 
-func repoGitSyncContainer(rs *v1alpha1.RepoSync) *corev1.Container {
-	return mutatedGitSyncContainer(corev1.LocalObjectReference{
+type gitSyncMutator func(*corev1.Container)
+
+func repoGitSyncContainer(rs *v1alpha1.RepoSync, muts ...gitSyncMutator) *corev1.Container {
+	cnt := mutatedGitSyncContainer(corev1.LocalObjectReference{
 		Name: repoSyncResourceName(rs.Namespace, gitSync),
 	})
+	for _, mut := range muts {
+		mut(cnt)
+	}
+	return cnt
+}
+
+func setGitSyncEnv(env []corev1.EnvVar) gitSyncMutator {
+	return func(cn *corev1.Container) {
+		cn.Env = env
+	}
 }

@@ -35,3 +35,9 @@ const (
 )
 
 var gceNodeAskpassURL = fmt.Sprintf("http://localhost:%v/git_askpass", gceNodeAskpassPort)
+
+const (
+	// git-sync container specific environment variables.
+	gitSyncName     = "GIT_SYNC_USERNAME"
+	gitSyncPassword = "GIT_SYNC_PASSWORD"
+)

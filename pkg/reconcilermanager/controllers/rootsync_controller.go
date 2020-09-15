@@ -309,6 +309,11 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 			// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 			container.VolumeMounts = volumeMounts(rs.Spec.Auth,
 				container.VolumeMounts)
+			// Update Environment variables for `token` Auth, which
+			// passes the credentials as the Username and Password.
+			if authTypeToken(rs.Spec.Auth) {
+				container.Env = gitSyncTokenAuthEnv(rs.Spec.SecretRef.Name)
+			}
 		default:
 			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 		}

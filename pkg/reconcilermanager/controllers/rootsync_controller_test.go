@@ -4,12 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -38,7 +37,8 @@ const (
 	// Updated hash of all configmap.data updated by Root Reconciler.
 	rsUpdatedAnnotation = "63519480403f277f98f2c791d4647705"
 
-	rootsyncSSHKey = "root-ssh-key"
+	rootsyncSSHKey              = "root-ssh-key"
+	rootsyncTokenAuthSecretName = "root-token"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -119,15 +119,15 @@ func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Clie
 	return fakeClient, testReconciler
 }
 
-func rootSync(ref, branch string, opts ...core.MetaMutator) *v1alpha1.RootSync {
+func rootSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RootSync {
 	result := fake.RootSyncObject(opts...)
 	result.Spec.Git = v1alpha1.Git{
 		Repo:      rootsyncRepo,
 		Revision:  ref,
 		Branch:    branch,
 		Dir:       rootsyncDir,
-		Auth:      auth,
-		SecretRef: v1alpha1.SecretReference{Name: rootsyncSSHKey},
+		Auth:      secretType,
+		SecretRef: v1alpha1.SecretReference{Name: secretRef},
 	}
 	return result
 }
@@ -136,6 +136,17 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 	rs := rootSync(
 		"1.0.0",
 		branch,
+		v1alpha1.GitSecretSSH,
+		rootsyncSSHKey,
+		core.Name(rootsyncName),
+		core.Namespace(rootsyncReqNamespace),
+		core.UID(uid),
+	)
+	rsSecretTypeToken := rootSync(
+		"1.0.0",
+		branch,
+		v1alpha1.GitSecretConfigKeyToken,
+		rootsyncTokenAuthSecretName,
 		core.Name(rootsyncName),
 		core.Namespace(rootsyncReqNamespace),
 		core.UID(uid),
@@ -143,12 +154,14 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 
 	testCases := []struct {
 		name     string
+		root     *v1alpha1.RootSync
 		actual   *appsv1.Deployment
 		expected *appsv1.Deployment
 		wantErr  bool
 	}{
 		{
 			name: "Deployment created",
+			root: rs,
 			actual: rootSyncDeployment(
 				setContainers(fake.ContainerObject(gitSync)),
 				setVolumes(gitSyncVolume("")),
@@ -163,7 +176,24 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Deployment created with Secret type Token",
+			root: rsSecretTypeToken,
+			actual: rootSyncDeployment(
+				setContainers(fake.ContainerObject(gitSync)),
+				setVolumes(gitSyncVolume("")),
+			),
+			expected: rootSyncDeployment(
+				setRootSyncOwnerRefs(rsSecretTypeToken),
+				setContainers(rootGitSyncContainer(setGitSyncEnv(gitSyncTokenAuthEnv(rootsyncTokenAuthSecretName)))),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(rootSyncReconcilerName),
+				setVolumes(gitSyncVolume(rootsyncTokenAuthSecretName)),
+			),
+			wantErr: false,
+		},
+		{
 			name: "Deployment failed, Unsupported container",
+			root: rs,
 			actual: rootSyncDeployment(
 				setContainers(fake.ContainerObject(unsupportedContainer)),
 			),
@@ -174,7 +204,7 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			declared := tc.actual.DeepCopyObject().(*appsv1.Deployment)
-			err := mutateRootSyncDeployment(rs, tc.actual, declared, []byte("1234"))
+			err := mutateRootSyncDeployment(tc.root, tc.actual, declared, []byte("1234"))
 			if tc.wantErr && err == nil {
 				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error", err)
 			} else if !tc.wantErr && err != nil {
@@ -206,7 +236,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		return nil
 	}
 
-	rs := rootSync(gitRevision, branch, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	rs := rootSync(gitRevision, branch, v1alpha1.GitSecretConfigKeySSH, rootsyncSSHKey, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -435,8 +465,12 @@ func mutatedGitSyncContainer(objRef corev1.LocalObjectReference) *corev1.Contain
 	}
 }
 
-func rootGitSyncContainer() *corev1.Container {
-	return mutatedGitSyncContainer(corev1.LocalObjectReference{
+func rootGitSyncContainer(muts ...gitSyncMutator) *corev1.Container {
+	cnt := mutatedGitSyncContainer(corev1.LocalObjectReference{
 		Name: rootSyncResourceName(gitSync),
 	})
+	for _, mut := range muts {
+		mut(cnt)
+	}
+	return cnt
 }
