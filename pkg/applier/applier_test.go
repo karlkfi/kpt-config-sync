@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -330,7 +332,10 @@ func TestRefresh(t *testing.T) {
 type FakeApplier struct {
 	WantActions []Event
 	GotActions  []Event
+	client      client.Client
 }
+
+var _ reconcile.Applier = &FakeApplier{}
 
 type Event struct {
 	Action string
@@ -360,6 +365,10 @@ func (a *FakeApplier) Delete(_ context.Context, obj *unstructured.Unstructured) 
 	bool, status.Error) {
 	a.GotActions = append(a.GotActions, Event{"Delete", obj.GetName()})
 	return true, nil
+}
+
+func (a *FakeApplier) GetClient() client.Client {
+	return a.client
 }
 
 func clientForTest(t *testing.T) *testingfake.Client {

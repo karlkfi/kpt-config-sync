@@ -54,9 +54,13 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 	err := c.Client.Create(ctx, obj)
 	c.recordLatency(start, "Create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
-	if err != nil {
-		return status.ResourceWrap(err, "failed to create "+description, ast.ParseFileObject(obj))
+	switch {
+	case apierrors.IsAlreadyExists(err):
+		return ConflictCreateAlreadyExists(err, obj)
+	case err != nil:
+		return status.APIServerErrorBuilder.Wrap(err).BuildWithResources(obj)
 	}
+
 	glog.Infof("Created %s", description)
 	return nil
 }
@@ -97,7 +101,7 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 
 	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 	if err != nil {
-		return status.ResourceWrap(err, "failed to delete "+description, ast.ParseFileObject(obj))
+		return status.ResourceWrap(err, "failed to delete "+description, obj)
 	}
 	return nil
 }

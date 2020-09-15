@@ -10,7 +10,13 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type reconcilerInterface interface {
+	Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error
+	GetClient() client.Client
+}
 
 // reconciler ensures objects are consistent with their declared state in the
 // repository.
@@ -37,17 +43,14 @@ func newReconciler(
 
 // Remediate takes an runtime.Object representing the object to update, and then
 // ensures that the version on the server matches it.
-func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) error {
-	declU, _ := r.declared.Get(id)
+func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
+	declU, found := r.declared.Get(id)
+	// Yes, this if block is necessary because Go is pedantic about nil interfaces.
+	// 1) var decl core.Object = declU results in a panic.
+	// 2) Using declU as a core.Object results in a panic.
 	var decl core.Object
-	var err error
-	if declU == nil {
-		decl = nil
-	} else {
-		decl, err = core.ObjectOf(declU)
-		if err != nil {
-			return err
-		}
+	if found {
+		decl = declU
 	}
 
 	d := diff.Diff{
@@ -93,4 +96,9 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
 		return status.InternalErrorf("diff type not supported: %v", t)
 	}
+}
+
+// GetClient returns the reconciler's underlying client.Client.
+func (r *reconciler) GetClient() client.Client {
+	return r.applier.GetClient()
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -89,7 +88,7 @@ func TestMutateImpossible(t *testing.T) {
 	}
 }
 
-func asUnstructured(t *testing.T, o runtime.Object) *unstructured.Unstructured {
+func asUnstructured(t *testing.T, o core.Object) *unstructured.Unstructured {
 	t.Helper()
 	u, err := reconcile.AsUnstructuredSanitized(o)
 	if err != nil {

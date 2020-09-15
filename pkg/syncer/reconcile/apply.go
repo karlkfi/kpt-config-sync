@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/kubectl/pkg/util/openapi"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const noOpPatch = "{}"
@@ -38,14 +39,15 @@ type Applier interface {
 	// RemoveNomosMeta performs a PUT (rather than a PATCH) to ensure that labels and annotations are removed.
 	RemoveNomosMeta(ctx context.Context, intent *unstructured.Unstructured) (bool, status.Error)
 	Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error)
+	GetClient() client.Client
 }
 
 // clientApplier does apply operations on resources, client-side, using the same approach as running `kubectl apply`.
 type clientApplier struct {
 	dynamicClient    dynamic.Interface
-	discoveryClient  *discovery.DiscoveryClient
+	discoveryClient  discovery.DiscoveryInterface
 	openAPIResources openapi.Resources
-	client           *client.Client
+	client           *syncerclient.Client
 	fights           fightDetector
 	fLogger          fightLogger
 }
@@ -53,7 +55,7 @@ type clientApplier struct {
 var _ Applier = &clientApplier{}
 
 // NewApplier returns a new clientApplier.
-func NewApplier(cfg *rest.Config, client *client.Client) (Applier, error) {
+func NewApplier(cfg *rest.Config, client *syncerclient.Client) (Applier, error) {
 	c, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -99,11 +101,16 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 func (c *clientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
 	patch, err := c.update(ctx, intendedState, currentState)
 	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
-	if err != nil {
+	switch {
+	case apierrors.IsConflict(err):
+		return false, syncerclient.ConflictUpdateOldVersion(err, intendedState)
+	case apierrors.IsNotFound(err):
+		return false, syncerclient.ConflictUpdateDoesNotExist(err, intendedState)
+	case err != nil:
 		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
 	}
 
-	updated := patch != nil && !isNoOpPatch(patch)
+	updated := !isNoOpPatch(patch)
 	if updated {
 		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
 			if c.fLogger.logFight(time.Now(), fight) {
@@ -120,7 +127,7 @@ func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Uns
 	_, err := c.client.Update(ctx, u, func(obj core.Object) (core.Object, error) {
 		changed = RemoveNomosLabelsAndAnnotations(obj)
 		if !changed {
-			return obj, client.NoUpdateNeeded()
+			return obj, syncerclient.NoUpdateNeeded()
 		}
 		return obj, nil
 	})
@@ -222,14 +229,16 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 
 	// If we weren't able to do a Strategic Merge, we fall back to JSON Merge Patch.
 	if patch == nil {
-		patch, err = c.calculateJSONMerge(gvk, previous, modified, current)
+		patch, err = c.calculateJSONMerge(previous, modified, current)
 		if err == nil {
 			err = attemptPatch(ctx, resourceClient, name, types.MergePatchType, patch, gvk)
 		}
 	}
 
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not patch resource %s with %s", resourceDescription, patch)
+		// Don't wrap this error. We care about it's type information, and the
+		// apierrors library doesn't properly recursively check for wrapped errors.
+		return nil, err
 	}
 
 	if isNoOpPatch(patch) {
@@ -257,7 +266,7 @@ func (c *clientApplier) calculateStrategic(resourceDescription string, gvk schem
 	return patch
 }
 
-func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous, modified, current []byte) ([]byte, error) {
+func (c *clientApplier) calculateJSONMerge(previous, modified, current []byte) ([]byte, error) {
 	preconditions := []mergepatch.PreconditionFunc{
 		mergepatch.RequireKeyUnchanged("apiVersion"),
 		mergepatch.RequireKeyUnchanged("kind"),
@@ -269,6 +278,9 @@ func (c *clientApplier) calculateJSONMerge(gvk schema.GroupVersionKind, previous
 // isNoOpPatch returns true if the given patch is a no-op that should be ignored.
 // TODO(b/152312521): Find a more elegant solution for ignoring noop-like patches.
 func isNoOpPatch(patch []byte) bool {
+	if patch == nil {
+		return true
+	}
 	p := string(patch)
 	return p == noOpPatch || p == rmCreationTimestampPatch
 }
@@ -316,4 +328,9 @@ func description(u *unstructured.Unstructured) string {
 		return fmt.Sprintf("[%s kind=%s name=%s]", gvk.GroupVersion(), gvk.Kind, name)
 	}
 	return fmt.Sprintf("[%s kind=%s namespace=%s name=%s]", gvk.GroupVersion(), gvk.Kind, namespace, name)
+}
+
+// GetClient returns the underlying applier's client.Client.
+func (c *clientApplier) GetClient() client.Client {
+	return c.client.Client
 }

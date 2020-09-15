@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -103,11 +102,10 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		case diff.Create:
 			u, err := d.UnstructuredDeclared()
 			if err != nil {
-				errs = status.Append(errs, syntax.ObjectParseError(d.Declared, err))
+				errs = status.Append(errs, err)
 				continue
 			}
-			if _, e := a.applier.Create(ctx, u); e != nil {
-				err := status.ResourceWrap(e, "unable to create resource %s", decl)
+			if _, err := a.applier.Create(ctx, u); err != nil {
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("created resource %v", coreID)
@@ -115,16 +113,15 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		case diff.Update:
 			u, err := d.UnstructuredDeclared()
 			if err != nil {
-				errs = status.Append(errs, syntax.ObjectParseError(d.Declared, err))
+				errs = status.Append(errs, err)
 				continue
 			}
 			actual, err := d.UnstructuredActual()
 			if err != nil {
-				errs = status.Append(errs, syntax.ObjectParseError(d.Actual, err))
+				errs = status.Append(errs, err)
 				continue
 			}
-			if _, e := a.applier.Update(ctx, u, actual); e != nil {
-				err := status.ResourceWrap(e, "unable to update resource %s", decl)
+			if _, err := a.applier.Update(ctx, u, actual); err != nil {
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("updated resource %v", coreID)
@@ -132,11 +129,10 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		case diff.Delete:
 			actual, err := d.UnstructuredActual()
 			if err != nil {
-				errs = status.Append(errs, syntax.ObjectParseError(d.Actual, err))
+				errs = status.Append(errs, err)
 				continue
 			}
-			if _, e := a.applier.Delete(ctx, actual); e != nil {
-				err := status.ResourceWrap(e, "unable to delete %s", decl)
+			if _, err := a.applier.Delete(ctx, actual); err != nil {
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("deleted resource %v", coreID)
@@ -144,12 +140,10 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		case diff.Unmanage:
 			actual, err := d.UnstructuredActual()
 			if err != nil {
-				errs = status.Append(errs, syntax.ObjectParseError(d.Actual, err))
+				errs = status.Append(errs, err)
 				continue
 			}
-			if _, e := a.applier.RemoveNomosMeta(ctx, actual); e != nil {
-				err := status.ResourceWrap(
-					e, "unable to remove the nomos meta from %v", decl)
+			if _, err := a.applier.RemoveNomosMeta(ctx, actual); err != nil {
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("unmanaged the resource %v", coreID)

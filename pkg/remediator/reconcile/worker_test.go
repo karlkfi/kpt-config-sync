@@ -2,14 +2,22 @@ package reconcile
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/remediator/queue"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/syncertest"
+	syncertestfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestWorker_ProcessNextObject(t *testing.T) {
@@ -93,4 +101,117 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			c.Check(t, tc.want...)
 		})
 	}
+}
+
+func TestWorker_Refresh(t *testing.T) {
+	name := "admin"
+	namespace := "shipping"
+	scheme := runtime.NewScheme()
+	err := v1.AddToScheme(scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []struct {
+		name        string
+		queue       fakeQueue
+		client      client.Client
+		want        *unstructured.Unstructured
+		wantDeleted bool
+		wantErr     status.Error
+	}{
+		{
+			name: "Not found marks object deleted",
+			queue: fakeQueue{
+				element: fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace)),
+			},
+			client:      syncertestfake.NewClient(t, scheme),
+			want:        fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace)),
+			wantDeleted: true,
+			wantErr:     nil,
+		},
+		{
+			name: "Found updates objects",
+			queue: fakeQueue{
+				element: fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace),
+					core.Annotation("foo", "bar")),
+			},
+			client: syncertestfake.NewClient(t, scheme,
+				fake.RoleObject(core.Name(name), core.Namespace(namespace),
+					core.Annotation("foo", "qux"))),
+			want: fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace),
+				core.Annotation("foo", "qux")),
+			wantDeleted: false,
+			wantErr:     nil,
+		},
+		{
+			name: "API Error does not update object",
+			queue: fakeQueue{
+				element: fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace)),
+			},
+			client:      syncertestfake.NewErrorClient(errors.New("some error")),
+			want:        fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace)),
+			wantDeleted: false,
+			wantErr:     status.APIServerErrorBuilder.Sprint("some error").Build(),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := &Worker{
+				objectQueue: &tc.queue,
+				reconciler: fakeReconciler{
+					client: tc.client,
+				},
+			}
+
+			err := w.refresh(context.Background(), fake.UnstructuredObject(
+				kinds.Role(), core.Name(name), core.Namespace(namespace)))
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got refresh = %v, want %v",
+					err, tc.wantErr)
+			}
+
+			if !tc.wantDeleted && tc.wantErr == nil {
+				// These fields are added by unstructured conversions, but we aren't
+				// testing this behavior.
+				_ = unstructured.SetNestedField(tc.want.Object, nil, "metadata", "creationTimestamp")
+				_ = unstructured.SetNestedField(tc.want.Object, nil, "rules")
+				unstructured.RemoveNestedField(tc.want.Object, "metadata", "labels")
+			}
+
+			var want core.Object = tc.want
+			if tc.wantDeleted {
+				want = queue.MarkDeleted(want)
+			}
+
+			if diff := cmp.Diff(want, tc.queue.element); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+type fakeReconciler struct {
+	client       client.Client
+	remediateErr status.Error
+}
+
+var _ reconcilerInterface = fakeReconciler{}
+
+func (f fakeReconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
+	return f.remediateErr
+}
+
+func (f fakeReconciler) GetClient() client.Client {
+	return f.client
+}
+
+type fakeQueue struct {
+	queue.Interface
+	element core.Object
+}
+
+func (q *fakeQueue) Add(o core.Object) {
+	q.element = o
 }

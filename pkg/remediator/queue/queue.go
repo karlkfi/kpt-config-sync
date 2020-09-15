@@ -28,6 +28,17 @@ func gvknnOfObject(obj core.Object) GVKNN {
 	}
 }
 
+// Interface is the methods ObjectQueue satisfies.
+// See ObjectQueue for method definitions.
+type Interface interface {
+	Add(obj core.Object)
+	Get() (core.Object, bool)
+	Done(obj core.Object)
+	Forget(obj core.Object)
+	Retry(obj core.Object)
+	ShutDown()
+}
+
 // ObjectQueue is a wrapper around workqueue.RateLimitingInterface for use with
 // declared resources. It deduplicates work items by their GVKNN.
 type ObjectQueue struct {

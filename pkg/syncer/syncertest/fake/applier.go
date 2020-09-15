@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // applier implements a fake reconcile.Applier for use in testing.
@@ -56,4 +57,9 @@ func (a *applier) Delete(ctx context.Context, obj *unstructured.Unstructured) (b
 		return false, status.APIServerError(err, "deleting")
 	}
 	return true, nil
+}
+
+// GetClient implements reconcile.Applier.
+func (a *applier) GetClient() client.Client {
+	return a.Client
 }

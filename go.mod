@@ -43,7 +43,7 @@ require (
 	k8s.io/cli-runtime v0.0.0-20191114110141-0a35778df828
 	k8s.io/client-go v0.18.2
 	k8s.io/cluster-registry v0.0.6
-	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c // indirect
+	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
 	k8s.io/kubectl v0.0.0-20191114113550-6123e1c827f7
 	k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 	sigs.k8s.io/controller-runtime v0.4.0

@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -139,7 +140,7 @@ func (d Diff) Type(manager declared.Scope) Type {
 }
 
 // UnstructuredActual returns the actual as an unstructured object.
-func (d Diff) UnstructuredActual() (*unstructured.Unstructured, error) {
+func (d Diff) UnstructuredActual() (*unstructured.Unstructured, status.Error) {
 	if d.Actual == nil {
 		return nil, nil
 	}
@@ -149,7 +150,7 @@ func (d Diff) UnstructuredActual() (*unstructured.Unstructured, error) {
 }
 
 // UnstructuredDeclared returns the declared as an unstructured object.
-func (d Diff) UnstructuredDeclared() (*unstructured.Unstructured, error) {
+func (d Diff) UnstructuredDeclared() (*unstructured.Unstructured, status.Error) {
 	if d.Declared == nil {
 		return nil, nil
 	}

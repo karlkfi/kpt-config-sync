@@ -8,15 +8,20 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
+	"github.com/google/nomos/pkg/status"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Worker pulls objects from a work queue and passes them to its reconciler for
 // remediation.
 type Worker struct {
-	objectQueue *queue.ObjectQueue
-	reconciler  *reconciler
+	objectQueue queue.Interface
+	reconciler  reconcilerInterface
 }
 
 // NewWorker returns a new Worker for the given queue and declared resources.
@@ -58,12 +63,50 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 	}
 
 	if err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate); err != nil {
+		// To debug the set of events we've missed, you may need to comment out this
+		// block. Specifically, this makes things smooth for production, but can
+		// hide bugs (for example, if we don't properly process delete events).
+		if err.Code() == syncerclient.ResourceConflictCode {
+			// This means our cached version of the object isn't the same as the one
+			// on the cluster. We need to refresh the cached version.
+			// TODO(b/162601559): Increment resource conflict metric here
+			err := w.refresh(ctx, obj)
+			if err != nil {
+				glog.Errorf("Worker unable to update cached version of %q: %v", core.IDOf(obj), err)
+			}
+		}
+
 		glog.Errorf("Worker received an error while reconciling %q: %v", core.IDOf(obj), err)
 		w.objectQueue.Retry(obj)
+
 		return false
 	}
 
 	glog.V(3).Infof("Worker reconciled %q", core.IDOf(obj))
 	w.objectQueue.Forget(obj)
 	return true
+}
+
+// refresh updates the cached version of the object.
+func (w *Worker) refresh(ctx context.Context, o core.Object) status.Error {
+	c := w.reconciler.GetClient()
+
+	// Try to get an updated version of the object from the cluster.
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(o.GroupVersionKind())
+	err := c.Get(ctx, client.ObjectKey{Name: o.GetName(), Namespace: o.GetNamespace()}, u)
+
+	switch {
+	case apierrors.IsNotFound(err):
+		// The object no longer exists on the cluster, so mark it deleted.
+		w.objectQueue.Add(queue.MarkDeleted(o))
+	case err != nil:
+		// We encountered some other error that we don't know how to solve, so
+		// surface it.
+		return status.APIServerErrorBuilder.Wrap(err).BuildWithResources(o)
+	default:
+		// Update the cached version of the resource.
+		w.objectQueue.Add(u)
+	}
+	return nil
 }
