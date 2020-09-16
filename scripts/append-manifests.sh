@@ -28,15 +28,33 @@ declare -A ignoreFiles=(
 #  ["README.md"]=1
 )
 
+# Calls to this script may be chained on the same file, so we add a delineator at the beginning
+# based on:
+#   a) file existing and being not empty
+#   b) the last line of that file being a "---"
+delineator=""
+if [[ -s "$output_file" ]]; then
+  last_line=$(tail -n 1 "$output_file")
+  if [[ "$last_line" != "---" ]]; then
+    delineator="---"
+  fi
+fi
+
 # Filters all the files in $input_dir by grepping their names against a pattern.
 # Note that it does this against the filename, not the full filepath
 for manifest in $(find "${input_dir}" -type f -print0 | xargs -0 basename -a | grep "${pattern}" | sort)
 do
   if [[ -z "${ignoreFiles[$manifest]}" ]]
   then
+    # Only adding the delineator if it is non-empty prevents an empty line at the beginning of the file
+    if [ -n "$delineator" ]; then
+      echo "$delineator" >> "$output_file"
+    fi
+
     { echo "# ----- $manifest -----";
       cat "$input_dir/$manifest";
-      echo ""; echo "---";
     } >> "$output_file"
+
+    delineator="---"
   fi
 done
