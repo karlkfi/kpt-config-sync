@@ -114,6 +114,8 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace), core.UID(uid))
 	rsSecretTypeToken := repoSync(gitRevision, branch, v1alpha1.GitSecretConfigKeyToken,
 		reposynTokenAuthSecretName, core.Namespace(reposyncReqNamespace), core.UID(uid))
+	rsSecretTypeGCENode := repoSync(gitRevision, branch, v1alpha1.GitSecretGCENode,
+		reposynTokenAuthSecretName, core.Namespace(reposyncReqNamespace), core.UID(uid))
 
 	testCases := []struct {
 		name             string
@@ -155,6 +157,22 @@ func TestRepoSyncMutateDeployment(t *testing.T) {
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(repoSyncName(rsSecretTypeToken.Namespace)),
 				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rsSecretTypeToken.Namespace, rsSecretTypeToken.Spec.SecretRef.Name))),
+			),
+			wantErr: false,
+		},
+		{
+			name:     "Deployment created with Secret type GCENode",
+			repoSync: rsSecretTypeGCENode,
+			actualDeployment: repoSyncDeployment(
+				rsSecretTypeGCENode,
+				setVolumes(gitSyncVolume("")),
+			),
+			wantDeployment: repoSyncDeployment(
+				rsSecretTypeGCENode,
+				setRepoSyncOwnerRefs(rsSecretTypeGCENode),
+				setContainers(askPassSidecarContainer()),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(repoSyncName(rsSecretTypeGCENode.Namespace)),
 			),
 			wantErr: false,
 		},
@@ -439,4 +457,9 @@ func setGitSyncEnv(env []corev1.EnvVar) gitSyncMutator {
 	return func(cn *corev1.Container) {
 		cn.Env = env
 	}
+}
+
+func askPassSidecarContainer() *corev1.Container {
+	sc := gceNodeAskPassSidecar()
+	return &sc
 }

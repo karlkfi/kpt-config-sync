@@ -31,7 +31,10 @@ const (
 
 // gceNode specific value.
 const (
-	gceNodeAskpassPort = 9102
+	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
+	gceNodeAskpassImageTag    = "20200616014202"
+	gceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
+	gceNodeAskpassPort        = 9102
 )
 
 var gceNodeAskpassURL = fmt.Sprintf("http://localhost:%v/git_askpass", gceNodeAskpassPort)

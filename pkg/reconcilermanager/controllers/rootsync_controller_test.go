@@ -151,6 +151,15 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 		core.Namespace(rootsyncReqNamespace),
 		core.UID(uid),
 	)
+	rsSecretTypeGCENODE := rootSync(
+		"1.0.0",
+		branch,
+		v1alpha1.GitSecretGCENode,
+		rootsyncTokenAuthSecretName,
+		core.Name(rootsyncName),
+		core.Namespace(rootsyncReqNamespace),
+		core.UID(uid),
+	)
 
 	testCases := []struct {
 		name     string
@@ -188,6 +197,20 @@ func TestRootSyncMutateDeployment(t *testing.T) {
 				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
 				setServiceAccountName(rootSyncReconcilerName),
 				setVolumes(gitSyncVolume(rootsyncTokenAuthSecretName)),
+			),
+			wantErr: false,
+		},
+		{
+			name: "Deployment created with Secret type GCENode",
+			root: rsSecretTypeGCENODE,
+			actual: rootSyncDeployment(
+				setVolumes(gitSyncVolume("")),
+			),
+			expected: rootSyncDeployment(
+				setRootSyncOwnerRefs(rsSecretTypeGCENODE),
+				setContainers(askPassSidecarContainer()),
+				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
+				setServiceAccountName(rootSyncReconcilerName),
 			),
 			wantErr: false,
 		},

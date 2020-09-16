@@ -319,6 +319,13 @@ func mutateRootSyncDeployment(rs *v1alpha1.RootSync, existing, declared *appsv1.
 		}
 		updatedContainers = append(updatedContainers, container)
 	}
+
+	// Add container spec for the "gcenode-askpass-sidecar" (defined as
+	// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
+	if authTypeGCENode(rs.Spec.Auth) {
+		updatedContainers = append(updatedContainers, gceNodeAskPassSidecar())
+	}
+
 	templateSpec.Containers = updatedContainers
 
 	return nil
