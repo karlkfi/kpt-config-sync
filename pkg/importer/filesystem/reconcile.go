@@ -131,9 +131,8 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
 	glog.Errorf("Failed to resolve config directory: %v", status.FormatError(false, err))
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-	sErr := status.SourceError.Sprintf("unable to sync repo: %v: "+
-		"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync",
-		err).Build()
+	sErr := status.SourceError.Wrap(err).Sprint("unable to sync repo\n" +
+		"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync").Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
 	return reconcile.Result{}, nil
 }

@@ -2,7 +2,9 @@ package status
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
@@ -107,14 +109,37 @@ func (eb ErrorBuilder) Sprint(message string) ErrorBuilder {
 
 // Sprintf implements ErrorBuilder.
 func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
+	for _, e := range a {
+		if _, isError := e.(error); isError {
+			// Don't format errors in string form because we lose type information;
+			// use .Wrap instead.
+			// TODO(b/168720175): It would be nice to not panic here.
+			panic(InternalError("attempted format error when .Wrap should have been used"))
+		}
+	}
+
+	message := fmt.Sprintf(format, a...)
+	if strings.Contains(message, "%!") {
+		// Make sure there aren't string formatting errors in the error message.
+		// Don't replace the below with string formatting syntax or it may cause
+		// a stack overflow.
+		// TODO(b/168720175): It would be nice to not panic here.
+		panic(InternalError("improperly formatted error message: " + message))
+	}
 	return ErrorBuilder{error: messageErrorImpl{
 		underlying: eb.error,
-		message:    fmt.Sprintf(format, a...),
+		message:    message,
 	}}
 }
 
 // Wrap implements ErrorBuilder.
 func (eb ErrorBuilder) Wrap(toWrap error) ErrorBuilder {
+	if e, isStatusError := toWrap.(Error); isStatusError {
+		// We don't allow wrapping KNV errors in other KNV errors.
+		// TODO(b/168720175): It would be nice to not panic here.
+		glog.Info(e.Code())
+		panic(InternalError("attempted wrap a status.Error in another status.Error"))
+	}
 	if toWrap == nil {
 		return ErrorBuilder{error: nil}
 	}
