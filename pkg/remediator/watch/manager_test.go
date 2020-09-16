@@ -11,16 +11,19 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 )
 
 func fakeRunnable() Runnable {
-	return &filteredWatcher{
-		base:      watch.NewFake(),
-		resources: nil,
-		queue:     nil,
+	opts := watcherOptions{
+		reconciler: "test",
+		startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
+			return watch.NewFake(), nil
+		},
 	}
+	return NewFiltered(opts)
 }
 
 func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(watcherOptions) (Runnable, status.Error) {

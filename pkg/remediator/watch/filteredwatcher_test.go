@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -19,7 +20,7 @@ type action struct {
 	obj   runtime.Object
 }
 
-func TestWrappedWatcher(t *testing.T) {
+func TestFilteredWatcher(t *testing.T) {
 	deployment1 := fake.DeploymentObject(core.Name("hello"))
 	deployment1Beta := fake.DeploymentObject(core.Name("hello"))
 	deployment1Beta.GetObjectKind().SetGroupVersionKind(deployment1Beta.GroupVersionKind().GroupKind().WithVersion("beta1"))
@@ -122,7 +123,7 @@ func TestWrappedWatcher(t *testing.T) {
 			nil,
 		},
 		{
-			"Ignore bookmark events",
+			"Handle bookmark events",
 			[]core.Object{
 				deployment1,
 			},
@@ -133,7 +134,7 @@ func TestWrappedWatcher(t *testing.T) {
 				},
 				{
 					watch.Bookmark,
-					nil,
+					deployment1,
 				},
 			},
 			[]core.ID{
@@ -149,21 +150,32 @@ func TestWrappedWatcher(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			base := watch.NewFakeWithChanSize(len(tc.actions), false)
-			for _, a := range tc.actions {
-				base.Action(a.event, a.obj)
-			}
-
+			base := watch.NewFake()
 			q := queue.New("test")
-			w := filteredWatcher{
+			opts := watcherOptions{
+				reconciler: "test",
 				resources:  dr,
-				base:       base,
 				queue:      q,
-				reconciler: ":test",
+				startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
+					return base, nil
+				},
 			}
+			w := NewFiltered(opts)
 
-			w.Stop()
-			w.Run()
+			go func() {
+				for _, a := range tc.actions {
+					// Each base.Action() blocks until the code within w.Run() reads its
+					// event from the queue.
+					base.Action(a.event, a.obj)
+				}
+				// This is not reached until after w.Run() reads the last event from the
+				// queue.
+				w.Stop()
+			}()
+			// w.Run() blocks until w.Stop() is called.
+			if err := w.Run(); err != nil {
+				t.Fatalf("got Run() = %v, want Run() = <nil>", err)
+			}
 
 			var got []core.ID
 			for q.Len() > 0 {

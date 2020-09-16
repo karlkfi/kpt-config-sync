@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
@@ -143,7 +144,13 @@ func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
 	if err != nil {
 		return err
 	}
-	go w.Run()
+	go func(r Runnable) {
+		// TODO(b/168623881): Handle this error by removing the watcher from the watcherMap.
+		// This will require making watcherMap threadsafe.
+		if err := r.Run(); err != nil {
+			glog.Errorf("Error running watcher for %s: %v", gvk.String(), err)
+		}
+	}(w)
 	m.watcherMap[gvk] = w
 
 	return nil
