@@ -1,16 +1,11 @@
-# Build the reconciler binary
-FROM golang:1.14 as builder
+# Use cached build of reconciler, go-binaries should have been built just previously
+FROM gcr.io/nomos-dev/go-binaries:latest as bins
 
-WORKDIR /workspace
-
-COPY . .
-
-# Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o reconciler -mod=vendor cmd/reconciler/main.go
+RUN stat /go/bin/reconciler
 
 FROM k8s.gcr.io/debian-base:v2.0.0
 WORKDIR /
-COPY --from=builder /workspace/reconciler .
+COPY --from=bins /go/bin/reconciler .
 RUN apt-get update && apt-get install -y git
 
 # License file required for on-prem release.

@@ -49,6 +49,14 @@ image-nomos: build
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t $(NOMOS_TAG) \
 		$(STAGING_DIR)/$(NOMOS_IMAGE)
+	@echo "+++ Building the go-binary image"
+	docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
+		&& docker image rm -f gcr.io/nomos-dev/go-binaries:latest \
+		|| true
+	docker build $(DOCKER_BUILD_QUIET) \
+		-t gcr.io/nomos-dev/go-binaries:latest \
+		-f build/go-binaries/Dockerfile \
+		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		-t $(RECONCILER_TAG) \
