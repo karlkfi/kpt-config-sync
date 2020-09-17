@@ -259,7 +259,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 func validateMultiRepoDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
 	rs := fake.RootSyncObject()
-	rs.Spec.SourceFormat = string(filesystem.SourceFormatHierarchy)
+	rs.Spec.SourceFormat = string(nt.Root.Format)
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",
 		Dir:       acmeDir,

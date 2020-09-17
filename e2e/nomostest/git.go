@@ -35,6 +35,9 @@ type Repository struct {
 	// Root is the location on the machine running the test at which the local
 	// repository is stored.
 	Root string
+	// Format is the source format for parsing the repository (hierarchy or
+	// unstructured).
+	Format filesystem.SourceFormat
 
 	T *testing.T
 }
@@ -53,8 +56,9 @@ func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesyste
 	localDir := filepath.Join(tmpDir, "repos", name)
 
 	g := &Repository{
-		Root: localDir,
-		T:    nt.T,
+		Root:   localDir,
+		Format: sourceFormat,
+		T:      nt.T,
 	}
 	g.init(name, nt.gitPrivateKeyPath, port)
 	g.initialCommit(sourceFormat)
