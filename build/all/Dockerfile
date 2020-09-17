@@ -1,0 +1,89 @@
+# Build all nomos go binaries
+FROM golang:1.14 as bins
+
+WORKDIR /workspace
+
+COPY . .
+
+# Version string to embed in built binary.
+ARG VERSION
+
+# Build all our stuff.
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+  go install \
+    -mod=vendor \
+    -ldflags "-X github.com/google/nomos/pkg/version.VERSION=${VERSION}" \
+    ./cmd/reconciler \
+    ./cmd/reconciler-manager \
+    ./cmd/monitor \
+    ./cmd/git-importer \
+    ./cmd/nomos
+
+# Reconciler image
+FROM k8s.gcr.io/debian-base:v2.0.0 as reconciler
+WORKDIR /
+COPY --from=bins /go/bin/reconciler .
+RUN apt-get update && apt-get install -y git
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+
+# Copy in golang-lru source (MPL licensed dependency)
+COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
+
+# Set up a HOME directory for non-root user
+RUN mkdir -p /nomos
+RUN chown 1000 /nomos
+ENV HOME="/nomos"
+
+# Switch to non-root user
+USER 1000
+
+ENTRYPOINT ["/reconciler"]
+
+# Reconciler Manager image
+FROM gcr.io/distroless/static:nonroot as manager
+WORKDIR /
+COPY --from=bins /go/bin/reconciler-manager manager
+USER nonroot:nonroot
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+
+# Copy in golang-lru source (MPL licensed dependency)
+COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
+
+ENTRYPOINT ["/manager"]
+
+
+# Nomos image
+FROM k8s.gcr.io/debian-base:v2.0.0 as nomos
+
+# https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
+RUN apt-get update && apt-get install -y \
+  ca-certificates libcap2-bin bash git
+
+RUN mkdir -p /opt/nomos/bin
+ENV PATH="/opt/nomos/bin:${PATH}"
+WORKDIR /opt/nomos/bin
+
+# Nomos binaries.
+COPY --from=bins /go/bin/git-importer git-importer
+COPY --from=bins /go/bin/monitor monitor
+COPY --from=bins /go/bin/nomos nomos
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+
+# Copy in golang-lru source (MPL licensed dependency)
+COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
+
+# Set up a HOME directory for non-root user
+RUN mkdir -p /nomos
+RUN chown 1000 /nomos
+ENV HOME="/nomos"
+
+# Switch to non-root user
+USER 1000
+
+CMD echo -e "Need to specify a Nomos binary:\n\n$(ls .)" && exit 1
