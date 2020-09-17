@@ -15,8 +15,8 @@ release-commit:
 	$(MAKE) config-sync-manifest \
 		VERSION=$(VERSION) \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(COMMIT_SHA) \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+		IMAGE_TAG=$(COMMIT_SHA)
+	$(MAKE) build-cli VERSION=$(VERSION)
 
 	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/commit/$(COMMIT_SHA))
 	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
@@ -31,8 +31,8 @@ release-tagged: tag-version tag-upload
 	$(MAKE) config-sync-manifest \
 		VERSION=$(GIT_TAG) \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG=$(GIT_TAG) \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+		IMAGE_TAG=$(GIT_TAG)
+	$(MAKE) build-cli VERSION=$(VERSION)
 
 	$(eval RELEASE_PATH = gs://config-management-release/config-sync/tag/$(GIT_TAG))
 	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)
@@ -49,8 +49,8 @@ release-user:
 	$(MAKE) config-sync-manifest \
 		VERSION="$(USER)/$(BRANCH_OR_SHA)" \
 		GCR_PREFIX=$(GCR_PREFIX) \
-		IMAGE_TAG="latest" \
-		PLATFORMS="linux_amd64 darwin_amd64 windows_amd64"
+		IMAGE_TAG="latest"
+	$(MAKE) build-cli VERSION=$(VERSION)
 
 	$(eval RELEASE_PATH = gs://stolos-dev/config-sync/user/$(USER)/$(BRANCH_OR_SHA))
 	$(MAKE) upload-manifest RELEASE_PATH=$(RELEASE_PATH)

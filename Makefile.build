@@ -23,50 +23,51 @@ push-buildenv: build-buildenv
 ###################################
 
 .PHONY: build
-build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
-	@echo "+++ Finished building"
+build: $(OUTPUT_DIR) pull-buildenv
+	@echo "+++ Build setup done"
 
-# Compiles binaries for a specific platform (e.g. "linux-amd64").
-build-platform-%:
-	@echo "+++ Compiling Nomos binaries for $* platform"
+# NOTE: this rule depends on OUTPUT_DIR because buildenv needs those dirs to
+# exist in order to work.
+PLATFORMS := linux_amd64 darwin_amd64 windows_amd64
+build-cli: pull-buildenv
+	@echo "+++ Compiling Nomos binaries for $(PLATFORMS)"
 	@echo "+++ Compiling with VERSION: $(VERSION)"
+	@mkdir -p \
+		$(BIN_DIR) \
+		$(GO_DIR)/pkg \
+		$(GO_DIR)/src/$(REPO) \
+	    $(GO_DIR)/std/linux_amd64_static \
+	    $(GO_DIR)/std/darwin_amd64_static \
+	    $(GO_DIR)/std/windows_amd64_static \
+		$(TEMP_OUTPUT_DIR) \
+	@mkdir -p $(addprefix $(OUTPUT_DIR)/go/bin/,$(PLATFORMS))
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh \
-		--build_mode $(BUILD_MODE) \
-		--pkg $(REPO) \
-		--platform $* \
 		--version $(VERSION) \
-		-- \
-		./...
+		$(PLATFORMS)
 
 # Creates a docker image for the specified nomos component.
-image-nomos: build
-	@echo "+++ Building the Nomos image"
-	@cp -r ./build/$(NOMOS_IMAGE) $(STAGING_DIR)
-	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
-	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
-        # hashicorp/golang-lru is Mozilla Public Licensed, include the source code
-	@cp -r vendor/github.com/hashicorp/golang-lru $(STAGING_DIR)/$(NOMOS_IMAGE)
-	@docker build $(DOCKER_BUILD_QUIET) \
-		-t $(NOMOS_TAG) \
-		$(STAGING_DIR)/$(NOMOS_IMAGE)
+image-nomos:
 	@echo "+++ Building the go-binary image"
-	docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
+	@docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
 		&& docker image rm -f gcr.io/nomos-dev/go-binaries:latest \
 		|| true
-	docker build $(DOCKER_BUILD_QUIET) \
-		-t gcr.io/nomos-dev/go-binaries:latest \
-		-f build/go-binaries/Dockerfile \
-		--build-arg VERSION=$(VERSION) \
+	@echo "+++ Building the nomos image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		--target nomos \
+		-t $(NOMOS_TAG) \
+		-f build/all/Dockerfile \
 		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
+		--target reconciler \
 		-t $(RECONCILER_TAG) \
-		-f build/reconciler/Dockerfile \
+		-f build/all/Dockerfile \
 		.
 	@echo "+++ Building the Reconciler Manager image"
 	@docker build $(DOCKER_BUILD_QUIET) \
+		--target manager \
 		-t $(RECONCILER_MANAGER_TAG) \
-		-f build/reconciler-manager/Dockerfile \
+		-f build/all/Dockerfile \
 		.
 
 # Pushes the specified component's docker image to gcr.io.
@@ -94,24 +95,24 @@ gen-yaml-all: \
 
 # Generates the podspec yaml for the component specified.
 $(GEN_YAML_DIR)/git-importer.yaml: manifests/templates/git-importer.yaml
-	@echo "+++ Generating yaml $*"
+	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
 $(GEN_YAML_DIR)/monitor.yaml: manifests/templates/monitor.yaml
-	@echo "+++ Generating yaml $*"
+	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
 $(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml: \
 		manifests/templates/reconciler-manager-deployment-configmap.yaml
-	@echo "+++ Generating yaml $*"
+	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@
 
 $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 		manifests/templates/reconciler-manager.yaml
-	@echo "+++ Generating yaml $*"
+	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(RECONCILER_MANAGER_TAG)|' < $< > $@
 

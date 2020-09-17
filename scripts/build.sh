@@ -16,74 +16,49 @@
 
 set -euo pipefail
 
-PKG=""
+PLATFORMS=()
 VERSION=""
-PLATFORM=""
-BUILD_MODE=""
-
 while [[ $# -gt 0 ]]; do
   ARG="${1:-}"
   shift
   case ${ARG} in
-    --pkg)
-      PKG=${1:-}
-      shift
-      ;;
     --version)
       VERSION=${1:-}
       shift
       ;;
-    --platform)
-      PLATFORM=${1:-}
-      shift
-      ;;
-    --build_mode)
-      BUILD_MODE=${1:-}
-      shift
-      ;;
-    --)
-      break
-      ;;
     *)
-      echo "Invalid arg: ${ARG}"
-      exit 1
+      PLATFORMS+=("$ARG")
     ;;
   esac
 done
 
-if [ -z "${PKG}" ]; then
-    echo "PKG must be set"
-    exit 1
-fi
 if [ -z "${VERSION}" ]; then
     echo "VERSION must be set"
     exit 1
 fi
-# Platform format: $GOOS-$GOARCH (e.g. linux-amd64).
-if [ -z "${PLATFORM}" ]; then
-    echo "PLATFORM must be set"
-    exit 1
-fi
-if [ -z "${BUILD_MODE}" ]; then
-    echo "BUILD_MODE must be set"
-    exit 1
-fi
 
-# Example: "linux_amd64" -> ["linux" "amd64"]
-IFS='_' read -r -a platform_split <<< "${PLATFORM}"
-GOOS="${platform_split[0]}"
-GOARCH="${platform_split[1]}"
+for PLATFORM in "${PLATFORMS[@]}"; do
+  # Example: "linux_amd64" -> ["linux" "amd64"]
+  IFS='_' read -r -a platform_split <<< "${PLATFORM}"
+  GOOS="${platform_split[0]}"
+  GOARCH="${platform_split[1]}"
 
-env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install             \
-    -installsuffix "static"                                        \
-    -ldflags "-X ${PKG}/pkg/version.VERSION=${VERSION}"            \
-    "$@"
+  echo "Building nomos for ${PLATFORM}"
+  env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install \
+      -installsuffix "static" \
+      -ldflags "-X github.com/google/nomos/pkg/version.VERSION=${VERSION}" \
+      ./cmd/nomos
 
-output_dir="${GOPATH}/bin/${GOOS}_${GOARCH}"
-mkdir -p "${output_dir}"
-find "${GOPATH}/bin" -maxdepth 1 -type f -exec mv {} "${output_dir}" \;
+  # When go builds for native architecture, it puts output in $GOPATH/bin
+  # but when cross compiling, it puts it in the $GOPATH/bin/$GOOS_$GOARCH dir
+  if [ -f "${GOPATH}/bin/nomos" ]; then
+    mv "${GOPATH}/bin/nomos" "${GOPATH}/bin/${PLATFORM}/nomos"
+  fi
 
-# Use upx to reduce binary size.
-if [ "${BUILD_MODE}" = "release" ]; then
-  upx "${output_dir}/*"
-fi
+  bin=nomos
+  if [[ "${GOOS}" == "windows" ]]; then
+    bin="$bin.exe"
+  fi
+  # Use upx to reduce binary size.
+  upx "${GOPATH}/bin/${PLATFORM}/${bin}"
+done
