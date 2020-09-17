@@ -2,6 +2,8 @@ package nomostest
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -66,5 +68,35 @@ func connectToLocalRegistry(nt *NT) {
 	})
 	if err != nil {
 		nt.T.Fatalf("connecting cluster to local Docker registry: %v", err)
+	}
+}
+
+func checkDockerImages(nt *NT) {
+	nt.T.Helper()
+
+	var images = []string{
+		"nomos",
+		"reconciler",
+		"reconciler-manager",
+	}
+
+	for _, image := range images {
+		checkImage(nt, image)
+	}
+}
+
+func checkImage(nt *NT, image string) {
+	url := fmt.Sprintf("http://localhost:5000/%s:latest", image)
+	resp, err := http.Get(url)
+	if err != nil {
+		nt.T.Fatalf("Failed to check for image %s in regsitry: %s", image, err)
+	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		nt.T.Fatalf("Failed to read response for image %s in regsitry: %s", image, err)
 	}
 }

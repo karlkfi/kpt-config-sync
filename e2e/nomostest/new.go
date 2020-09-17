@@ -94,6 +94,8 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 	}
 
 	connectToLocalRegistry(nt)
+	checkDockerImages(nt)
+
 	// You can't add Secrets to Namespaces that don't exist, so create them now.
 	err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace))
 	if err != nil {
