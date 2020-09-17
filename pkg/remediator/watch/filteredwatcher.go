@@ -87,7 +87,7 @@ func (w *filteredWatcher) Run() status.Error {
 		// 3. true,  nil   -> We have not been stopped and we started a new watch.
 		started, err := w.start(resourceVersion)
 		if err != nil {
-			return FailedToStartWatcher(err)
+			return err
 		}
 		if !started {
 			break
