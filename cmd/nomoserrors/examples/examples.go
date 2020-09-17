@@ -22,7 +22,9 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/parse"
+	"github.com/google/nomos/pkg/remediator/watch"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -284,6 +286,9 @@ func Generate() AllExamples {
 	// 1061
 	result.add(parse.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
 
+	// 1062
+	result.add(parse.InvalidKptfileError("invalid name", fake.KptFileObject()))
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 
@@ -301,6 +306,14 @@ func Generate() AllExamples {
 
 	// 2006
 	result.add(status.EmptySourceError(10, "namespaces"))
+
+	// 2007
+	result.add(watch.FailedToStartWatcher(errors.New("some watcher start error")))
+
+	// 2008
+	result.add(client.ConflictCreateAlreadyExists(errors.New("already exists"), fake.RoleObject()))
+	result.add(client.ConflictUpdateOldVersion(errors.New("old version"), fake.RoleObject()))
+	result.add(client.ConflictUpdateDoesNotExist(errors.New("does not exist"), fake.RoleObject()))
 
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))

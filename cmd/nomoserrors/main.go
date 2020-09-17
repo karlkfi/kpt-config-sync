@@ -10,6 +10,10 @@ import (
 	"github.com/google/nomos/cmd/nomoserrors/examples"
 	"github.com/google/nomos/pkg/status"
 	"github.com/spf13/cobra"
+
+	// Ensure it's very unlikely we're missing errors.
+	_ "github.com/google/nomos/pkg/importer/filesystem"
+	_ "github.com/google/nomos/pkg/remediator"
 )
 
 var idFlag string
@@ -34,6 +38,7 @@ func printMissingErrors(e examples.AllExamples) {
 	// Error IDs begin at 1000. Begin at 999 to ensure we catch that KNV1000 has
 	// no examples.
 	previous := 999
+	missing := false
 	for _, id := range status.CodeRegistry() {
 		idInt, err := strconv.Atoi(id)
 		if err != nil {
@@ -46,11 +51,16 @@ func printMissingErrors(e examples.AllExamples) {
 			// transitively required by nomoserrors include these errors.
 			// The 2000 and up errors are special cases we don't care about for this.
 			fmt.Printf("KNV%d must be either explicitly marked obsolete, or its package is not imported\n", previous+1)
+			missing = true
 		} else if !e[id].Deprecated && len(e[id].Examples) == 0 {
 			// The code isn't deprecated and there aren't any examples for it.
-			fmt.Printf("Missing example(s) for code: %s\n", id)
+			fmt.Printf("Missing example(s) in cmd/nomoserrors/examples/examples.go for code: %s\n", id)
+			missing = true
 		}
 		previous = idInt
+	}
+	if missing {
+		os.Exit(1)
 	}
 }
 
@@ -89,10 +99,14 @@ func printErrorCodes() {
 }
 
 func printErrors(id string, e examples.AllExamples) {
-	fmt.Println("=== SAMPLE ERRORS ===")
-	fmt.Println()
+	printedHeader := false
 	for _, err := range sortedErrors(e) {
 		if id == "" || err.Code() == id {
+			if !printedHeader {
+				fmt.Println("=== SAMPLE ERRORS ===")
+				fmt.Println()
+				printedHeader = true
+			}
 			fmt.Println(err.Error())
 			fmt.Println()
 			fmt.Println()
