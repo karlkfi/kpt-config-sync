@@ -12,3 +12,8 @@ type Nomos struct {
 	// rather than mono-repo behavior.
 	MultiRepo bool
 }
+
+// Unstructured will set the option for unstructured repo.
+func Unstructured(opts *New) {
+	opts.Nomos.SourceFormat = filesystem.SourceFormatUnstructured
+}

@@ -15,4 +15,13 @@ type MultiRepo struct {
 	//
 	// All are initialized as empty Unstructured repos at the start.
 	NotRootRepos []string
+
+	// SkipMultiRepo will skip the test if run in multi repo mode.  This stutters because we decided to embed
+	// this struct inside of the "New" struct rather than have it as a member.
+	SkipMultiRepo bool
+}
+
+// SkipMultiRepo will skip the test in multi repo mode.
+func SkipMultiRepo(opt *New) {
+	opt.SkipMultiRepo = true
 }

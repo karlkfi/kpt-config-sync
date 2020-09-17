@@ -11,12 +11,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/nomos/e2e/nomostest/ntopts"
+
 	"github.com/google/nomos/e2e/nomostest"
 )
 
 type BatsTest struct {
-	fileName string
-	nomosDir string
+	fileName  string
+	nomosDir  string
+	multiRepo bool
 }
 
 func (bt *BatsTest) batsPath() string {
@@ -44,7 +47,11 @@ func (bt *BatsTest) Run(t *testing.T) {
 
 func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 	return func(t *testing.T) {
-		nt := nomostest.New(t)
+		var opts []nomostest.NTOption
+		if !bt.multiRepo {
+			opts = append(opts, ntopts.SkipMultiRepo)
+		}
+		nt := nomostest.New(t, opts...)
 
 		// Factored out for accessing deprecated functions that only exist for supporting bats tests.
 		privateKeyPath := nt.GitPrivateKeyPath() //nolint:staticcheck

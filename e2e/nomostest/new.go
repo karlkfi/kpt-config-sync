@@ -26,11 +26,19 @@ const fileMode = os.ModePerm
 // which we write test data.
 const nomosE2E = "nomos-e2e"
 
+// NTOption is an option type for NT.
+type NTOption func(opt *ntopts.New)
+
 // New establishes a connection to a test cluster and prepares it for testing.
 //
 // Use NewWithOptions for customization.
-func New(t *testing.T) *NT {
-	return NewWithOptions(t, ntopts.New{})
+func New(t *testing.T, ntOptions ...NTOption) *NT {
+	// TODO: we should probably put ntopts.New members inside of NT use the go-convention of mutating NT with option functions.
+	var optsStruct ntopts.New
+	for _, opt := range ntOptions {
+		opt(&optsStruct)
+	}
+	return NewWithOptions(t, optsStruct)
 }
 
 // NewWithOptions establishes a connection to a test cluster based on the passed
@@ -47,6 +55,10 @@ func New(t *testing.T) *NT {
 // 2) A functioning git server hosted on the cluster.
 // 3) A fresh ACM installation.
 func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
+	if *e2e.MultiRepo && opts.SkipMultiRepo && !*e2e.ForceMultiRepo {
+		t.Skip("Test skipped for MR mode")
+	}
+
 	t.Parallel()
 	t.Helper()
 

@@ -30,3 +30,7 @@ var KubernetesVersion = flag.String("kubernetes-version", "1.16",
 // MultiRepo enables running the tests against multi-repo Config Sync.
 var MultiRepo = flag.Bool("multirepo", false,
 	"If true, configure multi-repo Config Sync. Otherwise configure mono-repo.")
+
+// ForceMultiRepo enables running all multi repo tests even if they are marked as skipped.
+var ForceMultiRepo = flag.Bool("force-multi-repo", false,
+	"If true, run all tests in multi repo mode instead of skipping ones that opt out.")

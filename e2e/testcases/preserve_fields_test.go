@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/e2e/nomostest/ntopts"
+
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
@@ -191,7 +193,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 // annotation.
 // TODO(b/160032776): Remove this test once all users are past 1.4.0.
 func TestPreserveLastApplied(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	// Declare a ClusterRole and wait for it to sync.
 	nsViewerName := "namespace-viewer"
@@ -244,7 +246,7 @@ func TestPreserveLastApplied(t *testing.T) {
 }
 
 func TestAddUpdateDeleteLabels(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	ns := "crud-labels"
 	nt.Root.Add("acme/namespaces/crud-labels/ns.yaml",
@@ -294,7 +296,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 }
 
 func TestAddUpdateDeleteAnnotations(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	ns := "crud-annotations"
 	nt.Root.Add("acme/namespaces/crud-annotations/ns.yaml",

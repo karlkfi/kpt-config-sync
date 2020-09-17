@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -136,9 +135,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 }
 
 func TestPreventDeletionImplicitNamespace(t *testing.T) {
-	nt := nomostest.NewWithOptions(t, ntopts.New{
-		Nomos: ntopts.Nomos{SourceFormat: filesystem.SourceFormatUnstructured},
-	})
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMultiRepo)
 
 	role := fake.RoleObject(core.Name("configmap-getter"), core.Namespace("delivery"))
 	role.Rules = []rbacv1.PolicyRule{{

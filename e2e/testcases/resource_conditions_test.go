@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/e2e/nomostest/ntopts"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -18,7 +20,7 @@ import (
 )
 
 func TestResourceConditionAnnotations(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	ns := "rc-annotations"
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
@@ -188,7 +190,7 @@ func TestResourceConditionAnnotations(t *testing.T) {
 }
 
 func TestConstraintTemplateStatusAnnotations(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	nt.ApplyGatekeeperTestData("constraint-template-crd.yaml")
 
@@ -238,7 +240,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 }
 
 func TestConstraintStatusAnnotations(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipMultiRepo)
 
 	nt.ApplyGatekeeperTestData("constraint-crd.yaml")
 
