@@ -26,8 +26,10 @@ push-buildenv: build-buildenv
 build: $(OUTPUT_DIR) pull-buildenv
 	@echo "+++ Finished building"
 
+# NOTE: this rule depends on OUTPUT_DIR because buildenv needs those dirs to
+# exist in order to work.
 PLATFORMS := linux_amd64 darwin_amd64 windows_amd64
-build-cli:
+build-cli: $(OUTPUT_DIR)
 	@echo "+++ Compiling Nomos binaries for $(PLATFORMS)"
 	@echo "+++ Compiling with VERSION: $(VERSION)"
 	@mkdir -p $(addprefix $(OUTPUT_DIR)/go/bin/,$(PLATFORMS))
