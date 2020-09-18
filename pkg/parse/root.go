@@ -2,11 +2,13 @@ package parse
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/remediator"
@@ -139,6 +141,10 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 		return err
 	}
 
+	// Ensure that if a Namespace is declared, it is inserted before any objects
+	// that would go inside it.
+	sortByScope(cos)
+
 	err = p.update(ctx, cos)
 	if err == nil {
 		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
@@ -190,4 +196,17 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 		return errors.Wrap(err, "failed to update RootSync sync status from parser")
 	}
 	return nil
+}
+
+// sortByScope sorts the given slice of Objects so that all cluster-scoped
+// resources come before any namespace-scoped resources.
+func sortByScope(objs []core.Object) {
+	sort.SliceStable(objs, func(i, j int) bool {
+		iNamespaced := objs[i].GetNamespace() != ""
+		jNamespaced := objs[j].GetNamespace() != ""
+		if iNamespaced != jNamespaced {
+			return jNamespaced
+		}
+		return false
+	})
 }
