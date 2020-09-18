@@ -6,7 +6,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
@@ -31,7 +30,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 	if len(repoList.Items) > 1 {
 		resList := make([]id.Resource, len(repoList.Items))
 		for i, r := range repoList.Items {
-			resList[i] = ast.ParseFileObject(&r)
+			resList[i] = &r
 		}
 		return nil, status.MultipleSingletonsError(resList...)
 	}

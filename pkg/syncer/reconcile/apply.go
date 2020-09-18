@@ -7,8 +7,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -89,7 +87,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if err != nil {
 		return false, err
 	}
-	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
+	if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
 			glog.Warningf("Fight detected on create of %s.", description(intendedState))
 		}
@@ -107,12 +105,12 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	case apierrors.IsNotFound(err):
 		return false, syncerclient.ConflictUpdateDoesNotExist(err, intendedState)
 	case err != nil:
-		return false, status.ResourceWrap(err, "unable to update resource", ast.ParseFileObject(intendedState))
+		return false, status.ResourceWrap(err, "unable to update resource", intendedState)
 	}
 
 	updated := !isNoOpPatch(patch)
 	if updated {
-		if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
+		if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
 			if c.fLogger.logFight(time.Now(), fight) {
 				glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
 			}
@@ -142,7 +140,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	if err != nil {
 		return false, err
 	}
-	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.RelativeSlash(""))); fight != nil {
+	if fight := c.fights.markUpdated(time.Now(), obj); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
 			glog.Warningf("Fight detected on delete of %s.", description(obj))
 		}
@@ -153,7 +151,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 // create creates the resource with the declared-config annotation set.
 func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) status.Error {
 	if err := createApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
-		return status.ResourceWrap(err, "could not generate apply annotation on create", ast.ParseFileObject(obj))
+		return status.ResourceWrap(err, "could not generate apply annotation on create", obj)
 	}
 
 	return c.client.Create(ctx, obj)

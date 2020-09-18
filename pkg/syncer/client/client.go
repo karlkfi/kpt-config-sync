@@ -10,7 +10,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
@@ -82,7 +81,7 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 			glog.V(2).Infof("Delete skipped, resource is finalizing %s", description)
 			return nil
 		}
-		return status.ResourceWrap(err, "failed to get resource for delete", ast.ParseFileObject(obj))
+		return status.ResourceWrap(err, "failed to get resource for delete", obj)
 	}
 
 	start := time.Now()
@@ -129,9 +128,14 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 	var lastErr error
 
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
-		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
-			return nil, status.MissingResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
+		err := c.Client.Get(ctx, namespacedName, workingObj)
+		switch {
+		case apierrors.IsNotFound(err):
+			return nil, ConflictUpdateDoesNotExist(err, obj)
+		case err != nil:
+			return nil, status.ResourceWrap(err, "failed to get object to update", obj)
 		}
+
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(core.DeepCopy(workingObj))
 		if err != nil {
@@ -139,7 +143,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 				glog.V(2).Infof("Update function for %s returned no update needed", description)
 				return newObj, nil
 			}
-			return nil, status.ResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update", obj)
 		}
 
 		// cmp.Diff may take a while on the resource, only compute if V(1)
@@ -163,13 +167,16 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		}
 		lastErr = err
 
+		// Note that this loop already re-gets the current state if there is a
+		// resourceVersion mismatch, so callers don't need to explicitly update their
+		// cached version.
 		if !apierrors.IsConflict(err) {
-			return nil, status.ResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update", obj)
 		}
 		glog.V(2).Infof("Conflict during update for %q: %v", description, err)
 		time.Sleep(100 * time.Millisecond) // Back off on retry a bit.
 	}
-	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update", ast.ParseFileObject(obj))
+	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update", obj)
 }
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.
@@ -181,7 +188,7 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
 		}
-		return status.ResourceWrap(err, "failed to get resource for update", ast.ParseFileObject(obj))
+		return status.ResourceWrap(err, "failed to get resource for update", obj)
 	}
 
 	glog.V(1).Infof("Will update %s to %s", description, spew.Sdump(obj))

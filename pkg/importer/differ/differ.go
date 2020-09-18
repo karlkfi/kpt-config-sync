@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -87,8 +86,7 @@ func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.Namespace
 		if !oldObj.Spec.DeleteSyncedTime.IsZero() {
 			e := status.ResourceWrap(
 				errors.Errorf("NamespaceConfig %s has .spec.deleteSyncedTime set, cannot update", oldObj.Name),
-				"",
-				ast.ParseFileObject(oldObj))
+				"", oldObj)
 			return nil, e
 		}
 		newObj.ResourceVersion = oldObj.ResourceVersion

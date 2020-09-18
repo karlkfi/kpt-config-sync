@@ -10,6 +10,8 @@ import (
 	syncertestfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -55,3 +57,47 @@ func TestClient_Create(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_Update(t *testing.T) {
+	testCases := []struct {
+		name     string
+		declared core.Object
+		client   client.Client
+		wantErr  status.Error
+	}{
+		{
+			name:     "Conflict error if not found",
+			declared: fake.RoleObject(core.Name("admin"), core.Namespace("billing")),
+			client: syncertestfake.NewErrorClient(apierrors.NewNotFound(
+				rbacv1.Resource("Role"), "admin")),
+			wantErr: syncerclient.ConflictUpdateDoesNotExist(errors.New("not found"),
+				fake.RoleObject(core.Name("admin"), core.Namespace("billing"))),
+		},
+		{
+			name:     "Generic error if other error",
+			declared: fake.RoleObject(core.Name("admin"), core.Namespace("billing")),
+			client:   syncertestfake.NewErrorClient(errors.New("some error")),
+			wantErr: status.ResourceWrap(errors.New("some error"), "message",
+				fake.RoleObject()),
+		},
+		{
+			name:     "No error if client does not return error",
+			declared: fake.RoleObject(core.Name("admin"), core.Namespace("billing")),
+			client:   syncertestfake.NewErrorClient(nil),
+			wantErr:  nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sc := syncerclient.New(tc.client, nil)
+
+			_, err := sc.Update(context.Background(), tc.declared, noOpUpdate)
+			if !errors.Is(tc.wantErr, err) {
+				t.Fatalf("got err %v, want err %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func noOpUpdate(o core.Object) (object core.Object, err error) { return o, nil }

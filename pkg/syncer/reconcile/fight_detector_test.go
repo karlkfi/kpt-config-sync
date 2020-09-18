@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -175,7 +173,7 @@ func TestFightDetector(t *testing.T) {
 
 				aboveThreshold := false
 				for _, update := range updates {
-					fight := fd.markUpdated(now.Add(update), ast.NewFileObject(&u, cmpath.RelativeSlash("")))
+					fight := fd.markUpdated(now.Add(update), u)
 					aboveThreshold = aboveThreshold || fight != nil
 				}
 				if tc.wantAboveThreshold[o] && !aboveThreshold {
