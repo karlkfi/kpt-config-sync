@@ -23,41 +23,50 @@ push-buildenv: build-buildenv
 ###################################
 
 .PHONY: build
-build: $(OUTPUT_DIR) pull-buildenv
+build: $(OUTPUT_DIR) pull-buildenv $(addprefix build-platform-, $(PLATFORMS))
 	@echo "+++ Finished building"
 
-PLATFORMS := linux_amd64 darwin_amd64 windows_amd64
-build-cli:
-	@echo "+++ Compiling Nomos binaries for $(PLATFORMS)"
+# Compiles binaries for a specific platform (e.g. "linux-amd64").
+build-platform-%:
+	@echo "+++ Compiling Nomos binaries for $* platform"
 	@echo "+++ Compiling with VERSION: $(VERSION)"
-	@mkdir -p $(addprefix $(OUTPUT_DIR)/go/bin/,$(PLATFORMS))
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/build.sh \
+		--build_mode $(BUILD_MODE) \
+		--pkg $(REPO) \
+		--platform $* \
 		--version $(VERSION) \
-		$(PLATFORMS)
+		-- \
+		./...
 
 # Creates a docker image for the specified nomos component.
-image-nomos:
+image-nomos: build
+	@echo "+++ Building the Nomos image"
+	@cp -r ./build/$(NOMOS_IMAGE) $(STAGING_DIR)
+	@cp $(BIN_DIR)/linux_amd64/* $(STAGING_DIR)/$(NOMOS_IMAGE)
+	@cp ./LICENSE $(STAGING_DIR)/$(NOMOS_IMAGE)
+        # hashicorp/golang-lru is Mozilla Public Licensed, include the source code
+	@cp -r vendor/github.com/hashicorp/golang-lru $(STAGING_DIR)/$(NOMOS_IMAGE)
+	@docker build $(DOCKER_BUILD_QUIET) \
+		-t $(NOMOS_TAG) \
+		$(STAGING_DIR)/$(NOMOS_IMAGE)
 	@echo "+++ Building the go-binary image"
-	@docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
+	docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
 		&& docker image rm -f gcr.io/nomos-dev/go-binaries:latest \
 		|| true
-	@echo "+++ Building the nomos image"
-	@docker build $(DOCKER_BUILD_QUIET) \
-		--target nomos \
-		-t $(NOMOS_TAG) \
-		-f build/all/Dockerfile \
+	docker build $(DOCKER_BUILD_QUIET) \
+		-t gcr.io/nomos-dev/go-binaries:latest \
+		-f build/go-binaries/Dockerfile \
+		--build-arg VERSION=$(VERSION) \
 		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		--target reconciler \
 		-t $(RECONCILER_TAG) \
-		-f build/all/Dockerfile \
+		-f build/reconciler/Dockerfile \
 		.
 	@echo "+++ Building the Reconciler Manager image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		--target manager \
 		-t $(RECONCILER_MANAGER_TAG) \
-		-f build/all/Dockerfile \
+		-f build/reconciler-manager/Dockerfile \
 		.
 
 # Pushes the specified component's docker image to gcr.io.
@@ -112,7 +121,7 @@ $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 
 # config-sync-manifest creates the config-sync-manifest.yaml for release and incorporation into ACM Operator
 .PHONY: config-sync-manifest
-config-sync-manifest: push-to-gcr-nomos gen-yaml-all build-cli
+config-sync-manifest: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing config-sync-manifest.yaml"
 	@rm -rf ${NOMOS_MANIFEST_STAGING_DIR}
 	@mkdir -p ${NOMOS_MANIFEST_STAGING_DIR}

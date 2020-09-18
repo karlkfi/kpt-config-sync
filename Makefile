@@ -18,6 +18,10 @@
 
 ##### CONFIG #####
 
+# List of GOOS-GOARCH cross compilation targets
+# Corresponding host mounts for Go std packages should be set below.
+PLATFORMS ?= linux_amd64
+
 REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Nomos
@@ -76,6 +80,10 @@ BUILDENV_PROJECT ?= nomos-public
 BUILDENV_IMAGE_VERSION ?= v0.2.5
 BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
 
+# When set to "release", enables these optimizations:
+# - Compress binary sizes
+BUILD_MODE ?= debug
+
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := git-importer monitor
 
@@ -100,7 +108,7 @@ endif
 #
 # To turn off, for example:
 #   make DOCKER_BUILD_QUIET="" deploy
-DOCKER_BUILD_QUIET ?= --quiet
+DOCKER_BUILD_QUIET := --quiet
 
 # Suppresses gcloud output.
 GCLOUD_QUIET := --quiet
