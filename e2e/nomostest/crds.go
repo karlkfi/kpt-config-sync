@@ -44,7 +44,7 @@ func waitForCRDs(nt *NT, crds []string) error {
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for CRDs: %v", took, monoRepoCRDs)
+	nt.T.Logf("took %v to wait for CRDs: %v", took, crds)
 	return nil
 }
 

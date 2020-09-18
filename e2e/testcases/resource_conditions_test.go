@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest/ntopts"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -20,7 +18,12 @@ import (
 )
 
 func TestResourceConditionAnnotations(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
+
+	if nt.MultiRepo {
+		// TODO(b/168918861): Re-enable this test when multi-repo supports resource condition annotations.
+		return
+	}
 
 	ns := "rc-annotations"
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", ns),
@@ -190,9 +193,16 @@ func TestResourceConditionAnnotations(t *testing.T) {
 }
 
 func TestConstraintTemplateStatusAnnotations(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
-	nt.ApplyGatekeeperTestData("constraint-template-crd.yaml")
+	if nt.MultiRepo {
+		// TODO(b/168918861): Re-enable this test when multi-repo supports resource condition annotations.
+		return
+	}
+
+	if err := nt.ApplyGatekeeperTestData("constraint-template-crd.yaml", "constrainttemplates.templates.gatekeeper.sh"); err != nil {
+		t.Fatalf("Failed to create constraint template CRD: %v", err)
+	}
 
 	// Create and apply a ConstraintTemplate.
 	ctName := "k8sname"
@@ -240,9 +250,16 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 }
 
 func TestConstraintStatusAnnotations(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
-	nt.ApplyGatekeeperTestData("constraint-crd.yaml")
+	if nt.MultiRepo {
+		// TODO(b/168918861): Re-enable this test when multi-repo supports resource condition annotations.
+		return
+	}
+
+	if err := nt.ApplyGatekeeperTestData("constraint-crd.yaml", "k8sallowedrepos.constraints.gatekeeper.sh"); err != nil {
+		t.Fatalf("Failed to create constraint template CRD: %v", err)
+	}
 
 	constraintGVK := schema.GroupVersionKind{
 		Group:   gatekeeper.ConstraintsGroup,

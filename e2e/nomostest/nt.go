@@ -251,10 +251,15 @@ func (nt *NT) Kubectl(args ...string) {
 // ApplyGatekeeperTestData is an exception to the "all test data is specified inline"
 // rule. It isn't informative to literally have the CRD specifications in the
 // test code, and we have strict type requirements on how the CRD is laid out.
-func (nt *NT) ApplyGatekeeperTestData(file string) {
+func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 	absPath := filepath.Join(baseDir, "e2e", "testdata", "gatekeeper", file)
 
 	// We have to set validate=false because the default Gatekeeper YAMLs can't be
 	// applied without it, and we aren't going to define our own compliant version.
 	nt.Kubectl("apply", "-f", absPath, "--validate=false")
+	err := waitForCRDs(nt, []string{crd})
+	if err != nil {
+		nt.RenewClient()
+	}
+	return err
 }
