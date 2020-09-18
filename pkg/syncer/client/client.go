@@ -67,7 +67,7 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
 // This automatically sets the propagation policy to always be "Background".
-func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOption) error {
+func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOption) status.Error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
 
@@ -82,7 +82,7 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 			glog.V(2).Infof("Delete skipped, resource is finalizing %s", description)
 			return nil
 		}
-		return errors.Wrapf(err, "failed to get %s during delete operation (this is an API server error)", description)
+		return status.ResourceWrap(err, "failed to get resource for delete", ast.ParseFileObject(obj))
 	}
 
 	start := time.Now()
@@ -101,7 +101,7 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 
 	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 	if err != nil {
-		return status.ResourceWrap(err, "failed to delete "+description, obj)
+		return status.ResourceWrap(err, "failed to delete", obj)
 	}
 	return nil
 }
@@ -130,7 +130,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 
 	for tryNum := 0; tryNum < c.MaxTries; tryNum++ {
 		if err := c.Client.Get(ctx, namespacedName, workingObj); err != nil {
-			return nil, status.MissingResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.MissingResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
 		}
 		oldV := resourceVersion(workingObj)
 		newObj, err := updateFn(core.DeepCopy(workingObj))
@@ -139,7 +139,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 				glog.V(2).Infof("Update function for %s returned no update needed", description)
 				return newObj, nil
 			}
-			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
 		}
 
 		// cmp.Diff may take a while on the resource, only compute if V(1)
@@ -164,24 +164,24 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		lastErr = err
 
 		if !apierrors.IsConflict(err) {
-			return nil, status.ResourceWrap(err, "failed to update "+description, ast.ParseFileObject(obj))
+			return nil, status.ResourceWrap(err, "failed to update", ast.ParseFileObject(obj))
 		}
 		glog.V(2).Infof("Conflict during update for %q: %v", description, err)
 		time.Sleep(100 * time.Millisecond) // Back off on retry a bit.
 	}
-	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update "+description, ast.ParseFileObject(obj))
+	return nil, status.ResourceWrap(lastErr, "exceeded max tries to update", ast.ParseFileObject(obj))
 }
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.
 // This operation always involves retrieving the resource from API Server before actually creating or updating it.
-func (c *Client) Upsert(ctx context.Context, obj core.Object) error {
+func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
 	if err := c.Client.Get(ctx, namespacedName, obj.DeepCopyObject()); err != nil {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
 		}
-		return errors.Wrapf(err, "error getting %s for create/update", description)
+		return status.ResourceWrap(err, "failed to get resource for update", ast.ParseFileObject(obj))
 	}
 
 	glog.V(1).Infof("Will update %s to %s", description, spew.Sdump(obj))
@@ -190,7 +190,7 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) error {
 	c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 
 	if err != nil {
-		return errors.Wrapf(err, "upsert failed for %s", description)
+		return status.ResourceWrap(err, "failed to update", obj)
 	}
 	glog.Infof("Updated %s via upsert", description)
 	return nil

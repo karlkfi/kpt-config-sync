@@ -87,7 +87,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 
 	if err != nil {
-		return false, status.ResourceWrap(err, "unable to create resource", ast.ParseFileObject(intendedState))
+		return false, err
 	}
 	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(intendedState, cmpath.RelativeSlash(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
@@ -140,7 +140,7 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	metrics.Operations.WithLabelValues("delete", obj.GetKind(), metrics.StatusLabel(err)).Inc()
 
 	if err != nil {
-		return false, status.ResourceWrap(err, "unable to delete resource", ast.ParseFileObject(obj))
+		return false, err
 	}
 	if fight := c.fights.markUpdated(time.Now(), ast.NewFileObject(obj, cmpath.RelativeSlash(""))); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
@@ -151,9 +151,9 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 }
 
 // create creates the resource with the declared-config annotation set.
-func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) error {
+func (c *clientApplier) create(ctx context.Context, obj *unstructured.Unstructured) status.Error {
 	if err := createApplyAnnotation(obj, unstructured.UnstructuredJSONScheme); err != nil {
-		return errors.Wrapf(err, "could not generate apply annotation for %s", description(obj))
+		return status.ResourceWrap(err, "could not generate apply annotation on create", ast.ParseFileObject(obj))
 	}
 
 	return c.client.Create(ctx, obj)

@@ -196,7 +196,7 @@ func (r *metaReconciler) finalizeSync(ctx context.Context, sync *v1.Sync, gvks m
 	}
 	err := r.client.Upsert(ctx, sync)
 	if err != nil {
-		return status.APIServerError(err, fmt.Sprintf("could not finalize Sync %s", sync.Name))
+		return err
 	}
 	glog.Infof("finalized Sync %s", sync.Name)
 	return nil
