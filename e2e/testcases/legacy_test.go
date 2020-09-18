@@ -17,9 +17,9 @@ import (
 )
 
 type BatsTest struct {
-	fileName  string
-	nomosDir  string
-	multiRepo bool
+	fileName      string
+	nomosDir      string
+	skipMultiRepo func(int) bool
 }
 
 func (bt *BatsTest) batsPath() string {
@@ -48,7 +48,7 @@ func (bt *BatsTest) Run(t *testing.T) {
 func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 	return func(t *testing.T) {
 		var opts []nomostest.NTOption
-		if !bt.multiRepo {
+		if bt.skipMultiRepo != nil && bt.skipMultiRepo(testNum) {
 			opts = append(opts, ntopts.SkipMultiRepo)
 		}
 		nt := nomostest.New(t, opts...)
@@ -101,6 +101,9 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 			// kubectl creates the .kube directory in HOME if it does not exist
 			fmt.Sprintf("HOME=%s", batsHome),
 		}
+		if nt.MultiRepo {
+			cmd.Env = append(cmd.Env, "CSMR=true")
+		}
 
 		t.Log("Using environment")
 		for _, env := range cmd.Env {
@@ -143,6 +146,9 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 
 func TestBats(t *testing.T) {
 	t.Parallel()
+	skipAll := func(int) bool {
+		return true
+	}
 
 	nomosDir, err := filepath.Abs("../..")
 	if err != nil {
@@ -151,27 +157,27 @@ func TestBats(t *testing.T) {
 
 	testCases := []*BatsTest{
 		{fileName: "acme.bats"},
-		{fileName: "apiservice.bats"},
-		{fileName: "basic.bats"},
-		{fileName: "cli.bats"},
+		{fileName: "apiservice.bats", skipMultiRepo: skipAll},
+		{fileName: "basic.bats", skipMultiRepo: skipAll},
+		{fileName: "cli.bats", skipMultiRepo: skipAll},
 		// Converted to cluster_resources_test.go.
 		//{fileName: "cluster_resources.bats"},
-		{fileName: "custom_resource_definitions_v1.bats"},
-		{fileName: "custom_resource_definitions_v1beta1.bats"},
-		{fileName: "custom_resources_v1.bats"},
-		{fileName: "custom_resources_v1beta1.bats"},
-		{fileName: "foo_corp.bats"},
-		{fileName: "gatekeeper.bats"},
-		{fileName: "multiversion.bats"},
-		{fileName: "namespaces.bats"},
-		{fileName: "operator-no-policy-dir.bats"},
-		{fileName: "per_cluster_addressing.bats"},
+		{fileName: "custom_resource_definitions_v1.bats", skipMultiRepo: skipAll},
+		{fileName: "custom_resource_definitions_v1beta1.bats", skipMultiRepo: skipAll},
+		{fileName: "custom_resources_v1.bats", skipMultiRepo: skipAll},
+		{fileName: "custom_resources_v1beta1.bats", skipMultiRepo: skipAll},
+		{fileName: "foo_corp.bats", skipMultiRepo: skipAll},
+		{fileName: "gatekeeper.bats", skipMultiRepo: skipAll},
+		{fileName: "multiversion.bats", skipMultiRepo: skipAll},
+		{fileName: "namespaces.bats", skipMultiRepo: skipAll},
+		{fileName: "operator-no-policy-dir.bats", skipMultiRepo: skipAll},
+		{fileName: "per_cluster_addressing.bats", skipMultiRepo: skipAll},
 		// Converted to preserve_fields_test.go.
 		//{fileName: "preserve_fields.bats"},
-		{fileName: "repoless.bats"},
+		{fileName: "repoless.bats", skipMultiRepo: skipAll},
 		// Converted to resource_conditions_test.go.
 		//{fileName: "resource_conditions.bats"},
-		{fileName: "status_monitoring.bats"},
+		{fileName: "status_monitoring.bats", skipMultiRepo: skipAll},
 	}
 	for idx := range testCases {
 		tc := testCases[idx]

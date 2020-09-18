@@ -5,6 +5,8 @@ set -euo pipefail
 DIR=$(dirname "${BASH_SOURCE[0]}")
 # shellcheck source=e2e/lib/debug.bash
 source "$DIR/debug.bash"
+# shellcheck source=e2e/lib/env.bash
+source "$DIR/env.bash"
 # shellcheck source=e2e/lib/git.bash
 source "$DIR/git.bash"
 # shellcheck source=e2e/lib/wait.bash
@@ -144,62 +146,40 @@ function nomos::_synced() {
 }
 
 # Returns success if the repo is fully synced.
+function nomos::repo_synced() {
+  if env::csmr; then
+    nomos::__csmr_repo_synced
+  else
+    nomos::__legacy_repo_synced
+  fi
+}
+
+# Returns success if the repo is fully synced.
+# This is defined as the source and sync status being equaal to the current git commit hash.
+function nomos::__csmr_repo_synced() {
+  local rs
+  rs="$(kubectl get -n config-management-system rootsync root-sync -ojson)"
+  if [[ $(jq -r ".status.source.commit" <<< "$rs") != $(git::hash) ]]; then
+    return 1
+  fi
+  if [[ $(jq -r ".status.sync.commit" <<< "$rs") != $(git::hash) ]]; then
+    return 1
+  fi
+}
+
+# Returns success if the repo is fully synced.
 # This is defined as
 #   token == status.source.token && len(status.source.errors) == 0 \
 #   && token == status.import.token && len(status.import.errors) == 0 \
 #   && token == status.sync.token && len(status.sync.errors) == 0
-#
-# Flags:
-#  --sourceError    exit 0 if
-#     token == status.source.token && 0 < len(status.source.errors)
-#  --importError    exit 0 if
-#     token == status.source.token && len(status.source.errors) == 0 \
-#     && token == status.import.token && 0 < len(status.import.errors)
-#  --syncError      exit 0 if
-#     token == status.source.token && len(status.source.errors) == 0 \
-#     && token == status.import.token && len(status.import.errors) == 0 \
-#     && token == status.sync.token && 0 < len(status.sync.errors)
-function nomos::repo_synced() {
-  local args=()
-  local sourceError=false
-  local importError=false
-  local syncError=false
-  local tokenOverride=""
-
-  while (( "$#" )); do
-    local arg="${1:-}"
-    shift
-    case "$arg" in
-      --sourceError)
-        sourceError=true
-        ;;
-      --importError)
-        importError=true
-        ;;
-      --syncError)
-        syncError=true
-        ;;
-      --tokenOverride)
-        tokenOverride=${1}
-        shift
-        ;;
-      *)
-        args+=("$arg")
-        ;;
-    esac
-  done
-
-  if (( ${#args[@]} != 0 )); then
+function nomos::__legacy_repo_synced() {
+  if (( $# != 0 )); then
     echo "Invalid number of args for repo_synced"
     return 1
   fi
 
   local token
-  if [ -n "${tokenOverride}" ]; then
-    token="${tokenOverride}"
-  else
-    token="$(git::hash)"
-  fi
+  token="$(git::hash)"
 
   local output
   # This fixes a race condition for when the repo object is deleted from git SOT
@@ -214,12 +194,6 @@ function nomos::repo_synced() {
   if [[ "$token" != "$status_token" ]]; then
     return 1
   fi
-  if $sourceError; then
-    if (( 0 == error_count )); then
-      return 1
-    fi
-    return 0
-  fi
   if (( 0 < error_count )); then
     return 1
   fi
@@ -229,12 +203,6 @@ function nomos::repo_synced() {
   if [[ "$token" != "$status_token" ]]; then
     return 1
   fi
-  if $importError; then
-    if (( 0 == error_count )); then
-      return 1
-    fi
-    return 0
-  fi
   if (( 0 < error_count )); then
     return 1
   fi
@@ -243,11 +211,6 @@ function nomos::repo_synced() {
   error_count="$(jq '[.status.sync.inProgress[].errors] | flatten | length' <<< "$output")"
   if [[ "$token" != "$status_token" ]]; then
     return 1
-  fi
-  if $syncError; then
-    if (( 0 == error_count )); then
-      return 1
-    fi
   fi
 
   #### WORKAROUND ####
