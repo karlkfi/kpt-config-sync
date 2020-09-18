@@ -43,17 +43,11 @@ for PLATFORM in "${PLATFORMS[@]}"; do
   GOOS="${platform_split[0]}"
   GOARCH="${platform_split[1]}"
 
-  echo "Building nomos for ${PLATFORM}"
-  env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install \
-      -installsuffix "static" \
-      -ldflags "-X github.com/google/nomos/pkg/version.VERSION=${VERSION}" \
+  env GOOS="${GOOS}" GOARCH="${GOARCH}" CGO_ENABLED="0" go install             \
+      -installsuffix "static"                                        \
+      -ldflags "-X github.com/google/nomos/pkg/version.VERSION=${VERSION}"            \
       ./cmd/nomos
 
-  # When go builds for native architecture, it puts output in $GOPATH/bin
-  # but when cross compiling, it puts it in the $GOPATH/bin/$GOOS_$GOARCH dir
-  if [ -f "${GOPATH}/bin/nomos" ]; then
-    mv "${GOPATH}/bin/nomos" "${GOPATH}/bin/${PLATFORM}/nomos"
-  fi
   # Use upx to reduce binary size.
   upx "${GOPATH}/bin/${PLATFORM}/nomos"
 done
