@@ -56,6 +56,7 @@ image-nomos: build
 	docker build $(DOCKER_BUILD_QUIET) \
 		-t gcr.io/nomos-dev/go-binaries:latest \
 		-f build/go-binaries/Dockerfile \
+		--build-arg VERSION=$(VERSION) \
 		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
