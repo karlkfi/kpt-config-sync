@@ -113,8 +113,7 @@ func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 		if _, isError := e.(error); isError {
 			// Don't format errors in string form because we lose type information;
 			// use .Wrap instead.
-			// TODO(b/168720175): It would be nice to not panic here.
-			panic(InternalError("attempted format error when .Wrap should have been used"))
+			reportMisuse("attempted format error when .Wrap should have been used")
 		}
 	}
 
@@ -123,8 +122,7 @@ func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 		// Make sure there aren't string formatting errors in the error message.
 		// Don't replace the below with string formatting syntax or it may cause
 		// a stack overflow.
-		// TODO(b/168720175): It would be nice to not panic here.
-		panic(InternalError("improperly formatted error message: " + message))
+		reportMisuse("improperly formatted error message: " + message)
 	}
 	return ErrorBuilder{error: messageErrorImpl{
 		underlying: eb.error,
@@ -136,9 +134,8 @@ func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 func (eb ErrorBuilder) Wrap(toWrap error) ErrorBuilder {
 	if e, isStatusError := toWrap.(Error); isStatusError {
 		// We don't allow wrapping KNV errors in other KNV errors.
-		// TODO(b/168720175): It would be nice to not panic here.
 		glog.Info(e.Code())
-		panic(InternalError("attempted wrap a status.Error in another status.Error"))
+		reportMisuse("attempted wrap a status.Error in another status.Error")
 	}
 	if toWrap == nil {
 		return ErrorBuilder{error: nil}

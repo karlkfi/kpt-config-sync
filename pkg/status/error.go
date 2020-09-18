@@ -119,9 +119,9 @@ func nextCandidate(code string) (int, error) {
 func register(code string) {
 	if _, exists := registered[code]; exists {
 		if c, err2 := nextCandidate(code); err2 == nil {
-			panic(fmt.Errorf("duplicate error code %s, next candidate: %d", code, c))
+			reportMisuse(fmt.Sprintf("duplicate error code %s, next candidate: %d", code, c))
 		} else {
-			panic(fmt.Errorf("duplicate error code %s", code))
+			reportMisuse(fmt.Sprintf("duplicate error code %s", code))
 		}
 	}
 	registered[code] = true
