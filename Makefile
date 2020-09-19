@@ -25,7 +25,7 @@ PLATFORMS ?= linux_amd64
 REPO := github.com/google/nomos
 
 # List of dirs containing go code owned by Nomos
-NOMOS_CODE_DIRS := pkg cmd
+NOMOS_CODE_DIRS := pkg cmd e2e
 NOMOS_GO_PKG := $(foreach dir,$(NOMOS_CODE_DIRS),./$(dir)/...)
 
 # Directory containing all build artifacts.  We need abspath here since
@@ -194,8 +194,6 @@ test-all-local: test test-e2e
 fmt-go: $(OUTPUT_DIR)
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
-	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w e2e
-	@docker run $(DOCKER_RUN_ARGS) goimports -w e2e
 
 lint: lint-go lint-bash lint-yaml lint-license
 
