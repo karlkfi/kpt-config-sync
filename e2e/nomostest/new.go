@@ -84,6 +84,8 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		default:
 			t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
 		}
+	} else if opts.SkipMonoRepo {
+		t.Skip("Test skipped for MonoRepo mode")
 	}
 
 	t.Parallel()

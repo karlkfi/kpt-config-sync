@@ -23,6 +23,9 @@ type MultiRepo struct {
 	// MultiRepoIncompatible will disable the test for multi repo.  Setting --skip-mode will not affect whether it gets run.
 	// This should be used for disabling tests
 	MultiRepoIncompatible bool
+
+	// SkipMonoRepo will skip the test if run in mono repo mode.
+	SkipMonoRepo bool
 }
 
 // SkipMultiRepo will skip the test in multi repo mode.
@@ -33,4 +36,9 @@ func SkipMultiRepo(opt *New) {
 // MultiRepoIncompatible will always skip the test in multi repo mode.
 func MultiRepoIncompatible(opt *New) {
 	opt.MultiRepoIncompatible = true
+}
+
+// SkipMonoRepo will skip the test in mono repo mode.
+func SkipMonoRepo(opt *New) {
+	opt.SkipMonoRepo = true
 }

@@ -1,0 +1,145 @@
+package e2e
+
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/ntopts"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/testing/fake"
+)
+
+func TestDeleteRootSync(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	rsName := "root-sync"
+
+	var rs v1alpha1.RootSync
+	err := nt.Validate(rsName, v1.NSConfigManagementSystem, &rs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete RootSync custom resource from the cluster.
+	err = nt.Delete(&rs)
+	if err != nil {
+		t.Fatalf("deleting RootSync: %v", err)
+	}
+
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound(rsName, v1.NSConfigManagementSystem, fake.RootSyncObject())
+	})
+	if err != nil {
+		t.Errorf("RootSync present after deletion: %v", err)
+	}
+
+	// Verify Root Reconciler deployment no longer present.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound("root-reconciler", v1.NSConfigManagementSystem, fake.DeploymentObject())
+	})
+	if err != nil {
+		t.Errorf("RootSync present after deletion: %v", err)
+	}
+
+	// validate Root Reconcoiler configmaps are no longer present.
+	err1 := nt.ValidateNotFound("root-reconciler-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject())
+	err2 := nt.ValidateNotFound("root-reconciler-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject())
+	err3 := nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject())
+	if err1 != nil || err2 != nil || err3 != nil {
+		if err1 != nil {
+			t.Error(err1)
+		}
+		if err2 != nil {
+			t.Error(err2)
+		}
+		if err3 != nil {
+			t.Error(err3)
+		}
+		t.FailNow()
+	}
+}
+
+func TestUpdateRootSyncGitDirectory(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	rsName := "root-sync"
+
+	// Validate RootSync is present.
+	var rs v1alpha1.RootSync
+	err := nt.Validate(rsName, v1.NSConfigManagementSystem, &rs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add audit namespace in policy directory acme.
+	acmeNS := "audit"
+	nt.Root.Add(fmt.Sprintf("%s/namespaces/%s/ns.yaml", rs.Spec.Git.Dir, acmeNS),
+		fake.NamespaceObject(acmeNS))
+
+	// Add namespace in policy directory 'foo'.
+	fooDir := "foo"
+	fooNS := "shipping"
+	nt.Root.Add(fmt.Sprintf("%s/namespaces/%s/ns.yaml", fooDir, fooNS),
+		fake.NamespaceObject(fooNS))
+
+	// Add repo resource in policy directory 'foo'.
+	nt.Root.Add(fmt.Sprintf("%s/system/repo.yaml", fooDir),
+		fake.RepoObject())
+
+	nt.Root.CommitAndPush("add namespace to acme directory")
+	nt.WaitForRepoSync()
+
+	// Validate namespace 'audit' created.
+	err = nt.Validate(acmeNS, "", fake.NamespaceObject(acmeNS))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate namespace 'shipping' not present.
+	err = nt.ValidateNotFound(fooNS, "", fake.NamespaceObject(fooNS))
+	if err != nil {
+		t.Errorf("%s present after deletion: %v", fooNS, err)
+	}
+
+	// Update RootSync.
+	//
+	// Get RootSync and then perform Update to avoid update failures due to
+	// version mismatch.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		rootsync := &v1alpha1.RootSync{}
+		err := nt.Get(rsName, v1.NSConfigManagementSystem, rootsync)
+		if err != nil {
+			return err
+		}
+
+		// Update the policy directory in RootSync Custom Resource.
+		rootsync.Spec.Git.Dir = fooDir
+
+		err = nt.Update(rootsync)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("RootSync update failed: %v", err)
+	}
+
+	// TODO(b/169195578) Validate Source path annotation with policyDir.
+
+	// Validate namespace 'shipping' created.
+	_, err = nomostest.Retry(60*time.Second, func() error {
+		return nt.Validate(fooNS, "", fake.NamespaceObject(fooNS))
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate namespace 'audit' no longer present.
+	_, err = nomostest.Retry(20*time.Second, func() error {
+		return nt.ValidateNotFound(acmeNS, "", fake.NamespaceObject(acmeNS))
+	})
+	if err != nil {
+		t.Error(err)
+	}
+}
