@@ -5,7 +5,6 @@ set -u
 load "../lib/debug"
 load "../lib/git"
 load "../lib/namespace"
-load "../lib/namespaceconfig"
 load "../lib/setup"
 load "../lib/wait"
 

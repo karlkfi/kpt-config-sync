@@ -165,10 +165,20 @@ func TestBats(t *testing.T) {
 		t.Fatal("Failed to get nomos dir: ", err)
 	}
 
+	// NOTE: eventually all skipped tests will need a note on exemption (see basic.bats as an example).
+	// Once CSMR is the only implementation we ship, the skipped tests that are specific to legacy can be removed, and
+	// all the skips can be removed.
 	testCases := []*BatsTest{
 		{fileName: "acme.bats"},
 		{fileName: "apiservice.bats"},
-		{fileName: "basic.bats", skipMultiRepo: skipNum(1, 2, 3, 4, 7, 9)},
+		{
+			fileName: "basic.bats",
+			skipMultiRepo: skipNum(
+				1, // tests internals of namespaceconfig
+				2, // tests internals of syncs
+				3, // tests internals of clusterconfigs
+				9, // TODO(b/169084314): enable this test
+			)},
 		{fileName: "cli.bats", skipMultiRepo: skipAll},
 		// Converted to cluster_resources_test.go.
 		//{fileName: "cluster_resources.bats"},

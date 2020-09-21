@@ -14,8 +14,6 @@ source "$DIR/git.bash"
 source "$DIR/ignore.bash"
 # shellcheck source=e2e/lib/namespace.bash
 source "$DIR/namespace.bash"
-# shellcheck source=e2e/lib/namespaceconfig.bash
-source "$DIR/namespaceconfig.bash"
 # shellcheck source=e2e/lib/nomos.bash
 source "$DIR/nomos.bash"
 # shellcheck source=e2e/lib/resource.bash

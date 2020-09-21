@@ -4,6 +4,7 @@ set -euo pipefail
 
 load "../lib/assert"
 load "../lib/git"
+load "../lib/nomos"
 load "../lib/setup"
 load "../lib/wait"
 load "../lib/resource"
@@ -84,9 +85,6 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::rm acme/namespaces/accounting/namespace.yaml
   git::commit
   wait::for -f -t 60 -- kubectl get ns accounting
-  run kubectl get namespaceconfigs new-ns
-  [ "$status" -eq 1 ]
-  assert::contains "not found"
 }
 
 @test "${FILE_NAME}: Namespace to Policyspace conversion" {
@@ -133,19 +131,12 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
   git::commit
-  wait::for -t 30 -f -- kubectl get rolebindings -n backend bob-rolebinding
+  wait::for -t 30 -- nomos::repo_synced
 
   run kubectl get rolebindings -n backend bob-rolebinding
   assert::contains "NotFound"
   run kubectl get rolebindings -n backend robert-rolebinding -o yaml
   assert::contains "acme-admin"
-
-  # verify that import token has been updated from the commit above
-  local itoken="$(kubectl get namespaceconfig backend -ojsonpath='{.spec.token}')"
-  git::check_hash "$itoken"
-
-  # verify that sync token has been updated as well
-  wait::for -t 30 -- namespaceconfig::sync_token_eq backend "$itoken"
 }
 
 function manage_namespace() {

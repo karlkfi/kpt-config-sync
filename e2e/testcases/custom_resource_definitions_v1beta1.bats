@@ -4,7 +4,6 @@ set -euo pipefail
 
 load "../lib/debug"
 load "../lib/git"
-load "../lib/namespaceconfig"
 load "../lib/resource"
 load "../lib/setup"
 load "../lib/wait"
