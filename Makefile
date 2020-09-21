@@ -141,6 +141,18 @@ $(OUTPUT_DIR):
 		$(TEMP_OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR)
 
+# These directories get mounted by DOCKER_RUN_ARGS, so we have to create them
+# before invoking docker.
+.PHONY: buildenv-dirs
+buildenv-dirs:
+	@mkdir -p \
+		$(BIN_DIR) \
+		$(GO_DIR)/src/$(REPO) \
+			$(GO_DIR)/std/linux_amd64_static \
+			$(GO_DIR)/std/darwin_amd64_static \
+			$(GO_DIR)/std/windows_amd64_static \
+		$(TEMP_OUTPUT_DIR)
+
 ##### TARGETS #####
 
 include Makefile.build
@@ -156,7 +168,7 @@ clean:
 	@echo "+++ Cleaning $(OUTPUT_DIR)"
 	@rm -rf $(OUTPUT_DIR)
 
-test-unit: $(OUTPUT_DIR) pull-buildenv
+test-unit: pull-buildenv buildenv-dirs
 	@echo "+++ Running unit tests in a docker container"
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/test-unit.sh $(NOMOS_GO_PKG)
 
@@ -176,13 +188,13 @@ test-all-local: test test-e2e
 # Runs gofmt and goimports.
 # Even though goimports runs gofmt, it runs it without the -s (simplify) flag
 # and offers no option to turn it on. So we run them in sequence.
-fmt-go: $(OUTPUT_DIR)
+fmt-go: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) gofmt -s -w $(NOMOS_CODE_DIRS)
 	@docker run $(DOCKER_RUN_ARGS) goimports -w $(NOMOS_CODE_DIRS)
 
 lint: lint-go lint-bash lint-yaml lint-license
 
-lint-go: build
+lint-go: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-go.sh $(NOMOS_GO_PKG)
 
 lint-bash:
@@ -191,7 +203,7 @@ lint-bash:
 license:
 	@./scripts/prepare-licenses.sh
 
-lint-license: build
+lint-license: pull-buildenv buildenv-dirs
 	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
 
 lint-yaml:
