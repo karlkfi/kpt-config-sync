@@ -2,7 +2,6 @@
 package git
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -57,10 +56,41 @@ func ListFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
 		// directory, so we have to convert these to absolute paths.
 		abs, err := dir.Join(cmpath.RelativeOS(f)).EvalSymlinks()
 		if err != nil {
-			fmt.Println(f)
-			return nil, err
+			return nil, errors.Wrapf(err, "error getting absolute path for %q", f)
 		}
 		result = append(result, abs)
 	}
+
+	// git submodule foreach --recursive git ls-files
+	out, err = exec.Command("git", "-C", dir.OSPath(), "submodule",
+		// Execute the command for every submodule.
+		"foreach",
+		// Recursively execute the command for every submodule's submodule.
+		"--recursive",
+		// List the files in the submodule.
+		"git", "ls-files").
+		CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrap(err, string(out))
+	}
+
+	lines := strings.Split(string(out), "\n")
+	prefix := ""
+	for _, l := range lines {
+		if len(l) == 0 {
+			// If the repo has no submodules, lines is just [""] and we want to ignore that.
+			continue
+		}
+		// Before entering a submodule, git prints the path from the root of the
+		// repository to the submodule. For example:
+		// Entering 'namespaces/foo'
+		if strings.HasPrefix(l, "Entering '") {
+			prefix = l[10 : len(l)-1]
+			continue
+		}
+		abs := dir.Join(cmpath.RelativeOS(prefix)).Join(cmpath.RelativeOS(l))
+		result = append(result, abs)
+	}
+
 	return result, nil
 }
