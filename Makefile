@@ -135,7 +135,6 @@ DOCKER_RUN_ARGS = \
 .PHONY: $(OUTPUT_DIR)
 $(OUTPUT_DIR):
 	@echo "+++ Creating the local build output directory: $(OUTPUT_DIR)"
-	@rm -rf $(OUTPUT_DIR)
 	@mkdir -p \
 		$(STAGING_DIR) \
 		$(TEMP_OUTPUT_DIR) \

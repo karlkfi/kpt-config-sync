@@ -50,6 +50,7 @@ image-e2e-tests: \
 	@build/e2e-tests/build.sh \
 		-t $(E2E_TEST_IMAGE) \
 		$(DOCKER_BUILD_QUIET)
+	$(MAKE) build-cli VERSION=$(VERSION)
 
 
 GOTOPT2_BINARY := docker run -i -u $(UID):$(GID) $(BUILDENV_IMAGE) /bin/gotopt2
