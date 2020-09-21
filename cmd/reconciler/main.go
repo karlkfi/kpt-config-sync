@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/service"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
 )
 
@@ -50,6 +51,10 @@ var (
 		"Cluster name to use for Cluster selection")
 	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
 		"The format of the repository.")
+
+	debug = flag.Bool("debug", false,
+		"Enable debug mode, panicking in many scenarios where normally an InternalError would be logged. "+
+			"Do not use in production.")
 )
 
 var flags = struct {
@@ -65,6 +70,10 @@ var flags = struct {
 func main() {
 	flag.Parse()
 	log.Setup()
+
+	if *debug {
+		status.EnablePanicOnMisuse()
+	}
 
 	go service.ServeMetrics()
 

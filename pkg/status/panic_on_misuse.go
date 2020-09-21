@@ -22,6 +22,8 @@ func EnablePanicOnMisuse() {
 	panicOnMisuse = true
 }
 
+// reportMisuse either panics, or logs an error with glog.Errorf depending on
+// whether panicOnMisuse is true.
 func reportMisuse(message string) {
 	if panicOnMisuse {
 		// We're in debug mode, so halt execution so the runner is likely to get

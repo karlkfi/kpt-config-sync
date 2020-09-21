@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest/ntopts"
@@ -95,7 +96,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 
 	objs := installationManifests(nt, tmpManifestsDir)
 	if nomos.MultiRepo {
-		objs = multiRepoObjects(objs)
+		objs = multiRepoObjects(nt.T, objs)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -229,12 +230,25 @@ func monoRepoObjects(objects []core.Object) []core.Object {
 	return filtered
 }
 
-func multiRepoObjects(objects []core.Object) []core.Object {
+func multiRepoObjects(t *testing.T, objects []core.Object) []core.Object {
 	var filtered []core.Object
+	found := false
 	for _, obj := range objects {
+		if obj.GetName() == "reconciler-manager-cm" &&
+			obj.GetNamespace() == "config-management-system" &&
+			obj.GroupVersionKind() == kinds.ConfigMap() {
+			setReconcilerDebugMode(t, obj)
+			// Mark that we've found the ReconcilerManager ConfigMap.
+			// This way we know we've enabled debug mode.
+			found = true
+		}
+
 		if multiObjects[obj.GetName()] || sharedObjects[obj.GetName()] {
 			filtered = append(filtered, obj)
 		}
+	}
+	if !found {
+		t.Fatal("Did not find Reconciler Manager")
 	}
 	return filtered
 }
@@ -284,4 +298,52 @@ func validateMultiRepoDeployments(nt *NT) error {
 	}
 	nt.T.Logf("took %v to wait for reconciler-manager and root-reconciler", took)
 	return nil
+}
+
+// setReconcilerDebugMode ensures the Reconciler deployments are run in debug mode.
+func setReconcilerDebugMode(t *testing.T, obj core.Object) {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		t.Fatalf("parsed Reconciler Manager ConfigMap was not Unstructured %v", u)
+	}
+
+	deploymentYaml, found, err := unstructured.NestedString(u.Object, "data", "deployment.yaml")
+	if !found {
+		t.Fatal("Reconciler Manager ConfigMap has no deployment.yaml entry")
+	}
+	if err != nil {
+		t.Fatalf("Getting deployment.yaml entry from Reconciler Manager ConfigMap: %v", err)
+	}
+
+	// The Deployment YAML for Reconciler deployments is a raw YAML string embedded
+	// in the ConfigMap. Unmarshalling/marshalling is likely to lead to errors, so
+	// this modifies the YAML string directly by finding the line we want to insert
+	// the debug flag after, and then inserting the line we want to add.
+	lines := strings.Split(deploymentYaml, "\n")
+	found = false
+	for i, line := range lines {
+		// We want to set the debug flag immediately after setting the git-dir flag.
+		if strings.Contains(line, "- \"--git-dir=/repo/root/rev\"") {
+			// Standard Go "insert into slice" idiom.
+			lines = append(lines, "")
+			copy(lines[i+2:], lines[i+1:])
+			// Prefix of 8 spaces as the run arguments are indented 8 spaces relative
+			// to the embedded YAML string. The embedded YAML is indented 3 spaces,
+			// so this is equivalent to indenting 11 spaces in the original file:
+			// manifests/templates/reconciler-manager-deployment-configmap.yaml.
+			lines[i+1] = "        - \"--debug\""
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("Unable to set debug mode for reconciler")
+	}
+
+	err = unstructured.SetNestedField(u.Object,
+		strings.Join(lines, "\n"), "data", "deployment.yaml")
+	if err != nil {
+		t.Fatalf("Setting deployment.yaml: %v", err)
+	}
+	t.Log("Set deployment.yaml")
 }
