@@ -149,6 +149,16 @@ func TestBats(t *testing.T) {
 	skipAll := func(int) bool {
 		return true
 	}
+	skipNum := func(nums ...int) func(int) bool {
+		return func(num int) bool {
+			for _, n := range nums {
+				if n == num {
+					return true
+				}
+			}
+			return false
+		}
+	}
 
 	nomosDir, err := filepath.Abs("../..")
 	if err != nil {
@@ -157,27 +167,27 @@ func TestBats(t *testing.T) {
 
 	testCases := []*BatsTest{
 		{fileName: "acme.bats"},
-		{fileName: "apiservice.bats", skipMultiRepo: skipAll},
-		{fileName: "basic.bats", skipMultiRepo: skipAll},
+		{fileName: "apiservice.bats"},
+		{fileName: "basic.bats", skipMultiRepo: skipNum(1, 2, 3, 4, 7, 9)},
 		{fileName: "cli.bats", skipMultiRepo: skipAll},
 		// Converted to cluster_resources_test.go.
 		//{fileName: "cluster_resources.bats"},
-		{fileName: "custom_resource_definitions_v1.bats", skipMultiRepo: skipAll},
-		{fileName: "custom_resource_definitions_v1beta1.bats", skipMultiRepo: skipAll},
-		{fileName: "custom_resources_v1.bats", skipMultiRepo: skipAll},
-		{fileName: "custom_resources_v1beta1.bats", skipMultiRepo: skipAll},
-		{fileName: "foo_corp.bats", skipMultiRepo: skipAll},
-		{fileName: "gatekeeper.bats", skipMultiRepo: skipAll},
-		{fileName: "multiversion.bats", skipMultiRepo: skipAll},
-		{fileName: "namespaces.bats", skipMultiRepo: skipAll},
+		{fileName: "custom_resource_definitions_v1.bats"},
+		{fileName: "custom_resource_definitions_v1beta1.bats"},
+		{fileName: "custom_resources_v1.bats"},
+		{fileName: "custom_resources_v1beta1.bats"},
+		{fileName: "foo_corp.bats"},
+		{fileName: "gatekeeper.bats"},
+		{fileName: "multiversion.bats"},
+		{fileName: "namespaces.bats", skipMultiRepo: skipNum(1, 3, 5, 6)},
 		{fileName: "operator-no-policy-dir.bats", skipMultiRepo: skipAll},
-		{fileName: "per_cluster_addressing.bats", skipMultiRepo: skipAll},
+		{fileName: "per_cluster_addressing.bats", skipMultiRepo: skipNum(1, 2, 5, 6)},
 		// Converted to preserve_fields_test.go.
 		//{fileName: "preserve_fields.bats"},
 		{fileName: "repoless.bats", skipMultiRepo: skipAll},
 		// Converted to resource_conditions_test.go.
 		//{fileName: "resource_conditions.bats"},
-		{fileName: "status_monitoring.bats", skipMultiRepo: skipAll},
+		{fileName: "status_monitoring.bats", skipMultiRepo: skipNum(1, 2)},
 	}
 	for idx := range testCases {
 		tc := testCases[idx]
