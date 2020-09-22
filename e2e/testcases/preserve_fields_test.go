@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -193,7 +193,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 // annotation.
 // TODO(b/160032776): Remove this test once all users are past 1.4.0.
 func TestPreserveLastApplied(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
 	// Declare a ClusterRole and wait for it to sync.
 	nsViewerName := "namespace-viewer"
@@ -225,20 +225,20 @@ func TestPreserveLastApplied(t *testing.T) {
 	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
 	nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
 
+	annotationKeys := []string{
+		v1.ClusterNameAnnotationKey,
+		v1.ResourceManagementKey,
+		v1.SourcePathAnnotationKey,
+		v1.SyncTokenAnnotationKey}
+	if nt.MultiRepo {
+		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey)
+	}
+	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation, v1.DeclaredConfigAnnotationKey}, annotationKeys...)
+
 	_, err = nomostest.Retry(20*time.Second, func() error {
 		return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
-			nomostest.HasExactlyAnnotationKeys(
-				corev1.LastAppliedConfigAnnotation,
-				v1.ClusterNameAnnotationKey,
-				v1.DeclaredConfigAnnotationKey,
-				v1.ResourceManagementKey,
-				v1.SourcePathAnnotationKey,
-				v1.SyncTokenAnnotationKey),
-			declaredConfig(nomostest.HasExactlyAnnotationKeys(
-				v1.ClusterNameAnnotationKey,
-				v1.ResourceManagementKey,
-				v1.SourcePathAnnotationKey,
-				v1.SyncTokenAnnotationKey)))
+			nomostest.HasExactlyAnnotationKeys(withDeclared...),
+			declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -246,7 +246,7 @@ func TestPreserveLastApplied(t *testing.T) {
 }
 
 func TestAddUpdateDeleteLabels(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
 	ns := "crud-labels"
 	nt.Root.Add("acme/namespaces/crud-labels/ns.yaml",
@@ -296,7 +296,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 }
 
 func TestAddUpdateDeleteAnnotations(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
 	ns := "crud-annotations"
 	nt.Root.Add("acme/namespaces/crud-annotations/ns.yaml",
@@ -309,20 +309,21 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSync()
 
+	annotationKeys := []string{
+		v1.ClusterNameAnnotationKey,
+		v1.ResourceManagementKey,
+		v1.SourcePathAnnotationKey,
+		v1.SyncTokenAnnotationKey}
+	if nt.MultiRepo {
+		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey)
+	}
+	withDeclared := append([]string{v1.DeclaredConfigAnnotationKey}, annotationKeys...)
+
 	// Checking that the configmap with no annotations appears on cluster, and
 	// that no user annotations are specified
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys(
-			v1.ClusterNameAnnotationKey,
-			v1.DeclaredConfigAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys(
-			v1.ClusterNameAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey)))
+		nomostest.HasExactlyAnnotationKeys(withDeclared...),
+		declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,20 +333,13 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("Update annotation for ConfigMap in repo")
 	nt.WaitForRepoSync()
 
+	updatedKeys := append([]string{"baz"}, annotationKeys...)
+	updatedWithDeclared := append([]string{"baz"}, withDeclared...)
 	// Checking that annotation is updated after syncing an update.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys("baz",
-			v1.ClusterNameAnnotationKey,
-			v1.DeclaredConfigAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey),
+		nomostest.HasExactlyAnnotationKeys(updatedWithDeclared...),
 		nomostest.HasAnnotation("baz", "qux"),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys("baz",
-			v1.ClusterNameAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey)),
+		declaredConfig(nomostest.HasExactlyAnnotationKeys(updatedKeys...)),
 		nomostest.HasAnnotation("baz", "qux"))
 	if err != nil {
 		t.Fatal(err)
@@ -358,17 +352,8 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 
 	// Check that the annotation is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys(
-			v1.ClusterNameAnnotationKey,
-			v1.DeclaredConfigAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys(
-			v1.ClusterNameAnnotationKey,
-			v1.ResourceManagementKey,
-			v1.SourcePathAnnotationKey,
-			v1.SyncTokenAnnotationKey)))
+		nomostest.HasExactlyAnnotationKeys(withDeclared...),
+		declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
 	if err != nil {
 		t.Fatal(err)
 	}
