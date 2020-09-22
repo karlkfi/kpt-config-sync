@@ -200,13 +200,7 @@ func TestBats(t *testing.T) {
 				6, // TODO(169155915): run again once polling period is lower
 			),
 		},
-		{
-			fileName: "operator-no-policy-dir.bats",
-			skipMultiRepo: skipNum(
-				1, // TODO(b/169158287): adjust parse errors to be part of source status
-				2, // TODO(b/168914145): adjust control knobs for CSMR
-			),
-		},
+		{fileName: "operator-no-policy-dir.bats"},
 		{
 			fileName: "per_cluster_addressing.bats",
 			skipMultiRepo: skipNum(
@@ -227,8 +221,8 @@ func TestBats(t *testing.T) {
 		{
 			fileName: "status_monitoring.bats",
 			skipMultiRepo: skipNum(
-				1, // TODO(b/169158287): adjust parse errors to be part of source status
-				2, // TODO(b/169158287): adjust parse errors to be part of source status
+				1, // TODO(b/
+				2, // TODO(b/169199523): handle delete all namespaces case
 			),
 		},
 	}

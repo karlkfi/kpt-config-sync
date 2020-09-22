@@ -3,6 +3,7 @@
 set -euo pipefail
 
 load "../lib/assert"
+load "../lib/env"
 load "../lib/git"
 load "../lib/setup"
 load "../lib/wait"
@@ -23,15 +24,52 @@ test_teardown() {
 
   # Force delete repo object.
   kubectl delete repo repo --ignore-not-found
+}
 
+function source_error_message() {
+  local message="${1:-}"
+  local cmd=(wait::for -t 90)
+  if [[ "$message" == "" ]]; then
+    cmd+=(-o)
+  else
+    cmd+=(-c)
+  fi
+  cmd+=("$message" --)
+  if env::csmr; then
+    cmd+=(kubectl get -n config-management-system rootsync root-sync
+        --output='jsonpath={.status.source.errors[0].errorMessage}')
+  else
+    cmd+=(kubectl get repo repo
+        --output='jsonpath={.status.source.errors[0].errorMessage}')
+  fi
+  "${cmd[@]}"
+}
+
+function import_error_message() {
+  local message="${1:-}"
+  if env::csmr; then
+    source_error_message "$message"
+    return $?
+  fi
+
+  local cmd=(wait::for -t 90)
+  if [[ "$message" == "" ]]; then
+    cmd+=(-o)
+  else
+    cmd+=(-c)
+  fi
+  cmd+=(
+    "$message" --
+    kubectl get repo repo
+    --output='jsonpath={.status.import.errors[0].errorMessage}'
+  )
+  "${cmd[@]}"
 }
 
 function ensure_error_free_repo () {
   debug::log "Ensure that the repo is error-free at the start of the test"
   git::commit -a -m "Commit the repo contents."
-
-  wait::for -t 30 -o "" -- kubectl get repo repo \
-    --output='jsonpath={.status.import.errors[0].errorMessage}'
+  import_error_message ""
 }
 
 @test "${FILE_NAME}: Invalid policydir gets an error message in status.source.errors" {
@@ -41,11 +79,8 @@ function ensure_error_free_repo () {
 
   kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
   nomos::restart_pods
-
-  wait::for -t 10 -o "" -- kubectl get repo repo \
-    --output='jsonpath={.status.import.errors[0].errorMessage}'
-  wait::for -t 10 -o "" -- kubectl get repo repo \
-    --output='jsonpath={.status.source.errors[0].errorMessage}'
+  import_error_message ""
+  source_error_message ""
 
   debug::log "Break the policydir in the repo"
   kubectl apply -f "${MANIFEST_DIR}/importer_some-nonexistent-policydir.yaml"
@@ -54,17 +89,14 @@ function ensure_error_free_repo () {
   # Increased timeout from initial 30 to 60 for flakiness.  git-importer
   # gets restarted on each object change.
   debug::log "Expect an error to be present in status.source.errors"
-  wait::for -t 90 -c "some-nonexistent-policydir" -- \
-    kubectl get repo repo -o=yaml \
-      --output='jsonpath={.status.source.errors[0].errorMessage}'
+  source_error_message "some-nonexistent-policydir"
 
   debug::log "Fix the policydir in the repo"
   kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
   nomos::restart_pods
 
   debug::log "Expect repo to recover from the error in source message"
-  wait::for -t 90 -o "" -- kubectl get repo repo \
-    --output='jsonpath={.status.source.errors[0].errorMessage}'
+  source_error_message ""
 }
 
 function namespace_count_matches () {
@@ -98,9 +130,7 @@ function namespace_count_matches () {
   git::commit -a -m "wiping all namespaces from acme"
 
   debug::log "Expect an error to be present in status.source.errors"
-  wait::for -t 90 -c "mounted git repo appears to contain no managed namespaces" -- \
-    kubectl get repo repo -o=yaml \
-      --output='jsonpath={.status.source.errors[0].errorMessage}'
+  source_error_message "mounted git repo appears to contain no managed namespaces"
 
   debug::log "Before restore: ensure we still have the ${EXPECTED_NS_COUNT} namespaces we expect"
   wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
@@ -112,8 +142,7 @@ function namespace_count_matches () {
   git::commit -a -m "restoring the namespaces"
 
   debug::log "Expect repo to recover from the error in source message"
-  wait::for -t 90 -o "" -- kubectl get repo repo \
-    --output='jsonpath={.status.source.errors[0].errorMessage}'
+  source_error_message ""
 
   debug::log "After restore: ensure we still have the ${EXPECTED_NS_COUNT} namespaces we expect"
   wait::for -t 30 -- namespace_count_matches "${EXPECTED_NS_COUNT}"
