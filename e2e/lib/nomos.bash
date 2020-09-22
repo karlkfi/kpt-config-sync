@@ -14,97 +14,6 @@ source "$DIR/wait.bash"
 # shellcheck source=e2e/lib/resource.bash
 source "$DIR/resource.bash"
 
-# Returns success if the namespace has synced.
-# Synced is defined as
-#   token == .spec.token && token == .status.token
-# No errors is defined as
-#   len(.status.errors) == 0
-#
-# Flags:
-#  --error Exit 0 if the namespace is synced and has an error,
-#    defined as len(syncErrors) != 0
-#
-# Arguments:
-#  name: the namespace name
-function nomos::ns_synced() {
-  local args=()
-  local error=false
-  while (( 0 < $# )); do
-    local arg="${1:-}"
-    shift
-    case "$arg" in
-      --error)
-        error=true
-        ;;
-      *)
-        args+=("$arg")
-        ;;
-    esac
-  done
-
-  if (( ${#args[@]} != 1 )); then
-    debug::error "Invalid number of args for ns_synced"
-    return 1
-  fi
-
-
-  local ns="${args[0]}"
-  local token
-  token="$(git::hash)"
-  local output
-  local status=0
-  output="$(kubectl get namespaceconfig "$ns" -ojson 2>&1)" || status=$?
-  if (( status != 0 )); then
-    return 1
-  fi
-  if ! nomos::_synced "$output" "$token" "$error"; then
-    return 1
-  fi
-}
-
-# Returns success if the cluster has synced and there are no errors.
-# Synced is defined as
-#   token == .spec.token && token == .status.token
-# No erros is defined as
-#   len(.status.errors) == 0
-#
-# Flags:
-#  --error Exit 0 if the cluster is synced and has an error,
-#    defined as len(syncErrors) != 0
-#
-function nomos::cluster_synced() {
-  local args=()
-  local error=false
-  while (( 0 < $# )); do
-    local arg="${1:-}"
-    shift
-    case "$arg" in
-      --error)
-        error=true
-        ;;
-      *)
-        args+=("$arg")
-        ;;
-    esac
-  done
-
-  if (( ${#args[@]} != 0 )); then
-    echo "Invalid number of args"
-    return 1
-  fi
-
-
-  local token
-  token="$(git::hash)"
-  local output
-  local status=0
-  output="$(kubectl get clusterconfig config-management-cluster-config -ojson)" || status=$?
-  if (( status != 0 )); then
-    return 1
-  fi
-  nomos::_synced "$output" "$token" "$error"
-}
-
 # Helper funciton for NS and Cluster synced check.
 function nomos::_synced() {
   if (( $# != 3 )); then
@@ -239,6 +148,10 @@ function nomos::__legacy_repo_synced() {
 # Without the operator, it's necessary to restart these pods for them to pick up
 # changes to their ConfigMaps.
 function nomos::restart_pods() {
-  kubectl delete pod -n config-management-system -l app=git-importer
-  kubectl delete pod -n config-management-system -l app=monitor
+  if env::csmr; then
+    kubectl delete pod -n config-management-system -l app=reconciler-manager
+  else
+    kubectl delete pod -n config-management-system -l app=git-importer
+    kubectl delete pod -n config-management-system -l app=monitor
+  fi
 }

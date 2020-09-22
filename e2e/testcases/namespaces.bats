@@ -34,21 +34,21 @@ test_teardown() {
   local ns=foo
   git::add "${YAML_DIR}/foo.yaml" acme/namespaces/foo/foo.yaml
   git::commit -m "Create foo namespace"
-  wait::for -t 10 -- nomos::ns_synced $ns
+  wait::for -t 30 -- nomos::repo_synced
 
   git::update "${YAML_DIR}/foo-with-metadata.yaml" acme/namespaces/foo/foo.yaml
   git::commit -m "Add label/annotation to foo namespace"
-  wait::for -t 10 -- nomos::ns_synced $ns
+  wait::for -t 30 -- nomos::repo_synced
   namespace::check_exists $ns -l "bar=isalabel" -a "bar=isanannotation"
 
   git::update "${YAML_DIR}/foo-with-metadata-update.yaml" acme/namespaces/foo/foo.yaml
   git::commit -m "Add label/annotation to foo namespace"
-  wait::for -t 10 -- nomos::ns_synced $ns
+  wait::for -t 30 -- nomos::repo_synced
   namespace::check_exists $ns -l "bar=updated-label" -a "bar=updated-annotation"
 
   git::update "${YAML_DIR}/foo.yaml" acme/namespaces/foo/foo.yaml
   git::commit -m "Delete label/annotation on foo namespace"
-  wait::for -t 10 -- nomos::ns_synced $ns
+  wait::for -t 30 -- nomos::repo_synced
   # check ns exists then check that previous label / annotation values do not exist
   resource::check ns $ns
   ! resource::check ns $ns -l "bar=updated-label"

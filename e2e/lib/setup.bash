@@ -151,8 +151,11 @@ setup::git::remove_all_dangerously() {
   git push origin master:master -f
 
   wait::for -t 60 -- nomos::repo_synced
-  wait::for -f -t 60 -- kubectl get namespaceconfig safety
-  wait::for -f -t 60 -- kubectl get clusterrole acme-admin
+  if ! env::csmr; then
+    # Unclear if these are needed given nomos::repo_synced
+    wait::for -f -t 60 -- kubectl get namespaceconfig safety
+    wait::for -f -t 60 -- kubectl get clusterrole acme-admin
+  fi
 }
 
 # Adds the contents of the specified example directory to the git repository's root

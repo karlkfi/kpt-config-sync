@@ -74,7 +74,8 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add "${NOMOS_DIR}/examples/acme/cluster/admin-clusterrole.yaml" acme/cluster/admin-clusterrole.yaml
   git::commit
 
-  wait::for -t 30 -- nomos::cluster_synced
+  wait::for -t 30 -- nomos::repo_synced
+  wait::for -t 30 -- kubectl get clusterconfig config-management-cluster-config
 }
 
 @test "${FILE_NAME}: Namespace garbage collection" {

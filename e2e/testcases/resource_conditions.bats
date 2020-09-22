@@ -84,10 +84,10 @@ test_teardown() {
   git::commit
 
   debug::log "Waiting for ns $ns to sync to commit $(git::hash)"
-  wait::for -l -t 60 -- nomos::ns_synced ${ns}
+  wait::for -l -t 60 -- nomos::repo_synced
 
   debug::log "Waiting for cluster sync to commit $(git::hash)"
-  wait::for -l -t 60 -- nomos::cluster_synced
+  wait::for -l -t 60 -- nomos::repo_synced
 
   debug::log "Checking that the configmap appears on cluster"
   resource::check -n ${ns} configmap ${nsresname} -a "configmanagement.gke.io/managed=enabled"
@@ -186,7 +186,7 @@ test_teardown() {
   git::commit
 
   debug::log "Waiting for cluster sync to commit $(git::hash)"
-  wait::for -t 60 -- nomos::cluster_synced
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Waiting for CT to get reconciling annotation"
   wait::for -t 60 -- resource::check constrainttemplate ${resname} -a 'configmanagement.gke.io/reconciling=[\"ConstraintTemplate has not been created\"]'
@@ -204,7 +204,7 @@ test_teardown() {
   git::commit
 
   debug::log "Waiting for cluster sync to commit $(git::hash)"
-  wait::for -t 60 -- nomos::cluster_synced
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Waiting for constraint to get reconciling annotation"
   wait::for -t 120 -- resource::check funpods ${resname} -a 'configmanagement.gke.io/reconciling=[\"Constraint has not been processed by PolicyController\"]'
