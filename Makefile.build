@@ -86,22 +86,26 @@ gen-yaml-all: \
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
+.PHONY: $(GEN_YAML_DIR)/git-importer.yaml
 $(GEN_YAML_DIR)/git-importer.yaml: manifests/templates/git-importer.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
+.PHONY: $(GEN_YAML_DIR)/monitor.yaml
 $(GEN_YAML_DIR)/monitor.yaml: manifests/templates/monitor.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
+.PHONY: $(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml
 $(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml: \
 		manifests/templates/reconciler-manager-deployment-configmap.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@
 
+.PHONY: $(GEN_YAML_DIR)/reconciler-manager.yaml
 $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 		manifests/templates/reconciler-manager.yaml
 	@echo "+++ Generating yaml $@"
