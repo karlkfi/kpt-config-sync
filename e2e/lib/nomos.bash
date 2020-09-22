@@ -155,3 +155,37 @@ function nomos::restart_pods() {
     kubectl delete pod -n config-management-system -l app=monitor
   fi
 }
+
+function nomos::source_error_code() {
+  local code="${1:-}"
+  if ! env::csmr && [[ "$code" != "" ]]; then
+    code="KNV${code}"
+  fi
+  wait::for -t 90 -o "${code}" -- nomos::__source_error_code
+}
+
+function nomos::__source_error_code() {
+  if env::csmr; then
+    kubectl get -n config-management-system rootsync root-sync \
+        --output='jsonpath={.status.source.errors[0].code}'
+  else
+    kubectl get repo repo -o=jsonpath='{.status.source.errors[0].code}'
+  fi
+}
+
+function nomos::import_error_code() {
+  local code="${1:-}"
+  if ! env::csmr && [[ "$code" != "" ]]; then
+    code="KNV${code}"
+  fi
+  wait::for -t 90 -o "${code}" -- nomos::__import_error_code
+}
+
+function nomos::__import_error_code() {
+  if env::csmr; then
+    kubectl get -n config-management-system rootsync root-sync \
+        --output='jsonpath={.status.source.errors[0].code}'
+  else
+    kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
+  fi
+}

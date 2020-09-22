@@ -207,13 +207,7 @@ func TestBats(t *testing.T) {
 				3, // b/169155128 - namespace tombstoning that was used in MonoRepo for status, we decided to not implement this for CSMR
 			),
 		},
-		{
-			fileName: "operator-no-policy-dir.bats",
-			skipMultiRepo: testNums(
-				1, // TODO(b/169158287): adjust parse errors to be part of source status
-				2, // TODO(b/168914145): adjust control knobs for CSMR
-			),
-		},
+		{fileName: "operator-no-policy-dir.bats"},
 		{
 			fileName: "per_cluster_addressing.bats",
 			skipMultiRepo: testNums(
@@ -234,8 +228,7 @@ func TestBats(t *testing.T) {
 		{
 			fileName: "status_monitoring.bats",
 			skipMultiRepo: testNums(
-				1, // TODO(b/169158287): adjust parse errors to be part of source status
-				2, // TODO(b/169158287): adjust parse errors to be part of source status
+				2, // TODO(b/169199523): handle delete all namespaces case
 			),
 		},
 	}

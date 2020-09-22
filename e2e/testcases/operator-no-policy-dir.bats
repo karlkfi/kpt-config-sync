@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+load "../lib/env"
 load "../lib/git"
 load "../lib/configmap"
 load "../lib/setup"
@@ -11,9 +12,11 @@ load "../lib/nomos"
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 test_setup() {
-  kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
-  kubectl apply -f "${MANIFEST_DIR}/source-format_hierarchy.yaml"
-  nomos::restart_pods
+  if ! env::csmr; then
+    kubectl apply -f "${MANIFEST_DIR}/importer_acme.yaml"
+    kubectl apply -f "${MANIFEST_DIR}/source-format_hierarchy.yaml"
+    nomos::restart_pods
+  fi
 
   setup::git::initialize
   setup::git::init acme
@@ -22,18 +25,29 @@ test_setup() {
 test_teardown() {
   setup::git::remove_all acme
 
-  kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
-  nomos::restart_pods
-
+  if ! env::csmr; then
+    kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
+    nomos::restart_pods
+  fi
 }
 
+set_importer_no_policy_dir() {
+  if env::csmr; then
+    # No teardown required since the Go framework runs one test per setup
+    kubectl patch -n config-management-system rootsync root-sync \
+      --type merge \
+      --patch '{"spec":{"git":{"dir":""}}}'
+  else
+    kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
+    nomos::restart_pods
+  fi
+}
 
 @test "${FILE_NAME}: Absence of cluster, namespaces, systems directories at POLICY_DIR yields a missing repo error" {
-  kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
-  nomos::restart_pods
+  set_importer_no_policy_dir
 
   # Verify that the application of the operator config yields the correct error code
-  wait::for -t 60 -o "KNV1017" -- kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
+  nomos::import_error_code "1017"
 }
 
 # This test case gradually adjusts root and acme directories' contents to move from:
@@ -41,11 +55,10 @@ test_teardown() {
 @test "${FILE_NAME}: Confirm that nomos syncs correctly with POLICY_DIR unset" {
   setup::git::add_contents_to_root acme
 
-  kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
-  nomos::restart_pods
+  set_importer_no_policy_dir
 
   setup::git::remove_folder acme
 
   wait::for -t 60 -- nomos::repo_synced
-  wait::for -t 60 -o "" -- kubectl get repo repo -o=jsonpath='{.status.import.errors}'
+  nomos::import_error_code ""
 }
