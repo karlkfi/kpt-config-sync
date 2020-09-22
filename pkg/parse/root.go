@@ -11,9 +11,12 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,6 +132,11 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 		return err
 	}
 
+	// TODO(b/167700852): Inject this function into the Parser.
+	if p.sourceFormat == filesystem.SourceFormatUnstructured {
+		cos = addImplicitNamespaces(cos)
+	}
+
 	e := addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
@@ -209,4 +217,36 @@ func sortByScope(objs []core.Object) {
 		}
 		return false
 	})
+}
+
+func addImplicitNamespaces(cos []core.Object) []core.Object {
+	// namespaces will track the set of Namespaces we expect to exist, and those
+	// which actually do.
+	namespaces := make(map[string]bool)
+
+	for _, o := range cos {
+		if o.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
+			namespaces[o.GetName()] = true
+		} else if o.GetNamespace() != "" && !namespaces[o.GetNamespace()] {
+			// If unset, this ensures the key exists and is false.
+			// Otherwise it has no impact.
+			namespaces[o.GetNamespace()] = false
+		}
+	}
+
+	for ns, isDeclared := range namespaces {
+		if isDeclared {
+			continue
+		}
+		cos = append(cos, fake.NamespaceObject(ns,
+			core.Name(ns),
+			// We do NOT want to delete theses implicit Namespaces when the resources
+			// inside them are removed. Note that if the user later declares
+			// the Namespace without this annotation, the annotation is removed as
+			// expected.
+			core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion),
+		))
+	}
+
+	return cos
 }
