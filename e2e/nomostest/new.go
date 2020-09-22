@@ -31,17 +31,28 @@ type NTOption func(opt *ntopts.New)
 
 // New establishes a connection to a test cluster and prepares it for testing.
 //
-// Use NewWithOptions for customization.
+// Use newWithOptions for customization.
 func New(t *testing.T, ntOptions ...NTOption) *NT {
 	// TODO: we should probably put ntopts.New members inside of NT use the go-convention of mutating NT with option functions.
-	var optsStruct ntopts.New
+	optsStruct := ntopts.New{
+		Name:   testClusterName(t),
+		TmpDir: testDir(t),
+		KindCluster: ntopts.KindCluster{
+			Version: ntopts.AsKindVersion(t, *e2e.KubernetesVersion),
+		},
+		Nomos: ntopts.Nomos{
+			SourceFormat: filesystem.SourceFormatHierarchy,
+			MultiRepo:    *e2e.MultiRepo,
+		},
+	}
+
 	for _, opt := range ntOptions {
 		opt(&optsStruct)
 	}
-	return NewWithOptions(t, optsStruct)
+	return newWithOptions(t, optsStruct)
 }
 
-// NewWithOptions establishes a connection to a test cluster based on the passed
+// newWithOptions establishes a connection to a test cluster based on the passed
 //
 // options.
 //
@@ -54,9 +65,19 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 // 1) A connection to the Kubernetes cluster.
 // 2) A functioning git server hosted on the cluster.
 // 3) A fresh ACM installation.
-func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
-	if *e2e.MultiRepo && opts.SkipMultiRepo && !*e2e.ForceMultiRepo {
-		t.Skip("Test skipped for MR mode")
+func newWithOptions(t *testing.T, opts ntopts.New) *NT {
+	switch *e2e.SkipMode {
+	case e2e.RunDefault:
+		if opts.Nomos.MultiRepo && opts.SkipMultiRepo {
+			t.Skip("Test skipped for MR mode")
+		}
+	case e2e.RunAll:
+	case e2e.RunSkipped:
+		if opts.Nomos.MultiRepo && !opts.SkipMultiRepo {
+			t.Skip("Test skipped for MR mode")
+		}
+	default:
+		t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
 	}
 
 	t.Parallel()
@@ -68,23 +89,6 @@ func NewWithOptions(t *testing.T, opts ntopts.New) *NT {
 		// without triggering e2e tests.
 		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
-
-	// Set default options.
-	if opts.Name == "" {
-		opts.Name = testClusterName(t)
-	}
-	if opts.TmpDir == "" {
-		opts.TmpDir = testDir(t)
-	}
-	if opts.KindCluster.Version == "" {
-		opts.KindCluster.Version = ntopts.AsKindVersion(t, *e2e.KubernetesVersion)
-	}
-	if opts.Nomos.SourceFormat == "" {
-		opts.Nomos.SourceFormat = filesystem.SourceFormatHierarchy
-	}
-
-	// Set multi-repo based upon flag value.
-	opts.Nomos.MultiRepo = *e2e.MultiRepo
 
 	// TODO(willbeason): Support connecting to:
 	//  1) A user-specified cluster.

@@ -31,6 +31,15 @@ var KubernetesVersion = flag.String("kubernetes-version", "1.16",
 var MultiRepo = flag.Bool("multirepo", false,
 	"If true, configure multi-repo Config Sync. Otherwise configure mono-repo.")
 
-// ForceMultiRepo enables running all multi repo tests even if they are marked as skipped.
-var ForceMultiRepo = flag.Bool("force-multi-repo", false,
-	"If true, run all tests in multi repo mode instead of skipping ones that opt out.")
+// SkipMode will only run the skipped multi repo tests.
+var SkipMode = flag.String("skip-mode", "",
+	"Runs tests as given by the mode, one of \"\", runAll, runSkipped to run normally, run all tests, or run only skipped tests respectively")
+
+const (
+	// RunAll runs all tests whether skipped or not
+	RunAll = "runAll"
+	// RunSkipped runs only skipped tests
+	RunSkipped = "runSkipped"
+	// RunDefault runs tests as normal and skips skipped tests
+	RunDefault = ""
+)
