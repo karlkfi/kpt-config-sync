@@ -179,7 +179,10 @@ func TestBats(t *testing.T) {
 				3, // tests internals of clusterconfigs
 				9, // TODO(b/169084314): enable this test
 			)},
-		{fileName: "cli.bats", skipMultiRepo: skipAll},
+		{
+			fileName:      "cli.bats",
+			skipMultiRepo: skipAll, // TODO(b/158042839): implement nomos status in CLI, this may be a go rewrite
+		},
 		// Converted to cluster_resources_test.go.
 		//{fileName: "cluster_resources.bats"},
 		{fileName: "custom_resource_definitions_v1.bats"},
@@ -189,15 +192,45 @@ func TestBats(t *testing.T) {
 		{fileName: "foo_corp.bats"},
 		{fileName: "gatekeeper.bats"},
 		{fileName: "multiversion.bats"},
-		{fileName: "namespaces.bats", skipMultiRepo: skipNum(1, 3, 5, 6)},
-		{fileName: "operator-no-policy-dir.bats", skipMultiRepo: skipAll},
-		{fileName: "per_cluster_addressing.bats", skipMultiRepo: skipNum(1, 2, 5, 6)},
+		{
+			fileName: "namespaces.bats", skipMultiRepo: skipNum(
+				1, // TODO(169155915): run again once polling period is lower
+				3, // b/169155128 - we decided to not implement this for CSMR
+				5, // TODO(b/1691568640): not clearing invalid management annotation
+				6, // TODO(169155915): run again once polling period is lower
+			),
+		},
+		{
+			fileName: "operator-no-policy-dir.bats",
+			skipMultiRepo: skipNum(
+				1, // TODO(b/169158287): adjust parse errors to be part of source status
+				2, // TODO(b/168914145): adjust control knobs for CSMR
+			),
+		},
+		{
+			fileName: "per_cluster_addressing.bats",
+			skipMultiRepo: skipNum(
+				1, // TODO(169155915): run again once polling period is lower
+				2, // TODO(169155915): run again once polling period is lower
+				5, // TODO(169155915): run again once polling period is lower
+				6, // TODO(169155915): run again once polling period is lower
+			),
+		},
 		// Converted to preserve_fields_test.go.
 		//{fileName: "preserve_fields.bats"},
-		{fileName: "repoless.bats", skipMultiRepo: skipAll},
+		{
+			fileName:      "repoless.bats",
+			skipMultiRepo: skipAll, // TODO(b/168914145): adjust control knobs for CSMR
+		},
 		// Converted to resource_conditions_test.go.
 		//{fileName: "resource_conditions.bats"},
-		{fileName: "status_monitoring.bats", skipMultiRepo: skipNum(1, 2)},
+		{
+			fileName: "status_monitoring.bats",
+			skipMultiRepo: skipNum(
+				1, // TODO(b/169158287): adjust parse errors to be part of source status
+				2, // TODO(b/169158287): adjust parse errors to be part of source status
+			),
+		},
 	}
 	for idx := range testCases {
 		tc := testCases[idx]
