@@ -8,6 +8,19 @@ import (
 	"github.com/google/nomos/pkg/syncer/differ"
 )
 
+// IsManager returns true if the given reconciler is the manager for the resource.
+func IsManager(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	manager, ok := annotations[v1alpha1.ResourceManagerKey]
+	if !ok || !differ.ManagementEnabled(obj) {
+		return false
+	}
+	return manager == string(reconciler)
+}
+
 // CanManage returns true if the given reconciler is allowed to manage the given
 // resource.
 func CanManage(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {

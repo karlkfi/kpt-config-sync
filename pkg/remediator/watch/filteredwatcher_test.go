@@ -21,6 +21,8 @@ type action struct {
 }
 
 func TestFilteredWatcher(t *testing.T) {
+	reconciler := declared.Scope("test")
+
 	deployment1 := fake.DeploymentObject(core.Name("hello"))
 	deployment1Beta := fake.DeploymentObject(core.Name("hello"))
 	deployment1Beta.GetObjectKind().SetGroupVersionKind(deployment1Beta.GroupVersionKind().GroupKind().WithVersion("beta1"))
@@ -28,7 +30,10 @@ func TestFilteredWatcher(t *testing.T) {
 	deployment2 := fake.DeploymentObject(core.Name("world"))
 	deployment3 := fake.DeploymentObject(core.Name("nomes"))
 
-	managedDeployment := fake.DeploymentObject(core.Name("not-declared"), syncertest.ManagementEnabled)
+	managedBySelfDeployment := fake.DeploymentObject(core.Name("not-declared"),
+		syncertest.ManagementEnabled, difftest.ManagedBy(reconciler))
+	managedByOtherDeployment := fake.DeploymentObject(core.Name("not-declared"),
+		syncertest.ManagementEnabled, difftest.ManagedBy("other"))
 	deploymentForRoot := fake.DeploymentObject(core.Name("managed-by-root"), difftest.ManagedByRoot)
 
 	testCases := []struct {
@@ -65,18 +70,31 @@ func TestFilteredWatcher(t *testing.T) {
 			},
 		},
 		{
-			"Enqueue events for undeclared-but-managed resource",
+			"Enqueue events for undeclared-but-managed-by-other-reconciler resource",
 			[]core.Object{
 				deployment1,
 			},
 			[]action{
 				{
 					watch.Modified,
-					managedDeployment,
+					managedByOtherDeployment,
+				},
+			},
+			nil,
+		},
+		{
+			"Enqueue events for undeclared-but-managed-by-this-reconciler resource",
+			[]core.Object{
+				deployment1,
+			},
+			[]action{
+				{
+					watch.Modified,
+					managedBySelfDeployment,
 				},
 			},
 			[]core.ID{
-				core.IDOf(managedDeployment),
+				core.IDOf(managedBySelfDeployment),
 			},
 		},
 		{
@@ -153,7 +171,7 @@ func TestFilteredWatcher(t *testing.T) {
 			base := watch.NewFake()
 			q := queue.New("test")
 			opts := watcherOptions{
-				reconciler: "test",
+				reconciler: reconciler,
 				resources:  dr,
 				queue:      q,
 				startWatch: func(options metav1.ListOptions) (watch.Interface, error) {

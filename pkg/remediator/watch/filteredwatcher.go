@@ -198,7 +198,13 @@ func (w *filteredWatcher) shouldProcess(object core.Object) bool {
 		// declaration.
 		return object.GroupVersionKind() == decl.GroupVersionKind()
 	}
+
 	// Even if the object is undeclared, we still want to process it if it is
 	// tagged as a managed object.
-	return differ.ManagementEnabled(object)
+	if !differ.ManagementEnabled(object) {
+		return false
+	}
+
+	// Only process non declared, managed resources if we are the manager.
+	return diff.IsManager(w.reconciler, object)
 }
