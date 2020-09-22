@@ -53,6 +53,10 @@ type NT struct {
 	// Only used in multi-repo tests.
 	NonRootRepos map[string]*Repository
 
+	// FilesystemPollingPeriod is the time between checking the filessystem for udpates
+	// to the local Git repository.
+	FilesystemPollingPeriod time.Duration
+
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
 	gitPrivateKeyPath string
 

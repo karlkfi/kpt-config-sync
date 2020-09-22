@@ -44,3 +44,9 @@ const (
 	gitSyncName     = "GIT_SYNC_USERNAME"
 	gitSyncPassword = "GIT_SYNC_PASSWORD"
 )
+
+const (
+	// FilesystemPollingPeriod indicates the time between checking the filesystem
+	// for git updates.
+	FilesystemPollingPeriod = "FILESYSTEM_POLLING_PERIOD"
+)

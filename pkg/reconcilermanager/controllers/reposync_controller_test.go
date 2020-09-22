@@ -3,7 +3,9 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -40,11 +42,24 @@ const (
 
 	unsupportedContainer = "abc"
 
+	pollingPeriod = "50ms"
+
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "56ae494afb6162843a9d4b9d82624c06"
+	nsAnnotation = "0599c8ba83efdfe24b893252e7a32eae"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "5e66d1e08ef85751beb3f67654dab316"
+	nsUpdatedAnnotation = "4591f6e8511bd62ab8db138f9dbc5432"
 )
+
+// Set in init.
+var filesystemPollingPeriod time.Duration
+
+func init() {
+	var err error
+	filesystemPollingPeriod, err = time.ParseDuration(pollingPeriod)
+	if err != nil {
+		glog.Exitf("failed to parse polling period: %q, got error: %v, want error: nil", pollingPeriod, err)
+	}
+}
 
 func repoSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := fake.RepoSyncObject(opts...)
@@ -103,6 +118,7 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
 	testReconciler := NewRepoSyncReconciler(
+		filesystemPollingPeriod,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
 		s,
@@ -248,7 +264,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision),
+			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
@@ -342,7 +358,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision),
+			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}

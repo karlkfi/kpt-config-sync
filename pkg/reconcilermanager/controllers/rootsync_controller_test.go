@@ -33,9 +33,9 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "6509f3594863fa38c60d9decea4f6ba9"
+	rsAnnotation = "eddad408a2b3e94314f4d5b5a441d5fb"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "63519480403f277f98f2c791d4647705"
+	rsUpdatedAnnotation = "f5f9d5d58163aabf40245d14623565cb"
 
 	rootsyncSSHKey              = "root-ssh-key"
 	rootsyncTokenAuthSecretName = "root-token"
@@ -111,6 +111,7 @@ func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Clie
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
 	testReconciler := NewRootSyncReconciler(
+		filesystemPollingPeriod,
 		rootsyncCluster,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
@@ -285,7 +286,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(reconciler),
-			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitRevision),
+			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitRevision, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -382,7 +383,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(reconciler),
-			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitUpdatedRevision),
+			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitUpdatedRevision, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(

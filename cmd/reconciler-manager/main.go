@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	"github.com/go-logr/glogr"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
@@ -20,6 +22,9 @@ var (
 	// Root-Repo-only flag.
 	clusterName = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"),
 		"Cluster name to use for Cluster selection")
+
+	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", pollingPeriod(),
+		"Period of time between checking the filesystem for udpates to the local Git repository.")
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -55,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repoSync := controllers.NewRepoSyncReconciler(mgr.GetClient(),
+	repoSync := controllers.NewRepoSyncReconciler(*filesystemPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RepoSync"),
 		mgr.GetScheme())
 	if err := repoSync.SetupWithManager(mgr); err != nil {
@@ -63,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rootSync := controllers.NewRootSyncReconciler(*clusterName, mgr.GetClient(),
+	rootSync := controllers.NewRootSyncReconciler(*filesystemPollingPeriod, *clusterName, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
 	if err := rootSync.SetupWithManager(mgr); err != nil {
@@ -78,4 +83,17 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func pollingPeriod() time.Duration {
+	val, present := os.LookupEnv(controllers.FilesystemPollingPeriod)
+	if present {
+		pollingFreq, err := time.ParseDuration(val)
+		if err != nil {
+			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
+				"got value: %v, want err: nil", controllers.FilesystemPollingPeriod, pollingFreq))
+		}
+		return pollingFreq
+	}
+	return v1alpha1.DefaultFilesystemPollingPeriod
 }

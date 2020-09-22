@@ -88,6 +88,17 @@ var (
 	// config-management-system, this namespace gets created elsewhere
 )
 
+// filesystemPollingPeriod specifies filesystem polling period as time.Duration
+var filesystemPollingPeriod time.Duration
+
+// IsReconcilerManagerConfigMap returns true if passed obj is the
+// reconciler-manager ConfigMap reconciler-manager-cm in config-management namespace.
+var IsReconcilerManagerConfigMap = func(obj core.Object) bool {
+	return obj.GetName() == "reconciler-manager-cm" &&
+		obj.GetNamespace() == "config-management-system" &&
+		obj.GroupVersionKind() == kinds.ConfigMap()
+}
+
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
 func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
@@ -96,7 +107,8 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 
 	objs := installationManifests(nt, tmpManifestsDir)
 	if nomos.MultiRepo {
-		objs = multiRepoObjects(nt.T, objs)
+		filesystemPollingPeriod = nt.FilesystemPollingPeriod
+		objs = multiRepoObjects(nt.T, objs, setReconcilerDebugMode, setReconcilerFilesystemPollingPeriod)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -230,25 +242,28 @@ func monoRepoObjects(objects []core.Object) []core.Object {
 	return filtered
 }
 
-func multiRepoObjects(t *testing.T, objects []core.Object) []core.Object {
+func multiRepoObjects(t *testing.T, objects []core.Object, opts ...func(t *testing.T, obj core.Object)) []core.Object {
 	var filtered []core.Object
 	found := false
 	for _, obj := range objects {
-		if obj.GetName() == "reconciler-manager-cm" &&
-			obj.GetNamespace() == "config-management-system" &&
-			obj.GroupVersionKind() == kinds.ConfigMap() {
-			setReconcilerDebugMode(t, obj)
+		u, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("parsed multi repo object: %q was not Unstructured %v", u.GetName(), u)
+		}
+		if IsReconcilerManagerConfigMap(obj) {
 			// Mark that we've found the ReconcilerManager ConfigMap.
 			// This way we know we've enabled debug mode.
 			found = true
 		}
-
+		for _, opt := range opts {
+			opt(t, obj)
+		}
 		if multiObjects[obj.GetName()] || sharedObjects[obj.GetName()] {
 			filtered = append(filtered, obj)
 		}
 	}
 	if !found {
-		t.Fatal("Did not find Reconciler Manager")
+		t.Fatal("Did not find Reconciler Manager ConfigMap")
 	}
 	return filtered
 }
@@ -307,6 +322,9 @@ func setReconcilerDebugMode(t *testing.T, obj core.Object) {
 		t.Fatalf("parsed Reconciler Manager ConfigMap was not Unstructured %v", u)
 	}
 
+	if !IsReconcilerManagerConfigMap(u) {
+		return
+	}
 	deploymentYaml, found, err := unstructured.NestedString(u.Object, "data", "deployment.yaml")
 	if !found {
 		t.Fatal("Reconciler Manager ConfigMap has no deployment.yaml entry")
@@ -346,4 +364,22 @@ func setReconcilerDebugMode(t *testing.T, obj core.Object) {
 		t.Fatalf("Setting deployment.yaml: %v", err)
 	}
 	t.Log("Set deployment.yaml")
+}
+
+// setReconcilerFilesystemPollingPeriod update Reconciler Manager configmap
+// reconciler-manager-cm with filesystem polling period to override the default.
+func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		t.Fatalf("parsed Reconciler Manager ConfigMap was not Unstructured %v", u)
+	}
+	if !IsReconcilerManagerConfigMap(u) {
+		return
+	}
+	err := unstructured.SetNestedField(u.Object,
+		filesystemPollingPeriod.String(), "data", controllers.FilesystemPollingPeriod)
+	if err != nil {
+		t.Fatalf("Setting filesystem polling period: %v", err)
+	}
+	t.Log("Set filesystem polling period")
 }

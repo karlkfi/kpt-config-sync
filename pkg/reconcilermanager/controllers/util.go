@@ -14,11 +14,15 @@ import (
 )
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranch, gitRev string) map[string]string {
+func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranch, gitRev, pollPeriod string) map[string]string {
 	result := make(map[string]string)
 	result["SCOPE"] = string(reconcilerScope)
 	result["POLICY_DIR"] = policyDir
 	result["GIT_REPO"] = gitRepo
+
+	// Add Filesystem Polling Period.
+	result[FilesystemPollingPeriod] = pollPeriod
+
 	if gitBranch != "" {
 		result["GIT_BRANCH"] = gitBranch
 	} else {
@@ -33,8 +37,8 @@ func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranc
 }
 
 // rootReconcilerData returns configmap data for root reconciler.
-func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName, gitRepo, gitBranch, gitRev string) map[string]string {
-	result := reconcilerData(reconcilerScope, policyDir, gitRepo, gitBranch, gitRev)
+func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName, gitRepo, gitBranch, gitRev, pollPeriod string) map[string]string {
+	result := reconcilerData(reconcilerScope, policyDir, gitRepo, gitBranch, gitRev, pollPeriod)
 	result["CLUSTER_NAME"] = clusterName
 	return result
 }

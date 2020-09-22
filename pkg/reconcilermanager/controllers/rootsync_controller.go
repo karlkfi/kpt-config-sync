@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -33,12 +34,13 @@ type RootSyncReconciler struct {
 }
 
 // NewRootSyncReconciler returns a new RootSyncReconciler.
-func NewRootSyncReconciler(cn string, c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
+func NewRootSyncReconciler(p time.Duration, cn string, c client.Client, l logr.Logger, s *runtime.Scheme) *RootSyncReconciler {
 	return &RootSyncReconciler{
 		reconcilerBase: reconcilerBase{
-			client: c,
-			log:    l,
-			scheme: s,
+			client:                  c,
+			log:                     l,
+			scheme:                  s,
+			filesystemPollingPeriod: p,
 		},
 		clusterName: cn,
 	}
@@ -162,7 +164,8 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 		},
 		{
 			cmName: rootSyncResourceName(reconciler),
-			data:   rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
+			data: rootReconcilerData(declared.RootReconciler, rs.Spec.Dir, r.clusterName,
+				rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision, r.filesystemPollingPeriod.String()),
 		},
 	}
 }

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -16,9 +17,10 @@ import (
 
 // reconcilerBase provides common data and methods for the RepoSync and RootSync reconcilers
 type reconcilerBase struct {
-	client client.Client
-	log    logr.Logger
-	scheme *runtime.Scheme
+	client                  client.Client
+	log                     logr.Logger
+	scheme                  *runtime.Scheme
+	filesystemPollingPeriod time.Duration
 }
 
 // configMapMutation provides an interface for named mutation functions passed to upsertConfigMaps

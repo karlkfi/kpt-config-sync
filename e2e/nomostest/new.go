@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
@@ -107,14 +108,15 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	c := connect(t, cfg)
 
 	nt := &NT{
-		Context:        context.Background(),
-		T:              t,
-		ClusterName:    opts.Name,
-		TmpDir:         opts.TmpDir,
-		Config:         cfg,
-		Client:         c,
-		kubeconfigPath: kubeconfigPath,
-		MultiRepo:      opts.Nomos.MultiRepo,
+		Context:                 context.Background(),
+		T:                       t,
+		ClusterName:             opts.Name,
+		TmpDir:                  opts.TmpDir,
+		Config:                  cfg,
+		Client:                  c,
+		kubeconfigPath:          kubeconfigPath,
+		MultiRepo:               opts.Nomos.MultiRepo,
+		FilesystemPollingPeriod: 50 * time.Millisecond,
 	}
 
 	connectToLocalRegistry(nt)

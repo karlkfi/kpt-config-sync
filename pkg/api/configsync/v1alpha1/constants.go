@@ -1,5 +1,7 @@
 package v1alpha1
 
+import "time"
+
 // API type constants
 const (
 	// RepoSyncName is the expected name of any RepoSync CR.
@@ -38,4 +40,10 @@ const (
 const (
 	// DefaultPeriodSecs is the default value in seconds between consecutive syncs.
 	DefaultPeriodSecs = 15
+)
+
+const (
+	// DefaultFilesystemPollingPeriod specifies time between checking the filesystem
+	// for udpates to the local Git repository.
+	DefaultFilesystemPollingPeriod = 5 * time.Second
 )

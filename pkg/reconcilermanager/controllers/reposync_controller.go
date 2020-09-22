@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -34,12 +35,13 @@ type RepoSyncReconciler struct {
 }
 
 // NewRepoSyncReconciler returns a new RepoSyncReconciler.
-func NewRepoSyncReconciler(c client.Client, l logr.Logger, s *runtime.Scheme) *RepoSyncReconciler {
+func NewRepoSyncReconciler(p time.Duration, c client.Client, l logr.Logger, s *runtime.Scheme) *RepoSyncReconciler {
 	return &RepoSyncReconciler{
 		reconcilerBase: reconcilerBase{
-			client: c,
-			log:    l,
-			scheme: s,
+			client:                  c,
+			log:                     l,
+			scheme:                  s,
+			filesystemPollingPeriod: p,
 		},
 	}
 }
@@ -91,7 +93,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, repoConfigMapMutations(&rs), owRefs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(&rs), owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -152,7 +154,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
+func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: repoSyncResourceName(rs.Namespace, gitSync),
@@ -167,7 +169,8 @@ func repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
 		},
 		{
 			cmName: repoSyncResourceName(rs.Namespace, reconciler),
-			data:   reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir, rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision),
+			data: reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir,
+				rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision, r.filesystemPollingPeriod.String()),
 		},
 	}
 }

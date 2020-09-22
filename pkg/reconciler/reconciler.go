@@ -48,9 +48,9 @@ type Options struct {
 	// the Applier. At the end of each period, the Applier will re-apply its
 	// current set of declared resources to the cluster.
 	ApplierResyncPeriod time.Duration
-	// GitPollingFrequency is how often to check the local git repository for
+	// FilesystemPollingFrequency is how often to check the local git repository for
 	// changes.
-	GitPollingFrequency time.Duration
+	FilesystemPollingFrequency time.Duration
 	// GitRoot is the absolute path to the Git repository.
 	// Usually contains a symlink that must be resolved every time before parsing.
 	GitRoot cmpath.Absolute
@@ -145,13 +145,13 @@ func Run(ctx context.Context, opts Options) {
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fs, opts.DiscoveryClient, a, rem)
+			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.GitPollingFrequency, fs, opts.DiscoveryClient, a, rem)
+			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer

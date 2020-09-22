@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -16,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -43,7 +45,7 @@ var (
 		"Period of time between forced re-syncs from Git (even without a new commit).")
 	workers = flag.Int("workers", 1,
 		"Number of concurrent remediator workers to run at once.")
-	gitPollingPeriod = flag.Duration("git-polling-period", 5*time.Second,
+	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", pollingPeriod(),
 		"Period of time between checking the filessystem for udpates to the local Git repository.")
 
 	// Root-Repo-only flags. If set for a Namespace-scoped Reconciler, causes the Reconciler to fail immediately.
@@ -94,17 +96,17 @@ func main() {
 	}
 
 	opts := reconciler.Options{
-		FightDetectionThreshold: *fightDetectionThreshold,
-		NumWorkers:              *workers,
-		ReconcilerScope:         declared.Scope(*scope),
-		ApplierResyncPeriod:     *resyncPeriod,
-		GitPollingFrequency:     *gitPollingPeriod,
-		GitRoot:                 absGitDir,
-		GitRev:                  *gitRev,
-		GitBranch:               *gitBranch,
-		GitRepo:                 *gitRepo,
-		PolicyDir:               relPolicyDir,
-		DiscoveryClient:         dc,
+		FightDetectionThreshold:    *fightDetectionThreshold,
+		NumWorkers:                 *workers,
+		ReconcilerScope:            declared.Scope(*scope),
+		ApplierResyncPeriod:        *resyncPeriod,
+		FilesystemPollingFrequency: *filesystemPollingPeriod,
+		GitRoot:                    absGitDir,
+		GitRev:                     *gitRev,
+		GitBranch:                  *gitBranch,
+		GitRepo:                    *gitRepo,
+		PolicyDir:                  relPolicyDir,
+		DiscoveryClient:            dc,
 	}
 	if declared.Scope(*scope) == declared.RootReconciler {
 		glog.Info("Starting reconciler for: root")
@@ -121,4 +123,17 @@ func main() {
 		}
 	}
 	reconciler.Run(context.Background(), opts)
+}
+
+func pollingPeriod() time.Duration {
+	val, present := os.LookupEnv(controllers.FilesystemPollingPeriod)
+	if present {
+		pollingFreq, err := time.ParseDuration(val)
+		if err != nil {
+			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
+				"got value: %v, want err: nil", controllers.FilesystemPollingPeriod, pollingFreq))
+		}
+		return pollingFreq
+	}
+	return v1alpha1.DefaultFilesystemPollingPeriod
 }
