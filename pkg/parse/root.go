@@ -93,16 +93,32 @@ func (p *root) Run(ctx context.Context) {
 // Read implements Runnable.
 func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
+	if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
+		return nil, status.APIServerError(err2, "setting source status")
+	}
 	if err != nil {
-		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
-			return nil, status.APIServerError(err2, "setting source status")
-		}
 		return nil, err
 	}
 	return &state, nil
 }
 
-func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
+// Parse implements Runnable.
+// TODO(b/167677315): DRY this with the namespace version.
+func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
+	if p.lastApplied == state.policyDir.OSPath() {
+		return nil
+	}
+
+	var err status.MultiError
+	defer func() {
+		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
+			glog.Errorf("Failed to set sync status: %v", err2)
+		} else if err == nil {
+			// Only set lastApplied if *everything* succeeded, including status update.
+			p.lastApplied = state.policyDir.OSPath()
+		}
+	}()
+
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
@@ -113,7 +129,7 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, wantFiles)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// TODO(b/167700852): Inject this function into the Parser.
@@ -124,60 +140,23 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 	e := addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
-		return nil, err
+		return err
 	}
 
 	// TODO(b/167700852): Allow passing these validators into the Parser.
 	err = status.Append(err, ValidateRepoSyncs.Validate(filesystem.AsFileObjects(cos)))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Ensure that if a Namespace is declared, it is inserted before any objects
 	// that would go inside it.
 	sortByScope(cos)
-	return cos, nil
-}
-
-// Parse implements Runnable.
-// TODO(b/167677315): DRY this with the namespace version.
-func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
-	if p.lastApplied == state.policyDir.OSPath() {
-		return nil
-	}
-
-	cos, err := p.parseSource(state)
-	if err != nil {
-		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
-			glog.Errorf("Failed to set source status: %v", err2)
-		}
-		return err
-	}
 
 	err = p.update(ctx, cos)
-	if err != nil {
-		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
-			glog.Errorf("Failed to set sync status: %v", err2)
-		}
-		return err
+	if err == nil {
+		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
 	}
-
-	// Update status to clear errors
-	if err2 := p.setSourceStatus(ctx, *state, nil); err2 != nil {
-		glog.Errorf("Failed to set source status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err2 := p.setSyncStatus(ctx, state.commit, nil); err2 != nil {
-		glog.Errorf("Failed to set sync status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err != nil {
-		return err
-	}
-
-	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-	// Only set lastApplied if *everything* succeeded, including status update.
-	p.lastApplied = state.policyDir.OSPath()
 	return err
 }
 

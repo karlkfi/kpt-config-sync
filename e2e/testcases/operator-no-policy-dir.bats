@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-load "../lib/env"
 load "../lib/git"
 load "../lib/configmap"
 load "../lib/setup"
@@ -22,30 +21,19 @@ test_setup() {
 
 test_teardown() {
   setup::git::remove_all acme
+
   kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
   nomos::restart_pods
+
 }
 
-source_error_code() {
-  nomos::source_error_json | jq -r ".[0].code"
-}
-
-set_importer_no_policy_dir() {
-  if env::csmr; then
-    # No teardown required since the Go framework runs one test per setup
-    kubectl patch -n config-management-system rootsync root-sync \
-      '{"spec":{"git":{"dir":""}}}'
-  else
-    kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
-    nomos::restart_pods
-  fi
-}
 
 @test "${FILE_NAME}: Absence of cluster, namespaces, systems directories at POLICY_DIR yields a missing repo error" {
-  set_importer_no_policy_dir
+  kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
+  nomos::restart_pods
 
   # Verify that the application of the operator config yields the correct error code
-  wait::for -t 60 -o "KNV1017" -- source_error_code
+  wait::for -t 60 -o "KNV1017" -- kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
 }
 
 # This test case gradually adjusts root and acme directories' contents to move from:
@@ -53,10 +41,11 @@ set_importer_no_policy_dir() {
 @test "${FILE_NAME}: Confirm that nomos syncs correctly with POLICY_DIR unset" {
   setup::git::add_contents_to_root acme
 
-  set_importer_no_policy_dir
+  kubectl apply -f "${MANIFEST_DIR}/importer_no-policy-dir.yaml"
+  nomos::restart_pods
 
   setup::git::remove_folder acme
 
   wait::for -t 60 -- nomos::repo_synced
-  wait::for -t 60 -o "null" -- source_error_code
+  wait::for -t 60 -o "" -- kubectl get repo repo -o=jsonpath='{.status.import.errors}'
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/core"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
@@ -81,57 +79,15 @@ func (p *namespace) Run(ctx context.Context) {
 // Read implements Runnable.
 func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 	state, err := p.readGitState()
+	// We don't want to bail out immediately as we want to surface this error to
+	// the user in the RepoSync's status field.
+	if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
+		return nil, status.APIServerError(err2, "setting source status")
+	}
 	if err != nil {
-		// We don't want to bail out immediately as we want to surface this error to
-		// the user in the RepoSync's status field.
-		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
-			return nil, status.APIServerError(err2, "setting source status")
-		}
 		return nil, err
 	}
 	return &state, nil
-}
-
-func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiError) {
-	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, state.files)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse and generate a ResourceGroup from the Kptfile if it exists
-	cos, e := AsResourceGroup(cos)
-	if e != nil {
-		err = status.Append(err, e)
-		return nil, err
-	}
-
-	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
-	if e != nil {
-		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
-		return nil, err
-	}
-
-	objs := filesystem.AsFileObjects(cos)
-
-	scoper, _, err := filesystem.BuildScoper(p.discoveryInterface, true, objs, nil, filesystem.NoSyncedCRDs)
-	if err != nil {
-		return nil, err
-	}
-	// We recreate this validator with every run as the set of available CRDs may
-	// change between runs. The user may have either declared new CRDs in the root
-	// repo, or they may have manually applied new ones.
-	err = noClusterScopeValidator(scoper).Validate(objs)
-	if err != nil {
-		return nil, err
-	}
-
-	nsv := repositoryScopeVisitor(p.scope)
-	err = nsv.Validate(objs)
-	if err != nil {
-		return nil, err
-	}
-	return cos, nil
 }
 
 // Parse implements Runnable.
@@ -140,43 +96,62 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 		return nil
 	}
 
-	cos, err := p.parseSource(state)
-	if err != nil {
-		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
-			glog.Errorf("Failed to set source status: %v", err2)
+	var err status.MultiError
+	defer func() {
+		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
+			glog.Errorf("Failed to set sync status: %v", err2)
+		} else if err == nil {
+			// Only set lastApplied if *everything* succeeded, including status update.
+			p.lastApplied = state.policyDir.OSPath()
 		}
+	}()
+
+	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, state.files)
+	if err != nil {
+		return err
+	}
+
+	// Parse and generate a ResourceGroup from the Kptfile if it exists
+	cos, e := AsResourceGroup(cos)
+	if e != nil {
+		err = status.Append(err, e)
+		return err
+	}
+
+	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
+	if e != nil {
+		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
+		return err
+	}
+
+	objs := filesystem.AsFileObjects(cos)
+
+	scoper, _, err := filesystem.BuildScoper(p.discoveryInterface, true, objs, nil, filesystem.NoSyncedCRDs)
+	if err != nil {
+		return err
+	}
+	// We recreate this validator with every run as the set of available CRDs may
+	// change between runs. The user may have either declared new CRDs in the root
+	// repo, or they may have manually applied new ones.
+	err = noClusterScopeValidator(scoper).Validate(objs)
+	if err != nil {
+		return err
+	}
+
+	nsv := repositoryScopeVisitor(p.scope)
+	err = nsv.Validate(objs)
+	if err != nil {
 		return err
 	}
 
 	err = p.update(ctx, cos)
-	if err != nil {
-		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
-			glog.Errorf("Failed to set sync status: %v", err2)
-		}
-		return err
+	if err == nil {
+		glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
 	}
-
-	// Update status to clear errors
-	if err2 := p.setSourceStatus(ctx, *state, nil); err2 != nil {
-		glog.Errorf("Failed to set source status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err2 := p.setSyncStatus(ctx, state.commit, nil); err2 != nil {
-		glog.Errorf("Failed to set sync status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err != nil {
-		return err
-	}
-
-	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-	// Only set lastApplied if *everything* succeeded, including status update.
-	p.lastApplied = state.policyDir.OSPath()
-	return nil
+	return err
 }
 
-// setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
-// will be removed from the status.
 func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
 	// The main idea here is an error-robust way of surfacing to the user that
 	// we're having problems reading from our local clone of their git repository.
@@ -209,8 +184,6 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	return nil
 }
 
-// setSyncStatus sets the sync status with a given git state and set of errors.  If errs is empty, all errors
-// will be removed from the status.
 func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
