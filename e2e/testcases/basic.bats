@@ -27,8 +27,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::commit
-
-  wait::for kubectl get ns dir
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Check that the deployment was created"
   wait::for -t 60 -- kubectl get deployment hello-world -n dir
@@ -50,6 +49,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::commit -m "Add a deployment to a directory"
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Ensure that the system created a sync for the deployment"
   wait::for -t 60 -- kubectl get sync deployment.apps
@@ -64,9 +64,9 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 @test "${FILE_NAME}: Check that deleting clusterconfigs is recoverable" {
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   wait::for kubectl get ns dir
-  wait::for -t 30 -- nomos::repo_synced
 
   debug::log "Forcefully delete clusterconfigs and verify recovery"
   kubectl delete clusterconfig --all
@@ -74,7 +74,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add "${NOMOS_DIR}/examples/acme/cluster/admin-clusterrole.yaml" acme/cluster/admin-clusterrole.yaml
   git::commit
 
-  wait::for -t 30 -- nomos::repo_synced
+  wait::for -t 60 -- nomos::repo_synced
   wait::for -t 30 -- kubectl get clusterconfig config-management-cluster-config
 }
 
@@ -82,20 +82,24 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   mkdir -p acme/namespaces/accounting
   git::add ${YAML_DIR}/accounting-namespace.yaml acme/namespaces/accounting/namespace.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
   wait::for kubectl get ns accounting
   git::rm acme/namespaces/accounting/namespace.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
   wait::for -f -t 60 -- kubectl get ns accounting
 }
 
 @test "${FILE_NAME}: Namespace to Policyspace conversion" {
   git::add ${YAML_DIR}/dir-namespace.yaml acme/namespaces/dir/namespace.yaml
   git::commit
+  wait::for nomos::repo_synced
   wait::for kubectl get ns dir
 
   git::rm acme/namespaces/dir/namespace.yaml
   git::add ${YAML_DIR}/subdir-namespace.yaml acme/namespaces/dir/subdir/namespace.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   wait::for kubectl get ns subdir
   wait::for -f -- kubectl get ns dir
@@ -107,6 +111,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::add ${YAML_DIR}/replicaset-helloworld.yaml acme/namespaces/dir/replicaset.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "check that the deployment and replicaset were created"
   wait::for -t 60 -- kubectl get deployment hello-world -n dir
@@ -115,6 +120,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   debug::log "Remove the deployment"
   git::rm acme/namespaces/dir/deployment.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "check that the deployment was removed and replicaset remains"
   wait::for -f -t 60 -- kubectl get deployment hello-world -n dir
@@ -125,6 +131,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/backend/namespace.yaml" acme/namespaces/eng/backend/namespace.yaml
   git::add "${NOMOS_DIR}/examples/acme/namespaces/eng/backend/bob-rolebinding.yaml" acme/namespaces/eng/backend/br.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
   wait::for -- kubectl get rolebinding -n backend bob-rolebinding
 
   run kubectl get rolebindings -n backend bob-rolebinding -o yaml
@@ -132,7 +139,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
 
   git::update ${YAML_DIR}/robert-rolebinding.yaml acme/namespaces/eng/backend/br.yaml
   git::commit
-  wait::for -t 30 -- nomos::repo_synced
+  wait::for -t 60 -- nomos::repo_synced
 
   run kubectl get rolebindings -n backend bob-rolebinding
   assert::contains "NotFound"
@@ -154,6 +161,7 @@ function manage_namespace() {
   git::add "${YAML_DIR}/reserved_namespaces/namespace.${ns}.yaml" \
     "acme/namespaces/${ns}/namespace.yaml"
   git::commit -m "Start managing the namespace"
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Wait until managed service appears on the cluster"
   wait::for -t 30 -- kubectl get services "some-service" --namespace="${ns}"
@@ -161,6 +169,7 @@ function manage_namespace() {
   debug::log "Remove the namespace directory from the repo"
   git::rm "acme/namespaces/${ns}"
   git::commit -m "Remove the namespace from the managed set of namespaces"
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Wait until the managed resource disappears from the cluster"
   wait::for -f -t 60 -- kubectl get services "some-service" --namespace="${ns}"
