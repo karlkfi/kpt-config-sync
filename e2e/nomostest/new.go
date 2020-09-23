@@ -66,18 +66,24 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 // 2) A functioning git server hosted on the cluster.
 // 3) A fresh ACM installation.
 func newWithOptions(t *testing.T, opts ntopts.New) *NT {
-	switch *e2e.SkipMode {
-	case e2e.RunDefault:
-		if opts.Nomos.MultiRepo && opts.SkipMultiRepo {
-			t.Skip("Test skipped for MR mode")
+	if opts.Nomos.MultiRepo {
+		if opts.MultiRepoIncompatible {
+			t.Skip("Test incompatible with MultiRepo mode")
 		}
-	case e2e.RunAll:
-	case e2e.RunSkipped:
-		if opts.Nomos.MultiRepo && !opts.SkipMultiRepo {
-			t.Skip("Test skipped for MR mode")
+
+		switch *e2e.SkipMode {
+		case e2e.RunDefault:
+			if opts.SkipMultiRepo {
+				t.Skip("Test skipped for MultiRepo mode")
+			}
+		case e2e.RunAll:
+		case e2e.RunSkipped:
+			if !opts.SkipMultiRepo {
+				t.Skip("Test skipped for MultiRepo mode")
+			}
+		default:
+			t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
 		}
-	default:
-		t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
 	}
 
 	t.Parallel()

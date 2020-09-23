@@ -17,9 +17,10 @@ import (
 )
 
 type BatsTest struct {
-	fileName      string
-	nomosDir      string
-	skipMultiRepo func(int) bool
+	fileName              string
+	nomosDir              string
+	skipMultiRepo         func(int) bool
+	multiRepoIncompatible func(int) bool
 }
 
 func (bt *BatsTest) batsPath() string {
@@ -50,6 +51,9 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 		var opts []nomostest.NTOption
 		if bt.skipMultiRepo != nil && bt.skipMultiRepo(testNum) {
 			opts = append(opts, ntopts.SkipMultiRepo)
+		}
+		if bt.multiRepoIncompatible != nil && bt.multiRepoIncompatible(testNum) {
+			opts = append(opts, ntopts.MultiRepoIncompatible)
 		}
 		nt := nomostest.New(t, opts...)
 
@@ -146,10 +150,10 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 
 func TestBats(t *testing.T) {
 	t.Parallel()
-	skipAll := func(int) bool {
+	allTests := func(int) bool {
 		return true
 	}
-	skipNum := func(nums ...int) func(int) bool {
+	testNums := func(nums ...int) func(int) bool {
 		return func(num int) bool {
 			for _, n := range nums {
 				if n == num {
@@ -173,15 +177,18 @@ func TestBats(t *testing.T) {
 		{fileName: "apiservice.bats"},
 		{
 			fileName: "basic.bats",
-			skipMultiRepo: skipNum(
+			skipMultiRepo: testNums(
+				9, // TODO(b/169084314): enable this test
+			),
+			multiRepoIncompatible: testNums(
 				1, // tests internals of namespaceconfig
 				2, // tests internals of syncs
 				3, // tests internals of clusterconfigs
-				9, // TODO(b/169084314): enable this test
-			)},
+			),
+		},
 		{
 			fileName:      "cli.bats",
-			skipMultiRepo: skipAll, // TODO(b/158042839): implement nomos status in CLI, this may be a go rewrite
+			skipMultiRepo: allTests, // TODO(b/158042839): implement nomos status in CLI, this may be a go rewrite
 		},
 		// Converted to cluster_resources_test.go.
 		//{fileName: "cluster_resources.bats"},
@@ -193,40 +200,43 @@ func TestBats(t *testing.T) {
 		{fileName: "gatekeeper.bats"},
 		{fileName: "multiversion.bats"},
 		{
-			fileName: "namespaces.bats", skipMultiRepo: skipNum(
-				1, // TODO(169155915): run again once polling period is lower
-				3, // b/169155128 - we decided to not implement this for CSMR
-				5, // TODO(b/1691568640): not clearing invalid management annotation
-				6, // TODO(169155915): run again once polling period is lower
+			fileName: "namespaces.bats",
+			skipMultiRepo: testNums(
+				1, // TODO(b/169155915): run again once polling period is lower
+				5, // TODO(b/169174036): not clearing invalid management annotation
+				6, // TODO(b/169155915): run again once polling period is lower
+			),
+			multiRepoIncompatible: testNums(
+				3, // b/169155128 - namespace tombstoning that was used in MonoRepo for status, we decided to not implement this for CSMR
 			),
 		},
 		{
 			fileName: "operator-no-policy-dir.bats",
-			skipMultiRepo: skipNum(
+			skipMultiRepo: testNums(
 				1, // TODO(b/169158287): adjust parse errors to be part of source status
 				2, // TODO(b/168914145): adjust control knobs for CSMR
 			),
 		},
 		{
 			fileName: "per_cluster_addressing.bats",
-			skipMultiRepo: skipNum(
-				1, // TODO(169155915): run again once polling period is lower
-				2, // TODO(169155915): run again once polling period is lower
-				5, // TODO(169155915): run again once polling period is lower
-				6, // TODO(169155915): run again once polling period is lower
+			skipMultiRepo: testNums(
+				1, // TODO(b/169155915): run again once polling period is lower
+				2, // TODO(b/169155915): run again once polling period is lower
+				5, // TODO(b/169155915): run again once polling period is lower
+				6, // TODO(b/169155915): run again once polling period is lower
 			),
 		},
 		// Converted to preserve_fields_test.go.
 		//{fileName: "preserve_fields.bats"},
 		{
 			fileName:      "repoless.bats",
-			skipMultiRepo: skipAll, // TODO(b/168914145): adjust control knobs for CSMR
+			skipMultiRepo: allTests, // TODO(b/168914145): adjust control knobs for CSMR
 		},
 		// Converted to resource_conditions_test.go.
 		//{fileName: "resource_conditions.bats"},
 		{
 			fileName: "status_monitoring.bats",
-			skipMultiRepo: skipNum(
+			skipMultiRepo: testNums(
 				1, // TODO(b/169158287): adjust parse errors to be part of source status
 				2, // TODO(b/169158287): adjust parse errors to be part of source status
 			),
