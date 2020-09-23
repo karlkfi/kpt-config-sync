@@ -68,13 +68,11 @@ function check_cluster_scoped_resource() {
   # check selection for correct value
   wait::for -t 30 -- resource_field_eq ${res} ${resname} ${jsonpath} ${create}
 
-  local resver
-  resver=$(resource::resource_version ${res} e2e-test-${res})
   git::update ${YAML_DIR}/${res}${resext}-modify.yaml ${respath}
   git::commit
 
   # wait for update
-  resource::wait_for_update -t 20 ${res} ${resname} ${resver}
+  wait::for -t 60 -- nomos::repo_synced
   selection=$(kubectl get ${res} ${resname} -ojson | jq -c "${jsonpath}")
   [[ "$selection" == "$modify" ]] || debug::error "$selection != $modify"
 
