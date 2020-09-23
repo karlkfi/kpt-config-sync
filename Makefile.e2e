@@ -160,14 +160,12 @@ test-e2e-go: __push-local-image __install-nomos-local test-e2e-go-nobuild
 # This doesn't rebuild the Nomos image, so you can modify test code and rerun
 # this without having to rebuild the image.
 test-e2e-go-nobuild:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m
-	@GO111MODULE=on go test ./e2e/... --e2e --multirepo --timeout 60m
+	@./scripts/e2e-go.sh --timeout 60m
 
 # Go test target for Prow.
 # Separate from the above as we are still tuning how Prow runs tests.
 __test-e2e-go-nobuild-prow:
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 40m --parallel 12
-	@GO111MODULE=on go test ./e2e/... --e2e --multirepo --timeout 60m --parallel 12
+	@./scripts/e2e-go.sh --timeout 40m --parallel 12
 
 # The target to be run by Prow for e2e tests.
 # Called by the nomos-ci-raw-go target in the test-infra repository:
