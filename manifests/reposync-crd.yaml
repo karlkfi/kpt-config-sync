@@ -66,9 +66,11 @@ spec:
                 repo:
                   description: Repo is the git repository URL to sync from. Required.
                   type: string
+                branch:
+                  description: 'Branch is the git branch to checkout. Default: "master".'
+                  type: string
                 revision:
-                  description: 'Revision is the git revision (tag, branch, ref or
-                    commit) to fetch.  Default: "master".'
+                  description: 'Revision is the git revision (tag, ref or commit) to fetch. Default: "HEAD".'
                   type: string
                 secretRef:
                   description: SecretRef is the secret used to connect to the Git

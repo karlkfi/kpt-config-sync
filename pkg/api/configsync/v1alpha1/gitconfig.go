@@ -14,7 +14,7 @@ type Git struct {
 	// +optional
 	Branch string `json:"branch,omitempty"`
 
-	// Revision is the git revision (tag, ref or commit) to fetch.
+	// Revision is the git revision (tag, ref or commit) to fetch. Default: "HEAD".
 	// +optional
 	Revision string `json:"revision,omitempty"`
 
