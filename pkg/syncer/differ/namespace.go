@@ -27,7 +27,7 @@ func (d *NamespaceDiff) Type() Type {
 				// Corresponding Namespace has already been deleted, so delete the NsConfig
 				return DeleteNsConfig
 			}
-			if lifecycle.HasPreventDeletion(d.Actual) || IsManageableSystemNamespace(d.Name) {
+			if lifecycle.HasPreventDeletion(d.Actual) || IsManageableSystemNamespace(d.Actual) {
 				return UnmanageNamespace
 			}
 			return Delete

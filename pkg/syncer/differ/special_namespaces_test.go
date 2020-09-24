@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/policycontroller"
+	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -24,7 +25,7 @@ func TestIsManageableSystem(t *testing.T) {
 		testcase := testcase
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			reserved := IsManageableSystemNamespace(testcase.name)
+			reserved := IsManageableSystemNamespace(fake.NamespaceObject(testcase.name))
 			if reserved != testcase.reserved {
 				t.Errorf("Expected %v got %v", testcase.reserved, reserved)
 			}

@@ -116,8 +116,7 @@ func (d Diff) Type() Type {
 				return Unmanage
 			}
 
-			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
-				IsManageableSystemNamespace(d.Name) {
+			if IsManageableSystemNamespace(d.Actual) {
 				// Don't delete this Namespace from the cluster; unmanage it.
 
 				// The Syncer never creates a differ.Diff with a Namespace, so this only
