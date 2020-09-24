@@ -5,12 +5,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/policycontroller"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,151 +23,175 @@ const (
 
 func TestDiffType(t *testing.T) {
 	testCases := []struct {
-		name       string
-		scope      declared.Scope
-		declared   core.Object
-		actual     core.Object
-		expectType Type
+		name     string
+		scope    declared.Scope
+		declared core.Object
+		actual   core.Object
+		want     Operation
 	}{
+		// Declared + no actual paths.
 		{
-			name:       "in repo, create",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			expectType: Create,
+			name:     "declared + no actual, management enabled: create",
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			want:     Create,
 		},
 		{
-			name:       "in repo only and unmanaged, noop",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementDisabled),
-			expectType: NoOp,
+			name:     "declared + no actual, management disabled: no op",
+			declared: fake.RoleObject(syncertest.ManagementDisabled),
+			want:     NoOp,
 		},
 		{
-			name:       "in repo only, management invalid error",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "invalid")),
-			expectType: Error,
+			name:     "declared + no actual, no management: error",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(),
+			want:     Error,
+		},
+		// Declared + actual paths.
+		{
+			name:     "declared + actual, management enabled, can manage: update",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual:   fake.RoleObject(syncertest.ManagementEnabled),
+			want:     Update,
 		},
 		{
-			name:       "in repo only, management empty string error",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "")),
-			expectType: Error,
+			name:  "declared + actual, management enabled, namespace reconciler / root-owned object: conflict",
+			scope: "foo",
+			declared: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("foo")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("foo"),
+				difftest.ManagedByRoot),
+			want: ManagementConflict,
 		},
 		{
-			name:       "in both, update",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			actual:     fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			expectType: Update,
+			name:     "declared + actual, management disabled, can manage, with meta: unmanage",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementDisabled),
+			actual:   fake.RoleObject(syncertest.ManagementEnabled),
+			want:     Unmanage,
 		},
 		{
-			name:       "in both and owned, update",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			actual:     fake.ClusterRoleObject(core.OwnerReference([]metav1.OwnerReference{{}})),
-			expectType: Update,
+			name:     "declared + actual, management disabled, can manage, no meta: no op",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementDisabled),
+			actual:   fake.RoleObject(),
+			want:     NoOp,
 		},
 		{
-			name:       "in both, update even though cluster has invalid annotation",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "invalid")),
-			expectType: Update,
+			name:  "declared + actual, management disabled, namespace reconciler / root-owned object: no op",
+			scope: "shipping",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedByRoot),
+			want: NoOp,
 		},
 		{
-			name:       "in both, management disabled unmanage",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementDisabled),
-			actual:     fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			expectType: Unmanage,
+			name: "declared + actual, management disabled, root reconciler / namespace-owned object: no op",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy("shipping")),
+			want: NoOp,
 		},
 		{
-			name:       "in both, management disabled noop",
-			scope:      declared.RootReconciler,
-			declared:   fake.ClusterRoleObject(syncertest.ManagementDisabled),
-			actual:     fake.ClusterRoleObject(),
-			expectType: NoOp,
+			name: "declared + actual, management disabled, root reconciler / empty management annotation object: unmanage",
+			declared: fake.RoleObject(syncertest.ManagementDisabled,
+				core.Namespace("shipping")),
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Namespace("shipping"),
+				difftest.ManagedBy("")),
+			want: Unmanage,
 		},
 		{
-			name:       "delete",
-			scope:      declared.RootReconciler,
-			actual:     fake.ClusterRoleObject(syncertest.ManagementEnabled),
-			expectType: Delete,
+			name:     "declared + actual, declared management invalid: error",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementInvalid),
+			actual:   fake.RoleObject(),
+			want:     Error,
 		},
 		{
-			name:       "in cluster only, unset noop",
-			scope:      declared.RootReconciler,
-			actual:     fake.ClusterRoleObject(),
-			expectType: NoOp,
+			name:     "declared + actual, actual management invalid: error",
+			scope:    declared.RootReconciler,
+			declared: fake.RoleObject(syncertest.ManagementEnabled),
+			actual:   fake.RoleObject(syncertest.ManagementInvalid),
+			want:     Update,
+		},
+		// Actual + no declared paths.
+		{
+			name:   "actual + no declared, no meta: no-op",
+			scope:  declared.RootReconciler,
+			actual: fake.RoleObject(),
+			want:   NoOp,
 		},
 		{
-			name:       "in cluster only, remove invalid empty string",
-			scope:      declared.RootReconciler,
-			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "")),
-			expectType: Unmanage,
-		},
-		{
-			name:       "in cluster only, remove invalid annotation",
-			scope:      declared.RootReconciler,
-			actual:     fake.ClusterRoleObject(core.Annotation(v1.ResourceManagementKey, "invalid")),
-			expectType: Unmanage,
-		},
-		{
-			name:  "in cluster only and owned, do nothing",
+			name:  "actual + no declared, owned: noop",
 			scope: declared.RootReconciler,
-			actual: fake.ClusterRoleObject(syncertest.ManagementEnabled,
-				core.OwnerReference([]metav1.OwnerReference{{}})),
-			expectType: NoOp,
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.OwnerReference([]metav1.OwnerReference{
+					{},
+				})),
+			want: NoOp,
 		},
 		{
-			name:  "in cluster only and owned and prevent deletion, unmanage",
-			scope: declared.RootReconciler,
-			actual: fake.ClusterRoleObject(syncertest.ManagementEnabled,
-				core.OwnerReference([]metav1.OwnerReference{{}}),
+			name:  "actual + no declared, cannot manage: noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name: "actual + no declared, prevent deletion: unmanage",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
 				core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)),
-			expectType: NoOp,
+			want: Unmanage,
 		},
 		{
-			name:       "in-namespace-repo object managed by correct Namespace reconciler",
-			scope:      "shipping",
-			declared:   fake.RoleObject(syncertest.ManagementEnabled),
-			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy("shipping")),
-			expectType: Update,
+			name: "actual + no declared, system Namespace: unmanage",
+			actual: fake.NamespaceObject(metav1.NamespaceSystem,
+				syncertest.ManagementEnabled),
+			want: Unmanage,
 		},
 		{
-			// Namespace cannot take over ownership from Root.
-			name:       "in-namespace-repo object managed by Root reconciler",
-			scope:      "shipping",
-			declared:   fake.RoleObject(syncertest.ManagementEnabled),
-			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			expectType: ManagementConflict,
-		},
-		// Root always wins.
-		{
-			// Root will take over ownership from Namespace.
-			name:       "in-root-repo object managed by Namespace reconciler",
-			scope:      declared.RootReconciler,
-			declared:   fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy("shipping")),
-			expectType: Update,
+			name: "actual + no declared, gatekeeper Namespace: unmanage",
+			actual: fake.NamespaceObject(policycontroller.NamespaceSystem,
+				syncertest.ManagementEnabled),
+			want: Unmanage,
 		},
 		{
-			name:       "in-root-repo object managed by Root reconciler",
-			scope:      declared.RootReconciler,
-			declared:   fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			actual:     fake.RoleObject(syncertest.ManagementEnabled, difftest.ManagedBy(declared.RootReconciler)),
-			expectType: Update,
+			name: "actual + no declared, managed: delete",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Name(metav1.NamespaceSystem)),
+			want: Delete,
+		},
+		{
+			name:   "actual + no declared, invalid management: unmanage",
+			actual: fake.RoleObject(syncertest.ManagementInvalid),
+			want:   Unmanage,
+		},
+		// Error path.
+		{
+			name: "no declared or actual, no op (log error)",
+			want: NoOp,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			scope := tc.scope
+			if scope == "" {
+				scope = declared.RootReconciler
+			}
+
 			diff := Diff{
 				Declared: tc.declared,
 				Actual:   tc.actual,
 			}
 
-			if d := cmp.Diff(tc.expectType, diff.Type(tc.scope)); d != "" {
+			if d := cmp.Diff(tc.want, diff.Operation(scope)); d != "" {
 				t.Fatal(d)
 			}
 		})

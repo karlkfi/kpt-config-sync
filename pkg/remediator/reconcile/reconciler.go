@@ -57,7 +57,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		Declared: decl,
 		Actual:   obj,
 	}
-	switch t := d.Type(r.scope); t {
+	switch t := d.Operation(r.scope); t {
 	case diff.NoOp:
 		return nil
 	case diff.Create:

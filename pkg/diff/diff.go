@@ -4,6 +4,7 @@ package diff
 
 import (
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
@@ -13,32 +14,33 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// Type indicates the state of the given resource
-type Type string
+// Operation indicates what action should be taken if we detect a difference
+// between declared configuration and the state of the cluster.
+type Operation string
 
 const (
 	// NoOp indicates that no action should be taken.
-	NoOp = Type("no-op")
+	NoOp = Operation("no-op")
 
 	// Create indicates the resource should be created.
-	Create = Type("create")
+	Create = Operation("create")
 
 	// Update indicates the resource is declared and is on the API server, so we should
 	// calculate a patch and apply it.
-	Update = Type("update")
+	Update = Operation("update")
 
 	// Delete indicates the resource should be deleted.
-	Delete = Type("delete")
+	Delete = Operation("delete")
 
 	// Error indicates the resource's management annotation in the API server is invalid.
-	Error = Type("error")
+	Error = Operation("error")
 
 	// Unmanage indicates the resource's management annotation should be removed from the API Server.
-	Unmanage = Type("unmanage")
+	Unmanage = Operation("unmanage")
 
 	// ManagementConflict represents the case where Declared and Actual both exist,
 	// but the Actual one is managed by a Reconciler that supersedes this one.
-	ManagementConflict = Type("management-conflict")
+	ManagementConflict = Operation("management-conflict")
 )
 
 // Diff is resource where Declared and Actual do not match.
@@ -50,8 +52,8 @@ type Diff struct {
 	Actual core.Object
 }
 
-// Type returns the type of the difference between the repository and the API Server.
-func (d Diff) Type(manager declared.Scope) Type {
+// Operation returns the type of the difference between the repository and the API Server.
+func (d Diff) Operation(manager declared.Scope) Operation {
 	switch {
 	case d.Declared != nil && d.Actual == nil:
 		// Create Branch.
@@ -79,7 +81,7 @@ func (d Diff) Type(manager declared.Scope) Type {
 	}
 }
 
-func (d Diff) createType() Type {
+func (d Diff) createType() Operation {
 	switch {
 	case differ.ManagementEnabled(d.Declared):
 		// Management is enabled on the declaration and it doesn't exist, so create
@@ -94,7 +96,10 @@ func (d Diff) createType() Type {
 	}
 }
 
-func (d Diff) updateType(manager declared.Scope) Type {
+func (d Diff) updateType(manager declared.Scope) Operation {
+	// We don't need to check for owner references here since that would be a
+	// nomos vet error. Note that as-is, it is valid to declare something owned by
+	// another object, possible causing (and being surfaced as) a resource fight.
 	canManage := CanManage(manager, d.Actual)
 
 	switch {
@@ -105,7 +110,12 @@ func (d Diff) updateType(manager declared.Scope) Type {
 		return ManagementConflict
 	case differ.ManagementDisabled(d.Declared) && canManage:
 		if differ.HasNomosMeta(d.Actual) {
-			return Unmanage
+			switch d.Actual.GetAnnotations()[v1alpha1.ResourceManagerKey] {
+			case string(declared.RootReconciler), "":
+				return Unmanage
+			default:
+				return NoOp
+			}
 		}
 		return NoOp
 	case differ.ManagementDisabled(d.Declared) && !canManage:
@@ -117,7 +127,7 @@ func (d Diff) updateType(manager declared.Scope) Type {
 	}
 }
 
-func (d Diff) deleteType(reconciler declared.Scope) Type {
+func (d Diff) deleteType(reconciler declared.Scope) Operation {
 	// Degenerate cases where we never want to take any action.
 	switch {
 	case !differ.HasNomosMeta(d.Actual):

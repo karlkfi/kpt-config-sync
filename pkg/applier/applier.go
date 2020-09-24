@@ -92,7 +92,7 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 		}
 		coreID := core.IDOf(decl)
 
-		switch t := d.Type(a.scope); t {
+		switch t := d.Operation(a.scope); t {
 		case diff.NoOp:
 			continue
 		case diff.Error:
