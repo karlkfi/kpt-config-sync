@@ -197,12 +197,10 @@ func TestThreeWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: fake.Namespace("namespace/" + testNs2),
 					Actual:   nil,
 				},
@@ -219,12 +217,10 @@ func TestThreeWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: fake.Namespace("namespace/" + testNs2),
 					Actual:   nil,
 				},
@@ -244,12 +240,10 @@ func TestThreeWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: fake.Namespace("namespace/" + testNs2),
 					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
@@ -274,12 +268,10 @@ func TestThreeWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: nil,
 					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
@@ -300,12 +292,10 @@ func TestThreeWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   fake.Namespace("namespace/" + testNs1),
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: nil,
 					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
@@ -331,7 +321,7 @@ func TestThreeWay(t *testing.T) {
 
 			diffs := ThreeWay(newDeclared, previousDeclared, actual)
 			if diff := cmp.Diff(diffs, tc.want,
-				cmpopts.SortSlices(func(x, y Diff) bool { return x.Name < y.Name })); diff != "" {
+				cmpopts.SortSlices(func(x, y Diff) bool { return x.GetName() < y.GetName() })); diff != "" {
 				t.Errorf(diff)
 			}
 		})
@@ -363,12 +353,10 @@ func TestTwoWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: fake.Namespace("namespace/" + testNs2),
 					Actual:   nil,
 				},
@@ -385,12 +373,10 @@ func TestTwoWay(t *testing.T) {
 			},
 			want: []Diff{
 				{
-					Name:     "Namespace, /" + testNs1,
 					Declared: fake.Namespace("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Name:     "Namespace, /" + testNs2,
 					Declared: fake.Namespace("namespace/" + testNs2),
 					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
@@ -412,7 +398,7 @@ func TestTwoWay(t *testing.T) {
 
 			diffs := TwoWay(declared, actual)
 			if diff := cmp.Diff(diffs, tc.want,
-				cmpopts.SortSlices(func(x, y Diff) bool { return x.Name < y.Name })); diff != "" {
+				cmpopts.SortSlices(func(x, y Diff) bool { return x.GetName() < y.GetName() })); diff != "" {
 				t.Errorf(diff)
 			}
 		})

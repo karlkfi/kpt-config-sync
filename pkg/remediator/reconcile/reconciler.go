@@ -54,7 +54,6 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 	}
 
 	d := diff.Diff{
-		Name:     id.Name,
 		Declared: decl,
 		Actual:   obj,
 	}

@@ -44,9 +44,6 @@ const (
 // Diff is resource where Declared and Actual do not match.
 // Both Declared and Actual are core.Object.
 type Diff struct {
-	// Name is the name of the resource this diff is for.
-	// TODO(b/169293806): clean up callsites to behave consistently and validate name input or remove this field entirely.
-	Name string
 	// Declared is the resource as it exists in the repository.
 	Declared core.Object
 	// Actual is the resource as it exists in the cluster.
@@ -120,7 +117,7 @@ func (d Diff) Type(manager declared.Scope) Type {
 			}
 
 			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
-				differ.IsManageableSystemNamespace(d.Actual.GetName()) {
+				differ.IsManageableSystemNamespace(d.GetName()) {
 				// Don't delete this Namespace from the cluster; unmanage it.
 				// The Syncer never creates a differ.Diff with a Namespace, so this only
 				// happens in the Remediator.
@@ -166,7 +163,6 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []D
 	for coreID, previousDecl := range previousDeclared {
 		if _, ok := newDeclared[coreID]; !ok {
 			toDelete := Diff{
-				Name:     coreID.String(),
 				Declared: nil,
 				Actual:   previousDecl,
 			}
@@ -177,14 +173,12 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []D
 	for coreID, newDecl := range newDeclared {
 		if actual, ok := actual[coreID]; !ok {
 			toCreate := Diff{
-				Name:     coreID.String(),
 				Declared: newDecl,
 				Actual:   nil,
 			}
 			diffs = append(diffs, toCreate)
 		} else {
 			toUpdate := Diff{
-				Name:     coreID.String(),
 				Declared: newDecl,
 				Actual:   actual,
 			}
@@ -197,4 +191,16 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []D
 // TwoWay does a two way diff and returns the FileObjectDiff list.
 func TwoWay(declared, actual map[core.ID]core.Object) []Diff {
 	return ThreeWay(declared, nil, actual)
+}
+
+// GetName returns the metadata.name of the object being considered.
+func (d *Diff) GetName() string {
+	if d.Declared != nil {
+		return d.Declared.GetName()
+	}
+	if d.Actual != nil {
+		return d.Actual.GetName()
+	}
+	// No object is being considered.
+	return ""
 }
