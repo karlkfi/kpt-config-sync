@@ -177,9 +177,6 @@ func TestBats(t *testing.T) {
 		{fileName: "apiservice.bats"},
 		{
 			fileName: "basic.bats",
-			skipMultiRepo: testNums(
-				9, // TODO(b/169084314): enable this test
-			),
 			multiRepoIncompatible: testNums(
 				1, // tests internals of namespaceconfig
 				2, // tests internals of syncs

@@ -45,6 +45,7 @@ const (
 // Both Declared and Actual are core.Object.
 type Diff struct {
 	// Name is the name of the resource this diff is for.
+	// TODO(b/169293806): clean up callsites to behave consistently and validate name input or remove this field entirely.
 	Name string
 	// Declared is the resource as it exists in the repository.
 	Declared core.Object
@@ -119,9 +120,8 @@ func (d Diff) Type(manager declared.Scope) Type {
 			}
 
 			if (d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind()) &&
-				differ.IsManageableSystemNamespace(d.Name) {
+				differ.IsManageableSystemNamespace(d.Actual.GetName()) {
 				// Don't delete this Namespace from the cluster; unmanage it.
-
 				// The Syncer never creates a differ.Diff with a Namespace, so this only
 				// happens in the Remediator.
 				return Unmanage
