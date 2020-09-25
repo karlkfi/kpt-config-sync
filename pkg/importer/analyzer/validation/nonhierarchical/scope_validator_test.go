@@ -49,14 +49,14 @@ func TestScopeValidator(t *testing.T) {
 		),
 	}
 
-	nht.RunAll(t, nonhierarchical.ScopeValidator(scoper), testCases)
+	nht.RunAll(t, nonhierarchical.ScopeValidator(metav1.NamespaceDefault, scoper), testCases)
 }
 
 func TestScopeValidator_AddsDefaultNamespace(t *testing.T) {
 	scoper := discovery.Scoper{
 		kinds.Role().GroupKind(): discovery.NamespaceScope,
 	}
-	v := nonhierarchical.ScopeValidator(scoper)
+	v := nonhierarchical.ScopeValidator(metav1.NamespaceDefault, scoper)
 
 	r := fake.Role(core.Namespace(""))
 	err := v.Validate([]ast.FileObject{r})
@@ -67,11 +67,26 @@ func TestScopeValidator_AddsDefaultNamespace(t *testing.T) {
 	}
 }
 
+func TestScopeValidator_AddsSetNamespace(t *testing.T) {
+	scoper := discovery.Scoper{
+		kinds.Role().GroupKind(): discovery.NamespaceScope,
+	}
+	v := nonhierarchical.ScopeValidator("shipping", scoper)
+
+	r := fake.Role(core.Namespace(""))
+	err := v.Validate([]ast.FileObject{r})
+	if err != nil {
+		t.Errorf("got Validate() = %v, want nil", err)
+	} else if ns := r.GetNamespace(); ns != "shipping" {
+		t.Errorf("got metadata.namespace = %q, want %q", ns, "shipping")
+	}
+}
+
 func TestScopeValidator_LeavesClusterScopedBlank(t *testing.T) {
 	scoper := discovery.Scoper{
 		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
 	}
-	v := nonhierarchical.ScopeValidator(scoper)
+	v := nonhierarchical.ScopeValidator(metav1.NamespaceDefault, scoper)
 
 	r := fake.ClusterRole(core.Namespace(""))
 	err := v.Validate([]ast.FileObject{r})

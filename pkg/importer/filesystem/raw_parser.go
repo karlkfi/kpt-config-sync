@@ -16,17 +16,19 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
-	reader Reader
-	dc     utildiscovery.ServerResourcer
+	reader           Reader
+	dc               utildiscovery.ServerResourcer
+	defaultNamespace string
 }
 
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer) ConfigParser {
+func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamespace string) ConfigParser {
 	return &rawParser{
-		reader: reader,
-		dc:     dc,
+		reader:           reader,
+		dc:               dc,
+		defaultNamespace: defaultNamespace,
 	}
 }
 
@@ -54,7 +56,7 @@ func (p *rawParser) Parse(
 		return nil, scoperErr
 	}
 
-	scopeErrs := nonhierarchical.ScopeValidator(scoper).Validate(fileObjects)
+	scopeErrs := nonhierarchical.ScopeValidator(p.defaultNamespace, scoper).Validate(fileObjects)
 	if scopeErrs != nil {
 		// Don't try to resolve selectors if scopes are incorrect.
 		return nil, scopeErrs

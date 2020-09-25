@@ -41,11 +41,12 @@ func flatNamespaceSelector(name, key, value string) ast.FileObject {
 
 func TestRawParser_Parse(t *testing.T) {
 	testCases := []struct {
-		testName    string
-		clusterName string
-		objects     []ast.FileObject
-		syncedCRDs  []*v1beta1.CustomResourceDefinition
-		expected    *namespaceconfig.AllConfigs
+		testName         string
+		clusterName      string
+		defaultNamespace string
+		objects          []ast.FileObject
+		syncedCRDs       []*v1beta1.CustomResourceDefinition
+		expected         *namespaceconfig.AllConfigs
 	}{
 		{
 			testName: "empty returns empty",
@@ -115,6 +116,25 @@ func TestRawParser_Parse(t *testing.T) {
 				fake.Role(core.Name("sre-role"), core.Namespace("prod-shipping"), core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 			),
 		},
+		{
+			testName: "sets Namespace default if scope unset",
+			objects: []ast.FileObject{
+				fake.Role(core.Namespace("")),
+			},
+			expected: testoutput.NewAllConfigs(
+				fake.Role(core.Namespace(metav1.NamespaceDefault)),
+			),
+		},
+		{
+			testName:         "sets scope if scope set",
+			defaultNamespace: "shipping",
+			objects: []ast.FileObject{
+				fake.Role(core.Namespace("")),
+			},
+			expected: testoutput.NewAllConfigs(
+				fake.Role(core.Namespace("shipping")),
+			),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -126,7 +146,12 @@ func TestRawParser_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := ft.NewFakeReader(root, tc.objects)
-			p := filesystem.NewRawParser(r, f)
+			scope := tc.defaultNamespace
+			if scope == "" {
+				scope = metav1.NamespaceDefault
+			}
+
+			p := filesystem.NewRawParser(r, f, scope)
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
@@ -179,7 +204,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := ft.NewFakeReader(root, tc.objects)
-			p := filesystem.NewRawParser(r, f)
+			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil

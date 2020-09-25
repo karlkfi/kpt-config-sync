@@ -36,7 +36,7 @@ func NewNamespaceParser(
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},
-			parser:           filesystem.NewRawParser(fileReader, dc),
+			parser:           filesystem.NewRawParser(fileReader, dc, string(scope)),
 			updater: updater{
 				applier:    app,
 				remediator: rem,

@@ -49,7 +49,7 @@ func NewRootParser(
 
 	switch format {
 	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewRawParser(fileReader, dc)
+		opts.parser = filesystem.NewRawParser(fileReader, dc, metav1.NamespaceDefault)
 	case filesystem.SourceFormatHierarchy:
 		opts.parser = filesystem.NewParser(fileReader, dc)
 	default:

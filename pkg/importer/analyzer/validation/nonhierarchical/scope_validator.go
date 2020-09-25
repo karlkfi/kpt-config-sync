@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IllegalNamespaceOnClusterScopedResourceErrorCode represents a cluster-scoped resource illegally
@@ -51,8 +50,8 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 // declarations.
 //
 // If the object is namespace-scoped and does not declare a NamespaceSelector,
-// it is automatically assigned to the "default" Namespace.
-func ScopeValidator(scoper discovery.Scoper) Validator {
+// it is automatically assigned to the passed defaultNamespace.
+func ScopeValidator(defaultNamespace string, scoper discovery.Scoper) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		// Skip the validation when it is a Kptfile.
 		// Kptfile is only for client side. A ResourceGroup CR will be generated from it
@@ -75,7 +74,7 @@ func ScopeValidator(scoper discovery.Scoper) Validator {
 				return NamespaceAndSelectorResourceError(o)
 			}
 			if !hasNamespace && !hasNamespaceSelector {
-				o.SetNamespace(metav1.NamespaceDefault)
+				o.SetNamespace(defaultNamespace)
 			}
 		} else if o.GetNamespace() != "" {
 			return IllegalNamespaceOnClusterScopedResourceError(&o)

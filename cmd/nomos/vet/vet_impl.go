@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // vet runs nomos vet with the specified options.
@@ -62,7 +63,7 @@ func vet(
 		parser = parse.NewParser(dc)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case unstructuredFormat:
-		parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc)
+		parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault)
 	default:
 		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 	}

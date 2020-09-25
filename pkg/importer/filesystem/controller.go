@@ -60,7 +60,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	switch format {
 	case SourceFormatUnstructured:
 		// SourceFormat is unstructured, so use the RawParser.
-		cfgParser = NewRawParser(&FileReader{}, dc)
+		cfgParser = NewRawParser(&FileReader{}, dc, metav1.NamespaceDefault)
 	case SourceFormatHierarchy, "":
 		cfgParser = NewParser(&FileReader{}, dc)
 		format = SourceFormatHierarchy
