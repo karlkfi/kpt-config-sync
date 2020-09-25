@@ -1,4 +1,4 @@
-package syntax
+package filesystem
 
 import (
 	"github.com/google/nomos/pkg/importer/id"
@@ -13,11 +13,13 @@ var structuredKinds = map[schema.GroupKind]bool{
 	kinds.HierarchyConfig().GroupKind():   true,
 	kinds.NamespaceSelector().GroupKind(): true,
 	kinds.Repo().GroupKind():              true,
+	kinds.RepoSync().GroupKind():          true,
+	kinds.RootSync().GroupKind():          true,
 }
 
-// MustBeStructured returns true if the importer logic requires the given GroupKind
+// mustBeStructured returns true if the importer logic requires the given GroupKind
 // to be parsed into a structured object.
-func MustBeStructured(gvk schema.GroupVersionKind) bool {
+func mustBeStructured(gvk schema.GroupVersionKind) bool {
 	return structuredKinds[gvk.GroupKind()]
 }
 

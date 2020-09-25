@@ -180,4 +180,4 @@ test-e2e-go-ephemeral: __push-local-image
 # Rebuilds the nomos image, so use this when you're actively modifying the Nomos
 # code between test runs.
 test-e2e-go-multirepo: __push-local-image __install-nomos-local
-	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m --multirepo --force-multi-repo
+	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m --multirepo

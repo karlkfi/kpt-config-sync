@@ -112,14 +112,14 @@ func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast
 	// directives are specified for those fields. To be safe, we keep all resources in their raw
 	// unstructured format unless we specifically require them for importer pre-processing. These
 	// resources are mostly limited to ACM custom resources which we know are safe.
-	if syntax.MustBeStructured(obj.GroupVersionKind()) {
+	if mustBeStructured(obj.GroupVersionKind()) {
 		rObj, err := asDefaultVersioned(obj)
 		if err != nil {
-			return nil, syntax.ObjectParseError(oid, err)
+			return nil, ObjectParseError(oid, err)
 		}
 		var ok bool
 		if obj, ok = rObj.(core.Object); !ok {
-			return nil, syntax.ObjectParseError(oid, errNotKubernetes)
+			return nil, ObjectParseError(oid, errNotKubernetes)
 		}
 	}
 
