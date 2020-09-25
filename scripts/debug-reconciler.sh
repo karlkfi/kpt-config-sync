@@ -9,7 +9,7 @@ nomos=$(dirname "$0")/..
 
 # Params with sensible defaults
 repo=https://github.com/GoogleCloudPlatform/csp-config-management.git
-repodir=/tmp/repo/rev
+repodir=/tmp/repo
 branch=1.0.0
 
 # You can put your own defaults for these flags in debugger.defaults.bash
