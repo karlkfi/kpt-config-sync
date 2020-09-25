@@ -21,9 +21,9 @@ import (
 const (
 	// remoteName is static as every git repository has exactly one remote.
 	remoteName = "origin"
-	// branchName is static as behavior when switching branches is never under
+	// MasterBranch is static as behavior when switching branches is never under
 	// test.
-	branchName = "master"
+	MasterBranch = "master"
 )
 
 // Repository is a local git repository with a connection to a repository
@@ -231,11 +231,33 @@ func (g *Repository) Remove(path string) {
 // for tests.
 func (g *Repository) CommitAndPush(msg string) {
 	g.T.Helper()
+	g.CommitAndPushBranch(msg, MasterBranch)
+}
+
+// CommitAndPushBranch commits any changes to the git branch, and
+// pushes them to the git server.
+func (g *Repository) CommitAndPushBranch(msg, branch string) {
+	g.T.Helper()
 
 	g.Git("commit", "-m", msg)
 
 	g.T.Logf("committing %q", msg)
-	g.Git("push", "-u", remoteName, branchName)
+	g.Git("push", remoteName, branch)
+}
+
+// CreateBranch creates and checkouts a new branch at once.
+func (g *Repository) CreateBranch(branch string) {
+	g.T.Helper()
+
+	g.Git("branch", branch)
+	g.CheckoutBranch(branch)
+}
+
+// CheckoutBranch checkouts a branch.
+func (g *Repository) CheckoutBranch(branch string) {
+	g.T.Helper()
+
+	g.Git("checkout", branch)
 }
 
 // Hash returns the current hash of the git repository.

@@ -15,10 +15,8 @@ import (
 func TestDeleteRootSync(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
-	rsName := "root-sync"
-
 	var rs v1alpha1.RootSync
-	err := nt.Validate(rsName, v1.NSConfigManagementSystem, &rs)
+	err := nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +28,7 @@ func TestDeleteRootSync(t *testing.T) {
 	}
 
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(rsName, v1.NSConfigManagementSystem, fake.RootSyncObject())
+		return nt.ValidateNotFound(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObject())
 	})
 	if err != nil {
 		t.Errorf("RootSync present after deletion: %v", err)
@@ -139,6 +137,95 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	})
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestUpdateRootSyncGitBranch(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	// Add audit namespace.
+	auditNS := "audit"
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", auditNS),
+		fake.NamespaceObject(auditNS))
+	nt.Root.CommitAndPush("add namespace to acme directory")
+	nt.WaitForRepoSync()
+
+	// Validate namespace 'acme' created.
+	err := nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
+	if err != nil {
+		t.Error(err)
+	}
+
+	testBranch := "test-branch"
+	testNS := "audit-test"
+
+	// Add a 'test-branch' branch with 'audit-test' namespace.
+	nt.Root.CreateBranch(testBranch)
+	nt.Root.CheckoutBranch(testBranch)
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", testNS),
+		fake.NamespaceObject(testNS))
+	nt.Root.CommitAndPushBranch("add audit-test to acme directory", testBranch)
+
+	// Validate namespace 'audit-test' not present to vaidate rootsync is not syncing
+	// from 'test-branch' yet.
+	err = nt.ValidateNotFound(testNS, "", fake.NamespaceObject(testNS))
+	if err != nil {
+		t.Errorf("%s present: %v", testNS, err)
+	}
+
+	// Update RootSync.
+	//
+	// Get RootSync and then perform Update.
+	rootsync := &v1alpha1.RootSync{}
+	err = nt.Get(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, rootsync)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Update the branch in RootSync Custom Resource.
+	rootsync.Spec.Git.Branch = testBranch
+
+	err = nt.Update(rootsync)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	nt.WaitForRepoSync()
+
+	// Validate namespace 'audit-test' created after updating rootsync.
+	err = nt.Validate(testNS, "", fake.NamespaceObject(testNS))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Get RootSync and then perform Update.
+	rs := &v1alpha1.RootSync{}
+	err = nt.Get(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, rs)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	// Switch back to 'master' branch.
+	rs.Spec.Git.Branch = nomostest.MasterBranch
+
+	err = nt.Update(rs)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	nt.WaitForRepoSync()
+
+	// Validate namespace 'acme' present.
+	err = nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate namespace 'audit-test' not present to vaidate rootsync is not syncing
+	// from 'test-branch' anymore.
+	_, err = nomostest.Retry(60*time.Second, func() error {
+		return nt.ValidateNotFound(testNS, "", fake.NamespaceObject(testNS))
+	})
+	if err != nil {
+		t.Fatalf("RootSync update failed: %v", err)
 	}
 }
 
