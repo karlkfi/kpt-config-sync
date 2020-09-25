@@ -159,3 +159,17 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	nt.WaitForRootSyncSourceErrorClear()
 }
+
+func TestForceRevert(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	nt.Root.Remove("acme/system/repo.yaml")
+	nt.Root.CommitAndPush("Cause source error")
+
+	nt.WaitForRootSyncSourceErrorCode("1017")
+
+	nt.Root.Git("reset", "--hard", "HEAD^")
+	nt.Root.Git("push", "-f", "origin", "master")
+
+	nt.WaitForRootSyncSourceErrorClear()
+}

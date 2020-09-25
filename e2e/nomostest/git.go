@@ -74,10 +74,10 @@ func (g *Repository) gitCmd(command ...string) *exec.Cmd {
 	return exec.Command("git", args...)
 }
 
-// git wraps shelling out to git, ensuring we're running from the git repository
+// Git wraps shelling out to git, ensuring we're running from the git repository
 //
 // Fails immediately if any git command fails.
-func (g *Repository) git(command ...string) {
+func (g *Repository) Git(command ...string) {
 	g.T.Helper()
 
 	cmd := g.gitCmd(command...)
@@ -117,24 +117,24 @@ func (g *Repository) init(name, privateKey string, port int) {
 	if err != nil {
 		g.T.Fatal(err)
 	}
-	g.git("init")
+	g.Git("init")
 
 	// We have to configure username/email or else committing to the repository
 	// produces errors.
-	g.git("config", "user.name", "E2E Testing")
-	g.git("config", "user.email", "nomos-team@google.com")
+	g.Git("config", "user.name", "E2E Testing")
+	g.Git("config", "user.email", "nomos-team@google.com")
 
 	// Use ssh rather than the default that git uses, as the default does not know
 	// how to use private key files.
-	g.git("config", "ssh.variant", "ssh")
+	g.Git("config", "ssh.variant", "ssh")
 	//Overwrite the ssh command to:
 	// 1) Not perform host key checking for git-server, since this isn't set up
 	//   properly and we don't care.
 	// 2) Use the private key file we generated.
-	g.git("config", "core.sshCommand",
+	g.Git("config", "core.sshCommand",
 		fmt.Sprintf("ssh -q -o StrictHostKeyChecking=no -i %s", privateKey))
 	// Point the origin remote at the port we've forwarded to git-server.
-	g.git("remote", "add", remoteName,
+	g.Git("remote", "add", remoteName,
 		fmt.Sprintf("ssh://git@localhost:%d/git-server/repos/%s", port, name))
 }
 
@@ -205,7 +205,7 @@ func (g *Repository) AddFile(path string, bytes []byte) {
 		g.T.Fatal(err)
 	}
 	// Add the file to Git.
-	g.git("add", absPath)
+	g.Git("add", absPath)
 }
 
 // Remove deletes `file` from the git repository.
@@ -222,7 +222,7 @@ func (g *Repository) Remove(path string) {
 		g.T.Fatal(err)
 	}
 
-	g.git("add", absPath)
+	g.Git("add", absPath)
 }
 
 // CommitAndPush commits any changes to the git repository, and
@@ -232,10 +232,10 @@ func (g *Repository) Remove(path string) {
 func (g *Repository) CommitAndPush(msg string) {
 	g.T.Helper()
 
-	g.git("commit", "-m", msg)
+	g.Git("commit", "-m", msg)
 
 	g.T.Logf("committing %q", msg)
-	g.git("push", "-u", remoteName, branchName)
+	g.Git("push", "-u", remoteName, branchName)
 }
 
 // Hash returns the current hash of the git repository.

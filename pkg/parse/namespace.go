@@ -66,12 +66,20 @@ func (p *namespace) Run(ctx context.Context) {
 		case <-ticker.C: // every clock tick
 			state, err := p.Read(ctx)
 			if err != nil {
+				// Clear the lastApplied state on error since this could be the result of switching branches or
+				// some other operation where inverting the operation would result in p.lastApplied matching
+				// the previous, correct lastApplied value in which case the errors in status would never clear.
+				p.lastApplied = ""
 				glog.Error(err)
 				continue
 			}
 
 			err = p.Parse(ctx, state)
 			if err != nil {
+				// Clear the lastApplied state on error since this could be the result of switching branches or
+				// some other operation where inverting the operation would result in p.lastApplied matching
+				// the previous, correct lastApplied value in which case the errors in status would never clear.
+				p.lastApplied = ""
 				glog.Error(err)
 			}
 		}

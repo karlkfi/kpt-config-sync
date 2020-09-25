@@ -78,12 +78,20 @@ func (p *root) Run(ctx context.Context) {
 		case <-ticker.C: // every clock tick
 			state, err := p.Read(ctx)
 			if err != nil {
+				// Clear the lastApplied state on error since this could be the result of switching branches or
+				// some other operation where inverting the operation would result in p.lastApplied matching
+				// the previous, correct lastApplied value in which case the errors in status would never clear.
+				p.lastApplied = ""
 				glog.Error(err)
 				continue
 			}
 
 			err = p.Parse(ctx, state)
 			if err != nil {
+				// Clear the lastApplied state on error since this could be the result of switching branches or
+				// some other operation where inverting the operation would result in p.lastApplied matching
+				// the previous, correct lastApplied value in which case the errors in status would never clear.
+				p.lastApplied = ""
 				glog.Error(err)
 			}
 		}
@@ -178,7 +186,7 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
 	// Only set lastApplied if *everything* succeeded, including status update.
 	p.lastApplied = state.policyDir.OSPath()
-	return err
+	return nil
 }
 
 func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
