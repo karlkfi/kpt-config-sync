@@ -142,7 +142,7 @@ config-sync-manifest: push-to-gcr-nomos gen-yaml-all
 .PHONY: config-sync-manifest-e2e
 config-sync-manifest-e2e: config-sync-manifest
 	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
-	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
+	cat $(OUTPUT_DIR)/manifests/test-resources/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	cat ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
 	scripts/append-manifests.sh \
