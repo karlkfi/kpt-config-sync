@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -131,6 +134,20 @@ func (nt *NT) Update(obj core.Object, opts ...client.UpdateOption) error {
 func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
 	nt.T.Logf("deleting %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
+}
+
+// MergePatch uses the object to construct a merge patch for the fields provided.
+func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOption) error {
+	nt.T.Logf("Applying patch %s", patch)
+	return nt.Client.Patch(nt.Context, obj, client.ConstantPatch(types.MergePatchType, []byte(patch)), opts...)
+}
+
+// MustMergePatch is like MergePatch but will call t.Fatal if the patch fails.
+func (nt *NT) MustMergePatch(obj core.Object, patch string, opts ...client.PatchOption) {
+	nt.T.Helper()
+	if err := nt.MergePatch(obj, patch, opts...); err != nil {
+		nt.T.Fatal(err)
+	}
 }
 
 // Validate returns an error if the indicated object does not exist.
@@ -266,4 +283,98 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 		nt.RenewClient()
 	}
 	return err
+}
+
+// WaitForRootSyncSourceErrorCode waits until the given error code is present on the RootSync resource
+func (nt *NT) WaitForRootSyncSourceErrorCode(code string, opts ...WaitOption) {
+	nt.Wait(fmt.Sprintf("RootSync error code %s", code),
+		func() error {
+			rs := fake.RootSyncObject()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			errs := rs.Status.Source.Errors
+			if len(errs) == 0 {
+				return errors.Errorf("no errors present")
+			}
+			var codes []string
+			for _, e := range errs {
+				if e.Code == code {
+					return nil
+				}
+				codes = append(codes, e.Code)
+			}
+			return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
+		},
+		opts...,
+	)
+}
+
+// WaitForRootSyncSourceErrorClear waits until the given error code is present on the RootSync resource
+func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
+	nt.Wait("RootSync errors cleared",
+		func() error {
+			rs := fake.RootSyncObject()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			errs := rs.Status.Source.Errors
+			if len(errs) == 0 {
+				return nil
+			}
+			var messages []string
+			for _, e := range errs {
+				messages = append(messages, e.ErrorMessage)
+			}
+			return errors.Errorf("got errors %s", strings.Join(messages, ", "))
+		},
+		opts...,
+	)
+}
+
+// WaitOption is an optional parameter for Wait
+type WaitOption func(wait *waitSpec)
+
+type waitSpec struct {
+	timeout     time.Duration
+	renewClient bool
+}
+
+// WaitTimeout provides the timeout option to Wait.
+func WaitTimeout(timeout time.Duration) WaitOption {
+	return func(wait *waitSpec) {
+		wait.timeout = timeout
+	}
+}
+
+// RenewClient tells wait to renew the client after
+func RenewClient() WaitOption {
+	return func(wait *waitSpec) {
+		wait.renewClient = true
+	}
+}
+
+// Wait provides a logged wait for condition to return nil with options for timeout and client renew.
+func (nt *NT) Wait(opName string, condition func() error, opts ...WaitOption) {
+	nt.T.Helper()
+
+	wait := waitSpec{
+		timeout: time.Second * 120,
+	}
+	for _, opt := range opts {
+		opt(&wait)
+	}
+
+	// Wait for the repository to report it is synced.
+	took, err := Retry(wait.timeout, condition)
+	if err != nil {
+		nt.T.Logf("failed after %v to wait for %s", took, opName)
+		nt.T.Fatal(err)
+	}
+	nt.T.Logf("took %v to wait for %s", took, opName)
+	if wait.renewClient {
+		nt.RenewClient()
+	}
 }

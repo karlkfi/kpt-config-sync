@@ -65,11 +65,9 @@ func TestDeleteRootSync(t *testing.T) {
 func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
-	rsName := "root-sync"
-
 	// Validate RootSync is present.
 	var rs v1alpha1.RootSync
-	err := nt.Validate(rsName, v1.NSConfigManagementSystem, &rs)
+	err := nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +108,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	// version mismatch.
 	_, err = nomostest.Retry(5*time.Second, func() error {
 		rootsync := &v1alpha1.RootSync{}
-		err := nt.Get(rsName, v1.NSConfigManagementSystem, rootsync)
+		err := nt.Get(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, rootsync)
 		if err != nil {
 			return err
 		}
@@ -142,4 +140,22 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func TestInvalidRootSyncBranchStatus(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	// Update RootSync to invalid branch name
+	rs := fake.RootSyncObject()
+	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "invalid-branch"}}}`)
+
+	// Check for error code 2001 (this is a generic error code for the curent impl, this may change if we
+	// make better git error reporting.
+	nt.WaitForRootSyncSourceErrorCode("2001")
+
+	// Update RootSync to valid branch name
+	rs = fake.RootSyncObject()
+	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "master"}}}`)
+
+	nt.WaitForRootSyncSourceErrorClear()
 }
