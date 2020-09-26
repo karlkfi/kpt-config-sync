@@ -180,7 +180,7 @@ func (a *Applier) Apply(ctx context.Context, watched map[schema.GroupVersionKind
 
 	// pull the actual resource from the API server.
 	// Only pull the types we're watching.
-	actualObjects, err := a.getActualObjects(ctx, watched)
+	actualObjects, err := a.getActualObjects(ctx, newCache, watched)
 	if err != nil {
 		// This fails if we fail to list _any single_ type we're expecting.
 		return err
@@ -206,7 +206,7 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 		gvks[resource.GroupVersionKind()] = true
 	}
 
-	actualObjects, err := a.getActualObjects(ctx, gvks)
+	actualObjects, err := a.getActualObjects(ctx, a.cachedObjects, gvks)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 }
 
 // getActualObjects fetches the current resources from the API server.
-func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVersionKind]bool) (map[core.ID]core.Object, status.MultiError) {
+func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]core.Object, gvks map[schema.GroupVersionKind]bool) (map[core.ID]core.Object, status.MultiError) {
 	var errs status.MultiError
 	actual := make(map[core.ID]core.Object)
 	for gvk, watched := range gvks {
@@ -236,7 +236,20 @@ func (a *Applier) getActualObjects(ctx context.Context, gvks map[schema.GroupVer
 		for _, res := range resources.Items {
 			obj := res.DeepCopy()
 			coreID := core.IDOf(obj)
-			actual[coreID] = obj
+			decl, ok := declared[coreID]
+			if !ok {
+				continue
+			}
+			// It's possible for `declared` to contain resources of the same GroupKind
+			// but with differing versions. In that case, those resources will show up
+			// in both GVK lists. We only want to keep the resource whose GVK matches
+			// the GVK of its declaration.
+			if decl.GroupVersionKind() == obj.GroupVersionKind() {
+				actual[coreID] = obj
+			} else {
+				glog.V(2).Infof("Ignoring version %q of actual resource %s.",
+					obj.GroupVersionKind().Version, coreID.String())
+			}
 		}
 	}
 	return actual, errs

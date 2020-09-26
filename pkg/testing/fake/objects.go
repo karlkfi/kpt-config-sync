@@ -79,6 +79,15 @@ func RoleBindingObject(opts ...core.MetaMutator) *rbacv1.RoleBinding {
 	return obj
 }
 
+// RoleBindingV1Beta1Object initializes a v1beta1 RoleBinding.
+func RoleBindingV1Beta1Object(opts ...core.MetaMutator) *rbacv1beta1.RoleBinding {
+	obj := &rbacv1beta1.RoleBinding{TypeMeta: ToTypeMeta(kinds.RoleBindingV1Beta1())}
+	defaultMutate(obj)
+	mutate(obj, opts...)
+
+	return obj
+}
+
 // RoleBinding returns an rbacv1 RoleBinding.
 func RoleBinding(opts ...core.MetaMutator) ast.FileObject {
 	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)

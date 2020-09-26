@@ -195,7 +195,8 @@ func TestBats(t *testing.T) {
 		{fileName: "custom_resources_v1beta1.bats"},
 		{fileName: "foo_corp.bats"},
 		{fileName: "gatekeeper.bats"},
-		{fileName: "multiversion.bats"},
+		// Converted to multiversion_test.go.
+		//{fileName: "multiversion.bats"},
 		{
 			fileName: "namespaces.bats",
 			skipMultiRepo: testNums(

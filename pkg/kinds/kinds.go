@@ -36,6 +36,11 @@ func RoleBinding() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
 }
 
+// RoleBindingV1Beta1 returns the canonical v1beta1 RoleBinding GroupVersionKind
+func RoleBindingV1Beta1() schema.GroupVersionKind {
+	return rbacv1beta1.SchemeGroupVersion.WithKind("RoleBinding")
+}
+
 // Role returns the canonical Role GroupVersionKind
 func Role() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("Role")
