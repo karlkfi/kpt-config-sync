@@ -8,7 +8,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/policycontroller"
 	"github.com/google/nomos/pkg/syncer/syncertest"
@@ -202,126 +201,126 @@ func TestThreeWay(t *testing.T) {
 	tcs := []struct {
 		name string
 		// the git resource to which the applier syncs the state to.
-		newDeclared []ast.FileObject
+		newDeclared []core.Object
 		// the previously declared resources.
-		previousDeclared []ast.FileObject
+		previousDeclared []core.Object
 		// The actual state of the resources.
-		actual []ast.FileObject
+		actual []core.Object
 		// expected diff.
 		want []Diff
 	}{
 		{
 			name: "Update and Create - no previously declared",
-			newDeclared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			newDeclared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
-					Actual:   fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
+					Actual:   fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 				},
 				{
-					Declared: fake.Namespace("namespace/" + testNs2),
+					Declared: fake.NamespaceObject("namespace/" + testNs2),
 					Actual:   nil,
 				},
 			},
 		},
 		{
 			name: "Update and Create - no actual",
-			newDeclared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			newDeclared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			previousDeclared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			previousDeclared: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Declared: fake.Namespace("namespace/" + testNs2),
+					Declared: fake.NamespaceObject("namespace/" + testNs2),
 					Actual:   nil,
 				},
 			},
 		},
 		{
 			name: "Update and Create - with previousDeclared and actual",
-			newDeclared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			newDeclared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			previousDeclared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			previousDeclared: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Declared: fake.Namespace("namespace/" + testNs2),
-					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+					Declared: fake.NamespaceObject("namespace/" + testNs2),
+					Actual:   fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
 			},
 		},
 		{
 			name:        "Noop - with actual and no declared",
-			newDeclared: []ast.FileObject{},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			newDeclared: []core.Object{},
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: nil,
 		},
 		{
 			name: "Delete - no actual",
-			newDeclared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+			newDeclared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
 			},
-			previousDeclared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			previousDeclared: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
 					Declared: nil,
-					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+					Actual:   fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
 			},
 		},
 		{
 			name: "Delete - with previous declared and actual",
-			newDeclared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
+			newDeclared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
 			},
-			previousDeclared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			previousDeclared: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
+				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
-					Actual:   fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
+					Actual:   fake.NamespaceObject("namespace/" + testNs1),
 				},
 				{
 					Declared: nil,
-					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+					Actual:   fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
 			},
 		},
@@ -356,53 +355,53 @@ func TestTwoWay(t *testing.T) {
 	tcs := []struct {
 		name string
 		// the git resource to which the applier syncs the state to.
-		declared []ast.FileObject
+		declared []core.Object
 		// The actual state of the resources.
-		actual []ast.FileObject
+		actual []core.Object
 		// expected diff.
 		want []Diff
 	}{
 		{
 			name: "No Diff when declared is nil",
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: nil,
 		},
 		{
 			name: "Diff - no actual",
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			declared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Declared: fake.Namespace("namespace/" + testNs2),
+					Declared: fake.NamespaceObject("namespace/" + testNs2),
 					Actual:   nil,
 				},
 			},
 		},
 		{
 			name: "Diff for update- with previousDeclared and actual",
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/" + testNs1),
-				fake.Namespace("namespace/" + testNs2),
+			declared: []core.Object{
+				fake.NamespaceObject("namespace/" + testNs1),
+				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+			actual: []core.Object{
+				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
 				{
-					Declared: fake.Namespace("namespace/" + testNs1),
+					Declared: fake.NamespaceObject("namespace/" + testNs1),
 					Actual:   nil,
 				},
 				{
-					Declared: fake.Namespace("namespace/" + testNs2),
-					Actual:   fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
+					Declared: fake.NamespaceObject("namespace/" + testNs2),
+					Actual:   fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 				},
 			},
 		},
@@ -426,5 +425,23 @@ func TestTwoWay(t *testing.T) {
 				t.Errorf(diff)
 			}
 		})
+	}
+}
+
+func TestUnknown(t *testing.T) {
+	obj := fake.NamespaceObject("hello")
+	declared := map[core.ID]core.Object{
+		core.IDOf(obj): obj,
+	}
+	actual := map[core.ID]core.Object{
+		core.IDOf(obj): Unknown(),
+	}
+	diffs := TwoWay(declared, actual)
+	if len(diffs) != 0 {
+		t.Errorf("Want empty diffs with unknown; got %v", diffs)
+	}
+	diffs = ThreeWay(declared, nil, actual)
+	if len(diffs) != 0 {
+		t.Errorf("Want empty diffs with unknown; got %v", diffs)
 	}
 }

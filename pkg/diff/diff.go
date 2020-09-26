@@ -202,6 +202,8 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []D
 				Actual:   nil,
 			}
 			diffs = append(diffs, toCreate)
+		} else if IsUnknown(actual) {
+			glog.Infof("Skipping diff for resource in unknown state: %s", coreID)
 		} else {
 			toUpdate := Diff{
 				Declared: newDecl,
