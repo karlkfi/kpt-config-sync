@@ -9,11 +9,17 @@ set -euo pipefail
 
 # Setup
 
-MGR_TAG="gcr.io/stolos-dev/${USER}/reconciler-manager:latest"
-REC_TAG="gcr.io/stolos-dev/${USER}/reconciler:latest"
+REPO_DIR="$(readlink -f "$(dirname "$0")")/.."
 
-docker build -t "${MGR_TAG}" . -f build/reconciler-manager/Dockerfile
-docker build -t "${REC_TAG}" . -f build/reconciler/Dockerfile
+GCP_PROJECT=${GCP_PROJECT:-stolos-dev}
+NOMOS_TAG="gcr.io/${GCP_PROJECT}/${USER}/nomos:latest"
+MGR_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler-manager:latest"
+REC_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler:latest"
+
+make -C "${REPO_DIR}" image-nomos \
+  NOMOS_TAG="${NOMOS_TAG}" \
+  RECONCILER_TAG="${REC_TAG}" \
+  RECONCILER_MANAGER_TAG="${MGR_TAG}"
 docker push "${MGR_TAG}"
 docker push "${REC_TAG}"
 
