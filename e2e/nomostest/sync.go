@@ -105,3 +105,27 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		return nil
 	}
 }
+
+// RepoSyncHasStatusSyncCommit creates a Predicate that ensures that the
+// .status.sync.commit field on the passed RepoSync matches sha1.
+func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
+	return func(o core.Object) error {
+		rs, ok := o.(*v1alpha1.RepoSync)
+		if !ok {
+			return WrongTypeErr(o, &v1alpha1.RepoSync{})
+		}
+
+		jsn, err := json.MarshalIndent(rs, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
+			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, jsn)
+		}
+		if commit := rs.Status.Sync.Commit; commit != sha1 {
+			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, jsn)
+		}
+		return nil
+	}
+}

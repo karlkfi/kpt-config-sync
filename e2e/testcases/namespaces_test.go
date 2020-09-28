@@ -23,7 +23,7 @@ func TestDeclareNamespace(t *testing.T) {
 
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.CommitAndPush("add Namespace")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Test that the Namespace "foo" exists.
 	err = nt.Validate("foo", "", &corev1.Namespace{})
@@ -46,7 +46,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	nt.Root.Add("acme/role.yaml", fake.RoleObject(core.Name("admin"),
 		core.Namespace("shipping")))
 	nt.Root.CommitAndPush("add Role in implicit Namespace")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("shipping", "", &corev1.Namespace{})
 	if err != nil {
@@ -61,7 +61,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	// Phase 2: Remove the Role, and ensure the implicit Namespace is NOT deleted.
 	nt.Root.Remove("acme/role.yaml")
 	nt.Root.CommitAndPush("remove Role")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("shipping", "", &corev1.Namespace{})
 	if err != nil {

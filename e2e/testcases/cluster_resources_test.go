@@ -62,7 +62,7 @@ func TestRevertClusterRole(t *testing.T) {
 	declaredcr.Rules = declaredRules
 	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
 		hasRules(declaredRules))
@@ -134,11 +134,11 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	declaredcr.Rules = declaredRules
 	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	if !nt.MultiRepo {
 		// Validate ClusterConfig behavior.
-		nt.WaitForSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
+		nt.WaitForRootSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
 			nomostest.ClusterConfigHasSpecToken,
 			nomostest.ClusterConfigHasStatusToken,
 		)
@@ -175,7 +175,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	// Delete the ClusterRole from the SOT.
 	nt.Root.Remove("acme/cluster/clusterrole.yaml")
 	nt.Root.CommitAndPush("deleting ClusterRole")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.ValidateNotFound(crName, "", &rbacv1.ClusterRole{})
 	if err != nil {

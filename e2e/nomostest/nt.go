@@ -56,6 +56,10 @@ type NT struct {
 	// Only used in multi-repo tests.
 	NonRootRepos map[string]*Repository
 
+	// NamespaceRepos is a map from Namespace names to the name of the Repository
+	// containing configs for that Namespace.
+	NamespaceRepos map[string]string
+
 	// FilesystemPollingPeriod is the time between checking the filessystem for udpates
 	// to the local Git repository.
 	FilesystemPollingPeriod time.Duration
@@ -184,44 +188,65 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 	return err
 }
 
-// WaitForRepoSync is a convenience method that waits for the Repo's
-// status.sync.latestToken is equal to the repository's sha1.
-func (nt *NT) WaitForRepoSync() {
+// WaitForRepoSyncs is a convenience method that waits for all repositories
+// to sync.
+//
+// Unless you're testing pre-CSMR functionality related to in-cluster objects,
+// you should be using this function to block on ConfigSync to sync everything.
+//
+// If you want to check the internals of specific objects (e.g. the error field
+// of a RepoSync), use nt.Validate() - possibly in a Retry.
+func (nt *NT) WaitForRepoSyncs() {
 	nt.T.Helper()
 
 	if nt.MultiRepo {
-		// TODO(b/167580665): also wait for any RepoSyncs to be synced.
-		nt.WaitForSync(func() core.Object { return &v1alpha1.RootSync{} },
+		nt.WaitForRootSync(func() core.Object { return &v1alpha1.RootSync{} },
 			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
+
+		for repo, ns := range nt.NamespaceRepos {
+			nt.waitForRepoSync(repo, func() core.Object { return &v1alpha1.RepoSync{} },
+				v1alpha1.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
+		}
 	} else {
-		nt.WaitForSync(func() core.Object { return &v1.Repo{} },
+		nt.WaitForRootSync(func() core.Object { return &v1.Repo{} },
 			"repo", "", RepoHasStatusSyncLatestToken)
 	}
 }
 
-// WaitForSync waits for the passed object to
-// syncedTo is a function that accepts the sha1 hash of the repository and
-// returns a Predicate that validates the passed object/name.
-//
-// Use WaitForRepoSync() if you're just waiting for ACM to report the latest
-// commit has successfully synced.
+// waitForRepoSync waits for the specified RepoSync to be synced to HEAD
+// of the specified repository.
+func (nt *NT) waitForRepoSync(repoName string, o func() core.Object,
+	name, namespace string, syncedTo func(sha1 string) Predicate) {
+	nt.T.Helper()
+
+	// Get the repository this RepoSync is syncing to, and ensure it is synced
+	// to HEAD.
+	repo, exists := nt.NonRootRepos[repoName]
+	if !exists {
+		nt.T.Fatal("checked if nonexistent repo is synced")
+	}
+	sha1 := repo.Hash()
+	nt.waitForSync(o, name, namespace, syncedTo(sha1))
+}
+
+// waitForSync waits for the specified object to be synced.
 //
 // o returns a new object of the type to check is synced. It can't just be a
 // struct pointer as calling .Get on the same struct pointer multiple times
 // has undefined behavior.
-func (nt *NT) WaitForSync(o func() core.Object, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
+//
+// name and namespace identify the specific object to check.
+//
+// predicates is a list of Predicates to use to tell whether the object is
+// synced as desired.
+func (nt *NT) waitForSync(o func() core.Object,
+	name, namespace string, predicates ...Predicate) {
 	nt.T.Helper()
-
-	sha1 := nt.Root.Hash()
-	isSynced := make([]Predicate, len(syncedTo))
-	for i, s := range syncedTo {
-		isSynced[i] = s(sha1)
-	}
 
 	// Wait for the repository to report it is synced.
 	took, err := Retry(120*time.Second, func() error {
 		obj := o()
-		return nt.Validate(name, namespace, obj, isSynced...)
+		return nt.Validate(name, namespace, obj, predicates...)
 	})
 	if err != nil {
 		nt.T.Logf("failed after %v to wait for sync", took)
@@ -229,18 +254,42 @@ func (nt *NT) WaitForSync(o func() core.Object, name, namespace string, syncedTo
 	}
 	nt.T.Logf("took %v to wait for sync", took)
 
+	// Automatically renew the Client. We don't have tests that depend on behavior
+	// when the test's client is out of date, and if ConfigSync reports that
+	// everything has synced properly then (usually) new types should be available.
 	if _, isRepo := o().(*v1.Repo); isRepo {
-		// Automatically renew the Client. We don't have tests that depend on behavior
-		// when the test's client is out of date, and if ConfigSync reports that
-		// everything has synced properly then (usually) new types should be available.
 		nt.RenewClient()
 	}
+	if _, isRepoSync := o().(*v1alpha1.RepoSync); isRepoSync {
+		nt.RenewClient()
+	}
+}
+
+// WaitForRootSync waits for the specified object to be synced to the root
+// repository.
+//
+// o returns a new struct pointer to the desired object type each time it is
+// called.
+//
+// name and namespace uniquely specify an object of the desired type.
+//
+// syncedTo specify how to check that the object is synced to HEAD. This function
+// automatically checks for HEAD of the root repository.
+func (nt *NT) WaitForRootSync(o func() core.Object, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
+	nt.T.Helper()
+
+	sha1 := nt.Root.Hash()
+	isSynced := make([]Predicate, len(syncedTo))
+	for i, s := range syncedTo {
+		isSynced[i] = s(sha1)
+	}
+	nt.waitForSync(o, name, namespace, isSynced...)
 }
 
 // RenewClient gets a new Client for talking to the cluster.
 //
 // Required whenever we expect the set of available types on the cluster
-// to change. Called automatically at the end of WaitForSync.
+// to change. Called automatically at the end of WaitForRootSync.
 //
 // The only reason to call this manually from within a test is if we expect a
 // controller to create a CRD dynamically, or if the test requires applying a

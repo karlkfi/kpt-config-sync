@@ -21,7 +21,7 @@ func TestMultipleVersions_CustomResource(t *testing.T) {
 	// Add the Anvil CRD.
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", anvilCRD())
 	nt.Root.CommitAndPush("Adding Anvil CRD")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 	nt.RenewClient()
 
 	// Add the v1 and v1beta1 Anvils and verify they are created.
@@ -29,7 +29,7 @@ func TestMultipleVersions_CustomResource(t *testing.T) {
 	nt.Root.Add("acme/namespaces/foo/anvilv1.yaml", anvilCR("v1", "first", 10))
 	nt.Root.Add("acme/namespaces/foo/anvilv2.yaml", anvilCR("v2", "second", 100))
 	nt.Root.CommitAndPush("Adding v1 and v2 Anvil CRs")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err := nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
@@ -44,7 +44,7 @@ func TestMultipleVersions_CustomResource(t *testing.T) {
 	nt.Root.Add("acme/namespaces/foo/anvilv1.yaml", anvilCR("v1", "first", 20))
 	nt.Root.Add("acme/namespaces/foo/anvilv2.yaml", anvilCR("v2", "second", 200))
 	nt.Root.CommitAndPush("Modifying v1 and v2 Anvil CRs")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
@@ -147,7 +147,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	nt.Root.Add("acme/namespaces/foo/rbv1.yaml", rbV1)
 	nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
 	nt.Root.CommitAndPush("Adding v1 and v1beta1 RoleBindings")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
 		hasV1Subjects("v1user@acme.com"))
@@ -176,7 +176,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	nt.Root.Add("acme/namespaces/foo/rbv1.yaml", rbV1)
 	nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
 	nt.Root.CommitAndPush("Modifying v1 and v1beta1 RoleBindings")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
 		hasV1Subjects("v1user@acme.com", "v1admin@acme.com"))
@@ -192,7 +192,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	// Remove the v1beta1 RoleBinding and verify that only it is deleted.
 	nt.Root.Remove("acme/namespaces/foo/rbv1beta1.yaml")
 	nt.Root.CommitAndPush("Removing v1beta1 RoleBinding")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	if err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
 		t.Fatal(err)
@@ -204,7 +204,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	// Remove the v1 RoleBinding and verify that it is also deleted.
 	nt.Root.Remove("acme/namespaces/foo/rbv1.yaml")
 	nt.Root.CommitAndPush("Removing v1 RoleBinding")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	if err := nt.ValidateNotFound("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
 		t.Fatal(err)

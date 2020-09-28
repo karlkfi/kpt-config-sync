@@ -20,7 +20,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.Add("acme/namespaces/foo/repo-sync.yaml", rs)
 	nt.Root.CommitAndPush("Adding foo namespace and RepoSync")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err := nt.Validate(rs.Name, "foo", &v1alpha1.RepoSync{})
 	if err != nil {

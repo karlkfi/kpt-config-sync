@@ -45,6 +45,10 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 			SourceFormat: filesystem.SourceFormatHierarchy,
 			MultiRepo:    *e2e.MultiRepo,
 		},
+		MultiRepo: ntopts.MultiRepo{
+			NonRootRepos:   make(map[string]bool),
+			NamespaceRepos: make(map[string]string),
+		},
 	}
 
 	for _, opt := range ntOptions {
@@ -117,6 +121,8 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		kubeconfigPath:          kubeconfigPath,
 		MultiRepo:               opts.Nomos.MultiRepo,
 		FilesystemPollingPeriod: 50 * time.Millisecond,
+		NonRootRepos:            make(map[string]*Repository),
+		NamespaceRepos:          make(map[string]string),
 	}
 
 	connectToLocalRegistry(nt)
@@ -146,8 +152,12 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt)
 	nt.Root = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
-	for _, nsr := range opts.MultiRepo.NotRootRepos {
+	for nsr := range opts.MultiRepo.NonRootRepos {
 		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
+	}
+	for ns, repo := range opts.MultiRepo.NamespaceRepos {
+		nt.NamespaceRepos[ns] = repo
+		// TODO(akulkapoor): Configure Namespace repos.
 	}
 
 	// First wait for CRDs to be established.
@@ -170,7 +180,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
 
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 	return nt
 }
 

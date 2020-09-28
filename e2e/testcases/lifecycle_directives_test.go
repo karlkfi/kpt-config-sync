@@ -35,7 +35,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 		fake.NamespaceObject("shipping", preventDeletion))
 	nt.Root.Add("acme/namespaces/shipping/role.yaml", role)
 	nt.Root.CommitAndPush("declare Namespace with prevent deletion lifecycle annotation")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("shipping", "", &corev1.Namespace{})
 	if err != nil {
@@ -46,7 +46,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	nt.Root.Remove("acme/namespaces/shipping/ns.yaml")
 	nt.Root.Remove("acme/namespaces/shipping/role.yaml")
 	nt.Root.CommitAndPush("remove Namespace shipping declaration")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure we kept the undeclared Namespace that had the "deletion: prevent" annotation.
 	err = nt.Validate("shipping", "", &corev1.Namespace{},
@@ -80,7 +80,7 @@ func TestPreventDeletionRole(t *testing.T) {
 	nt.Root.Add("acme/namespaces/shipping/ns.yaml", fake.NamespaceObject("shipping"))
 	nt.Root.Add("acme/namespaces/shipping/role.yaml", role)
 	nt.Root.CommitAndPush("declare Role with prevent deletion lifecycle annotation")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
@@ -90,7 +90,7 @@ func TestPreventDeletionRole(t *testing.T) {
 	// Delete the declaration and ensure the Namespace isn't deleted.
 	nt.Root.Remove("acme/namespaces/shipping/role.yaml")
 	nt.Root.CommitAndPush("remove Role declaration")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
@@ -116,7 +116,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	}}
 	nt.Root.Add("acme/cluster/cr.yaml", clusterRole)
 	nt.Root.CommitAndPush("declare ClusterRole with prevent deletion lifecycle annotation")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("cluster-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
@@ -126,7 +126,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	// Delete the declaration and ensure the ClusterRole isn't deleted.
 	nt.Root.Remove("acme/cluster/cr.yaml")
 	nt.Root.CommitAndPush("remove ClusterRole bar declaration")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
@@ -145,7 +145,7 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	}}
 	nt.Root.Add("acme/role.yaml", role)
 	nt.Root.CommitAndPush("Declare configmap-getter Role")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err := nt.Validate("delivery", "", &corev1.Namespace{},
 		nomostest.HasAnnotation(lifecycle.Deletion, lifecycle.PreventDeletion))
@@ -159,7 +159,7 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 
 	nt.Root.Remove("acme/role.yaml")
 	nt.Root.CommitAndPush("Remove configmap-getter Role")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure the Namespace wasn't deleted.
 	err = nt.Validate("delivery", "", &corev1.Namespace{},

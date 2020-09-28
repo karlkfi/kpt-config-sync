@@ -50,7 +50,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), service)
 
 	nt.Root.CommitAndPush("declare Namespace and Service")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the target port we set.
 	err := nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
@@ -104,7 +104,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
 	nt.Root.CommitAndPush("update declared Service")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure the Service has the new target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))
@@ -146,7 +146,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
 
 	nt.Root.CommitAndPush("declare ClusterRoles")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure the aggregate rule is actually aggregated.
 	duration, err := nomostest.Retry(60*time.Second, func() error {
@@ -163,7 +163,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 	aggregateRole.Labels["meaningless-label"] = "exists"
 	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
 	nt.Root.CommitAndPush("add label to aggregate ClusterRole")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// TODO(b/162496882): We don't usually preserve the aggregate field, so
 	//  we Retry when in reality we would just check once.
@@ -206,7 +206,7 @@ func TestPreserveLastApplied(t *testing.T) {
 	}}
 	nt.Root.Add("acme/cluster/ns-viewer-cr.yaml", nsViewer)
 	nt.Root.CommitAndPush("add namespace-viewer ClusterRole")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
 	if err != nil {
@@ -257,7 +257,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	cm := fake.ConfigMapObject(core.Name(cmName))
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Adding ConfigMap with no labels to repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Checking that the configmap with no labels appears on cluster, and
 	// that no user labels are specified
@@ -271,7 +271,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	cm.Labels["baz"] = "qux"
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Update label for ConfigMap in repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Checking that label is updated after syncing an update.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
@@ -284,7 +284,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	delete(cm.Labels, "baz")
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Delete label for configmap in repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Check that the label is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
@@ -307,7 +307,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	cm := fake.ConfigMapObject(core.Name(cmName))
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	annotationKeys := []string{
 		v1.ClusterNameAnnotationKey,
@@ -331,7 +331,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	cm.Annotations["baz"] = "qux"
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Update annotation for ConfigMap in repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	updatedKeys := append([]string{"baz"}, annotationKeys...)
 	updatedWithDeclared := append([]string{"baz"}, withDeclared...)
@@ -348,7 +348,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	delete(cm.Annotations, "baz")
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Delete annotation for configmap in repo")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Check that the annotation is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},

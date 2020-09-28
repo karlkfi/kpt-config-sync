@@ -86,7 +86,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		fake.RepoObject())
 
 	nt.Root.CommitAndPush("add namespace to acme directory")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'audit' created.
 	err = nt.Validate(acmeNS, "", fake.NamespaceObject(acmeNS))
@@ -148,7 +148,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", auditNS),
 		fake.NamespaceObject(auditNS))
 	nt.Root.CommitAndPush("add namespace to acme directory")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'acme' created.
 	err := nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
@@ -189,7 +189,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'audit-test' created after updating rootsync.
 	err = nt.Validate(testNS, "", fake.NamespaceObject(testNS))
@@ -211,7 +211,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'acme' present.
 	err = nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))

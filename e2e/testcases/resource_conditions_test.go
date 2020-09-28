@@ -45,7 +45,7 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("add ConfigMap and ClusterRole with no annotations")
 	// The bats test checks the NamespaceConfig/ClusterConfig, but checking the Repo
 	// is sufficient.
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// Ensure we don't already have error conditions.
 	// In this test, and so below, it is sufficient to block on the Repo object reporting
@@ -233,7 +233,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	}
 	nt.Root.Add("acme/cluster/constraint-template.yaml", ct)
 	nt.Root.CommitAndPush("add gatekeeper ConstraintTemplate")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// In the real world, this annotation would be removed once PolicyController
 	// created the CRD corresponding to this ConstraintTemplate. Thus, this test
@@ -283,7 +283,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	}
 	nt.Root.Add("acme/cluster/constraint.yaml", constraint)
 	nt.Root.CommitAndPush("Add Gatekeeper Constraint")
-	nt.WaitForRepoSync()
+	nt.WaitForRepoSyncs()
 
 	// In the real world, this annotation would be removed once PolicyController
 	// began enforcing it. Thus, this test requires Gatekeeper to not be installed
