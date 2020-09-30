@@ -39,10 +39,6 @@ build-cli: pull-buildenv buildenv-dirs
 
 # Creates a docker image for the specified nomos component.
 image-nomos:
-	@echo "+++ Building the go-binary image"
-	@docker image inspect gcr.io/nomos-dev/go-binaries:latest &> /dev/null \
-		&& docker image rm -f gcr.io/nomos-dev/go-binaries:latest \
-		|| true
 	@echo "+++ Building the nomos image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target nomos \
