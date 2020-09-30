@@ -46,8 +46,7 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 			MultiRepo:    *e2e.MultiRepo,
 		},
 		MultiRepo: ntopts.MultiRepo{
-			NonRootRepos:   make(map[string]bool),
-			NamespaceRepos: make(map[string]string),
+			NamespaceRepos: make(map[string]struct{}),
 		},
 	}
 
@@ -152,11 +151,11 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt)
 	nt.Root = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
-	for nsr := range opts.MultiRepo.NonRootRepos {
-		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
-	}
-	for ns, repo := range opts.MultiRepo.NamespaceRepos {
-		nt.NamespaceRepos[ns] = repo
+	for ns := range opts.MultiRepo.NamespaceRepos {
+		// Assumes Namespace repos take the name of the Namespace they correspond
+		// to. Otherwise is needlessly confusing.
+		nt.NonRootRepos[ns] = NewRepository(nt, ns, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
+		nt.NamespaceRepos[ns] = ns
 		// TODO(akulkapoor): Configure Namespace repos.
 	}
 
