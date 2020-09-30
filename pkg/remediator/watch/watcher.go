@@ -34,12 +34,12 @@ func createWatcher(opts watcherOptions) (Runnable, status.Error) {
 	if opts.startWatch == nil {
 		mapping, err := opts.mapper.RESTMapping(opts.gvk.GroupKind(), opts.gvk.Version)
 		if err != nil {
-			return nil, FailedToStartWatcher(err)
+			return nil, status.APIServerErrorf(err, "watcher failed to get REST mapping for %s", opts.gvk.String())
 		}
 
 		dynamicClient, err := dynamic.NewForConfig(opts.config)
 		if err != nil {
-			return nil, FailedToStartWatcher(err)
+			return nil, status.APIServerErrorf(err, "watcher failed to get dynamic client for %s", opts.gvk.String())
 		}
 
 		opts.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
@@ -48,16 +48,4 @@ func createWatcher(opts watcherOptions) (Runnable, status.Error) {
 	}
 
 	return NewFiltered(opts), nil
-}
-
-// FailedToStartWatcherCode is the code that represents a Watcher failing to start.
-var FailedToStartWatcherCode = "2007"
-
-var failedToStartWatcherBuilder = status.NewErrorBuilder(FailedToStartWatcherCode)
-
-// FailedToStartWatcher reports that a Watcher failed to start, and the underlying
-// cause.
-func FailedToStartWatcher(reason error) status.Error {
-	return failedToStartWatcherBuilder.Wrap(reason).
-		Sprint("failed to start watcher").Build()
 }

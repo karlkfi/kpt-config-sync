@@ -35,7 +35,7 @@ const (
 // TestApply verifies that the apply can compare the declared resource from git with
 // the previously cached resource and take the right actions.
 func TestApply(t *testing.T) {
-	tcs := []struct {
+	var tcs = []struct {
 		name string
 		// scope is the applier's scope.
 		scope declared.Scope
@@ -43,12 +43,12 @@ func TestApply(t *testing.T) {
 		declared []ast.FileObject
 		// cached is the cache of the set of previously-declared objects.
 		cached []ast.FileObject
-		// watched is the set of types we are currently watching.
-		watched map[schema.GroupVersionKind]bool
 		// actual is the objects currently on the cluster.
 		actual []ast.FileObject
 		// expected changes happened to each resource.
-		want []Event
+		wantEvents []Event
+		// expected GVKs returned from apply()
+		wantGVKs map[schema.GroupVersionKind]struct{}
 		// wantErr is the set of errors we want to occur.
 		wantErr status.MultiError
 	}{
@@ -60,12 +60,13 @@ func TestApply(t *testing.T) {
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			cached: []ast.FileObject{},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): true,
-			},
 			actual: []ast.FileObject{},
-			want: []Event{
-				{"Create", testNs1}},
+			wantEvents: []Event{
+				{"Create", testNs1},
+			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Namespace(): {},
+			},
 		},
 		{
 			name:  "Update Test - if the resource is previously cached.",
@@ -76,13 +77,15 @@ func TestApply(t *testing.T) {
 			cached: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): true,
-			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			want: []Event{{"Update", testNs2}},
+			wantEvents: []Event{
+				{"Update", testNs2},
+			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Namespace(): {},
+			},
 		},
 		{
 			name:     "Delete Test - if the cached resource is not in the upcoming resource",
@@ -91,15 +94,13 @@ func TestApply(t *testing.T) {
 			cached: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): true,
-			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
-			want: []Event{
+			wantEvents: []Event{
 				{"Delete", testNs3},
 			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{},
 		},
 		{
 			name:  "CUD Test - all three at once",
@@ -112,65 +113,32 @@ func TestApply(t *testing.T) {
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): true,
-			},
 			actual: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
 				fake.Namespace("namespace/"+testNs3, syncertest.ManagementEnabled),
 			},
-			want: []Event{
+			wantEvents: []Event{
 				{"Create", testNs1},
 				{"Update", testNs2},
 				{"Delete", testNs3},
 			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Namespace(): {},
+			},
 		},
 		{
-			name:  "Ignore Test 1 - if the resource has the configManagement disabled.",
+			name:  "Ignore Test - if the resource has the configManagement disabled.",
 			scope: declared.RootReconciler,
 			declared: []ast.FileObject{
 				fake.Namespace("namespace/"+testNs1, syncertest.ManagementDisabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): true,
-			},
 			actual: []ast.FileObject{},
 			// testNs1 is not touched.
-			want: []Event{},
-		},
-		{
-			name:  "Ignore Test 2 - if the resource type is not watched.",
-			scope: declared.RootReconciler,
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
+			wantEvents: []Event{},
+			// We still want to watch Namespaces so we can unmanage the actual.
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Namespace(): {},
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): false,
-			},
-			actual: []ast.FileObject{},
-			// testNs1 is not touched.
-			want: []Event{},
-		},
-		{
-			name:  "Ignore Test 3 - don't delete unwatched types.",
-			scope: declared.RootReconciler,
-			declared: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs2, syncertest.ManagementEnabled),
-			},
-			cached: []ast.FileObject{
-				// We don't cache unwatched types.
-				// We don't kill watchers until the user has removed all instances of
-				// the type from the repo, and we don't cache types until we have
-				// successfully launched a watcher for that type.
-			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Namespace(): false,
-			},
-			actual: []ast.FileObject{
-				fake.Namespace("namespace/"+testNs1, syncertest.ManagementEnabled),
-			},
-			// testNs1 is not touched.
-			want: []Event{},
 		},
 		// We don't need to test every possible path here; we've already done that
 		// in diff_test.go. This just ensures we can reach the switch-case branches we expect.
@@ -180,14 +148,15 @@ func TestApply(t *testing.T) {
 			declared: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Role(): true,
-			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			},
-			want: []Event{
-				{"Update", "admin"}},
+			wantEvents: []Event{
+				{"Update", "admin"},
+			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Role(): {},
+			},
 		},
 		{
 			name:  "Management Conflict Test2 - declared managed by Namespace, and actual resource managed by root",
@@ -196,21 +165,20 @@ func TestApply(t *testing.T) {
 				fake.Role(core.Name("admin"), core.Namespace("shipping"),
 					syncertest.ManagementEnabled),
 			},
-			watched: map[schema.GroupVersionKind]bool{
-				kinds.Role(): true,
-			},
 			actual: []ast.FileObject{
 				fake.Role(core.Name("admin"), core.Namespace("shipping"),
 					syncertest.ManagementEnabled, difftest.ManagedByRoot),
 			},
+			wantGVKs: map[schema.GroupVersionKind]struct{}{
+				kinds.Role(): {},
+			},
 			wantErr: ManagementConflictError(fake.Role()),
 		},
 	}
-
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := clientForTest(t)
-			clientApplier := &FakeApplier{WantActions: tc.want}
+			clientApplier := &FakeApplier{WantActions: tc.wantEvents}
 			// Propagate the actual resources.
 			for _, actual := range tc.actual {
 				if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
@@ -229,12 +197,16 @@ func TestApply(t *testing.T) {
 			}
 			a.cachedObjects = previousCache
 			// Verify.
-			err := a.Apply(context.Background(), tc.watched, filesystem.AsCoreObjects(tc.declared))
+			gvks, err := a.Apply(context.Background(), filesystem.AsCoreObjects(tc.declared))
 			if err != nil || tc.wantErr != nil {
 				if !errors.Is(err, tc.wantErr) {
 					t.Errorf("got Apply() = error %v, want error %v", err, tc.wantErr)
 				}
 				return
+			}
+
+			if diff := cmp.Diff(tc.wantGVKs, gvks); diff != "" {
+				t.Errorf("Diff of GVK map from Apply(): %s", diff)
 			}
 
 			if len(clientApplier.WantActions) == 0 && len(clientApplier.GotActions) == 0 {

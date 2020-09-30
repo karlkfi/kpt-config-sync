@@ -28,6 +28,7 @@ func NewNamespaceParser(
 	pollingFrequency time.Duration,
 	fs FileSource,
 	dc discovery.ServerResourcer,
+	resources *declared.Resources,
 	app applier.Interface,
 	rem remediator.Interface,
 ) Runnable {
@@ -38,6 +39,7 @@ func NewNamespaceParser(
 			files:            files{FileSource: fs},
 			parser:           filesystem.NewRawParser(fileReader, dc, string(scope)),
 			updater: updater{
+				resources:  resources,
 				applier:    app,
 				remediator: rem,
 			},

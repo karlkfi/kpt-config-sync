@@ -2,7 +2,6 @@ package watch
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
@@ -81,26 +80,16 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 	}, nil
 }
 
-// Update accepts new resource list and takes following actions:
-// - start watchers for any GroupKind that is present in the new
-//   resource list, but weren't present in previous resource list.
-// - stop watchers for any GroupVersionKind that is not present
-//   in the new resource list
-//
-// Returns a map from the each declared type to whether we have a watcher for
-// that type.
-func (m *Manager) Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError) {
-	err := m.resources.Update(objects)
-	if err != nil {
-		// This only fails if we've made a coding mistake.
-		return nil, err
-	}
-
-	watched := m.resources.GVKSet()
-
+// UpdateWatches accepts a map of GVKs that should be watched and takes the
+// following actions:
+// - stop watchers for any GroupVersionKind that is not present in the given
+//   map.
+// - start watchers for any GroupVersionKind that is present in the given map
+//   and not present in the current watch map.
+func (m *Manager) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
 	// Stop obsolete watchers.
 	for gvk := range m.watcherMap {
-		if !watched[gvk] {
+		if _, keepWatching := gvkMap[gvk]; !keepWatching {
 			// We were watching the type, but no longer have declarations for it.
 			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
@@ -109,20 +98,25 @@ func (m *Manager) Update(objects []core.Object) (map[schema.GroupVersionKind]boo
 
 	// Start new watchers
 	var errs status.MultiError
-	for gvk := range watched {
-		if _, found := m.watcherMap[gvk]; !found {
+	for gvk := range gvkMap {
+		if _, isWatched := m.watcherMap[gvk]; !isWatched {
 			// We don't have a watcher for this type, so add a watcher for it.
 			if err := m.startWatcher(gvk); err != nil {
-				// We'll try to start the watcher next time - the type may be temporarily
-				// unavailable.
 				errs = status.Append(errs, err)
-				// We aren't watching the type since launching the watcher failed.
-				watched[gvk] = false
 			}
 		}
 	}
 
-	return watched, errs
+	return errs
+}
+
+// watchedGVKs returns a list of all GroupVersionKinds currently being watched.
+func (m *Manager) watchedGVKs() []schema.GroupVersionKind {
+	var gvks []schema.GroupVersionKind
+	for gvk := range m.watcherMap {
+		gvks = append(gvks, gvk)
+	}
+	return gvks
 }
 
 // startWatcher starts a watcher for a GVK

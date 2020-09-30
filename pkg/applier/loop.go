@@ -6,11 +6,16 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func (a *Applier) isRootApplier() bool {
+	return a.scope == declared.RootReconciler
+}
 
 // Run periodically syncs the resource state in the API server with the git resource in every
 // ResyncPeriod until the StopChannel is called.

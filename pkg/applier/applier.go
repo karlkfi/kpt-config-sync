@@ -40,8 +40,13 @@ type Applier struct {
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
-	Apply(ctx context.Context, watched map[schema.GroupVersionKind]bool, desiredResource []core.Object) status.MultiError
+	// Apply updates the resource API server with the latest parsed git resource.
+	// This is called when a new change in the git resource is detected. It also
+	// returns a map of the GVKs which were successfully applied by the Applier.
+	Apply(ctx context.Context, desiredResources []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
 }
+
+var _ Interface = &Applier{}
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
@@ -160,40 +165,40 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 	return errs
 }
 
-// Apply updates the resource API server with the latest parsed git resource. This is called
-// when a new change in the git resource is detected.
-func (a *Applier) Apply(ctx context.Context, watched map[schema.GroupVersionKind]bool, desiredResource []core.Object) status.MultiError {
+// Apply implements Interface.
+func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	// create the new cache showing the new declared resource.
 	newCache := make(map[core.ID]core.Object)
 	for _, desired := range desiredResource {
-		if !watched[desired.GroupVersionKind()] {
-			// We aren't watching this type yet, so ignore this declaration.
-			// We already show an error as we were unable to launch the watcher, so it
-			// isn't necessary to show the error again here.
-			continue
-		}
 		newCache[core.IDOf(desired)] = desired
 	}
 
 	a.mux.Lock()
 	defer a.mux.Unlock()
 
-	// pull the actual resource from the API server.
-	// Only pull the types we're watching.
-	actualObjects, err := a.getActualObjects(ctx, newCache, watched)
-	if err != nil {
-		// This fails if we fail to list _any single_ type we're expecting.
-		return err
-	}
+	var errs status.MultiError
+	// Pull the actual resources from the API server to compare against the
+	// declared resources. Note that we do not immediately return on error here
+	// because the Applier needs to try to do as much work as it can on each
+	// cycle. We collect and return all errors at the end. SOme of those errors
+	// are transient and resolve in future cycles based on partial work completed
+	// in a previous cycle (eg ignore an error about a CR so that we can apply the
+	// CRD, then a future cycle is able to apply the CR).
+	// TODO(b/169717222): Here and elsewhere, pass the MultiError as a parameter.
+	actualObjects, gvks, getErrs := a.getActualObjects(ctx, newCache)
+	errs = status.Append(errs, getErrs)
+
 	// TODO(b/165081629): Enable prune on startup (eg when cachedObjects is nil)
 	diffs := diff.ThreeWay(newCache, a.cachedObjects, actualObjects)
 	// Sync the API resource state to the git resource.
-	if err := a.sync(ctx, diffs); err != nil {
-		return err
+	syncErrs := a.sync(ctx, diffs)
+	errs = status.Append(errs, syncErrs)
+
+	if errs == nil {
+		// Only update the cache on complete success.
+		a.cachedObjects = newCache
 	}
-	// Update the cache.
-	a.cachedObjects = newCache
-	return nil
+	return gvks, errs
 }
 
 // Refresh syncs and updates the API server with the (cached) git resource states.
@@ -201,38 +206,38 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 	a.mux.Lock()
 	defer a.mux.Unlock()
 
-	gvks := make(map[schema.GroupVersionKind]bool)
-	for _, resource := range a.cachedObjects {
-		gvks[resource.GroupVersionKind()] = true
-	}
-
-	actualObjects, err := a.getActualObjects(ctx, a.cachedObjects, gvks)
-	if err != nil {
-		return err
-	}
+	actualObjects, _, err := a.getActualObjects(ctx, a.cachedObjects)
 	// Two way merge. Compare between the cached declared and the actual states to decide the create and update.
 	diffs := diff.TwoWay(a.cachedObjects, actualObjects)
-	if err := a.sync(ctx, diffs); err != nil {
-		return err
-	}
-	return nil
+	// Sync the API resource state to the git resource.
+	syncErrs := a.sync(ctx, diffs)
+
+	return status.Append(err, syncErrs)
 }
 
-// getActualObjects fetches the current resources from the API server.
-func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]core.Object, gvks map[schema.GroupVersionKind]bool) (map[core.ID]core.Object, status.MultiError) {
+// getActualObjects fetches and returns the current resources from the API
+// server to match the given declared resources. It also returns a map of GVKs
+// which were successfully listed by the Applier (eg not in an unknown state).
+func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]core.Object) (map[core.ID]core.Object, map[schema.GroupVersionKind]struct{}, status.MultiError) {
+	gvks := make(map[schema.GroupVersionKind]struct{})
+	for _, resource := range declared {
+		gvks[resource.GroupVersionKind()] = struct{}{}
+	}
+
 	var errs status.MultiError
 	actual := make(map[core.ID]core.Object)
-	for gvk, watched := range gvks {
-		if !watched {
-			// Don't try to get unwatched types.
-			continue
-		}
+	for gvk := range gvks {
 		resources := &unstructured.UnstructuredList{}
 		resources.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
 		if err := a.client.List(ctx, resources, a.listOptions...); err != nil {
-			errs = status.Append(errs, status.APIServerErrorf(err, "failed to list %s resources", gvk.String()))
+			errs = status.Append(errs, FailedToListResources(err))
+			// Remove any GVK which we were unable to list resources for. This is
+			// typically caused by a new type that is not available yet. We will retry
+			// again soon.
+			delete(gvks, gvk)
 			continue
 		}
+
 		for _, res := range resources.Items {
 			obj := res.DeepCopy()
 			coreID := core.IDOf(obj)
@@ -247,14 +252,31 @@ func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]cor
 			if decl.GroupVersionKind() == obj.GroupVersionKind() {
 				actual[coreID] = obj
 			} else {
-				glog.V(2).Infof("Ignoring version %q of actual resource %s.",
+				glog.V(4).Infof("Ignoring version %q of actual resource %s.",
 					obj.GroupVersionKind().Version, coreID.String())
 			}
 		}
 	}
-	return actual, errs
+
+	// For all declared objects, mark their actual state as unknown if we were
+	// unable to list it by GVK.
+	for id, obj := range declared {
+		if _, listed := gvks[obj.GroupVersionKind()]; !listed {
+			actual[id] = diff.Unknown()
+		}
+	}
+	return actual, gvks, errs
 }
 
-func (a *Applier) isRootApplier() bool {
-	return a.scope == declared.RootReconciler
+// FailedToListResourcesCode is the code that represents the Applier failing to
+// list resources of a specfic GVK.
+var FailedToListResourcesCode = "2007"
+
+var failedToListResourcesBuilder = status.NewErrorBuilder(FailedToListResourcesCode)
+
+// FailedToListResources reports that the Applier failed to list resources and
+// the underlying cause.
+func FailedToListResources(reason error) status.Error {
+	return failedToListResourcesBuilder.Wrap(reason).
+		Sprint("failed to list resources").Build()
 }

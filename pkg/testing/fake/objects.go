@@ -79,6 +79,16 @@ func RoleBindingObject(opts ...core.MetaMutator) *rbacv1.RoleBinding {
 	return obj
 }
 
+// RoleBindingAtPath returns a RoleBinding at the specified path.
+func RoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(RoleBindingObject(opts...), path)
+}
+
+// RoleBinding returns an rbacv1 RoleBinding.
+func RoleBinding(opts ...core.MetaMutator) ast.FileObject {
+	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)
+}
+
 // RoleBindingV1Beta1Object initializes a v1beta1 RoleBinding.
 func RoleBindingV1Beta1Object(opts ...core.MetaMutator) *rbacv1beta1.RoleBinding {
 	obj := &rbacv1beta1.RoleBinding{TypeMeta: ToTypeMeta(kinds.RoleBindingV1Beta1())}
@@ -88,14 +98,14 @@ func RoleBindingV1Beta1Object(opts ...core.MetaMutator) *rbacv1beta1.RoleBinding
 	return obj
 }
 
-// RoleBinding returns an rbacv1 RoleBinding.
-func RoleBinding(opts ...core.MetaMutator) ast.FileObject {
-	return RoleBindingAtPath("namespaces/foo/rolebinding.yaml", opts...)
+// RoleBindingV1Beta1AtPath returns a RoleBinding at the specified path.
+func RoleBindingV1Beta1AtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(RoleBindingV1Beta1Object(opts...), path)
 }
 
-// RoleBindingAtPath returns a RoleBinding at the specified path.
-func RoleBindingAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(RoleBindingObject(opts...), path)
+// RoleBindingV1Beta1 returns an rbacv1beta1 RoleBinding.
+func RoleBindingV1Beta1(opts ...core.MetaMutator) ast.FileObject {
+	return RoleBindingV1Beta1AtPath("namespaces/foo/rolebinding.yaml", opts...)
 }
 
 // ClusterRoleObject returns an rbacv1 ClusterRole.

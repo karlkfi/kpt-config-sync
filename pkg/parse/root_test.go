@@ -8,8 +8,8 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -82,14 +82,15 @@ func TestRoot_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := &fakeRemediator{}
+			a := &fakeApplier{}
 			parser := &root{
 				sourceFormat: tc.format,
 				opts: opts{
 					parser: &fakeParser{parse: tc.parsed},
 					updater: updater{
-						remediator: r,
-						applier:    noOpApplier{},
+						resources:  &declared.Resources{},
+						remediator: &noOpRemediator{},
+						applier:    a,
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(),
 						fake.RootSyncObject()),
@@ -106,20 +107,17 @@ func TestRoot_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, r.got, cmpopts.EquateEmpty()); diff != "" {
+			if diff := cmp.Diff(tc.want, a.got, cmpopts.EquateEmpty()); diff != "" {
 				t.Error(diff)
 			}
 		})
 	}
 }
 
-type fakeRemediator struct {
-	got []core.Object
-}
+type noOpRemediator struct{}
 
-func (r *fakeRemediator) Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError) {
-	r.got = objects
-	return nil, nil
+func (r *noOpRemediator) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+	return nil
 }
 
 type fakeParser struct {
@@ -139,12 +137,17 @@ func (p *fakeParser) ReadClusterRegistryResources(root cmpath.Absolute, files []
 	return nil
 }
 
-type noOpApplier struct {
-	applier.Interface
+type fakeApplier struct {
+	got []core.Object
 }
 
-func (a noOpApplier) Apply(ctx context.Context, watched map[schema.GroupVersionKind]bool, objs []core.Object) status.MultiError {
-	return nil
+func (a *fakeApplier) Apply(ctx context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+	a.got = objs
+	gvks := make(map[schema.GroupVersionKind]struct{})
+	for _, obj := range objs {
+		gvks[obj.GroupVersionKind()] = struct{}{}
+	}
+	return gvks, nil
 }
 
 func TestSortByScope(t *testing.T) {

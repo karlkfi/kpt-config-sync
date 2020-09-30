@@ -3,7 +3,6 @@ package remediator
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/remediator/reconcile"
@@ -32,7 +31,9 @@ type Remediator struct {
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
-	Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError)
+	// UpdateWatches starts and stops server-side watches based upon the given map
+	// of GVKs which should be watched.
+	UpdateWatches(map[schema.GroupVersionKind]struct{}) status.MultiError
 }
 
 var _ Interface = &Remediator{}
@@ -71,8 +72,7 @@ func (r *Remediator) Start(ctx context.Context) {
 	r.started = true
 }
 
-// Update updates the declared resources for all reconcile workers and
-// potentially starts/stops server-side watches.
-func (r *Remediator) Update(objects []core.Object) (map[schema.GroupVersionKind]bool, status.MultiError) {
-	return r.watchMgr.Update(objects)
+// UpdateWatches implements Interface.
+func (r *Remediator) UpdateWatches(gvks map[schema.GroupVersionKind]struct{}) status.MultiError {
+	return r.watchMgr.UpdateWatches(gvks)
 }

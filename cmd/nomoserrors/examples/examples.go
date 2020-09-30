@@ -22,7 +22,6 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/parse"
-	"github.com/google/nomos/pkg/remediator/watch"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -308,7 +307,7 @@ func Generate() AllExamples {
 	result.add(status.EmptySourceError(10, "namespaces"))
 
 	// 2007
-	result.add(watch.FailedToStartWatcher(errors.New("some watcher start error")))
+	result.add(applier.FailedToListResources(errors.New("GVK foo is not available")))
 
 	// 2008
 	result.add(client.ConflictCreateAlreadyExists(errors.New("already exists"), fake.RoleObject()))
@@ -331,6 +330,7 @@ func Generate() AllExamples {
 	return result
 }
 
+// Add adds the given error to the collection examples of errors.
 func (e *ExamplesOrDeprecated) Add(error status.Error) {
 	e.Examples = append(e.Examples, error)
 }

@@ -145,13 +145,13 @@ func Run(ctx context.Context, opts Options) {
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootParser(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
-			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, a, rem)
+			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceParser(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
-			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, a, rem)
+			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer

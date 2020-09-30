@@ -130,7 +130,7 @@ func (w *filteredWatcher) start(resourceVersion string) (bool, status.Error) {
 
 	base, err := w.startWatch(options)
 	if err != nil {
-		return false, FailedToStartWatcher(err)
+		return false, status.APIServerErrorf(err, "failed to start watch for %s", w.gvk)
 	}
 	w.base = base
 	return true, nil
