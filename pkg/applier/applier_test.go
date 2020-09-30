@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -352,4 +353,50 @@ func clientForTest(t *testing.T) *testingfake.Client {
 	}
 
 	return testingfake.NewClient(t, s)
+}
+
+func TestSortByScope(t *testing.T) {
+	namespaced := diff.Diff{Declared: fake.RoleObject(core.Namespace("shipping"))}
+	clustered := diff.Diff{Declared: fake.ClusterRoleObject()}
+
+	testCases := []struct {
+		name  string
+		left  diff.Diff
+		right diff.Diff
+		want  bool
+	}{
+		{
+			name:  "both namespaced",
+			left:  namespaced,
+			right: namespaced,
+			want:  false,
+		},
+		{
+			name:  "first namespaced",
+			left:  namespaced,
+			right: clustered,
+			want:  false,
+		},
+		{
+			name:  "second namespaced",
+			left:  clustered,
+			right: namespaced,
+			want:  true,
+		},
+		{
+			name:  "both clustered",
+			left:  clustered,
+			right: clustered,
+			want:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := clusterScopedFirst(tc.left, tc.right)
+			if got != tc.want {
+				t.Errorf("got clusterScopedFirst() = %t, want %t", got, tc.want)
+			}
+		})
+	}
 }

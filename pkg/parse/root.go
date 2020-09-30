@@ -2,7 +2,6 @@ package parse
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"github.com/golang/glog"
@@ -143,9 +142,6 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 		return nil, err
 	}
 
-	// Ensure that if a Namespace is declared, it is inserted before any objects
-	// that would go inside it.
-	sortByScope(cos)
 	return cos, nil
 }
 
@@ -235,19 +231,6 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 		return errors.Wrap(err, "failed to update RootSync sync status from parser")
 	}
 	return nil
-}
-
-// sortByScope sorts the given slice of Objects so that all cluster-scoped
-// resources come before any namespace-scoped resources.
-func sortByScope(objs []core.Object) {
-	sort.SliceStable(objs, func(i, j int) bool {
-		iNamespaced := objs[i].GetNamespace() != ""
-		jNamespaced := objs[j].GetNamespace() != ""
-		if iNamespaced != jNamespaced {
-			return jNamespaced
-		}
-		return false
-	})
 }
 
 func addImplicitNamespaces(cos []core.Object) []core.Object {

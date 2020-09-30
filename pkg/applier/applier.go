@@ -2,6 +2,7 @@ package applier
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/golang/glog"
@@ -86,6 +87,11 @@ func NewRootApplier(c client.Client, applier syncerreconcile.Applier) *Applier {
 // in sync with the declared resources.
 func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError {
 	var errs status.MultiError
+
+	// Sort diffs so that cluster-scoped resources are first.
+	// Don't put these into a map before reading them out, or ordering will not be
+	// guaranteed.
+	sortByScope(diffs)
 	for _, d := range diffs {
 		// Take CRUD actions based on the diff between actual resource (what's stored in
 		// the api server) and the declared resource (the cached git resource).
@@ -279,4 +285,44 @@ var failedToListResourcesBuilder = status.NewErrorBuilder(FailedToListResourcesC
 func FailedToListResources(reason error) status.Error {
 	return failedToListResourcesBuilder.Wrap(reason).
 		Sprint("failed to list resources").Build()
+}
+
+func sortByScope(diffs []diff.Diff) {
+	// Sort diffs so that cluster-scoped ones get added first.
+	sort.Slice(diffs, func(i, j int) bool {
+		return clusterScopedFirst(diffs[i], diffs[j])
+	})
+}
+
+func clusterScopedFirst(left, right diff.Diff) bool {
+	// Less than if left is Namespaced and right is not.
+	leftNamespaced := false
+	if left.Declared != nil {
+		leftNamespaced = left.Declared.GetNamespace() != ""
+	} else if left.Actual != nil {
+		leftNamespaced = left.Actual.GetNamespace() != ""
+	}
+
+	rightNamespaced := false
+	if right.Declared != nil {
+		rightNamespaced = right.Declared.GetNamespace() != ""
+	} else if right.Actual != nil {
+		rightNamespaced = right.Actual.GetNamespace() != ""
+	}
+
+	switch {
+	case leftNamespaced && rightNamespaced:
+		return false
+	case leftNamespaced && !rightNamespaced:
+		// The only case where we want to swap left and right is if left is
+		// Namespaced and right is not.
+		return false
+	case !leftNamespaced && rightNamespaced:
+		return true
+	case !leftNamespaced && !rightNamespaced:
+		return false
+	}
+
+	// Unreachable code.
+	return false
 }
