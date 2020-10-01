@@ -1,6 +1,7 @@
 package nomostest
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -290,7 +292,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
 	rs.Spec.Git = v1alpha1.Git{
-		Repo:      "git@test-git-server.config-management-system-test:/git-server/repos/sot.git",
+		Repo:      fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", rootRepo),
 		Dir:       acmeDir,
 		Auth:      "ssh",
 		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
@@ -313,6 +315,57 @@ func validateMultiRepoDeployments(nt *NT) error {
 	}
 	nt.T.Logf("took %v to wait for reconciler-manager and root-reconciler", took)
 	return nil
+}
+
+func setupRepoSync(nt *NT, ns string) error {
+	// create RepoSync to initialize the Namespace reconciler.
+	rs := fake.RepoSyncObject(core.Namespace(ns))
+	rs.Spec.Git = v1alpha1.Git{
+		Repo: fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", ns),
+		Dir:  acmeDir,
+		Auth: "ssh",
+		SecretRef: v1alpha1.SecretReference{
+			Name: "ssh-key",
+		},
+	}
+	if err := nt.Create(rs); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	took, err := Retry(60*time.Second, func() error {
+		return nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+	})
+	if err != nil {
+		return err
+	}
+	nt.T.Logf("took %v to wait for ns-reconciler", took)
+	return nil
+}
+
+func setupRepoSyncRoleBinding(nt *NT, ns string) error {
+	rb := fake.RoleBindingObject(core.Name("syncs"), core.Namespace(ns))
+	sb := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      fmt.Sprintf("ns-reconciler-%s", ns),
+			Namespace: configmanagement.ControllerNamespace,
+		},
+	}
+	rf := rbacv1.RoleRef{
+		APIGroup: "rbac.authorization.k8s.io",
+		Kind:     "ClusterRole",
+		// TODO (b/169933284) Update role reference for namespace reconciler setup.
+		Name: "cluster-admin",
+	}
+	rb.Subjects = sb
+	rb.RoleRef = rf
+	if err := nt.Create(rb); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	// Validate rolebinding 'syncs' is present.
+	return nt.Validate("syncs", ns, &rbacv1.RoleBinding{})
 }
 
 // setReconcilerDebugMode ensures the Reconciler deployments are run in debug mode.

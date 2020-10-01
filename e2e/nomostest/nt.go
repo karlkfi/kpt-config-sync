@@ -203,7 +203,7 @@ func (nt *NT) WaitForRepoSyncs() {
 		nt.WaitForRootSync(func() core.Object { return &v1alpha1.RootSync{} },
 			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
 
-		for repo, ns := range nt.NamespaceRepos {
+		for ns, repo := range nt.NamespaceRepos {
 			nt.waitForRepoSync(repo, func() core.Object { return &v1alpha1.RepoSync{} },
 				v1alpha1.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
 		}

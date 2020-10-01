@@ -4,7 +4,7 @@ package ntopts
 // If NonRootRepos is non-empty, the test is assumed to be running in
 // multi-repo mode.
 type MultiRepo struct {
-	// NamespaceRepos is a set representing the Namespace repos to craete.
+	// NamespaceRepos is a set representing the Namespace repos to create.
 	//
 	// We don't support referencing the Root repository in this map; while we do
 	// support this use case, it isn't special behavior that tests any unique code

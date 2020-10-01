@@ -9,6 +9,50 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 )
 
+func sshDir(nt *NT) string {
+	nt.T.Helper()
+	return filepath.Join(nt.TmpDir, "ssh")
+}
+
+func privateKeyPath(nt *NT) string {
+	nt.T.Helper()
+	return filepath.Join(sshDir(nt), "id_rsa.nomos")
+}
+
+func publicKeyPath(nt *NT) string {
+	nt.T.Helper()
+	return filepath.Join(sshDir(nt), "id_rsa.nomos.pub")
+}
+
+// createSSHKeySecret generates a public/public key pair for the test.
+func createSSHKeyPair(nt *NT) {
+	err := os.MkdirAll(sshDir(nt), fileMode)
+	if err != nil {
+		nt.T.Fatal("creating ssh directory:", err)
+	}
+
+	// ssh-keygen -t rsa -b 4096 -N "" \
+	//   -f /opt/testing/nomos/id_rsa.nomos
+	//   -C "key generated for use in e2e tests"
+	out, err := exec.Command("ssh-keygen", "-t", "rsa", "-b", "4096", "-N", "",
+		"-f", privateKeyPath(nt),
+		"-C", "key generated for use in e2e tests").Output()
+	if err != nil {
+		nt.T.Log(string(out))
+		nt.T.Fatal("generating rsa key for ssh:", err)
+	}
+}
+
+// createSecret creates secret in the given namespace using 'keypath'.
+func createSecret(nt *NT, namespace, name, keyPath string) {
+	// kubectl create secret generic 'name' \
+	//   -n='namespace' \
+	//   --from-file='keyPath'
+	nt.Kubectl("create", "secret", "generic", name,
+		"-n", namespace,
+		"--from-file", keyPath)
+}
+
 // generateSSHKeys generates a public/public key pair for the test.
 //
 // It turns out kubectl create secret is annoying to emulate, and it doesn't
@@ -18,38 +62,19 @@ import (
 func generateSSHKeys(nt *NT, kcfg string) string {
 	nt.T.Helper()
 
-	sshDir := filepath.Join(nt.TmpDir, "ssh")
-	err := os.MkdirAll(sshDir, fileMode)
-	if err != nil {
-		nt.T.Fatal("creating ssh directory:", err)
-	}
+	createSSHKeyPair(nt)
 
-	privateKeyPath := filepath.Join(sshDir, "id_rsa.nomos")
-	publicKeyPath := filepath.Join(sshDir, "id_rsa.nomos.pub")
+	createSecret(nt, configmanagement.ControllerNamespace, "git-creds",
+		fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
 
-	// ssh-keygen -t rsa -b 4096 -N "" \
-	//   -f /opt/testing/nomos/id_rsa.nomos
-	//   -C "key generated for use in e2e tests"
-	out, err := exec.Command("ssh-keygen", "-t", "rsa", "-b", "4096", "-N", "",
-		"-f", privateKeyPath,
-		"-C", "key generated for use in e2e tests").Output()
-	if err != nil {
-		nt.T.Log(string(out))
-		nt.T.Fatal("generating rsa key for ssh:", err)
-	}
+	createSecret(nt, testGitNamespace, "ssh-pub",
+		filepath.Join(publicKeyPath(nt)))
 
-	// kubectl create secret generic git-creds \
-	//   -n=config-management-system \
-	//   --from-file=ssh="${TEST_DIR}/id_rsa.nomos"
-	nt.Kubectl("create", "secret", "generic", "git-creds",
-		"-n", configmanagement.ControllerNamespace,
-		"--from-file", fmt.Sprintf("ssh=%s", privateKeyPath))
+	return privateKeyPath(nt)
+}
 
-	// kubectl create secret generic ssh-pub \
-	//   -n="${GIT_SERVER_NS}" \
-	//   --from-file=/opt/testing/nomos/id_rsa.nomos.pub
-	nt.Kubectl("create", "secret", "generic", "ssh-pub",
-		"-n", testGitNamespace,
-		"--from-file", filepath.Join(publicKeyPath))
-	return privateKeyPath
+// createNamespaceSecret creates secret in a given namespace using privateKeyPath.
+func createNamespaceSecret(nt *NT, ns string) {
+	nt.T.Helper()
+	createSecret(nt, ns, "ssh-key", fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
 }

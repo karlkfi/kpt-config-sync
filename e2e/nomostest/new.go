@@ -147,16 +147,20 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	if err != nil {
 		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
 	}
+
+	// allRepos specifies the slice all repos for portforwarding.
+	allRepos := []string{rootRepo}
+	for repo := range opts.MultiRepo.NamespaceRepos {
+		allRepos = append(allRepos, repo)
+	}
+
 	// The git-server reports itself to be ready, so we don't have to wait on
 	// anything.
-	nt.gitRepoPort = portForwardGitServer(nt)
-	nt.Root = NewRepository(nt, "sot.git", nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
-	for ns := range opts.MultiRepo.NamespaceRepos {
-		// Assumes Namespace repos take the name of the Namespace they correspond
-		// to. Otherwise is needlessly confusing.
-		nt.NonRootRepos[ns] = NewRepository(nt, ns, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
-		nt.NamespaceRepos[ns] = ns
-		// TODO(akulkapoor): Configure Namespace repos.
+	nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
+	nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+
+	for nsr := range opts.MultiRepo.NamespaceRepos {
+		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
 	}
 
 	// First wait for CRDs to be established.
@@ -173,6 +177,27 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// created. Create a new Client, since it'll automatically be configured to
 	// understand the Repo and RootSync types as ConfigSync is now installed.
 	nt.RenewClient()
+
+	for ns := range opts.MultiRepo.NamespaceRepos {
+		nt.NamespaceRepos[ns] = ns
+
+		// create namespace for namespace reconciler.
+		err = nt.Create(fake.NamespaceObject(ns))
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+
+		// create secret for the namespace reconciler.
+		createNamespaceSecret(nt, ns)
+
+		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
+			nt.T.Fatal(err)
+		}
+
+		if err := setupRepoSync(nt, ns); err != nil {
+			nt.T.Fatal(err)
+		}
+	}
 
 	err = waitForConfigSync(nt)
 	if err != nil {

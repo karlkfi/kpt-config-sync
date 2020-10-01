@@ -21,6 +21,7 @@ import (
 const testGitNamespace = "config-management-system-test"
 const testGitServer = "test-git-server"
 const testGitServerImage = "gcr.io/nomos-public/git-server:v1.0.0"
+const rootRepo = "sot.git"
 
 func testGitServerSelector() map[string]string {
 	// Note that maps are copied by reference into objects.
@@ -153,7 +154,7 @@ func gitDeployment() *appsv1.Deployment {
 
 // portForwardGitServer forwards the git-server deployment to a port.
 // Returns the localhost port which forwards to the git-server Pod.
-func portForwardGitServer(nt *NT) int {
+func portForwardGitServer(nt *NT, repos ...string) int {
 	nt.T.Helper()
 
 	// This logic is not robust to the git-server pod being killed/restarted,
@@ -175,16 +176,16 @@ func portForwardGitServer(nt *NT) int {
 
 	podName := podList.Items[0].Name
 
-	// TODO(willbeason): Do this dynamically for new repositories.
-	nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
-		"git", "init", "--bare", "--shared", "/git-server/repos/sot.git")
-	// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
-	// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
-	// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
-	// re-initialize.
-	nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
-		"git", "-C", "/git-server/repos/sot.git", "config", "receive.denyNonFastforwards", "false")
-
+	for _, repo := range repos {
+		nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+			"git", "init", "--bare", "--shared", fmt.Sprintf("/git-server/repos/%s", repo))
+		// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
+		// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
+		// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
+		// re-initialize.
+		nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
+	}
 	return forwardToFreePort(nt.T, nt.kubeconfigPath, podName)
 }
 
