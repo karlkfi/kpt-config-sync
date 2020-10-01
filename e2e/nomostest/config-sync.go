@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	acmeDir       = "acme"
-	manifests     = "manifests"
-	testResources = "test-resources"
+	acmeDir   = "acme"
+	manifests = "manifests"
 
 	// e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
 	monoConfigMapsName = "mono-repo-configmaps.yaml"
@@ -37,10 +36,9 @@ var (
 	//
 	// All paths must be relative to the test file that is running. There is probably
 	// a more elegant way to do this.
-	baseDir          = filepath.FromSlash("../..")
-	manifestsDir     = filepath.Join(baseDir, manifests)
-	testResourcesDir = filepath.Join(manifestsDir, testResources)
-	templateDir      = filepath.Join(manifestsDir, "templates")
+	baseDir      = filepath.FromSlash("../..")
+	manifestsDir = filepath.Join(baseDir, manifests)
+	templateDir  = filepath.Join(manifestsDir, "templates")
 
 	monoConfigMaps  = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, monoConfigMapsName)
 	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, multiConfigMapsName)
@@ -141,46 +139,30 @@ func copyFile(src, dst string) error {
 	return ioutil.WriteFile(dst, bytes, fileMode)
 }
 
-func copyDirContents(src, dest string) error {
-	files, err := ioutil.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		// Explicitly not recursive
-		if f.IsDir() {
-			continue
-		}
-
-		from := filepath.Join(src, f.Name())
-		to := filepath.Join(dest, f.Name())
-		err := copyFile(from, to)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // installationManifests generates the ConfigSync installation YAML and copies
 // it to the test's temporary directory.
 func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 	nt.T.Helper()
-	err := os.MkdirAll(tmpManifestsDir, fileMode)
-	if err != nil {
-		nt.T.Fatal(err)
-	}
 
-	nt.T.Log("copying test-only-resources")
-	err = copyDirContents(testResourcesDir, tmpManifestsDir)
+	manifestFiles, err := ioutil.ReadDir(manifestsDir)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.T.Log("copying manifests, not including manifests/templates/")
-	err = copyDirContents(manifestsDir, tmpManifestsDir)
+	err = os.MkdirAll(tmpManifestsDir, fileMode)
 	if err != nil {
 		nt.T.Fatal(err)
+	}
+	for _, f := range manifestFiles {
+		nt.T.Log("copying manifests")
+		// Explicitly not recursive since we want to treat the template files specially.
+		if !f.IsDir() {
+			from := filepath.Join(manifestsDir, f.Name())
+			to := filepath.Join(tmpManifestsDir, f.Name())
+			err = copyFile(from, to)
+			if err != nil {
+				nt.T.Fatal(err)
+			}
+		}
 	}
 
 	// Copy ConfigMaps

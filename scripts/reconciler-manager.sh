@@ -25,7 +25,7 @@ docker push "${REC_TAG}"
 
 # Install CRDs for successfully running importer pod.
 # Note: CRD installation will handled by ConfigSync operator in future.
-kubectl apply -f manifests/test-resources/00-namespace.yaml
+kubectl apply -f manifests/00-namespace.yaml
 kubectl apply -f manifests/namespace-selector-crd.yaml
 kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
