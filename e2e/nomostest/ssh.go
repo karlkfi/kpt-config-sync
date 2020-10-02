@@ -73,8 +73,8 @@ func generateSSHKeys(nt *NT, kcfg string) string {
 	return privateKeyPath(nt)
 }
 
-// createNamespaceSecret creates secret in a given namespace using privateKeyPath.
-func createNamespaceSecret(nt *NT, ns string) {
+// CreateNamespaceSecret creates secret in a given namespace using privateKeyPath.
+func CreateNamespaceSecret(nt *NT, ns string) {
 	nt.T.Helper()
 	createSecret(nt, ns, "ssh-key", fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
 }

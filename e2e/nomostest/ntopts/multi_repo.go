@@ -11,6 +11,9 @@ type MultiRepo struct {
 	// paths.
 	NamespaceRepos map[string]struct{}
 
+	// Control indicates options for configuring Namespace Repos.
+	Control repoControl
+
 	// SkipMultiRepo will skip the test if run in multi repo mode.  This stutters because we decided to embed
 	// this struct inside of the "New" struct rather than have it as a member.
 	SkipMultiRepo bool
@@ -45,3 +48,25 @@ func MultiRepoIncompatible(opt *New) {
 func SkipMonoRepo(opt *New) {
 	opt.SkipMonoRepo = true
 }
+
+// WithDelegatedControl will specify the Delegated Control Pattern.
+func WithDelegatedControl(opt *New) {
+	opt.Control = DelegatedControl
+}
+
+// WithCentralizedControl will specify the Central Control Pattern.
+func WithCentralizedControl(opt *New) {
+	opt.Control = CentralControl
+}
+
+// repoControl indicates the type of control for Namespace repos.
+type repoControl string
+
+const (
+	// DelegatedControl indicates the central admin only declares the Namespace
+	// in the Root Repo and delegates declaration of RepoSync to the app operator.
+	DelegatedControl = "Delegated"
+	// CentralControl indicates the central admin only declares the Namespace
+	// in the Root Repo and delegates declaration of RepoSync to the app operator.
+	CentralControl = "Central"
+)

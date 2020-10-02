@@ -2,39 +2,59 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func TestNamespaceRepo_Centralized(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+	bsNamespace := "bookstore"
 
-	rs := fake.RepoSyncObject(core.Namespace("foo"))
-	rs.Spec.Repo = "TODO(b/168915318)"
-	rs.Spec.Auth = "none"
+	nt := nomostest.New(
+		t,
+		ntopts.SkipMonoRepo,
+		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.WithCentralizedControl,
+	)
 
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
-	nt.Root.Add("acme/namespaces/foo/repo-sync.yaml", rs)
-	nt.Root.CommitAndPush("Adding foo namespace and RepoSync")
-	nt.WaitForRepoSyncs()
-
-	err := nt.Validate(rs.Name, "foo", &v1alpha1.RepoSync{})
-	if err != nil {
-		t.Error(err)
+	repo, exist := nt.NonRootRepos[bsNamespace]
+	if !exist {
+		t.Fatal("nonexistent repo")
 	}
 
-	// TODO(b/168915318): Validate that the objects in the namespace repo get synced.
+	// Validate service account 'store' not present.
+	err := nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
+	if err != nil {
+		t.Errorf("store service account already present: %v", err)
+	}
+
+	sa := fake.ServiceAccountObject("store", core.Namespace(bsNamespace))
+	repo.Add("acme/sa.yaml", sa)
+	repo.CommitAndPush("Adding service account")
+	nt.WaitForRepoSyncs()
+
+	// Validate service account 'store' is present.
+	_, err = nomostest.Retry(15*time.Second, func() error {
+		return nt.Validate("store", bsNamespace, &corev1.ServiceAccount{})
+	})
+	if err != nil {
+		t.Fatalf("service account store not found: %v", err)
+	}
 }
 
 func TestNamespaceRepo_Delegated(t *testing.T) {
 	bsNamespaceRepo := "bookstore"
 
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(bsNamespaceRepo))
+	nt := nomostest.New(
+		t,
+		ntopts.SkipMonoRepo,
+		ntopts.NamespaceRepo(bsNamespaceRepo),
+		ntopts.WithDelegatedControl,
+	)
 
 	repo, exist := nt.NonRootRepos[bsNamespaceRepo]
 	if !exist {

@@ -178,30 +178,17 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// understand the Repo and RootSync types as ConfigSync is now installed.
 	nt.RenewClient()
 
-	for ns := range opts.MultiRepo.NamespaceRepos {
-		nt.NamespaceRepos[ns] = ns
-
-		// create namespace for namespace reconciler.
-		err = nt.Create(fake.NamespaceObject(ns))
-		if err != nil {
-			nt.T.Fatal(err)
-		}
-
-		// create secret for the namespace reconciler.
-		createNamespaceSecret(nt, ns)
-
-		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
-			nt.T.Fatal(err)
-		}
-
-		if err := setupRepoSync(nt, ns); err != nil {
-			nt.T.Fatal(err)
-		}
-	}
-
 	err = waitForConfigSync(nt)
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
+	}
+
+	if opts.Control == ntopts.DelegatedControl {
+		setupDelegatedControl(nt, opts)
+	}
+
+	if opts.Control == ntopts.CentralControl {
+		setupCentralizedControl(nt, opts)
 	}
 
 	nt.WaitForRepoSyncs()

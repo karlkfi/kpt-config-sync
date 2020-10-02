@@ -101,6 +101,11 @@ var IsReconcilerManagerConfigMap = func(obj core.Object) bool {
 		obj.GroupVersionKind() == kinds.ConfigMap()
 }
 
+// gitRepo returns fully qualified git repo name hosted in test git server.
+func gitRepo(repoName string) string {
+	return fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", repoName)
+}
+
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
 func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
@@ -292,7 +297,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
 	rs.Spec.Git = v1alpha1.Git{
-		Repo:      fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", rootRepo),
+		Repo:      gitRepo(rootRepo),
 		Dir:       acmeDir,
 		Auth:      "ssh",
 		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
@@ -321,7 +326,7 @@ func setupRepoSync(nt *NT, ns string) error {
 	// create RepoSync to initialize the Namespace reconciler.
 	rs := fake.RepoSyncObject(core.Namespace(ns))
 	rs.Spec.Git = v1alpha1.Git{
-		Repo: fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", ns),
+		Repo: gitRepo(ns),
 		Dir:  acmeDir,
 		Auth: "ssh",
 		SecretRef: v1alpha1.SecretReference{
@@ -343,7 +348,9 @@ func setupRepoSync(nt *NT, ns string) error {
 	return nil
 }
 
-func setupRepoSyncRoleBinding(nt *NT, ns string) error {
+// repoSyncRoleBinding returns rolebinding that grants service account
+// permission to manage resources in the namespace.
+func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
 	rb := fake.RoleBindingObject(core.Name("syncs"), core.Namespace(ns))
 	sb := []rbacv1.Subject{
 		{
@@ -360,7 +367,11 @@ func setupRepoSyncRoleBinding(nt *NT, ns string) error {
 	}
 	rb.Subjects = sb
 	rb.RoleRef = rf
-	if err := nt.Create(rb); err != nil {
+	return rb
+}
+
+func setupRepoSyncRoleBinding(nt *NT, ns string) error {
+	if err := nt.Create(repoSyncRoleBinding(ns)); err != nil {
 		nt.T.Fatal(err)
 	}
 
@@ -435,4 +446,58 @@ func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
 		t.Fatalf("Setting filesystem polling period: %v", err)
 	}
 	t.Log("Set filesystem polling period")
+}
+
+func setupDelegatedControl(nt *NT, opts ntopts.New) {
+	for ns := range opts.MultiRepo.NamespaceRepos {
+		nt.NamespaceRepos[ns] = ns
+
+		// create namespace for namespace reconciler.
+		err := nt.Create(fake.NamespaceObject(ns))
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+
+		// create secret for the namespace reconciler.
+		CreateNamespaceSecret(nt, ns)
+
+		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
+			nt.T.Fatal(err)
+		}
+
+		if err := setupRepoSync(nt, ns); err != nil {
+			nt.T.Fatal(err)
+		}
+	}
+}
+
+func structuredPath(namespace, resourceName string) string {
+	return fmt.Sprintf("acme/namespaces/%s/%s", namespace, resourceName)
+}
+
+func setupCentralizedControl(nt *NT, opts ntopts.New) {
+	for ns := range opts.MultiRepo.NamespaceRepos {
+		nt.Root.Add(structuredPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
+
+		nt.Root.Add(structuredPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
+
+		rs := fake.RepoSyncObject(core.Namespace(ns))
+		rs.Spec.Repo = gitRepo(ns)
+		rs.Spec.Dir = "acme"
+		rs.Spec.Auth = "ssh"
+		rs.Spec.SecretRef = v1alpha1.SecretReference{
+			Name: "ssh-key",
+		}
+		nt.Root.Add(structuredPath(ns, "repo-sync.yaml"), rs)
+
+		nt.Root.CommitAndPush("Adding namespace, rolebinding and RepoSync")
+		nt.WaitForRepoSyncs()
+
+		CreateNamespaceSecret(nt, ns)
+
+		err := nt.Validate(rs.Name, ns, &v1alpha1.RepoSync{})
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+	}
 }
