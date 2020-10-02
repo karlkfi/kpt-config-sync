@@ -31,6 +31,9 @@ type Remediator struct {
 //
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
+	// NeedsUpdate returns true if the Remediator needs its watches to be updated
+	// (typically due to some asynchronous error that occurred).
+	NeedsUpdate() bool
 	// UpdateWatches starts and stops server-side watches based upon the given map
 	// of GVKs which should be watched.
 	UpdateWatches(map[schema.GroupVersionKind]struct{}) status.MultiError
@@ -70,6 +73,11 @@ func (r *Remediator) Start(ctx context.Context) {
 		go worker.Run(ctx)
 	}
 	r.started = true
+}
+
+// NeedsUpdate implements Interface.
+func (r *Remediator) NeedsUpdate() bool {
+	return r.watchMgr.NeedsUpdate()
 }
 
 // UpdateWatches implements Interface.

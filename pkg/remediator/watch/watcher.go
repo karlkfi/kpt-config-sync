@@ -14,9 +14,9 @@ import (
 
 type startWatchFunc func(metav1.ListOptions) (watch.Interface, error)
 
-// watcherOptions contains the options needed
+// watcherConfig contains the options needed
 // to create a watcher.
-type watcherOptions struct {
+type watcherConfig struct {
 	gvk        schema.GroupVersionKind
 	mapper     meta.RESTMapper
 	config     *rest.Config
@@ -27,25 +27,25 @@ type watcherOptions struct {
 }
 
 // createWatcherFunc is the type of functions to create watchers
-type createWatcherFunc func(opts watcherOptions) (Runnable, status.Error)
+type createWatcherFunc func(cfg watcherConfig) (Runnable, status.Error)
 
 // createWatcher creates a watcher for a given GVK
-func createWatcher(opts watcherOptions) (Runnable, status.Error) {
-	if opts.startWatch == nil {
-		mapping, err := opts.mapper.RESTMapping(opts.gvk.GroupKind(), opts.gvk.Version)
+func createWatcher(cfg watcherConfig) (Runnable, status.Error) {
+	if cfg.startWatch == nil {
+		mapping, err := cfg.mapper.RESTMapping(cfg.gvk.GroupKind(), cfg.gvk.Version)
 		if err != nil {
-			return nil, status.APIServerErrorf(err, "watcher failed to get REST mapping for %s", opts.gvk.String())
+			return nil, status.APIServerErrorf(err, "watcher failed to get REST mapping for %s", cfg.gvk.String())
 		}
 
-		dynamicClient, err := dynamic.NewForConfig(opts.config)
+		dynamicClient, err := dynamic.NewForConfig(cfg.config)
 		if err != nil {
-			return nil, status.APIServerErrorf(err, "watcher failed to get dynamic client for %s", opts.gvk.String())
+			return nil, status.APIServerErrorf(err, "watcher failed to get dynamic client for %s", cfg.gvk.String())
 		}
 
-		opts.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
+		cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
 			return dynamicClient.Resource(mapping.Resource).Watch(options)
 		}
 	}
 
-	return NewFiltered(opts), nil
+	return NewFiltered(cfg), nil
 }

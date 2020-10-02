@@ -15,23 +15,23 @@ import (
 )
 
 func fakeRunnable() Runnable {
-	opts := watcherOptions{
+	cfg := watcherConfig{
 		reconciler: "test",
 		startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
 			return watch.NewFake(), nil
 		},
 	}
-	return NewFiltered(opts)
+	return NewFiltered(cfg)
 }
 
 func fakeError(gvk schema.GroupVersionKind) status.Error {
 	return status.APIServerErrorf(errors.New("failed"), "watcher failed for %s", gvk.String())
 }
 
-func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(watcherOptions) (Runnable, status.Error) {
-	return func(options watcherOptions) (runnable Runnable, err status.Error) {
-		if errOnType[options.gvk] {
-			return nil, fakeError(options.gvk)
+func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(watcherConfig) (Runnable, status.Error) {
+	return func(cfg watcherConfig) (runnable Runnable, err status.Error) {
+		if errOnType[cfg.gvk] {
+			return nil, fakeError(cfg.gvk)
 		}
 		return fakeRunnable(), nil
 	}
@@ -138,6 +138,12 @@ func TestManager_Update(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.wantWatchedTypes, m.watchedGVKs(), cmpopts.SortSlices(sortGVKs)); diff != "" {
 				t.Error(diff)
+			}
+
+			gotNU := m.NeedsUpdate()
+			wantNU := tc.wantErr != nil
+			if gotNU != wantNU {
+				t.Errorf("got NeedsUpdate() = %v, want %v", gotNU, wantNU)
 			}
 		})
 	}

@@ -170,7 +170,7 @@ func TestFilteredWatcher(t *testing.T) {
 
 			base := watch.NewFake()
 			q := queue.New("test")
-			opts := watcherOptions{
+			cfg := watcherConfig{
 				reconciler: reconciler,
 				resources:  dr,
 				queue:      q,
@@ -178,7 +178,7 @@ func TestFilteredWatcher(t *testing.T) {
 					return base, nil
 				},
 			}
-			w := NewFiltered(opts)
+			w := NewFiltered(cfg)
 
 			go func() {
 				for _, a := range tc.actions {

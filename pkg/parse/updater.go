@@ -17,6 +17,10 @@ type updater struct {
 	applier    applier.Interface
 }
 
+func (u *updater) needsUpdate() bool {
+	return u.remediator.NeedsUpdate()
+}
+
 func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiError {
 	// First update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.

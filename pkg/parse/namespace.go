@@ -68,20 +68,18 @@ func (p *namespace) Run(ctx context.Context) {
 		case <-ticker.C: // every clock tick
 			state, err := p.Read(ctx)
 			if err != nil {
-				// Clear the lastApplied state on error since this could be the result of switching branches or
-				// some other operation where inverting the operation would result in p.lastApplied matching
-				// the previous, correct lastApplied value in which case the errors in status would never clear.
-				p.lastApplied = ""
+				// Invalidate state on error since this could be the result of switching
+				// branches or some other operation where inverting the operation would
+				// result in repeating a previous state that was checkpointed.
+				p.invalidate()
 				glog.Error(err)
 				continue
 			}
 
 			err = p.Parse(ctx, state)
 			if err != nil {
-				// Clear the lastApplied state on error since this could be the result of switching branches or
-				// some other operation where inverting the operation would result in p.lastApplied matching
-				// the previous, correct lastApplied value in which case the errors in status would never clear.
-				p.lastApplied = ""
+				// See comment above.
+				p.invalidate()
 				glog.Error(err)
 			}
 		}
@@ -146,7 +144,7 @@ func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiErr
 
 // Parse implements Runnable.
 func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiError {
-	if p.lastApplied == state.policyDir.OSPath() {
+	if p.upToDate(state.policyDir.OSPath()) {
 		return nil
 	}
 
@@ -180,8 +178,8 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 	}
 
 	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-	// Only set lastApplied if *everything* succeeded, including status update.
-	p.lastApplied = state.policyDir.OSPath()
+	// Only checkpoint our state *everything* succeeded, including status update.
+	p.checkpoint(state.policyDir.OSPath())
 	return nil
 }
 

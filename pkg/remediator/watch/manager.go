@@ -1,6 +1,8 @@
 package watch
 
 import (
+	"sync"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
@@ -29,11 +31,15 @@ type Manager struct {
 	// queue is the work queue for remediator.
 	queue *queue.ObjectQueue
 
-	// watcherMap maps GVKs to their associated watchers
-	watcherMap map[schema.GroupVersionKind]Runnable
-
 	// createWatcherFunc is the function to create a watcher.
 	createWatcherFunc createWatcherFunc
+
+	// The following fields are guarded by the mutex.
+	mux sync.Mutex
+	// watcherMap maps GVKs to their associated watchers
+	watcherMap map[schema.GroupVersionKind]Runnable
+	// needsUpdate indicates if the Manager's watches need to be updated.
+	needsUpdate bool
 }
 
 // Options contains options for creating a watch manager.
@@ -80,13 +86,27 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 	}, nil
 }
 
+// NeedsUpdate returns true if the Manager's watches need to be updated. This
+// function is threadsafe.
+func (m *Manager) NeedsUpdate() bool {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
+	return m.needsUpdate
+}
+
 // UpdateWatches accepts a map of GVKs that should be watched and takes the
 // following actions:
 // - stop watchers for any GroupVersionKind that is not present in the given
 //   map.
 // - start watchers for any GroupVersionKind that is present in the given map
 //   and not present in the current watch map.
+//
+// This function is threadsafe.
 func (m *Manager) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	// Stop obsolete watchers.
 	for gvk := range m.watcherMap {
 		if _, keepWatching := gvkMap[gvk]; !keepWatching {
@@ -107,6 +127,8 @@ func (m *Manager) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) sta
 		}
 	}
 
+	// If any errors occurred, then the Manager still needs to be updated.
+	m.needsUpdate = errs != nil
 	return errs
 }
 
@@ -119,14 +141,15 @@ func (m *Manager) watchedGVKs() []schema.GroupVersionKind {
 	return gvks
 }
 
-// startWatcher starts a watcher for a GVK
+// startWatcher starts a watcher for a GVK. This function is NOT threadsafe;
+// caller must have a lock on m.mux.
 func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
 	_, found := m.watcherMap[gvk]
 	if found {
 		// The watcher is already started.
 		return nil
 	}
-	opts := watcherOptions{
+	cfg := watcherConfig{
 		gvk:        gvk,
 		mapper:     m.mapper,
 		config:     m.cfg,
@@ -134,23 +157,30 @@ func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
 		queue:      m.queue,
 		reconciler: m.reconciler,
 	}
-	w, err := m.createWatcherFunc(opts)
+	w, err := m.createWatcherFunc(cfg)
 	if err != nil {
 		return err
 	}
-	go func(r Runnable) {
-		// TODO(b/168623881): Handle this error by removing the watcher from the watcherMap.
-		// This will require making watcherMap threadsafe.
-		if err := r.Run(); err != nil {
-			glog.Errorf("Error running watcher for %s: %v", gvk.String(), err)
-		}
-	}(w)
-	m.watcherMap[gvk] = w
 
+	m.watcherMap[gvk] = w
+	go m.runWatcher(w, gvk)
 	return nil
 }
 
-// stopWatcher stops a watcher for a GVK
+// runWatcher blocks until the given watcher finishes running. This function is
+// threadsafe.
+func (m *Manager) runWatcher(r Runnable, gvk schema.GroupVersionKind) {
+	if err := r.Run(); err != nil {
+		glog.Warningf("Error running watcher for %s: %v", gvk.String(), err)
+		m.mux.Lock()
+		delete(m.watcherMap, gvk)
+		m.needsUpdate = true
+		m.mux.Unlock()
+	}
+}
+
+// stopWatcher stops a watcher for a GVK. This function is NOT threadsafe;
+// caller must have a lock on m.mux.
 func (m *Manager) stopWatcher(gvk schema.GroupVersionKind) {
 	w, found := m.watcherMap[gvk]
 	if !found {

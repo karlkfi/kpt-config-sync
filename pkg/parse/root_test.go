@@ -92,8 +92,7 @@ func TestRoot_Parse(t *testing.T) {
 						remediator: &noOpRemediator{},
 						applier:    a,
 					},
-					client: syncertest.NewClient(t, runtime.NewScheme(),
-						fake.RootSyncObject()),
+					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
 			}
 
@@ -114,16 +113,10 @@ func TestRoot_Parse(t *testing.T) {
 	}
 }
 
-type noOpRemediator struct{}
-
 func sortObjects(left, right core.Object) bool {
 	leftID := core.IDOf(left)
 	rightID := core.IDOf(right)
 	return leftID.String() < rightID.String()
-}
-
-func (r *noOpRemediator) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
-	return nil
 }
 
 type fakeParser struct {

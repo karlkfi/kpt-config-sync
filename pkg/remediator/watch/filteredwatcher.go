@@ -51,13 +51,13 @@ type filteredWatcher struct {
 var _ Runnable = &filteredWatcher{}
 
 // NewFiltered returns a new filtered watch initialized with the given options.
-func NewFiltered(opts watcherOptions) Runnable {
+func NewFiltered(cfg watcherConfig) Runnable {
 	return &filteredWatcher{
-		gvk:        opts.gvk.String(),
-		startWatch: opts.startWatch,
-		resources:  opts.resources,
-		queue:      opts.queue,
-		reconciler: opts.reconciler,
+		gvk:        cfg.gvk.String(),
+		startWatch: cfg.startWatch,
+		resources:  cfg.resources,
+		queue:      cfg.queue,
+		reconciler: cfg.reconciler,
 		base:       watch.NewEmptyWatch(),
 	}
 }
