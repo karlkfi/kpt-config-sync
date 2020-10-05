@@ -43,19 +43,21 @@ func (r *Resources) Update(objects []core.Object) status.Error {
 		}
 		newSet[id] = u
 	}
+
+	previousSet := r.getObjectSet()
+	if err := deletesAllNamespaces(previousSet, newSet); err != nil {
+		return err
+	}
+
 	// Now assign the pointer for the new map to the struct reference in a
 	// threadsafe context. From now on, this map is read-only.
-	r.mutex.Lock()
-	r.objectSet = newSet
-	r.mutex.Unlock()
+	r.setObjectSet(newSet)
 	return nil
 }
 
 // Get returns a copy of the resource declaration as read from Git
 func (r *Resources) Get(id core.ID) (*unstructured.Unstructured, bool) {
-	r.mutex.RLock()
-	objSet := r.objectSet
-	r.mutex.RUnlock()
+	objSet := r.getObjectSet()
 
 	// A local reference to the map is threadsafe since only the struct reference
 	// is replaced on update.
@@ -70,9 +72,7 @@ func (r *Resources) Get(id core.ID) (*unstructured.Unstructured, bool) {
 // Declarations returns all resource declarations from Git.
 func (r *Resources) Declarations() []*unstructured.Unstructured {
 	var objects []*unstructured.Unstructured
-	r.mutex.RLock()
-	objSet := r.objectSet
-	r.mutex.RUnlock()
+	objSet := r.getObjectSet()
 
 	// A local reference to the map is threadsafe since only the struct reference
 	// is replaced on update.
@@ -85,9 +85,7 @@ func (r *Resources) Declarations() []*unstructured.Unstructured {
 // GVKSet returns the set of all GroupVersionKind found in the git repo.
 func (r *Resources) GVKSet() map[schema.GroupVersionKind]bool {
 	gvkSet := make(map[schema.GroupVersionKind]bool)
-	r.mutex.RLock()
-	objSet := r.objectSet
-	r.mutex.RUnlock()
+	objSet := r.getObjectSet()
 
 	// A local reference to the objSet map is threadsafe since only the pointer to
 	// the map is replaced on update.
@@ -98,4 +96,16 @@ func (r *Resources) GVKSet() map[schema.GroupVersionKind]bool {
 		}
 	}
 	return gvkSet
+}
+
+func (r *Resources) getObjectSet() map[core.ID]*unstructured.Unstructured {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.objectSet
+}
+
+func (r *Resources) setObjectSet(objectSet map[core.ID]*unstructured.Unstructured) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.objectSet = objectSet
 }

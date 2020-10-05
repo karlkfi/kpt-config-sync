@@ -228,9 +228,6 @@ func TestBats(t *testing.T) {
 		//{fileName: "resource_conditions.bats"},
 		{
 			fileName: "status_monitoring.bats",
-			skipMultiRepo: testNums(
-				2, // TODO(b/169199523): handle delete all namespaces case
-			),
 		},
 	}
 	for idx := range testCases {
