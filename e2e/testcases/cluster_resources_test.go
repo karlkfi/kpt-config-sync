@@ -23,7 +23,7 @@ func sortPolicyRules(l, r rbacv1.PolicyRule) bool {
 	return string(jsnL) < string(jsnR)
 }
 
-func hasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
+func clusterRoleHasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 	return func(o core.Object) error {
 		cr, ok := o.(*rbacv1.ClusterRole)
 		if !ok {
@@ -65,7 +65,7 @@ func TestRevertClusterRole(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
-		hasRules(declaredRules))
+		clusterRoleHasRules(declaredRules))
 	if err != nil {
 		t.Fatalf("validating ClusterRole precondition: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestRevertClusterRole(t *testing.T) {
 	// Ensure the conflict is reverted.
 	d, err := nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate(crName, "", &rbacv1.ClusterRole{},
-			hasRules(declaredRules))
+			clusterRoleHasRules(declaredRules))
 	})
 
 	if err != nil {
@@ -97,7 +97,7 @@ func TestRevertClusterRole(t *testing.T) {
 		// If it doesn't after ten minutes, this is definitely a bug.
 		d2, err := nomostest.Retry(20*time.Minute, func() error {
 			return nt.Validate(crName, "", &rbacv1.ClusterRole{},
-				hasRules(declaredRules))
+				clusterRoleHasRules(declaredRules))
 		})
 		if err == nil {
 			// This was probably a flake. Consider increasing test resources or
@@ -145,7 +145,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
-		hasRules(declaredRules))
+		clusterRoleHasRules(declaredRules))
 	if err != nil {
 		t.Fatalf("validating ClusterRole precondition: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	// Ensure the resource is updated.
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate(crName, "", &rbacv1.ClusterRole{},
-			hasRules(updatedRules))
+			clusterRoleHasRules(updatedRules))
 	})
 	if err != nil {
 		t.Errorf("updating ClusterRole: %v", err)

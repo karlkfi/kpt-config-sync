@@ -119,6 +119,9 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 	// Remove RepoSync resource from Root Repository.
 	nt.Root.Remove(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName))
 	nt.Root.CommitAndPush("Removing RepoSync from the Root Repository")
+	// Remove from NamespaceRepos so we don't try to check that it is syncing,
+	// as we've just deleted it.
+	delete(nt.NamespaceRepos, bsNamespace)
 	nt.WaitForRepoSyncs()
 
 	checkRepoSyncResourcesNotPresent(bsNamespace, nt)

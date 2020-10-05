@@ -150,7 +150,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 
 	// Ensure the aggregate rule is actually aggregated.
 	duration, err := nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{}, hasRules([]rbacv1.PolicyRule{
+		return nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{}, clusterRoleHasRules([]rbacv1.PolicyRule{
 			nsViewer.Rules[0], rbacViewer.Rules[0],
 		}))
 	})
@@ -178,7 +178,7 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		// As-is, it is still possible to flake but this should be enough tries that
 		// those will be rare.
 		return nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{},
-			hasRules([]rbacv1.PolicyRule{
+			clusterRoleHasRules([]rbacv1.PolicyRule{
 				nsViewer.Rules[0], rbacViewer.Rules[0],
 			}))
 	})

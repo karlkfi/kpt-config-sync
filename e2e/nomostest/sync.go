@@ -96,11 +96,14 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 			return err
 		}
 
+		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
+			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		}
 		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, jsn)
+			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
 		}
 		if commit := rs.Status.Sync.Commit; commit != sha1 {
-			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, jsn)
+			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
 		return nil
 	}
@@ -120,11 +123,14 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 			return err
 		}
 
+		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
+			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		}
 		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, jsn)
+			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
 		}
 		if commit := rs.Status.Sync.Commit; commit != sha1 {
-			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, jsn)
+			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
 		return nil
 	}

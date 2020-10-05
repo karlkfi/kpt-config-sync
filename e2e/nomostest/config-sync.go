@@ -358,18 +358,8 @@ func repoSyncClusterRole() *rbacv1.ClusterRole {
 	cr := fake.ClusterRoleObject(core.Name(clusterRoleName))
 	cr.Rules = []rbacv1.PolicyRule{
 		{
-			APIGroups: []string{configsync.GroupName},
-			Resources: []string{"reposyncs"},
-			Verbs:     []string{rbacv1.VerbAll},
-		},
-		{
-			APIGroups: []string{configsync.GroupName},
-			Resources: []string{"reposyncs/status"},
-			Verbs:     []string{rbacv1.VerbAll},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"serviceaccounts"},
+			APIGroups: []string{rbacv1.APIGroupAll},
+			Resources: []string{rbacv1.ResourceAll},
 			Verbs:     []string{rbacv1.VerbAll},
 		},
 	}
@@ -527,9 +517,14 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")
+		// This waits for the Namespace to be created.
 		nt.WaitForRepoSyncs()
 
+		// Now that the Namespace exists, create the secret inside it, and ensure
+		// its RepoSync reports everything is synced.
 		CreateNamespaceSecret(nt, ns)
+		nt.NamespaceRepos[ns] = ns
+		nt.WaitForRepoSyncs()
 
 		err := nt.Validate(rs.Name, ns, &v1alpha1.RepoSync{})
 		if err != nil {

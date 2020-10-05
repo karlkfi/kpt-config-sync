@@ -134,14 +134,14 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	// Add foo back so we resume syncing.
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.CommitAndPush("re-declare foo Namespace")
-	// TODO(b/170243322): WaitForRepoSyncs should check that there are no longer errors.
 	nt.WaitForRepoSyncs()
 
+	err = nt.Validate("foo", "", &corev1.Namespace{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = nomostest.Retry(10*time.Second, func() error {
-		err := nt.Validate("foo", "", &corev1.Namespace{})
-		if err != nil {
-			return err
-		}
+		// It takes a few seconds for Namespaces to terminate.
 		return nt.ValidateNotFound("bar", "", &corev1.Namespace{})
 	})
 	if err != nil {
@@ -155,12 +155,13 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	_, err = nomostest.Retry(10*time.Second, func() error {
-		err := nt.ValidateNotFound("foo", "", &corev1.Namespace{})
-		if err != nil {
-			return err
-		}
-		return nt.ValidateNotFound("bar", "", &corev1.Namespace{})
+		// It takes a few seconds for Namespaces to terminate.
+		return nt.ValidateNotFound("foo", "", &corev1.Namespace{})
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = nt.ValidateNotFound("bar", "", &corev1.Namespace{})
 	if err != nil {
 		t.Fatal(err)
 	}

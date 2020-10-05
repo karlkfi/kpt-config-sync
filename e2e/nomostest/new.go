@@ -70,7 +70,8 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 // 2) A functioning git server hosted on the cluster.
 // 3) A fresh ACM installation.
 func newWithOptions(t *testing.T, opts ntopts.New) *NT {
-	if opts.Nomos.MultiRepo {
+	switch {
+	case opts.Nomos.MultiRepo:
 		if opts.MultiRepoIncompatible {
 			t.Skip("Test incompatible with MultiRepo mode")
 		}
@@ -88,8 +89,13 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		default:
 			t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
 		}
-	} else if opts.SkipMonoRepo {
+	case opts.SkipMonoRepo:
 		t.Skip("Test skipped for MonoRepo mode")
+	case len(opts.NamespaceRepos) > 0:
+		// We're in MonoRepo mode and we aren't skipping this test, but there are
+		// Namespace repos specified.
+		t.Fatal("Namespace Repos specified, but running in MonRepo mode. " +
+			"Did you forget ntopts.SkipMonRepo?")
 	}
 
 	t.Parallel()
@@ -183,11 +189,14 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
 
-	if opts.Control == ntopts.DelegatedControl {
+	switch opts.Control {
+	case ntopts.DelegatedControl:
 		setupDelegatedControl(nt, opts)
-	}
-
-	if opts.Control == ntopts.CentralControl {
+	case ntopts.CentralControl:
+		setupCentralizedControl(nt, opts)
+	default:
+		// Most tests don't care about centralized/delegated control, but can
+		// specify the behavior if that distinction is under test.
 		setupCentralizedControl(nt, opts)
 	}
 

@@ -204,7 +204,7 @@ func (nt *NT) WaitForRepoSyncs() {
 			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
 
 		for ns, repo := range nt.NamespaceRepos {
-			nt.waitForRepoSync(repo, func() core.Object { return &v1alpha1.RepoSync{} },
+			nt.WaitForRepoSync(repo, func() core.Object { return &v1alpha1.RepoSync{} },
 				v1alpha1.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
 		}
 	} else {
@@ -213,9 +213,9 @@ func (nt *NT) WaitForRepoSyncs() {
 	}
 }
 
-// waitForRepoSync waits for the specified RepoSync to be synced to HEAD
+// WaitForRepoSync waits for the specified RepoSync to be synced to HEAD
 // of the specified repository.
-func (nt *NT) waitForRepoSync(repoName string, o func() core.Object,
+func (nt *NT) WaitForRepoSync(repoName string, o func() core.Object,
 	name, namespace string, syncedTo func(sha1 string) Predicate) {
 	nt.T.Helper()
 
