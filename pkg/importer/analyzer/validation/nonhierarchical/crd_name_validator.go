@@ -19,9 +19,11 @@ const InvalidCRDNameErrorCode = "1048"
 var invalidCRDNameErrorBuilder = status.NewErrorBuilder(InvalidCRDNameErrorCode)
 
 // InvalidCRDNameError reports a CRD with an invalid name in the repo.
-func InvalidCRDNameError(resource id.Resource) status.Error {
+func InvalidCRDNameError(resource id.Resource, expected string) status.Error {
 	return invalidCRDNameErrorBuilder.
-		Sprintf("The CustomResourceDefinition has an invalid name. To fix, change the name to `spec.names.plural+\".\"+spec.group`.").
+		Sprintf("The CustomResourceDefinition `metadata.name` MUST be in the form: `<spec.names.plural>.<spec.group>`. "+
+			"To fix, update those fields or change `metadata.name` to %q.",
+			expected).
 		BuildWithResources(resource)
 }
 
@@ -38,7 +40,7 @@ func validateCRDName(o ast.FileObject) status.Error {
 
 	expectedName := fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
 	if crd.Name != expectedName {
-		return InvalidCRDNameError(&o)
+		return InvalidCRDNameError(&o, expectedName)
 	}
 
 	return nil

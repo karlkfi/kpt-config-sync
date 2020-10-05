@@ -238,7 +238,7 @@ func Generate() AllExamples {
 	result.add(nonhierarchical.UnsupportedCRDRemovalError(fake.CustomResourceDefinitionV1Beta1()))
 
 	// 1048
-	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinitionV1Beta1()))
+	result.add(nonhierarchical.InvalidCRDNameError(fake.CustomResourceDefinitionV1Beta1(), "default-names.apiextensions.k8s.io"))
 
 	// 1049 is Deprecated.
 	result.markDeprecated("1049")
