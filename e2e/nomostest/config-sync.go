@@ -48,6 +48,8 @@ var (
 
 	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
 	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, "ns-reconciler")
+	// RepoSyncFileName specifies the filename containing RepoSync.
+	RepoSyncFileName = "repo-sync.yaml"
 
 	templates = []string{
 		"git-importer.yaml",
@@ -504,15 +506,16 @@ func setupDelegatedControl(nt *NT, opts ntopts.New) {
 	}
 }
 
-func structuredPath(namespace, resourceName string) string {
+// StructuredNSPath returns structured path with namespace and resourcename in repo.
+func StructuredNSPath(namespace, resourceName string) string {
 	return fmt.Sprintf("acme/namespaces/%s/%s", namespace, resourceName)
 }
 
 func setupCentralizedControl(nt *NT, opts ntopts.New) {
 	for ns := range opts.MultiRepo.NamespaceRepos {
-		nt.Root.Add(structuredPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
+		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
-		nt.Root.Add(structuredPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
+		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
 
 		rs := fake.RepoSyncObject(core.Namespace(ns))
 		rs.Spec.Repo = gitRepo(ns)
@@ -521,7 +524,7 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		rs.Spec.SecretRef = v1alpha1.SecretReference{
 			Name: "ssh-key",
 		}
-		nt.Root.Add(structuredPath(ns, "repo-sync.yaml"), rs)
+		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")
 		nt.WaitForRepoSyncs()
