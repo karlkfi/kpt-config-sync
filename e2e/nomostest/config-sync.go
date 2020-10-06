@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -44,6 +45,9 @@ var (
 
 	monoConfigMaps  = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, monoConfigMapsName)
 	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, multiConfigMapsName)
+
+	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
+	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, "ns-reconciler")
 
 	templates = []string{
 		"git-importer.yaml",
@@ -348,6 +352,32 @@ func setupRepoSync(nt *NT, ns string) error {
 	return nil
 }
 
+func repoSyncClusterRole() *rbacv1.ClusterRole {
+	cr := fake.ClusterRoleObject(core.Name(clusterRoleName))
+	cr.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{configsync.GroupName},
+			Resources: []string{"reposyncs"},
+			Verbs:     []string{rbacv1.VerbAll},
+		},
+		{
+			APIGroups: []string{configsync.GroupName},
+			Resources: []string{"reposyncs/status"},
+			Verbs:     []string{rbacv1.VerbAll},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"serviceaccounts"},
+			Verbs:     []string{rbacv1.VerbAll},
+		},
+	}
+	return cr
+}
+
+func setupRepoSynClusterRole(nt *NT) error {
+	return nt.Create(repoSyncClusterRole())
+}
+
 // repoSyncRoleBinding returns rolebinding that grants service account
 // permission to manage resources in the namespace.
 func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
@@ -362,8 +392,7 @@ func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
 	rf := rbacv1.RoleRef{
 		APIGroup: "rbac.authorization.k8s.io",
 		Kind:     "ClusterRole",
-		// TODO (b/169933284) Update role reference for namespace reconciler setup.
-		Name: "cluster-admin",
+		Name:     clusterRoleName,
 	}
 	rb.Subjects = sb
 	rb.RoleRef = rf
@@ -461,6 +490,10 @@ func setupDelegatedControl(nt *NT, opts ntopts.New) {
 		// create secret for the namespace reconciler.
 		CreateNamespaceSecret(nt, ns)
 
+		if err := setupRepoSynClusterRole(nt); err != nil {
+			nt.T.Fatal(err)
+		}
+
 		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
 			nt.T.Fatal(err)
 		}
@@ -478,7 +511,7 @@ func structuredPath(namespace, resourceName string) string {
 func setupCentralizedControl(nt *NT, opts ntopts.New) {
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		nt.Root.Add(structuredPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
-
+		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
 		nt.Root.Add(structuredPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
 
 		rs := fake.RepoSyncObject(core.Namespace(ns))
@@ -490,7 +523,7 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		}
 		nt.Root.Add(structuredPath(ns, "repo-sync.yaml"), rs)
 
-		nt.Root.CommitAndPush("Adding namespace, rolebinding and RepoSync")
+		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")
 		nt.WaitForRepoSyncs()
 
 		CreateNamespaceSecret(nt, ns)
