@@ -37,7 +37,7 @@ func New(t *testing.T, ntOptions ...NTOption) *NT {
 	// TODO: we should probably put ntopts.New members inside of NT use the go-convention of mutating NT with option functions.
 	optsStruct := ntopts.New{
 		Name:   testClusterName(t),
-		TmpDir: testDir(t),
+		TmpDir: TestDir(t),
 		KindCluster: ntopts.KindCluster{
 			Version: ntopts.AsKindVersion(t, *e2e.KubernetesVersion),
 		},
@@ -195,7 +195,10 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	return nt
 }
 
-func testDir(t *testing.T) string {
+// TestDir creates a unique temporary directory for the E2E test.
+//
+// Returned directory is absolute and OS-specific.
+func TestDir(t *testing.T) string {
 	t.Helper()
 
 	name := testDirName(t)
