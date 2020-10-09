@@ -204,8 +204,8 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	// Switch back to 'master' branch.
-	rs.Spec.Git.Branch = nomostest.MasterBranch
+	// Switch back to 'main' branch.
+	rs.Spec.Git.Branch = nomostest.MainBranch
 
 	err = nt.Update(rs)
 	if err != nil {
@@ -242,7 +242,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	// Update RootSync to valid branch name
 	rs = fake.RootSyncObject()
-	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "master"}}}`)
+	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "main"}}}`)
 
 	nt.WaitForRootSyncSourceErrorClear()
 }
@@ -256,7 +256,7 @@ func TestForceRevert(t *testing.T) {
 	nt.WaitForRootSyncSourceErrorCode("1017")
 
 	nt.Root.Git("reset", "--hard", "HEAD^")
-	nt.Root.Git("push", "-f", "origin", "master")
+	nt.Root.Git("push", "-f", "origin", "main")
 
 	nt.WaitForRootSyncSourceErrorClear()
 }

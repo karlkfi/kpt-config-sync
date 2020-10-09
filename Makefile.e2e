@@ -133,7 +133,7 @@ test-nomos-vet-local: build
 
 	@rm -rf ./.output/tmp/empty
 	@mkdir ./.output/tmp/empty
-	@cd ./.output/tmp/empty && git init && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
+	@cd ./.output/tmp/empty && git init && git checkout -b main && $(NOMOS_LOCAL) init && $(NOMOS_LOCAL) vet
 
 include Makefile.e2e.ci
 

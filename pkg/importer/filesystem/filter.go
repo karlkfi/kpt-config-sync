@@ -8,7 +8,7 @@ import (
 func isHierarchyFile(root cmpath.Absolute, file cmpath.Absolute) bool {
 	fileSplits := file.Split()
 	rootSplits := root.Split()
-	if len(fileSplits) < len(rootSplits) {
+	if len(fileSplits) <= len(rootSplits) {
 		return false
 	}
 	for i := range rootSplits {
@@ -16,6 +16,7 @@ func isHierarchyFile(root cmpath.Absolute, file cmpath.Absolute) bool {
 			return false
 		}
 	}
+
 	return fileSplits[len(rootSplits)] == repo.SystemDir ||
 		fileSplits[len(rootSplits)] == repo.ClusterDir ||
 		fileSplits[len(rootSplits)] == repo.ClusterRegistryDir ||

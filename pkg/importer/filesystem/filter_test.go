@@ -40,6 +40,11 @@ func TestFilterHierarchyFiles(t *testing.T) {
 			root: "/",
 		},
 		{
+			name:  "root doesn't panic",
+			root:  "/",
+			files: []string{"/"},
+		},
+		{
 			name:  "keep system/",
 			root:  "/",
 			files: []string{"/system/repo.yaml"},

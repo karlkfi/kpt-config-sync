@@ -21,9 +21,9 @@ import (
 const (
 	// remoteName is static as every git repository has exactly one remote.
 	remoteName = "origin"
-	// MasterBranch is static as behavior when switching branches is never under
+	// MainBranch is static as behavior when switching branches is never under
 	// test.
-	MasterBranch = "master"
+	MainBranch = "main"
 )
 
 // Repository is a local git repository with a connection to a repository
@@ -118,6 +118,7 @@ func (g *Repository) init(name, privateKey string, port int) {
 		g.T.Fatal(err)
 	}
 	g.Git("init")
+	g.Git("checkout", "-b", "main")
 
 	// We have to configure username/email or else committing to the repository
 	// produces errors.
@@ -231,7 +232,7 @@ func (g *Repository) Remove(path string) {
 // for tests.
 func (g *Repository) CommitAndPush(msg string) {
 	g.T.Helper()
-	g.CommitAndPushBranch(msg, MasterBranch)
+	g.CommitAndPushBranch(msg, MainBranch)
 }
 
 // CommitAndPushBranch commits any changes to the git branch, and
@@ -242,7 +243,7 @@ func (g *Repository) CommitAndPushBranch(msg, branch string) {
 	g.Git("commit", "-m", msg)
 
 	g.T.Logf("committing %q", msg)
-	g.Git("push", remoteName, branch)
+	g.Git("push", "-u", remoteName, branch)
 }
 
 // CreateBranch creates and checkouts a new branch at once.

@@ -304,6 +304,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	rs.Spec.SourceFormat = string(nt.Root.Format)
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:      gitRepo(rootRepo),
+		Branch:    MainBranch,
 		Dir:       acmeDir,
 		Auth:      "ssh",
 		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
@@ -330,15 +331,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 
 func setupRepoSync(nt *NT, ns string) error {
 	// create RepoSync to initialize the Namespace reconciler.
-	rs := fake.RepoSyncObject(core.Namespace(ns))
-	rs.Spec.Git = v1alpha1.Git{
-		Repo: gitRepo(ns),
-		Dir:  acmeDir,
-		Auth: "ssh",
-		SecretRef: v1alpha1.SecretReference{
-			Name: "ssh-key",
-		},
-	}
+	rs := repoSyncObject(ns)
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -501,19 +494,27 @@ func StructuredNSPath(namespace, resourceName string) string {
 	return fmt.Sprintf("acme/namespaces/%s/%s", namespace, resourceName)
 }
 
+func repoSyncObject(ns string) *v1alpha1.RepoSync {
+	rs := fake.RepoSyncObject(core.Namespace(ns))
+	rs.Spec.Git = v1alpha1.Git{
+		Repo:   gitRepo(ns),
+		Branch: MainBranch,
+		Dir:    acmeDir,
+		Auth:   "ssh",
+		SecretRef: v1alpha1.SecretReference{
+			Name: "ssh-key",
+		},
+	}
+	return rs
+}
+
 func setupCentralizedControl(nt *NT, opts ntopts.New) {
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
 		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
 
-		rs := fake.RepoSyncObject(core.Namespace(ns))
-		rs.Spec.Repo = gitRepo(ns)
-		rs.Spec.Dir = "acme"
-		rs.Spec.Auth = "ssh"
-		rs.Spec.SecretRef = v1alpha1.SecretReference{
-			Name: "ssh-key",
-		}
+		rs := repoSyncObject(ns)
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")

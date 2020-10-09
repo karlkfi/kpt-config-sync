@@ -27,7 +27,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 			name: "nil annotation without env",
 			gc: gitContext{
 				Repo:   "git@github.com/foo",
-				Branch: "master",
+				Branch: "main",
 				Rev:    "HEAD",
 			},
 			commitHash: "1234567",
@@ -37,7 +37,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				core.Annotation(v1.ResourceManagementKey, "enabled"),
 				core.Annotation(v1alpha1.ResourceManagerKey, "some-namespace"),
 				core.Annotation(v1.SyncTokenAnnotationKey, "1234567"),
-				core.Annotation(v1alpha1.GitContextKey, `{"repo":"git@github.com/foo","branch":"master","rev":"HEAD"}`),
+				core.Annotation(v1alpha1.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
 			)},
 		},
 	}

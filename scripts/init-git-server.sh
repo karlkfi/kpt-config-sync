@@ -69,6 +69,7 @@ export GIT_SSH_COMMAND="ssh -q -o StrictHostKeyChecking=no -i ${NOMOS_DIR}/id_rs
 mkdir -p "${TEST_REPO_DIR}/repo"
 cd "${TEST_REPO_DIR}/repo" || exit 1
 git init
+git checkout -b main
 git remote add origin ssh://git@localhost:2222/git-server/repos/sot.git
 git config user.name "Testing Nome"
 git config user.email testing_nome@example.com
@@ -76,5 +77,5 @@ mkdir acme
 touch acme/README.md
 git add acme/README.md
 git commit -a -m "initial commit"
-git push origin master -f
+git push -u origin main -f
 echo "Finished setting up git"

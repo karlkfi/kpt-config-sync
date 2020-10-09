@@ -31,6 +31,7 @@ setup::git::initialize() {
   cd "${TEST_REPO}"
 
   git init
+  git checkout -b main
   git remote add origin "ssh://git@localhost:${FWD_SSH_PORT}/git-server/repos/sot.git"
   git fetch
   git config user.name "Testing Nome"
@@ -56,7 +57,7 @@ setup::git::__commit_dir_and_wait() {
   git add -A
   git status
   git commit -m "setUp commit"
-  git push origin master:master -f
+  git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
 }
@@ -128,7 +129,7 @@ setup::git::remove_all() {
   git add -A
   git status
   git commit -m "wiping almost all of ${DIR_NAME}"
-  git push origin master:master -f
+  git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
   wait::for -t 60 -- kubectl get ns safety
@@ -148,7 +149,7 @@ setup::git::remove_all_dangerously() {
   git add -A
   git status
   git commit -m "wiping contents of ${DIR_NAME}"
-  git push origin master:master -f
+  git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
   if ! env::csmr; then
@@ -170,7 +171,7 @@ setup::git::add_contents_to_root() {
   cd "${TEST_REPO}"
   git add -A
   git commit -m "add files to root"
-  git push origin master:master -f
+  git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
 }
@@ -212,7 +213,7 @@ setup::git::commit_minimal_repo_contents() {
 }
 
 # This removes the specified folder, leaving behind the other files in the project root
-# 
+#
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
 setup::git::remove_folder() {
@@ -223,7 +224,7 @@ setup::git::remove_folder() {
   cd "${TEST_REPO}"
   git add -A
   git commit -m "add files to root"
-  git push origin master:master -f
+  git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced
 }

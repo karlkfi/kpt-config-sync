@@ -67,4 +67,4 @@ EXAMPLE="$(dirname "$0")/../examples/foo-corp-example/"
 rsync -rv --delete --exclude '.git' --exclude 'OWNERS.nomos' "$EXAMPLE" "$REPO"
 git -C "$REPO" add .
 git -C "$REPO" commit -m "$COMMIT_MESSAGE"
-git -C "$REPO" push origin "HEAD:$REPO_VERSION"
+git -C "$REPO" push -u origin "HEAD:$REPO_VERSION"

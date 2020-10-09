@@ -127,7 +127,7 @@ function git::commit() {
   echo "git: commit / push"
   git commit -m "${message}"
   echo "git: pushing $(git log -n1 --format=format:%H)"
-  git push origin master -f
+  git push -u origin main:main -f
 
   cd -
 }
