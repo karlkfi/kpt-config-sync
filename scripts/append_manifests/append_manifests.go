@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 const delimiter = "---\n"
@@ -55,6 +56,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		// If a file doesn't end in a newline, add one
+		lastRune, _ := utf8.DecodeLastRuneInString(string(readBytes))
+		if lastRune != '\n' {
+			readBytes = append(readBytes, []byte("\n")...)
+		}
+
 		labeledRes := fmt.Sprintf(label, p) + string(readBytes)
 		yamlResources = append(yamlResources, labeledRes)
 	}

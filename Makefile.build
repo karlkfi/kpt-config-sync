@@ -116,35 +116,24 @@ $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 .PHONY: config-sync-manifest
 config-sync-manifest: push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing config-sync-manifest.yaml"
-	@rm -rf ${NOMOS_MANIFEST_STAGING_DIR}
-	@mkdir -p ${NOMOS_MANIFEST_STAGING_DIR}
-	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
-	@echo "+++ Copy manifests (except templates/) to output folder"
+	@echo "++++ Copy manifests (except templates/ and 00-namespace.yaml) to output folder"
 	@rm -rf $(OUTPUT_DIR)/manifests
-	@mkdir $(OUTPUT_DIR)/manifests
-	cp manifests/*.yaml $(OUTPUT_DIR)/manifests
-	@echo "+++ Append all relevant yamls to config-sync-manifest.yaml"
-	scripts/append-manifests.sh \
+	rsync manifests/* --exclude="00-namespace.yaml" .output/manifests/
+	@echo "++++ Add yaml files to config-sync-manifest.yaml"
+	env GO111MODULE=on go run -mod=vendor ./scripts/append_manifests/append_manifests.go \
+		--destination=${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
 		$(OUTPUT_DIR)/manifests \
-		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
-	scripts/append-manifests.sh \
-		$(OUTPUT_DIR)/deployment \
-		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml
+		$(OUTPUT_DIR)/deployment
 
 # config-sync-manifest-e2e adds additional resources that are necessary for the e2e tests
-#
-# TODO (b/161182417): The appending business here is only necessary because append-manifests.sh
-# is hard to use.  If improved, we could clean up this logic.
 .PHONY: config-sync-manifest-e2e
 config-sync-manifest-e2e: config-sync-manifest
-	@touch ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
-	cat $(OUTPUT_DIR)/manifests/00-namespace.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
-	echo "---" >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
-	cat ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml >> ${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml
-	scripts/append-manifests.sh \
-		e2e/raw-nomos/manifests \
-		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
-		mono-repo-configmaps # only this single file (pattern match)
+	@echo "+++ Preparing config-sync-manifest-e2e.yaml"
+	env GO111MODULE=on go run -mod=vendor ./scripts/append_manifests/append_manifests.go \
+		--destination=${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
+		manifests/00-namespace.yaml \
+		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
+		e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
 
 ###################################
 # E2E Git Server
