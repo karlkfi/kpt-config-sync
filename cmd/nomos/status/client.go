@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -10,16 +11,24 @@ import (
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	"github.com/google/nomos/cmd/nomos/util"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 type statusClient struct {
+	// TODO(b/170849447): Replace RepoInterface and PodInterface with runtime client usage.
+	client           client.Client
 	repos            typedv1.RepoInterface
 	pods             corev1.PodInterface
 	configManagement *util.ConfigManagementClient
@@ -81,6 +90,28 @@ func (c *statusClient) clusterStatus(name string) (status string, errs []string)
 	return
 }
 
+//nolint:unused
+func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
+	rs := &v1alpha1.RootSync{}
+	if err := c.client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
+		return nil, err
+	}
+	return rs, nil
+}
+
+//nolint:unused
+func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
+	rsl := &v1alpha1.RepoSyncList{}
+	if err := c.client.List(ctx, rsl); err != nil {
+		return nil, err
+	}
+	var repoSyncs []*v1alpha1.RepoSync
+	for _, rs := range rsl.Items {
+		repoSyncs = append(repoSyncs, &rs)
+	}
+	return repoSyncs, nil
+}
+
 // statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
 //
@@ -102,7 +133,27 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 	clientMap := make(map[string]*statusClient)
 	unreachableClusters := false
 
+	s := runtime.NewScheme()
+	if sErr := v1.AddToScheme(s); sErr != nil {
+		return nil, err
+	}
+	if sErr := v1alpha1.AddToScheme(s); sErr != nil {
+		return nil, err
+	}
+
 	for name, cfg := range configs {
+		mapper, err := apiutil.NewDynamicRESTMapper(cfg)
+		if err != nil {
+			fmt.Printf("Failed to create mapper for %q: %v\n", name, err)
+			continue
+		}
+
+		cl, err := client.New(cfg, client.Options{Scheme: s, Mapper: mapper})
+		if err != nil {
+			fmt.Printf("Failed to generate runtime client for %q: %v\n", name, err)
+			continue
+		}
+
 		policyHierarchyClientSet, err := apis.NewForConfig(cfg)
 		if err != nil {
 			fmt.Printf("Failed to generate Repo client for %q: %v\n", name, err)
@@ -129,6 +180,7 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 			if isOnCluster() || isReachable(pcs, cfgName) {
 				mapMutex.Lock()
 				clientMap[cfgName] = &statusClient{
+					cl,
 					pcs.ConfigmanagementV1().Repos(),
 					kcs.CoreV1().Pods(metav1.NamespaceSystem),
 					cmc,
