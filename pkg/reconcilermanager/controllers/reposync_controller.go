@@ -11,7 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/parse"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
@@ -66,7 +66,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	)
 
 	var err error
-	if err = parse.ValidateRepoSync(&rs); err != nil {
+	if err = nonhierarchical.ValidateRepoSync(&rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
 		reposync.SetStalled(&rs, "Validation", err)
 		// We intentionally overwrite the previous error here since we do not want

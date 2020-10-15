@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -466,6 +467,11 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/foo", syncertest.ManagementDisabled),
 			fake.Role(core.Namespace("foo")),
 		),
+		parsertest.Failure("Invalid RepoSync",
+			nonhierarchical.InvalidRepoSyncCode,
+			fake.Namespace("namespaces/foo"),
+			ast.NewFileObject(fake.RepoSyncObject(core.Name("invalid")),
+				cmpath.RelativeSlash("namespaces/foo/rs.yaml"))),
 	)
 
 	test.RunAll(t)

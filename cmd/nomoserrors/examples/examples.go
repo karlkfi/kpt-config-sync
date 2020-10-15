@@ -284,7 +284,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(parse.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
+	result.add(nonhierarchical.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
 
 	// 1062
 	result.add(parse.InvalidKptfileError("invalid name", fake.KptFileObject()))

@@ -1,4 +1,4 @@
-package parse
+package nonhierarchical
 
 import (
 	"strings"
@@ -6,13 +6,12 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
 
 // ValidateRepoSyncs validates all RepoSyncs in a passed list of FileObjects.
-var ValidateRepoSyncs = nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
+var ValidateRepoSyncs = PerObjectValidator(func(o ast.FileObject) status.Error {
 	return ValidateRepoSync(o.Object)
 })
 
@@ -78,9 +77,10 @@ func ValidateRepoSync(o core.Object) status.Error {
 	return nil
 }
 
-var invalidRepoSyncCode = "1061"
+// InvalidRepoSyncCode is the code for an invalid declared RepoSync.
+var InvalidRepoSyncCode = "1061"
 
-var invalidRepoSyncBuilder = status.NewErrorBuilder(invalidRepoSyncCode)
+var invalidRepoSyncBuilder = status.NewErrorBuilder(InvalidRepoSyncCode)
 
 // InvalidRepoSyncName reports that a RepoSync has the wrong name.
 func InvalidRepoSyncName(o core.Object) status.Error {

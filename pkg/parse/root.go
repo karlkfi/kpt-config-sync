@@ -134,12 +134,6 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 		return nil, err
 	}
 
-	// TODO(b/167700852): Allow passing these validators into the Parser.
-	err = status.Append(err, ValidateRepoSyncs.Validate(filesystem.AsFileObjects(cos)))
-	if err != nil {
-		return nil, err
-	}
-
 	return cos, nil
 }
 
