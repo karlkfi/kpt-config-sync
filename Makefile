@@ -138,7 +138,8 @@ $(OUTPUT_DIR):
 	@mkdir -p \
 		$(STAGING_DIR) \
 		$(TEMP_OUTPUT_DIR) \
-		$(TEST_GEN_YAML_DIR)
+		$(TEST_GEN_YAML_DIR) \
+		$(NOMOS_MANIFEST_STAGING_DIR)
 
 # These directories get mounted by DOCKER_RUN_ARGS, so we have to create them
 # before invoking docker.

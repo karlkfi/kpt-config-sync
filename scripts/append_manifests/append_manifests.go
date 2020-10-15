@@ -55,6 +55,12 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		// If a file doesn't end in a newline, add one
+		if !strings.HasSuffix(string(readBytes), "\n") {
+			readBytes = append(readBytes, []byte("\n")...)
+		}
+
 		labeledRes := fmt.Sprintf(label, p) + string(readBytes)
 		yamlResources = append(yamlResources, labeledRes)
 	}
