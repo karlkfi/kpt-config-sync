@@ -41,7 +41,7 @@ func secret(t *testing.T, name, data, auth string, opts ...core.MetaMutator) *co
 	result.Data = secretData(t, data, auth)
 	result.OwnerReferences = []metav1.OwnerReference{
 		{
-			APIVersion:         v1.SchemeGroupVersion.String(),
+			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
 			Kind:               "RepoSync",
 			Name:               v1alpha1.RepoSyncName,
 			Controller:         pointer.BoolPtr(true),

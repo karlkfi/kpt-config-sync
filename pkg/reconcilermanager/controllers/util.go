@@ -3,12 +3,12 @@ package controllers
 import (
 	"sort"
 
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -53,7 +53,7 @@ func sourceFormatData(format string) map[string]string {
 func ownerReference(kind, name string, uid types.UID) []metav1.OwnerReference {
 	return []metav1.OwnerReference{
 		{
-			APIVersion:         v1.SchemeGroupVersion.String(),
+			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
 			Kind:               kind,
 			Name:               name,
 			Controller:         pointer.BoolPtr(true),

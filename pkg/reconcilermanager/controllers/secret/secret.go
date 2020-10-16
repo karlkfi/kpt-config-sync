@@ -81,7 +81,7 @@ func create(ctx context.Context, reposync *v1alpha1.RepoSync, namespaceSecret *c
 	// the Secret is also deleted.
 	newSecret.OwnerReferences = []metav1.OwnerReference{
 		{
-			APIVersion:         v1.SchemeGroupVersion.String(),
+			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
 			Kind:               reposync.Kind,
 			Name:               reposync.Name,
 			Controller:         pointer.BoolPtr(true),
