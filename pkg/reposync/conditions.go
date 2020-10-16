@@ -8,6 +8,38 @@ import (
 // Local alias to enable unit test mocking.
 var now = metav1.Now
 
+// IsReconciling returns true if the given RepoSync has a True Reconciling condition.
+func IsReconciling(rs *v1alpha1.RepoSync) bool {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RepoSyncReconciling)
+	return found && cond.Status == metav1.ConditionTrue
+}
+
+// IsStalled returns true if the given RepoSync has a True Stalled condition.
+func IsStalled(rs *v1alpha1.RepoSync) bool {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RepoSyncStalled)
+	return found && cond.Status == metav1.ConditionTrue
+}
+
+// ReconcilingMessage returns the message from a True Reconciling condition or
+// an empty string if no True Reconciling condition was found.
+func ReconcilingMessage(rs *v1alpha1.RepoSync) string {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RepoSyncReconciling)
+	if !found || cond.Status == metav1.ConditionFalse {
+		return ""
+	}
+	return cond.Message
+}
+
+// StalledMessage returns the message from a True Stalled condition or an empty
+// string if no True Stalled condition was found.
+func StalledMessage(rs *v1alpha1.RepoSync) string {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RepoSyncStalled)
+	if !found || cond.Status == metav1.ConditionFalse {
+		return ""
+	}
+	return cond.Message
+}
+
 // ClearCondition sets the specified condition to False if it is currently
 // defined as True. If the condition is unspecified, then it is left that way.
 func ClearCondition(rs *v1alpha1.RepoSync, condType v1alpha1.RepoSyncConditionType) {

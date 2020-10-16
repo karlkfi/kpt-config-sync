@@ -7,6 +7,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestRepoState_PrintRows(t *testing.T) {
@@ -19,7 +21,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git fields missing",
 			&repoState{
 				scope: "<root>",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo: "git@github.com:tester/sample",
 				},
 				status: "SYNCED",
@@ -31,7 +33,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git subdirectory specified",
 			&repoState{
 				scope: "<root>",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo: "git@github.com:tester/sample",
 					Dir:  "admin",
 				},
@@ -44,7 +46,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git branch specified",
 			&repoState{
 				scope: "bookstore",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo:   "git@github.com:tester/sample",
 					Branch: "feature",
 				},
@@ -57,7 +59,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git revision specified",
 			&repoState{
 				scope: "bookstore",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "v1",
 				},
@@ -70,7 +72,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"all optional git fields specified",
 			&repoState{
 				scope: "bookstore",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Branch:   "feature",
@@ -85,7 +87,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"repo with errors",
 			&repoState{
 				scope: "bookstore",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Revision: "v1",
@@ -100,7 +102,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"unsynced repo",
 			&repoState{
 				scope: "bookstore",
-				git: &v1alpha1.Git{
+				git: v1alpha1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "v1",
 				},
@@ -122,7 +124,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 }
 
 func TestRepoState_MonoRepoStatus(t *testing.T) {
-	git := &v1alpha1.Git{
+	git := v1alpha1.Git{
 		Repo:     "git@github.com:tester/sample",
 		Revision: "v1",
 		Dir:      "admin",
@@ -130,7 +132,7 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 
 	testCases := []struct {
 		name   string
-		git    *v1alpha1.Git
+		git    v1alpha1.Git
 		status v1.RepoStatus
 		want   *repoState
 	}{
@@ -206,6 +208,166 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 	}
 }
 
+func withGitRepoSync(git v1alpha1.Git) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RepoSync)
+		rs.Spec.Git = git
+	}
+}
+
+func withCommitsRepoSync(source, sync string) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RepoSync)
+		rs.Status.Source.Commit = source
+		rs.Status.Sync.Commit = sync
+	}
+}
+
+func withErrorsRepoSync(errs ...string) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RepoSync)
+		for _, err := range errs {
+			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+	}
+}
+
+func TestRepoState_NamespaceRepoStatus(t *testing.T) {
+	git := v1alpha1.Git{
+		Repo:     "git@github.com:tester/sample",
+		Revision: "v1",
+		Dir:      "admin",
+	}
+
+	testCases := []struct {
+		name     string
+		repoSync *v1alpha1.RepoSync
+		want     *repoState
+	}{
+		{
+			"repo is pending first sync",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withGitRepoSync(git)),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "PENDING",
+				commit: "N/A",
+			},
+		},
+		{
+			"repo is synced",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc123"), withGitRepoSync(git)),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "SYNCED",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo has errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123"), withErrorsRepoSync("KNV2010: I am unhappy"), withGitRepoSync(git)),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2010: I am unhappy"},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := namespaceRepoStatus(tc.repoSync)
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
+func withGitRootSync(git v1alpha1.Git) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RootSync)
+		rs.Spec.Git = git
+	}
+}
+
+func withCommitsRootSync(source, sync string) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RootSync)
+		rs.Status.Source.Commit = source
+		rs.Status.Sync.Commit = sync
+	}
+}
+
+func withErrorsRootSync(errs ...string) core.MetaMutator {
+	return func(o core.Object) {
+		rs := o.(*v1alpha1.RootSync)
+		for _, err := range errs {
+			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+	}
+}
+
+func TestRepoState_RootRepoStatus(t *testing.T) {
+	git := v1alpha1.Git{
+		Repo:     "git@github.com:tester/sample",
+		Revision: "v1",
+		Dir:      "admin",
+	}
+
+	testCases := []struct {
+		name     string
+		rootSync *v1alpha1.RootSync
+		want     *repoState
+	}{
+		{
+			"repo is pending first sync",
+			fake.RootSyncObject(withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "PENDING",
+				commit: "N/A",
+			},
+		},
+		{
+			"repo is synced",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "abc123"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "SYNCED",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo has errors",
+			fake.RootSyncObject(withCommitsRootSync("def456", "abc123"), withErrorsRootSync("KNV2010: I am unhappy"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2010: I am unhappy"},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := rootRepoStatus(tc.rootSync)
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
 func TestClusterState_PrintRows(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -236,7 +398,7 @@ func TestClusterState_PrintRows(t *testing.T) {
 				repos: []*repoState{
 					{
 						scope: "<root>",
-						git: &v1alpha1.Git{
+						git: v1alpha1.Git{
 							Repo: "git@github.com:tester/sample",
 						},
 						status: "SYNCED",
@@ -244,7 +406,7 @@ func TestClusterState_PrintRows(t *testing.T) {
 					},
 					{
 						scope: "bookstore",
-						git: &v1alpha1.Git{
+						git: v1alpha1.Git{
 							Repo:   "git@github.com:tester/sample",
 							Branch: "feature",
 						},

@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const fakeConditionMessage = "Testing"
+
 var testNow = metav1.Date(1, time.February, 3, 4, 5, 6, 7, time.Local)
 
 func withConditions(conds ...v1alpha1.RootSyncCondition) core.MetaMutator {
@@ -26,7 +28,7 @@ func fakeCondition(condType v1alpha1.RootSyncConditionType, status metav1.Condit
 		Type:               condType,
 		Status:             status,
 		Reason:             "Test",
-		Message:            "Testing",
+		Message:            fakeConditionMessage,
 		LastUpdateTime:     testNow,
 		LastTransitionTime: testNow,
 	}
@@ -37,6 +39,134 @@ func fakeCondition(condType v1alpha1.RootSyncConditionType, status metav1.Condit
 		rsc.Message = strs[1]
 	}
 	return rsc
+}
+
+func TestIsReconciling(t *testing.T) {
+	testCases := []struct {
+		name string
+		rs   *v1alpha1.RootSync
+		want bool
+	}{
+		{
+			"Missing condition is false",
+			fake.RootSyncObject(),
+			false,
+		},
+		{
+			"False condition is false",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionFalse))),
+			false,
+		},
+		{
+			"True condition is true",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionFalse))),
+			true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := IsReconciling(tc.rs)
+			if got != tc.want {
+				t.Errorf("got IsReconciling() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsStalled(t *testing.T) {
+	testCases := []struct {
+		name string
+		rs   *v1alpha1.RootSync
+		want bool
+	}{
+		{
+			"Missing condition is false",
+			fake.RootSyncObject(),
+			false,
+		},
+		{
+			"False condition is false",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionFalse))),
+			false,
+		},
+		{
+			"True condition is true",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionTrue))),
+			true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := IsStalled(tc.rs)
+			if got != tc.want {
+				t.Errorf("got IsStalled() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestReconcilingMessage(t *testing.T) {
+	testCases := []struct {
+		name string
+		rs   *v1alpha1.RootSync
+		want string
+	}{
+		{
+			"Missing condition is empty",
+			fake.RootSyncObject(),
+			"",
+		},
+		{
+			"False condition is empty",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionFalse))),
+			"",
+		},
+		{
+			"True condition is its message",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionFalse))),
+			fakeConditionMessage,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ReconcilingMessage(tc.rs)
+			if got != tc.want {
+				t.Errorf("got ReconcilingMessage() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStalledMessage(t *testing.T) {
+	testCases := []struct {
+		name string
+		rs   *v1alpha1.RootSync
+		want string
+	}{
+		{
+			"Missing condition is empty",
+			fake.RootSyncObject(),
+			"",
+		},
+		{
+			"False condition is empty",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionFalse))),
+			"",
+		},
+		{
+			"True condition is its message",
+			fake.RootSyncObject(withConditions(fakeCondition(v1alpha1.RootSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RootSyncStalled, metav1.ConditionTrue))),
+			fakeConditionMessage,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := StalledMessage(tc.rs)
+			if got != tc.want {
+				t.Errorf("got StalledMessage() = %v, want %v", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestClearCondition(t *testing.T) {

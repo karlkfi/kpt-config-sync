@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -134,14 +135,14 @@ func (c *statusClient) clusterStatusNew(cluster string) *clusterState {
 	if isMulti {
 		// TODO: handle multi repo
 	} else {
-		c.clusterStatusMono(cs)
+		c.monoRepoClusterStatus(cs)
 	}
 	return cs
 }
 
-// clusterStatusMono populates the given clusterState with the sync status of
+// monoRepoClusterStatus populates the given clusterState with the sync status of
 // the mono repo on the statusClient's cluster.
-func (c *statusClient) clusterStatusMono(cs *clusterState) {
+func (c *statusClient) monoRepoClusterStatus(cs *clusterState) {
 	git, err := c.monoRepoGit()
 	if err != nil {
 		cs.status = util.ErrorMsg
@@ -168,30 +169,64 @@ func (c *statusClient) clusterStatusMono(cs *clusterState) {
 
 // monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
 // and builds a Git config out of it.
-func (c *statusClient) monoRepoGit() (*v1alpha1.Git, error) {
+func (c *statusClient) monoRepoGit() (v1alpha1.Git, error) {
 	syncRepo, err := c.configManagement.NestedString("spec", "git", "syncRepo")
 	if err != nil {
-		return nil, err
+		return v1alpha1.Git{}, err
 	}
 	syncBranch, err := c.configManagement.NestedString("spec", "git", "syncBranch")
 	if err != nil {
-		return nil, err
+		return v1alpha1.Git{}, err
 	}
 	syncRev, err := c.configManagement.NestedString("spec", "git", "syncRev")
 	if err != nil {
-		return nil, err
+		return v1alpha1.Git{}, err
 	}
 	policyDir, err := c.configManagement.NestedString("spec", "git", "policyDir")
 	if err != nil {
-		return nil, err
+		return v1alpha1.Git{}, err
 	}
 
-	return &v1alpha1.Git{
+	return v1alpha1.Git{
 		Repo:     syncRepo,
 		Branch:   syncBranch,
 		Revision: syncRev,
 		Dir:      policyDir,
 	}, nil
+}
+
+// multiRepoClusterStatus populates the given clusterState with the sync status of
+// the multi repos on the statusClient's cluster.
+func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterState) {
+	var errs []string
+	sync, err := c.rootSync(ctx)
+	if err != nil {
+		errs = append(errs, err.Error())
+	} else {
+		cs.repos = append(cs.repos, rootRepoStatus(sync))
+	}
+
+	syncs, err := c.repoSyncs(ctx)
+	if err != nil {
+		errs = append(errs, err.Error())
+	} else {
+		var repos []*repoState
+		for _, rs := range syncs {
+			repos = append(repos, namespaceRepoStatus(rs))
+		}
+		sort.Slice(repos, func(i, j int) bool {
+			return repos[i].scope < repos[j].scope
+		})
+		cs.repos = append(cs.repos, repos...)
+	}
+
+	if len(errs) > 0 {
+		cs.status = util.ErrorMsg
+		cs.error = strings.Join(errs, ", ")
+	} else if len(cs.repos) == 0 {
+		cs.status = util.UnknownMsg
+		cs.error = "No RootSync or RepoSync resources found"
+	}
 }
 
 // isInstalled returns true if the statusClient is connected to a cluster where

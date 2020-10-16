@@ -28,6 +28,38 @@ func ClearCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionTy
 	condition.LastUpdateTime = time
 }
 
+// IsReconciling returns true if the given RootSync has a True Reconciling condition.
+func IsReconciling(rs *v1alpha1.RootSync) bool {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
+	return found && cond.Status == metav1.ConditionTrue
+}
+
+// IsStalled returns true if the given RootSync has a True Stalled condition.
+func IsStalled(rs *v1alpha1.RootSync) bool {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+	return found && cond.Status == metav1.ConditionTrue
+}
+
+// ReconcilingMessage returns the message from a True Reconciling condition or
+// an empty string if no True Reconciling condition was found.
+func ReconcilingMessage(rs *v1alpha1.RootSync) string {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
+	if !found || cond.Status == metav1.ConditionFalse {
+		return ""
+	}
+	return cond.Message
+}
+
+// StalledMessage returns the message from a True Stalled condition or an empty
+// string if no True Stalled condition was found.
+func StalledMessage(rs *v1alpha1.RootSync) string {
+	cond, found := findCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+	if !found || cond.Status == metav1.ConditionFalse {
+		return ""
+	}
+	return cond.Message
+}
+
 // SetReconciling sets the Reconciling condition to True.
 func SetReconciling(rs *v1alpha1.RootSync, reason, message string) {
 	setCondition(rs, v1alpha1.RootSyncReconciling, reason, message)

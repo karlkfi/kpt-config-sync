@@ -5,8 +5,11 @@ import (
 	"io"
 	"path"
 
+	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/reposync"
+	"github.com/google/nomos/pkg/rootsync"
 )
 
 const (
@@ -36,7 +39,7 @@ func (c *clusterState) printRows(writer io.Writer) {
 // repoState represents the sync status of a single repo on a cluster.
 type repoState struct {
 	scope  string
-	git    *v1alpha1.Git
+	git    v1alpha1.Git
 	status string
 	commit string
 	errors []string
@@ -51,7 +54,7 @@ func (r *repoState) printRows(writer io.Writer) {
 	}
 }
 
-func gitString(git *v1alpha1.Git) string {
+func gitString(git v1alpha1.Git) string {
 	var gitStr string
 	if git.Dir != "" {
 		gitStr = path.Join(git.Repo, git.Dir)
@@ -73,17 +76,103 @@ func gitString(git *v1alpha1.Git) string {
 }
 
 // monoRepoStatus converts the given Git config and mono-repo status into a repoState.
-func monoRepoStatus(git *v1alpha1.Git, status v1.RepoStatus) *repoState {
-	commit := status.Sync.LatestToken
-	if len(commit) == 0 {
-		commit = "N/A"
-	}
-
+func monoRepoStatus(git v1alpha1.Git, status v1.RepoStatus) *repoState {
 	return &repoState{
 		scope:  "<root>",
 		git:    git,
 		status: getSyncStatus(status),
-		commit: commit,
+		commit: commitOrNA(status.Sync.LatestToken),
 		errors: syncStatusErrors(status),
 	}
+}
+
+// namespaceRepoStatus converts the given RepoSync into a repoState.
+func namespaceRepoStatus(rs *v1alpha1.RepoSync) *repoState {
+	return &repoState{
+		scope:  rs.Namespace,
+		git:    rs.Spec.Git,
+		status: getRepoStatus(rs),
+		commit: commitOrNA(rs.Status.Sync.Commit),
+		errors: repoSyncErrors(rs),
+	}
+}
+
+// rootRepoStatus converts the given RootSync into a repoState.
+func rootRepoStatus(rs *v1alpha1.RootSync) *repoState {
+	return &repoState{
+		scope:  "<root>",
+		git:    rs.Spec.Git,
+		status: getRootStatus(rs),
+		commit: commitOrNA(rs.Status.Sync.Commit),
+		errors: rootSyncErrors(rs),
+	}
+}
+
+func commitOrNA(commit string) string {
+	if len(commit) == 0 {
+		return "N/A"
+	}
+	return commit
+}
+
+func getRepoStatus(rs *v1alpha1.RepoSync) string {
+	if reposync.IsStalled(rs) {
+		return util.ErrorMsg
+	}
+	// TODO(b/168529857): Report reconciling once it is no longer sticky.
+	//if reposync.IsReconciling(rs) {
+	//	return "DEPLOYING"
+	//}
+	return multiRepoSyncStatus(rs.Status.SyncStatus)
+}
+
+func getRootStatus(rs *v1alpha1.RootSync) string {
+	if rootsync.IsStalled(rs) {
+		return util.ErrorMsg
+	}
+	// TODO(b/168529857): Report reconciling once it is no longer sticky.
+	//if rootsync.IsReconciling(rs) {
+	//	return "DEPLOYING"
+	//}
+	return multiRepoSyncStatus(rs.Status.SyncStatus)
+}
+
+func multiRepoSyncStatus(status v1alpha1.SyncStatus) string {
+	if len(status.Source.Errors) > 0 || len(status.Sync.Errors) > 0 {
+		return util.ErrorMsg
+	}
+	if len(status.Sync.Commit) == 0 {
+		return pendingMsg
+	}
+	if status.Sync.Commit == status.Source.Commit {
+		return syncedMsg
+	}
+	return pendingMsg
+}
+
+// repoSyncErrors returns all errors reported in the given RepoSync as a single array.
+func repoSyncErrors(rs *v1alpha1.RepoSync) []string {
+	if reposync.IsStalled(rs) {
+		return []string{reposync.StalledMessage(rs)}
+	}
+	return multiRepoSyncStatusErrors(rs.Status.SyncStatus)
+}
+
+// rootSyncErrors returns all errors reported in the given RootSync as a single array.
+func rootSyncErrors(rs *v1alpha1.RootSync) []string {
+	if rootsync.IsStalled(rs) {
+		return []string{rootsync.StalledMessage(rs)}
+	}
+	return multiRepoSyncStatusErrors(rs.Status.SyncStatus)
+}
+
+func multiRepoSyncStatusErrors(status v1alpha1.SyncStatus) []string {
+	var errs []string
+	for _, err := range status.Source.Errors {
+		errs = append(errs, err.ErrorMessage)
+	}
+	for _, err := range status.Sync.Errors {
+		errs = append(errs, err.ErrorMessage)
+	}
+	return errs
 }
