@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 )
 
@@ -119,6 +121,91 @@ func TestRepoState_PrintRows(t *testing.T) {
 	}
 }
 
+func TestRepoState_MonoRepoStatus(t *testing.T) {
+	git := &v1alpha1.Git{
+		Repo:     "git@github.com:tester/sample",
+		Revision: "v1",
+		Dir:      "admin",
+	}
+
+	testCases := []struct {
+		name   string
+		git    *v1alpha1.Git
+		status v1.RepoStatus
+		want   *repoState
+	}{
+		{
+			"repo is pending first sync",
+			git,
+			v1.RepoStatus{
+				Source: v1.RepoSourceStatus{},
+				Import: v1.RepoImportStatus{},
+				Sync:   v1.RepoSyncStatus{},
+			},
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "PENDING",
+				commit: "N/A",
+			},
+		},
+		{
+			"repo is synced",
+			git,
+			v1.RepoStatus{
+				Source: v1.RepoSourceStatus{
+					Token: "abc123",
+				},
+				Import: v1.RepoImportStatus{
+					Token: "abc123",
+				},
+				Sync: v1.RepoSyncStatus{
+					LatestToken: "abc123",
+				},
+			},
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "SYNCED",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo has errors",
+			git,
+			v1.RepoStatus{
+				Source: v1.RepoSourceStatus{
+					Token: "def456",
+				},
+				Import: v1.RepoImportStatus{
+					Token: "def456",
+					Errors: []v1.ConfigManagementError{
+						{ErrorMessage: "KNV2010: I am unhappy"},
+					},
+				},
+				Sync: v1.RepoSyncStatus{
+					LatestToken: "abc123",
+				},
+			},
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2010: I am unhappy"},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := monoRepoStatus(tc.git, tc.status)
+			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
 func TestClusterState_PrintRows(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -126,12 +213,21 @@ func TestClusterState_PrintRows(t *testing.T) {
 		want    string
 	}{
 		{
-			"cluster without repos",
+			"cluster without config sync",
 			&clusterState{
 				ref:    "gke_sample-project_europe-west1-b_cluster-1",
 				status: "UNINSTALLED",
 			},
-			"--------------------\ngke_sample-project_europe-west1-b_cluster-1\nUNINSTALLED\n",
+			"--------------------\ngke_sample-project_europe-west1-b_cluster-1\nUNINSTALLED\t\n",
+		},
+		{
+			"cluster without repos",
+			&clusterState{
+				ref:    "gke_sample-project_europe-west1-b_cluster-1",
+				status: "UNCONFIGURED",
+				error:  "Missing git-creds secret",
+			},
+			"--------------------\ngke_sample-project_europe-west1-b_cluster-1\nUNCONFIGURED\tMissing git-creds secret\n",
 		},
 		{
 			"cluster with repos",

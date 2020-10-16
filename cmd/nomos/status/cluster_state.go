@@ -5,6 +5,7 @@ import (
 	"io"
 	"path"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 )
 
@@ -17,14 +18,15 @@ const (
 type clusterState struct {
 	ref    string
 	status string
+	error  string
 	repos  []*repoState
 }
 
 func (c *clusterState) printRows(writer io.Writer) {
 	fmt.Fprintf(writer, "%s\n", separator)
 	fmt.Fprintf(writer, "%s\n", c.ref)
-	if c.status != "" {
-		fmt.Fprintf(writer, "%s\n", c.status)
+	if c.status != "" || c.error != "" {
+		fmt.Fprintf(writer, "%s\t%s\n", c.status, c.error)
 	}
 	for _, repo := range c.repos {
 		repo.printRows(writer)
@@ -68,4 +70,20 @@ func gitString(git *v1alpha1.Git) string {
 	}
 
 	return gitStr
+}
+
+// monoRepoStatus converts the given Git config and mono-repo status into a repoState.
+func monoRepoStatus(git *v1alpha1.Git, status v1.RepoStatus) *repoState {
+	commit := status.Sync.LatestToken
+	if len(commit) == 0 {
+		commit = "N/A"
+	}
+
+	return &repoState{
+		scope:  "<root>",
+		git:    git,
+		status: getSyncStatus(status),
+		commit: commit,
+		errors: syncStatusErrors(status),
+	}
 }

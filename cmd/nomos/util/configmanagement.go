@@ -34,7 +34,24 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 	return &ConfigManagementClient{cl.Resource(gvr).Namespace("")}, nil
 }
 
+// NestedBool returns the boolean value specified by the given path of field names.
+// Returns false if a value is not found and an error if value is not a bool.
+func (c *ConfigManagementClient) NestedBool(fields ...string) (bool, error) {
+	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
+	if err != nil {
+		return false, err
+	}
+
+	val, _, err := unstructured.NestedBool(unstr.UnstructuredContent(), fields...)
+	if err != nil {
+		return false, errors.Wrap(err, "internal error parsing ConfigManagement")
+	}
+
+	return val, nil
+}
+
 // NestedString returns the string value specified by the given path of field names.
+// Returns empty string if a value is not found and an error if value is not a string.
 func (c *ConfigManagementClient) NestedString(fields ...string) (string, error) {
 	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
 	if err != nil {
@@ -50,6 +67,7 @@ func (c *ConfigManagementClient) NestedString(fields ...string) (string, error) 
 }
 
 // NestedStringSlice returns the string slice specified by the given path of field names.
+// Returns nil if a value is not found and an error if value is not a string slice.
 func (c *ConfigManagementClient) NestedStringSlice(fields ...string) ([]string, error) {
 	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
 	if err != nil {

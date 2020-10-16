@@ -1,3 +1,5 @@
+// Package status contains logic for the nomos status CLI command.
+//nolint:unused
 package status
 
 import (
@@ -5,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -90,7 +93,6 @@ func (c *statusClient) clusterStatus(name string) (status string, errs []string)
 	return
 }
 
-//nolint:unused
 func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
 	rs := &v1alpha1.RootSync{}
 	if err := c.client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
@@ -99,7 +101,6 @@ func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error)
 	return rs, nil
 }
 
-//nolint:unused
 func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
 	rsl := &v1alpha1.RepoSyncList{}
 	if err := c.client.List(ctx, rsl); err != nil {
@@ -110,6 +111,137 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 		repoSyncs = append(repoSyncs, &rs)
 	}
 	return repoSyncs, nil
+}
+
+// clusterStatusNew is the in-progress replacement for clusterStatus().
+func (c *statusClient) clusterStatusNew(cluster string) *clusterState {
+	cs := &clusterState{ref: cluster}
+
+	if !c.isInstalled(cs) {
+		return cs
+	}
+	if !c.isConfigured(cs) {
+		return cs
+	}
+
+	isMulti, err := c.configManagement.NestedBool("spec", "enableMultiRepo")
+	if err != nil {
+		cs.status = util.ErrorMsg
+		cs.error = err.Error()
+		return cs
+	}
+
+	if isMulti {
+		// TODO: handle multi repo
+	} else {
+		c.clusterStatusMono(cs)
+	}
+	return cs
+}
+
+// clusterStatusMono populates the given clusterState with the sync status of
+// the mono repo on the statusClient's cluster.
+func (c *statusClient) clusterStatusMono(cs *clusterState) {
+	git, err := c.monoRepoGit()
+	if err != nil {
+		cs.status = util.ErrorMsg
+		cs.error = err.Error()
+		return
+	}
+
+	repoList, err := c.repos.List(metav1.ListOptions{})
+	if err != nil {
+		cs.status = util.ErrorMsg
+		cs.error = err.Error()
+		return
+	}
+
+	if len(repoList.Items) == 0 {
+		cs.status = util.UnknownMsg
+		cs.error = "Repo resource is missing"
+		return
+	}
+
+	repoStatus := repoList.Items[0].Status
+	cs.repos = append(cs.repos, monoRepoStatus(git, repoStatus))
+}
+
+// monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
+// and builds a Git config out of it.
+func (c *statusClient) monoRepoGit() (*v1alpha1.Git, error) {
+	syncRepo, err := c.configManagement.NestedString("spec", "git", "syncRepo")
+	if err != nil {
+		return nil, err
+	}
+	syncBranch, err := c.configManagement.NestedString("spec", "git", "syncBranch")
+	if err != nil {
+		return nil, err
+	}
+	syncRev, err := c.configManagement.NestedString("spec", "git", "syncRev")
+	if err != nil {
+		return nil, err
+	}
+	policyDir, err := c.configManagement.NestedString("spec", "git", "policyDir")
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.Git{
+		Repo:     syncRepo,
+		Branch:   syncBranch,
+		Revision: syncRev,
+		Dir:      policyDir,
+	}, nil
+}
+
+// isInstalled returns true if the statusClient is connected to a cluster where
+// Config Sync is installed. Updates the given clusterState with status info if
+// Config Sync is not installed.
+func (c *statusClient) isInstalled(cs *clusterState) bool {
+	podList, err := c.pods.List(metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			cs.status = util.NotInstalledMsg
+		} else {
+			cs.status = util.ErrorMsg
+			cs.error = err.Error()
+		}
+		return false
+	}
+
+	if len(podList.Items) == 0 {
+		cs.status = util.NotInstalledMsg
+		return false
+	}
+
+	return true
+}
+
+// isConfigured returns true if the statusClient is connected to a cluster where
+// Config Sync is configured. Updates the given clusterState with status info if
+// Config Sync is not configured.
+func (c *statusClient) isConfigured(cs *clusterState) bool {
+	errs, err := c.configManagement.NestedStringSlice("status", "errors")
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			cs.status = util.NotConfiguredMsg
+			cs.error = "ConfigManagement resource is missing"
+		} else {
+			cs.status = util.ErrorMsg
+			cs.error = err.Error()
+		}
+		return false
+	}
+
+	if len(errs) > 0 {
+		cs.status = util.NotConfiguredMsg
+		cs.error = strings.Join(errs, ", ")
+		return false
+	}
+
+	return true
 }
 
 // statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
