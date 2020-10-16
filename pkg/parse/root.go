@@ -22,19 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NewRootParser creates a new runnable parser for parsing a Root repository.
-func NewRootParser(
-	clusterName string,
-	format filesystem.SourceFormat,
-	fileReader filesystem.Reader,
-	c client.Client,
-	pollingFrequency time.Duration,
-	fs FileSource,
-	dc discovery.ServerResourcer,
-	resources *declared.Resources,
-	app applier.Interface,
-	rem remediator.Interface,
-) (Runnable, error) {
+// NewRootRunner creates a new runnable parser for parsing a Root repository.
+func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
 	opts := opts{
 		clusterName:      clusterName,
 		client:           c,
@@ -128,12 +117,12 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 		cos = addImplicitNamespaces(cos)
 	}
 
+	// Duplicated with namespace.go.
 	e := addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return nil, err
 	}
-
 	return cos, nil
 }
 

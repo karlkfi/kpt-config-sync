@@ -20,24 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NewNamespaceParser creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceParser(
-	scope declared.Scope,
-	fileReader filesystem.Reader,
-	c client.Client,
-	pollingFrequency time.Duration,
-	fs FileSource,
-	dc discovery.ServerResourcer,
-	resources *declared.Resources,
-	app applier.Interface,
-	rem remediator.Interface,
-) Runnable {
+// NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
+func NewNamespaceRunner(scope declared.Scope, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
 	return &namespace{
 		opts: opts{
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},
-			parser:           filesystem.NewRawParser(fileReader, dc, string(scope)),
+			parser:           NewNamespaceParser(fileReader, dc, scope),
 			updater: updater{
 				resources:  resources,
 				applier:    app,
@@ -107,36 +97,10 @@ func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiErr
 		return nil, err
 	}
 
-	// Parse and generate a ResourceGroup from the Kptfile if it exists
-	cos, e := AsResourceGroup(cos)
-	if e != nil {
-		err = status.Append(err, e)
-		return nil, err
-	}
-
-	e = addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
+	// Duplicated with root.go.
+	e := addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
-		return nil, err
-	}
-
-	objs := filesystem.AsFileObjects(cos)
-
-	scoper, _, err := filesystem.BuildScoper(p.discoveryInterface, true, objs, nil, filesystem.NoSyncedCRDs)
-	if err != nil {
-		return nil, err
-	}
-	// We recreate this validator with every run as the set of available CRDs may
-	// change between runs. The user may have either declared new CRDs in the root
-	// repo, or they may have manually applied new ones.
-	err = noClusterScopeValidator(scoper).Validate(objs)
-	if err != nil {
-		return nil, err
-	}
-
-	nsv := repositoryScopeVisitor(p.scope)
-	err = nsv.Validate(objs)
-	if err != nil {
 		return nil, err
 	}
 	return cos, nil
