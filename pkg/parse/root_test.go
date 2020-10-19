@@ -126,13 +126,12 @@ type fakeParser struct {
 func (p *fakeParser) Parse(clusterName string,
 	enableAPIServerChecks bool,
 	getSyncedCRDs filesystem.GetSyncedCRDs,
-	policyDir cmpath.Absolute,
-	files []cmpath.Absolute,
+	filePaths filesystem.FilePaths,
 ) ([]core.Object, status.MultiError) {
 	return p.parse, nil
 }
 
-func (p *fakeParser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
+func (p *fakeParser) ReadClusterRegistryResources(filePaths filesystem.FilePaths) []ast.FileObject {
 	return nil
 }
 

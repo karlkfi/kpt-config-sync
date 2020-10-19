@@ -233,7 +233,11 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 	}
 	// Read the manifests cached in the tmpdir.
 	reader := filesystem.FileReader{}
-	fos, err := reader.Read(readPath, paths)
+	filePaths := filesystem.FilePaths{
+		RootDir: readPath,
+		Files:   paths,
+	}
+	fos, err := reader.Read(filePaths)
 	if err != nil {
 		nt.T.Fatal(err)
 	}

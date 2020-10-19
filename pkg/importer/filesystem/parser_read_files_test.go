@@ -360,7 +360,8 @@ items:
 			}
 
 			r := &filesystem.FileReader{}
-			actual, mErr := r.Read(d.Root(), files)
+			fp := filesystem.FilePaths{RootDir: d.Root(), Files: files}
+			actual, mErr := r.Read(fp)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)
 

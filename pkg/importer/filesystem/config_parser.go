@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -27,12 +26,11 @@ type ConfigParser interface {
 	Parse(clusterName string,
 		enableAPIServerChecks bool,
 		getSyncedCRDs GetSyncedCRDs,
-		policyDir cmpath.Absolute,
-		files []cmpath.Absolute,
+		filePaths FilePaths,
 	) ([]core.Object, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
-	ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject
+	ReadClusterRegistryResources(filePaths FilePaths) []ast.FileObject
 }
 
 // AsCoreObjects converts a slice of FileObjects to a slice of core.Objects.

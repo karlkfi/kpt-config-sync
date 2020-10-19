@@ -66,17 +66,24 @@ func (v *namespaceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 // - "config-sync-root.tree.hnc.x-k8s.io/depth: 1"
 // Note: "config-sync-root" is used as root in the hierarchy.
 func addDepthLabels(o *ast.NamespaceObject, r cmpath.Relative) {
-	// Relative path for namespaces should start with "namespaces" and end with "namespace.yaml".
+	// Relative path for namespaces should start with the policyDir, contain the
+	// "namespaces" directory, and end with "namespace.yaml".
 	// If not, early exit.
 	p := r.Split()
-	if len(p) < 2 {
+	if len(p) < 3 {
 		return
 	}
 
-	// Replace "namespaces" with "config-sync-root" as the root in the hierarchy and
-	// add depth labels for all names in the path except the last "namespace.yaml".
-	p[0] = DepthLabelRootName
-	p = p[:len(p)-1]
+	for i, ans := range p {
+		// Replace "namespaces" with "config-sync-root" as the root in the hierarchy and
+		// add depth labels for all names in the path except the last "namespace.yaml".
+		if ans == "namespaces" {
+			p[i] = DepthLabelRootName
+			p = p[i : len(p)-1]
+			break
+		}
+	}
+
 	for i, ans := range p {
 		l := ans + DepthSuffix
 		dist := strconv.Itoa(len(p) - i - 1)

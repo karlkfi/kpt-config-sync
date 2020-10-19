@@ -8,7 +8,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/customresources"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 )
@@ -37,11 +36,10 @@ func (p *rawParser) Parse(
 	clusterName string,
 	enableAPIServerChecks bool,
 	getSyncedCRDs GetSyncedCRDs,
-	policyDir cmpath.Absolute,
-	files []cmpath.Absolute,
+	filePaths FilePaths,
 ) ([]core.Object, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
-	fileObjects, errs := p.reader.Read(policyDir, files)
+	fileObjects, errs := p.reader.Read(filePaths)
 	if errs != nil {
 		return nil, errs
 	}
@@ -80,7 +78,7 @@ func (p *rawParser) Parse(
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
-func (p *rawParser) ReadClusterRegistryResources(_ cmpath.Absolute, _ []cmpath.Absolute) []ast.FileObject {
+func (p *rawParser) ReadClusterRegistryResources(_ FilePaths) []ast.FileObject {
 	return nil
 }
 

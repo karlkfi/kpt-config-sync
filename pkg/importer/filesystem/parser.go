@@ -59,37 +59,36 @@ func NewParser(reader Reader, dc utildiscovery.ServerResourcer) *Parser {
 // enableAPIServerChecks, if true, contacts the API Server if it is unable to
 //   determine whether types are namespace- or cluster-scoped.
 // getSyncedCRDs is a callback that returns the CRDs on the API Server.
-// policyDir is the absolute root path of the policies.
-// files is the complete list of absolute file paths to parse.
-//   It is an error for any files not to be present.
+// filePaths is the list of absolute file paths to parse and the absolute and
+//   relative paths of the Nomos root.
+// It is an error for any files not to be present.
 func (p *Parser) Parse(
 	clusterName string,
 	enableAPIServerChecks bool,
 	getSyncedCRDs GetSyncedCRDs,
-	policyDir cmpath.Absolute,
-	files []cmpath.Absolute,
+	filePaths FilePaths,
 ) ([]core.Object, status.MultiError) {
 	p.errors = nil
 
-	flatRoot := p.readObjects(policyDir, files)
+	flatRoot := p.readObjects(filePaths)
 	if p.errors != nil {
 		return nil, p.errors
 	}
 
 	visitors := generateVisitors(flatRoot)
-	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs)
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs, filePaths.PolicyDir)
 
 	return AsCoreObjects(fileObjects), p.errors
 }
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) readObjects(root cmpath.Absolute, files []cmpath.Absolute) *ast.FlatRoot {
+func (p *Parser) readObjects(filePaths FilePaths) *ast.FlatRoot {
 	return &ast.FlatRoot{
-		SystemObjects:          p.readSystemResources(root, files),
-		ClusterRegistryObjects: p.ReadClusterRegistryResources(root, files),
-		ClusterObjects:         p.readClusterResources(root, files),
-		NamespaceObjects:       p.readNamespaceResources(root, files),
+		SystemObjects:          p.readSystemResources(filePaths),
+		ClusterRegistryObjects: p.ReadClusterRegistryResources(filePaths),
+		ClusterObjects:         p.readClusterResources(filePaths),
+		NamespaceObjects:       p.readNamespaceResources(filePaths),
 	}
 }
 
@@ -108,7 +107,7 @@ func generateVisitors(flatRoot *ast.FlatRoot) []ast.Visitor {
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs, policyDir cmpath.Relative) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -141,7 +140,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, policyDir, enableAPIServerChecks).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)
@@ -202,41 +201,42 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 	return root
 }
 
-// filterTopDir returns the set of file contained in the top directory of root.
+// filterTopDir returns the set of files contained in the top directory of root
+//   along with the absolute and relative paths of root.
 // Assumes all files are within root.
-func filterTopDir(root cmpath.Absolute, files []cmpath.Absolute, topDir string) []cmpath.Absolute {
-	rootSplits := root.Split()
+func filterTopDir(filePaths FilePaths, topDir string) FilePaths {
+	rootSplits := filePaths.RootDir.Split()
 	var result []cmpath.Absolute
-	for _, f := range files {
+	for _, f := range filePaths.Files {
 		if f.Split()[len(rootSplits)] != topDir {
 			continue
 		}
 		result = append(result, f)
 	}
-	return result
+	return FilePaths{filePaths.RootDir, filePaths.PolicyDir, result}
 }
 
-func (p *Parser) readSystemResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.SystemDir))
+func (p *Parser) readSystemResources(filePaths FilePaths) []ast.FileObject {
+	result, errs := p.reader.Read(filterTopDir(filePaths, repo.SystemDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readNamespaceResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.NamespacesDir))
+func (p *Parser) readNamespaceResources(filePaths FilePaths) []ast.FileObject {
+	result, errs := p.reader.Read(filterTopDir(filePaths, repo.NamespacesDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readClusterResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.ClusterDir))
+func (p *Parser) readClusterResources(filePaths FilePaths) []ast.FileObject {
+	result, errs := p.reader.Read(filterTopDir(filePaths, repo.ClusterDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
-func (p *Parser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	result, errs := p.reader.Read(root, filterTopDir(root, files, repo.ClusterRegistryDir))
+func (p *Parser) ReadClusterRegistryResources(filePaths FilePaths) []ast.FileObject {
+	result, errs := p.reader.Read(filterTopDir(filePaths, repo.ClusterRegistryDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }

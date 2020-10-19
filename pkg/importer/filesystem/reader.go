@@ -24,12 +24,19 @@ import (
 // Reader reads a list of FileObjects.
 type Reader interface {
 	// Read returns the list of FileObjects in the passed file.
-	//
-	// rootDir is the absolute path to policyDir.
-	// files is the list of absolute path to the files to read.
-	// TODO(b/155509765): These two arguments get passed around together a lot
-	//  and have the same lifecycle. Encapsulate in a struct or similar.
-	Read(rootDir cmpath.Absolute, files []cmpath.Absolute) ([]ast.FileObject, status.MultiError)
+	Read(filePaths FilePaths) ([]ast.FileObject, status.MultiError)
+}
+
+// FilePaths encapsulates the list of absolute file paths to read and the absolute and relative path of the Nomos Root.
+type FilePaths struct {
+	// RootDir is the absolute path to policyDir.
+	RootDir cmpath.Absolute
+
+	// PolicyDir is the relative path of the Nomos Root from the Repo Root.
+	PolicyDir cmpath.Relative
+
+	// Files is the list of absolute path to the files to read.
+	Files []cmpath.Absolute
 }
 
 // FileReader reads FileObjects from a filesystem.
@@ -37,11 +44,11 @@ type FileReader struct{}
 
 var _ Reader = &FileReader{}
 
-func (r *FileReader) Read(rootDir cmpath.Absolute, files []cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) Read(filePaths FilePaths) ([]ast.FileObject, status.MultiError) {
 	var objs []ast.FileObject
 	var errs status.MultiError
-	for _, f := range files {
-		newObjs, err := r.read(rootDir, f)
+	for _, f := range filePaths.Files {
+		newObjs, err := r.read(filePaths.RootDir, filePaths.PolicyDir, f)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
@@ -55,7 +62,7 @@ func (r *FileReader) Read(rootDir cmpath.Absolute, files []cmpath.Absolute) ([]a
 }
 
 // Read implements Reader.
-func (r *FileReader) read(rootDir cmpath.Absolute, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func (r *FileReader) read(rootDir cmpath.Absolute, policyDir cmpath.Relative, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	unstructureds, err := parseFile(file.OSPath())
 	if err != nil {
 		return nil, status.PathWrapError(err, file.OSPath())
@@ -64,7 +71,7 @@ func (r *FileReader) read(rootDir cmpath.Absolute, file cmpath.Absolute) ([]ast.
 	var fileObjects []ast.FileObject
 	var errs status.MultiError
 	for _, u := range unstructureds {
-		newFileObjects, err := toFileObjects(u, rootDir, file)
+		newFileObjects, err := toFileObjects(u, rootDir, policyDir, file)
 		if err != nil {
 			errs = status.Append(errs, err)
 		}
@@ -78,9 +85,9 @@ func (r *FileReader) read(rootDir cmpath.Absolute, file cmpath.Absolute) ([]ast.
 // 1) a slice containing a single FileObject, if the passed Unstructured is a valid Kubernetes object;
 // 2) a list of multiple FileObject, if the passed Unstructured was a List type; or
 // 3) an error, if there was a problem parsing the Unstructured.
-func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cmpath.Relative, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	if isList(u) {
-		return flattenList(u, rootDir, path)
+		return flattenList(u, rootDir, policyDir, path)
 	}
 
 	oid, errs := parseID(u.UnstructuredContent(), path)
@@ -129,10 +136,11 @@ func toFileObjects(u runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast
 			BuildWithPaths(path)
 	}
 
-	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(rel))}, nil
+	join := filepath.Join(policyDir.SlashPath(), rel)
+	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(join))}, nil
 }
 
-func flattenList(list runtime.Unstructured, rootDir, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func flattenList(list runtime.Unstructured, rootDir cmpath.Absolute, policyDir cmpath.Relative, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	var errs status.MultiError
 
@@ -144,7 +152,7 @@ func flattenList(list runtime.Unstructured, rootDir, path cmpath.Absolute) ([]as
 			return nil
 		}
 		// If the unstructuredItem is itself a List, toFileObjects recurse back here until we get to an actual Object.
-		newObjs, newErrs := toFileObjects(unstructuredItem, rootDir, path)
+		newObjs, newErrs := toFileObjects(unstructuredItem, rootDir, policyDir, path)
 		result = append(result, newObjs...)
 		errs = status.Append(errs, newErrs)
 		// Returning an error will stop parsing early, so return nil.

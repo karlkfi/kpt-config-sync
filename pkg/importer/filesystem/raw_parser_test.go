@@ -146,6 +146,10 @@ func TestRawParser_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := ft.NewFakeReader(root, tc.objects)
+
+			policyDir := cmpath.RelativeSlash("/")
+			fps := filesystem.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
+
 			scope := tc.defaultNamespace
 			if scope == "" {
 				scope = metav1.NamespaceDefault
@@ -155,8 +159,7 @@ func TestRawParser_Parse(t *testing.T) {
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
-			coreObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs,
-				root, r.ToFileList())
+			coreObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs, fps)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
@@ -206,11 +209,13 @@ func TestRawParser_ParseErrors(t *testing.T) {
 			r := ft.NewFakeReader(root, tc.objects)
 			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault)
 
+			policyDir := cmpath.RelativeSlash("/")
+			fps := filesystem.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
+
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil
 			}
-			_, err2 := p.Parse("", true, getSyncedCRDs,
-				root, r.ToFileList())
+			_, err2 := p.Parse("", true, getSyncedCRDs, fps)
 			if err2 == nil {
 				t.Fatal("expected error")
 			}

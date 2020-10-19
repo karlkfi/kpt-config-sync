@@ -91,8 +91,13 @@ func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 }
 
 func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiError) {
+	filePaths := filesystem.FilePaths{
+		RootDir:   state.policyDir,
+		PolicyDir: p.PolicyDir,
+		Files:     state.files,
+	}
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, state.files)
+	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, filePaths)
 	if err != nil {
 		return nil, err
 	}

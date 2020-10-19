@@ -231,10 +231,14 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		wantFiles = FilterHierarchyFiles(absPolicyDir, wantFiles)
 	}
 
+	filePaths := FilePaths{
+		RootDir:   absPolicyDir,
+		PolicyDir: c.policyDir,
+		Files:     wantFiles,
+	}
+
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredCoreObjects, mErr := c.parser.Parse(
-		c.clusterName, true, getSyncedCRDs, absPolicyDir, wantFiles,
-	)
+	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, true, getSyncedCRDs, filePaths)
 	desiredFileObjects := AsFileObjects(desiredCoreObjects)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))

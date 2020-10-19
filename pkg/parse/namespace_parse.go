@@ -5,7 +5,6 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -32,9 +31,9 @@ func NewNamespaceParser(fileReader filesystem.Reader, dc discovery.ServerResourc
 var _ filesystem.ConfigParser = &NamespaceParser{}
 
 // Parse implements filesystem.ConfigParser.
-func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs filesystem.GetSyncedCRDs, policyDir cmpath.Absolute, files []cmpath.Absolute) ([]core.Object, status.MultiError) {
+func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
 	cos, err := p.parser.Parse(clusterName, enableAPIServerChecks,
-		getSyncedCRDs, policyDir, files)
+		getSyncedCRDs, filePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +68,6 @@ func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, g
 }
 
 // ReadClusterRegistryResources implements filesystem.ConfigParser.
-func (p NamespaceParser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	return p.parser.ReadClusterRegistryResources(root, files)
+func (p NamespaceParser) ReadClusterRegistryResources(filePaths filesystem.FilePaths) []ast.FileObject {
+	return p.parser.ReadClusterRegistryResources(filePaths)
 }

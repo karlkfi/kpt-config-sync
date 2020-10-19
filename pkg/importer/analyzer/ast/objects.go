@@ -28,7 +28,7 @@ func ParseFileObject(o core.Object) *FileObject {
 // FileObject extends runtime.FileObject to include the path to the file in the repo.
 type FileObject struct {
 	core.Object
-	// Path is the path this object has relative to Nomos Root, if known.
+	// Path is the path of this object in the repo prefixed by the Nomos Root.
 	cmpath.Relative
 }
 

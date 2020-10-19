@@ -179,14 +179,20 @@ func (pt Test) RunAll(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			policyDir := cmpath.RelativeSlash("")
 			reader := ft.NewFakeReader(root, objects)
+			filePaths := filesystem.FilePaths{
+				RootDir:   root,
+				PolicyDir: policyDir,
+				Files:     reader.ToFileList(),
+			}
 			parser := newTestParser(reader, tc.SyncedCRDs)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.SyncedCRDs, nil
 			}
 
-			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, root, reader.ToFileList())
+			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, filePaths)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 

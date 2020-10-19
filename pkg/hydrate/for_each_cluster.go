@@ -4,7 +4,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -20,6 +19,8 @@ const (
 //   when Parse is called.
 // syncedCRDs is the set of CRDs synced the the cluster used for APIServer checks.
 // enableAPIServerChecks is whether to call Parse with APIServer checks enabled.
+// filePaths is the list of absolute file paths to parse and the absolute and
+//   relative paths of the Nomos root.
 // f is a function with three arguments:
 //    clusterName, the name of the Cluster the Parser was called with.
 //    fileObjects, the FileObjects which Parser.Parse returned.
@@ -30,20 +31,19 @@ func ForEachCluster(
 	parser filesystem.ConfigParser,
 	getSyncedCRDs filesystem.GetSyncedCRDs,
 	enableAPIServerChecks bool,
-	rootDir cmpath.Absolute,
-	files []cmpath.Absolute,
+	filePaths filesystem.FilePaths,
 	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError),
 ) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, filePaths)
 	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)
 	f(defaultCluster, defaultFileObjects, err)
 
-	clusterRegistry := parser.ReadClusterRegistryResources(rootDir, files)
+	clusterRegistry := parser.ReadClusterRegistryResources(filePaths)
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, rootDir, files)
+		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, filePaths)
 		fileObjects := filesystem.AsFileObjects(coreObjects)
 		f(cluster.Name, fileObjects, err2)
 	}

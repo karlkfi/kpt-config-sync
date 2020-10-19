@@ -68,9 +68,15 @@ func vet(
 		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 	}
 
+	filePaths := filesystem.FilePaths{
+		RootDir:   rootDir,
+		PolicyDir: cmpath.RelativeOS(root),
+		Files:     files,
+	}
+
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !skipAPIServer, rootDir, files,
+	hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !skipAPIServer, filePaths,
 		vetCluster(&vetErrs, allClusters, clusters),
 	)
 	if len(vetErrs) > 0 {

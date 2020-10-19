@@ -24,13 +24,13 @@ func NewFakeReader(root cmpath.Absolute, objs []ast.FileObject) FakeReader {
 	return result
 }
 
-func (r FakeReader) Read(_ cmpath.Absolute, paths []cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func (r FakeReader) Read(filePaths filesystem.FilePaths) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
-	for _, p := range paths {
-		if objs, ok := r[p]; ok {
+	for _, f := range filePaths.Files {
+		if objs, ok := r[f]; ok {
 			result = append(result, objs...)
 		} else {
-			return nil, status.PathWrapError(os.ErrNotExist, p.OSPath())
+			return nil, status.PathWrapError(os.ErrNotExist, f.OSPath())
 		}
 	}
 	return result, nil

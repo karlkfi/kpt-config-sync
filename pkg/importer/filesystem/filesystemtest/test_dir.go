@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 )
 
@@ -20,7 +21,8 @@ type TestDirOpt func(t *testing.T, testDir cmpath.Absolute)
 
 // TestDir is a temporary directory for use in testing.
 type TestDir struct {
-	tmpDir cmpath.Absolute
+	tmpDir    cmpath.Absolute
+	policyDir cmpath.Relative
 }
 
 // NewTestDir constructs a new temporary test directory.
@@ -36,7 +38,8 @@ func NewTestDir(t *testing.T, opts ...TestDirOpt) *TestDir {
 	if err != nil {
 		t.Fatalf("Failed to create test directory %v", err)
 	}
-	result := &TestDir{tmpDir: abs}
+	rel := cmpath.RelativeOS(tmp)
+	result := &TestDir{tmpDir: abs, policyDir: rel}
 	t.Cleanup(func() {
 		result.remove(t)
 	})
@@ -47,9 +50,26 @@ func NewTestDir(t *testing.T, opts ...TestDirOpt) *TestDir {
 	return result
 }
 
-// Root returns the root directory of the TestDir.
+// Root returns the absolute path to the root directory of the TestDir.
 func (d TestDir) Root() cmpath.Absolute {
 	return d.tmpDir
+}
+
+// FilePaths returns a collection of absolute file paths along with the absolute
+// and relative paths of the root directory of the TestDir.
+//
+// filePaths is a list of slash-delimited paths relative to the test directory root.
+func (d TestDir) FilePaths(filePaths ...string) filesystem.FilePaths {
+	var files []cmpath.Absolute
+	for _, f := range filePaths {
+		files = append(files, d.tmpDir.Join(cmpath.RelativeSlash(f)))
+	}
+
+	return filesystem.FilePaths{
+		RootDir:   d.tmpDir,
+		PolicyDir: d.policyDir,
+		Files:     files,
+	}
 }
 
 // Remove deletes the test directory.

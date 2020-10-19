@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/status"
 )
 
 func TestFileReader_Read_NotExist(t *testing.T) {
-	dir := ft.NewTestDir(t).Root()
+	dir := ft.NewTestDir(t)
+	fps := dir.FilePaths("no-exist")
 
 	reader := filesystem.FileReader{}
 
-	objs, err := reader.Read(dir, []cmpath.Absolute{dir.Join(cmpath.RelativeSlash("no-exist"))})
+	objs, err := reader.Read(fps)
 	if err != nil || len(objs) > 0 {
 		t.Errorf("got Read(nonexistent path) = %+v, %v; want nil, nil", objs, err)
 	}
@@ -34,13 +34,12 @@ func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
 	dir := ft.NewTestDir(t,
 		ft.FileContents(tmpRelative, ""),
 		ft.Chmod(tmpRelative, 0000),
-	).Root()
+	)
+	fps := dir.FilePaths(tmpRelative)
 
 	reader := filesystem.FileReader{}
 
-	objs, err := reader.Read(dir, []cmpath.Absolute{
-		dir.Join(cmpath.RelativeSlash(tmpRelative)),
-	})
+	objs, err := reader.Read(fps)
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on parent dir) = %+v, %v; want nil, error", objs, err)
 	}
@@ -58,13 +57,12 @@ func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
 	dir := ft.NewTestDir(t,
 		ft.FileContents(tmpRelative, ""),
 		ft.Chmod(subDir, 0000),
-	).Root()
+	)
+	fps := dir.FilePaths(tmpRelative)
 
 	reader := filesystem.FileReader{}
 
-	objs, err := reader.Read(dir, []cmpath.Absolute{
-		dir.Join(cmpath.RelativeSlash(tmpRelative)),
-	})
+	objs, err := reader.Read(fps)
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on child dir) = %+v, %v; want nil, error", objs, err)
 	}
@@ -107,12 +105,10 @@ kind: Namespace
 metadata:
   name: foo
   %s
-`, tc.metadata))).Root()
-
+`, tc.metadata)))
+			fps := dir.FilePaths(nsFile)
 			reader := filesystem.FileReader{}
-			_, err := reader.Read(dir, []cmpath.Absolute{
-				dir.Join(cmpath.RelativeSlash(nsFile)),
-			})
+			_, err := reader.Read(fps)
 
 			if err != nil {
 				t.Fatalf("got Read() = %v, want nil", err)
@@ -130,12 +126,10 @@ kind: Namespace
 metadata:
   name: foo
   annotations: a
-`)).Root()
-
+`))
+	fps := dir.FilePaths(nsFile)
 	reader := filesystem.FileReader{}
-	_, err := reader.Read(dir, []cmpath.Absolute{
-		dir.Join(cmpath.RelativeSlash(nsFile)),
-	})
+	_, err := reader.Read(fps)
 
 	if err == nil {
 		t.Fatal("got Read() = nil, want err")
@@ -160,12 +154,10 @@ metadata:
   name: repo
 spec:
   version: 1.0
-`)).Root()
-
+`))
+	fps := dir.FilePaths(nsFile)
 	reader := filesystem.FileReader{}
-	_, err := reader.Read(dir, []cmpath.Absolute{
-		dir.Join(cmpath.RelativeSlash(nsFile)),
-	})
+	_, err := reader.Read(fps)
 
 	if err == nil {
 		t.Fatal("got Read() = nil, want err")
@@ -185,17 +177,15 @@ func TestFileReader_Read_ValidObject(t *testing.T) {
 	dir := ft.NewTestDir(t,
 		ft.FileContents(nsFile, `
 apiVersion: configmanagement.gke.io/v1
-kind: Repo
+kind: Namespace
 metadata:
-  name: repo
+  name: ns
 spec:
   version: "1.0"
-`)).Root()
-
+`))
+	fps := dir.FilePaths(nsFile)
 	reader := filesystem.FileReader{}
-	_, err := reader.Read(dir, []cmpath.Absolute{
-		dir.Join(cmpath.RelativeSlash(nsFile)),
-	})
+	_, err := reader.Read(fps)
 
 	if err != nil {
 		t.Fatalf("got Read() = %v, want nil", err)

@@ -106,8 +106,14 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 		wantFiles = filesystem.FilterHierarchyFiles(state.policyDir, wantFiles)
 	}
 
+	filePaths := filesystem.FilePaths{
+		RootDir:   state.policyDir,
+		PolicyDir: p.PolicyDir,
+		Files:     wantFiles,
+	}
+
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, state.policyDir, wantFiles)
+	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, filePaths)
 	if err != nil {
 		return nil, err
 	}

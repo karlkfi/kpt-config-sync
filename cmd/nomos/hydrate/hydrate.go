@@ -83,6 +83,7 @@ clusters.`,
 		if err != nil {
 			return err
 		}
+		policyDir := cmpath.RelativeOS(flags.Path)
 
 		files, err := parse.FindFiles(rootDir)
 		if err != nil {
@@ -90,6 +91,12 @@ clusters.`,
 		}
 		// Hydrate is only used in hierarchical mode.
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
+
+		filePaths := filesystem.FilePaths{
+			RootDir:   rootDir,
+			PolicyDir: policyDir,
+			Files:     files,
+		}
 
 		dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
 		if err != nil {
@@ -101,7 +108,7 @@ clusters.`,
 
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, rootDir, files, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, filePaths, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {
