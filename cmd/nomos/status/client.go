@@ -1,5 +1,4 @@
 // Package status contains logic for the nomos status CLI command.
-//nolint:unused
 package status
 
 import (
@@ -38,62 +37,6 @@ type statusClient struct {
 	configManagement *util.ConfigManagementClient
 }
 
-func (c *statusClient) clusterStatus(name string) (status string, errs []string) {
-	syncBranch, err := c.configManagement.NestedString("spec", "git", "syncBranch")
-	// TODO(b/131767793): Error logic (and more) needs to be refactored out of status.go
-	// and into the pkg directory, where:
-	//   a) common code between status.go and version.go can be shared
-	//   b) error handling of these two functions can be unified
-	//   c) more code can be covered by unit tests
-	if err != nil {
-		fmt.Printf("Failed to retrieve syncBranch for %q: %v\n", name, err)
-	}
-
-	repoList, err := c.repos.List(metav1.ListOptions{})
-	if err != nil {
-		fmt.Printf("Failed to retrieve repos for %q: %v\n", name, err)
-	}
-
-	if err == nil && len(repoList.Items) > 0 {
-		repoStatus := repoList.Items[0].Status
-		status = statusRow(name, repoStatus, syncBranch)
-		errs = syncStatusErrors(repoStatus)
-		return
-	}
-
-	podList, err := c.pods.List(metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
-
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			status = util.NotInstalledMsg
-		} else {
-			status = errorRow(name, util.ErrorMsg)
-			errs = append(errs, err.Error())
-		}
-		return
-	} else if len(podList.Items) == 0 {
-		status = errorRow(name, util.NotInstalledMsg)
-		return
-	}
-
-	errs, err = c.configManagement.NestedStringSlice("status", "errors")
-
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			status = errorRow(name, util.NotConfiguredMsg)
-			errs = append(errs, "ConfigManagement resource is missing")
-		} else {
-			status = errorRow(name, util.ErrorMsg)
-			errs = append(errs, err.Error())
-		}
-	} else if len(errs) > 0 {
-		status = errorRow(name, util.NotConfiguredMsg)
-	} else {
-		status = errorRow(name, util.UnknownMsg)
-	}
-	return
-}
-
 func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
 	rs := &v1alpha1.RootSync{}
 	if err := c.client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
@@ -114,8 +57,8 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 	return repoSyncs, nil
 }
 
-// clusterStatusNew is the in-progress replacement for clusterStatus().
-func (c *statusClient) clusterStatusNew(cluster string) *clusterState {
+// clusterStatus returns the clusterState for the cluster this client is connected to.
+func (c *statusClient) clusterStatus(ctx context.Context, cluster string) *clusterState {
 	cs := &clusterState{ref: cluster}
 
 	if !c.isInstalled(cs) {
@@ -133,7 +76,7 @@ func (c *statusClient) clusterStatusNew(cluster string) *clusterState {
 	}
 
 	if isMulti {
-		// TODO: handle multi repo
+		c.multiRepoClusterStatus(ctx, cs)
 	} else {
 		c.monoRepoClusterStatus(cs)
 	}

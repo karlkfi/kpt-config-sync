@@ -27,7 +27,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"<root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n",
+			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional git subdirectory specified",
@@ -40,7 +40,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"<root>\tgit@github.com:tester/sample/admin@master\t\n  SYNCED\tabc123\t\n",
+			"  <root>\tgit@github.com:tester/sample/admin@master\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional git branch specified",
@@ -53,7 +53,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"bookstore\tgit@github.com:tester/sample@feature\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\tgit@github.com:tester/sample@feature\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional git revision specified",
@@ -66,7 +66,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"bookstore\tgit@github.com:tester/sample@v1\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\tgit@github.com:tester/sample@v1\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"all optional git fields specified",
@@ -81,7 +81,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"bookstore\tgit@github.com:tester/sample/books@v1\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\tgit@github.com:tester/sample/books@v1\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"repo with errors",
@@ -96,7 +96,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				commit: "abc123",
 				errors: []string{"error1", "error2"},
 			},
-			"bookstore\tgit@github.com:tester/sample/books@v1\t\n  ERROR\tabc123\t\n  Error:\terror1\t\n  Error:\terror2\t\n",
+			"  bookstore\tgit@github.com:tester/sample/books@v1\t\n  ERROR\tabc123\t\n  Error:\terror1\t\n  Error:\terror2\t\n",
 		},
 		{
 			"unsynced repo",
@@ -108,7 +108,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				},
 				status: "PENDING",
 			},
-			"bookstore\tgit@github.com:tester/sample@v1\t\n  PENDING\t\t\n",
+			"  bookstore\tgit@github.com:tester/sample@v1\t\n  PENDING\t\t\n",
 		},
 	}
 	for _, tc := range testCases {
@@ -380,7 +380,11 @@ func TestClusterState_PrintRows(t *testing.T) {
 				ref:    "gke_sample-project_europe-west1-b_cluster-1",
 				status: "UNINSTALLED",
 			},
-			"--------------------\ngke_sample-project_europe-west1-b_cluster-1\nUNINSTALLED\t\n",
+			`
+gke_sample-project_europe-west1-b_cluster-1
+  --------------------
+  UNINSTALLED	
+`,
 		},
 		{
 			"cluster without repos",
@@ -389,7 +393,11 @@ func TestClusterState_PrintRows(t *testing.T) {
 				status: "UNCONFIGURED",
 				error:  "Missing git-creds secret",
 			},
-			"--------------------\ngke_sample-project_europe-west1-b_cluster-1\nUNCONFIGURED\tMissing git-creds secret\n",
+			`
+gke_sample-project_europe-west1-b_cluster-1
+  --------------------
+  UNCONFIGURED	Missing git-creds secret
+`,
 		},
 		{
 			"cluster with repos",
@@ -415,7 +423,15 @@ func TestClusterState_PrintRows(t *testing.T) {
 					},
 				},
 			},
-			"--------------------\ngke_sample-project_europe-west1-b_cluster-2\n<root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\nbookstore\tgit@github.com:tester/sample@feature\t\n  SYNCED\tabc123\t\n",
+			`
+gke_sample-project_europe-west1-b_cluster-2
+  --------------------
+  <root>	git@github.com:tester/sample@master	
+  SYNCED	abc123	
+  --------------------
+  bookstore	git@github.com:tester/sample@feature	
+  SYNCED	abc123	
+`,
 		},
 	}
 	for _, tc := range testCases {

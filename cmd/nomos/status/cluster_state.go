@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	indentation = "  "
-	separator   = "--------------------"
+	commitHashLength = 8
+	indent           = "  "
+	separator        = "--------------------"
 )
 
 // clusterState represents the sync status of all repos on a cluster.
@@ -26,13 +27,25 @@ type clusterState struct {
 }
 
 func (c *clusterState) printRows(writer io.Writer) {
-	fmt.Fprintf(writer, "%s\n", separator)
+	fmt.Fprintln(writer, "")
 	fmt.Fprintf(writer, "%s\n", c.ref)
 	if c.status != "" || c.error != "" {
-		fmt.Fprintf(writer, "%s\t%s\n", c.status, c.error)
+		fmt.Fprintf(writer, "%s%s\n", indent, separator)
+		fmt.Fprintf(writer, "%s%s\t%s\n", indent, c.status, c.error)
 	}
 	for _, repo := range c.repos {
+		fmt.Fprintf(writer, "%s%s\n", indent, separator)
 		repo.printRows(writer)
+	}
+}
+
+// unavailableCluster returns a clusterState for a cluster that could not be
+// reached by a client connection.
+func unavailableCluster(ref string) *clusterState {
+	return &clusterState{
+		ref:    ref,
+		status: "N/A",
+		error:  "Failed to connect to cluster",
 	}
 }
 
@@ -46,11 +59,11 @@ type repoState struct {
 }
 
 func (r *repoState) printRows(writer io.Writer) {
-	fmt.Fprintf(writer, "%s\t%s\t\n", r.scope, gitString(r.git))
-	fmt.Fprintf(writer, "%s%s\t%s\t\n", indentation, r.status, r.commit)
+	fmt.Fprintf(writer, "%s%s\t%s\t\n", indent, r.scope, gitString(r.git))
+	fmt.Fprintf(writer, "%s%s\t%s\t\n", indent, r.status, r.commit)
 
 	for _, err := range r.errors {
-		fmt.Fprintf(writer, "%sError:\t%s\t\n", indentation, err)
+		fmt.Fprintf(writer, "%sError:\t%s\t\n", indent, err)
 	}
 }
 
@@ -81,7 +94,7 @@ func monoRepoStatus(git v1alpha1.Git, status v1.RepoStatus) *repoState {
 		scope:  "<root>",
 		git:    git,
 		status: getSyncStatus(status),
-		commit: commitOrNA(status.Sync.LatestToken),
+		commit: commitHash(status.Sync.LatestToken),
 		errors: syncStatusErrors(status),
 	}
 }
@@ -92,7 +105,7 @@ func namespaceRepoStatus(rs *v1alpha1.RepoSync) *repoState {
 		scope:  rs.Namespace,
 		git:    rs.Spec.Git,
 		status: getRepoStatus(rs),
-		commit: commitOrNA(rs.Status.Sync.Commit),
+		commit: commitHash(rs.Status.Sync.Commit),
 		errors: repoSyncErrors(rs),
 	}
 }
@@ -103,14 +116,16 @@ func rootRepoStatus(rs *v1alpha1.RootSync) *repoState {
 		scope:  "<root>",
 		git:    rs.Spec.Git,
 		status: getRootStatus(rs),
-		commit: commitOrNA(rs.Status.Sync.Commit),
+		commit: commitHash(rs.Status.Sync.Commit),
 		errors: rootSyncErrors(rs),
 	}
 }
 
-func commitOrNA(commit string) string {
+func commitHash(commit string) string {
 	if len(commit) == 0 {
 		return "N/A"
+	} else if len(commit) > commitHashLength {
+		commit = commit[:commitHashLength]
 	}
 	return commit
 }

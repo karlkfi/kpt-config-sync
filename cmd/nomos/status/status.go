@@ -1,6 +1,7 @@
 package status
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,7 +9,6 @@ import (
 	"os/exec"
 	"runtime"
 	"sort"
-	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -22,10 +22,8 @@ import (
 )
 
 const (
-	maxNameLength  = 50
-	maxTokenLength = 8
-	pendingMsg     = "PENDING"
-	syncedMsg      = "SYNCED"
+	pendingMsg = "PENDING"
+	syncedMsg  = "SYNCED"
 )
 
 var (
@@ -40,7 +38,7 @@ func init() {
 }
 
 // GetStatusReadCloser returns a ReadCloser with the output produced by running the "nomos status" command as a string
-func GetStatusReadCloser(contexts []string) (io.ReadCloser, error) {
+func GetStatusReadCloser(ctx context.Context, contexts []string) (io.ReadCloser, error) {
 	r, w, _ := os.Pipe()
 	writer := util.NewWriter(w)
 
@@ -50,7 +48,7 @@ func GetStatusReadCloser(contexts []string) (io.ReadCloser, error) {
 	}
 	names := clusterNames(clientMap)
 
-	printStatus(writer, clientMap, names)
+	printStatus(ctx, writer, clientMap, names)
 	err = w.Close()
 	if err != nil {
 		e := fmt.Errorf("failed to close status file writer with error: %v", err)
@@ -91,11 +89,11 @@ var Cmd = &cobra.Command{
 		writer := util.NewWriter(os.Stdout)
 		if pollingInterval > 0 {
 			for {
-				printStatus(writer, clientMap, names)
+				printStatus(cmd.Context(), writer, clientMap, names)
 				time.Sleep(pollingInterval)
 			}
 		} else {
-			printStatus(writer, clientMap, names)
+			printStatus(cmd.Context(), writer, clientMap, names)
 		}
 	},
 }
@@ -103,39 +101,39 @@ var Cmd = &cobra.Command{
 // clusterNames returns a sorted list of names from the given clientMap.
 func clusterNames(clientMap map[string]*statusClient) []string {
 	var names []string
-	var unreachableNames []string
-	for name, cl := range clientMap {
-		if cl == nil {
-			unreachableNames = append(unreachableNames, name)
-		} else {
-			names = append(names, name)
-		}
+	for name := range clientMap {
+		names = append(names, name)
 	}
 	sort.Strings(names)
-	sort.Strings(unreachableNames)
-	return append(names, unreachableNames...)
+	return names
+}
+
+// clusterStates returns a map of clusterStates calculated from the given map of clients.
+func clusterStates(ctx context.Context, clientMap map[string]*statusClient) map[string]*clusterState {
+	stateMap := make(map[string]*clusterState)
+	for name, client := range clientMap {
+		if client == nil {
+			stateMap[name] = unavailableCluster(name)
+		} else {
+			stateMap[name] = client.clusterStatus(ctx, name)
+		}
+	}
+	return stateMap
 }
 
 // printStatus fetches ConfigManagementStatus and/or RepoStatus from each cluster in the given map
 // and then prints a formatted status row for each one. If there are any errors reported by either
 // object, those are printed in a second table under the status table.
 // nolint:errcheck
-func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, names []string) {
-	// First build up maps of all the things we want to display.
-	writeMap, errorMap := fetchStatus(clientMap)
+func printStatus(ctx context.Context, writer *tabwriter.Writer, clientMap map[string]*statusClient, names []string) {
+	// First build up a map of all the states to display.
+	stateMap := clusterStates(ctx, clientMap)
 
-	// Prepend an asterisk for the "Current" column, which denotes the users' current context
 	currentContext, err := restconfig.CurrentContextName()
 	if err != nil {
 		fmt.Printf("Failed to get current context name with err: %v\n", errors.Cause(err))
 	}
-	for _, name := range names {
-		if name == currentContext {
-			writeMap[name] = "*\t" + writeMap[name]
-		} else {
-			writeMap[name] = "\t" + writeMap[name]
-		}
-	}
+
 	// Now we write everything at once. Processing and then printing helps avoid screen strobe.
 
 	if pollingInterval > 0 {
@@ -144,67 +142,17 @@ func printStatus(writer *tabwriter.Writer, clientMap map[string]*statusClient, n
 		writer.Flush()
 	}
 
-	// Print table header.
-	// To prevent column width flickering when Nomos status is in poll mode, we artificially pad
-	// the sync status column to the length of the longest status (14 characters)
-	fmt.Fprintln(writer, "Current\tContext\tSync Status   \tLast Synced Token\tSync Branch\tResource Status")
-	fmt.Fprintln(writer, "-------\t-------\t-----------   \t-----------------\t-----------\t---------------")
-
-	// Print a summary of all clusters.
+	// Print status for each cluster.
 	for _, name := range names {
-		fmt.Fprintf(writer, "%s", writeMap[name])
-	}
-
-	// Print out any errors that occurred.
-	if len(errorMap) > 0 {
-		fmt.Fprintf(writer, "\n\n")
-		fmt.Fprintln(writer, "Config Management Errors:")
-
-		for _, name := range names {
-			for _, clusterErr := range errorMap[name] {
-				fmt.Fprintln(writer, errorRow(name, clusterErr))
-			}
+		state := stateMap[name]
+		if name == currentContext {
+			// Prepend an asterisk for the users' current context
+			state.ref = "*" + name
 		}
+		state.printRows(writer)
 	}
 
 	writer.Flush()
-}
-
-// fetchStatus returns two maps which are both keyed by cluster name. The first is a map of
-// printable cluster status rows and the second is a map of printable cluster error rows.
-func fetchStatus(clientMap map[string]*statusClient) (map[string]string, map[string][]string) {
-	var mapMutex sync.Mutex
-	var wg sync.WaitGroup
-	writeMap := make(map[string]string)
-	errorMap := make(map[string][]string)
-
-	// We fetch the repo objects in parallel to avoid long delays if multiple clusters are unreachable
-	// or slow to respond.
-	for name, repoClient := range clientMap {
-		if repoClient == nil {
-			mapMutex.Lock()
-			writeMap[name] = naStatusRow(name)
-			mapMutex.Unlock()
-			continue
-		}
-		wg.Add(1)
-
-		go func(name string, sClient *statusClient) {
-			status, errs := sClient.clusterStatus(name)
-
-			mapMutex.Lock()
-			writeMap[name] = status
-			if len(errs) > 0 {
-				errorMap[name] = errs
-			}
-			mapMutex.Unlock()
-
-			wg.Done()
-		}(name, repoClient)
-	}
-
-	wg.Wait()
-	return writeMap, errorMap
 }
 
 // clearTerminal executes an OS-specific command to clear all output on the terminal.
@@ -258,36 +206,6 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 	return syncErrors
 }
 
-// shortName returns a cluster name which has been truncated to the maximum name length.
-func shortName(name string) string {
-	if len(name) <= maxNameLength {
-		return name
-	}
-	return name[len(name)-maxNameLength:]
-}
-
-// errorRow returns the given error message formated as a printable row.
-func errorRow(name string, err string) string {
-	return stringForRow(name, err, "", "", "")
-}
-
-// statusRow returns the given RepoStatus and syncBranch formated as a printable row.
-// This consists of (in order) the: Context, Status, Last Synced Token, Sync Branch, Resource Status
-func statusRow(name string, status v1.RepoStatus, syncBranch string) string {
-	token := status.Sync.LatestToken
-	if len(token) == 0 {
-		token = "N/A"
-	} else if len(token) > maxTokenLength {
-		token = token[:maxTokenLength]
-	}
-	return stringForRow(name, getSyncStatus(status), token, syncBranch, getResourceStatus(status.Sync.ResourceConditions))
-}
-
-// naStatusRow returns a printable row for a cluster that is N/A.
-func naStatusRow(name string) string {
-	return stringForRow(name, "N/A", "", "", "")
-}
-
 // getSyncStatus returns the given RepoStatus formatted as a short summary string.
 func getSyncStatus(status v1.RepoStatus) string {
 	if hasErrors(status) {
@@ -335,12 +253,4 @@ func syncStatusErrors(status v1.RepoStatus) []string {
 	}
 
 	return errs
-}
-
-// stringForRow returns a string containing all of the columns in a particular row, except for
-// the 'Current' column which is prepended prior to printing.
-// Note: It is necessary to include tabs even for columns which are empty, otherwise the formatting
-// of rows below will be misaligned.
-func stringForRow(name string, syncStatus string, token string, syncBranch string, resourceStatus v1.ResourceConditionState) string {
-	return fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t\n", shortName(name), syncStatus, token, syncBranch, resourceStatus)
 }

@@ -344,8 +344,8 @@ func pathToNamespacePodList(ns string) string {
 }
 
 // AddNomosStatusToZip writes `nomos status` to bugreport zip file
-func (b *BugReporter) AddNomosStatusToZip() {
-	if statusRc, err := status.GetStatusReadCloser([]string{b.k8sContext}); err != nil {
+func (b *BugReporter) AddNomosStatusToZip(ctx context.Context) {
+	if statusRc, err := status.GetStatusReadCloser(ctx, []string{b.k8sContext}); err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else if err = b.writeReadableToZip(Readable{
 		Name:       path.Join(Processed, b.k8sContext, "status"),
