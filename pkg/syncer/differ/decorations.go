@@ -27,7 +27,7 @@ func ManagementUnset(obj core.LabeledAndAnnotated) bool {
 // manages.
 func HasNomosMeta(obj core.LabeledAndAnnotated) bool {
 	as := obj.GetAnnotations()
-	sas := append(v1.SyncerAnnotations(), hnc.AnnotationKey)
+	sas := append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A1, hnc.AnnotationKeyV1A2)
 	for _, a := range sas {
 		if _, ok := as[a]; ok {
 			return true

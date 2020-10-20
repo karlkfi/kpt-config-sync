@@ -22,7 +22,7 @@ func enableManagement(obj core.LabeledAndAnnotated) {
 // place. Returns true if the object was modified.
 func RemoveNomosLabelsAndAnnotations(obj core.LabeledAndAnnotated) bool {
 	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	core.RemoveAnnotations(obj, append(v1.SyncerAnnotations(), hnc.AnnotationKey)...)
+	core.RemoveAnnotations(obj, append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A1, hnc.AnnotationKeyV1A2)...)
 	core.RemoveLabels(obj, v1.SyncerLabels())
 	after := len(obj.GetAnnotations()) + len(obj.GetLabels())
 	return before != after

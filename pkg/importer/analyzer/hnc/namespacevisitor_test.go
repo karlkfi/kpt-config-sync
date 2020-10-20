@@ -75,7 +75,11 @@ func TestBuilderVisitor(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/bar"),
 									Type:     node.Namespace,
-									Objects:  []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/foo/bar", core.Annotation(AnnotationKey, v1.ManagedByValue), depthLabels("foo/bar"))}},
+									Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace(
+										"namespaces/foo/bar",
+										core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
+										core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
+										depthLabels("foo/bar"))}},
 								},
 							},
 						},
@@ -83,7 +87,8 @@ func TestBuilderVisitor(t *testing.T) {
 							Relative: cmpath.RelativeSlash("namespaces/qux"),
 							Type:     node.Namespace,
 							Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux",
-								core.Annotation(AnnotationKey, v1.ManagedByValue),
+								core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
+								core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
 								depthLabels("qux"))}},
 						},
 					},
