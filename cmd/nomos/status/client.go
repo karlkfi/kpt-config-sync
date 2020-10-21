@@ -17,6 +17,8 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +47,14 @@ func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error)
 	return rs, nil
 }
 
+func (c *statusClient) repoSync(ctx context.Context, ns string) (*v1alpha1.RepoSync, error) {
+	rs := &v1alpha1.RepoSync{}
+	if err := c.client.Get(ctx, reposync.ObjectKey(declared.Scope(ns)), rs); err != nil {
+		return nil, err
+	}
+	return rs, nil
+}
+
 func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
 	rsl := &v1alpha1.RepoSyncList{}
 	if err := c.client.List(ctx, rsl); err != nil {
@@ -58,7 +68,7 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 }
 
 // clusterStatus returns the clusterState for the cluster this client is connected to.
-func (c *statusClient) clusterStatus(ctx context.Context, cluster string) *clusterState {
+func (c *statusClient) clusterStatus(ctx context.Context, cluster, namespace string) *clusterState {
 	cs := &clusterState{ref: cluster}
 
 	if !c.isInstalled(cs) {
@@ -75,7 +85,9 @@ func (c *statusClient) clusterStatus(ctx context.Context, cluster string) *clust
 		return cs
 	}
 
-	if isMulti {
+	if namespace != "" {
+		c.namespaceRepoClusterStatus(ctx, cs, namespace)
+	} else if isMulti {
 		c.multiRepoClusterStatus(ctx, cs)
 	} else {
 		c.monoRepoClusterStatus(cs)
@@ -170,6 +182,19 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 		cs.status = util.UnknownMsg
 		cs.error = "No RootSync or RepoSync resources found"
 	}
+}
+
+// namespaceRepoClusterStatus populates the given clusterState with the sync status of
+// the specified namespace repo on the statusClient's cluster.
+func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clusterState, ns string) {
+	sync, err := c.repoSync(ctx, ns)
+	if err != nil {
+		cs.status = util.ErrorMsg
+		cs.error = err.Error()
+		return
+	}
+
+	cs.repos = append(cs.repos, namespaceRepoStatus(sync))
 }
 
 // isInstalled returns true if the statusClient is connected to a cluster where

@@ -29,12 +29,14 @@ const (
 var (
 	clientTimeout   time.Duration
 	pollingInterval time.Duration
+	namespace       string
 )
 
 func init() {
 	flags.AddContexts(Cmd)
 	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
+	Cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace repo to get status for (multi-repo only, leave unset to get all repos)")
 }
 
 // GetStatusReadCloser returns a ReadCloser with the output produced by running the "nomos status" command as a string
@@ -115,7 +117,7 @@ func clusterStates(ctx context.Context, clientMap map[string]*statusClient) map[
 		if client == nil {
 			stateMap[name] = unavailableCluster(name)
 		} else {
-			stateMap[name] = client.clusterStatus(ctx, name)
+			stateMap[name] = client.clusterStatus(ctx, name, namespace)
 		}
 	}
 	return stateMap
