@@ -1,19 +1,20 @@
 package vet
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/cmd/nomos/parse"
+	nomosparse "github.com/google/nomos/cmd/nomos/parse"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,19 +22,15 @@ import (
 //
 // root is the OS-specific path to the Nomos policy root.
 //   If relative, it is assumed to be relative to the working directory.
+// namespace, if non-emptystring, validates the repo as a CSMR Namespace
+//   repository.
 // sourceFormat is whether the repository is in the hierarchy or unstructured
 //   format.
 // skipAPIServer is whether to skip the API Server checks.
 // allClusters is whether we are implicitly vetting every cluster.
 // clusters is the set of clusters we are checking.
 //   Only used if allClusters is false.
-func vet(
-	root string,
-	sourceFormat string,
-	skipAPIServer bool,
-	allClusters bool,
-	clusters []string,
-) error {
+func vet(root string, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return err
@@ -47,7 +44,7 @@ func vet(
 		return err
 	}
 
-	files, err := parse.FindFiles(rootDir)
+	files, err := nomosparse.FindFiles(rootDir)
 	if err != nil {
 		return err
 	}
@@ -57,20 +54,46 @@ func vet(
 		return err
 	}
 
+	if sourceFormat == "" {
+		if namespace == "" {
+			// Default to hierarchical if --namespace is not provided.
+			sourceFormat = filesystem.SourceFormatHierarchy
+		} else {
+			// Default to unstructured if --namespace is provided.
+			sourceFormat = filesystem.SourceFormatUnstructured
+		}
+	}
+
+	getSyncedCRDs := nomosparse.GetSyncedCRDs
+	if skipAPIServer {
+		getSyncedCRDs = filesystem.NoSyncedCRDs
+	}
+
 	var parser filesystem.ConfigParser
 	switch sourceFormat {
-	case hierarchyFormat:
-		parser = parse.NewParser(dc)
+	case filesystem.SourceFormatHierarchy:
+		if namespace != "" {
+			// The user could technically provide --source-format=unstructured.
+			// This nuance isn't necessary to communicate nor confusing to omit.
+			return errors.Errorf("if --%s is provided, --%s must be omitted",
+				namespaceFlag, sourceFormatFlag)
+		}
+
+		parser = filesystem.NewParser(&filesystem.FileReader{}, dc)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
-	case unstructuredFormat:
-		parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault)
+	case filesystem.SourceFormatUnstructured:
+		if namespace == "" {
+			parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault)
+		} else {
+			parser = parse.NewNamespace(&filesystem.FileReader{}, dc, declared.Scope(namespace))
+		}
 	default:
 		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 	}
 
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !skipAPIServer, rootDir, files,
+	hydrate.ForEachCluster(parser, getSyncedCRDs, !skipAPIServer, rootDir, files,
 		vetCluster(&vetErrs, allClusters, clusters),
 	)
 	if len(vetErrs) > 0 {
@@ -86,11 +109,10 @@ type clusterErrors struct {
 }
 
 func (e clusterErrors) Error() string {
-	errs := e.MultiError.Errors()
-	if len(errs) == 1 && errs[0].Code() == status.APIServerErrorCode {
-		return fmt.Sprintf("did you mean to run with --%s?: %v", flags.SkipAPIServerFlag, e.Error())
+	if e.name == "defaultcluster" {
+		return e.MultiError.Error()
 	}
-	return fmt.Sprintf("errors for cluster %q: %v\n", e.name, e.MultiError.Error())
+	return fmt.Sprintf("errors for cluster %q:\n%v\n", e.name, e.MultiError.Error())
 }
 
 func vetCluster(vetErrors *[]string, allClusters bool, clusters []string) func(clusterName string, fileObjects []ast.FileObject, errs status.MultiError) {
@@ -107,7 +129,7 @@ func vetCluster(vetErrors *[]string, allClusters bool, clusters []string) func(c
 
 		if errs != nil {
 			if clusterName == "" {
-				clusterName = parse.UnregisteredCluster
+				clusterName = nomosparse.UnregisteredCluster
 			}
 			*vetErrors = append(*vetErrors, clusterErrors{
 				name:       clusterName,

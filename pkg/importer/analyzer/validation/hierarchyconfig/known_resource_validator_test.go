@@ -27,7 +27,7 @@ func resource(group string, kinds ...string) v1.HierarchyConfigResource {
 }
 
 func TestHierarchyConfigScopeValidator(t *testing.T) {
-	scoper := discovery.CoreScoper()
+	scoper := discovery.CoreScoper(true)
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("no resources", hierarchyConfig()),
@@ -46,11 +46,11 @@ func TestHierarchyConfigScopeValidator(t *testing.T) {
 		),
 	}
 
-	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper, true), testCases)
+	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper), testCases)
 }
 
 func TestHierarchyConfigScopeValidatorServerless(t *testing.T) {
-	scoper := discovery.CoreScoper()
+	scoper := discovery.CoreScoper(false)
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("no resources", hierarchyConfig()),
@@ -69,5 +69,5 @@ func TestHierarchyConfigScopeValidatorServerless(t *testing.T) {
 		),
 	}
 
-	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper, false), testCases)
+	nht.RunAll(t, NewHierarchyConfigScopeValidator(scoper), testCases)
 }

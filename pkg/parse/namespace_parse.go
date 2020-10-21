@@ -10,31 +10,30 @@ import (
 	"github.com/google/nomos/pkg/util/discovery"
 )
 
-// NamespaceParser is a filesystem.ConfigParser that parses Namespace
+// Namespace is a filesystem.ConfigParser that parses Namespace
 // repositories.
 //
 // It wraps a filesystem.rawParser and adds a few additional validation steps.
-type NamespaceParser struct {
+type Namespace struct {
 	discoveryInterface discovery.ServerResourcer
 	parser             filesystem.ConfigParser
 	scope              declared.Scope
 }
 
-// NewNamespaceParser creates a new NamespaceParser.
-func NewNamespaceParser(fileReader filesystem.Reader, dc discovery.ServerResourcer, scope declared.Scope) *NamespaceParser {
-	return &NamespaceParser{
+// NewNamespace creates a new Namespace.
+func NewNamespace(fileReader filesystem.Reader, dc discovery.ServerResourcer, scope declared.Scope) *Namespace {
+	return &Namespace{
 		discoveryInterface: dc,
 		parser:             filesystem.NewRawParser(fileReader, dc, string(scope)),
 		scope:              scope,
 	}
 }
 
-var _ filesystem.ConfigParser = &NamespaceParser{}
+var _ filesystem.ConfigParser = &Namespace{}
 
 // Parse implements filesystem.ConfigParser.
-func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs filesystem.GetSyncedCRDs, policyDir cmpath.Absolute, files []cmpath.Absolute) ([]core.Object, status.MultiError) {
-	cos, err := p.parser.Parse(clusterName, enableAPIServerChecks,
-		getSyncedCRDs, policyDir, files)
+func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs filesystem.GetSyncedCRDs, policyDir cmpath.Absolute, files []cmpath.Absolute) ([]core.Object, status.MultiError) {
+	cos, err := n.parser.Parse(clusterName, enableAPIServerChecks, getSyncedCRDs, policyDir, files)
 	if err != nil {
 		return nil, err
 	}
@@ -48,10 +47,12 @@ func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, g
 
 	objs := filesystem.AsFileObjects(cos)
 
-	scoper, _, err := filesystem.BuildScoper(p.discoveryInterface, true, objs, nil, getSyncedCRDs)
+	var scoper discovery.Scoper
+	scoper, _, err = filesystem.BuildScoper(n.discoveryInterface, enableAPIServerChecks, objs, nil, getSyncedCRDs)
 	if err != nil {
 		return nil, err
 	}
+
 	// We recreate this validator with every run as the set of available CRDs may
 	// change between runs. The user may have either declared new CRDs in the root
 	// repo, or they may have manually applied new ones.
@@ -60,7 +61,7 @@ func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, g
 		return nil, err
 	}
 
-	nsv := repositoryScopeVisitor(p.scope)
+	nsv := repositoryScopeVisitor(n.scope)
 	err = nsv.Validate(objs)
 	if err != nil {
 		return nil, err
@@ -69,6 +70,6 @@ func (p NamespaceParser) Parse(clusterName string, enableAPIServerChecks bool, g
 }
 
 // ReadClusterRegistryResources implements filesystem.ConfigParser.
-func (p NamespaceParser) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
-	return p.parser.ReadClusterRegistryResources(root, files)
+func (n Namespace) ReadClusterRegistryResources(root cmpath.Absolute, files []cmpath.Absolute) []ast.FileObject {
+	return n.parser.ReadClusterRegistryResources(root, files)
 }

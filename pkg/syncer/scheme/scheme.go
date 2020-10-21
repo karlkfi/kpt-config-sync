@@ -72,15 +72,15 @@ func ResourceScopes(
 			continue
 		}
 
-		isNamespaced, err := scoper.GetGroupKindScope(gvk.GroupKind())
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if isNamespaced {
+		scope, err := scoper.GetGroupKindScope(gvk.GroupKind())
+		switch {
+		case scope == discovery.NamespaceScope && err == nil:
 			namespace[gvk] = obj
-		} else {
+		case scope == discovery.ClusterScope && err == nil:
 			cluster[gvk] = obj
+		default:
+			// The scope is Unknown or there was an error getting the scope.
+			return nil, nil, err
 		}
 	}
 	return namespace, cluster, nil
