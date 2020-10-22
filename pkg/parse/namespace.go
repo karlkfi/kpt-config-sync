@@ -27,7 +27,7 @@ func NewNamespaceRunner(scope declared.Scope, fileReader filesystem.Reader, c cl
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},
-			parser:           NewNamespace(fileReader, dc, scope),
+			parser:           NewNamespaceParser(fileReader, dc, scope),
 			updater: updater{
 				resources:  resources,
 				applier:    app,

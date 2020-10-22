@@ -12,14 +12,13 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestScopeValidator(t *testing.T) {
-	scoper := discovery.NewScoper(map[schema.GroupKind]discovery.ScopeType{
+	scoper := discovery.Scoper{
 		kinds.Role().GroupKind():        discovery.NamespaceScope,
 		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
-	}, true)
+	}
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Namespace-scoped object with metadata.namespace",
@@ -54,9 +53,9 @@ func TestScopeValidator(t *testing.T) {
 }
 
 func TestScopeValidator_AddsDefaultNamespace(t *testing.T) {
-	scoper := discovery.NewScoper(map[schema.GroupKind]discovery.ScopeType{
+	scoper := discovery.Scoper{
 		kinds.Role().GroupKind(): discovery.NamespaceScope,
-	}, true)
+	}
 	v := nonhierarchical.ScopeValidator(metav1.NamespaceDefault, scoper)
 
 	r := fake.Role(core.Namespace(""))
@@ -69,9 +68,9 @@ func TestScopeValidator_AddsDefaultNamespace(t *testing.T) {
 }
 
 func TestScopeValidator_AddsSetNamespace(t *testing.T) {
-	scoper := discovery.NewScoper(map[schema.GroupKind]discovery.ScopeType{
+	scoper := discovery.Scoper{
 		kinds.Role().GroupKind(): discovery.NamespaceScope,
-	}, true)
+	}
 	v := nonhierarchical.ScopeValidator("shipping", scoper)
 
 	r := fake.Role(core.Namespace(""))
@@ -84,9 +83,9 @@ func TestScopeValidator_AddsSetNamespace(t *testing.T) {
 }
 
 func TestScopeValidator_LeavesClusterScopedBlank(t *testing.T) {
-	scoper := discovery.NewScoper(map[schema.GroupKind]discovery.ScopeType{
+	scoper := discovery.Scoper{
 		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
-	}, true)
+	}
 	v := nonhierarchical.ScopeValidator(metav1.NamespaceDefault, scoper)
 
 	r := fake.ClusterRole(core.Namespace(""))

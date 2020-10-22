@@ -69,9 +69,6 @@ kubectl apply -fR to the cluster, and is equivalent to the state ConfigManagemen
 clusters.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Don't show usage on error, as argument validation passed.
-		cmd.SilenceUsage = true
-
 		switch extension {
 		case "yaml", "json": // do nothing
 		default:
@@ -98,7 +95,7 @@ clusters.`,
 		if err != nil {
 			return err
 		}
-		parser := filesystem.NewParser(&filesystem.FileReader{}, dc)
+		parser := parse.NewParser(dc)
 
 		var allObjects []ast.FileObject
 

@@ -26,7 +26,7 @@ func BuildScoper(
 ) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
 	// Initialize the scoper with the default set of Kubernetes resources and the
 	// declared CRDs.
-	scoper := utildiscovery.CoreScoper(useAPIServer)
+	scoper := utildiscovery.CoreScoper()
 	scoper.AddCustomResources(declaredCRDs)
 
 	// If we don't need to check the API Server because we have all the required
@@ -51,19 +51,19 @@ func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer
 	// the API Server in the future.
 	syncedCRDs, err := getSyncedCRDs()
 	if err != nil {
-		return scoper, nil, err
+		return nil, nil, err
 	}
 	scoper.AddCustomResources(syncedCRDs)
 
 	// List the APIResources from the API Server.
 	lists, discoveryErr := utildiscovery.GetResources(dc)
 	if discoveryErr != nil {
-		return scoper, nil, discoveryErr
+		return nil, nil, discoveryErr
 	}
 
 	// Add resources from the API Server last.
 	if addListsErr := scoper.AddAPIResourceLists(lists); addListsErr != nil {
-		return scoper, nil, addListsErr
+		return nil, nil, addListsErr
 	}
 
 	return scoper, syncedCRDs, nil

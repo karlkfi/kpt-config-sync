@@ -13,11 +13,11 @@ import (
 )
 
 func TestClusterScopeValidator(t *testing.T) {
-	var scoper discovery.Scoper = discovery.NewScoper(map[schema.GroupKind]discovery.ScopeType{
-		kinds.Role().GroupKind():        discovery.NamespaceScope,
-		kinds.ClusterRole().GroupKind(): discovery.ClusterScope,
-		kinds.Namespace().GroupKind():   discovery.ClusterScope,
-	}, true)
+	var scoper discovery.Scoper = map[schema.GroupKind]discovery.IsNamespaced{
+		kinds.Role().GroupKind():        true,
+		kinds.ClusterRole().GroupKind(): false,
+		kinds.Namespace().GroupKind():   false,
+	}
 
 	testCases := []struct {
 		name     string

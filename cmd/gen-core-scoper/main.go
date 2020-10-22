@@ -18,11 +18,8 @@ import (
 // CoreScoper returns a Scoper with the scopes of all core Kubernetes and Nomos
 // types defined. Use this instead of building a Scoper from the response to an
 // APIServer when one is unavailable.
-//
-// errOnUnknown is whether the Scoper should return an error if the scope is
-// either explicitly set to Unknown or is not found.
-func CoreScoper(errOnUnknown bool) Scoper {
-	return NewScoper(map[schema.GroupKind]ScopeType{
+func CoreScoper() Scoper {
+	return map[schema.GroupKind]IsNamespaced{
 `
 
 func main() {
@@ -61,7 +58,7 @@ func main() {
 		sb.WriteString(fmt.Sprintf("\t\tschema.GroupKind{Group: %q, Kind: %q}: %s,\n", fields[0], fields[2], scope))
 	}
 
-	sb.WriteString(`	}, errOnUnknown)
+	sb.WriteString(`	}
 }
 `)
 

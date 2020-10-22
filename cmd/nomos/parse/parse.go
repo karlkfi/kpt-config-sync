@@ -7,9 +7,11 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/clusterconfig"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +22,11 @@ import (
 
 const timeout = time.Second * 15
 
+// NewParser returns a new default-initialized Parser for the CLI.
+func NewParser(dc discovery.ServerResourcer) *filesystem.Parser {
+	return filesystem.NewParser(&filesystem.FileReader{}, dc)
+}
+
 // GetSyncedCRDs returns the CRDs synced to the cluster in the current context.
 //
 // Times out after 15 seconds.
@@ -29,7 +36,7 @@ func GetSyncedCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 
 	config, err := restconfig.NewRestConfig()
 	if err != nil {
-		return nil, getSyncedCRDsError(err, "failed to create rest config")
+		return nil, getSyncedCRDsError(err, "failed to create rest config: %+v")
 	}
 
 	mapper, err := apiutil.NewDynamicRESTMapper(config)

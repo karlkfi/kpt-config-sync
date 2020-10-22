@@ -9,11 +9,8 @@ import (
 // CoreScoper returns a Scoper with the scopes of all core Kubernetes and Nomos
 // types defined. Use this instead of building a Scoper from the response to an
 // APIServer when one is unavailable.
-//
-// errOnUnknown is whether the Scoper should return an error if the scope is
-// either explicitly set to Unknown or is not found.
-func CoreScoper(errOnUnknown bool) Scoper {
-	return NewScoper(map[schema.GroupKind]ScopeType{
+func CoreScoper() Scoper {
+	return map[schema.GroupKind]IsNamespaced{
 		{Group: "", Kind: "ConfigMap"}:                                                  NamespaceScope,
 		{Group: "", Kind: "Endpoints"}:                                                  NamespaceScope,
 		{Group: "", Kind: "Event"}:                                                      NamespaceScope,
@@ -73,5 +70,5 @@ func CoreScoper(errOnUnknown bool) Scoper {
 		{Group: "configmanagement.gke.io", Kind: "Sync"}:                                ClusterScope,
 		{Group: "configsync.gke.io", Kind: "RepoSync"}:                                  NamespaceScope,
 		{Group: "clusterregistry.k8s.io", Kind: "Cluster"}:                              ClusterScope,
-	}, errOnUnknown)
+	}
 }

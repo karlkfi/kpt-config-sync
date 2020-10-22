@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/nomos/cmd/nomos/flags"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 )
@@ -20,8 +19,7 @@ func resetFlags() {
 	flags.Path = flags.PathDefault
 	flags.SkipAPIServer = false
 
-	sourceFormatValue = string(filesystem.SourceFormatHierarchy)
-	namespaceValue = ""
+	sourceFormatValue = defaultFormat
 }
 
 var examplesDir = cmpath.RelativeSlash("../../../examples")

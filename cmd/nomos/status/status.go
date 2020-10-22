@@ -53,7 +53,8 @@ func GetStatusReadCloser(ctx context.Context, contexts []string) (io.ReadCloser,
 	printStatus(ctx, writer, clientMap, names)
 	err = w.Close()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to close status file writer with error")
+		e := fmt.Errorf("failed to close status file writer with error: %v", err)
+		return nil, e
 	}
 
 	return ioutil.NopCloser(r), nil
@@ -65,23 +66,23 @@ var Cmd = &cobra.Command{
 	Use: "status",
 	// TODO: make Configuration Management a constant (for product renaming)
 	Short: `Prints the status of all clusters with Configuration Management installed.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Don't show usage on error, as argument validation passed.
-		cmd.SilenceUsage = true
-
+	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Connecting to clusters...")
 
 		clientMap, err := statusClients(flags.Contexts)
 		if err != nil {
 			// If "no such file or directory" error, unwrap and display before exiting
 			if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
-				return errors.Wrapf(err, "failed to create client configs")
+				// nolint:errcheck
+				fmt.Printf("failed to create client configs: %v\n", unWrapped)
+				os.Exit(255)
 			}
 
 			glog.Fatalf("Failed to get clients: %v", err)
 		}
 		if len(clientMap) == 0 {
-			return errors.New("no clusters found")
+			fmt.Print("No clusters found.\n")
+			os.Exit(255)
 		}
 
 		// Use a sorted order of names to avoid shuffling in the output.
@@ -96,7 +97,6 @@ var Cmd = &cobra.Command{
 		} else {
 			printStatus(cmd.Context(), writer, clientMap, names)
 		}
-		return nil
 	},
 }
 

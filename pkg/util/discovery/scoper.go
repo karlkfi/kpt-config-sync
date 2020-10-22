@@ -10,59 +10,40 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// ScopeType is the namespace/cluster scope of a particular GroupKind.
-type ScopeType string
+// IsNamespaced is true if the type is Namespaced, false otherwise.
+type IsNamespaced bool
 
 const (
-	// ClusterScope is an object scoped to the cluster.
-	ClusterScope = ScopeType("Cluster")
-	// NamespaceScope is an object scoped to namespace.
-	NamespaceScope = ScopeType("Namespace")
-	// UnknownScope means we don't know the scope of the type.
-	UnknownScope = ScopeType("Unknown")
+	// ClusterScope is an object scoped to the cluster
+	ClusterScope = IsNamespaced(false)
+	// NamespaceScope is an object scoped to namespace
+	NamespaceScope = IsNamespaced(true)
 )
 
-// NewScoper returns a Scoper for determining whether objects/types are Namespaced.
-//
-// errOnUnknown is whether to return an error if the scope for an object or type
-// is either explicitly marked Unknown or is not in the initially pased map.
-func NewScoper(scopes map[schema.GroupKind]ScopeType, errOnUnknown bool) Scoper {
-	return Scoper{
-		scope:        scopes,
-		errOnUnknown: errOnUnknown,
-	}
-}
-
-// Scoper wraps a map from GroupKinds to ScopeType.
-type Scoper struct {
-	scope        map[schema.GroupKind]ScopeType
-	errOnUnknown bool
-}
+// Scoper wraps a map from GroupKinds to IsNamespaced.
+type Scoper map[schema.GroupKind]IsNamespaced
 
 // GetObjectScope implements Scoper
-func (s *Scoper) GetObjectScope(o id.Resource) (ScopeType, status.Error) {
-	scope, err := s.GetGroupKindScope(o.GroupVersionKind().GroupKind())
-	if err != nil {
-		// Make the error specific to the object.
-		return scope, UnknownObjectKindError(o)
+func (s *Scoper) GetObjectScope(o id.Resource) (IsNamespaced, status.Error) {
+	if s == nil {
+		return false, status.InternalError("missing Scoper")
 	}
-	return scope, nil
+	if scope, hasScope := (*s)[o.GroupVersionKind().GroupKind()]; hasScope {
+		return scope, nil
+	}
+	return false, UnknownObjectKindError(o)
 }
 
 // GetGroupKindScope returns whether the type is namespace-scoped or cluster-scoped.
 // Returns an error if the GroupKind is unknown to the cluster.
-func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (ScopeType, status.Error) {
+func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (IsNamespaced, status.Error) {
 	if s == nil {
-		return UnknownScope, status.InternalError("missing Scoper")
+		return false, status.InternalError("missing Scoper")
 	}
-	if scope, hasScope := s.scope[gk]; hasScope && scope != UnknownScope {
+	if scope, hasScope := (*s)[gk]; hasScope {
 		return scope, nil
 	}
-	// We weren't able to get the scope for this type.
-	if s.errOnUnknown {
-		return UnknownScope, UnknownGroupKindError(gk)
-	}
-	return UnknownScope, nil
+	return false, UnknownGroupKindError(gk)
 }
 
 // HasScopesFor returns true if the Scoper knows the scopes for every type in the
@@ -72,7 +53,7 @@ func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (ScopeType, status.Error
 // as this is a convenience method.
 func (s *Scoper) HasScopesFor(objects []ast.FileObject) bool {
 	for _, o := range objects {
-		if _, exists := s.scope[o.GroupVersionKind().GroupKind()]; !exists {
+		if _, exists := (*s)[o.GroupVersionKind().GroupKind()]; !exists {
 			return false
 		}
 	}
@@ -89,17 +70,17 @@ func (s *Scoper) AddCustomResources(crds []*v1beta1.CustomResourceDefinition) {
 func (s *Scoper) add(gkss []GroupKindScope) {
 	for _, gks := range gkss {
 		// Explicitly do not overwrite scopes that have already been added.
-		if _, hasGK := s.scope[gks.GroupKind]; hasGK {
+		if _, hasGK := (*s)[gks.GroupKind]; hasGK {
 			continue
 		}
-		s.scope[gks.GroupKind] = gks.ScopeType
+		(*s)[gks.GroupKind] = gks.IsNamespaced
 	}
 }
 
 // GroupKindScope is a Kubernetes type, and whether it is Namespaced.
 type GroupKindScope struct {
 	schema.GroupKind
-	ScopeType
+	IsNamespaced
 }
 
 // ScopesFromCRDs extracts the scopes declared in all passed CRDs.
@@ -141,8 +122,8 @@ func scopeFromCRD(crd *v1beta1.CustomResourceDefinition) GroupKindScope {
 	}
 
 	return GroupKindScope{
-		GroupKind: gk,
-		ScopeType: scope,
+		GroupKind:    gk,
+		IsNamespaced: scope,
 	}
 }
 
@@ -188,17 +169,14 @@ func toGKSs(lists ...*metav1.APIResourceList) ([]GroupKindScope, error) {
 		}
 
 		for _, resource := range list.APIResources {
-			gks := GroupKindScope{
-				GroupKind: schema.GroupKind{
-					Group: groupVersion.Group,
-					Kind:  resource.Kind,
-				}}
-			if resource.Namespaced {
-				gks.ScopeType = NamespaceScope
-			} else {
-				gks.ScopeType = ClusterScope
+			gk := schema.GroupKind{
+				Group: groupVersion.Group,
+				Kind:  resource.Kind,
 			}
-			result = append(result, gks)
+			result = append(result, GroupKindScope{
+				GroupKind:    gk,
+				IsNamespaced: IsNamespaced(resource.Namespaced),
+			})
 		}
 	}
 

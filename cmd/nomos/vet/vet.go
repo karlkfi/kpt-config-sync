@@ -5,30 +5,27 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/spf13/cobra"
+)
+
+const (
+	hierarchyFormat    = "hierarchy"
+	unstructuredFormat = "unstructured"
+	defaultFormat      = hierarchyFormat
 )
 
 var (
 	sourceFormatFlag  = "source-format"
 	sourceFormatValue string
-
-	namespaceFlag  = "namespace"
-	namespaceValue string
 )
 
 func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
 	flags.AddSkipAPIServerCheck(Cmd)
-	Cmd.Flags().StringVar(&sourceFormatValue, sourceFormatFlag, "",
-		fmt.Sprintf("If %q or unset, validate as a %s repository. If %q, validate as an unstructured repository.",
-			string(filesystem.SourceFormatHierarchy), configmanagement.ProductName,
-			string(filesystem.SourceFormatUnstructured)))
-	Cmd.Flags().StringVar(&namespaceValue, namespaceFlag, "",
-		fmt.Sprintf(
-			"If set, validate the repository as a Namespace Repo with the provided name. Automatically sets --source-format=%s",
-			filesystem.SourceFormatUnstructured))
+	Cmd.Flags().StringVar(&sourceFormatValue, sourceFormatFlag, defaultFormat,
+		fmt.Sprintf("If %q, validate as a %s repository. If %q, validate as an unstructured repository.",
+			hierarchyFormat, configmanagement.ProductName, unstructuredFormat))
 }
 
 // Cmd is the Cobra object representing the nomos vet command.
@@ -45,10 +42,6 @@ returns a non-zero error code if any issues are found.
   nomos vet --path=/path/to/my/directory`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Don't show usage on error, as argument validation passed.
-		cmd.SilenceUsage = true
-
-		return vet(flags.Path, namespaceValue, filesystem.SourceFormat(sourceFormatValue),
-			flags.SkipAPIServer, flags.AllClusters(), flags.Clusters)
+		return vet(flags.Path, sourceFormatValue, flags.SkipAPIServer, flags.AllClusters(), flags.Clusters)
 	},
 }

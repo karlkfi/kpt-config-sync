@@ -40,7 +40,8 @@ func GetVersionReadCloser(contexts []string) (io.ReadCloser, error) {
 	versionInternal(allCfgs, writer, contexts)
 	err = w.Close()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to close version file writer with error: %v")
+		e := fmt.Errorf("failed to close version file writer with error: %v", err)
+		return nil, e
 	}
 
 	return ioutil.NopCloser(r), nil
@@ -62,17 +63,13 @@ var (
 		Long: `Prints the version of Configuration Management installed on each cluster and the version
 of the "nomos" client binary for debugging purposes.`,
 		Example: `  nomos version`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Don't show usage on error, as argument validation passed.
-			cmd.SilenceUsage = true
-
-			allCfgs, err := allKubectlConfigs()
+		Run: func(_ *cobra.Command, _ []string) {
+			allCfgs, _ := allKubectlConfigs()
 			versionInternal(allCfgs, os.Stdout, flags.Contexts)
 
-			if err != nil {
-				return errors.Wrap(err, "unable to parse kubectl config")
+			if allCfgs == nil {
+				os.Exit(255)
 			}
-			return nil
 		},
 	}
 )
