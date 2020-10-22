@@ -86,4 +86,4 @@ ENV HOME="/nomos"
 # Switch to non-root user
 USER 1000
 
-CMD echo -e "Need to specify a Nomos binary:\n\n$(ls .)" && exit 1
+CMD echo "Please specify a specific binary:\n\n$(find . -type f -executable -printf '\t%f\n')\n" && exit 1
