@@ -21,12 +21,17 @@ func noClusterScopeValidator(scoper discovery.Scoper) nonhierarchical.Validator 
 			// error, we can expect customers to notice.
 			return err
 		}
-		if scope != discovery.NamespaceScope {
+
+		switch scope {
+		case discovery.ClusterScope:
 			// This can only happen if there is actually a problem - i.e. a type we
 			// know is cluster-scoped is in a Namespace repo.
 			return shouldBeInRootErr(o)
+		default:
+			// Either the type is Namespaced, or we don't know the scope and can't
+			// check a cluster.
+			return nil
 		}
-		return nil
 	})
 }
 

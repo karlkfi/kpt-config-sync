@@ -64,7 +64,7 @@ func TestResourceScopes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ns, cluster, err := ResourceScopes(tc.gvks, s, discovery.CoreScoper())
+			ns, cluster, err := ResourceScopes(tc.gvks, s, discovery.CoreScoper(true))
 
 			if diff := cmp.Diff(tc.wantNamespacedTypes, ns, cmpopts.EquateEmpty()); diff != "" {
 				t.Error(diff)

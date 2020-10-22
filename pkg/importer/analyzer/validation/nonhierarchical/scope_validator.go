@@ -59,27 +59,30 @@ func ScopeValidator(defaultNamespace string, scoper discovery.Scoper) Validator 
 		if o.GroupVersionKind().GroupKind() == kinds.KptFile().GroupKind() {
 			return nil
 		}
-		isNamespaced, err := scoper.GetObjectScope(o)
+		scope, err := scoper.GetObjectScope(o)
 		if err != nil {
 			return err
 		}
 
-		if isNamespaced {
-			// namespace-scoped resources must declare either metadata.namespace or the
-			// NamespaceSelector annotation when in nonhierarchical mode.
-			hasNamespace := o.GetNamespace() != ""
-			_, hasNamespaceSelector := o.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
-
-			if hasNamespace && hasNamespaceSelector {
+		// namespace-scoped resources must declare either metadata.namespace or the
+		// NamespaceSelector annotation when in nonhierarchical mode.
+		hasNamespace := o.GetNamespace() != ""
+		_, hasNamespaceSelector := o.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+		switch {
+		case scope == discovery.NamespaceScope && hasNamespace:
+			if hasNamespaceSelector {
 				return NamespaceAndSelectorResourceError(o)
 			}
-			if !hasNamespace && !hasNamespaceSelector {
+			return nil
+		case scope == discovery.NamespaceScope && !hasNamespace:
+			if !hasNamespaceSelector {
 				o.SetNamespace(defaultNamespace)
 			}
-		} else if o.GetNamespace() != "" {
+			return nil
+		case scope == discovery.ClusterScope && hasNamespace:
 			return IllegalNamespaceOnClusterScopedResourceError(&o)
+		default:
+			return nil
 		}
-
-		return nil
 	})
 }

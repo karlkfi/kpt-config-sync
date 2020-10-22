@@ -1,7 +1,6 @@
 package hierarchyconfig
 
 import (
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -12,28 +11,28 @@ import (
 
 // NewHierarchyConfigScopeValidator returns a Validator that complains if a passed
 // HierarchyConfig includes types that are not Namespace-scoped.
-func NewHierarchyConfigScopeValidator(scoper discovery.Scoper, errorOnUnknown bool) nonhierarchical.Validator {
+func NewHierarchyConfigScopeValidator(scoper discovery.Scoper) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
 		if hc, isHierarchyConfig := o.Object.(*v1.HierarchyConfig); isHierarchyConfig {
-			return validateHierarchyConfigScopes(scoper, newFileHierarchyConfig(hc, o), errorOnUnknown)
+			return validateHierarchyConfigScopes(scoper, newFileHierarchyConfig(hc, o))
 		}
 		return nil
 	})
 }
 
-func validateHierarchyConfigScopes(scoper discovery.Scoper, hc fileHierarchyConfig, errOnUnknown bool) status.Error {
+func validateHierarchyConfigScopes(scoper discovery.Scoper, hc fileHierarchyConfig) status.Error {
 	for _, gkc := range hc.flatten() {
-		isNamespaced, err := scoper.GetGroupKindScope(gkc.GK)
+		scope, err := scoper.GetGroupKindScope(gkc.GK)
 		if err != nil {
-			if errOnUnknown {
-				return err
-			}
-			glog.V(6).Infof("ignored error due to --no-api-server-check: %s", err)
-			return nil
+			return err
 		}
-
-		if !isNamespaced {
+		switch scope {
+		case discovery.NamespaceScope:
+			return nil
+		case discovery.ClusterScope:
 			return ClusterScopedResourceInHierarchyConfigError(gkc)
+		default:
+			return nil
 		}
 	}
 	return nil

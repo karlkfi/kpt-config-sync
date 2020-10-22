@@ -140,8 +140,8 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, policyDir, enableAPIServerChecks).Validate(fileObjects))
-	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, policyDir).Validate(fileObjects))
+	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, stdErrs)

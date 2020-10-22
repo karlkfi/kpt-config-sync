@@ -11,7 +11,7 @@ import (
 )
 
 func TestScope(t *testing.T) {
-	scoper := discovery.CoreScoper()
+	scoper := discovery.CoreScoper(true)
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Role in namespaces/",
@@ -32,11 +32,11 @@ func TestScope(t *testing.T) {
 			fake.AnvilAtPath("cluster/anvil.yaml")),
 	}
 
-	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash(""), true), testCases)
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash("")), testCases)
 }
 
 func TestScopeServerless(t *testing.T) {
-	scoper := discovery.CoreScoper()
+	scoper := discovery.CoreScoper(false)
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Role in namespaces/",
@@ -57,11 +57,11 @@ func TestScopeServerless(t *testing.T) {
 			fake.AnvilAtPath("cluster/anvil.yaml")),
 	}
 
-	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash(""), false), testCases)
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash("")), testCases)
 }
 
 func TestScopePolicyDir(t *testing.T) {
-	scoper := discovery.CoreScoper()
+	scoper := discovery.CoreScoper(true)
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Role in acme/namespaces/",
@@ -86,5 +86,5 @@ func TestScopePolicyDir(t *testing.T) {
 			fake.AnvilAtPath("foo/cluster/anvil.yaml")),
 	}
 
-	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash("acme"), true), testCases)
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, cmpath.RelativeSlash("acme")), testCases)
 }
