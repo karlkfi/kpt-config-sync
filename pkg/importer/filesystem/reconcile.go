@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/util/clusterconfig"
+	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -238,7 +239,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, true, getSyncedCRDs, filePaths)
+	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, true, vet.NoCachedAPIResources, getSyncedCRDs, filePaths)
 	desiredFileObjects := AsFileObjects(desiredCoreObjects)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))

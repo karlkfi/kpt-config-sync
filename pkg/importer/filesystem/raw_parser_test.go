@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -159,7 +160,7 @@ func TestRawParser_Parse(t *testing.T) {
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
-			coreObjects, err := p.Parse(tc.clusterName, true, getSyncedCRDs, fps)
+			coreObjects, err := p.Parse(tc.clusterName, true, vet.NoCachedAPIResources, getSyncedCRDs, fps)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
@@ -215,7 +216,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil
 			}
-			_, err2 := p.Parse("", true, getSyncedCRDs, fps)
+			_, err2 := p.Parse("", true, vet.NoCachedAPIResources, getSyncedCRDs, fps)
 			if err2 == nil {
 				t.Fatal("expected error")
 			}

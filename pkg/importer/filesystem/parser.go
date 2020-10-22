@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,12 +63,7 @@ func NewParser(reader Reader, dc utildiscovery.ServerResourcer) *Parser {
 // filePaths is the list of absolute file paths to parse and the absolute and
 //   relative paths of the Nomos root.
 // It is an error for any files not to be present.
-func (p *Parser) Parse(
-	clusterName string,
-	enableAPIServerChecks bool,
-	getSyncedCRDs GetSyncedCRDs,
-	filePaths FilePaths,
-) ([]core.Object, status.MultiError) {
+func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths FilePaths) ([]core.Object, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects(filePaths)
@@ -76,7 +72,7 @@ func (p *Parser) Parse(
 	}
 
 	visitors := generateVisitors(flatRoot)
-	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, getSyncedCRDs, filePaths.PolicyDir)
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs, filePaths.PolicyDir)
 
 	return AsCoreObjects(fileObjects), p.errors
 }
@@ -107,7 +103,7 @@ func generateVisitors(flatRoot *ast.FlatRoot) []ast.Visitor {
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, getSyncedCRDs GetSyncedCRDs, policyDir cmpath.Relative) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, policyDir cmpath.Relative) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -124,11 +120,9 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 
-	// We can't continue with hierarchical logic processing if there is any issue
-	// establishing the scope of all declared resources.
-	scoper, syncedCRDs, scoperErrs := BuildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErrs := BuildScoper(p.dc, enableAPIServerChecks, addCachedAPIResources, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErrs != nil {
-		p.errors = status.Append(p.errors, err)
+		p.errors = status.Append(p.errors, scoperErrs)
 		return nil
 	}
 	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))

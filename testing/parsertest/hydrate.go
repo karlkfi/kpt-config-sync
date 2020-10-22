@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/restmapper"
@@ -192,7 +193,7 @@ func (pt Test) RunAll(t *testing.T) {
 				return tc.SyncedCRDs, nil
 			}
 
-			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, getSyncedCRDs, filePaths)
+			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, vet.NoCachedAPIResources, getSyncedCRDs, filePaths)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 

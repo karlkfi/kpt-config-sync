@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -123,11 +124,7 @@ type fakeParser struct {
 	parse []core.Object
 }
 
-func (p *fakeParser) Parse(clusterName string,
-	enableAPIServerChecks bool,
-	getSyncedCRDs filesystem.GetSyncedCRDs,
-	filePaths filesystem.FilePaths,
-) ([]core.Object, status.MultiError) {
+func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
 	return p.parse, nil
 }
 

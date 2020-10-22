@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/vet"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
@@ -32,12 +33,7 @@ func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamesp
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *rawParser) Parse(
-	clusterName string,
-	enableAPIServerChecks bool,
-	getSyncedCRDs GetSyncedCRDs,
-	filePaths FilePaths,
-) ([]core.Object, status.MultiError) {
+func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths FilePaths) ([]core.Object, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(filePaths)
 	if errs != nil {
@@ -49,7 +45,7 @@ func (p *rawParser) Parse(
 		return nil, crdErrs
 	}
 
-	scoper, syncedCRDs, scoperErr := BuildScoper(p.dc, enableAPIServerChecks, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, syncedCRDs, scoperErr := BuildScoper(p.dc, enableAPIServerChecks, addCachedAPIResources, fileObjects, declaredCRDs, getSyncedCRDs)
 	if scoperErr != nil {
 		return nil, scoperErr
 	}

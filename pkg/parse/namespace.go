@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/vet"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -97,7 +98,7 @@ func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiErr
 		Files:     state.files,
 	}
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	cos, err := p.parser.Parse(p.clusterName, true, filesystem.NoSyncedCRDs, filePaths)
+	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
 	if err != nil {
 		return nil, err
 	}

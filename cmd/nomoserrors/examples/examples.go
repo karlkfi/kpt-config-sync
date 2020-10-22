@@ -28,6 +28,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -291,6 +292,12 @@ func Generate() AllExamples {
 
 	// 1063
 	result.add(nonhierarchical.KptfileExistenceError(fake.KptFile("Kptfile")))
+
+	// 1064
+	p, _ := cmpath.AbsoluteSlash("/api-resources.txt")
+	result.add(vet.InvalidScopeValue(p, "rbac      other     Role", "other"))
+	result.add(vet.UnableToReadAPIResources(p, errors.New("missing file permissions")))
+	result.add(vet.MissingAPIGroup(p))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))

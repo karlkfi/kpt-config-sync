@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,7 +31,7 @@ import (
 // allClusters is whether we are implicitly vetting every cluster.
 // clusters is the set of clusters we are checking.
 //   Only used if allClusters is false.
-func vet(root string, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
+func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return err
@@ -99,7 +100,7 @@ func vet(root string, namespace string, sourceFormat filesystem.SourceFormat, sk
 
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, getSyncedCRDs, !skipAPIServer, filePaths,
+	hydrate.ForEachCluster(parser, getSyncedCRDs, !skipAPIServer, rootDir.Join(vet.APIResourcesPath), filePaths,
 		vetCluster(&vetErrs, allClusters, clusters),
 	)
 	if len(vetErrs) > 0 {

@@ -6,6 +6,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,6 +41,17 @@ func ListConfigs(ctx context.Context, cache cache.Cache) (*AllConfigs, error) {
 func DecorateWithClusterConfigs(ctx context.Context, reader client.Reader, policies *AllConfigs) status.MultiError {
 	clusterConfigs := &v1.ClusterConfigList{}
 	if err := reader.List(ctx, clusterConfigs); err != nil {
+		if meta.IsNoMatchError(err) {
+			// This can only happen if the ClusterConfig types does not exist on the
+			// cluster. This function is only run in "nomos vet" or in mono-repo mode,
+			// so this branch can only be validly reached if a user runs "nomos vet"
+			// and is connected to a cluster which does not have ACM installed.
+			//
+			// We don't care to handle the case where a user is running ACM in
+			// mono-repo mode and has removed both the Operator and the ClusterConfig
+			// CRD.
+			return nil
+		}
 		return status.APIServerError(err, "failed to list ClusterConfigs")
 	}
 

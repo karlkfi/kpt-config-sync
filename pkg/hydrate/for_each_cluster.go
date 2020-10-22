@@ -4,7 +4,9 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/vet"
 )
 
 const (
@@ -15,10 +17,11 @@ const (
 // ForEachCluster hydrates an AllConfigs for each declared cluster and executes the passed function
 // on the result.
 //
-// p is the ConfigParser which returns a set of FileObjects and a possible MultiError
+// parser is the ConfigParser which returns a set of FileObjects and a possible MultiError
 //   when Parse is called.
-// syncedCRDs is the set of CRDs synced the the cluster used for APIServer checks.
+// getSyncedCRDs is the set of CRDs synced the the cluster used for APIServer checks.
 // enableAPIServerChecks is whether to call Parse with APIServer checks enabled.
+// apiResources is how to read cached API resources from the disk.
 // filePaths is the list of absolute file paths to parse and the absolute and
 //   relative paths of the Nomos root.
 // f is a function with three arguments:
@@ -27,15 +30,9 @@ const (
 //    err, the MultiError which Parser.Parse returned, if there was one.
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
-func ForEachCluster(
-	parser filesystem.ConfigParser,
-	getSyncedCRDs filesystem.GetSyncedCRDs,
-	enableAPIServerChecks bool,
-	filePaths filesystem.FilePaths,
-	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError),
-) {
+func ForEachCluster(parser filesystem.ConfigParser, getSyncedCRDs filesystem.GetSyncedCRDs, enableAPIServerChecks bool, apiResources cmpath.Absolute, filePaths filesystem.FilePaths, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, getSyncedCRDs, filePaths)
+	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, vet.AddCachedAPIResources(apiResources), getSyncedCRDs, filePaths)
 	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)
 	f(defaultCluster, defaultFileObjects, err)
 
@@ -43,7 +40,7 @@ func ForEachCluster(
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, getSyncedCRDs, filePaths)
+		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, vet.AddCachedAPIResources(apiResources), getSyncedCRDs, filePaths)
 		fileObjects := filesystem.AsFileObjects(coreObjects)
 		f(cluster.Name, fileObjects, err2)
 	}

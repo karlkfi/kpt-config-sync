@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
@@ -13,10 +14,14 @@ import (
 // BuildScoper only contacts the API Server if both:
 // 1. useAPIServer is true, and
 // 2. there are declared types we can't establish the scope of.
+// TODO(b/172446570): Refactor to make this accept a list of AddAPIResourcesFn
+//   so it has fewer arguments and the logic is more separable.
 func BuildScoper(
 	dc utildiscovery.ServerResourcer,
 	// if false, don't contact the API Server.
 	useAPIServer bool,
+	// The cached API Resources.
+	addCachedAPIResources vet.AddCachedAPIResourcesFn,
 	// The list of declared FileObjects. Used to determine if API Server calls are necessary.
 	fileObjects []ast.FileObject,
 	// The list of CRDs declared in the repository.
@@ -27,6 +32,14 @@ func BuildScoper(
 	// Initialize the scoper with the default set of Kubernetes resources and the
 	// declared CRDs.
 	scoper := utildiscovery.CoreScoper(useAPIServer)
+
+	// It is possible that the cached API Resources conflicts with declared CRDs.
+	// For this edge case, the declared CRD takes precedence as, once synced,
+	// the new api-resources.txt will eventually be updated to reflect this change.
+	err := addCachedAPIResources(&scoper)
+	if err != nil {
+		return scoper, nil, err
+	}
 	scoper.AddCustomResources(declaredCRDs)
 
 	// If we don't need to check the API Server because we have all the required

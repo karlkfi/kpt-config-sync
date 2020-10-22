@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/vet"
 )
 
 // Namespace is a filesystem.ConfigParser that parses Namespace
@@ -31,9 +32,8 @@ func NewNamespace(fileReader filesystem.Reader, dc discovery.ServerResourcer, sc
 var _ filesystem.ConfigParser = &Namespace{}
 
 // Parse implements filesystem.ConfigParser.
-func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
-	cos, err := n.parser.Parse(clusterName, enableAPIServerChecks,
-		getSyncedCRDs, filePaths)
+func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
+	cos, err := n.parser.Parse(clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs, filePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, getSync
 	objs := filesystem.AsFileObjects(cos)
 
 	var scoper discovery.Scoper
-	scoper, _, err = filesystem.BuildScoper(n.discoveryInterface, enableAPIServerChecks, objs, nil, getSyncedCRDs)
+	scoper, _, err = filesystem.BuildScoper(n.discoveryInterface, enableAPIServerChecks, addCachedAPIResources, objs, nil, getSyncedCRDs)
 	if err != nil {
 		return nil, err
 	}

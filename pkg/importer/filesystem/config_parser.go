@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
@@ -23,11 +24,7 @@ var NoSyncedCRDs GetSyncedCRDs = func() ([]*apiextensionsv1beta1.CustomResourceD
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
 // configs from a filesystem.
 type ConfigParser interface {
-	Parse(clusterName string,
-		enableAPIServerChecks bool,
-		getSyncedCRDs GetSyncedCRDs,
-		filePaths FilePaths,
-	) ([]core.Object, status.MultiError)
+	Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths FilePaths) ([]core.Object, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
 	ReadClusterRegistryResources(filePaths FilePaths) []ast.FileObject
