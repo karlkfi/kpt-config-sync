@@ -372,7 +372,6 @@ func (r *namespaceConfigReconciler) createNamespace(ctx context.Context, namespa
 		_, err = r.applier.Create(ctx, u)
 	}
 
-	metrics.Operations.WithLabelValues("create", namespace.Kind, metrics.StatusLabel(err)).Inc()
 	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, v1.EventReasonNamespaceCreateFailed,
 			"failed to create namespace: %q", err)
@@ -395,7 +394,6 @@ func (r *namespaceConfigReconciler) updateNamespace(ctx context.Context, namespa
 	}
 
 	_, err = r.applier.Update(ctx, uIntended, uActual)
-	metrics.Operations.WithLabelValues("update", actual.Kind, metrics.StatusLabel(err)).Inc()
 
 	if err != nil {
 		r.recorder.Eventf(namespaceConfig, corev1.EventTypeWarning, v1.EventReasonNamespaceUpdateFailed,
@@ -409,7 +407,6 @@ func (r *namespaceConfigReconciler) deleteNamespace(ctx context.Context, namespa
 	glog.V(2).Infof("Deleting namespace %q because it is marked for deletion in corresponding NamespaceConfig.", namespace.GetName())
 
 	err := r.client.Delete(ctx, namespace)
-	metrics.Operations.WithLabelValues("delete", namespace.Kind, metrics.StatusLabel(err)).Inc()
 
 	// Synchronous delete failure
 	if err != nil {
