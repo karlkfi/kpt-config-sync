@@ -73,9 +73,6 @@ RUN apk add --no-cache \
   py-pip \
   upx
 
-# grip is a Markdown rendered.
-RUN pip install grip
-
 # Starting from go 1.10, build and test results are cached, which speeds up
 # following runs.
 ENV GOCACHE=/go/cache
