@@ -40,13 +40,14 @@ download-cli: $(OUTPUT_DIR)
 	@chmod +x $(GO_BIN_DIR)/nomos
 
 
-# Builds the e2e docker image and depencencies.
+# Builds the e2e docker image and dependencies.
 # Note that the GCP project is hardcoded since we currently don't want
 # or need a config-management-release version of the e2e-tests image.
 image-e2e-tests: \
 		build/e2e-tests/Dockerfile \
 		build/e2e-tests/build.sh
 	@echo "+++ Building the e2e docker image"
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@build/e2e-tests/build.sh \
 		-t $(E2E_TEST_IMAGE) \
 		$(DOCKER_BUILD_QUIET)

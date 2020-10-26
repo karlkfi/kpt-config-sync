@@ -39,6 +39,7 @@ build-cli: pull-buildenv buildenv-dirs
 
 # Creates a docker image for the specified nomos component.
 image-nomos:
+	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@echo "+++ Building the nomos image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target nomos \
