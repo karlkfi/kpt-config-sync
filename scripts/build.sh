@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "${VERSION}" ]; then
+if [[ -z "${VERSION}" ]]; then
     echo "VERSION must be set"
     exit 1
 fi
@@ -60,5 +60,9 @@ for PLATFORM in "${PLATFORMS[@]}"; do
     bin="$bin.exe"
   fi
   # Use upx to reduce binary size.
-  upx "${GOPATH}/bin/${PLATFORM}/${bin}"
+  if [[ "${GOOS}" != "darwin" ]]; then
+    # upx doesn't play nice with Darwin 16 for Go Binaries.
+    # We don't care to debug this since the file size difference is ~20MB.
+    upx "${GOPATH}/bin/${PLATFORM}/${bin}"
+  fi
 done
