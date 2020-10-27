@@ -9,6 +9,13 @@ metadata:
     configmanagement.gke.io/arch: "csmr"
   name: reposyncs.configsync.gke.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.source.commit
+    name: SourceCommit
+    type: string
+  - JSONPath: .status.sync.commit
+    name: SyncCommit
+    type: string
   group: configsync.gke.io
   names:
     kind: RepoSync

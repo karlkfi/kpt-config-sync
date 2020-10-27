@@ -6,6 +6,8 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="SourceCommit",type="string",JSONPath=".status.source.commit"
+// +kubebuilder:printcolumn:name="SyncCommit",type="string",JSONPath=".status.sync.commit"
 // +protobuf=true
 
 // RepoSync is the Schema for the reposyncs API
