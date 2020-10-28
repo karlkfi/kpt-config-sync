@@ -15,7 +15,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -172,87 +171,4 @@ func clearTerminal(out io.Writer) {
 	if err := cmd.Run(); err != nil {
 		glog.Warningf("Failed to execute command: %v", err)
 	}
-}
-
-func getResourceStatus(resourceConditions []v1.ResourceCondition) v1.ResourceConditionState {
-	resourceStatus := v1.ResourceStateHealthy
-
-	for _, resourceCondition := range resourceConditions {
-
-		if resourceCondition.ResourceState.IsError() {
-			return v1.ResourceStateError
-		} else if resourceCondition.ResourceState.IsReconciling() {
-			resourceStatus = v1.ResourceStateReconciling
-		}
-	}
-
-	return resourceStatus
-}
-
-func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string {
-	if len(resourceConditions) == 0 {
-		return nil
-	}
-
-	var syncErrors []string
-
-	for _, resourceCondition := range resourceConditions {
-		for _, rcError := range resourceCondition.Errors {
-			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tError: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcError))
-		}
-		for _, rcReconciling := range resourceCondition.ReconcilingReasons {
-			syncErrors = append(syncErrors, fmt.Sprintf("%v\t%v\tReconciling: %v", resourceCondition.Kind, resourceCondition.NamespacedName, rcReconciling))
-		}
-	}
-
-	return syncErrors
-}
-
-// getSyncStatus returns the given RepoStatus formatted as a short summary string.
-func getSyncStatus(status v1.RepoStatus) string {
-	if hasErrors(status) {
-		return util.ErrorMsg
-	}
-	if len(status.Sync.LatestToken) == 0 {
-		return pendingMsg
-	}
-	if status.Sync.LatestToken == status.Source.Token && len(status.Sync.InProgress) == 0 {
-		return syncedMsg
-	}
-	return pendingMsg
-}
-
-// hasErrors returns true if there are any config management errors present in the given RepoStatus.
-func hasErrors(status v1.RepoStatus) bool {
-	if len(status.Import.Errors) > 0 {
-		return true
-	}
-	for _, syncStatus := range status.Sync.InProgress {
-		if len(syncStatus.Errors) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-// syncStatusErrors returns all errors reported in the given RepoStatus as a single array.
-func syncStatusErrors(status v1.RepoStatus) []string {
-	var errs []string
-	for _, err := range status.Source.Errors {
-		errs = append(errs, err.ErrorMessage)
-	}
-	for _, err := range status.Import.Errors {
-		errs = append(errs, err.ErrorMessage)
-	}
-	for _, syncStatus := range status.Sync.InProgress {
-		for _, err := range syncStatus.Errors {
-			errs = append(errs, err.ErrorMessage)
-		}
-	}
-
-	if getResourceStatus(status.Sync.ResourceConditions) != v1.ResourceStateHealthy {
-		errs = append(errs, getResourceStatusErrors(status.Sync.ResourceConditions)...)
-	}
-
-	return errs
 }

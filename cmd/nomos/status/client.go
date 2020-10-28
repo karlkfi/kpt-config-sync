@@ -249,10 +249,6 @@ func (c *statusClient) isConfigured(cs *clusterState) bool {
 
 // statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
-//
-// TODO(b/131767793) This function (and its children) make up the body of this file, which is far
-// too long and lacks unit testing.  To begin, some logic (especially error handling) should be
-// extracted from the two commands, placed in pkg/, and unit tested.
 func statusClients(contexts []string) (map[string]*statusClient, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if configs == nil {
