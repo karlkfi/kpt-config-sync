@@ -42,7 +42,7 @@ RUN go get github.com/filmil/gotopt2/cmd/gotopt2@v0.1.2
 RUN go get sigs.k8s.io/kind@v0.2.1
 
 # Build intermediate image for gcloud / kubectl
-FROM marketplace.gcr.io/google/ubuntu1804 as gcloud-install
+FROM ubuntu:18.04 as gcloud-install
 
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
 RUN apt-get update && apt-get install -y curl python
@@ -58,7 +58,7 @@ RUN mkdir -p /opt/gcloud && \
     gcloud components install alpha beta
 
 # Build e2e image
-FROM marketplace.gcr.io/google/ubuntu1804 as e2e-base
+FROM ubuntu:18.04 as e2e-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 

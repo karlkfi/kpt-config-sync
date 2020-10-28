@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/nomos
 
 # Reconciler image
-FROM marketplace.gcr.io/google/debian9 as reconciler
+FROM k8s.gcr.io/debian-base:v2.0.0 as reconciler
 WORKDIR /
 COPY --from=bins /go/bin/reconciler .
 RUN apt-get update && apt-get install -y git
@@ -57,7 +57,7 @@ ENTRYPOINT ["/manager"]
 
 
 # Nomos image
-FROM marketplace.gcr.io/google/debian9 as nomos
+FROM k8s.gcr.io/debian-base:v2.0.0 as nomos
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apt-get update && apt-get install -y \
