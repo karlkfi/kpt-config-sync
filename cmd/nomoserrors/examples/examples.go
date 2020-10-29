@@ -289,6 +289,9 @@ func Generate() AllExamples {
 	// 1062
 	result.add(parse.InvalidKptfileError("invalid name", fake.KptFileObject()))
 
+	// 1063
+	result.add(nonhierarchical.KptfileExistenceError(fake.KptFile("Kptfile")))
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 
