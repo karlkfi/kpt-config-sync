@@ -117,9 +117,9 @@ $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 .PHONY: config-sync-manifest
 config-sync-manifest: $(OUTPUT_DIR) push-to-gcr-nomos gen-yaml-all
 	@echo "+++ Preparing config-sync-manifest.yaml"
-	@echo "++++ Copy manifests (except templates/ and 00-namespace.yaml) to output folder"
+	@echo "++++ Copy manifests (except templates/ and test-resources/) to output folder"
 	rm -rf $(OUTPUT_DIR)/manifests
-	rsync manifests/* --exclude="00-namespace.yaml" .output/manifests/
+	rsync manifests/* .output/manifests/
 	@echo "++++ Add yaml files to config-sync-manifest.yaml"
 	env GO111MODULE=on go run -mod=vendor ./scripts/append_manifests/append_manifests.go \
 		--destination=${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
@@ -132,7 +132,7 @@ config-sync-manifest-e2e: config-sync-manifest
 	@echo "+++ Preparing config-sync-manifest-e2e.yaml"
 	env GO111MODULE=on go run -mod=vendor ./scripts/append_manifests/append_manifests.go \
 		--destination=${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
-		manifests/00-namespace.yaml \
+		manifests/test-resources/00-namespace.yaml \
 		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
 		e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
 

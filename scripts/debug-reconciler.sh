@@ -81,7 +81,7 @@ done
 # Installs the required k8s resources to run the reconciler and runs git-sync
 function run() {
   files=(
-    "$nomos/manifests/00-namespace.yaml"
+    "$nomos/manifests/test-resources/00-namespace.yaml"
     "$nomos/manifests/namespace-selector-crd.yaml"
     "$nomos/manifests/cluster-selector-crd.yaml"
     "$nomos/manifests/cluster-registry-crd.yaml"
