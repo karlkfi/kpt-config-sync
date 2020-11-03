@@ -11,10 +11,9 @@ import (
 // deploymentConfig is defined in configmap manifests/templates/reconciler-manager/manifest.yaml.
 var deploymentConfig = "deployment.yaml"
 
-// nsParseDeployment parse deployment from deployment.yaml to deploy reconciler pod
-// for root repository.
+// parseDeployment parse deployment from deployment.yaml to deploy reconciler pod
 // Alias to enable test mocking.
-var nsParseDeployment = func(de *appsv1.Deployment) error {
+var parseDeployment = func(de *appsv1.Deployment) error {
 	return parseDeploymentFromConfig(deploymentConfig, de)
 }
 

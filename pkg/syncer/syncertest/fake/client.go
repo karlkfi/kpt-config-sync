@@ -281,8 +281,10 @@ func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.Up
 }
 
 // Patch implements client.Client.
-func (c *Client) Patch(_ context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
-	return errors.New("fake.Client does not support Patch()")
+func (c *Client) Patch(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) error {
+	// Currently re-using the Update implementation for Patch since it fits the use-case where this is used for unit tests.
+	// Please use this with caution for your use-case.
+	return c.Update(ctx, obj)
 }
 
 // DeleteAllOf implements client.Client.

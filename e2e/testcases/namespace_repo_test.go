@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNamespaceRepo_Centralized(t *testing.T) {
@@ -24,13 +25,24 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 		ntopts.WithCentralizedControl,
 	)
 
+	// Validate status condition "Reconciling" is set to "False" after the Reconciler
+	// Deployment is successfully created.
+	// Log error if the Reconciling condition does not progress to False before the timeout
+	// expires.
+	_, err := nomostest.Retry(15*time.Second, func() error {
+		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{}, hasReconcilingStatus(metav1.ConditionFalse))
+	})
+	if err != nil {
+		t.Errorf("RepoSync did not finish reconciling: %v", err)
+	}
+
 	repo, exist := nt.NonRootRepos[bsNamespace]
 	if !exist {
 		t.Fatal("nonexistent repo")
 	}
 
 	// Validate service account 'store' not present.
-	err := nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
+	err = nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
 	if err != nil {
 		t.Errorf("store service account already present: %v", err)
 	}
@@ -46,6 +58,19 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("service account store not found: %v", err)
+	}
+}
+
+func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
+	return func(o core.Object) error {
+		rs := o.(*v1alpha1.RepoSync)
+		conditions := rs.Status.Conditions
+		for _, condition := range conditions {
+			if condition.Type == "Reconciling" && condition.Status != r {
+				return fmt.Errorf("object %q have %q condition status %q; wanted %q", o.GetName(), condition.Type, string(condition.Status), r)
+			}
+		}
+		return nil
 	}
 }
 

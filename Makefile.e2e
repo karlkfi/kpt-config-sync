@@ -186,4 +186,3 @@ test-e2e-go-ephemeral-multi-repo: __push-local-image
 # code between test runs.
 test-e2e-go-multirepo: __push-local-image __install-nomos-local
 	@GO111MODULE=on go test ./e2e/... --e2e --timeout 60m --multirepo
-

@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,13 +31,12 @@ const (
 	gitRevision        = "1.0.0.rc.8"
 	gitUpdatedRevision = "1.1.0.rc.1"
 
-	reposyncReqNamespace       = "bookinfo"
-	reposyncKind               = "RepoSync"
-	reposyncCRName             = "repo-sync"
-	reposyncRepo               = "https://github.com/test/reposync/csp-config-management/"
-	reposyncDir                = "foo-corp"
-	reposyncSSHKey             = "ssh-key"
-	reposynTokenAuthSecretName = "namespace-token"
+	reposyncReqNamespace = "bookinfo"
+	reposyncKind         = "RepoSync"
+	reposyncCRName       = "repo-sync"
+	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
+	reposyncDir          = "foo-corp"
+	reposyncSSHKey       = "ssh-key"
 
 	unsupportedContainer = "abc"
 
@@ -126,105 +124,9 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 	return fakeClient, testReconciler
 }
 
-func TestRepoSyncMutateDeployment(t *testing.T) {
-	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace), core.UID(uid))
-	rsSecretTypeToken := repoSync(gitRevision, branch, v1alpha1.GitSecretConfigKeyToken,
-		reposynTokenAuthSecretName, core.Namespace(reposyncReqNamespace), core.UID(uid))
-	rsSecretTypeGCENode := repoSync(gitRevision, branch, v1alpha1.GitSecretGCENode,
-		reposynTokenAuthSecretName, core.Namespace(reposyncReqNamespace), core.UID(uid))
-
-	testCases := []struct {
-		name             string
-		repoSync         *v1alpha1.RepoSync
-		actualDeployment *appsv1.Deployment
-		wantDeployment   *appsv1.Deployment
-		wantErr          bool
-	}{
-		{
-			name:     "Deployment created",
-			repoSync: rs,
-			actualDeployment: repoSyncDeployment(
-				rs,
-				setContainers(fake.ContainerObject(gitSync)),
-				setVolumes(gitSyncVolume("")),
-			),
-			wantDeployment: repoSyncDeployment(
-				rs,
-				setRepoSyncOwnerRefs(rs),
-				setContainers(repoGitSyncContainer(rs)),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(repoSyncName(rs.Namespace)),
-				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))),
-			),
-			wantErr: false,
-		},
-		{
-			name:     "Deployment created with Secret type Token",
-			repoSync: rsSecretTypeToken,
-			actualDeployment: repoSyncDeployment(
-				rsSecretTypeToken,
-				setContainers(fake.ContainerObject(gitSync)),
-				setVolumes(gitSyncVolume("")),
-			),
-			wantDeployment: repoSyncDeployment(
-				rsSecretTypeToken,
-				setRepoSyncOwnerRefs(rsSecretTypeToken),
-				setContainers(repoGitSyncContainer(rsSecretTypeToken, setGitSyncEnv(gitSyncTokenAuthEnv(secret.RepoSyncSecretName(rsSecretTypeToken.Namespace, rsSecretTypeToken.Spec.SecretRef.Name))))),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(repoSyncName(rsSecretTypeToken.Namespace)),
-				setVolumes(gitSyncVolume(secret.RepoSyncSecretName(rsSecretTypeToken.Namespace, rsSecretTypeToken.Spec.SecretRef.Name))),
-			),
-			wantErr: false,
-		},
-		{
-			name:     "Deployment created with Secret type GCENode",
-			repoSync: rsSecretTypeGCENode,
-			actualDeployment: repoSyncDeployment(
-				rsSecretTypeGCENode,
-				setVolumes(gitSyncVolume("")),
-			),
-			wantDeployment: repoSyncDeployment(
-				rsSecretTypeGCENode,
-				setRepoSyncOwnerRefs(rsSecretTypeGCENode),
-				setContainers(askPassSidecarContainer()),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(repoSyncName(rsSecretTypeGCENode.Namespace)),
-			),
-			wantErr: false,
-		},
-		{
-			name:     "Deployment failed, Unsupported container",
-			repoSync: rs,
-			actualDeployment: repoSyncDeployment(
-				rs,
-				setContainers(fake.ContainerObject(unsupportedContainer)),
-			),
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			declared := tc.actualDeployment.DeepCopyObject().(*appsv1.Deployment)
-			err := mutateRepoSyncDeployment(tc.repoSync, tc.actualDeployment, declared, []byte("1234"))
-			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error", err)
-			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncDeployment() got error: %q, want error: nil", err)
-			}
-			if !tc.wantErr {
-				diff := cmp.Diff(tc.actualDeployment, tc.wantDeployment)
-				if diff != "" {
-					t.Errorf("mutateRepoSyncDeployment() got diff: %v\nwant: nil", diff)
-				}
-			}
-		})
-	}
-}
-
 func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
-	nsParseDeployment = func(de *appsv1.Deployment) error {
+	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -447,27 +349,7 @@ func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deplo
 	return dep
 }
 
-func setRepoSyncOwnerRefs(rs *v1alpha1.RepoSync) depMutator {
-	return func(dep *appsv1.Deployment) {
-		dep.OwnerReferences = ownerReference(
-			rs.GroupVersionKind().Kind,
-			rs.Name,
-			rs.UID,
-		)
-	}
-}
-
 type gitSyncMutator func(*corev1.Container)
-
-func repoGitSyncContainer(rs *v1alpha1.RepoSync, muts ...gitSyncMutator) *corev1.Container {
-	cnt := mutatedGitSyncContainer(corev1.LocalObjectReference{
-		Name: repoSyncResourceName(rs.Namespace, gitSync),
-	})
-	for _, mut := range muts {
-		mut(cnt)
-	}
-	return cnt
-}
 
 func setGitSyncEnv(env []corev1.EnvVar) gitSyncMutator {
 	return func(cn *corev1.Container) {

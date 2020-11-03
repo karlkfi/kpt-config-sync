@@ -117,12 +117,21 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
 	}
 
-	// Overwrite reconciler pod deployment.
-	if err := r.upsertDeployment(ctx, &rs, configMapDataHash); err != nil {
+	mut := r.mutationsFor(rs, configMapDataHash)
+
+	// Upsert Namespace reconciler deployment.
+	op, err := r.upsertDeployment(ctx, repoSyncName(rs.Namespace), v1.NSConfigManagementSystem, mut)
+	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
 		_ = r.updateStatus(ctx, &rs, log)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
+	}
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+		rs.Status.Reconciler = repoSyncName(rs.Namespace)
+		msg := fmt.Sprintf("Reconciler deployment was %s", op)
+		reposync.SetReconciling(&rs, "Deployment", msg)
 	}
 
 	// Since there were no errors, we can clear any previous Stalled condition.
@@ -230,103 +239,6 @@ func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
 	return nil
 }
 
-func (r *RepoSyncReconciler) upsertDeployment(ctx context.Context, rs *v1alpha1.RepoSync, configMapDataHash []byte) error {
-	var childDep appsv1.Deployment
-	// Parse the deployment.yaml mounted as configmap in Reconciler Managers deployment.
-	if err := nsParseDeployment(&childDep); err != nil {
-		return errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
-	}
-
-	childDep.Name = repoSyncName(rs.Namespace)
-	childDep.Namespace = v1.NSConfigManagementSystem
-
-	// CreateOrUpdate() first call Get() on the object. If the
-	// object does not exist, Create() will be called. If it does exist, Update()
-	// will be called. Just before calling either Create() or Update(), the mutate
-	// callback will be called.
-	//
-	// We make deep copy first so that we can set the declared fields as needed.
-	declared := childDep.DeepCopyObject().(*appsv1.Deployment)
-	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childDep, func() error {
-		return mutateRepoSyncDeployment(rs, &childDep, declared, configMapDataHash)
-	})
-	if err != nil {
-		return err
-	}
-	if op != controllerutil.OperationResultNone {
-		r.log.Info("Deployment successfully reconciled", executedOperation, op)
-		rs.Status.Reconciler = childDep.Name
-		msg := fmt.Sprintf("Reconciler deployment was %s", op)
-		reposync.SetReconciling(rs, "Deployment", msg)
-	}
-	return nil
-}
-
-func mutateRepoSyncDeployment(rs *v1alpha1.RepoSync, existing, declared *appsv1.Deployment, configMapDataHash []byte) error {
-	// Update existing template.spec with reconciler template.spec.
-	existing.Spec.Template.Spec = declared.Spec.Template.Spec
-
-	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the corresponding Deployment is also deleted.
-	existing.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
-	// Mutate Annotation with the hash of configmap.data from all the ConfigMap
-	// reconciler creates/updates.
-	core.SetAnnotation(&existing.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
-
-	templateSpec := &existing.Spec.Template.Spec
-
-	// Update ServiceAccountName. eg. ns-reconciler-<namespace>
-	templateSpec.ServiceAccountName = repoSyncName(rs.Namespace)
-
-	// Mutate secret.secretname to secret reference specified in RepoSync CR.
-	// Secret reference is the name of the secret used by git-sync container to
-	// authenticate with the git repository using the authorization method specified
-	// in the RepoSync CR.
-	secretName := secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
-	templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
-
-	var updatedContainers []corev1.Container
-	// Mutate spec.Containers to update name, configmap references and volumemounts.
-	for _, container := range templateSpec.Containers {
-		switch container.Name {
-		case reconciler:
-			configmapRef := make(map[string]*bool)
-			configmapRef[repoSyncResourceName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
-			container.EnvFrom = envFromSources(configmapRef)
-		case gitSync:
-			configmapRef := make(map[string]*bool)
-			configmapRef[repoSyncResourceName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
-			container.EnvFrom = envFromSources(configmapRef)
-			// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
-			container.VolumeMounts = volumeMounts(rs.Spec.Auth,
-				container.VolumeMounts)
-			// Update Environment variables for `token` Auth, which
-			// passes the credentials as the Username and Password.
-			if authTypeToken(rs.Spec.Auth) {
-				container.Env = gitSyncTokenAuthEnv(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
-			}
-		default:
-			return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
-		}
-		updatedContainers = append(updatedContainers, container)
-	}
-
-	// Add container spec for the "gcenode-askpass-sidecar" (defined as
-	// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
-	if authTypeGCENode(rs.Spec.Auth) {
-		updatedContainers = append(updatedContainers, gceNodeAskPassSidecar())
-	}
-
-	templateSpec.Containers = updatedContainers
-
-	return nil
-}
-
 func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.RepoSync, log logr.Logger) error {
 	rs.Status.ObservedGeneration = rs.Generation
 	err := r.client.Status().Update(ctx, rs)
@@ -334,4 +246,60 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Repo
 		log.Error(err, "failed to update RepoSync status")
 	}
 	return err
+}
+
+func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHash []byte) mutateFn {
+	return func(d *appsv1.Deployment) error {
+		// OwnerReferences, so that when the RepoSync CustomResource is deleted,
+		// the corresponding Deployment is also deleted.
+		d.OwnerReferences = ownerReference(
+			rs.GroupVersionKind().Kind,
+			rs.Name,
+			rs.UID,
+		)
+		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
+		// reconciler creates/updates.
+		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+		templateSpec := &d.Spec.Template.Spec
+		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
+		templateSpec.ServiceAccountName = repoSyncName(rs.Namespace)
+		// Mutate secret.secretname to secret reference specified in RepoSync CR.
+		// Secret reference is the name of the secret used by git-sync container to
+		// authenticate with the git repository using the authorization method specified
+		// in the RepoSync CR.
+		secretName := secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
+		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
+		var updatedContainers []corev1.Container
+		// Mutate spec.Containers to update name, configmap references and volumemounts.
+		for _, container := range templateSpec.Containers {
+			switch container.Name {
+			case reconciler:
+				configmapRef := make(map[string]*bool)
+				configmapRef[repoSyncResourceName(rs.Namespace, reconciler)] = pointer.BoolPtr(false)
+				container.EnvFrom = envFromSources(configmapRef)
+			case gitSync:
+				configmapRef := make(map[string]*bool)
+				configmapRef[repoSyncResourceName(rs.Namespace, gitSync)] = pointer.BoolPtr(false)
+				container.EnvFrom = envFromSources(configmapRef)
+				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
+				container.VolumeMounts = volumeMounts(rs.Spec.Auth,
+					container.VolumeMounts)
+				// Update Environment variables for `token` Auth, which
+				// passes the credentials as the Username and Password.
+				if authTypeToken(rs.Spec.Auth) {
+					container.Env = gitSyncTokenAuthEnv(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
+				}
+			default:
+				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
+			}
+			updatedContainers = append(updatedContainers, container)
+		}
+		// Add container spec for the "gcenode-askpass-sidecar" (defined as
+		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
+		if authTypeGCENode(rs.Spec.Auth) {
+			updatedContainers = append(updatedContainers, gceNodeAskPassSidecar())
+		}
+		templateSpec.Containers = updatedContainers
+		return nil
+	}
 }

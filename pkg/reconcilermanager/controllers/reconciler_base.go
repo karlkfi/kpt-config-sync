@@ -2,12 +2,16 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
+	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -83,6 +87,63 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, 
 		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
 	}
 	return nil
+}
+
+type mutateFn func(*appsv1.Deployment) error
+
+func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, f mutateFn) (controllerutil.OperationResult, error) {
+	var childDep appsv1.Deployment
+
+	if err := parseDeployment(&childDep); err != nil {
+		return controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
+	}
+
+	childDep.Name = name
+	childDep.Namespace = namespace
+
+	return r.createOrPatchDeployment(ctx, &childDep, f)
+}
+
+// createOrPatchDeployment() first call Get() on the deployment. If the
+// object does not exist, Create() will be called. If it does exist, Patch()
+// will be called.
+func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, dep *appsv1.Deployment, mutateDeployment mutateFn) (controllerutil.OperationResult, error) {
+	key, err := client.ObjectKeyFromObject(dep)
+	if err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	if err := r.client.Get(ctx, key, dep); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return controllerutil.OperationResultNone, err
+		}
+
+		if err := mutateDeployment(dep); err != nil {
+			return controllerutil.OperationResultNone, err
+		}
+
+		if err := r.client.Create(ctx, dep); err != nil {
+			return controllerutil.OperationResultNone, err
+		}
+		return controllerutil.OperationResultCreated, nil
+	}
+
+	existing := dep.DeepCopy()
+	patch := client.MergeFrom(existing)
+
+	if err := mutateDeployment(dep); err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	if reflect.DeepEqual(existing, dep) {
+		return controllerutil.OperationResultNone, nil
+	}
+
+	if err := r.client.Patch(ctx, dep, patch); err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	return controllerutil.OperationResultUpdated, nil
 }
 
 func filterVolumes(existing []corev1.Volume, authType string, secretName string) []corev1.Volume {
