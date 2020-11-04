@@ -1,5 +1,12 @@
 package ntopts
 
+import (
+	"k8s.io/client-go/rest"
+)
+
+// Opt is an option type for ntopts.New.
+type Opt func(opt *New)
+
 // New is the set of options for instantiating a new NT test.
 type New struct {
 	// Name is the name of the test. Overrides the one generated from the test
@@ -10,7 +17,9 @@ type New struct {
 	// generated directory based on Name and the OS's main temporary directory.
 	TmpDir string
 
-	KindCluster
+	// RESTConfig is the config for creating a Client connection to a K8s cluster.
+	RESTConfig *rest.Config
+
 	Nomos
 	MultiRepo
 }

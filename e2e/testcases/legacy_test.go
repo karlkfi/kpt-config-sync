@@ -48,7 +48,7 @@ func (bt *BatsTest) Run(t *testing.T) {
 
 func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 	return func(t *testing.T) {
-		var opts []nomostest.NTOption
+		var opts []ntopts.Opt
 		if bt.skipMultiRepo != nil && bt.skipMultiRepo(testNum) {
 			opts = append(opts, ntopts.SkipMultiRepo)
 		}

@@ -59,7 +59,7 @@ func createSecret(nt *NT, namespace, name, keyPath string) {
 // expose the inner logic to outside consumers. So instead of trying to do it
 // ourselves, we're shelling out to kubectl to ensure we create a valid set of
 // secrets.
-func generateSSHKeys(nt *NT, kcfg string) string {
+func generateSSHKeys(nt *NT) string {
 	nt.T.Helper()
 
 	createSSHKeyPair(nt)
