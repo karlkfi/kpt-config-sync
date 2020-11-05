@@ -110,10 +110,12 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
 
-	c := connect(t, opts.RESTConfig)
+	scheme := newScheme(t)
+	c := connect(t, opts.RESTConfig, scheme)
+	ctx := context.Background()
 
 	nt := &NT{
-		Context:                 context.Background(),
+		Context:                 ctx,
 		T:                       t,
 		ClusterName:             opts.Name,
 		TmpDir:                  opts.TmpDir,
@@ -124,7 +126,15 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		FilesystemPollingPeriod: 50 * time.Millisecond,
 		NonRootRepos:            make(map[string]*Repository),
 		NamespaceRepos:          make(map[string]string),
+		scheme:                  scheme,
 	}
+
+	// TODO(willbeason): Only do this for non-ephemeral clusters.
+	Clean(nt)
+	t.Cleanup(func() {
+		// Clean the cluster now that the test is over.
+		Clean(nt)
+	})
 
 	connectToLocalRegistry(nt)
 	docker.CheckImages(nt.T)

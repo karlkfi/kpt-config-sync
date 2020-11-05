@@ -16,14 +16,14 @@ import (
 )
 
 // connect creates a client.Client to the cluster
-func connect(t *testing.T, cfg *rest.Config) client.Client {
+func connect(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) client.Client {
 	t.Helper()
 
 	t.Log("creating Client")
 	c, err := client.New(cfg, client.Options{
 		// The Scheme is client-side, but this automatically fetches the RestMapper
 		// from the cluster.
-		Scheme: newScheme(t),
+		Scheme: scheme,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -44,13 +44,13 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	// We have no tests which require configuring this in incompatible ways, so if
 	// you need new types then add them here.
 	builders := []runtime.SchemeBuilder{
-		corev1.SchemeBuilder,
+		apiextensionsv1beta1.SchemeBuilder,
 		appsv1.SchemeBuilder,
+		corev1.SchemeBuilder,
 		configmanagementv1.SchemeBuilder,
 		configsyncv1alpha1.SchemeBuilder,
 		rbacv1.SchemeBuilder,
 		rbacv1beta1.SchemeBuilder,
-		apiextensionsv1beta1.SchemeBuilder,
 	}
 	for _, b := range builders {
 		err := b.AddToScheme(s)

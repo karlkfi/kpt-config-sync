@@ -128,7 +128,7 @@ func (g *Repository) init(name, privateKey string, port int) {
 	// Use ssh rather than the default that git uses, as the default does not know
 	// how to use private key files.
 	g.Git("config", "ssh.variant", "ssh")
-	//Overwrite the ssh command to:
+	// Overwrite the ssh command to:
 	// 1) Not perform host key checking for git-server, since this isn't set up
 	//   properly and we don't care.
 	// 2) Use the private key file we generated.
@@ -149,6 +149,8 @@ func (g *Repository) init(name, privateKey string, port int) {
 // files is the behavior under test. In that case, use AddFile.
 func (g *Repository) Add(path string, obj core.Object) {
 	g.T.Helper()
+	AddTestLabel(obj)
+	// TODO(willbeason): Figure out how to cleanly inject runtime.Scheme here.
 
 	// We have to make a pass through json since yaml.Marshal does not respect
 	// json "omitempty" directives.

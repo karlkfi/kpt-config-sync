@@ -72,6 +72,9 @@ type NT struct {
 
 	// kubeconfigPath is the path to the kubeconfig file for the kind cluster
 	kubeconfigPath string
+
+	// scheme is the Scheme for the test suite that maps from structs to GVKs.
+	scheme *runtime.Scheme
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -106,6 +109,7 @@ func fmtObj(name, namespace string, obj runtime.Object) string {
 //
 // Leave namespace as empty string for cluster-scoped resources.
 func (nt *NT) Get(name, namespace string, obj core.Object) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
 	if obj.GetResourceVersion() != "" {
 		// If obj is already populated, this can cause the final obj to be a
 		// composite of multiple states of the object on the cluster.
@@ -124,25 +128,31 @@ func (nt *NT) List(obj runtime.Object, opts ...client.ListOption) error {
 
 // Create is identical to Create defined for client.Client, but without requiring Context.
 func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("creating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
+	AddTestLabel(obj)
 	return nt.Client.Create(nt.Context, obj, opts...)
 }
 
 // Update is identical to Update defined for client.Client, but without requiring Context.
 func (nt *NT) Update(obj core.Object, opts ...client.UpdateOption) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("updating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Update(nt.Context, obj, opts...)
 }
 
 // Delete is identical to Delete defined for client.Client, but without requiring Context.
 func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("deleting %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
 }
 
 // MergePatch uses the object to construct a merge patch for the fields provided.
 func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOption) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("Applying patch %s", patch)
+	AddTestLabel(obj)
 	return nt.Client.Patch(nt.Context, obj, client.ConstantPatch(types.MergePatchType, []byte(patch)), opts...)
 }
 
@@ -297,7 +307,7 @@ func (nt *NT) WaitForRootSync(o func() core.Object, name, namespace string, sync
 func (nt *NT) RenewClient() {
 	nt.T.Helper()
 
-	nt.Client = connect(nt.T, nt.Config)
+	nt.Client = connect(nt.T, nt.Config, nt.scheme)
 }
 
 // Kubectl is a convenience method for calling kubectl against the

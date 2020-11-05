@@ -75,6 +75,7 @@ func HasExactlyAnnotationKeys(wantKeys ...string) Predicate {
 // HasExactlyLabelKeys ensures the Object has exactly the passed set of
 // labels, ignoring values.
 func HasExactlyLabelKeys(wantKeys ...string) Predicate {
+	wantKeys = append(wantKeys, TestLabel)
 	sort.Strings(wantKeys)
 	return func(o core.Object) error {
 		labels := o.GetLabels()
