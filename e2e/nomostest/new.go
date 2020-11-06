@@ -129,15 +129,21 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		scheme:                  scheme,
 	}
 
-	// TODO(willbeason): Only do this for non-ephemeral clusters.
-	Clean(nt)
-	t.Cleanup(func() {
-		// Clean the cluster now that the test is over.
+	if *e2e.ImagePrefix == e2e.DefaultImagePrefix {
+		// We're using an ephemeral Kind cluster, so connect to the local Docker
+		// repository. No need to clean before/after as these tests only exist for
+		// a single test.
+		connectToLocalRegistry(nt)
+		docker.CheckImages(nt.T)
+	} else {
+		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
+		// clean before and after running the test.
 		Clean(nt)
-	})
-
-	connectToLocalRegistry(nt)
-	docker.CheckImages(nt.T)
+		t.Cleanup(func() {
+			// Clean the cluster now that the test is over.
+			Clean(nt)
+		})
+	}
 
 	// You can't add Secrets to Namespaces that don't exist, so create them now.
 	err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace))

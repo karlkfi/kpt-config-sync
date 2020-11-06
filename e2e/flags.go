@@ -35,6 +35,13 @@ var MultiRepo = flag.Bool("multirepo", false,
 var SkipMode = flag.String("skip-mode", "",
 	"Runs tests as given by the mode, one of \"\", runAll, runSkipped to run normally, run all tests, or run only skipped tests respectively")
 
+// DefaultImagePrefix points to the local docker registry.
+const DefaultImagePrefix = "localhost:5000"
+
+// ImagePrefix is where the Docker images are stored.
+var ImagePrefix = flag.String("image-prefix", DefaultImagePrefix,
+	"The prefix to use for Docker images. Defaults to the local Docker registry. Omit the trailing slash. For example, 'gcr.io/stolos-dev/willbeason/1604693819'")
+
 const (
 	// RunAll runs all tests whether skipped or not
 	RunAll = "runAll"

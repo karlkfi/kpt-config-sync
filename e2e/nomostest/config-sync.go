@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -219,13 +220,13 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		switch template {
 		case "reconciler-manager.yaml":
 			// For the reconciler manager template, we want the latest image for the reconciler manager.
-			imgName = "localhost:5000/reconciler-manager:latest"
+			imgName = *e2e.ImagePrefix + "/reconciler-manager:latest"
 		case "reconciler-manager-deployment-configmap.yaml":
 			// For the reconciler deployment template, we want the latest image for the reconciler.
-			imgName = "localhost:5000/reconciler:latest"
+			imgName = *e2e.ImagePrefix + "/reconciler:latest"
 		default:
 			// For any other template, we want the latest image for the nomos binary (mono-repo).
-			imgName = "localhost:5000/nomos:latest"
+			imgName = *e2e.ImagePrefix + "/nomos:latest"
 		}
 
 		replaced := strings.Replace(string(bytes), "IMAGE_NAME", imgName, -1)

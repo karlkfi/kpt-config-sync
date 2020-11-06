@@ -116,7 +116,7 @@ func (nt *NT) Get(name, namespace string, obj core.Object) error {
 		//
 		// If this is due to a retry loop, remember to create a new instance to
 		// populate for each loop.
-		return errors.Errorf("called .Get on already-populated object")
+		return errors.Errorf("called .Get on already-populated object %v: %v", obj.GroupVersionKind(), obj)
 	}
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
@@ -190,7 +190,7 @@ func (nt *NT) Validate(name, namespace string, o core.Object, predicates ...Pred
 func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 	err := nt.Get(name, namespace, o)
 	if err == nil {
-		return errors.Errorf("%T %s/%s found", o, namespace, name)
+		return errors.Errorf("%T %v %s/%s found", o, o.GroupVersionKind(), namespace, name)
 	}
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -346,7 +346,7 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 
 // WaitForRootSyncSourceErrorCode waits until the given error code is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceErrorCode(code string, opts ...WaitOption) {
-	nt.Wait(fmt.Sprintf("RootSync error code %s", code),
+	Wait(nt.T, fmt.Sprintf("RootSync error code %s", code),
 		func() error {
 			rs := fake.RootSyncObject()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -372,7 +372,7 @@ func (nt *NT) WaitForRootSyncSourceErrorCode(code string, opts ...WaitOption) {
 
 // WaitForRootSyncSourceErrorClear waits until the given error code is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
-	nt.Wait("RootSync errors cleared",
+	Wait(nt.T, "RootSync errors cleared",
 		func() error {
 			rs := fake.RootSyncObject()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -397,8 +397,7 @@ func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
 type WaitOption func(wait *waitSpec)
 
 type waitSpec struct {
-	timeout     time.Duration
-	renewClient bool
+	timeout time.Duration
 }
 
 // WaitTimeout provides the timeout option to Wait.
@@ -408,16 +407,9 @@ func WaitTimeout(timeout time.Duration) WaitOption {
 	}
 }
 
-// RenewClient tells wait to renew the client after
-func RenewClient() WaitOption {
-	return func(wait *waitSpec) {
-		wait.renewClient = true
-	}
-}
-
-// Wait provides a logged wait for condition to return nil with options for timeout and client renew.
-func (nt *NT) Wait(opName string, condition func() error, opts ...WaitOption) {
-	nt.T.Helper()
+// Wait provides a logged wait for condition to return nil with options for timeout.
+func Wait(t *testing.T, opName string, condition func() error, opts ...WaitOption) {
+	t.Helper()
 
 	wait := waitSpec{
 		timeout: time.Second * 120,
@@ -429,11 +421,8 @@ func (nt *NT) Wait(opName string, condition func() error, opts ...WaitOption) {
 	// Wait for the repository to report it is synced.
 	took, err := Retry(wait.timeout, condition)
 	if err != nil {
-		nt.T.Logf("failed after %v to wait for %s", took, opName)
-		nt.T.Fatal(err)
+		t.Logf("failed after %v to wait for %s", took, opName)
+		t.Fatal(err)
 	}
-	nt.T.Logf("took %v to wait for %s", took, opName)
-	if wait.renewClient {
-		nt.RenewClient()
-	}
+	t.Logf("took %v to wait for %s", took, opName)
 }
