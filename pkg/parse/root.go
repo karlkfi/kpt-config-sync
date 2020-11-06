@@ -120,7 +120,7 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 		return nil, err
 	}
 
-	// TODO(b/172271747): After the support for Kptfile in a root repo is added, this validator will no longer be needed.
+	// TODO(b/172610552): After the support for Kptfile in a root repo is added, this validator will no longer be needed.
 	if err := nonhierarchical.KptfileExistenceValidator.Validate(filesystem.AsFileObjects(cos)); err != nil {
 		return nil, err
 	}
