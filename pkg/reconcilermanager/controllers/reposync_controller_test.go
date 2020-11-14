@@ -36,13 +36,14 @@ const (
 	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
 	reposyncDir          = "foo-corp"
 	reposyncSSHKey       = "ssh-key"
+	reposyncCluster      = "abc-123"
 
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "0599c8ba83efdfe24b893252e7a32eae"
+	nsAnnotation = "a4fe2c51bedbb0e502883b3847f4bec3"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "4591f6e8511bd62ab8db138f9dbc5432"
+	nsUpdatedAnnotation = "92cc88e614c4eba1ce6adc081b955edf"
 )
 
 // Set in init.
@@ -113,6 +114,7 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
 	testReconciler := NewRepoSyncReconciler(
+		reposyncCluster,
 		filesystemPollingPeriod,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
@@ -163,7 +165,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitRevision, pollingPeriod),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
@@ -257,7 +259,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconciler),
-			reconcilerData(reposyncReqNamespace, reposyncDir, reposyncRepo, branch, gitUpdatedRevision, pollingPeriod),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}

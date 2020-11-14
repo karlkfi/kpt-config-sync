@@ -21,6 +21,7 @@ import (
 
 // reconcilerBase provides common data and methods for the RepoSync and RootSync reconcilers
 type reconcilerBase struct {
+	clusterName             string
 	client                  client.Client
 	log                     logr.Logger
 	scheme                  *runtime.Scheme

@@ -29,6 +29,8 @@ import (
 
 // Options contains the settings for a reconciler process.
 type Options struct {
+	// ClusterName is the name of the cluster we are parsing configuration for.
+	ClusterName string
 	// FightDetectionThreshold is the rate of updates per minute to an API
 	// Resource at which the reconciler will log warnings about too many updates
 	// to the resource.
@@ -73,8 +75,6 @@ type Options struct {
 
 // RootOptions are the options specific to parsing Root repositories.
 type RootOptions struct {
-	// ClusterName is the name of the cluster we are parsing configuration for.
-	ClusterName string
 	// SourceFormat is how the Root repository is structured.
 	SourceFormat filesystem.SourceFormat
 }
@@ -150,7 +150,7 @@ func Run(ctx context.Context, opts Options) {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser = parse.NewNamespaceRunner(opts.ReconcilerScope, &filesystem.FileReader{}, cl,
+		parser = parse.NewNamespaceRunner(opts.ClusterName, opts.ReconcilerScope, &filesystem.FileReader{}, cl,
 			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 

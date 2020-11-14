@@ -22,9 +22,10 @@ import (
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(scope declared.Scope, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
+func NewNamespaceRunner(clusterName string, scope declared.Scope, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
 	return &namespace{
 		opts: opts{
+			clusterName:      clusterName,
 			client:           c,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},

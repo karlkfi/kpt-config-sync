@@ -14,32 +14,26 @@ import (
 )
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(reconcilerScope declared.Scope, policyDir, gitRepo, gitBranch, gitRev, pollPeriod string) map[string]string {
+func reconcilerData(clusterName string, reconcilerScope declared.Scope, gitConfig *v1alpha1.Git, pollPeriod string) map[string]string {
 	result := make(map[string]string)
+	result["CLUSTER_NAME"] = clusterName
 	result["SCOPE"] = string(reconcilerScope)
-	result["POLICY_DIR"] = policyDir
-	result["GIT_REPO"] = gitRepo
+	result["POLICY_DIR"] = gitConfig.Dir
+	result["GIT_REPO"] = gitConfig.Repo
 
 	// Add Filesystem Polling Period.
 	result[FilesystemPollingPeriod] = pollPeriod
 
-	if gitBranch != "" {
-		result["GIT_BRANCH"] = gitBranch
+	if gitConfig.Branch != "" {
+		result["GIT_BRANCH"] = gitConfig.Branch
 	} else {
 		result["GIT_BRANCH"] = "master"
 	}
-	if gitRev != "" {
-		result["GIT_REV"] = gitRev
+	if gitConfig.Revision != "" {
+		result["GIT_REV"] = gitConfig.Revision
 	} else {
 		result["GIT_REV"] = "HEAD"
 	}
-	return result
-}
-
-// rootReconcilerData returns configmap data for root reconciler.
-func rootReconcilerData(reconcilerScope declared.Scope, policyDir, clusterName, gitRepo, gitBranch, gitRev, pollPeriod string) map[string]string {
-	result := reconcilerData(reconcilerScope, policyDir, gitRepo, gitBranch, gitRev, pollPeriod)
-	result["CLUSTER_NAME"] = clusterName
 	return result
 }
 

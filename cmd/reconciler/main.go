@@ -21,6 +21,8 @@ import (
 )
 
 var (
+	clusterName = flag.String(flags.clusterName, os.Getenv("CLUSTER_NAME"),
+		"Cluster name to use for Cluster selection")
 	scope = flag.String("scope", os.Getenv("SCOPE"),
 		"Scope of the reconciler, either a namespace or ':root'.")
 
@@ -49,8 +51,6 @@ var (
 		"Period of time between checking the filessystem for udpates to the local Git repository.")
 
 	// Root-Repo-only flags. If set for a Namespace-scoped Reconciler, causes the Reconciler to fail immediately.
-	clusterName = flag.String(flags.clusterName, os.Getenv("CLUSTER_NAME"),
-		"Cluster name to use for Cluster selection")
 	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
 		"The format of the repository.")
 
@@ -96,6 +96,7 @@ func main() {
 	}
 
 	opts := reconciler.Options{
+		ClusterName:                *clusterName,
 		FightDetectionThreshold:    *fightDetectionThreshold,
 		NumWorkers:                 *workers,
 		ReconcilerScope:            declared.Scope(*scope),
@@ -118,15 +119,14 @@ func main() {
 
 		glog.Info("Starting reconciler for: root")
 		opts.RootOptions = &reconciler.RootOptions{
-			ClusterName:  *clusterName,
 			SourceFormat: format,
 		}
 	} else {
 		glog.Infof("Starting reconciler for: %s", *scope)
 
-		if *clusterName != "" || *sourceFormat != "" {
-			glog.Fatalf("Flags %s and %s and Environment variables %q and %q must not be passed to a Namespace reconciler",
-				flags.clusterName, flags.sourceFormat, controllers.ClusterNameKey, filesystem.SourceFormatKey)
+		if *sourceFormat != "" {
+			glog.Fatalf("Flag %s and Environment variable%q must not be passed to a Namespace reconciler",
+				flags.sourceFormat, filesystem.SourceFormatKey)
 		}
 	}
 	reconciler.Run(context.Background(), opts)

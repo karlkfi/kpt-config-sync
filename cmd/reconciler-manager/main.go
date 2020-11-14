@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	// Root-Repo-only flag.
 	clusterName = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"),
 		"Cluster name to use for Cluster selection")
 
@@ -60,7 +59,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repoSync := controllers.NewRepoSyncReconciler(*filesystemPollingPeriod, mgr.GetClient(),
+	repoSync := controllers.NewRepoSyncReconciler(*clusterName, *filesystemPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RepoSync"),
 		mgr.GetScheme())
 	if err := repoSync.SetupWithManager(mgr); err != nil {
@@ -68,7 +67,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rootSync := controllers.NewRootSyncReconciler(*filesystemPollingPeriod, *clusterName, mgr.GetClient(),
+	rootSync := controllers.NewRootSyncReconciler(*clusterName, *filesystemPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
 	if err := rootSync.SetupWithManager(mgr); err != nil {

@@ -35,13 +35,14 @@ type RepoSyncReconciler struct {
 }
 
 // NewRepoSyncReconciler returns a new RepoSyncReconciler.
-func NewRepoSyncReconciler(p time.Duration, c client.Client, l logr.Logger, s *runtime.Scheme) *RepoSyncReconciler {
+func NewRepoSyncReconciler(clusterName string, pollingPeriod time.Duration, client client.Client, log logr.Logger, scheme *runtime.Scheme) *RepoSyncReconciler {
 	return &RepoSyncReconciler{
 		reconcilerBase: reconcilerBase{
-			client:                  c,
-			log:                     l,
-			scheme:                  s,
-			filesystemPollingPeriod: p,
+			clusterName:             clusterName,
+			client:                  client,
+			log:                     log,
+			scheme:                  scheme,
+			filesystemPollingPeriod: pollingPeriod,
 		},
 	}
 }
@@ -178,8 +179,7 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []con
 		},
 		{
 			cmName: repoSyncResourceName(rs.Namespace, reconciler),
-			data: reconcilerData(declared.Scope(rs.Namespace), rs.Spec.Dir,
-				rs.Spec.Repo, rs.Spec.Branch, rs.Spec.Revision, r.filesystemPollingPeriod.String()),
+			data:   reconcilerData(r.clusterName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.filesystemPollingPeriod.String()),
 		},
 	}
 }

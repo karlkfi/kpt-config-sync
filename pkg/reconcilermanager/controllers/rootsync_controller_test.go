@@ -109,8 +109,8 @@ func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Clie
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
 	testReconciler := NewRootSyncReconciler(
-		filesystemPollingPeriod,
 		rootsyncCluster,
+		filesystemPollingPeriod,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
 		s,
@@ -173,7 +173,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(reconciler),
-			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitRevision, pollingPeriod),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
@@ -270,7 +270,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			rootSyncResourceName(reconciler),
-			rootReconcilerData(declared.RootReconciler, rootsyncDir, rootsyncCluster, rootsyncRepo, branch, gitUpdatedRevision, pollingPeriod),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
