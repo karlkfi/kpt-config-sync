@@ -70,40 +70,44 @@ push-to-gcr-nomos: image-nomos
 	docker push $(RECONCILER_MANAGER_TAG)
 
 ###################################
-# YAML generation
+# Deployment generation
 ###################################
 
-# Generates the podspec yaml for each component.
-.PHONY: gen-yaml-all
-gen-yaml-all: \
-		$(GEN_YAML_DIR)/git-importer.yaml \
-		$(GEN_YAML_DIR)/monitor.yaml \
-		$(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml \
-		$(GEN_YAML_DIR)/reconciler-manager.yaml
+.PHONY: clean-deployments-dir
+clean-deployments-dir: $(OUTPUT_DIR)
+	rm $(GEN_DEPLOYMENT_DIR)/*
+
+.PHONY: generate-deployments
+generate-deployments: \
+		clean-deployments-dir \
+		$(GEN_DEPLOYMENT_DIR)/git-importer.yaml \
+		$(GEN_DEPLOYMENT_DIR)/monitor.yaml \
+		$(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml \
+		$(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
-.PHONY: $(GEN_YAML_DIR)/git-importer.yaml
-$(GEN_YAML_DIR)/git-importer.yaml: manifests/templates/git-importer.yaml
+.PHONY: $(GEN_DEPLOYMENT_DIR)/git-importer.yaml
+$(GEN_DEPLOYMENT_DIR)/git-importer.yaml: manifests/templates/git-importer.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
-.PHONY: $(GEN_YAML_DIR)/monitor.yaml
-$(GEN_YAML_DIR)/monitor.yaml: manifests/templates/monitor.yaml
+.PHONY: $(GEN_DEPLOYMENT_DIR)/monitor.yaml
+$(GEN_DEPLOYMENT_DIR)/monitor.yaml: manifests/templates/monitor.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
-.PHONY: $(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml
-$(GEN_YAML_DIR)/reconciler-manager-deployment-configmap.yaml: \
+.PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml
+$(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml: \
 		manifests/templates/reconciler-manager-deployment-configmap.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@
 
-.PHONY: $(GEN_YAML_DIR)/reconciler-manager.yaml
-$(GEN_YAML_DIR)/reconciler-manager.yaml: \
+.PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml
+$(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml: \
 		manifests/templates/reconciler-manager.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
@@ -115,7 +119,7 @@ $(GEN_YAML_DIR)/reconciler-manager.yaml: \
 
 # config-sync-manifest creates the config-sync-manifest.yaml for release and incorporation into ACM Operator
 .PHONY: config-sync-manifest
-config-sync-manifest: $(OUTPUT_DIR) push-to-gcr-nomos gen-yaml-all
+config-sync-manifest: $(OUTPUT_DIR) push-to-gcr-nomos generate-deployments
 	@echo "+++ Preparing config-sync-manifest.yaml"
 	@echo "++++ Copy manifests (except templates/ and test-resources/) to output folder"
 	rm -rf $(OUTPUT_DIR)/manifests

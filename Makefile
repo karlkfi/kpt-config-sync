@@ -45,8 +45,8 @@ NOMOS_MANIFEST_STAGING_DIR := $(STAGING_DIR)/operator
 # Directory that gets mounted into /tmp for build and test containers.
 TEMP_OUTPUT_DIR := $(OUTPUT_DIR)/tmp
 
-# Directory containing gen-alld yaml files from manifest templates.
-GEN_YAML_DIR := $(OUTPUT_DIR)/deployment
+# Directory containing Deployment yamls with image paths spliced in
+GEN_DEPLOYMENT_DIR := $(OUTPUT_DIR)/deployment
 
 # Directory containing generated test yamls
 TEST_GEN_YAML_DIR := $(OUTPUT_DIR)/test/yaml
@@ -139,7 +139,8 @@ $(OUTPUT_DIR):
 		$(STAGING_DIR) \
 		$(TEMP_OUTPUT_DIR) \
 		$(TEST_GEN_YAML_DIR) \
-		$(NOMOS_MANIFEST_STAGING_DIR)
+		$(NOMOS_MANIFEST_STAGING_DIR) \
+		$(GEN_DEPLOYMENT_DIR)
 
 # These directories get mounted by DOCKER_RUN_ARGS, so we have to create them
 # before invoking docker.
