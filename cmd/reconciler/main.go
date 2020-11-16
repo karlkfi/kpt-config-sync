@@ -116,11 +116,18 @@ func main() {
 		PolicyDir:                  relPolicyDir,
 		DiscoveryClient:            dc,
 	}
+
 	if declared.Scope(*scope) == declared.RootReconciler {
+		// Default to "hierarchy" if unset.
+		format := filesystem.SourceFormat(*sourceFormat)
+		if format == "" {
+			format = filesystem.SourceFormatHierarchy
+		}
+
 		glog.Info("Starting reconciler for: root")
 		opts.RootOptions = &reconciler.RootOptions{
 			ClusterName:  *clusterName,
-			SourceFormat: filesystem.SourceFormat(*sourceFormat),
+			SourceFormat: format,
 		}
 	} else {
 		glog.Infof("Starting reconciler for: %s", *scope)
