@@ -4,11 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -337,7 +339,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 func (tc crdTestCase) run(t *testing.T) {
 	fakeDecoder := testingfake.NewDecoder(syncertest.ToUnstructuredList(t, syncertest.Converter, tc.declared))
 	fakeEventRecorder := testingfake.NewEventRecorder(t)
-	fakeSignal := testingfake.RestartSignalRecorder{}
+	fakeSignal := RestartSignalRecorder{}
 	actual := []runtime.Object{clusterCfg}
 	if tc.actual != nil {
 		actual = append(actual, tc.actual)
@@ -377,5 +379,25 @@ func (tc crdTestCase) run(t *testing.T) {
 	fakeClient.Check(t, want...)
 	if err != nil {
 		t.Errorf("unexpected reconciliation error: %v", err)
+	}
+}
+
+// RestartSignalRecorder implements a fake sync.RestartSignal.
+type RestartSignalRecorder struct {
+	Restarts []string
+}
+
+var _ sync.RestartSignal = &RestartSignalRecorder{}
+
+// Restart implements RestartSignal.
+func (r *RestartSignalRecorder) Restart(signal string) {
+	r.Restarts = append(r.Restarts, signal)
+}
+
+// Check ensures that the RestartSignal was called exactly with the passed
+// sequence of signals.
+func (r *RestartSignalRecorder) Check(t *testing.T, want ...string) {
+	if diff := cmp.Diff(want, r.Restarts); diff != "" {
+		t.Errorf("Diff in calls to fake.RestartSignalRecorder.Restart(): %s", diff)
 	}
 }
