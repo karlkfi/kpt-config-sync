@@ -53,6 +53,15 @@ func Clean(nt *NT) {
 			errDeleting = true
 		}
 
+		if len(list) > 0 && list[0].GetNamespace() != "" {
+			// Ignore namespaced types.
+			// It is much faster to delete Namespaces and have k8s automatically
+			// delete namespaced resources inside.
+			//
+			// There isn't a quick way to delete many cluster-scoped resources, so
+			// don't create tests that create thousands of cluster-scoped resources.
+			continue
+		}
 		for _, u := range list {
 			err := deleteObject(nt, &u)
 			if err != nil {
@@ -66,7 +75,7 @@ func Clean(nt *NT) {
 	}
 
 	// Now that we've told Kubernetes to delete everything, wait for it to be
-	// deleted. We don't do this above for two reasons:
+	// deleted. We don't do this in the loop above for two reasons:
 	//
 	// 1) Waiting for every object individually to be deleted would take a long
 	//    time.
@@ -83,6 +92,14 @@ func Clean(nt *NT) {
 			nt.T.Error(err)
 			errDeleting = true
 		}
+
+		if len(list) > 0 && list[0].GetNamespace() != "" {
+			// Ignore namespaced types.
+			// We're already blocking on waiting for the Namespaces to be deleted, so
+			// waiting on a Namespaced type would do nothing.
+			continue
+		}
+
 		for _, u := range list {
 			WaitToTerminate(nt, func() core.Object { return fake.UnstructuredObject(u.GroupVersionKind()) },
 				u.GetName(), u.GetNamespace())
@@ -165,7 +182,7 @@ func FailIfUnknown(t *testing.T, scheme *runtime.Scheme, o runtime.Object) {
 func WaitToTerminate(nt *NT, o func() core.Object, name, namespace string, opts ...WaitOption) {
 	nt.T.Helper()
 
-	Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, o().GroupVersionKind()), func() error {
+	Wait(nt.T, fmt.Sprintf("wait for \"%s/%s\" %v to terminate", o().GetNamespace(), name, o().GroupVersionKind()), func() error {
 		return nt.ValidateNotFound(name, namespace, o())
 	}, opts...)
 }

@@ -6,12 +6,17 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/pkg/importer"
 )
 
 // RemoteCluster tells the test to use the remote cluster pointed to by the
 // default context instead of creating a Kind cluster.
 func RemoteCluster(t *testing.T) Opt {
+	if !*e2e.Manual {
+		t.Skip("Must pass --manual so this isn't accidentally run against a test cluster automatically.")
+	}
+
 	return func(opt *New) {
 		t.Helper()
 

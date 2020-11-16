@@ -42,6 +42,11 @@ const DefaultImagePrefix = "localhost:5000"
 var ImagePrefix = flag.String("image-prefix", DefaultImagePrefix,
 	"The prefix to use for Docker images. Defaults to the local Docker registry. Omit the trailing slash. For example, 'gcr.io/stolos-dev/willbeason/1604693819'")
 
+// Manual indicates the test is being run manually. Some tests are not yet safe
+// to be run automatically.
+var Manual = flag.Bool("manual", false,
+	"Specify that the test is being run manually.")
+
 const (
 	// RunAll runs all tests whether skipped or not
 	RunAll = "runAll"

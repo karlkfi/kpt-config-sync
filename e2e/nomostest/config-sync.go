@@ -1,6 +1,7 @@
 package nomostest
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -128,13 +130,14 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	} else {
 		objs = monoRepoObjects(objs)
 	}
+	objs = convertObjects(nt, objs)
 
 	for _, o := range objs {
 		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == controllers.SourceFormat {
-			u := o.(*unstructured.Unstructured)
-			data := u.Object["data"].(map[string]interface{})
-			data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
+			cm := o.(*corev1.ConfigMap)
+			cm.Data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
 		}
+
 		err := nt.Create(o)
 		if err != nil {
 			nt.T.Fatal(err)
@@ -145,6 +148,41 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 		return validateMultiRepoDeployments
 	}
 	return validateMonoRepoDeployments
+}
+
+// convertObjects converts objects to their literal types. We can do this as
+// we should have all required types in the scheme anyway. This keeps us from
+// having to do ugly Unstructured operations.
+func convertObjects(nt *NT, objs []core.Object) []core.Object {
+	result := make([]core.Object, len(objs))
+	for i, obj := range objs {
+		u, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			// Somehow already converted, or added manually.
+			result[i] = obj
+		}
+
+		o, err := nt.scheme.New(u.GroupVersionKind())
+		if err != nil {
+			nt.T.Fatalf("installed type %v not in Scheme: %v", u.GroupVersionKind(), err)
+		}
+
+		jsn, err := u.MarshalJSON()
+		if err != nil {
+			nt.T.Fatalf("marshalling object into JSON: %v", err)
+		}
+
+		err = json.Unmarshal(jsn, o)
+		if err != nil {
+			nt.T.Fatalf("unmarshalling JSON into object: %v", err)
+		}
+		newObj, ok := o.(core.Object)
+		if !ok {
+			nt.T.Fatalf("trying to install non-object type %v", u.GroupVersionKind())
+		}
+		result[i] = newObj
+	}
+	return result
 }
 
 func copyFile(src, dst string) error {
@@ -229,7 +267,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 			imgName = *e2e.ImagePrefix + "/nomos:latest"
 		}
 
-		replaced := strings.Replace(string(bytes), "IMAGE_NAME", imgName, -1)
+		replaced := strings.ReplaceAll(string(bytes), "IMAGE_NAME", imgName)
 
 		err = ioutil.WriteFile(filepath.Join(tmpManifestsDir, template), []byte(replaced), fileMode)
 		if err != nil {
@@ -352,13 +390,15 @@ func validateMultiRepoDeployments(nt *NT) error {
 	return nil
 }
 
-func setupRepoSync(nt *NT, ns string) error {
+func setupRepoSync(nt *NT, ns string) {
 	// create RepoSync to initialize the Namespace reconciler.
 	rs := repoSyncObject(ns)
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
+}
 
+func waitForRepoReconciler(nt *NT, ns string) error {
 	took, err := Retry(60*time.Second, func() error {
 		return nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
@@ -367,6 +407,7 @@ func setupRepoSync(nt *NT, ns string) error {
 		return err
 	}
 	nt.T.Logf("took %v to wait for ns-reconciler", took)
+
 	return nil
 }
 
@@ -380,10 +421,6 @@ func repoSyncClusterRole() *rbacv1.ClusterRole {
 		},
 	}
 	return cr
-}
-
-func setupRepoSynClusterRole(nt *NT) error {
-	return nt.Create(repoSyncClusterRole())
 }
 
 // repoSyncRoleBinding returns rolebinding that grants service account
@@ -486,6 +523,11 @@ func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
 }
 
 func setupDelegatedControl(nt *NT, opts ntopts.New) {
+	// Just create one RepoSync ClusterRole, even if there are no Namespace repos.
+	if err := nt.Create(repoSyncClusterRole()); err != nil {
+		nt.T.Fatal(err)
+	}
+
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		nt.NamespaceRepos[ns] = ns
 
@@ -498,15 +540,15 @@ func setupDelegatedControl(nt *NT, opts ntopts.New) {
 		// create secret for the namespace reconciler.
 		CreateNamespaceSecret(nt, ns)
 
-		if err := setupRepoSynClusterRole(nt); err != nil {
-			nt.T.Fatal(err)
-		}
-
 		if err := setupRepoSyncRoleBinding(nt, ns); err != nil {
 			nt.T.Fatal(err)
 		}
 
-		if err := setupRepoSync(nt, ns); err != nil {
+		setupRepoSync(nt, ns)
+	}
+
+	for ns := range opts.MultiRepo.NamespaceRepos {
+		if err := waitForRepoReconciler(nt, ns); err != nil {
 			nt.T.Fatal(err)
 		}
 	}

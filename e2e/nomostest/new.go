@@ -55,6 +55,8 @@ func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 	if optsStruct.RESTConfig == nil {
 		ntopts.Kind(t, *e2e.KubernetesVersion)(&optsStruct)
 	}
+	optsStruct.RESTConfig.QPS = 50
+	optsStruct.RESTConfig.Burst = 75
 
 	return newWithOptions(t, optsStruct)
 }
