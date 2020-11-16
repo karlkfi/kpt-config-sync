@@ -138,7 +138,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 
 	if !nt.MultiRepo {
 		// Validate ClusterConfig behavior.
-		nt.WaitForRootSync(func() core.Object { return &v1.ClusterConfig{} }, v1.ClusterConfigName, "",
+		nt.WaitForRootSync(kinds.ClusterConfig(), v1.ClusterConfigName, "",
 			nomostest.ClusterConfigHasSpecToken,
 			nomostest.ClusterConfigHasStatusToken,
 		)

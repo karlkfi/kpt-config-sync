@@ -7,7 +7,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -101,8 +100,7 @@ func Clean(nt *NT) {
 		}
 
 		for _, u := range list {
-			WaitToTerminate(nt, func() core.Object { return fake.UnstructuredObject(u.GroupVersionKind()) },
-				u.GetName(), u.GetNamespace())
+			WaitToTerminate(nt, u.GroupVersionKind(), u.GetName(), u.GetNamespace())
 		}
 	}
 	if errDeleting {
@@ -179,10 +177,12 @@ func FailIfUnknown(t *testing.T, scheme *runtime.Scheme, o runtime.Object) {
 
 // WaitToTerminate waits for the passed object to be deleted.
 // Immediately fails the test if the object is not deleted within the timeout.
-func WaitToTerminate(nt *NT, o func() core.Object, name, namespace string, opts ...WaitOption) {
+func WaitToTerminate(nt *NT, gvk schema.GroupVersionKind, name, namespace string, opts ...WaitOption) {
 	nt.T.Helper()
 
-	Wait(nt.T, fmt.Sprintf("wait for \"%s/%s\" %v to terminate", o().GetNamespace(), name, o().GroupVersionKind()), func() error {
-		return nt.ValidateNotFound(name, namespace, o())
+	Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, gvk), func() error {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		return nt.ValidateNotFound(name, namespace, u)
 	}, opts...)
 }

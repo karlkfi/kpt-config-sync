@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -63,7 +64,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 
 	// The RootSync should report no problems - it has no way to detect there is
 	// a problem.
-	nt.WaitForRootSync(func() core.Object { return &v1alpha1.RootSync{} },
+	nt.WaitForRootSync(kinds.RootSync(),
 		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
 
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
@@ -111,7 +112,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
 	nt.Root.CommitAndPush("add conflicting pod role to Root")
 
-	nt.WaitForRootSync(func() core.Object { return &v1alpha1.RootSync{} },
+	nt.WaitForRootSync(kinds.RootSync(),
 		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {

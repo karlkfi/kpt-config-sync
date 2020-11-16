@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -210,22 +211,22 @@ func (nt *NT) WaitForRepoSyncs() {
 	nt.T.Helper()
 
 	if nt.MultiRepo {
-		nt.WaitForRootSync(func() core.Object { return &v1alpha1.RootSync{} },
+		nt.WaitForRootSync(kinds.RootSync(),
 			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
 
 		for ns, repo := range nt.NamespaceRepos {
-			nt.WaitForRepoSync(repo, func() core.Object { return &v1alpha1.RepoSync{} },
+			nt.WaitForRepoSync(repo, kinds.RepoSync(),
 				v1alpha1.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
 		}
 	} else {
-		nt.WaitForRootSync(func() core.Object { return &v1.Repo{} },
+		nt.WaitForRootSync(kinds.Repo(),
 			"repo", "", RepoHasStatusSyncLatestToken)
 	}
 }
 
 // WaitForRepoSync waits for the specified RepoSync to be synced to HEAD
 // of the specified repository.
-func (nt *NT) WaitForRepoSync(repoName string, o func() core.Object,
+func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
 	name, namespace string, syncedTo func(sha1 string) Predicate) {
 	nt.T.Helper()
 
@@ -236,7 +237,7 @@ func (nt *NT) WaitForRepoSync(repoName string, o func() core.Object,
 		nt.T.Fatal("checked if nonexistent repo is synced")
 	}
 	sha1 := repo.Hash()
-	nt.waitForSync(o, name, namespace, syncedTo(sha1))
+	nt.waitForSync(gvk, name, namespace, syncedTo(sha1))
 }
 
 // waitForSync waits for the specified object to be synced.
@@ -249,14 +250,24 @@ func (nt *NT) WaitForRepoSync(repoName string, o func() core.Object,
 //
 // predicates is a list of Predicates to use to tell whether the object is
 // synced as desired.
-func (nt *NT) waitForSync(o func() core.Object,
-	name, namespace string, predicates ...Predicate) {
+func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, predicates ...Predicate) {
 	nt.T.Helper()
 
 	// Wait for the repository to report it is synced.
 	took, err := Retry(120*time.Second, func() error {
-		obj := o()
-		return nt.Validate(name, namespace, obj, predicates...)
+		obj, err := nt.scheme.New(gvk)
+		if err != nil {
+			return fmt.Errorf("%w: got unrecognized GVK %v", ErrWrongType, gvk)
+		}
+		o, ok := obj.(core.Object)
+		if !ok {
+			// This means the GVK corresponded to a type registered in the Scheme
+			// which is not a valid Kubernetes object. We expect the only way this
+			// can happen is if gvk is for a List type, like NamespaceList.
+			return errors.Wrapf(ErrWrongType, "trying to wait for List type to sync: %T", o)
+		}
+
+		return nt.Validate(name, namespace, o, predicates...)
 	})
 	if err != nil {
 		nt.T.Logf("failed after %v to wait for sync", took)
@@ -267,10 +278,7 @@ func (nt *NT) waitForSync(o func() core.Object,
 	// Automatically renew the Client. We don't have tests that depend on behavior
 	// when the test's client is out of date, and if ConfigSync reports that
 	// everything has synced properly then (usually) new types should be available.
-	if _, isRepo := o().(*v1.Repo); isRepo {
-		nt.RenewClient()
-	}
-	if _, isRepoSync := o().(*v1alpha1.RepoSync); isRepoSync {
+	if gvk == kinds.Repo() || gvk == kinds.RepoSync() {
 		nt.RenewClient()
 	}
 }
@@ -285,7 +293,7 @@ func (nt *NT) waitForSync(o func() core.Object,
 //
 // syncedTo specify how to check that the object is synced to HEAD. This function
 // automatically checks for HEAD of the root repository.
-func (nt *NT) WaitForRootSync(o func() core.Object, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
+func (nt *NT) WaitForRootSync(gvk schema.GroupVersionKind, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	sha1 := nt.Root.Hash()
@@ -293,7 +301,7 @@ func (nt *NT) WaitForRootSync(o func() core.Object, name, namespace string, sync
 	for i, s := range syncedTo {
 		isSynced[i] = s(sha1)
 	}
-	nt.waitForSync(o, name, namespace, isSynced...)
+	nt.waitForSync(gvk, name, namespace, isSynced...)
 }
 
 // RenewClient gets a new Client for talking to the cluster.
