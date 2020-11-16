@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,7 +9,6 @@ import (
 )
 
 const delimiter = "---\n"
-const label = "# ----- %v -----\n"
 
 var destination = flag.String("destination", "", "Path to the destination file")
 
@@ -61,8 +59,7 @@ func main() {
 			readBytes = append(readBytes, []byte("\n")...)
 		}
 
-		labeledRes := fmt.Sprintf(label, p) + string(readBytes)
-		yamlResources = append(yamlResources, labeledRes)
+		yamlResources = append(yamlResources, string(readBytes))
 	}
 
 	// overwrite the file with our new contents
