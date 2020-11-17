@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ func TestNamespaceScopeVisitor(t *testing.T) {
 			name:    "wrong Namespace error",
 			scope:   "foo",
 			obj:     fake.Role(core.Namespace("bar")),
-			wantErr: badScopeErrBuilder.Sprint("").BuildWithResources(fake.Role()),
+			wantErr: nonhierarchical.BadScopeErrBuilder.Sprint("").BuildWithResources(fake.Role()),
 		},
 	}
 

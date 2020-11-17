@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -16,19 +17,21 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
-	reader           Reader
-	dc               utildiscovery.ServerResourcer
-	defaultNamespace string
+	reader                Reader
+	dc                    utildiscovery.ServerResourcer
+	defaultNamespace      string
+	inNamespaceReconciler bool
 }
 
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamespace string) ConfigParser {
+func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamespace string, reconcilerScope declared.Scope) ConfigParser {
 	return &rawParser{
-		reader:           reader,
-		dc:               dc,
-		defaultNamespace: defaultNamespace,
+		reader:                reader,
+		dc:                    dc,
+		defaultNamespace:      defaultNamespace,
+		inNamespaceReconciler: reconcilerScope != declared.RootReconciler,
 	}
 }
 
@@ -50,7 +53,7 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCac
 		return nil, scoperErr
 	}
 
-	scopeErrs := nonhierarchical.ScopeValidator(p.defaultNamespace, scoper).Validate(fileObjects)
+	scopeErrs := nonhierarchical.ScopeValidator(p.inNamespaceReconciler, p.defaultNamespace, scoper).Validate(fileObjects)
 	if scopeErrs != nil {
 		// Don't try to resolve selectors if scopes are incorrect.
 		return nil, scopeErrs

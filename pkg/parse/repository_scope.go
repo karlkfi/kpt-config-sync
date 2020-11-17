@@ -32,16 +32,10 @@ func repositoryScopeVisitor(scope declared.Scope) nonhierarchical.Validator {
 	})
 }
 
-// BadScopeErrCode is the error code indicating that a resource has been
-// declared in a Namespace repository that shouldn't be there.
-const BadScopeErrCode = "1058"
-
-var badScopeErrBuilder = status.NewErrorBuilder(BadScopeErrCode)
-
 // BadScopeErr reports that the passed resource declares a Namespace for a
 // different Namespace repository.
 func BadScopeErr(resource id.Resource, want declared.Scope) status.ResourceError {
-	return badScopeErrBuilder.
+	return nonhierarchical.BadScopeErrBuilder.
 		Sprintf("Resources in the %q repo must either omit metadata.namespace or declare metadata.namespace=%q", want, want).
 		BuildWithResources(resource)
 }

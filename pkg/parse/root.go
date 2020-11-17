@@ -41,7 +41,7 @@ func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReade
 
 	switch format {
 	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewRawParser(fileReader, dc, metav1.NamespaceDefault)
+		opts.parser = filesystem.NewRawParser(fileReader, dc, metav1.NamespaceDefault, declared.RootReconciler)
 	case filesystem.SourceFormatHierarchy:
 		opts.parser = filesystem.NewParser(fileReader, dc)
 	default:

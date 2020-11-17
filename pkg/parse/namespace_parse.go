@@ -24,7 +24,7 @@ type Namespace struct {
 func NewNamespace(fileReader filesystem.Reader, dc discovery.ServerResourcer, scope declared.Scope) *Namespace {
 	return &Namespace{
 		discoveryInterface: dc,
-		parser:             filesystem.NewRawParser(fileReader, dc, string(scope)),
+		parser:             filesystem.NewRawParser(fileReader, dc, string(scope), scope),
 		scope:              scope,
 	}
 }
@@ -46,20 +46,6 @@ func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, addCach
 	}
 
 	objs := filesystem.AsFileObjects(cos)
-
-	var scoper discovery.Scoper
-	scoper, _, err = filesystem.BuildScoper(n.discoveryInterface, enableAPIServerChecks, addCachedAPIResources, objs, nil, getSyncedCRDs)
-	if err != nil {
-		return nil, err
-	}
-
-	// We recreate this validator with every run as the set of available CRDs may
-	// change between runs. The user may have either declared new CRDs in the root
-	// repo, or they may have manually applied new ones.
-	err = noClusterScopeValidator(scoper).Validate(objs)
-	if err != nil {
-		return nil, err
-	}
 
 	nsv := repositoryScopeVisitor(n.scope)
 	err = nsv.Validate(objs)

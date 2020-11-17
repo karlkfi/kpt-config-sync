@@ -84,7 +84,7 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case filesystem.SourceFormatUnstructured:
 		if namespace == "" {
-			parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault)
+			parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
 		} else {
 			parser = parse.NewNamespace(&filesystem.FileReader{}, dc, declared.Scope(namespace))
 		}

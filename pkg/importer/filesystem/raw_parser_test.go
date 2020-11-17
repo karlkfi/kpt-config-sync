@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
@@ -156,7 +157,7 @@ func TestRawParser_Parse(t *testing.T) {
 				scope = metav1.NamespaceDefault
 			}
 
-			p := filesystem.NewRawParser(r, f, scope)
+			p := filesystem.NewRawParser(r, f, scope, declared.RootReconciler)
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return nil, nil
 			}
@@ -208,7 +209,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := ft.NewFakeReader(root, tc.objects)
-			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault)
+			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault, declared.RootReconciler)
 
 			policyDir := cmpath.RelativeSlash("/")
 			fps := filesystem.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}

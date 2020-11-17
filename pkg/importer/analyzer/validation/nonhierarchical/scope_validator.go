@@ -46,12 +46,26 @@ func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Erro
 		BuildWithResources(resource)
 }
 
+// BadScopeErrCode is the error code indicating that a resource has been
+// declared in a Namespace repository that shouldn't be there.
+const BadScopeErrCode = "1058"
+
+// BadScopeErrBuilder is an error build for errors related to the object scope errors
+var BadScopeErrBuilder = status.NewErrorBuilder(BadScopeErrCode)
+
+func shouldBeInRootErr(resource id.Resource) status.ResourceError {
+	return BadScopeErrBuilder.
+		Sprintf("Resources in namespace Repos must be Namespace-scoped type, but objects of type %v are Cluster-scoped. Move %s to the Root repo.",
+			resource.GroupVersionKind(), resource.GetName()).
+		BuildWithResources(resource)
+}
+
 // ScopeValidator returns errors for resources with illegal metadata.namespace
-// declarations.
+// declarations or cluster-scoped resources exist in the namespace scope.
 //
 // If the object is namespace-scoped and does not declare a NamespaceSelector,
 // it is automatically assigned to the passed defaultNamespace.
-func ScopeValidator(defaultNamespace string, scoper discovery.Scoper) Validator {
+func ScopeValidator(inNamespaceReconciler bool, defaultNamespace string, scoper discovery.Scoper) Validator {
 	return PerObjectValidator(func(o ast.FileObject) status.Error {
 		// Skip the validation when it is a Kptfile.
 		// Kptfile is only for client side. A ResourceGroup CR will be generated from it
@@ -79,6 +93,8 @@ func ScopeValidator(defaultNamespace string, scoper discovery.Scoper) Validator 
 				o.SetNamespace(defaultNamespace)
 			}
 			return nil
+		case scope == discovery.ClusterScope && inNamespaceReconciler:
+			return shouldBeInRootErr(&o)
 		case scope == discovery.ClusterScope && hasNamespace:
 			return IllegalNamespaceOnClusterScopedResourceError(&o)
 		default:
