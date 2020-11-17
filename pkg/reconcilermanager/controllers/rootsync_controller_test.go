@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 )
 
@@ -37,8 +36,7 @@ const (
 	// Updated hash of all configmap.data updated by Root Reconciler.
 	rsUpdatedAnnotation = "f5f9d5d58163aabf40245d14623565cb"
 
-	rootsyncSSHKey              = "root-ssh-key"
-	rootsyncTokenAuthSecretName = "root-token"
+	rootsyncSSHKey = "root-ssh-key"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -133,120 +131,9 @@ func rootSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutato
 	return result
 }
 
-func TestRootSyncMutateDeployment(t *testing.T) {
-	rs := rootSync(
-		"1.0.0",
-		branch,
-		v1alpha1.GitSecretSSH,
-		rootsyncSSHKey,
-		core.Name(rootsyncName),
-		core.Namespace(rootsyncReqNamespace),
-		core.UID(uid),
-	)
-	rsSecretTypeToken := rootSync(
-		"1.0.0",
-		branch,
-		v1alpha1.GitSecretConfigKeyToken,
-		rootsyncTokenAuthSecretName,
-		core.Name(rootsyncName),
-		core.Namespace(rootsyncReqNamespace),
-		core.UID(uid),
-	)
-	rsSecretTypeGCENODE := rootSync(
-		"1.0.0",
-		branch,
-		v1alpha1.GitSecretGCENode,
-		rootsyncTokenAuthSecretName,
-		core.Name(rootsyncName),
-		core.Namespace(rootsyncReqNamespace),
-		core.UID(uid),
-	)
-
-	testCases := []struct {
-		name     string
-		root     *v1alpha1.RootSync
-		actual   *appsv1.Deployment
-		expected *appsv1.Deployment
-		wantErr  bool
-	}{
-		{
-			name: "Deployment created",
-			root: rs,
-			actual: rootSyncDeployment(
-				setContainers(fake.ContainerObject(gitSync)),
-				setVolumes(gitSyncVolume("")),
-			),
-			expected: rootSyncDeployment(
-				setRootSyncOwnerRefs(rs),
-				setContainers(rootGitSyncContainer()),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(rootSyncReconcilerName),
-				setVolumes(gitSyncVolume(rootsyncSSHKey)),
-			),
-			wantErr: false,
-		},
-		{
-			name: "Deployment created with Secret type Token",
-			root: rsSecretTypeToken,
-			actual: rootSyncDeployment(
-				setContainers(fake.ContainerObject(gitSync)),
-				setVolumes(gitSyncVolume("")),
-			),
-			expected: rootSyncDeployment(
-				setRootSyncOwnerRefs(rsSecretTypeToken),
-				setContainers(rootGitSyncContainer(setGitSyncEnv(gitSyncTokenAuthEnv(rootsyncTokenAuthSecretName)))),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(rootSyncReconcilerName),
-				setVolumes(gitSyncVolume(rootsyncTokenAuthSecretName)),
-			),
-			wantErr: false,
-		},
-		{
-			name: "Deployment created with Secret type GCENode",
-			root: rsSecretTypeGCENODE,
-			actual: rootSyncDeployment(
-				setVolumes(gitSyncVolume("")),
-			),
-			expected: rootSyncDeployment(
-				setRootSyncOwnerRefs(rsSecretTypeGCENODE),
-				setContainers(askPassSidecarContainer()),
-				setAnnotations(map[string]string{v1alpha1.ConfigMapAnnotationKey: "31323334"}),
-				setServiceAccountName(rootSyncReconcilerName),
-			),
-			wantErr: false,
-		},
-		{
-			name: "Deployment failed, Unsupported container",
-			root: rs,
-			actual: rootSyncDeployment(
-				setContainers(fake.ContainerObject(unsupportedContainer)),
-			),
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			declared := tc.actual.DeepCopyObject().(*appsv1.Deployment)
-			err := mutateRootSyncDeployment(tc.root, tc.actual, declared, []byte("1234"))
-			if tc.wantErr && err == nil {
-				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error", err)
-			} else if !tc.wantErr && err != nil {
-				t.Errorf("mutateRepoSyncDeployment() returned error: %q, want error: nil", err)
-			}
-			if !tc.wantErr {
-				diff := cmp.Diff(tc.actual, tc.expected)
-				if diff != "" {
-					t.Errorf("Deployment diff: %v", diff)
-				}
-			}
-		})
-	}
-}
-
 func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
-	rsParseDeployment = func(de *appsv1.Deployment) error {
+	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -426,16 +313,6 @@ func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	return dep
 }
 
-func setContainers(conts ...*corev1.Container) depMutator {
-	return func(dep *appsv1.Deployment) {
-		var templateContainers []corev1.Container
-		for _, cont := range conts {
-			templateContainers = append(templateContainers, *cont)
-		}
-		dep.Spec.Template.Spec.Containers = templateContainers
-	}
-}
-
 func setServiceAccountName(name string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Spec.ServiceAccountName = name
@@ -446,55 +323,4 @@ func setAnnotations(annotations map[string]string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		dep.Spec.Template.Annotations = annotations
 	}
-}
-
-func setVolumes(vols ...corev1.Volume) depMutator {
-	return func(dep *appsv1.Deployment) {
-		dep.Spec.Template.Spec.Volumes = vols
-	}
-}
-
-func setRootSyncOwnerRefs(rs *v1alpha1.RootSync) depMutator {
-	return func(dep *appsv1.Deployment) {
-		dep.OwnerReferences = ownerReference(
-			rs.GroupVersionKind().Kind,
-			rs.Name,
-			rs.UID,
-		)
-	}
-}
-
-func gitSyncVolume(secretName string) corev1.Volume {
-	return corev1.Volume{
-		Name: gitCredentialVolume,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: secretName,
-			},
-		},
-	}
-}
-
-func mutatedGitSyncContainer(objRef corev1.LocalObjectReference) *corev1.Container {
-	return &corev1.Container{
-		Name: gitSync,
-		EnvFrom: []corev1.EnvFromSource{
-			{
-				ConfigMapRef: &corev1.ConfigMapEnvSource{
-					LocalObjectReference: objRef,
-					Optional:             pointer.BoolPtr(false),
-				},
-			},
-		},
-	}
-}
-
-func rootGitSyncContainer(muts ...gitSyncMutator) *corev1.Container {
-	cnt := mutatedGitSyncContainer(corev1.LocalObjectReference{
-		Name: rootSyncResourceName(gitSync),
-	})
-	for _, mut := range muts {
-		mut(cnt)
-	}
-	return cnt
 }

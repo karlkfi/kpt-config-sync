@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	uid                = types.UID("1234")
 	auth               = "ssh"
 	branch             = "1.0.0"
 	gitRevision        = "1.0.0.rc.8"
@@ -37,8 +36,6 @@ const (
 	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
 	reposyncDir          = "foo-corp"
 	reposyncSSHKey       = "ssh-key"
-
-	unsupportedContainer = "abc"
 
 	pollingPeriod = "50ms"
 
@@ -347,17 +344,4 @@ func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deplo
 	}
 
 	return dep
-}
-
-type gitSyncMutator func(*corev1.Container)
-
-func setGitSyncEnv(env []corev1.EnvVar) gitSyncMutator {
-	return func(cn *corev1.Container) {
-		cn.Env = env
-	}
-}
-
-func askPassSidecarContainer() *corev1.Container {
-	sc := gceNodeAskPassSidecar()
-	return &sc
 }
