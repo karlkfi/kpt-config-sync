@@ -151,6 +151,6 @@ func areConcreteErrors(x, y interface{}) bool {
 func compareErrors(x, y interface{}) bool {
 	xe := x.(error)
 	ye := y.(error)
-	// TODO(≥go1.13): Use standard definition of errors.Is.
+	// TODO: Use errors.Is when go1.13 is the minimally supported version of Go.
 	return xerrors.Is(xe, ye) || xerrors.Is(ye, xe)
 }

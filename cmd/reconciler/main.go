@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/service"
@@ -78,14 +77,7 @@ func main() {
 		status.EnablePanicOnMisuse()
 	}
 
-	go service.ServePrometheusMetrics(true)
-
-	sde, err := metrics.RegisterStackdriverExporter()
-	if err != nil {
-		glog.Fatalf("Failed to register Stackdriver exporter: %v", err)
-	}
-	defer sde.Flush()
-	defer sde.StopMetricsExporter()
+	go service.ServeMetrics()
 
 	relPolicyDir := cmpath.RelativeOS(*policyDir)
 	absGitDir, err := cmpath.AbsoluteOS(*gitDir)

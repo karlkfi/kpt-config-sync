@@ -40,6 +40,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	go service.ServePrometheusMetrics(false)
+	go service.ServeMetrics()
 	configsync.RunImporter()
 }
