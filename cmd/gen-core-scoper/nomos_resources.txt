@@ -1,3 +1,4 @@
+anthos.cloud.google.com        true    Validator
 configmanagement.gke.io        false  ClusterConfig
 configmanagement.gke.io        false  ClusterSelector
 configmanagement.gke.io        false  ConfigManagement
@@ -5,5 +6,10 @@ configmanagement.gke.io        false  HierarchyConfig
 configmanagement.gke.io        false  NamespaceConfig
 configmanagement.gke.io        false  NamespaceSelector
 configmanagement.gke.io        false  Repo
+configsync.gke.io              true   Environment
+configsync.gke.io              true   RepoSync
+configsync.gke.io              true   ResourceGroup
+configsync.gke.io              false  RootSync
 configmanagement.gke.io        false  Sync
 clusterregistry.k8s.io         false  Cluster
+kpt.dev                        true   Kptfile

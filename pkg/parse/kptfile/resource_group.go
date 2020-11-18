@@ -36,7 +36,7 @@ type Descriptor struct {
 
 // ResourceGroup defines the schema of ResourceGroup.
 // The actual type is defined in
-//  https://gke-internal.googlesource.com/GoogleCloudPlatform/resource-group/+/f8e2a2f575e5d8b9bf336a2cfadc0c95ea98db9e/api/v1beta1/resourcegroup_types.go.
+//  https://gke-internal.googlesource.com/GoogleCloudPlatform/resource-group/+/refs/heads/master/api/v1alpha1/resourcegroup_types.go
 // Here only spec is defined and status is ignored.
 // Here is an example of ResourceGroup:
 //    apiVersion: configsync.gke.io/v1alpha1

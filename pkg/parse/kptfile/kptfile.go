@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	// Group is the kpt API GRoup.
+	// Group is the kpt API Group.
 	Group = "kpt.dev"
 	// Kind is the Kptfile Kind string.
 	Kind = "Kptfile"

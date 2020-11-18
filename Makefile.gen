@@ -22,10 +22,11 @@ clientgen:
 	./scripts/generate-clientset.sh
 
 
-# To regenerate api_resources.txt:
-# 1) Create a fresh cluster that DOES NOT have ACM installed.
+# To regenerate api_resources_1_15.txt:
+# 1) Create a fresh 1.15 cluster that DOES NOT have ACM installed.
 # 2) Run the below command:
-# kubectl api-resources --verbs=create,list --no-headers | grep -P "[\w.]* {0,31}(true|false)\s+\w+$" -o > cmd/gen-core-scoper/api_resources.txt
+# kubectl api-resources --verbs=create,list --no-headers | grep -P "[\w.]* {0,31}(true|false)\s+\w+$" -o > cmd/gen-core-scoper/api_resources_1_15.txt
+# 3) Repeat (1) and (2) for Kubernetes 1.18.
 #
 # Note that we only get resources where "create" and "list" verbs are defined, as ACM
 # cannot manage resources it can't create or list.

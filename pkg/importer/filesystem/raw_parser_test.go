@@ -15,6 +15,7 @@ import (
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/vet"
@@ -22,6 +23,7 @@ import (
 	"github.com/google/nomos/testing/testoutput"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -135,6 +137,19 @@ func TestRawParser_Parse(t *testing.T) {
 			},
 			expected: testoutput.NewAllConfigs(
 				fake.Role(core.Namespace("shipping")),
+			),
+		},
+		{
+			testName: "don't fail on Anthos Validator type without CRD",
+			objects: []ast.FileObject{
+				fake.Namespace("namespaces/foo"),
+				fake.Unstructured(schema.GroupVersionKind{Group: "anthos.cloud.google.com", Version: "v1alpha1", Kind: "Validator"}, core.Namespace("foo"),
+					syncertest.ManagementDisabled),
+			},
+			expected: testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/foo"),
+				fake.Unstructured(schema.GroupVersionKind{Group: "anthos.cloud.google.com", Version: "v1alpha1", Kind: "Validator"}, core.Namespace("foo"),
+					syncertest.ManagementDisabled),
 			),
 		},
 	}
