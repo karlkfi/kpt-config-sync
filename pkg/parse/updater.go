@@ -35,7 +35,7 @@ func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiEr
 	gvks, applyErrs := u.applier.Apply(ctx, objs)
 	// Finally update the Remediator's watches to start new ones and stop old
 	// ones.
-	watchErrs := u.remediator.UpdateWatches(gvks)
+	watchErrs := u.remediator.UpdateWatches(ctx, gvks)
 
 	return status.Append(applyErrs, watchErrs)
 }

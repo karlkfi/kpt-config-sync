@@ -3,6 +3,8 @@
 package fake
 
 import (
+	"context"
+
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -22,7 +24,7 @@ var namespaceselectorsResource = schema.GroupVersionResource{Group: "configmanag
 var namespaceselectorsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "NamespaceSelector"}
 
 // Get takes name of the namespaceSelector, and returns the corresponding namespaceSelector object, and an error if there is any.
-func (c *FakeNamespaceSelectors) Get(name string, options v1.GetOptions) (result *configmanagementv1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Get(ctx context.Context, name string, options v1.GetOptions) (result *configmanagementv1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(namespaceselectorsResource, name), &configmanagementv1.NamespaceSelector{})
 	if obj == nil {
@@ -32,7 +34,7 @@ func (c *FakeNamespaceSelectors) Get(name string, options v1.GetOptions) (result
 }
 
 // List takes label and field selectors, and returns the list of NamespaceSelectors that match those selectors.
-func (c *FakeNamespaceSelectors) List(opts v1.ListOptions) (result *configmanagementv1.NamespaceSelectorList, err error) {
+func (c *FakeNamespaceSelectors) List(ctx context.Context, opts v1.ListOptions) (result *configmanagementv1.NamespaceSelectorList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(namespaceselectorsResource, namespaceselectorsKind, opts), &configmanagementv1.NamespaceSelectorList{})
 	if obj == nil {
@@ -53,13 +55,13 @@ func (c *FakeNamespaceSelectors) List(opts v1.ListOptions) (result *configmanage
 }
 
 // Watch returns a watch.Interface that watches the requested namespaceSelectors.
-func (c *FakeNamespaceSelectors) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeNamespaceSelectors) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(namespaceselectorsResource, opts))
 }
 
 // Create takes the representation of a namespaceSelector and creates it.  Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *FakeNamespaceSelectors) Create(namespaceSelector *configmanagementv1.NamespaceSelector) (result *configmanagementv1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Create(ctx context.Context, namespaceSelector *configmanagementv1.NamespaceSelector, opts v1.CreateOptions) (result *configmanagementv1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(namespaceselectorsResource, namespaceSelector), &configmanagementv1.NamespaceSelector{})
 	if obj == nil {
@@ -69,7 +71,7 @@ func (c *FakeNamespaceSelectors) Create(namespaceSelector *configmanagementv1.Na
 }
 
 // Update takes the representation of a namespaceSelector and updates it. Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *FakeNamespaceSelectors) Update(namespaceSelector *configmanagementv1.NamespaceSelector) (result *configmanagementv1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Update(ctx context.Context, namespaceSelector *configmanagementv1.NamespaceSelector, opts v1.UpdateOptions) (result *configmanagementv1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(namespaceselectorsResource, namespaceSelector), &configmanagementv1.NamespaceSelector{})
 	if obj == nil {
@@ -79,22 +81,22 @@ func (c *FakeNamespaceSelectors) Update(namespaceSelector *configmanagementv1.Na
 }
 
 // Delete takes name of the namespaceSelector and deletes it. Returns an error if one occurs.
-func (c *FakeNamespaceSelectors) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeNamespaceSelectors) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(namespaceselectorsResource, name), &configmanagementv1.NamespaceSelector{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNamespaceSelectors) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(namespaceselectorsResource, listOptions)
+func (c *FakeNamespaceSelectors) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(namespaceselectorsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &configmanagementv1.NamespaceSelectorList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched namespaceSelector.
-func (c *FakeNamespaceSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.NamespaceSelector, err error) {
+func (c *FakeNamespaceSelectors) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configmanagementv1.NamespaceSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(namespaceselectorsResource, name, pt, data, subresources...), &configmanagementv1.NamespaceSelector{})
 	if obj == nil {

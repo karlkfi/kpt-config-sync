@@ -10,10 +10,13 @@ import (
 )
 
 // ClusterConfigLister helps list ClusterConfigs.
+// All objects returned here must be treated as read-only.
 type ClusterConfigLister interface {
 	// List lists all ClusterConfigs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ClusterConfig, err error)
 	// Get retrieves the ClusterConfig from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.ClusterConfig, error)
 	ClusterConfigListerExpansion
 }
