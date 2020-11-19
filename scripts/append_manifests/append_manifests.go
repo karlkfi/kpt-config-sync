@@ -16,10 +16,20 @@ func filePaths(path string) ([]string, error) {
 	var paths []string
 
 	err := filepath.Walk(path, func(fPath string, info os.FileInfo, err error) error {
-		// recursion is not supported
+		if err != nil {
+			return err
+		}
+
+		// Walk is recursive by default, but this makes append_manifests harder to use.  To get
+		// around this, we don't let it walk any directory but the one that was the input.
 		if info.IsDir() {
+			if fPath != path {
+				// filepath.SkipDir is a special variable used to prevent the walking of a directory
+				return filepath.SkipDir
+			}
 			return nil
 		}
+
 		paths = append(paths, fPath)
 		return nil
 	})
