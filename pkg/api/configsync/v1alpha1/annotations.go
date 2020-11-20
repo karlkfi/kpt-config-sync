@@ -16,4 +16,8 @@ const (
 	// ResourceManagerKey is the annotation that indicates which multi-repo reconciler is managing
 	// the resource.
 	ResourceManagerKey = ConfigSyncPrefix + "manager"
+
+	// ClusterNameSelectorAnnotationKey is the annotation key set on ConfigSync-managed resources that refers
+	// to the name of the ClusterSelector resource.
+	ClusterNameSelectorAnnotationKey = ConfigSyncPrefix + "cluster-name-selector"
 )

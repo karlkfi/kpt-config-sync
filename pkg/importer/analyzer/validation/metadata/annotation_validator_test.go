@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -12,7 +13,7 @@ import (
 const (
 	legalAnnotation    = "annotation"
 	illegalAnnotation  = v1.ConfigManagementPrefix + "unsupported"
-	illegalAnnotation2 = v1.ConfigManagementPrefix + "unsupported2"
+	illegalAnnotation2 = v1alpha1.ConfigSyncPrefix + "unsupported2"
 )
 
 func TestAnnotationValidator(t *testing.T) {
@@ -26,9 +27,13 @@ func TestAnnotationValidator(t *testing.T) {
 			fake.Role(
 				core.Annotation(legalAnnotation, "")),
 		),
-		asttest.Fail("one illegal annotation",
+		asttest.Fail("one illegal annotation starts with `configmanagement.gke.io/`",
 			fake.Role(
 				core.Annotation(illegalAnnotation, "")),
+		),
+		asttest.Fail("one illegal annotation starts with `configsync.gke.io/`",
+			fake.Role(
+				core.Annotation(illegalAnnotation2, "")),
 		),
 		asttest.Fail("two illegal annotations",
 			fake.Role(
@@ -44,13 +49,17 @@ func TestAnnotationValidator(t *testing.T) {
 			fake.Role(
 				core.Annotation(v1.NamespaceSelectorAnnotationKey, "")),
 		),
-		asttest.Pass("clusterselector annotation",
+		asttest.Pass("legacy clusterselector annotation",
 			fake.Role(
-				core.Annotation(v1.ClusterSelectorAnnotationKey, "")),
+				core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "")),
 		),
 		asttest.Pass("management annotation",
 			fake.Role(
 				core.Annotation(v1.ResourceManagementKey, "")),
+		),
+		asttest.Pass("inline clusterselector annotation",
+			fake.Role(
+				core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "")),
 		),
 	)
 }

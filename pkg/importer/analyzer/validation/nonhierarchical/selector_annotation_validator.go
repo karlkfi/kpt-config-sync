@@ -3,6 +3,7 @@ package nonhierarchical
 import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
@@ -29,9 +30,13 @@ func validateClusterSelectorAnnotation(o ast.FileObject) status.Error {
 		return nil
 	}
 
-	if _, hasAnnotation := o.GetAnnotations()[v1.ClusterSelectorAnnotationKey]; hasAnnotation {
-		// This is a Cluster, ClusterSelector, or NamespaceSelector, and it defines the cluster-selector annotation.
-		return IllegalClusterSelectorAnnotationError(o)
+	if _, hasAnnotation := o.GetAnnotations()[v1.LegacyClusterSelectorAnnotationKey]; hasAnnotation {
+		// This is a Cluster, ClusterSelector, or NamespaceSelector, and it defines the legacy cluster-selector annotation.
+		return IllegalClusterSelectorAnnotationError(o, v1.LegacyClusterSelectorAnnotationKey)
+	}
+	if _, hasAnnotation := o.GetAnnotations()[v1alpha1.ClusterNameSelectorAnnotationKey]; hasAnnotation {
+		// This is a Cluster, ClusterSelector, or NamespaceSelector, and it defines the inline cluster-selector annotation.
+		return IllegalClusterSelectorAnnotationError(o, v1alpha1.ClusterNameSelectorAnnotationKey)
 	}
 	return nil
 }
@@ -83,11 +88,11 @@ var illegalSelectorAnnotationError = status.NewErrorBuilder(IllegalSelectorAnnot
 
 // IllegalClusterSelectorAnnotationError reports that a Cluster or ClusterSelector declares the
 // cluster-selector annotation.
-func IllegalClusterSelectorAnnotationError(resource id.Resource) status.Error {
+func IllegalClusterSelectorAnnotationError(resource id.Resource, annotation string) status.Error {
 	return illegalSelectorAnnotationError.
 		Sprintf("%ss may not be cluster-selected, and so MUST NOT declare the annotation '%s'. "+
 			"To fix, remove `metadata.annotations.%s` from:",
-			resource.GroupVersionKind().Kind, v1.ClusterSelectorAnnotationKey, v1.ClusterSelectorAnnotationKey).
+			resource.GroupVersionKind().Kind, annotation, annotation).
 		BuildWithResources(resource)
 }
 

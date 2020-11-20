@@ -72,6 +72,8 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCac
 	for _, v := range validators {
 		errs = status.Append(errs, v.Validate(fileObjects))
 	}
+
+	fileObjects = selectors.AnnotateClusterName(clusterName, fileObjects)
 	return AsCoreObjects(fileObjects), errs
 }
 

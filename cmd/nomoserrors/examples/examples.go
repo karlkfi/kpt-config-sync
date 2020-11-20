@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -64,7 +65,7 @@ func Generate() AllExamples {
 
 	// 1004
 	result.add(nonhierarchical.IllegalNamespaceSelectorAnnotationError(fake.Namespace("namespaces/foo")))
-	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster()))
+	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), v1alpha1.ClusterNameSelectorAnnotationKey))
 
 	// 1005
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
@@ -302,6 +303,9 @@ func Generate() AllExamples {
 
 	// 1065
 	result.add(clusterconfig.MalformedCRDError(errors.New("malformed CRD"), cmpath.Relative{}))
+
+	// 1066
+	result.add(selectors.ClusterSelectorAnnotationConflictError(fake.NamespaceObject("my-namespace")))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))

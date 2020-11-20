@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/asttest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -12,7 +13,7 @@ import (
 const (
 	legalLabel    = "label"
 	illegalLabel  = v1.ConfigManagementPrefix + "unsupported"
-	illegalLabel2 = v1.ConfigManagementPrefix + "unsupported2"
+	illegalLabel2 = v1alpha1.ConfigSyncPrefix + "unsupported2"
 )
 
 func TestLabelValidator(t *testing.T) {
@@ -26,9 +27,13 @@ func TestLabelValidator(t *testing.T) {
 			fake.Role(
 				core.Label(legalLabel, "")),
 		),
-		asttest.Fail("one illegal label",
+		asttest.Fail("one illegal label starts with `configmanagement.gke.io/`",
 			fake.Role(
 				core.Label(illegalLabel, "")),
+		),
+		asttest.Fail("one illegal label starts with `configsync.gke.io/`",
+			fake.Role(
+				core.Label(illegalLabel2, "")),
 		),
 		asttest.Fail("two illegal labels",
 			fake.Role(
@@ -46,7 +51,11 @@ func TestLabelValidator(t *testing.T) {
 		),
 		asttest.Fail("clusterselector label",
 			fake.Role(
-				core.Label(v1.ClusterSelectorAnnotationKey, "")),
+				core.Label(v1.LegacyClusterSelectorAnnotationKey, "")),
+		),
+		asttest.Fail("inline clusterselector label",
+			fake.Role(
+				core.Label(v1alpha1.ClusterNameSelectorAnnotationKey, "")),
 		),
 	)
 }

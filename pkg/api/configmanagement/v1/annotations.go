@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 )
 
 const (
@@ -12,9 +13,9 @@ const (
 	// the name of the cluster that the selectors are applied for.
 	ClusterNameAnnotationKey = ConfigManagementPrefix + "cluster-name"
 
-	// ClusterSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
+	// LegacyClusterSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to the name of the ClusterSelector resource.
-	ClusterSelectorAnnotationKey = ConfigManagementPrefix + "cluster-selector"
+	LegacyClusterSelectorAnnotationKey = ConfigManagementPrefix + "cluster-selector"
 
 	// NamespaceSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to name of NamespaceSelector resource.
@@ -56,7 +57,8 @@ const (
 func SyncerAnnotations() []string {
 	return []string{
 		ClusterNameAnnotationKey,
-		ClusterSelectorAnnotationKey,
+		LegacyClusterSelectorAnnotationKey,
+		v1alpha1.ClusterNameSelectorAnnotationKey,
 		NamespaceSelectorAnnotationKey,
 		DeclaredConfigAnnotationKey,
 		SourcePathAnnotationKey,

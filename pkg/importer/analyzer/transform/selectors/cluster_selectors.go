@@ -1,7 +1,10 @@
 package selectors
 
 import (
+	"strings"
+
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
@@ -33,16 +36,22 @@ const (
 )
 
 // ResolveClusterSelectors returns the list of objects which should be synced to cluster
-// clusterName based on the ClusterSelectors.
+// clusterName based on the cluster-selector annotations.
 //
-// Rules:
-// 1. A ClusterSelector is active if its LabelSelector selects Cluster clusterName.
+// An object is preserved if it meets one of the following rules:
+// 1. The object has no cluster-selector annotations.
+// 2. The object has the inline annotation (configsync.gke.io/cluster-name-selector),
+//    and the clusterName matches the label selector.
+// 3. The object has the legacy annotation (configmanagement.gke.io/cluster-selector),
+//    the ClusterSelector is active and the object is NOT in an excluded namespace.
+//    NOTE:
+//    - A ClusterSelector is active if its LabelSelector selects Cluster clusterName.
 //      Otherwise it is inactive.
-// 2. If there is no Cluster declaration for ClusterName, all ClusterSelectors are inactive.
-// 3. If an object's ClusterSelector is inactive, it is excluded.
-// 4. If an object is in an excluded Namespace, it is excluded.
+//    - If there is no Cluster declaration for ClusterName, all ClusterSelectors are inactive.
+//    - An excluded namespace refers to a namespace object with inactive ClusterSelector annotation.
 //
 // Returns error(s) if:
+// - an object has both the legacy cluster-selector annotation and the inline cluster-name-selector annotation,
 // - an object references a ClusterSelector which does not exist,
 // - a ClusterSelector is invalid or empty.
 func ResolveClusterSelectors(clusterName string, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
@@ -50,17 +59,17 @@ func ResolveClusterSelectors(clusterName string, objects []ast.FileObject) ([]as
 	clusters := FilterClusters(objects)
 	cluster := getCluster(clusterName, clusters)
 
-	// Get the active/inactive state for all declared ClusterSelectors.
-	csStates, err := getClusterSelectorStates(cluster, objects)
+	// Get the active/inactive state for all declared legacy ClusterSelectors.
+	csStates, err := getLegacyClusterSelectorStates(cluster, objects)
 	if err != nil {
 		return nil, err
 	}
 
 	// Determine whether each Namespace is active.
-	nsStates := getNamespaceStates(csStates, objects)
+	nsStates := getNamespaceStates(clusterName, csStates, objects)
 
 	// Discard objects and Namespaces with inactive ClusterSelectors.
-	return resolveClusterSelectors(csStates, nsStates, objects)
+	return resolveClusterSelectors(clusterName, csStates, nsStates, objects)
 }
 
 // FilterClusters returns the list of Clusters in the passed array of FileObjects.
@@ -78,7 +87,7 @@ func FilterClusters(objects []ast.FileObject) []clusterregistry.Cluster {
 // ClusterSelectors, or that do not declare ClusterSelectors.
 //
 // Returns an Error if any passed objects reference undeclared ClusterSelectors.
-func resolveClusterSelectors(csStates map[selectorName]state, nsStates map[namespaceName]state, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+func resolveClusterSelectors(clusterName string, csStates map[selectorName]state, nsStates map[namespaceName]state, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	var errs status.MultiError
 	for _, object := range objects {
@@ -89,7 +98,7 @@ func resolveClusterSelectors(csStates map[selectorName]state, nsStates map[names
 
 		// Given the active/inactive states of every ClusterSelector and Namespace,
 		// determine whether the object appears on the cluster.
-		objState, err := objectClusterSelectorState(csStates, nsStates, object)
+		objState, err := objectClusterSelectorState(clusterName, csStates, nsStates, object)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
@@ -104,14 +113,20 @@ func resolveClusterSelectors(csStates map[selectorName]state, nsStates map[names
 }
 
 // objectClusterSelectorState returns the active/inactive state for the object based on cluster
-// selection. This is determined by
+// selection. An object is active if it meets one of the following rules:
+// 1. The object has no cluster-selector annotations.
+// 2. The object has the inline annotation (configsync.gke.io/cluster-name-selector),
+//    and the clusterName matches the name selector.
+// 3. The object has the legacy annotation (configmanagement.gke.io/cluster-selector),
+//    the ClusterSelector is active and the object is NOT in an excluded namespace.
+//    NOTE:
+//    - A ClusterSelector is active if its LabelSelector selects Cluster clusterName.
+//      Otherwise it is inactive.
+//    - If there is no Cluster declaration for ClusterName, all ClusterSelectors are inactive.
+//    - An excluded namespace refers to a namespace object with inactive ClusterSelector annotation.
 //
-// 1. If the object declares a cluster-selector annotation that is inactive, the object is inactive.
-// 2. If the object declares a metadata.namespace for a Namespace that is inactive, the object is inactive.
-// 3. Otherwise, the object is active.
-//
-// Returns an error if the object references an undeclared ClusterSelector.
-func objectClusterSelectorState(csStates map[selectorName]state, nsStates map[namespaceName]state, object ast.FileObject) (state, status.Error) {
+// Returns an error if the object references an undeclared ClusterSelector or the object has both of the legacy and inline annotations
+func objectClusterSelectorState(clusterName string, csStates map[selectorName]state, nsStates map[namespaceName]state, object ast.FileObject) (state, status.Error) {
 	namespace := namespaceName(object.GetNamespace())
 	if nsState, nsDefined := nsStates[namespace]; nsDefined {
 		if nsState == inactive {
@@ -120,26 +135,48 @@ func objectClusterSelectorState(csStates map[selectorName]state, nsStates map[na
 		}
 	}
 
-	annotation, hasAnnotation := object.GetAnnotations()[v1.ClusterSelectorAnnotationKey]
-	if !hasAnnotation {
-		// object has no annotation, so it is active.
+	legacyAnnotation, hasLegacyAnnotation := object.GetAnnotations()[v1.LegacyClusterSelectorAnnotationKey]
+	inlineAnnotation, hasInlineAnnotation := object.GetAnnotations()[v1alpha1.ClusterNameSelectorAnnotationKey]
+
+	switch {
+	case hasLegacyAnnotation && hasInlineAnnotation:
+		return unknown, ClusterSelectorAnnotationConflictError(object)
+	case !hasLegacyAnnotation && !hasInlineAnnotation:
 		return active, nil
-	}
+	case hasInlineAnnotation:
+		return objectInlineClusterNameSelectorState(clusterName, inlineAnnotation)
+	default:
+		// object only has legacy annotation
+		csState, csDefined := csStates[selectorName(legacyAnnotation)]
+		if !csDefined {
+			// We require that all objects which declare the cluster-selector legacyAnnotation reference
+			// a ClusterSelector that exists.
+			return unknown, ObjectHasUnknownClusterSelector(object, legacyAnnotation)
+		}
 
-	csState, csDefined := csStates[selectorName(annotation)]
-	if !csDefined {
-		// We require that all objects which declare the cluster-selector annotation reference
-		// a ClusterSelector that exists.
-		return unknown, ObjectHasUnknownClusterSelector(object, annotation)
+		// object inherits the state of its ClusterSelector.
+		return csState, nil
 	}
+}
 
-	// object inherits the state of its ClusterSelector.
-	return csState, nil
+// objectInlineClusterNameSelectorState returns the active/inactive state for
+// the object based on the inline cluster-name-selector annotation.
+func objectInlineClusterNameSelectorState(clusterName, inlineAnnotation string) (state, status.Error) {
+	if len(clusterName) == 0 {
+		return inactive, nil
+	}
+	clusters := strings.Split(inlineAnnotation, ",")
+	for _, cluster := range clusters {
+		if strings.EqualFold(clusterName, strings.TrimSpace(cluster)) {
+			return active, nil
+		}
+	}
+	return inactive, nil
 }
 
 // getNamespaceStates returns a map from all defined Namespaces, and whether they are active or
 // inactive on the cluster.
-func getNamespaceStates(csStates map[selectorName]state, objects []ast.FileObject) map[namespaceName]state {
+func getNamespaceStates(clusterName string, csStates map[selectorName]state, objects []ast.FileObject) map[namespaceName]state {
 	result := make(map[namespaceName]state)
 
 	var errs status.MultiError
@@ -149,7 +186,7 @@ func getNamespaceStates(csStates map[selectorName]state, objects []ast.FileObjec
 			continue
 		}
 
-		nsState, err := objectClusterSelectorState(csStates, nil, object)
+		nsState, err := objectClusterSelectorState(clusterName, csStates, nil, object)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
@@ -160,8 +197,8 @@ func getNamespaceStates(csStates map[selectorName]state, objects []ast.FileObjec
 	return result
 }
 
-// getClusterSelectorStates returns the names of all active ClusterSelectors.
-func getClusterSelectorStates(cluster *clusterregistry.Cluster, objects []ast.FileObject) (map[selectorName]state, status.MultiError) {
+// getLegacyClusterSelectorStates returns the names of all active ClusterSelectors.
+func getLegacyClusterSelectorStates(cluster *clusterregistry.Cluster, objects []ast.FileObject) (map[selectorName]state, status.MultiError) {
 	// ClusterSelectors may only select Clusters with definitions.
 	selectors, errs := getClusterSelectors(objects)
 	if errs != nil {
@@ -246,6 +283,6 @@ func (s selectorFileObject) selects(o core.Object) bool {
 func ObjectHasUnknownClusterSelector(resource id.Resource, annotation string) status.Error {
 	return objectHasUnknownSelector.
 		Sprintf("Config %q MUST refer to an existing ClusterSelector, but has annotation \"%s=%s\" which maps to no declared ClusterSelector",
-			resource.GetName(), v1.ClusterSelectorAnnotationKey, annotation).
+			resource.GetName(), v1.LegacyClusterSelectorAnnotationKey, annotation).
 		BuildWithResources(resource)
 }

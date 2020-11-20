@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -35,6 +36,10 @@ func flatClusterSelector(name, key, value string) ast.FileObject {
 	cs := fake.ClusterSelectorObject(core.Name(name))
 	cs.Spec.Selector.MatchLabels = map[string]string{key: value}
 	return fake.FileObject(cs, name+"_cs.yaml")
+}
+
+func inlineClusterSelector(clusterName string) core.MetaMutator {
+	return core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, clusterName)
 }
 
 func flatNamespaceSelector(name, key, value string) ast.FileObject {
@@ -92,17 +97,20 @@ func TestRawParser_Parse(t *testing.T) {
 				fake.Cluster(core.Name("prod"), core.Label("environment", "prod")),
 				flatClusterSelector("prod-only", "environment", "prod"),
 				flatClusterSelector("dev-only", "environment", "dev"),
-				fake.ClusterRole(core.Name("prod-admin"), core.Annotation(v1.ClusterSelectorAnnotationKey, "prod-only")),
-				fake.ClusterRole(core.Name("dev-admin"), core.Annotation(v1.ClusterSelectorAnnotationKey, "dev-only")),
-				fake.Namespace("prod-shipping", core.Annotation(v1.ClusterSelectorAnnotationKey, "prod-only")),
+				fake.ClusterRole(core.Name("prod-owner"), inlineClusterSelector("prod")),
+				fake.ClusterRole(core.Name("prod-admin"), core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-only")),
+				fake.ClusterRole(core.Name("dev-admin"), core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "dev-only")),
+				fake.ClusterRole(core.Name("dev-owner"), inlineClusterSelector("dev")),
+				fake.Namespace("prod-shipping", inlineClusterSelector("prod")),
 				fake.Role(core.Name("prod-sre"), core.Namespace("prod-shipping")),
-				fake.Namespace("dev-shipping", core.Annotation(v1.ClusterSelectorAnnotationKey, "dev-only")),
+				fake.Namespace("dev-shipping", core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "dev-only")),
 				fake.Role(core.Name("dev-sre"), core.Namespace("dev-shipping")),
 			},
 			expected: testoutput.NewAllConfigs(
-				fake.ClusterRole(core.Name("prod-admin"), core.Annotation(v1.ClusterSelectorAnnotationKey, "prod-only")),
-				fake.Namespace("prod-shipping", core.Annotation(v1.ClusterSelectorAnnotationKey, "prod-only")),
-				fake.Role(core.Name("prod-sre"), core.Namespace("prod-shipping")),
+				fake.ClusterRole(core.Name("prod-owner"), core.Annotation(v1.ClusterNameAnnotationKey, "prod"), inlineClusterSelector("prod")),
+				fake.ClusterRole(core.Name("prod-admin"), core.Annotation(v1.ClusterNameAnnotationKey, "prod"), core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-only")),
+				fake.Namespace("prod-shipping", core.Annotation(v1.ClusterNameAnnotationKey, "prod"), inlineClusterSelector("prod")),
+				fake.Role(core.Name("prod-sre"), core.Namespace("prod-shipping"), core.Annotation(v1.ClusterNameAnnotationKey, "prod")),
 			),
 		},
 		{
@@ -115,9 +123,9 @@ func TestRawParser_Parse(t *testing.T) {
 				fake.Role(core.Name("sre-role"), core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 			},
 			expected: testoutput.NewAllConfigs(
-				fake.Namespace("prod-shipping", core.Label("sre-supported", "true")),
-				fake.Namespace("dev-shipping"),
-				fake.Role(core.Name("sre-role"), core.Namespace("prod-shipping"), core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
+				fake.Namespace("prod-shipping", core.Label("sre-supported", "true"), core.Annotation(v1.ClusterNameAnnotationKey, "prod")),
+				fake.Namespace("dev-shipping", core.Annotation(v1.ClusterNameAnnotationKey, "prod")),
+				fake.Role(core.Name("sre-role"), core.Namespace("prod-shipping"), core.Annotation(v1.ClusterNameAnnotationKey, "prod"), core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 			),
 		},
 		{

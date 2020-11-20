@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
@@ -330,11 +331,17 @@ func TestParserVetErrors(t *testing.T) {
 			nonhierarchical.IllegalSelectorAnnotationErrorCode,
 			fake.Namespace("namespaces/bar", core.Annotation(v1.NamespaceSelectorAnnotationKey, "prod")),
 		),
-		parsertest.Failure("NamespaceSelector may not have clusterSelector annotations",
+		parsertest.Failure("NamespaceSelector may not have legacy clusterSelector annotations",
 			nonhierarchical.IllegalSelectorAnnotationErrorCode,
 			fake.FileObject(clusterSelectorObject("prod-cluster", "env", "prod"),
 				"clusterregistry/cs.yaml"),
-			fake.NamespaceSelector(clusterSelectorAnnotation("prod-cluster")),
+			fake.NamespaceSelector(legacyClusterSelectorAnnotation("prod-cluster")),
+		),
+		parsertest.Failure("NamespaceSelector may not have inline clusterSelector annotations",
+			nonhierarchical.IllegalSelectorAnnotationErrorCode,
+			fake.FileObject(clusterSelectorObject("prod-cluster", "env", "prod"),
+				"clusterregistry/cs.yaml"),
+			fake.NamespaceSelector(inlineClusterSelectorAnnotation("prod-cluster")),
 		),
 		parsertest.Failure("Namespace-scoped object in cluster/ dir",
 			validation.IncorrectTopLevelDirectoryErrorCode,
@@ -506,8 +513,12 @@ func namespaceSelectorAnnotation(name string) core.MetaMutator {
 	return core.Annotation(v1.NamespaceSelectorAnnotationKey, name)
 }
 
-func clusterSelectorAnnotation(value string) core.MetaMutator {
-	return core.Annotation(v1.ClusterSelectorAnnotationKey, value)
+func legacyClusterSelectorAnnotation(value string) core.MetaMutator {
+	return core.Annotation(v1.LegacyClusterSelectorAnnotationKey, value)
+}
+
+func inlineClusterSelectorAnnotation(clusterName string) core.MetaMutator {
+	return core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, clusterName)
 }
 
 func cluster(name string, opts ...core.MetaMutator) ast.FileObject {
@@ -543,14 +554,14 @@ func TestParseClusterSelector(t *testing.T) {
 	prodSelectorObject := func() *v1.ClusterSelector {
 		return clusterSelectorObject(prodSelectorName, "environment", "prod")
 	}
-	prodSelectorAnnotation := clusterSelectorAnnotation(prodSelectorName)
+	prodLegacySelectorAnnotation := legacyClusterSelectorAnnotation(prodSelectorName)
 
 	devSelectorName := "sel-2"
 	devLabel := core.Label("environment", "dev")
 	devSelectorObject := func() *v1.ClusterSelector {
 		return clusterSelectorObject(devSelectorName, "environment", "dev")
 	}
-	devSelectorAnnotation := clusterSelectorAnnotation(devSelectorName)
+	devLegacySelectorAnnotation := legacyClusterSelectorAnnotation(devSelectorName)
 
 	test := parsertest.VetTest(
 		parsertest.Success("Resource without selector always exists 1",
@@ -566,10 +577,10 @@ func TestParseClusterSelector(t *testing.T) {
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/bar"),
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(prodCluster),
+
 		parsertest.Success("Resource without selector always exists 2",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
@@ -583,11 +594,11 @@ func TestParseClusterSelector(t *testing.T) {
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/bar"),
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(devCluster),
-		parsertest.Success("Namespace resource selected",
+
+		parsertest.Success("Namespace resource selected with legacy annotation",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml"),
@@ -595,16 +606,30 @@ func TestParseClusterSelector(t *testing.T) {
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					testoutput.DepthLabels("bar")),
 				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
-					prodSelectorAnnotation, testoutput.Source("namespaces/bar/rolebinding.yaml")),
+					prodLegacySelectorAnnotation, testoutput.Source("namespaces/bar/rolebinding.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/bar"),
-			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodLegacySelectorAnnotation),
 		).ForCluster(prodCluster),
-		parsertest.Success("Namespace resource not selected",
+
+		parsertest.Success("Namespace resource selected with inline annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster),
+					testoutput.Source("namespaces/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("bar")),
+				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
+					inlineClusterSelectorAnnotation(prodCluster), testoutput.Source("namespaces/bar/rolebinding.yaml")),
+			),
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(prodCluster),
+
+		parsertest.Success("Namespace resource not selected with legacy annotation",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml"),
@@ -615,13 +640,25 @@ func TestParseClusterSelector(t *testing.T) {
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/bar"),
-			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", prodLegacySelectorAnnotation),
 		).ForCluster(devCluster),
-		parsertest.Success("Namespace selected",
+
+		parsertest.Success("Namespace resource not selected with inline annotation",
 			testoutput.NewAllConfigs(
-				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), prodSelectorAnnotation,
+				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
+					testoutput.Source("namespaces/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("bar")),
+			),
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml", inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(devCluster),
+
+		parsertest.Success("Namespace selected with legacy annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), prodLegacySelectorAnnotation,
 					testoutput.Source("namespaces/bar/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -632,46 +669,79 @@ func TestParseClusterSelector(t *testing.T) {
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
-			fake.Namespace("namespaces/bar", prodSelectorAnnotation),
+			fake.Namespace("namespaces/bar", prodLegacySelectorAnnotation),
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(prodCluster),
-		parsertest.Success("Namespace not selected",
+
+		parsertest.Success("Namespace selected with inline annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.InCluster(prodCluster), inlineClusterSelectorAnnotation(prodCluster),
+					testoutput.Source("namespaces/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("bar")),
+				fake.RoleBinding(core.Namespace("bar"), testoutput.InCluster(prodCluster),
+					testoutput.Source("namespaces/bar/rolebinding.yaml")),
+			),
+			fake.Namespace("namespaces/bar", inlineClusterSelectorAnnotation(prodCluster)),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(prodCluster),
+
+		parsertest.Success("Namespace not selected with legacy annotation",
 			testoutput.NewAllConfigs(),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
-			fake.Namespace("namespaces/bar", prodSelectorAnnotation),
+			fake.Namespace("namespaces/bar", prodLegacySelectorAnnotation),
 			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
 		).ForCluster(devCluster),
-		parsertest.Success("Cluster resource selected",
+
+		parsertest.Success("Namespace not selected with inline annotation",
+			testoutput.NewAllConfigs(),
+			fake.Namespace("namespaces/bar", inlineClusterSelectorAnnotation(prodCluster)),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding.yaml"),
+		).ForCluster(devCluster),
+
+		parsertest.Success("Cluster resource selected with legacy annotation",
 			testoutput.NewAllConfigs(
-				fake.ClusterRoleBinding(prodSelectorAnnotation, testoutput.InCluster(prodCluster),
+				fake.ClusterRoleBinding(prodLegacySelectorAnnotation, testoutput.InCluster(prodCluster),
 					testoutput.Source("cluster/crb.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
-			fake.ClusterRoleBinding(prodSelectorAnnotation),
+			fake.ClusterRoleBinding(prodLegacySelectorAnnotation),
 		).ForCluster(prodCluster),
-		parsertest.Success("Cluster resource not selected",
+
+		parsertest.Success("Cluster resource selected with inline annotation",
+			testoutput.NewAllConfigs(
+				fake.ClusterRoleBinding(inlineClusterSelectorAnnotation(prodCluster), testoutput.InCluster(prodCluster),
+					testoutput.Source("cluster/crb.yaml")),
+			),
+			fake.ClusterRoleBinding(inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(prodCluster),
+
+		parsertest.Success("Cluster resource not selected with legacy annotation",
 			testoutput.NewAllConfigs(),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
-			fake.ClusterRoleBinding(prodSelectorAnnotation),
+			fake.ClusterRoleBinding(prodLegacySelectorAnnotation),
 		).ForCluster(devCluster),
-		parsertest.Success("Abstract Namespace resource selected",
+
+		parsertest.Success("Cluster resource not selected with inline annotation",
+			testoutput.NewAllConfigs(),
+			fake.ClusterRoleBinding(inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(devCluster),
+
+		parsertest.Success("Abstract Namespace resource selected with legacy annotation",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/foo/bar", testoutput.InCluster(prodCluster),
 					testoutput.Source("namespaces/foo/bar/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					testoutput.DepthLabels("foo/bar")),
-				fake.ConfigMapAtPath("", core.Namespace("bar"), prodSelectorAnnotation,
+				fake.ConfigMapAtPath("", core.Namespace("bar"), prodLegacySelectorAnnotation,
 					testoutput.InCluster(prodCluster), testoutput.Source("namespaces/foo/configmap.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
@@ -679,44 +749,104 @@ func TestParseClusterSelector(t *testing.T) {
 			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
 				kinds.ConfigMap().GroupVersion(), kinds.ConfigMap().Kind)),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/foo/bar"),
-			fake.ConfigMapAtPath("namespaces/foo/configmap.yaml", prodSelectorAnnotation),
+			fake.ConfigMapAtPath("namespaces/foo/configmap.yaml", prodLegacySelectorAnnotation),
 		).ForCluster(prodCluster),
-		parsertest.Success("Colliding resources selected to different clusters may coexist",
+
+		parsertest.Success("Abstract Namespace resource selected with inline annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/foo/bar", testoutput.InCluster(prodCluster),
+					testoutput.Source("namespaces/foo/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("foo/bar")),
+				fake.ConfigMapAtPath("", core.Namespace("bar"), inlineClusterSelectorAnnotation(prodCluster),
+					testoutput.InCluster(prodCluster), testoutput.Source("namespaces/foo/configmap.yaml")),
+			),
+			fake.HierarchyConfig(fake.HierarchyConfigResource(v1.HierarchyModeInherit,
+				kinds.ConfigMap().GroupVersion(), kinds.ConfigMap().Kind)),
+			fake.Namespace("namespaces/foo/bar"),
+			fake.ConfigMapAtPath("namespaces/foo/configmap.yaml", inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(prodCluster),
+
+		parsertest.Success("Colliding resources selected to different clusters may coexist with legacy annotation",
 			testoutput.NewAllConfigs(
 				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
 					testoutput.Source("namespaces/bar/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					testoutput.DepthLabels("bar")),
-				fake.RoleBinding(core.Namespace("bar"), devSelectorAnnotation,
+				fake.RoleBinding(core.Namespace("bar"), devLegacySelectorAnnotation,
 					testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding-2.yaml")),
 			),
 			cluster(prodCluster, prodLabel),
 			cluster(devCluster, devLabel),
 			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
 			fake.FileObject(devSelectorObject(), "clusterregistry/cs.yaml"),
-
 			fake.Namespace("namespaces/bar"),
-			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", prodSelectorAnnotation),
-			fake.RoleBindingAtPath("namespaces/bar/rolebinding-2.yaml", devSelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", prodLegacySelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-2.yaml", devLegacySelectorAnnotation),
 		).ForCluster(devCluster),
+
+		parsertest.Success("Colliding resources selected to different clusters may coexist with inline annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
+					testoutput.Source("namespaces/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("bar")),
+				fake.RoleBinding(core.Namespace("bar"), inlineClusterSelectorAnnotation(devCluster),
+					testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding-2.yaml")),
+			),
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", inlineClusterSelectorAnnotation(prodCluster)),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-2.yaml", inlineClusterSelectorAnnotation(devCluster)),
+		).ForCluster(devCluster),
+
+		parsertest.Success("Colliding resources selected to different clusters may coexist with mixed legacy annotation and inline annotation",
+			testoutput.NewAllConfigs(
+				fake.Namespace("namespaces/bar", testoutput.InCluster(devCluster),
+					testoutput.Source("namespaces/bar/namespace.yaml"),
+					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
+					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
+					testoutput.DepthLabels("bar")),
+				fake.RoleBinding(core.Namespace("bar"), inlineClusterSelectorAnnotation(devCluster),
+					testoutput.InCluster(devCluster), testoutput.Source("namespaces/bar/rolebinding-2.yaml")),
+			),
+			cluster(prodCluster, prodLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", prodLegacySelectorAnnotation),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-2.yaml", inlineClusterSelectorAnnotation(devCluster)),
+		).ForCluster(devCluster),
+
+		parsertest.Failure(
+			"legacy annotation and inline annotation coexist on the same object",
+			selectors.ClusterSelectorAnnotationConflictErrorCode,
+			cluster(prodCluster, prodLabel),
+			fake.FileObject(prodSelectorObject(), "clusterregistry/cs.yaml"),
+			fake.Namespace("namespaces/bar"),
+			fake.RoleBindingAtPath("namespaces/bar/rolebinding-1.yaml", prodLegacySelectorAnnotation, inlineClusterSelectorAnnotation(prodCluster)),
+		).ForCluster(prodCluster),
+
 		parsertest.Failure(
 			"A namespaced object that has a cluster selector annotation for nonexistent cluster is an error",
 			selectors.ObjectHasUnknownSelectorCode,
-			fake.Namespace("namespaces/foo", clusterSelectorAnnotation("does-not-exist")),
+			fake.Namespace("namespaces/foo", legacyClusterSelectorAnnotation("does-not-exist")),
 		),
+
 		parsertest.Failure(
 			"A cluster object that has a cluster selector annotation for nonexistent cluster is an error",
 			selectors.ObjectHasUnknownSelectorCode,
-			fake.ClusterRole(clusterSelectorAnnotation("does-not-exist")),
+			fake.ClusterRole(legacyClusterSelectorAnnotation("does-not-exist")),
 		),
+
 		parsertest.Success("A subdir of cluster/ is ok",
 			testoutput.NewAllConfigs(
 				fake.ClusterRoleBinding(testoutput.Source("cluster/foo/crb.yaml")),
 			),
 			fake.ClusterRoleBindingAtPath("cluster/foo/crb.yaml")),
+
 		parsertest.Success("A subdir of clusterregistry/ is ok",
 			testoutput.NewAllConfigs(),
 			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")),

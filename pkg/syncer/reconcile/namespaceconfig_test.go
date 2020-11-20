@@ -399,13 +399,13 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name: "default namespace is not deleted when namespace config is removed",
 			namespace: namespace(metav1.NamespaceDefault, core.Annotations(
 				map[string]string{
-					v1.ClusterNameAnnotationKey:       "cluster-name",
-					v1.ClusterSelectorAnnotationKey:   "some-selector",
-					v1.NamespaceSelectorAnnotationKey: "some-selector",
-					v1.ResourceManagementKey:          v1.ResourceManagementEnabled,
-					v1.SourcePathAnnotationKey:        "some-path",
-					v1.SyncTokenAnnotationKey:         "syncertest.Token",
-					"some-user-annotation":            "some-annotation-value",
+					v1.ClusterNameAnnotationKey:           "cluster-name",
+					v1.LegacyClusterSelectorAnnotationKey: "some-selector",
+					v1.NamespaceSelectorAnnotationKey:     "some-selector",
+					v1.ResourceManagementKey:              v1.ResourceManagementEnabled,
+					v1.SourcePathAnnotationKey:            "some-path",
+					v1.SyncTokenAnnotationKey:             "syncertest.Token",
+					"some-user-annotation":                "some-annotation-value",
 				},
 			),
 				core.Labels(
@@ -445,13 +445,13 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name: "kube-system namespace is not deleted when namespace config is removed",
 			namespace: namespace(metav1.NamespaceSystem, core.Annotations(
 				map[string]string{
-					v1.ClusterNameAnnotationKey:       "cluster-name",
-					v1.ClusterSelectorAnnotationKey:   "some-selector",
-					v1.NamespaceSelectorAnnotationKey: "some-selector",
-					v1.ResourceManagementKey:          v1.ResourceManagementEnabled,
-					v1.SourcePathAnnotationKey:        "some-path",
-					v1.SyncTokenAnnotationKey:         "syncertest.Token",
-					"some-user-annotation":            "some-annotation-value",
+					v1.ClusterNameAnnotationKey:           "cluster-name",
+					v1.LegacyClusterSelectorAnnotationKey: "some-selector",
+					v1.NamespaceSelectorAnnotationKey:     "some-selector",
+					v1.ResourceManagementKey:              v1.ResourceManagementEnabled,
+					v1.SourcePathAnnotationKey:            "some-path",
+					v1.SyncTokenAnnotationKey:             "syncertest.Token",
+					"some-user-annotation":                "some-annotation-value",
 				},
 			),
 				core.Labels(

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
@@ -15,9 +16,10 @@ import (
 // inputAnnotations is a map of annotations that are valid to exist on objects when imported from
 // the filesystem.
 var inputAnnotations = map[string]bool{
-	v1.NamespaceSelectorAnnotationKey: true,
-	v1.ClusterSelectorAnnotationKey:   true,
-	v1.ResourceManagementKey:          true,
+	v1.NamespaceSelectorAnnotationKey:         true,
+	v1.LegacyClusterSelectorAnnotationKey:     true,
+	v1alpha1.ClusterNameSelectorAnnotationKey: true,
+	v1.ResourceManagementKey:                  true,
 }
 
 // isInputAnnotation returns true if the annotation is a Nomos input annotation.
@@ -27,7 +29,7 @@ func isInputAnnotation(s string) bool {
 
 // hasConfigManagementPrefix returns true if the string begins with the Nomos annotation prefix.
 func hasConfigManagementPrefix(s string) bool {
-	return strings.HasPrefix(s, v1.ConfigManagementPrefix)
+	return strings.HasPrefix(s, v1.ConfigManagementPrefix) || strings.HasPrefix(s, v1alpha1.ConfigSyncPrefix)
 }
 
 // NewAnnotationValidator validates the annotations of every object.
@@ -61,8 +63,8 @@ func IllegalAnnotationDefinitionError(resource id.Resource, annotations []string
 	}
 	a := strings.Join(annotations2, ", ")
 	return illegalAnnotationDefinitionError.
-		Sprintf("Configs MUST NOT declare unsupported annotations starting with %q. "+
+		Sprintf("Configs MUST NOT declare unsupported annotations starting with %q or %q. "+
 			"The config has invalid annotations: %s",
-			v1.ConfigManagementPrefix, a).
+			v1.ConfigManagementPrefix, v1alpha1.ConfigSyncPrefix, a).
 		BuildWithResources(resource)
 }
