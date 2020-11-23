@@ -74,12 +74,13 @@ push-to-gcr-nomos: image-nomos
 ###################################
 
 .PHONY: clean-deployments-dir
-clean-deployments-dir: $(OUTPUT_DIR)
-	rm $(GEN_DEPLOYMENT_DIR)/*
+__clean-deployments-dir:
+	rm -rf $(GEN_DEPLOYMENT_DIR)
+	$(MAKE) $(OUTPUT_DIR)
 
 .PHONY: generate-deployments
 generate-deployments: \
-		clean-deployments-dir \
+		__clean-deployments-dir \
 		$(GEN_DEPLOYMENT_DIR)/git-importer.yaml \
 		$(GEN_DEPLOYMENT_DIR)/monitor.yaml \
 		$(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml \
