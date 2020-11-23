@@ -340,10 +340,8 @@ func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deplo
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Name(repoSyncName(rs.Namespace)),
 	)
-
 	for _, mut := range muts {
 		mut(dep)
 	}
-
 	return dep
 }

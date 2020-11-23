@@ -16,7 +16,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -135,6 +134,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
+			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -222,27 +222,6 @@ func TestRootSyncReconciler(t *testing.T) {
 	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, ClusterRoleBinding and Deployment successfully created")
 
-	// Verify status updates.
-	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RootSync).Status
-	wantStatus := v1alpha1.RootSyncStatus{
-		SyncStatus: v1alpha1.SyncStatus{
-			ObservedGeneration: rs.Generation,
-			Reconciler:         rootSyncReconcilerName,
-		},
-		Conditions: []v1alpha1.RootSyncCondition{
-			{
-				Type:    v1alpha1.RootSyncReconciling,
-				Status:  metav1.ConditionTrue,
-				Reason:  "Deployment",
-				Message: "Reconciler deployment was created",
-			},
-		},
-	}
-	ignoreTimes := cmpopts.IgnoreFields(wantStatus.Conditions[0], "LastTransitionTime", "LastUpdateTime")
-	if diff := cmp.Diff(wantStatus, gotStatus, ignoreTimes); diff != "" {
-		t.Errorf("Status diff:\n%s", diff)
-	}
-
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
 	if err := fakeClient.Update(context.Background(), rs); err != nil {
@@ -305,11 +284,9 @@ func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.Name(rootSyncReconcilerName),
 	)
-
 	for _, mut := range muts {
 		mut(dep)
 	}
-
 	return dep
 }
 

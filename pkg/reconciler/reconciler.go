@@ -212,7 +212,6 @@ func updateRootSyncStatus(ctx context.Context, cl client.Client, opts Options) {
 			return
 		}
 
-		rootsync.ClearCondition(&rs, v1alpha1.RootSyncReconciling)
 		rs.Status.Source.Git = v1alpha1.GitStatus{
 			Repo:     opts.GitRepo,
 			Revision: opts.GitRev,

@@ -271,7 +271,8 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 	// Log error if the Reconciling condition does not progress to False before the timeout
 	// expires.
 	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &v1alpha1.RootSync{}, hasRootSyncReconcilingStatus(metav1.ConditionFalse))
+		return nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &v1alpha1.RootSync{},
+			hasRootSyncReconcilingStatus(metav1.ConditionFalse), hasRootSyncStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
 		t.Errorf("RootSync did not finish reconciling: %v", err)
@@ -284,6 +285,19 @@ func hasRootSyncReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate 
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
 			if condition.Type == "Reconciling" && condition.Status != r {
+				return fmt.Errorf("object %q have %q condition status %q; wanted %q", o.GetName(), condition.Type, string(condition.Status), r)
+			}
+		}
+		return nil
+	}
+}
+
+func hasRootSyncStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
+	return func(o core.Object) error {
+		rs := o.(*v1alpha1.RootSync)
+		conditions := rs.Status.Conditions
+		for _, condition := range conditions {
+			if condition.Type == "Stalled" && condition.Status != r {
 				return fmt.Errorf("object %q have %q condition status %q; wanted %q", o.GetName(), condition.Type, string(condition.Status), r)
 			}
 		}
