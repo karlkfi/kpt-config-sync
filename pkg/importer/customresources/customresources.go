@@ -26,7 +26,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 
 		crd, err := clusterconfig.AsCRD(cr.Object)
 		if err != nil {
-			errs = status.Append(errs, status.PathWrapError(err, cr.SlashPath()))
+			errs = status.Append(errs, err)
 			continue
 		}
 		gk := schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}
@@ -46,7 +46,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 
 		crd, err := gatekeeper.ConstraintTemplateCRD(f.Object)
 		if err != nil {
-			errs = status.Append(errs, status.PathWrapError(err, f.SlashPath()))
+			errs = status.Append(errs, clusterconfig.MalformedCRDError(err, f.Relative))
 			continue
 		}
 

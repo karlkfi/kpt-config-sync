@@ -26,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -297,6 +298,9 @@ func Generate() AllExamples {
 	result.add(vet.InvalidScopeValue(p, "rbac      other     Role", "other"))
 	result.add(vet.UnableToReadAPIResources(p, errors.New("missing file permissions")))
 	result.add(vet.MissingAPIGroup(p))
+
+	// 1065
+	result.add(clusterconfig.MalformedCRDError(errors.New("malformed CRD"), cmpath.Relative{}))
 
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))

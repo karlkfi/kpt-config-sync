@@ -21,7 +21,7 @@ func illegalCRD(o ast.FileObject) status.Error {
 
 	crd, err := clusterconfig.AsCRD(o.Object)
 	if err != nil {
-		return status.ResourceWrap(err, "could not deserialize CRD", &o)
+		return err
 	}
 	if crd.Spec.Group == v1.SchemeGroupVersion.Group {
 		return UnsupportedObjectError(&o)

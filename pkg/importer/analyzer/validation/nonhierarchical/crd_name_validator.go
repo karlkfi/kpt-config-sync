@@ -35,9 +35,8 @@ func validateCRDName(o ast.FileObject) status.Error {
 
 	crd, err := clusterconfig.AsCRD(o.Object)
 	if err != nil {
-		return status.ResourceWrap(err, "could not deserialize CRD", &o)
+		return err
 	}
-
 	expectedName := fmt.Sprintf("%s.%s", crd.Spec.Names.Plural, crd.Spec.Group)
 	if crd.Name != expectedName {
 		return InvalidCRDNameError(&o, expectedName)

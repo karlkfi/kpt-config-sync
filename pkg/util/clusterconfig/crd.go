@@ -5,6 +5,8 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -46,16 +48,31 @@ func GetCRDs(decoder decode.Decoder, clusterConfig *v1.ClusterConfig) ([]*v1beta
 	return crds, nil
 }
 
+// MalformedCRDErrorCode is the error code for MalformedCRDError.
+const MalformedCRDErrorCode = "1065"
+
+var malformedCRDErrorBuilder = status.NewErrorBuilder(MalformedCRDErrorCode)
+
+// MalformedCRDError reports a malformed CRD.
+func MalformedCRDError(err error, path id.Path) status.Error {
+	return malformedCRDErrorBuilder.Wrap(err).Sprint("malformed CustomResourceDefinition").BuildWithPaths(path)
+}
+
 // AsCRD returns the typed version of the CustomResourceDefinition passed in.
-func AsCRD(o core.Object) (*v1beta1.CustomResourceDefinition, error) {
+func AsCRD(o core.Object) (*v1beta1.CustomResourceDefinition, status.Error) {
 	if crd, ok := o.(*v1beta1.CustomResourceDefinition); ok {
 		return crd, nil
 	}
-	// TODO(131853779): Should be able to always parse the typed CRD.
+
+	relativePath := cmpath.RelativeSlash(id.GetSourceAnnotation(o))
 	if crd, ok := o.(*unstructured.Unstructured); ok {
-		return unstructuredToCRD(crd)
+		crd, err := unstructuredToCRD(crd)
+		if err != nil {
+			return nil, MalformedCRDError(err, relativePath)
+		}
+		return crd, nil
 	}
-	return nil, fmt.Errorf("could not generate a CRD from %T: %#v", o, o)
+	return nil, MalformedCRDError(fmt.Errorf("could not generate a CRD from %T: %#v", o, o), relativePath)
 }
 
 // unstructuredToCRD returns the typed version of the CustomResourceDefinition of the Unstructured object.
