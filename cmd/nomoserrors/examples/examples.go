@@ -49,7 +49,7 @@ func Generate() AllExamples {
 	result := make(AllExamples)
 
 	// 1000
-	result.add(status.InternalError("we made a mistake"))
+	result.markDeprecated("1000")
 
 	// 1001 is Deprecated.
 	result.markDeprecated("1001")
@@ -333,6 +333,9 @@ func Generate() AllExamples {
 
 	// 2012
 	result.add(status.MultipleSingletonsError(fake.Repo(), fake.Repo()))
+
+	// 9998
+	result.add(status.InternalError("we made a mistake"))
 
 	// 9999
 	result.add(status.UndocumentedError("error not yet documented"))

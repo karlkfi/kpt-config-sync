@@ -1,7 +1,7 @@
 package status
 
 // InternalErrorCode is the error code for Internal.
-const InternalErrorCode = "1000"
+const InternalErrorCode = "9998"
 
 // InternalErrorBuilder allows creating complex internal errors.
 var InternalErrorBuilder = NewErrorBuilder(InternalErrorCode).Sprint("internal error")
