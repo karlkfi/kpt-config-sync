@@ -101,8 +101,8 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	case len(opts.NamespaceRepos) > 0:
 		// We're in MonoRepo mode and we aren't skipping this test, but there are
 		// Namespace repos specified.
-		t.Fatal("Namespace Repos specified, but running in MonRepo mode. " +
-			"Did you forget ntopts.SkipMonRepo?")
+		t.Fatal("Namespace Repos specified, but running in MonoRepo mode. " +
+			"Did you forget ntopts.SkipMonoRepo?")
 	}
 
 	if !*e2e.E2E {

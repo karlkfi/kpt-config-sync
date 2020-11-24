@@ -209,15 +209,8 @@ func TestBats(t *testing.T) {
 			),
 		},
 		{fileName: "operator-no-policy-dir.bats"},
-		{
-			fileName: "per_cluster_addressing.bats",
-			skipMultiRepo: testNums(
-				1, // TODO(b/169155915): run again once polling period is lower
-				2, // TODO(b/169155915): run again once polling period is lower
-				5, // TODO(b/169155915): run again once polling period is lower
-				6, // TODO(b/169155915): run again once polling period is lower
-			),
-		},
+		// Converted to cluster_selectors_test.go.
+		// {fileName: "per_cluster_addressing.bats"},
 		// Converted to preserve_fields_test.go.
 		// {fileName: "preserve_fields.bats"},
 		{

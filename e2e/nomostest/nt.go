@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
@@ -147,6 +148,13 @@ func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("deleting %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
+}
+
+// DeleteAllOf is identical to DeleteAllOf defined for client.Client, but without requiring Context.
+func (nt *NT) DeleteAllOf(obj core.Object, opts ...client.DeleteAllOfOption) error {
+	FailIfUnknown(nt.T, nt.scheme, obj)
+	nt.T.Logf("deleting all of %T", obj)
+	return nt.Client.DeleteAllOf(nt.Context, obj, opts...)
 }
 
 // MergePatch uses the object to construct a merge patch for the fields provided.
@@ -350,6 +358,33 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 		nt.RenewClient()
 	}
 	return err
+}
+
+// WaitForRepoImportErrorCode waits until the given error code is present on the Repo resource.
+func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("Repo error code %s", code),
+		func() error {
+			r := &v1.Repo{}
+			err := nt.Get("repo", "", r)
+
+			if err != nil {
+				return err
+			}
+			errs := r.Status.Import.Errors
+			if len(errs) == 0 {
+				return errors.Errorf("no errors present")
+			}
+			var codes []string
+			for _, e := range errs {
+				if e.Code == fmt.Sprintf("KNV%s", code) {
+					return nil
+				}
+				codes = append(codes, e.Code)
+			}
+			return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
+		},
+		opts...,
+	)
 }
 
 // WaitForRootSyncSourceErrorCode waits until the given error code is present on the RootSync resource

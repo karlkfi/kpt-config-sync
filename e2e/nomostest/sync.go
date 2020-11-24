@@ -7,6 +7,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RepoHasStatusSyncLatestToken ensures ACM has reported all objects were
@@ -96,6 +97,14 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 			return err
 		}
 
+		// Ensure the reconciler is ready (no true condition).
+		for i, condition := range rs.Status.Conditions {
+			if condition.Status == metav1.ConditionTrue {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, string(jsn))
+			}
+		}
+
 		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
 			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
 		}
@@ -121,6 +130,14 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		jsn, err := json.MarshalIndent(rs, "", "  ")
 		if err != nil {
 			return err
+		}
+
+		// Ensure the reconciler is ready (no true condition).
+		for i, condition := range rs.Status.Conditions {
+			if condition.Status == metav1.ConditionTrue {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, string(jsn))
+			}
 		}
 
 		if errCount := len(rs.Status.Source.Errors); errCount > 0 {

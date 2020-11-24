@@ -182,22 +182,23 @@ func clusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject
 	return FileObject(ClusterSelectorObject(opts...), path)
 }
 
-// Cluster returns a K8S Cluster resource in a FileObject.
-func Cluster(opts ...core.MetaMutator) ast.FileObject {
-	obj := &clusterregistry.Cluster{
-		TypeMeta: ToTypeMeta(kinds.Cluster()),
-	}
+// ClusterObject returns a fake Cluster object
+func ClusterObject(opts ...core.MetaMutator) *clusterregistry.Cluster {
+	obj := &clusterregistry.Cluster{TypeMeta: ToTypeMeta(kinds.Cluster())}
 	defaultMutate(obj)
 	mutate(obj, opts...)
 
-	return FileObject(obj, "clusterregistry/cluster.yaml")
+	return obj
+}
+
+// Cluster returns a K8S Cluster resource in a FileObject.
+func Cluster(opts ...core.MetaMutator) ast.FileObject {
+	return ClusterAtPath("clusterregistry/cluster.yaml", opts...)
 }
 
 // ClusterAtPath returns a Cluster at the specified path.
 func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	result := Cluster(opts...)
-	result.Relative = cmpath.RelativeSlash(path)
-	return result
+	return FileObject(ClusterObject(opts...), path)
 }
 
 // ConfigManagement returns a fake ConfigManagement.
