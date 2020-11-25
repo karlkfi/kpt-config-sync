@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,7 +32,7 @@ func (r *Resources) Update(objects []core.Object) status.Error {
 	for _, obj := range objects {
 		if obj == nil {
 			glog.Warning("Resources received nil declared resource")
-			// TODO(b/162601559): Increment internal error metric here
+			metrics.RecordInternalError("parser")
 			continue
 		}
 		id := core.IDOf(obj)

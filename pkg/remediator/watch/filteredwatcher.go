@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
@@ -162,7 +163,7 @@ func (w *filteredWatcher) handle(event watch.Event) string {
 	object, err := core.ObjectOf(event.Object)
 	if err != nil {
 		glog.Warningf("Received non core.Object in watch event: %v", err)
-		// TODO(b/162601559): Increment internal error metric here
+		metrics.RecordInternalError("remediator")
 		return ""
 	}
 	// filter objects.

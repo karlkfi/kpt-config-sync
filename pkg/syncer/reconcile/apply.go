@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
+	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -83,12 +84,14 @@ func NewApplier(cfg *rest.Config, client *syncerclient.Client) (Applier, error) 
 func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.Error) {
 	err := c.create(ctx, intendedState)
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
+	m.RecordApplyOperation(ctx, "create", m.StatusTagKey(err), intendedState.GroupVersionKind())
 
 	if err != nil {
 		return false, err
 	}
 	if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
+			m.RecordResourceFight(ctx, "create", intendedState.GroupVersionKind())
 			glog.Warningf("Fight detected on create of %s.", description(intendedState))
 		}
 	}
@@ -99,6 +102,8 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 func (c *clientApplier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
 	patch, err := c.update(ctx, intendedState, currentState)
 	metrics.Operations.WithLabelValues("update", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
+	m.RecordApplyOperation(ctx, "update", m.StatusTagKey(err), intendedState.GroupVersionKind())
+
 	switch {
 	case apierrors.IsConflict(err):
 		return false, syncerclient.ConflictUpdateOldVersion(err, intendedState)
@@ -112,6 +117,7 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	if updated {
 		if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
 			if c.fLogger.logFight(time.Now(), fight) {
+				m.RecordResourceFight(ctx, "update", intendedState.GroupVersionKind())
 				glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
 			}
 		}
@@ -129,6 +135,9 @@ func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Uns
 		}
 		return obj, nil
 	})
+	metrics.Operations.WithLabelValues("update", u.GetKind(), metrics.StatusLabel(err)).Inc()
+	m.RecordApplyOperation(ctx, "update", m.StatusTagKey(err), u.GroupVersionKind())
+
 	return changed, err
 }
 
@@ -136,12 +145,14 @@ func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Uns
 func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructured) (bool, status.Error) {
 	err := c.client.Delete(ctx, obj)
 	metrics.Operations.WithLabelValues("delete", obj.GetKind(), metrics.StatusLabel(err)).Inc()
+	m.RecordApplyOperation(ctx, "delete", m.StatusTagKey(err), obj.GroupVersionKind())
 
 	if err != nil {
 		return false, err
 	}
 	if fight := c.fights.markUpdated(time.Now(), obj); fight != nil {
 		if c.fLogger.logFight(time.Now(), fight) {
+			m.RecordResourceFight(ctx, "delete", obj.GroupVersionKind())
 			glog.Warningf("Fight detected on delete of %s.", description(obj))
 		}
 	}
@@ -299,6 +310,7 @@ func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name
 	_, err := resClient.Patch(ctx, name, patchType, patch, metav1.PatchOptions{})
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
+	m.RecordAPICallDuration(ctx, "patch", m.StatusTagKey(err), gvk, start)
 	return err
 }
 

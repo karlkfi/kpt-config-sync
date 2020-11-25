@@ -38,8 +38,8 @@ func RecordLastSync(ctx context.Context, scope string, timestamp time.Time) {
 	stats.Record(tagContext, measurement)
 }
 
-// RecordParseErrorsAndDuration produces measurements for the ParseDuration and ParseErrors views.
-func RecordParseErrorsAndDuration(ctx context.Context, scope string, errs status.MultiError, startTime time.Time) {
+// RecordParseErrorAndDuration produces measurements for the ParseDuration and ParseErrors views.
+func RecordParseErrorAndDuration(ctx context.Context, scope string, errs status.MultiError, startTime time.Time) {
 	durationTagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, StatusTagKey(errs)))
 	durationMeasurement := ParseDuration.M(time.Since(startTime).Seconds())
 	stats.Record(durationTagCtx, durationMeasurement)
@@ -58,8 +58,8 @@ func RecordDeclaredResources(ctx context.Context, scope string, numResources int
 	stats.Record(tagContext, measurement)
 }
 
-// RecordApplyOperations produces a measurement for the ApplyOperations view.
-func RecordApplyOperations(ctx context.Context, operation, status string, gvk schema.GroupVersionKind) {
+// RecordApplyOperation produces a measurement for the ApplyOperations view.
+func RecordApplyOperation(ctx context.Context, operation, status string, gvk schema.GroupVersionKind) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyOperation, operation), tag.Upsert(KeyType, gvk.Kind), tag.Upsert(KeyStatus, status))
 	measurement := ApplyOperations.M(1)
 	stats.Record(tagCtx, measurement)
@@ -76,8 +76,8 @@ func RecordLastApplyAndDuration(ctx context.Context, scope string, status string
 	stats.Record(tagCtx, durationMeasurement, lastApplyMeasurement)
 }
 
-// RecordResourceFights produces measurements for the ResourceFights view.
-func RecordResourceFights(ctx context.Context, operation string, gvk schema.GroupVersionKind) {
+// RecordResourceFight produces measurements for the ResourceFights view.
+func RecordResourceFight(ctx context.Context, operation string, gvk schema.GroupVersionKind) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyOperation, operation), tag.Upsert(KeyType, gvk.Kind))
 	measurement := ResourceFights.M(1)
 	stats.Record(tagCtx, measurement)
@@ -90,8 +90,8 @@ func RecordWatches(ctx context.Context, scope string, gvk schema.GroupVersionKin
 	stats.Record(tagCtx, measurement)
 }
 
-// RecordWatchManagerUpdatesAndDuration produces measurements for the WatchManagerUpdates and WatchManagerUpdatesDuration views.
-func RecordWatchManagerUpdatesAndDuration(ctx context.Context, scope string, status string, startTime time.Time) {
+// RecordWatchManagerUpdateAndDuration produces measurements for the WatchManagerUpdates and WatchManagerUpdatesDuration views.
+func RecordWatchManagerUpdateAndDuration(ctx context.Context, scope string, status string, startTime time.Time) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, status))
 
 	updatesMeasurement := WatchManagerUpdates.M(1)
@@ -107,15 +107,15 @@ func RecordRemediateDuration(ctx context.Context, status string, gvk schema.Grou
 	stats.Record(tagCtx, measurement)
 }
 
-// RecordResourceConflicts produces measurements for the ResourceConflicts view.
-func RecordResourceConflicts(ctx context.Context, gvk schema.GroupVersionKind) {
+// RecordResourceConflict produces measurements for the ResourceConflicts view.
+func RecordResourceConflict(ctx context.Context, gvk schema.GroupVersionKind) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyType, gvk.Kind))
 	measurement := ResourceConflicts.M(1)
 	stats.Record(tagCtx, measurement)
 }
 
-// RecordInternalErrors produces measurements for the InternalErrors view.
-func RecordInternalErrors(source string) {
+// RecordInternalError produces measurements for the InternalErrors view.
+func RecordInternalError(source string) {
 	tagCtx, _ := tag.New(context.Background(), tag.Upsert(KeySource, source))
 	measurement := InternalErrors.M(1)
 	stats.Record(tagCtx, measurement)

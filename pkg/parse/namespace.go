@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/vet"
 
 	"github.com/golang/glog"
@@ -31,6 +32,7 @@ func NewNamespaceRunner(clusterName string, scope declared.Scope, fileReader fil
 			files:            files{FileSource: fs},
 			parser:           NewNamespace(fileReader, dc, scope),
 			updater: updater{
+				scope:      scope,
 				resources:  resources,
 				applier:    app,
 				remediator: rem,
@@ -92,14 +94,16 @@ func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 	return &state, nil
 }
 
-func (p *namespace) parseSource(state *gitState) ([]core.Object, status.MultiError) {
+func (p *namespace) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
 	filePaths := filesystem.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,
 		Files:     state.files,
 	}
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	start := time.Now()
 	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
+	metrics.RecordParseErrorAndDuration(ctx, v1alpha1.RepoSyncName, err, start)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +123,7 @@ func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiErro
 		return nil
 	}
 
-	cos, err := p.parseSource(state)
+	cos, err := p.parseSource(ctx, state)
 	if err != nil {
 		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
 			glog.Errorf("Failed to set source status: %v", err2)
@@ -176,11 +180,13 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 			return nil
 		}
 	}
+	cse := status.ToCSE(errs)
 	// If we weren't able to get the commit hash, this replaces the value with
 	// empty string.
 	rs.Status.Source.Commit = state.commit
 	// Replace the previous set of errors getting the git state with the current set.
-	rs.Status.Source.Errors = status.ToCSE(errs)
+	rs.Status.Source.Errors = cse
+	metrics.RecordReconcilerErrors(ctx, v1alpha1.RepoSyncName, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return errors.Wrap(err, "failed to update RepoSync source status from parser")
@@ -201,9 +207,14 @@ func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs statu
 		return nil
 	}
 
+	now := metav1.Now()
+	cse := status.ToCSE(errs)
 	rs.Status.Sync.Commit = commit
-	rs.Status.Sync.Errors = status.ToCSE(errs)
-	rs.Status.Sync.LastUpdate = metav1.Now()
+	rs.Status.Sync.Errors = cse
+	rs.Status.Sync.LastUpdate = now
+
+	metrics.RecordReconcilerErrors(ctx, v1alpha1.RepoSyncName, "sync", len(cse))
+	metrics.RecordLastSync(ctx, v1alpha1.RootSyncName, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return errors.Wrap(err, "failed to update RepoSync sync status from parser")

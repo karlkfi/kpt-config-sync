@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,9 +53,11 @@ func NewRootSyncReconciler(clusterName string, pollingPeriod time.Duration, clie
 func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controllerruntime.Result, error) {
 	ctx := context.TODO()
 	log := r.log.WithValues("rootsync", req.NamespacedName)
+	start := time.Now()
 
 	var rs v1alpha1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -70,6 +73,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// We intentionally overwrite the previous error here since we do not want
 		// to return it to the controller runtime.
 		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, err
 	}
 
@@ -79,6 +83,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// We intentionally overwrite the previous error here since we do not want
 		// to return it to the controller runtime.
 		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, err
 	}
 	log.V(2).Info("secret found, proceeding with installation")
@@ -89,6 +94,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
@@ -97,6 +103,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
@@ -105,6 +112,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update ClusterRoleBinding")
 		rootsync.SetStalled(&rs, "ClusterRoleBinding", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "ClusterRoleBinding reconcile failed")
 	}
 
@@ -124,6 +132,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update Deployment")
 		rootsync.SetStalled(&rs, "Deployment", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 	if op == controllerutil.OperationResultNone {
@@ -169,6 +178,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	err = r.updateStatus(ctx, &rs, log)
+	metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
 	return controllerruntime.Result{}, err
 }
 

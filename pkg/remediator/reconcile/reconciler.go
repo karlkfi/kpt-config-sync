@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -93,6 +94,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		return err
 	default:
 		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
+		metrics.RecordInternalError("remediator")
 		return status.InternalErrorf("diff type not supported: %v", t)
 	}
 }

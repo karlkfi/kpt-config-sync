@@ -1,6 +1,7 @@
 package declared
 
 import (
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
@@ -26,4 +27,13 @@ func ValidateScope(s string) error {
 		return status.InternalErrorf("invalid scope %q: %v", s, errs)
 	}
 	return nil
+}
+
+// ScopeName returns the RootSync CR name if the passed Scope is the Root,
+// otherwise it returns the RepoSync CR name.
+func ScopeName(scope Scope) string {
+	if scope == RootReconciler {
+		return v1alpha1.RootSyncName
+	}
+	return v1alpha1.RepoSyncName
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/pkg/errors"
@@ -52,9 +53,11 @@ func NewRepoSyncReconciler(clusterName string, pollingPeriod time.Duration, clie
 func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controllerruntime.Result, error) {
 	ctx := context.TODO()
 	log := r.log.WithValues("reposync", req.NamespacedName)
+	start := time.Now()
 
 	var rs v1alpha1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -71,6 +74,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// We intentionally overwrite the previous error here since we do not want
 		// to return it to the controller runtime.
 		err = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, err
 	}
 
@@ -80,6 +84,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// We intentionally overwrite the previous error here since we do not want
 		// to return it to the controller runtime.
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, nil
 	}
 	log.V(2).Info("secret found, proceeding with installation")
@@ -88,6 +93,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	// existing secret in the reposync.namespace.
 	if err := secret.Put(ctx, &rs, r.client); err != nil {
 		log.Error(err, "RepoSync failed secret creation", "auth", rs.Spec.Auth)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, nil
 	}
 
@@ -97,6 +103,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "ConfigMap reconcile failed")
 	}
 
@@ -105,6 +112,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "ServiceAccount reconcile failed")
 	}
 
@@ -113,6 +121,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update RoleBinding")
 		reposync.SetStalled(&rs, "RoleBinding", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
 	}
 
@@ -132,6 +141,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
 		_ = r.updateStatus(ctx, &rs, log)
+		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
 	if op != controllerutil.OperationResultNone {
@@ -144,6 +154,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	// Since there were no errors, we can clear any previous Stalled condition.
 	reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
 	err = r.updateStatus(ctx, &rs, log)
+	metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 	return controllerruntime.Result{}, err
 }
 

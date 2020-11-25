@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
@@ -32,6 +33,7 @@ func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReade
 		pollingFrequency: pollingFrequency,
 		files:            files{FileSource: fs},
 		updater: updater{
+			scope:      declared.RootReconciler,
 			resources:  resources,
 			applier:    app,
 			remediator: rem,
@@ -100,7 +102,7 @@ func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
 	return &state, nil
 }
 
-func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
+func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
@@ -115,7 +117,9 @@ func (p *root) parseSource(state *gitState) ([]core.Object, status.MultiError) {
 	}
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
+	start := time.Now()
 	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
+	metrics.RecordParseErrorAndDuration(ctx, v1alpha1.RootSyncName, err, start)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +150,7 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 		return nil
 	}
 
-	cos, err := p.parseSource(state)
+	cos, err := p.parseSource(ctx, state)
 	if err != nil {
 		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
 			glog.Errorf("Failed to set source status: %v", err2)
@@ -197,8 +201,11 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 		}
 	}
 
+	cse := status.ToCSE(errs)
 	rs.Status.Source.Commit = state.commit
-	rs.Status.Source.Errors = status.ToCSE(errs)
+	rs.Status.Source.Errors = cse
+
+	metrics.RecordReconcilerErrors(ctx, v1alpha1.RootSyncName, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return errors.Wrap(err, "failed to update RootSync source status from parser")
@@ -217,9 +224,14 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 		return nil
 	}
 
+	now := metav1.Now()
+	cse := status.ToCSE(errs)
 	rs.Status.Sync.Commit = commit
-	rs.Status.Sync.Errors = status.ToCSE(errs)
-	rs.Status.Sync.LastUpdate = metav1.Now()
+	rs.Status.Sync.Errors = cse
+	rs.Status.Sync.LastUpdate = now
+
+	metrics.RecordReconcilerErrors(ctx, v1alpha1.RootSyncName, "sync", len(cse))
+	metrics.RecordLastSync(ctx, v1alpha1.RootSyncName, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return errors.Wrap(err, "failed to update RootSync sync status from parser")

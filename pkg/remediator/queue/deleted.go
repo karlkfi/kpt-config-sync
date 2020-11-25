@@ -3,6 +3,7 @@ package queue
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -23,7 +24,7 @@ func (d *deleted) DeepCopyObject() runtime.Object {
 func MarkDeleted(obj core.Object) core.Object {
 	if obj == nil {
 		glog.Warning("Attempting to mark nil object as deleted")
-		// TODO(b/162601559): Increment internal error metric here
+		metrics.RecordInternalError("remediator")
 		return obj
 	}
 	return &deleted{obj}
@@ -34,7 +35,7 @@ func MarkDeleted(obj core.Object) core.Object {
 func WasDeleted(obj core.Object) bool {
 	if obj == nil {
 		glog.Warning("Attempting to check nil object for WasDeleted")
-		// TODO(b/162601559): Increment internal error metric here
+		metrics.RecordInternalError("remediator")
 		return false
 	}
 	_, wasDeleted := obj.(*deleted)

@@ -10,6 +10,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
+	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/pkg/errors"
@@ -52,6 +53,7 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 	start := time.Now()
 	err := c.Client.Create(ctx, obj)
 	c.recordLatency(start, "Create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "create", m.StatusTagKey(err), obj.GroupVersionKind(), start)
 
 	switch {
 	case apierrors.IsAlreadyExists(err):
@@ -99,6 +101,8 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 	}
 
 	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "delete", m.StatusTagKey(err), obj.GroupVersionKind(), start)
+
 	if err != nil {
 		return status.ResourceWrap(err, "failed to delete", obj)
 	}
@@ -155,6 +159,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		start := time.Now()
 		err = clientUpdateFn(ctx, newObj)
 		c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+		m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GroupVersionKind(), start)
 
 		if err == nil {
 			newV := resourceVersion(newObj)
@@ -195,6 +200,7 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
 	start := time.Now()
 	err := c.Client.Update(ctx, obj)
 	c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GroupVersionKind(), start)
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to update", obj)

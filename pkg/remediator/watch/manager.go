@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -114,6 +115,7 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			// We were watching the type, but no longer have declarations for it.
 			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
+			metrics.RecordWatches(ctx, declared.ScopeName(m.reconciler), gvk, -1)
 		}
 	}
 
@@ -124,6 +126,8 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			// We don't have a watcher for this type, so add a watcher for it.
 			if err := m.startWatcher(ctx, gvk); err != nil {
 				errs = status.Append(errs, err)
+			} else {
+				metrics.RecordWatches(ctx, declared.ScopeName(m.reconciler), gvk, 1)
 			}
 		}
 	}

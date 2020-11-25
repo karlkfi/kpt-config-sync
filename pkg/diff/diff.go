@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -75,7 +76,7 @@ func (d Diff) Operation(manager declared.Scope) Operation {
 		return d.deleteType(manager)
 	default:
 		glog.Warning("Calculated diff for object with no declaration and not on the cluster")
-		// TODO(b/162601559): Increment internal error metric here
+		metrics.RecordInternalError("differ")
 		// Nothing to do; no resource exists.
 		return NoOp
 	}

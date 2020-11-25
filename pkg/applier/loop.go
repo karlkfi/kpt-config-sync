@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
@@ -28,7 +29,10 @@ func (a *Applier) Run(ctx context.Context, resyncPeriod time.Duration, stopChann
 			return
 		case <-ticker.C:
 		}
+		start := time.Now()
 		errs := a.Refresh(ctx)
+		metrics.RecordLastApplyAndDuration(ctx, declared.ScopeName(a.scope), metrics.StatusTagKey(errs), start)
+
 		if errs != nil {
 			glog.Errorf("applier run failed: %v", errs)
 		} else {

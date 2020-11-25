@@ -89,6 +89,7 @@ func TestRoot_Parse(t *testing.T) {
 				opts: opts{
 					parser: &fakeParser{parse: tc.parsed},
 					updater: updater{
+						scope:      declared.RootReconciler,
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,

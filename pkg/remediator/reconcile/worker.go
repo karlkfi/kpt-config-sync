@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -62,14 +63,17 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 		toRemediate = obj
 	}
 
-	if err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate); err != nil {
+	now := time.Now()
+	err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate)
+	metrics.RecordRemediateDuration(ctx, metrics.StatusTagKey(err), obj.GroupVersionKind(), now)
+	if err != nil {
 		// To debug the set of events we've missed, you may need to comment out this
 		// block. Specifically, this makes things smooth for production, but can
 		// hide bugs (for example, if we don't properly process delete events).
 		if err.Code() == syncerclient.ResourceConflictCode {
 			// This means our cached version of the object isn't the same as the one
 			// on the cluster. We need to refresh the cached version.
-			// TODO(b/162601559): Increment resource conflict metric here
+			metrics.RecordResourceConflict(ctx, obj.GroupVersionKind())
 			err := w.refresh(ctx, obj)
 			if err != nil {
 				glog.Errorf("Worker unable to update cached version of %q: %v", core.IDOf(obj), err)
