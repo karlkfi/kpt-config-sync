@@ -28,7 +28,7 @@ func main() {
 		glog.Fatalf("Failed to create manager: %v", err)
 	}
 
-	go service.ServeMetrics()
+	go service.ServePrometheusMetrics(false)
 
 	// Setup all Controllers
 	if err := monitor.AddToManager(mgr); err != nil {

@@ -7,7 +7,9 @@ import (
 
 	"github.com/go-logr/glogr"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -50,6 +52,14 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(glogr.New())
+
+	// Register the OpenCensus views
+	if err := metrics.RegisterReconcilerManagerMetricsViews(); err != nil {
+		setupLog.Error(err, "failed to register OpenCensus views")
+	}
+
+	// Register the Prometheus exporter
+	go service.ServePrometheusMetrics(true)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,

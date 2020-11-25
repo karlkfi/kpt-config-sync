@@ -7,6 +7,7 @@ go 1.15
 replace k8s.io/code-generator => k8s.io/code-generator v0.19.4
 
 require (
+	contrib.go.opencensus.io/exporter/prometheus v0.2.0
 	github.com/GoogleContainerTools/kpt v0.37.1-0.20201202171313-1387f08be4e7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
@@ -17,6 +18,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
 	github.com/spf13/cobra v1.1.1
+	go.opencensus.io v0.22.2
 	golang.org/x/tools v0.0.0-20201119132711-4783bc9bebf0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.4

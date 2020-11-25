@@ -29,6 +29,7 @@ data:
        metadata:
          labels:
            app: reconciler
+           monitored: "true"
        spec:
          serviceAccountName: reconciler
          containers:
