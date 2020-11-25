@@ -164,7 +164,9 @@ func (r *metaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 			}
 			sync.SetGroupVersionKind(kinds.Sync())
 			_, err := r.client.UpdateStatus(ctx, sync, updateFn)
-			mErr = status.Append(mErr, status.APIServerError(err, "could not update sync status"))
+			if err != nil {
+				mErr = status.Append(mErr, status.APIServerError(err, "could not update sync status"))
+			}
 		}
 	}
 

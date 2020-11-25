@@ -344,6 +344,10 @@ func Generate() AllExamples {
 	// 2012
 	result.add(status.MultipleSingletonsError(fake.Repo(), fake.Repo()))
 
+	// 2013
+	result.add(status.InsufficientPermissionErrorBuilder.Sprint("could not create resources").Wrap(
+		errors.New("deployments.apps is forbidden: User 'Bob' cannot create resources")).Build())
+
 	// 9998
 	result.add(status.InternalError("we made a mistake"))
 
