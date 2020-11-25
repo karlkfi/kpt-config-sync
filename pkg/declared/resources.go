@@ -44,6 +44,11 @@ func (r *Resources) Update(objects []core.Object) status.Error {
 		newSet[id] = u
 	}
 
+	previousSet := r.getObjectSet()
+	if err := deletesAllNamespaces(previousSet, newSet); err != nil {
+		return err
+	}
+
 	// Now assign the pointer for the new map to the struct reference in a
 	// threadsafe context. From now on, this map is read-only.
 	r.setObjectSet(newSet)

@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -81,7 +82,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 }
 
 func TestDontDeleteAllNamespaces(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMultiRepo)
+	nt := nomostest.New(t)
 
 	// Test Setup + Preconditions.
 	// Declare two Namespaces.
@@ -105,10 +106,17 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	nt.Root.Remove("acme/namespaces/bar/ns.yaml")
 	nt.Root.CommitAndPush("undeclare all Namespaces")
 
-	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate("repo", "",
-			&v1.Repo{}, repoHasErrors("KNV"+status.EmptySourceErrorCode))
-	})
+	if nt.MultiRepo {
+		_, err = nomostest.Retry(60*time.Second, func() error {
+			return nt.Validate("root-sync", "config-management-system",
+				&v1alpha1.RootSync{}, rootSyncHasErrors(status.EmptySourceErrorCode))
+		})
+	} else {
+		_, err = nomostest.Retry(60*time.Second, func() error {
+			return nt.Validate("repo", "",
+				&v1.Repo{}, repoHasErrors("KNV"+status.EmptySourceErrorCode))
+		})
+	}
 	if err != nil {
 		// Fail since we needn't continue the test if this action wasn't blocked.
 		t.Fatal(err)
@@ -159,42 +167,30 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	}
 }
 
-func TestDeleteAllNamespaces(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+func rootSyncHasErrors(wantCodes ...string) nomostest.Predicate {
+	sort.Strings(wantCodes)
 
-	// Test Setup + Preconditions.
-	// Declare two Namespaces.
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
-	nt.Root.Add("acme/namespaces/bar/ns.yaml", fake.NamespaceObject("bar"))
-	nt.Root.CommitAndPush("declare multiple Namespaces")
-	nt.WaitForRepoSyncs()
-
-	err := nt.Validate("foo", "", &corev1.Namespace{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = nt.Validate("bar", "", &corev1.Namespace{})
-	if err != nil {
-		t.Fatal(err)
+	var wantErrs []v1alpha1.ConfigSyncError
+	for _, code := range wantCodes {
+		wantErrs = append(wantErrs, v1alpha1.ConfigSyncError{Code: code})
 	}
 
-	// Remove the only two declared Namespaces.
-	// We expect this to succeed.
-	nt.Root.Remove("acme/namespaces/foo/ns.yaml")
-	nt.Root.Remove("acme/namespaces/bar/ns.yaml")
-	nt.Root.CommitAndPush("undeclare all Namespaces")
-	nt.WaitForRepoSyncs()
+	return func(o core.Object) error {
+		rs, isRootSync := o.(*v1alpha1.RootSync)
+		if !isRootSync {
+			return nomostest.WrongTypeErr(o, &v1alpha1.RootSync{})
+		}
 
-	_, err = nomostest.Retry(10*time.Second, func() error {
-		// It takes a few seconds for Namespaces to terminate.
-		return nt.ValidateNotFound("foo", "", &corev1.Namespace{})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = nt.ValidateNotFound("bar", "", &corev1.Namespace{})
-	if err != nil {
-		t.Fatal(err)
+		gotErrs := rs.Status.Sync.Errors
+		sort.Slice(gotErrs, func(i, j int) bool {
+			return gotErrs[i].Code < gotErrs[j].Code
+		})
+
+		if diff := cmp.Diff(wantErrs, gotErrs,
+			cmpopts.IgnoreFields(v1alpha1.ConfigSyncError{}, "ErrorMessage")); diff != "" {
+			return errors.New(diff)
+		}
+		return nil
 	}
 }
 

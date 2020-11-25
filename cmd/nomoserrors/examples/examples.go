@@ -8,6 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
@@ -319,6 +320,7 @@ func Generate() AllExamples {
 
 	// 2006
 	result.add(status.EmptySourceError(10, "namespaces"))
+	result.add(declared.DeleteAllNamespacesError([]string{"shipping", "billing"}))
 
 	// 2007
 	result.add(applier.FailedToListResources(errors.New("GVK foo is not available")))
