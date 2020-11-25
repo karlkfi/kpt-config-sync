@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	"time"
 
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -22,15 +21,15 @@ type ReposGetter interface {
 
 // RepoInterface has methods to work with Repo resources.
 type RepoInterface interface {
-	Create(ctx context.Context, repo *v1.Repo, opts metav1.CreateOptions) (*v1.Repo, error)
-	Update(ctx context.Context, repo *v1.Repo, opts metav1.UpdateOptions) (*v1.Repo, error)
-	UpdateStatus(ctx context.Context, repo *v1.Repo, opts metav1.UpdateOptions) (*v1.Repo, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Repo, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.RepoList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Repo, err error)
+	Create(*v1.Repo) (*v1.Repo, error)
+	Update(*v1.Repo) (*v1.Repo, error)
+	UpdateStatus(*v1.Repo) (*v1.Repo, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.Repo, error)
+	List(opts metav1.ListOptions) (*v1.RepoList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Repo, err error)
 	RepoExpansion
 }
 
@@ -47,19 +46,19 @@ func newRepos(c *ConfigmanagementV1Client) *repos {
 }
 
 // Get takes name of the repo, and returns the corresponding repo object, and an error if there is any.
-func (c *repos) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Repo, err error) {
+func (c *repos) Get(name string, options metav1.GetOptions) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Get().
 		Resource("repos").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Repos that match those selectors.
-func (c *repos) List(ctx context.Context, opts metav1.ListOptions) (result *v1.RepoList, err error) {
+func (c *repos) List(opts metav1.ListOptions) (result *v1.RepoList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -69,13 +68,13 @@ func (c *repos) List(ctx context.Context, opts metav1.ListOptions) (result *v1.R
 		Resource("repos").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested repos.
-func (c *repos) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *repos) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -85,84 +84,81 @@ func (c *repos) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Inter
 		Resource("repos").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch(ctx)
+		Watch()
 }
 
 // Create takes the representation of a repo and creates it.  Returns the server's representation of the repo, and an error, if there is any.
-func (c *repos) Create(ctx context.Context, repo *v1.Repo, opts metav1.CreateOptions) (result *v1.Repo, err error) {
+func (c *repos) Create(repo *v1.Repo) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Post().
 		Resource("repos").
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(repo).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Update takes the representation of a repo and updates it. Returns the server's representation of the repo, and an error, if there is any.
-func (c *repos) Update(ctx context.Context, repo *v1.Repo, opts metav1.UpdateOptions) (result *v1.Repo, err error) {
+func (c *repos) Update(repo *v1.Repo) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Put().
 		Resource("repos").
 		Name(repo.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(repo).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *repos) UpdateStatus(ctx context.Context, repo *v1.Repo, opts metav1.UpdateOptions) (result *v1.Repo, err error) {
+
+func (c *repos) UpdateStatus(repo *v1.Repo) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Put().
 		Resource("repos").
 		Name(repo.Name).
 		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(repo).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Delete takes name of the repo and deletes it. Returns an error if one occurs.
-func (c *repos) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *repos) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("repos").
 		Name(name).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *repos) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *repos) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("repos").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
+		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // Patch applies the patch and returns the patched repo.
-func (c *repos) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Repo, err error) {
+func (c *repos) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Repo, err error) {
 	result = &v1.Repo{}
 	err = c.client.Patch(pt).
 		Resource("repos").
-		Name(name).
 		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		Name(name).
 		Body(data).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }

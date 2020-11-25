@@ -154,7 +154,7 @@ func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOpti
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.T.Logf("Applying patch %s", patch)
 	AddTestLabel(obj)
-	return nt.Client.Patch(nt.Context, obj, client.RawPatch(types.MergePatchType, []byte(patch)), opts...)
+	return nt.Client.Patch(nt.Context, obj, client.ConstantPatch(types.MergePatchType, []byte(patch)), opts...)
 }
 
 // MustMergePatch is like MergePatch but will call t.Fatal if the patch fails.

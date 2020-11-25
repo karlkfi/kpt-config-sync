@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	"time"
 
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -22,14 +21,14 @@ type NamespaceSelectorsGetter interface {
 
 // NamespaceSelectorInterface has methods to work with NamespaceSelector resources.
 type NamespaceSelectorInterface interface {
-	Create(ctx context.Context, namespaceSelector *v1.NamespaceSelector, opts metav1.CreateOptions) (*v1.NamespaceSelector, error)
-	Update(ctx context.Context, namespaceSelector *v1.NamespaceSelector, opts metav1.UpdateOptions) (*v1.NamespaceSelector, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.NamespaceSelector, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.NamespaceSelectorList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.NamespaceSelector, err error)
+	Create(*v1.NamespaceSelector) (*v1.NamespaceSelector, error)
+	Update(*v1.NamespaceSelector) (*v1.NamespaceSelector, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.NamespaceSelector, error)
+	List(opts metav1.ListOptions) (*v1.NamespaceSelectorList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.NamespaceSelector, err error)
 	NamespaceSelectorExpansion
 }
 
@@ -46,19 +45,19 @@ func newNamespaceSelectors(c *ConfigmanagementV1Client) *namespaceSelectors {
 }
 
 // Get takes name of the namespaceSelector, and returns the corresponding namespaceSelector object, and an error if there is any.
-func (c *namespaceSelectors) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.NamespaceSelector, err error) {
+func (c *namespaceSelectors) Get(name string, options metav1.GetOptions) (result *v1.NamespaceSelector, err error) {
 	result = &v1.NamespaceSelector{}
 	err = c.client.Get().
 		Resource("namespaceselectors").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of NamespaceSelectors that match those selectors.
-func (c *namespaceSelectors) List(ctx context.Context, opts metav1.ListOptions) (result *v1.NamespaceSelectorList, err error) {
+func (c *namespaceSelectors) List(opts metav1.ListOptions) (result *v1.NamespaceSelectorList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -68,13 +67,13 @@ func (c *namespaceSelectors) List(ctx context.Context, opts metav1.ListOptions) 
 		Resource("namespaceselectors").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested namespaceSelectors.
-func (c *namespaceSelectors) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *namespaceSelectors) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -84,69 +83,66 @@ func (c *namespaceSelectors) Watch(ctx context.Context, opts metav1.ListOptions)
 		Resource("namespaceselectors").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch(ctx)
+		Watch()
 }
 
 // Create takes the representation of a namespaceSelector and creates it.  Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *namespaceSelectors) Create(ctx context.Context, namespaceSelector *v1.NamespaceSelector, opts metav1.CreateOptions) (result *v1.NamespaceSelector, err error) {
+func (c *namespaceSelectors) Create(namespaceSelector *v1.NamespaceSelector) (result *v1.NamespaceSelector, err error) {
 	result = &v1.NamespaceSelector{}
 	err = c.client.Post().
 		Resource("namespaceselectors").
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(namespaceSelector).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Update takes the representation of a namespaceSelector and updates it. Returns the server's representation of the namespaceSelector, and an error, if there is any.
-func (c *namespaceSelectors) Update(ctx context.Context, namespaceSelector *v1.NamespaceSelector, opts metav1.UpdateOptions) (result *v1.NamespaceSelector, err error) {
+func (c *namespaceSelectors) Update(namespaceSelector *v1.NamespaceSelector) (result *v1.NamespaceSelector, err error) {
 	result = &v1.NamespaceSelector{}
 	err = c.client.Put().
 		Resource("namespaceselectors").
 		Name(namespaceSelector.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(namespaceSelector).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Delete takes name of the namespaceSelector and deletes it. Returns an error if one occurs.
-func (c *namespaceSelectors) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *namespaceSelectors) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("namespaceselectors").
 		Name(name).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *namespaceSelectors) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *namespaceSelectors) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("namespaceselectors").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
+		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // Patch applies the patch and returns the patched namespaceSelector.
-func (c *namespaceSelectors) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.NamespaceSelector, err error) {
+func (c *namespaceSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.NamespaceSelector, err error) {
 	result = &v1.NamespaceSelector{}
 	err = c.client.Patch(pt).
 		Resource("namespaceselectors").
-		Name(name).
 		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		Name(name).
 		Body(data).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }

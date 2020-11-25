@@ -10,13 +10,10 @@ import (
 )
 
 // ClusterSelectorLister helps list ClusterSelectors.
-// All objects returned here must be treated as read-only.
 type ClusterSelectorLister interface {
 	// List lists all ClusterSelectors in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.ClusterSelector, err error)
 	// Get retrieves the ClusterSelector from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.ClusterSelector, error)
 	ClusterSelectorListerExpansion
 }

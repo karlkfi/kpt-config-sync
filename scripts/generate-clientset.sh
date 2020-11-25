@@ -15,7 +15,7 @@
 # k8s.io/code-generator/tree/master/cmd that we might have to use in the future.
 #
 
-set -euox pipefail
+set -euo pipefail
 
 NOMOS_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 
@@ -67,12 +67,23 @@ if $GEN_PROTO; then
   done
 fi
 
-# This should match the k8s.io/code-generator version in go.mod.
-tag="v0.19.4"
+# This should match the APIMachinery version that exists in the vendor
+# directory.
+tag="kubernetes-1.13.12"
 echo "Checking out codegen at tag ${tag}"
-  # Recall that "go get" also installs packages, so we don't need to also
-  # "go install": https://golang.org/pkg/cmd/go/internal/get/#pkg-variables
-  go get "${tools[@]}"
+checkout=(
+  git
+  -C "${GOBASE}/src/k8s.io/code-generator"
+  checkout -B "${tag}" "refs/tags/${tag}"
+)
+if ! "${checkout[@]}" &> /dev/null; then
+  echo "Fetching gen tools and checking out appropriate branch..."
+  go get -d -u "${tools[@]}"
+  "${checkout[@]}"
+fi
+
+echo "Building gen tools..."
+  go install "${tools[@]}"
 
 if $GEN_PROTO && [[ -z "$(command -v protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
   echo "ERROR:"

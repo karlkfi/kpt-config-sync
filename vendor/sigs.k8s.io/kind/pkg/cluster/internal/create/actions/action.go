@@ -19,12 +19,11 @@ package actions
 import (
 	"sync"
 
+	"sigs.k8s.io/kind/pkg/cluster/internal/context"
 	"sigs.k8s.io/kind/pkg/cluster/nodes"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 	"sigs.k8s.io/kind/pkg/internal/cli"
 	"sigs.k8s.io/kind/pkg/log"
-
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers"
 )
 
 // Action defines a step of bringing up a kind cluster after initial node
@@ -35,26 +34,26 @@ type Action interface {
 
 // ActionContext is data supplied to all actions
 type ActionContext struct {
-	Logger   log.Logger
-	Status   *cli.Status
-	Config   *config.Cluster
-	Provider providers.Provider
-	cache    *cachedData
+	Logger         log.Logger
+	Status         *cli.Status
+	Config         *config.Cluster
+	ClusterContext *context.Context
+	cache          *cachedData
 }
 
 // NewActionContext returns a new ActionContext
 func NewActionContext(
 	logger log.Logger,
-	status *cli.Status,
-	provider providers.Provider,
 	cfg *config.Cluster,
+	ctx *context.Context,
+	status *cli.Status,
 ) *ActionContext {
 	return &ActionContext{
-		Logger:   logger,
-		Status:   status,
-		Provider: provider,
-		Config:   cfg,
-		cache:    &cachedData{},
+		Logger:         logger,
+		Status:         status,
+		Config:         cfg,
+		ClusterContext: ctx,
+		cache:          &cachedData{},
 	}
 }
 
@@ -81,7 +80,7 @@ func (ac *ActionContext) Nodes() ([]nodes.Node, error) {
 	if cachedNodes != nil {
 		return cachedNodes, nil
 	}
-	n, err := ac.Provider.ListNodes(ac.Config.Name)
+	n, err := ac.ClusterContext.ListNodes()
 	if err != nil {
 		return nil, err
 	}

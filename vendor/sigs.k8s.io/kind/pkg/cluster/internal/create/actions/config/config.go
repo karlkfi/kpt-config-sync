@@ -19,7 +19,6 @@ package config
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	"sigs.k8s.io/kind/pkg/cluster/constants"
@@ -29,7 +28,7 @@ import (
 	"sigs.k8s.io/kind/pkg/cluster/internal/create/actions"
 	"sigs.k8s.io/kind/pkg/cluster/internal/kubeadm"
 	"sigs.k8s.io/kind/pkg/cluster/internal/patch"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers/common"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider/common"
 	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 )
@@ -52,7 +51,7 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 		return err
 	}
 
-	controlPlaneEndpoint, err := ctx.Provider.GetAPIServerInternalEndpoint(ctx.Config.Name)
+	controlPlaneEndpoint, err := ctx.ClusterContext.GetAPIServerInternalEndpoint()
 	if err != nil {
 		return err
 	}
@@ -61,24 +60,20 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 	fns := []func() error{}
 
 	configData := kubeadm.ConfigData{
-		NodeProvider:         fmt.Sprintf("%s", ctx.Provider),
-		ClusterName:          ctx.Config.Name,
+		ClusterName:          ctx.ClusterContext.Name(),
 		ControlPlaneEndpoint: controlPlaneEndpoint,
 		APIBindPort:          common.APIServerInternalPort,
 		APIServerAddress:     ctx.Config.Networking.APIServerAddress,
 		Token:                kubeadm.Token,
 		PodSubnet:            ctx.Config.Networking.PodSubnet,
-		KubeProxyMode:        string(ctx.Config.Networking.KubeProxyMode),
 		ServiceSubnet:        ctx.Config.Networking.ServiceSubnet,
 		ControlPlane:         true,
 		IPv6:                 ctx.Config.Networking.IPFamily == "ipv6",
 		FeatureGates:         ctx.Config.FeatureGates,
-		RuntimeConfig:        ctx.Config.RuntimeConfig,
 	}
 
 	kubeadmConfigPlusPatches := func(node nodes.Node, data kubeadm.ConfigData) func() error {
 		return func() error {
-			data.NodeName = node.String()
 			kubeadmConfig, err := getKubeadmConfig(ctx.Config, data, node)
 			if err != nil {
 				// TODO(bentheelder): logging here

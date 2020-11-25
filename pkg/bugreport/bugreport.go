@@ -152,7 +152,7 @@ func (b *BugReporter) EnabledServices() map[Product]bool {
 
 // FetchLogSources provides a set of Readables for all of nomos' container logs
 // TODO: Still need to figure out a good way to test this
-func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
+func (b *BugReporter) FetchLogSources() []Readable {
 	var toBeLogged logSources
 
 	// for each namespace, generate a list of logSources
@@ -193,7 +193,7 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 	}
 
 	// Convert logSources to Readables
-	toBeRead, errs := toBeLogged.convertLogSourcesToReadables(ctx, b.clientSet)
+	toBeRead, errs := toBeLogged.convertLogSourcesToReadables(b.clientSet)
 	b.ErrorList = append(b.ErrorList, errs...)
 
 	return toBeRead
@@ -321,14 +321,14 @@ func pathToClusterCmList(name string) string {
 }
 
 // FetchCMSystemPods provides a Readable for pods in the config management system and kube-system namespaces
-func (b *BugReporter) FetchCMSystemPods(ctx context.Context) (rd []Readable) {
+func (b *BugReporter) FetchCMSystemPods() (rd []Readable) {
 	var namespaces = []string{
 		configmanagement.ControllerNamespace,
 		metav1.NamespaceSystem,
 	}
 
 	for _, ns := range namespaces {
-		podList, err := b.clientSet.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{})
+		podList, err := b.clientSet.CoreV1().Pods(ns).List(metav1.ListOptions{})
 		if err != nil {
 			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s pods: %v", ns, err))
 		} else {

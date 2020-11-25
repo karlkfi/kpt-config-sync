@@ -10,13 +10,10 @@ import (
 )
 
 // NamespaceConfigLister helps list NamespaceConfigs.
-// All objects returned here must be treated as read-only.
 type NamespaceConfigLister interface {
 	// List lists all NamespaceConfigs in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.NamespaceConfig, err error)
 	// Get retrieves the NamespaceConfig from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.NamespaceConfig, error)
 	NamespaceConfigListerExpansion
 }

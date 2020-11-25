@@ -3,8 +3,6 @@
 package fake
 
 import (
-	"context"
-
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -24,7 +22,7 @@ var clusterselectorsResource = schema.GroupVersionResource{Group: "configmanagem
 var clusterselectorsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "ClusterSelector"}
 
 // Get takes name of the clusterSelector, and returns the corresponding clusterSelector object, and an error if there is any.
-func (c *FakeClusterSelectors) Get(ctx context.Context, name string, options v1.GetOptions) (result *configmanagementv1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Get(name string, options v1.GetOptions) (result *configmanagementv1.ClusterSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(clusterselectorsResource, name), &configmanagementv1.ClusterSelector{})
 	if obj == nil {
@@ -34,7 +32,7 @@ func (c *FakeClusterSelectors) Get(ctx context.Context, name string, options v1.
 }
 
 // List takes label and field selectors, and returns the list of ClusterSelectors that match those selectors.
-func (c *FakeClusterSelectors) List(ctx context.Context, opts v1.ListOptions) (result *configmanagementv1.ClusterSelectorList, err error) {
+func (c *FakeClusterSelectors) List(opts v1.ListOptions) (result *configmanagementv1.ClusterSelectorList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(clusterselectorsResource, clusterselectorsKind, opts), &configmanagementv1.ClusterSelectorList{})
 	if obj == nil {
@@ -55,13 +53,13 @@ func (c *FakeClusterSelectors) List(ctx context.Context, opts v1.ListOptions) (r
 }
 
 // Watch returns a watch.Interface that watches the requested clusterSelectors.
-func (c *FakeClusterSelectors) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeClusterSelectors) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(clusterselectorsResource, opts))
 }
 
 // Create takes the representation of a clusterSelector and creates it.  Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *FakeClusterSelectors) Create(ctx context.Context, clusterSelector *configmanagementv1.ClusterSelector, opts v1.CreateOptions) (result *configmanagementv1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Create(clusterSelector *configmanagementv1.ClusterSelector) (result *configmanagementv1.ClusterSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(clusterselectorsResource, clusterSelector), &configmanagementv1.ClusterSelector{})
 	if obj == nil {
@@ -71,7 +69,7 @@ func (c *FakeClusterSelectors) Create(ctx context.Context, clusterSelector *conf
 }
 
 // Update takes the representation of a clusterSelector and updates it. Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *FakeClusterSelectors) Update(ctx context.Context, clusterSelector *configmanagementv1.ClusterSelector, opts v1.UpdateOptions) (result *configmanagementv1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Update(clusterSelector *configmanagementv1.ClusterSelector) (result *configmanagementv1.ClusterSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(clusterselectorsResource, clusterSelector), &configmanagementv1.ClusterSelector{})
 	if obj == nil {
@@ -81,22 +79,22 @@ func (c *FakeClusterSelectors) Update(ctx context.Context, clusterSelector *conf
 }
 
 // Delete takes name of the clusterSelector and deletes it. Returns an error if one occurs.
-func (c *FakeClusterSelectors) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *FakeClusterSelectors) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(clusterselectorsResource, name), &configmanagementv1.ClusterSelector{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeClusterSelectors) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(clusterselectorsResource, listOpts)
+func (c *FakeClusterSelectors) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(clusterselectorsResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &configmanagementv1.ClusterSelectorList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched clusterSelector.
-func (c *FakeClusterSelectors) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configmanagementv1.ClusterSelector, err error) {
+func (c *FakeClusterSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.ClusterSelector, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(clusterselectorsResource, name, pt, data, subresources...), &configmanagementv1.ClusterSelector{})
 	if obj == nil {

@@ -100,6 +100,8 @@ type Builder struct {
 
 	singleItemImplied bool
 
+	export bool
+
 	schema ContentValidator
 
 	// fakeClientFn is used for testing
@@ -263,7 +265,7 @@ func (b *Builder) Unstructured() *Builder {
 		localFn:      b.isLocal,
 		restMapperFn: b.restMapperFn,
 		clientFn:     b.getClient,
-		decoder:      &metadataValidatingDecoder{unstructured.UnstructuredJSONScheme},
+		decoder:      unstructured.UnstructuredJSONScheme,
 	}
 
 	return b
@@ -456,6 +458,12 @@ func (b *Builder) FieldSelectorParam(s string) *Builder {
 		return b
 	}
 	b.fieldSelector = &s
+	return b
+}
+
+// ExportParam accepts the export boolean for these resources
+func (b *Builder) ExportParam(export bool) *Builder {
+	b.export = export
 	return b
 }
 
@@ -812,12 +820,6 @@ func (b *Builder) visitorResult() *Result {
 	}
 
 	if len(b.resources) != 0 {
-		for _, r := range b.resources {
-			_, err := b.mappingFor(r)
-			if err != nil {
-				return &Result{err: err}
-			}
-		}
 		return &Result{err: fmt.Errorf("resource(s) were provided, but no name, label selector, or --all flag specified")}
 	}
 	return &Result{err: missingResourceError}
@@ -862,7 +864,7 @@ func (b *Builder) visitBySelector() *Result {
 		if mapping.Scope.Name() != meta.RESTScopeNameNamespace {
 			selectorNamespace = ""
 		}
-		visitors = append(visitors, NewSelector(client, mapping, selectorNamespace, labelSelector, fieldSelector, b.limitChunks))
+		visitors = append(visitors, NewSelector(client, mapping, selectorNamespace, labelSelector, fieldSelector, b.export, b.limitChunks))
 	}
 	if b.continueOnError {
 		result.visitor = EagerVisitorList(visitors)
@@ -962,6 +964,7 @@ func (b *Builder) visitByResource() *Result {
 			Mapping:   mapping,
 			Namespace: selectorNamespace,
 			Name:      tuple.Name,
+			Export:    b.export,
 		}
 		items = append(items, info)
 	}
@@ -1026,6 +1029,7 @@ func (b *Builder) visitByName() *Result {
 			Mapping:   mapping,
 			Namespace: selectorNamespace,
 			Name:      name,
+			Export:    b.export,
 		}
 		visitors = append(visitors, info)
 	}

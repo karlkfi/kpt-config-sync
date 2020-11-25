@@ -43,7 +43,7 @@ func GetStatusReadCloser(ctx context.Context, contexts []string) (io.ReadCloser,
 	r, w, _ := os.Pipe()
 	writer := util.NewWriter(w)
 
-	clientMap, err := statusClients(ctx, contexts)
+	clientMap, err := statusClients(contexts)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ var Cmd = &cobra.Command{
 
 		fmt.Println("Connecting to clusters...")
 
-		clientMap, err := statusClients(context.Background(), flags.Contexts)
+		clientMap, err := statusClients(flags.Contexts)
 		if err != nil {
 			// If "no such file or directory" error, unwrap and display before exiting
 			if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {

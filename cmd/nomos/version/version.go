@@ -1,7 +1,6 @@
 package version
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -137,7 +136,7 @@ func lookupVersion(cfg *rest.Config) (string, error) {
 	//     ...
 	//   }
 	// }
-	cmVersion, err := cmClient.NestedString(context.Background(), "status", configManagementVersionName)
+	cmVersion, err := cmClient.NestedString("status", configManagementVersionName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return util.NotInstalledMsg, nil

@@ -10,13 +10,10 @@ import (
 )
 
 // RepoLister helps list Repos.
-// All objects returned here must be treated as read-only.
 type RepoLister interface {
 	// List lists all Repos in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Repo, err error)
 	// Get retrieves the Repo from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Repo, error)
 	RepoListerExpansion
 }

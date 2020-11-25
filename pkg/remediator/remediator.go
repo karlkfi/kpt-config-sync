@@ -36,7 +36,7 @@ type Interface interface {
 	NeedsUpdate() bool
 	// UpdateWatches starts and stops server-side watches based upon the given map
 	// of GVKs which should be watched.
-	UpdateWatches(context.Context, map[schema.GroupVersionKind]struct{}) status.MultiError
+	UpdateWatches(map[schema.GroupVersionKind]struct{}) status.MultiError
 }
 
 var _ Interface = &Remediator{}
@@ -81,6 +81,6 @@ func (r *Remediator) NeedsUpdate() bool {
 }
 
 // UpdateWatches implements Interface.
-func (r *Remediator) UpdateWatches(ctx context.Context, gvks map[schema.GroupVersionKind]struct{}) status.MultiError {
-	return r.watchMgr.UpdateWatches(ctx, gvks)
+func (r *Remediator) UpdateWatches(gvks map[schema.GroupVersionKind]struct{}) status.MultiError {
+	return r.watchMgr.UpdateWatches(gvks)
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
-	configsyncv1alpha1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -15,7 +14,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface
-	ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -23,17 +21,11 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	configmanagementV1 *configmanagementv1.ConfigmanagementV1Client
-	configsyncV1alpha1 *configsyncv1alpha1.ConfigsyncV1alpha1Client
 }
 
 // ConfigmanagementV1 retrieves the ConfigmanagementV1Client
 func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface {
 	return c.configmanagementV1
-}
-
-// ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
-func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
-	return c.configsyncV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -51,17 +43,13 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {
 		if configShallowCopy.Burst <= 0 {
-			return nil, fmt.Errorf("burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
+			return nil, fmt.Errorf("Burst is required to be greater than 0 when RateLimiter is not set and QPS is set to greater than 0")
 		}
 		configShallowCopy.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(configShallowCopy.QPS, configShallowCopy.Burst)
 	}
 	var cs Clientset
 	var err error
 	cs.configmanagementV1, err = configmanagementv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
-	cs.configsyncV1alpha1, err = configsyncv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +66,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.configmanagementV1 = configmanagementv1.NewForConfigOrDie(c)
-	cs.configsyncV1alpha1 = configsyncv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -88,7 +75,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.configmanagementV1 = configmanagementv1.New(c)
-	cs.configsyncV1alpha1 = configsyncv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

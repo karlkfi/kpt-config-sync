@@ -20,10 +20,6 @@ package v1alpha4
 type Cluster struct {
 	TypeMeta `yaml:",inline"`
 
-	// The cluster name.
-	// Optional, this will be overridden by --name / KIND_CLUSTER_NAME
-	Name string `yaml:"name,omitempty"`
-
 	// Nodes contains the list of nodes defined in the `kind` Cluster
 	// If unset this will default to a single control-plane node
 	// Note that if more than one control plane is specified, an external
@@ -40,11 +36,6 @@ type Cluster struct {
 	//
 	// https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 	FeatureGates map[string]bool `yaml:"featureGates,omitempty"`
-
-	// RuntimeConfig Keys and values are translated into --runtime-config values for kube-apiserver, separated by commas.
-	//
-	// Use this to enable alpha APIs.
-	RuntimeConfig map[string]string `yaml:"runtimeConfig,omitempty"`
 
 	// KubeadmConfigPatches are applied to the generated kubeadm config as
 	// merge patches. The `kind` field must match the target object, and
@@ -183,9 +174,6 @@ type Networking struct {
 	// If DisableDefaultCNI is true, kind will not install the default CNI setup.
 	// Instead the user should install their own CNI after creating the cluster.
 	DisableDefaultCNI bool `yaml:"disableDefaultCNI,omitempty"`
-	// KubeProxyMode defines if kube-proxy should operate in iptables or ipvs mode
-	// Defaults to 'iptables' mode
-	KubeProxyMode ProxyMode `yaml:"kubeProxyMode,omitempty"`
 }
 
 // ClusterIPFamily defines cluster network IP family
@@ -196,16 +184,6 @@ const (
 	IPv4Family ClusterIPFamily = "ipv4"
 	// IPv6Family sets ClusterIPFamily to ipv6
 	IPv6Family ClusterIPFamily = "ipv6"
-)
-
-// ProxyMode defines a proxy mode for kube-proxy
-type ProxyMode string
-
-const (
-	// IPTablesMode sets ProxyMode to iptables
-	IPTablesMode ProxyMode = "iptables"
-	// IPVSMode sets ProxyMode to iptables
-	IPVSMode ProxyMode = "ipvs"
 )
 
 // PatchJSON6902 represents an inline kustomize json 6902 patch

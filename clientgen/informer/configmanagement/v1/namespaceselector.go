@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	time "time"
 
 	apis "github.com/google/nomos/clientgen/apis"
@@ -45,13 +44,13 @@ func NewFilteredNamespaceSelectorInformer(client apis.Interface, resyncPeriod ti
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().NamespaceSelectors().List(context.TODO(), options)
+				return client.ConfigmanagementV1().NamespaceSelectors().List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().NamespaceSelectors().Watch(context.TODO(), options)
+				return client.ConfigmanagementV1().NamespaceSelectors().Watch(options)
 			},
 		},
 		&configmanagementv1.NamespaceSelector{},

@@ -54,19 +54,14 @@ func SetDefaultsCluster(obj *Cluster) {
 			obj.Networking.PodSubnet = "fd00:10:244::/64"
 		}
 	}
-	// default the service CIDR using a different subnet than kubeadm default
+	// default the service CIDR using the kubeadm default
 	// https://github.com/kubernetes/kubernetes/blob/746404f82a28e55e0b76ffa7e40306fb88eb3317/cmd/kubeadm/app/apis/kubeadm/v1beta2/defaults.go#L32
-	// Note: kubeadm is using a /12 subnet, that may allocate a 2^20 bitmap in etcd
-	// we allocate a /16 subnet that allows 65535 services (current Kubernetes tested limit is O(10k) services)
+	// Note: kubeadm is doing it already but this simplifies kind's logic
 	if obj.Networking.ServiceSubnet == "" {
-		obj.Networking.ServiceSubnet = "10.96.0.0/16"
+		obj.Networking.ServiceSubnet = "10.96.0.0/12"
 		if obj.Networking.IPFamily == "ipv6" {
 			obj.Networking.ServiceSubnet = "fd00:10:96::/112"
 		}
-	}
-	// default the KubeProxyMode using iptables as it's already the default
-	if obj.Networking.KubeProxyMode == "" {
-		obj.Networking.KubeProxyMode = IPTablesMode
 	}
 }
 

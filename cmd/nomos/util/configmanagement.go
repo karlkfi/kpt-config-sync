@@ -1,8 +1,6 @@
 package util
 
 import (
-	"context"
-
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,8 +36,8 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 
 // NestedBool returns the boolean value specified by the given path of field names.
 // Returns false if a value is not found and an error if value is not a bool.
-func (c *ConfigManagementClient) NestedBool(ctx context.Context, fields ...string) (bool, error) {
-	unstr, err := c.resInt.Get(ctx, ConfigManagementName, metav1.GetOptions{}, "")
+func (c *ConfigManagementClient) NestedBool(fields ...string) (bool, error) {
+	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
 	if err != nil {
 		return false, err
 	}
@@ -54,8 +52,8 @@ func (c *ConfigManagementClient) NestedBool(ctx context.Context, fields ...strin
 
 // NestedString returns the string value specified by the given path of field names.
 // Returns empty string if a value is not found and an error if value is not a string.
-func (c *ConfigManagementClient) NestedString(ctx context.Context, fields ...string) (string, error) {
-	unstr, err := c.resInt.Get(ctx, ConfigManagementName, metav1.GetOptions{}, "")
+func (c *ConfigManagementClient) NestedString(fields ...string) (string, error) {
+	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
 	if err != nil {
 		return "", err
 	}
@@ -70,8 +68,8 @@ func (c *ConfigManagementClient) NestedString(ctx context.Context, fields ...str
 
 // NestedStringSlice returns the string slice specified by the given path of field names.
 // Returns nil if a value is not found and an error if value is not a string slice.
-func (c *ConfigManagementClient) NestedStringSlice(ctx context.Context, fields ...string) ([]string, error) {
-	unstr, err := c.resInt.Get(ctx, ConfigManagementName, metav1.GetOptions{}, "")
+func (c *ConfigManagementClient) NestedStringSlice(fields ...string) ([]string, error) {
+	unstr, err := c.resInt.Get(ConfigManagementName, metav1.GetOptions{}, "")
 	if err != nil {
 		return nil, err
 	}

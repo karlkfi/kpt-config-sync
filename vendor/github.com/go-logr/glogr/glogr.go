@@ -1,20 +1,4 @@
-/*
-Copyright 2019 The logr Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-// Package glogr implements github.com/go-logr/logr.Logger in terms of
+// Package glogr implements github.com/thockin/logr.Logger in terms of
 // github.com/golang/glog.
 package glogr
 
@@ -31,42 +15,25 @@ import (
 
 // New returns a logr.Logger which is implemented by glog.
 func New() logr.Logger {
-	return NewWithOptions(Options{})
-}
-
-// NewWithOptions returns a logr.Logger which is implemented by glog.
-func NewWithOptions(opts Options) logr.Logger {
-	if opts.Depth < 0 {
-		opts.Depth = 0
-	}
-
 	return glogger{
 		level:  0,
 		prefix: "",
 		values: nil,
-		depth:  opts.Depth,
 	}
-}
-
-type Options struct {
-	// DepthOffset biases the assumed number of call frames to the "true"
-	// caller.  This is useful when the calling code calls a function which then
-	// calls glogr (e.g. a logging shim to another API).  Values less than zero
-	// will be treated as zero.
-	Depth int
 }
 
 type glogger struct {
 	level  int
 	prefix string
 	values []interface{}
-	depth  int
 }
 
 func (l glogger) clone() glogger {
-	out := l
-	out.values = copySlice(l.values)
-	return out
+	return glogger{
+		level:  l.level,
+		prefix: l.prefix,
+		values: copySlice(l.values),
+	}
 }
 
 func copySlice(in []interface{}) []interface{} {
@@ -90,6 +57,11 @@ func framesToCaller() int {
 		}
 	}
 	return 1 // something went wrong, this is safe
+}
+
+type kvPair struct {
+	key string
+	val interface{}
 }
 
 func flatten(kvList ...interface{}) string {
@@ -132,7 +104,7 @@ func (l glogger) Info(msg string, kvList ...interface{}) {
 		msgStr := flatten("msg", msg)
 		fixedStr := flatten(l.values...)
 		userStr := flatten(kvList...)
-		glog.InfoDepth(framesToCaller()+l.depth, l.prefix, " ", lvlStr, " ", msgStr, " ", fixedStr, " ", userStr)
+		glog.InfoDepth(framesToCaller(), l.prefix, " ", lvlStr, " ", msgStr, " ", fixedStr, " ", userStr)
 	}
 }
 
@@ -149,12 +121,12 @@ func (l glogger) Error(err error, msg string, kvList ...interface{}) {
 	errStr := flatten("error", loggableErr)
 	fixedStr := flatten(l.values...)
 	userStr := flatten(kvList...)
-	glog.ErrorDepth(framesToCaller()+l.depth, l.prefix, " ", msgStr, " ", errStr, " ", fixedStr, " ", userStr)
+	glog.ErrorDepth(framesToCaller(), l.prefix, " ", msgStr, " ", errStr, " ", fixedStr, " ", userStr)
 }
 
-func (l glogger) V(level int) logr.Logger {
+func (l glogger) V(level int) logr.InfoLogger {
 	new := l.clone()
-	new.level += level
+	new.level = level
 	return new
 }
 
@@ -177,3 +149,4 @@ func (l glogger) WithValues(kvList ...interface{}) logr.Logger {
 }
 
 var _ logr.Logger = glogger{}
+var _ logr.InfoLogger = glogger{}

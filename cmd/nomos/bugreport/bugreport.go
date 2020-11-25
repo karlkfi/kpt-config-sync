@@ -42,11 +42,9 @@ var Cmd = &cobra.Command{
 			return err
 		}
 
-		ctx := context.Background()
-
-		report.WriteRawInZip(report.FetchLogSources(ctx))
+		report.WriteRawInZip(report.FetchLogSources())
 		report.WriteRawInZip(report.FetchCMResources())
-		report.WriteRawInZip(report.FetchCMSystemPods(ctx))
+		report.WriteRawInZip(report.FetchCMSystemPods())
 		report.AddNomosStatusToZip(cmd.Context())
 		report.AddNomosVersionToZip()
 

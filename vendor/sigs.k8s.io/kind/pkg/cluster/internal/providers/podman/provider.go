@@ -34,43 +34,35 @@ import (
 	"sigs.k8s.io/kind/pkg/log"
 
 	internallogs "sigs.k8s.io/kind/pkg/cluster/internal/logs"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers/common"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider/common"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 	"sigs.k8s.io/kind/pkg/internal/cli"
 )
 
 // NewProvider returns a new provider based on executing `podman ...`
-func NewProvider(logger log.Logger) providers.Provider {
+func NewProvider(logger log.Logger) provider.Provider {
 	logger.Warn("enabling experimental podman provider")
-	return &provider{
+	return &Provider{
 		logger: logger,
 	}
 }
 
 // Provider implements provider.Provider
 // see NewProvider
-type provider struct {
+type Provider struct {
 	logger log.Logger
 }
 
-// String implements fmt.Stringer
-// NOTE: the value of this should not currently be relied upon for anything!
-// This is only used for setting the Node's providerID
-func (p *provider) String() string {
-	return "podman"
-}
-
 // Provision is part of the providers.Provider interface
-func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error) {
+func (p *Provider) Provision(status *cli.Status, cluster string, cfg *config.Cluster) (err error) {
 	if err := ensureMinVersion(); err != nil {
 		return err
 	}
 
-	// kind doesn't work with podman rootless, surface an error
+	// kind doesn't currently work with podman rootless, surface a warning
 	if os.Geteuid() != 0 {
-		p.logger.Errorf("podman provider does not work properly in rootless mode")
-		os.Exit(1)
+		p.logger.Warn("podman provider may not work properly in rootless mode")
 	}
 
 	// TODO: validate cfg
@@ -85,7 +77,7 @@ func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error
 	defer func() { status.End(err == nil) }()
 
 	// plan creating the containers
-	createContainerFuncs, err := planCreation(cfg)
+	createContainerFuncs, err := planCreation(cluster, cfg)
 	if err != nil {
 		return err
 	}
@@ -95,7 +87,7 @@ func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error
 }
 
 // ListClusters is part of the providers.Provider interface
-func (p *provider) ListClusters() ([]string, error) {
+func (p *Provider) ListClusters() ([]string, error) {
 	cmd := exec.Command("podman",
 		"ps",
 		"-a", // show stopped nodes
@@ -112,7 +104,7 @@ func (p *provider) ListClusters() ([]string, error) {
 }
 
 // ListNodes is part of the providers.Provider interface
-func (p *provider) ListNodes(cluster string) ([]nodes.Node, error) {
+func (p *Provider) ListNodes(cluster string) ([]nodes.Node, error) {
 	cmd := exec.Command("podman",
 		"ps",
 		"-a", // show stopped nodes
@@ -134,7 +126,7 @@ func (p *provider) ListNodes(cluster string) ([]nodes.Node, error) {
 }
 
 // DeleteNodes is part of the providers.Provider interface
-func (p *provider) DeleteNodes(n []nodes.Node) error {
+func (p *Provider) DeleteNodes(n []nodes.Node) error {
 	if len(n) == 0 {
 		return nil
 	}
@@ -151,19 +143,11 @@ func (p *provider) DeleteNodes(n []nodes.Node) error {
 	if err := exec.Command(command, args...).Run(); err != nil {
 		return errors.Wrap(err, "failed to delete nodes")
 	}
-	var nodeVolumes []string
-	for _, node := range n {
-		volumes, err := getVolumes(node.String())
-		if err != nil {
-			return err
-		}
-		nodeVolumes = append(nodeVolumes, volumes...)
-	}
-	return deleteVolumes(nodeVolumes)
+	return nil
 }
 
 // GetAPIServerEndpoint is part of the providers.Provider interface
-func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
+func (p *Provider) GetAPIServerEndpoint(cluster string) (string, error) {
 	// locate the node that hosts this
 	allNodes, err := p.ListNodes(cluster)
 	if err != nil {
@@ -189,45 +173,20 @@ func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 		return "", errors.Errorf("network details should only be one line, got %d lines", len(lines))
 	}
 
-	// portMapping19 maps to the standard CNI portmapping capability used in podman 1.9
+	// portMapping maps to the standard CNI portmapping capability
 	// see: https://github.com/containernetworking/cni/blob/spec-v0.4.0/CONVENTIONS.md
-	type portMapping19 struct {
+	type portMapping struct {
 		HostPort      int32  `json:"hostPort"`
 		ContainerPort int32  `json:"containerPort"`
 		Protocol      string `json:"protocol"`
 		HostIP        string `json:"hostIP"`
 	}
-	// portMapping20 maps to the podman 2.0 portmap type
-	// see: https://github.com/containers/podman/blob/05988fc74fc25f2ad2256d6e011dfb7ad0b9a4eb/libpod/define/container_inspect.go#L134-L143
-	type portMapping20 struct {
-		HostPort string `json:"HostPort"`
-		HostIP   string `json:"HostIp"`
-	}
 
-	portMappings20 := make(map[string][]portMapping20)
-	if err := json.Unmarshal([]byte(lines[0]), &portMappings20); err == nil {
-		for k, v := range portMappings20 {
-			protocol := "tcp"
-			parts := strings.Split(k, "/")
-			if len(parts) == 2 {
-				protocol = strings.ToLower(parts[1])
-			}
-			containerPort, err := strconv.Atoi(parts[0])
-			if err != nil {
-				return "", err
-			}
-			for _, pm := range v {
-				if containerPort == common.APIServerInternalPort && protocol == "tcp" {
-					return net.JoinHostPort(pm.HostIP, pm.HostPort), nil
-				}
-			}
-		}
-	}
-	var portMappings19 []portMapping19
-	if err := json.Unmarshal([]byte(lines[0]), &portMappings19); err != nil {
+	var portMappings []portMapping
+	if err := json.Unmarshal([]byte(lines[0]), &portMappings); err != nil {
 		return "", errors.Errorf("invalid network details: %v", err)
 	}
-	for _, pm := range portMappings19 {
+	for _, pm := range portMappings {
 		if pm.ContainerPort == common.APIServerInternalPort && pm.Protocol == "tcp" {
 			return net.JoinHostPort(pm.HostIP, strconv.Itoa(int(pm.HostPort))), nil
 		}
@@ -237,7 +196,7 @@ func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 }
 
 // GetAPIServerInternalEndpoint is part of the providers.Provider interface
-func (p *provider) GetAPIServerInternalEndpoint(cluster string) (string, error) {
+func (p *Provider) GetAPIServerInternalEndpoint(cluster string) (string, error) {
 	// locate the node that hosts this
 	allNodes, err := p.ListNodes(cluster)
 	if err != nil {
@@ -253,19 +212,18 @@ func (p *provider) GetAPIServerInternalEndpoint(cluster string) (string, error) 
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get apiserver IP")
 	}
-	return net.JoinHostPort(ipv4, fmt.Sprintf("%d", common.APIServerInternalPort)), nil
-
+	return ipv4, nil
 }
 
 // node returns a new node handle for this provider
-func (p *provider) node(name string) nodes.Node {
+func (p *Provider) node(name string) nodes.Node {
 	return &node{
 		name: name,
 	}
 }
 
 // CollectLogs will populate dir with cluster logs and other debug files
-func (p *provider) CollectLogs(dir string, nodes []nodes.Node) error {
+func (p *Provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	execToPathFn := func(cmd exec.Cmd, path string) func() error {
 		return func() error {
 			f, err := common.FileOnHost(path)

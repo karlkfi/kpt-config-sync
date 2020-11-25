@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	time "time"
 
 	apis "github.com/google/nomos/clientgen/apis"
@@ -45,13 +44,13 @@ func NewFilteredHierarchyConfigInformer(client apis.Interface, resyncPeriod time
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().HierarchyConfigs().List(context.TODO(), options)
+				return client.ConfigmanagementV1().HierarchyConfigs().List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().HierarchyConfigs().Watch(context.TODO(), options)
+				return client.ConfigmanagementV1().HierarchyConfigs().Watch(options)
 			},
 		},
 		&configmanagementv1.HierarchyConfig{},

@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	"time"
 
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -22,14 +21,14 @@ type HierarchyConfigsGetter interface {
 
 // HierarchyConfigInterface has methods to work with HierarchyConfig resources.
 type HierarchyConfigInterface interface {
-	Create(ctx context.Context, hierarchyConfig *v1.HierarchyConfig, opts metav1.CreateOptions) (*v1.HierarchyConfig, error)
-	Update(ctx context.Context, hierarchyConfig *v1.HierarchyConfig, opts metav1.UpdateOptions) (*v1.HierarchyConfig, error)
-	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
-	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.HierarchyConfig, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.HierarchyConfigList, error)
-	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.HierarchyConfig, err error)
+	Create(*v1.HierarchyConfig) (*v1.HierarchyConfig, error)
+	Update(*v1.HierarchyConfig) (*v1.HierarchyConfig, error)
+	Delete(name string, options *metav1.DeleteOptions) error
+	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+	Get(name string, options metav1.GetOptions) (*v1.HierarchyConfig, error)
+	List(opts metav1.ListOptions) (*v1.HierarchyConfigList, error)
+	Watch(opts metav1.ListOptions) (watch.Interface, error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.HierarchyConfig, err error)
 	HierarchyConfigExpansion
 }
 
@@ -46,19 +45,19 @@ func newHierarchyConfigs(c *ConfigmanagementV1Client) *hierarchyConfigs {
 }
 
 // Get takes name of the hierarchyConfig, and returns the corresponding hierarchyConfig object, and an error if there is any.
-func (c *hierarchyConfigs) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.HierarchyConfig, err error) {
+func (c *hierarchyConfigs) Get(name string, options metav1.GetOptions) (result *v1.HierarchyConfig, err error) {
 	result = &v1.HierarchyConfig{}
 	err = c.client.Get().
 		Resource("hierarchyconfigs").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of HierarchyConfigs that match those selectors.
-func (c *hierarchyConfigs) List(ctx context.Context, opts metav1.ListOptions) (result *v1.HierarchyConfigList, err error) {
+func (c *hierarchyConfigs) List(opts metav1.ListOptions) (result *v1.HierarchyConfigList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -68,13 +67,13 @@ func (c *hierarchyConfigs) List(ctx context.Context, opts metav1.ListOptions) (r
 		Resource("hierarchyconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested hierarchyConfigs.
-func (c *hierarchyConfigs) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *hierarchyConfigs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -84,69 +83,66 @@ func (c *hierarchyConfigs) Watch(ctx context.Context, opts metav1.ListOptions) (
 		Resource("hierarchyconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch(ctx)
+		Watch()
 }
 
 // Create takes the representation of a hierarchyConfig and creates it.  Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *hierarchyConfigs) Create(ctx context.Context, hierarchyConfig *v1.HierarchyConfig, opts metav1.CreateOptions) (result *v1.HierarchyConfig, err error) {
+func (c *hierarchyConfigs) Create(hierarchyConfig *v1.HierarchyConfig) (result *v1.HierarchyConfig, err error) {
 	result = &v1.HierarchyConfig{}
 	err = c.client.Post().
 		Resource("hierarchyconfigs").
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(hierarchyConfig).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Update takes the representation of a hierarchyConfig and updates it. Returns the server's representation of the hierarchyConfig, and an error, if there is any.
-func (c *hierarchyConfigs) Update(ctx context.Context, hierarchyConfig *v1.HierarchyConfig, opts metav1.UpdateOptions) (result *v1.HierarchyConfig, err error) {
+func (c *hierarchyConfigs) Update(hierarchyConfig *v1.HierarchyConfig) (result *v1.HierarchyConfig, err error) {
 	result = &v1.HierarchyConfig{}
 	err = c.client.Put().
 		Resource("hierarchyconfigs").
 		Name(hierarchyConfig.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(hierarchyConfig).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }
 
 // Delete takes name of the hierarchyConfig and deletes it. Returns an error if one occurs.
-func (c *hierarchyConfigs) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *hierarchyConfigs) Delete(name string, options *metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("hierarchyconfigs").
 		Name(name).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *hierarchyConfigs) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
+func (c *hierarchyConfigs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("hierarchyconfigs").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
+		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
+		Body(options).
+		Do().
 		Error()
 }
 
 // Patch applies the patch and returns the patched hierarchyConfig.
-func (c *hierarchyConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.HierarchyConfig, err error) {
+func (c *hierarchyConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.HierarchyConfig, err error) {
 	result = &v1.HierarchyConfig{}
 	err = c.client.Patch(pt).
 		Resource("hierarchyconfigs").
-		Name(name).
 		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		Name(name).
 		Body(data).
-		Do(ctx).
+		Do().
 		Into(result)
 	return
 }

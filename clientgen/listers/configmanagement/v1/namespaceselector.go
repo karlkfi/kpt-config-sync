@@ -10,13 +10,10 @@ import (
 )
 
 // NamespaceSelectorLister helps list NamespaceSelectors.
-// All objects returned here must be treated as read-only.
 type NamespaceSelectorLister interface {
 	// List lists all NamespaceSelectors in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.NamespaceSelector, err error)
 	// Get retrieves the NamespaceSelector from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.NamespaceSelector, error)
 	NamespaceSelectorListerExpansion
 }

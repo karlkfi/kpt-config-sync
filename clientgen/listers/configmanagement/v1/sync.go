@@ -10,13 +10,10 @@ import (
 )
 
 // SyncLister helps list Syncs.
-// All objects returned here must be treated as read-only.
 type SyncLister interface {
 	// List lists all Syncs in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.Sync, err error)
 	// Get retrieves the Sync from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.Sync, error)
 	SyncListerExpansion
 }

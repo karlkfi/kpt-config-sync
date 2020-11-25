@@ -3,7 +3,6 @@
 package v1
 
 import (
-	"context"
 	time "time"
 
 	apis "github.com/google/nomos/clientgen/apis"
@@ -45,13 +44,13 @@ func NewFilteredRepoInformer(client apis.Interface, resyncPeriod time.Duration, 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().Repos().List(context.TODO(), options)
+				return client.ConfigmanagementV1().Repos().List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().Repos().Watch(context.TODO(), options)
+				return client.ConfigmanagementV1().Repos().Watch(options)
 			},
 		},
 		&configmanagementv1.Repo{},

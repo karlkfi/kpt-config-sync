@@ -10,13 +10,10 @@ import (
 )
 
 // HierarchyConfigLister helps list HierarchyConfigs.
-// All objects returned here must be treated as read-only.
 type HierarchyConfigLister interface {
 	// List lists all HierarchyConfigs in the indexer.
-	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.HierarchyConfig, err error)
 	// Get retrieves the HierarchyConfig from the index for a given name.
-	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.HierarchyConfig, error)
 	HierarchyConfigListerExpansion
 }

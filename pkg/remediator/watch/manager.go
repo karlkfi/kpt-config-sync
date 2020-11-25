@@ -1,7 +1,6 @@
 package watch
 
 import (
-	"context"
 	"sync"
 
 	"github.com/golang/glog"
@@ -104,7 +103,7 @@ func (m *Manager) NeedsUpdate() bool {
 //   and not present in the current watch map.
 //
 // This function is threadsafe.
-func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+func (m *Manager) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -122,7 +121,7 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 	for gvk := range gvkMap {
 		if _, isWatched := m.watcherMap[gvk]; !isWatched {
 			// We don't have a watcher for this type, so add a watcher for it.
-			if err := m.startWatcher(ctx, gvk); err != nil {
+			if err := m.startWatcher(gvk); err != nil {
 				errs = status.Append(errs, err)
 			}
 		}
@@ -144,7 +143,7 @@ func (m *Manager) watchedGVKs() []schema.GroupVersionKind {
 
 // startWatcher starts a watcher for a GVK. This function is NOT threadsafe;
 // caller must have a lock on m.mux.
-func (m *Manager) startWatcher(ctx context.Context, gvk schema.GroupVersionKind) error {
+func (m *Manager) startWatcher(gvk schema.GroupVersionKind) error {
 	_, found := m.watcherMap[gvk]
 	if found {
 		// The watcher is already started.
@@ -158,7 +157,7 @@ func (m *Manager) startWatcher(ctx context.Context, gvk schema.GroupVersionKind)
 		queue:      m.queue,
 		reconciler: m.reconciler,
 	}
-	w, err := m.createWatcherFunc(ctx, cfg)
+	w, err := m.createWatcherFunc(cfg)
 	if err != nil {
 		return err
 	}
