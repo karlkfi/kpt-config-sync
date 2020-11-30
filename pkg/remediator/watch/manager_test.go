@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -28,8 +29,8 @@ func fakeError(gvk schema.GroupVersionKind) status.Error {
 	return status.APIServerErrorf(errors.New("failed"), "watcher failed for %s", gvk.String())
 }
 
-func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(watcherConfig) (Runnable, status.Error) {
-	return func(cfg watcherConfig) (runnable Runnable, err status.Error) {
+func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(context.Context, watcherConfig) (Runnable, status.Error) {
+	return func(ctx context.Context, cfg watcherConfig) (runnable Runnable, err status.Error) {
 		if errOnType[cfg.gvk] {
 			return nil, fakeError(cfg.gvk)
 		}
@@ -130,7 +131,7 @@ func TestManager_Update(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			gotErr := m.UpdateWatches(tc.gvks)
+			gotErr := m.UpdateWatches(context.Background(), tc.gvks)
 
 			wantErr := status.Append(nil, tc.wantErr)
 			if !errors.Is(wantErr, gotErr) {

@@ -105,7 +105,7 @@ func (c fakeDynamicClient) Namespace(string) dynamic.ResourceInterface {
 	return c
 }
 
-func (c fakeDynamicClient) Patch(string, types.PatchType, []byte, metav1.PatchOptions, ...string) (*unstructured.Unstructured, error) {
+func (c fakeDynamicClient) Patch(context.Context, string, types.PatchType, []byte, metav1.PatchOptions, ...string) (*unstructured.Unstructured, error) {
 	return nil, c.err
 }
 

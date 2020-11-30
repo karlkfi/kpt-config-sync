@@ -1,6 +1,7 @@
 package bugreport
 
 import (
+	"context"
 	"sort"
 	"testing"
 
@@ -115,7 +116,7 @@ func TestConvertLogSourcesToReadables(t *testing.T) {
 		client := fake.NewSimpleClientset()
 
 		t.Run(test.name, func(t *testing.T) {
-			output, errorList := test.logSources.convertLogSourcesToReadables(client)
+			output, errorList := test.logSources.convertLogSourcesToReadables(context.Background(), client)
 
 			if len(errorList) != test.numErrors {
 				t.Errorf("Expected %v errors but received %v.", test.numErrors, len(errorList))

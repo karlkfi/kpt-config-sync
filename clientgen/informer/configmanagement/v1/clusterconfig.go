@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"context"
 	time "time"
 
 	apis "github.com/google/nomos/clientgen/apis"
@@ -44,13 +45,13 @@ func NewFilteredClusterConfigInformer(client apis.Interface, resyncPeriod time.D
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().ClusterConfigs().List(options)
+				return client.ConfigmanagementV1().ClusterConfigs().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ConfigmanagementV1().ClusterConfigs().Watch(options)
+				return client.ConfigmanagementV1().ClusterConfigs().Watch(context.TODO(), options)
 			},
 		},
 		&configmanagementv1.ClusterConfig{},

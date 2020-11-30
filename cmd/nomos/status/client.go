@@ -71,14 +71,14 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 func (c *statusClient) clusterStatus(ctx context.Context, cluster, namespace string) *clusterState {
 	cs := &clusterState{ref: cluster}
 
-	if !c.isInstalled(cs) {
+	if !c.isInstalled(ctx, cs) {
 		return cs
 	}
-	if !c.isConfigured(cs) {
+	if !c.isConfigured(ctx, cs) {
 		return cs
 	}
 
-	isMulti, err := c.configManagement.NestedBool("spec", "enableMultiRepo")
+	isMulti, err := c.configManagement.NestedBool(ctx, "spec", "enableMultiRepo")
 	if err != nil {
 		cs.status = util.ErrorMsg
 		cs.error = err.Error()
@@ -90,22 +90,22 @@ func (c *statusClient) clusterStatus(ctx context.Context, cluster, namespace str
 	} else if isMulti {
 		c.multiRepoClusterStatus(ctx, cs)
 	} else {
-		c.monoRepoClusterStatus(cs)
+		c.monoRepoClusterStatus(ctx, cs)
 	}
 	return cs
 }
 
 // monoRepoClusterStatus populates the given clusterState with the sync status of
 // the mono repo on the statusClient's cluster.
-func (c *statusClient) monoRepoClusterStatus(cs *clusterState) {
-	git, err := c.monoRepoGit()
+func (c *statusClient) monoRepoClusterStatus(ctx context.Context, cs *clusterState) {
+	git, err := c.monoRepoGit(ctx)
 	if err != nil {
 		cs.status = util.ErrorMsg
 		cs.error = err.Error()
 		return
 	}
 
-	repoList, err := c.repos.List(metav1.ListOptions{})
+	repoList, err := c.repos.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		cs.status = util.ErrorMsg
 		cs.error = err.Error()
@@ -124,20 +124,20 @@ func (c *statusClient) monoRepoClusterStatus(cs *clusterState) {
 
 // monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
 // and builds a Git config out of it.
-func (c *statusClient) monoRepoGit() (v1alpha1.Git, error) {
-	syncRepo, err := c.configManagement.NestedString("spec", "git", "syncRepo")
+func (c *statusClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
+	syncRepo, err := c.configManagement.NestedString(ctx, "spec", "git", "syncRepo")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	syncBranch, err := c.configManagement.NestedString("spec", "git", "syncBranch")
+	syncBranch, err := c.configManagement.NestedString(ctx, "spec", "git", "syncBranch")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	syncRev, err := c.configManagement.NestedString("spec", "git", "syncRev")
+	syncRev, err := c.configManagement.NestedString(ctx, "spec", "git", "syncRev")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	policyDir, err := c.configManagement.NestedString("spec", "git", "policyDir")
+	policyDir, err := c.configManagement.NestedString(ctx, "spec", "git", "policyDir")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
@@ -154,11 +154,11 @@ func (c *statusClient) monoRepoGit() (v1alpha1.Git, error) {
 // the multi repos on the statusClient's cluster.
 func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterState) {
 	var errs []string
-	sync, err := c.rootSync(ctx)
+	rootSync, err := c.rootSync(ctx)
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
-		cs.repos = append(cs.repos, rootRepoStatus(sync))
+		cs.repos = append(cs.repos, rootRepoStatus(rootSync))
 	}
 
 	syncs, err := c.repoSyncs(ctx)
@@ -187,21 +187,21 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 // namespaceRepoClusterStatus populates the given clusterState with the sync status of
 // the specified namespace repo on the statusClient's cluster.
 func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clusterState, ns string) {
-	sync, err := c.repoSync(ctx, ns)
+	repoSync, err := c.repoSync(ctx, ns)
 	if err != nil {
 		cs.status = util.ErrorMsg
 		cs.error = err.Error()
 		return
 	}
 
-	cs.repos = append(cs.repos, namespaceRepoStatus(sync))
+	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync))
 }
 
 // isInstalled returns true if the statusClient is connected to a cluster where
 // Config Sync is installed. Updates the given clusterState with status info if
 // Config Sync is not installed.
-func (c *statusClient) isInstalled(cs *clusterState) bool {
-	podList, err := c.pods.List(metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
+func (c *statusClient) isInstalled(ctx context.Context, cs *clusterState) bool {
+	podList, err := c.pods.List(ctx, metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -224,8 +224,8 @@ func (c *statusClient) isInstalled(cs *clusterState) bool {
 // isConfigured returns true if the statusClient is connected to a cluster where
 // Config Sync is configured. Updates the given clusterState with status info if
 // Config Sync is not configured.
-func (c *statusClient) isConfigured(cs *clusterState) bool {
-	errs, err := c.configManagement.NestedStringSlice("status", "errors")
+func (c *statusClient) isConfigured(ctx context.Context, cs *clusterState) bool {
+	errs, err := c.configManagement.NestedStringSlice(ctx, "status", "errors")
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -249,7 +249,7 @@ func (c *statusClient) isConfigured(cs *clusterState) bool {
 
 // statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
-func statusClients(contexts []string) (map[string]*statusClient, error) {
+func statusClients(ctx context.Context, contexts []string) (map[string]*statusClient, error) {
 	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
 	if configs == nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
@@ -308,7 +308,7 @@ func statusClients(contexts []string) (map[string]*statusClient, error) {
 		go func(pcs *apis.Clientset, kcs *kubernetes.Clientset, cmc *util.ConfigManagementClient, cfgName string) {
 			// We need to explicitly check if this code is currently executing
 			// on-cluster since the reachability check fails in that case.
-			if isOnCluster() || isReachable(pcs, cfgName) {
+			if isOnCluster() || isReachable(ctx, pcs, cfgName) {
 				mapMutex.Lock()
 				clientMap[cfgName] = &statusClient{
 					cl,
@@ -363,8 +363,8 @@ func isOnCluster() bool {
 }
 
 // isReachable returns true if the given ClientSet points to a reachable cluster.
-func isReachable(clientset *apis.Clientset, cluster string) bool {
-	_, err := clientset.RESTClient().Get().DoRaw()
+func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string) bool {
+	_, err := clientset.RESTClient().Get().DoRaw(ctx)
 	if err == nil {
 		return true
 	}

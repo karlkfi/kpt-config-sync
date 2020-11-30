@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/nomos/pkg/status"
@@ -15,7 +16,7 @@ func (r *noOpRemediator) NeedsUpdate() bool {
 	return r.needsUpdate
 }
 
-func (r *noOpRemediator) UpdateWatches(gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+func (r *noOpRemediator) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
 	r.needsUpdate = false
 	return nil
 }

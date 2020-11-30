@@ -1,6 +1,8 @@
 package watch
 
 import (
+	"context"
+
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
@@ -27,10 +29,10 @@ type watcherConfig struct {
 }
 
 // createWatcherFunc is the type of functions to create watchers
-type createWatcherFunc func(cfg watcherConfig) (Runnable, status.Error)
+type createWatcherFunc func(ctx context.Context, cfg watcherConfig) (Runnable, status.Error)
 
 // createWatcher creates a watcher for a given GVK
-func createWatcher(cfg watcherConfig) (Runnable, status.Error) {
+func createWatcher(ctx context.Context, cfg watcherConfig) (Runnable, status.Error) {
 	if cfg.startWatch == nil {
 		mapping, err := cfg.mapper.RESTMapping(cfg.gvk.GroupKind(), cfg.gvk.Version)
 		if err != nil {
@@ -43,7 +45,7 @@ func createWatcher(cfg watcherConfig) (Runnable, status.Error) {
 		}
 
 		cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
-			return dynamicClient.Resource(mapping.Resource).Watch(options)
+			return dynamicClient.Resource(mapping.Resource).Watch(ctx, options)
 		}
 	}
 

@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"context"
 	"time"
 
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -21,14 +22,14 @@ type ClusterSelectorsGetter interface {
 
 // ClusterSelectorInterface has methods to work with ClusterSelector resources.
 type ClusterSelectorInterface interface {
-	Create(*v1.ClusterSelector) (*v1.ClusterSelector, error)
-	Update(*v1.ClusterSelector) (*v1.ClusterSelector, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.ClusterSelector, error)
-	List(opts metav1.ListOptions) (*v1.ClusterSelectorList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.ClusterSelector, err error)
+	Create(ctx context.Context, clusterSelector *v1.ClusterSelector, opts metav1.CreateOptions) (*v1.ClusterSelector, error)
+	Update(ctx context.Context, clusterSelector *v1.ClusterSelector, opts metav1.UpdateOptions) (*v1.ClusterSelector, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ClusterSelector, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterSelectorList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ClusterSelector, err error)
 	ClusterSelectorExpansion
 }
 
@@ -45,19 +46,19 @@ func newClusterSelectors(c *ConfigmanagementV1Client) *clusterSelectors {
 }
 
 // Get takes name of the clusterSelector, and returns the corresponding clusterSelector object, and an error if there is any.
-func (c *clusterSelectors) Get(name string, options metav1.GetOptions) (result *v1.ClusterSelector, err error) {
+func (c *clusterSelectors) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.ClusterSelector, err error) {
 	result = &v1.ClusterSelector{}
 	err = c.client.Get().
 		Resource("clusterselectors").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ClusterSelectors that match those selectors.
-func (c *clusterSelectors) List(opts metav1.ListOptions) (result *v1.ClusterSelectorList, err error) {
+func (c *clusterSelectors) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ClusterSelectorList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -67,13 +68,13 @@ func (c *clusterSelectors) List(opts metav1.ListOptions) (result *v1.ClusterSele
 		Resource("clusterselectors").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested clusterSelectors.
-func (c *clusterSelectors) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *clusterSelectors) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -83,66 +84,69 @@ func (c *clusterSelectors) Watch(opts metav1.ListOptions) (watch.Interface, erro
 		Resource("clusterselectors").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a clusterSelector and creates it.  Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *clusterSelectors) Create(clusterSelector *v1.ClusterSelector) (result *v1.ClusterSelector, err error) {
+func (c *clusterSelectors) Create(ctx context.Context, clusterSelector *v1.ClusterSelector, opts metav1.CreateOptions) (result *v1.ClusterSelector, err error) {
 	result = &v1.ClusterSelector{}
 	err = c.client.Post().
 		Resource("clusterselectors").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterSelector).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a clusterSelector and updates it. Returns the server's representation of the clusterSelector, and an error, if there is any.
-func (c *clusterSelectors) Update(clusterSelector *v1.ClusterSelector) (result *v1.ClusterSelector, err error) {
+func (c *clusterSelectors) Update(ctx context.Context, clusterSelector *v1.ClusterSelector, opts metav1.UpdateOptions) (result *v1.ClusterSelector, err error) {
 	result = &v1.ClusterSelector{}
 	err = c.client.Put().
 		Resource("clusterselectors").
 		Name(clusterSelector.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(clusterSelector).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the clusterSelector and deletes it. Returns an error if one occurs.
-func (c *clusterSelectors) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *clusterSelectors) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("clusterselectors").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *clusterSelectors) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *clusterSelectors) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("clusterselectors").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched clusterSelector.
-func (c *clusterSelectors) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.ClusterSelector, err error) {
+func (c *clusterSelectors) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ClusterSelector, err error) {
 	result = &v1.ClusterSelector{}
 	err = c.client.Patch(pt).
 		Resource("clusterselectors").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

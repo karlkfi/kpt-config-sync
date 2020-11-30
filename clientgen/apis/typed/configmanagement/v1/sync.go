@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"context"
 	"time"
 
 	scheme "github.com/google/nomos/clientgen/apis/scheme"
@@ -21,15 +22,15 @@ type SyncsGetter interface {
 
 // SyncInterface has methods to work with Sync resources.
 type SyncInterface interface {
-	Create(*v1.Sync) (*v1.Sync, error)
-	Update(*v1.Sync) (*v1.Sync, error)
-	UpdateStatus(*v1.Sync) (*v1.Sync, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.Sync, error)
-	List(opts metav1.ListOptions) (*v1.SyncList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Sync, err error)
+	Create(ctx context.Context, sync *v1.Sync, opts metav1.CreateOptions) (*v1.Sync, error)
+	Update(ctx context.Context, sync *v1.Sync, opts metav1.UpdateOptions) (*v1.Sync, error)
+	UpdateStatus(ctx context.Context, sync *v1.Sync, opts metav1.UpdateOptions) (*v1.Sync, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Sync, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.SyncList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sync, err error)
 	SyncExpansion
 }
 
@@ -46,19 +47,19 @@ func newSyncs(c *ConfigmanagementV1Client) *syncs {
 }
 
 // Get takes name of the sync, and returns the corresponding sync object, and an error if there is any.
-func (c *syncs) Get(name string, options metav1.GetOptions) (result *v1.Sync, err error) {
+func (c *syncs) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Get().
 		Resource("syncs").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Syncs that match those selectors.
-func (c *syncs) List(opts metav1.ListOptions) (result *v1.SyncList, err error) {
+func (c *syncs) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SyncList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -68,13 +69,13 @@ func (c *syncs) List(opts metav1.ListOptions) (result *v1.SyncList, err error) {
 		Resource("syncs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested syncs.
-func (c *syncs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *syncs) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -84,81 +85,84 @@ func (c *syncs) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("syncs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a sync and creates it.  Returns the server's representation of the sync, and an error, if there is any.
-func (c *syncs) Create(sync *v1.Sync) (result *v1.Sync, err error) {
+func (c *syncs) Create(ctx context.Context, sync *v1.Sync, opts metav1.CreateOptions) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Post().
 		Resource("syncs").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sync).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a sync and updates it. Returns the server's representation of the sync, and an error, if there is any.
-func (c *syncs) Update(sync *v1.Sync) (result *v1.Sync, err error) {
+func (c *syncs) Update(ctx context.Context, sync *v1.Sync, opts metav1.UpdateOptions) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Put().
 		Resource("syncs").
 		Name(sync.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sync).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *syncs) UpdateStatus(sync *v1.Sync) (result *v1.Sync, err error) {
+func (c *syncs) UpdateStatus(ctx context.Context, sync *v1.Sync, opts metav1.UpdateOptions) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Put().
 		Resource("syncs").
 		Name(sync.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(sync).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the sync and deletes it. Returns an error if one occurs.
-func (c *syncs) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *syncs) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("syncs").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *syncs) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *syncs) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("syncs").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched sync.
-func (c *syncs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Sync, err error) {
+func (c *syncs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Sync, err error) {
 	result = &v1.Sync{}
 	err = c.client.Patch(pt).
 		Resource("syncs").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

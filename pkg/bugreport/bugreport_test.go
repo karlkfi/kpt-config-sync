@@ -1,6 +1,7 @@
 package bugreport
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -89,7 +90,7 @@ type mockLogSource struct {
 	readCloser  io.ReadCloser
 }
 
-func (m *mockLogSource) fetchRcForLogSource(cs coreClient) (io.ReadCloser, error) {
+func (m *mockLogSource) fetchRcForLogSource(ctx context.Context, cs coreClient) (io.ReadCloser, error) {
 	if m.returnError {
 		return nil, fmt.Errorf("failed to get RC")
 	}

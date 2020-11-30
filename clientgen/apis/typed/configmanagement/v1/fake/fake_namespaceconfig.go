@@ -3,6 +3,8 @@
 package fake
 
 import (
+	"context"
+
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -22,7 +24,7 @@ var namespaceconfigsResource = schema.GroupVersionResource{Group: "configmanagem
 var namespaceconfigsKind = schema.GroupVersionKind{Group: "configmanagement.gke.io", Version: "v1", Kind: "NamespaceConfig"}
 
 // Get takes name of the namespaceConfig, and returns the corresponding namespaceConfig object, and an error if there is any.
-func (c *FakeNamespaceConfigs) Get(name string, options v1.GetOptions) (result *configmanagementv1.NamespaceConfig, err error) {
+func (c *FakeNamespaceConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *configmanagementv1.NamespaceConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(namespaceconfigsResource, name), &configmanagementv1.NamespaceConfig{})
 	if obj == nil {
@@ -32,7 +34,7 @@ func (c *FakeNamespaceConfigs) Get(name string, options v1.GetOptions) (result *
 }
 
 // List takes label and field selectors, and returns the list of NamespaceConfigs that match those selectors.
-func (c *FakeNamespaceConfigs) List(opts v1.ListOptions) (result *configmanagementv1.NamespaceConfigList, err error) {
+func (c *FakeNamespaceConfigs) List(ctx context.Context, opts v1.ListOptions) (result *configmanagementv1.NamespaceConfigList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(namespaceconfigsResource, namespaceconfigsKind, opts), &configmanagementv1.NamespaceConfigList{})
 	if obj == nil {
@@ -53,13 +55,13 @@ func (c *FakeNamespaceConfigs) List(opts v1.ListOptions) (result *configmanageme
 }
 
 // Watch returns a watch.Interface that watches the requested namespaceConfigs.
-func (c *FakeNamespaceConfigs) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeNamespaceConfigs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(namespaceconfigsResource, opts))
 }
 
 // Create takes the representation of a namespaceConfig and creates it.  Returns the server's representation of the namespaceConfig, and an error, if there is any.
-func (c *FakeNamespaceConfigs) Create(namespaceConfig *configmanagementv1.NamespaceConfig) (result *configmanagementv1.NamespaceConfig, err error) {
+func (c *FakeNamespaceConfigs) Create(ctx context.Context, namespaceConfig *configmanagementv1.NamespaceConfig, opts v1.CreateOptions) (result *configmanagementv1.NamespaceConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(namespaceconfigsResource, namespaceConfig), &configmanagementv1.NamespaceConfig{})
 	if obj == nil {
@@ -69,7 +71,7 @@ func (c *FakeNamespaceConfigs) Create(namespaceConfig *configmanagementv1.Namesp
 }
 
 // Update takes the representation of a namespaceConfig and updates it. Returns the server's representation of the namespaceConfig, and an error, if there is any.
-func (c *FakeNamespaceConfigs) Update(namespaceConfig *configmanagementv1.NamespaceConfig) (result *configmanagementv1.NamespaceConfig, err error) {
+func (c *FakeNamespaceConfigs) Update(ctx context.Context, namespaceConfig *configmanagementv1.NamespaceConfig, opts v1.UpdateOptions) (result *configmanagementv1.NamespaceConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(namespaceconfigsResource, namespaceConfig), &configmanagementv1.NamespaceConfig{})
 	if obj == nil {
@@ -80,7 +82,7 @@ func (c *FakeNamespaceConfigs) Update(namespaceConfig *configmanagementv1.Namesp
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeNamespaceConfigs) UpdateStatus(namespaceConfig *configmanagementv1.NamespaceConfig) (*configmanagementv1.NamespaceConfig, error) {
+func (c *FakeNamespaceConfigs) UpdateStatus(ctx context.Context, namespaceConfig *configmanagementv1.NamespaceConfig, opts v1.UpdateOptions) (*configmanagementv1.NamespaceConfig, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(namespaceconfigsResource, "status", namespaceConfig), &configmanagementv1.NamespaceConfig{})
 	if obj == nil {
@@ -90,22 +92,22 @@ func (c *FakeNamespaceConfigs) UpdateStatus(namespaceConfig *configmanagementv1.
 }
 
 // Delete takes name of the namespaceConfig and deletes it. Returns an error if one occurs.
-func (c *FakeNamespaceConfigs) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeNamespaceConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(namespaceconfigsResource, name), &configmanagementv1.NamespaceConfig{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeNamespaceConfigs) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(namespaceconfigsResource, listOptions)
+func (c *FakeNamespaceConfigs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(namespaceconfigsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &configmanagementv1.NamespaceConfigList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched namespaceConfig.
-func (c *FakeNamespaceConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *configmanagementv1.NamespaceConfig, err error) {
+func (c *FakeNamespaceConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configmanagementv1.NamespaceConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(namespaceconfigsResource, name, pt, data, subresources...), &configmanagementv1.NamespaceConfig{})
 	if obj == nil {
