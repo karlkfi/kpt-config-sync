@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package defaults contains cross-api-version configuration defaults
-package defaults
-
-// Image is the default for the Config.Image field, aka the default node image.
-const Image = "kindest/node:v1.18.2@sha256:7b27a6d0f2517ff88ba444025beae41491b016bc6af573ba467b70c5e8e0d85f"
+// Package v1alpha3 implements the v1alpha3 apiVersion of kind's cluster
+// configuration
+//
+// +k8s:deepcopy-gen=package
+// +k8s:defaulter-gen=TypeMeta
+package v1alpha3

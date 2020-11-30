@@ -54,7 +54,7 @@ test_teardown() {
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
   namespace::declare prod
   git::commit
-  wait::for -t 30 -- nomos::repo_synced
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource exists on cluster"
   kubectl get anvil e2e-test-anvil -n prod
@@ -88,13 +88,14 @@ test_teardown() {
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
   namespace::declare prod
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource exists on cluster"
   # we need to specify the version of anvil in kubectl. Otherwise, it may try to get a version that doesn't exist.
-  wait::for -t 30 -- kubectl get anvil.v1.acme.com e2e-test-anvil -n prod
+  kubectl get anvil.v1.acme.com e2e-test-anvil -n prod
 
   debug::log "CRD exists on cluster"
-  wait::for -t 30 -- kubectl get crd anvils.acme.com
+  kubectl get crd anvils.acme.com
 
   debug::log "Updating CRD version"
   git::update "${YAML_DIR}/customresources/v1_crds/anvil-crd-v2.yaml" acme/cluster/anvil-crd.yaml
@@ -120,6 +121,7 @@ test_teardown() {
   git::update "${YAML_DIR}/customresources/v1_crds/anvil-crd-only-v2.yaml" acme/cluster/anvil-crd.yaml
   git::update "${YAML_DIR}/customresources/anvil-heavier-v2.yaml" acme/namespaces/prod/anvil.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "CR is updated"
   # we need to specify the version of anvil in kubectl. Otherwise, it may try to get a version that doesn't exist.
@@ -147,6 +149,7 @@ test_teardown() {
   git::rm acme/cluster/anvil-crd.yaml
   git::rm acme/namespaces/prod/anvil.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource doesn't exist on cluster"
   wait::for -f -t 30 -- kubectl get anvil e2e-test-anvil -n prod
@@ -170,6 +173,7 @@ test_teardown() {
   git::add "${YAML_DIR}/customresources/v1_crds/clusteranvil-crd.yaml" acme/cluster/clusteranvil-crd.yaml
   git::add "${YAML_DIR}/customresources/clusteranvil.yaml" acme/cluster/clusteranvil.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource exists on cluster"
   wait::for -t 30 -- kubectl get clusteranvil e2e-test-clusteranvil
@@ -201,6 +205,7 @@ test_teardown() {
   git::rm acme/cluster/clusteranvil-crd.yaml
   git::rm acme/cluster/clusteranvil.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource doesn't exist on cluster"
   wait::for -f -t 30 -- kubectl get clusteranvil e2e-test-clusteranvil
@@ -219,9 +224,10 @@ test_teardown() {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/v1_crds/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "CRD exists on cluster"
-  wait::for -t 30 -- kubectl get crd anvils.acme.com
+  kubectl get crd anvils.acme.com
 
   debug::log "Adding unmanaged CR"
   kubectl apply -f  "${YAML_DIR}/customresources/anvil-heavier.yaml"
@@ -232,6 +238,7 @@ test_teardown() {
   debug::log "Removing CRD"
   git::rm acme/cluster/anvil-crd.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "CRD doesn't exist on cluster"
   wait::for -f -t 30 -- kubectl get crd anvils.acme.com
@@ -240,7 +247,7 @@ test_teardown() {
   wait::for -f -t 30 -- kubectl get anvils e2e-test-anvil -n default
 }
 
-@test "${FILE_NAME}: CRD added, CR added, CRD removed, which causes vet failure" {
+@test "${FILE_NAME}: CRD added, CR added" {
   local minor_version
   minor_version=$(get_minor_version)
   if (( minor_version < 16 )); then
@@ -250,23 +257,17 @@ test_teardown() {
   debug::log "Adding CRD"
   git::add "${YAML_DIR}/customresources/v1_crds/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "CRD exists on cluster"
-  wait::for -t 30 -- kubectl get crd anvils.acme.com
+  kubectl get crd anvils.acme.com
 
   debug::log "Adding Custom Resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
   namespace::declare prod
   git::commit
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource exists on cluster"
-  wait::for -t 30 -- kubectl get anvil e2e-test-anvil -n prod
-
-  debug::log "Removing CRD"
-  git::rm acme/cluster/anvil-crd.yaml
-  git::commit
-
-  debug::log "Check that nomos vet fails"
-  wait::for -f -t 5 -- nomos vet --path="${TEST_REPO}"
+  kubectl get anvil e2e-test-anvil -n prod
 }
-

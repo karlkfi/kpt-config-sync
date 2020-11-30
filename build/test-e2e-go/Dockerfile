@@ -8,6 +8,8 @@ ENV GO111MODULE=on
 ENV CGO_ENABLED=0
 
 # We're running tests within kind v0.8.1 clusters.
+# If you upgrade the version, you also need to update the speciak kubekins-with-Kind
+# images we use in the test-infra repository. See Makefile.prow.
 RUN go get sigs.k8s.io/kind@v0.8.1
 
 RUN apk add --no-cache \

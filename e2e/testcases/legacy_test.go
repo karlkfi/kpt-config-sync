@@ -188,7 +188,7 @@ func TestBats(t *testing.T) {
 			skipMultiRepo: allTests, // TODO(b/158042839): implement nomos status in CLI, this may be a go rewrite
 		},
 		// Converted to cluster_resources_test.go.
-		//{fileName: "cluster_resources.bats"},
+		// {fileName: "cluster_resources.bats"},
 		{fileName: "custom_resource_definitions_v1.bats"},
 		{fileName: "custom_resource_definitions_v1beta1.bats"},
 		{fileName: "custom_resources_v1.bats"},
@@ -196,7 +196,7 @@ func TestBats(t *testing.T) {
 		{fileName: "foo_corp.bats"},
 		{fileName: "gatekeeper.bats"},
 		// Converted to multiversion_test.go.
-		//{fileName: "multiversion.bats"},
+		// {fileName: "multiversion.bats"},
 		{
 			fileName: "namespaces.bats",
 			skipMultiRepo: testNums(
@@ -219,13 +219,13 @@ func TestBats(t *testing.T) {
 			),
 		},
 		// Converted to preserve_fields_test.go.
-		//{fileName: "preserve_fields.bats"},
+		// {fileName: "preserve_fields.bats"},
 		{
 			fileName:      "repoless.bats",
 			skipMultiRepo: allTests, // TODO(b/168914145): adjust control knobs for CSMR
 		},
 		// Converted to resource_conditions_test.go.
-		//{fileName: "resource_conditions.bats"},
+		// {fileName: "resource_conditions.bats"},
 		{
 			fileName: "status_monitoring.bats",
 		},

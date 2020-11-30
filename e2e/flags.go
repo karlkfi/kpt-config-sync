@@ -24,7 +24,7 @@ var Debug = flag.Bool("debug", false,
 
 // KubernetesVersion is the version of Kubernetes to test against. Only has effect
 // when testing against test-created Kind clusters.
-var KubernetesVersion = flag.String("kubernetes-version", "1.16",
+var KubernetesVersion = flag.String("kubernetes-version", "1.17",
 	"The version of Kubernetes to create")
 
 // MultiRepo enables running the tests against multi-repo Config Sync.

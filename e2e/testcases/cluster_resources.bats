@@ -96,15 +96,19 @@ function check_cluster_scoped_resource() {
   clusterrole_name="e2e-test-clusterrole"
 
   debug::log "Ensure the clusterrole does not already exist"
+  # If the test exits unexpectedly, this ClusterRole doesn't get cleaned up and
+  # the test is never able to pass again, so we delete it manually here.
+  kubectl delete clusterroles e2e-test-clusterrole --ignore-not-found
   wait::for -f -t 10 -- kubectl get clusterrole ${clusterrole_name}
 
   debug::log "Add initial clusterrole"
   git::add ${YAML_DIR}/clusterrole-modify.yaml acme/cluster/clusterrole.yaml
-  git::commit -m "Adds an initial clusterrole"
+  git::commit -m "Add initial clusterrole"
+  wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Check initial state of the object"
-  wait::for -o "[get list create]" -t 10 -- \
-    kubectl get clusterroles "${clusterrole_name}" -o jsonpath='{.rules[0].verbs}'
+  clusterrole::validate_management_selection ${clusterrole_name} '.rules[0].verbs' '["get","list","create"]'
+
   debug::log "Modify the clusterrole on the apiserver to remove 'create' verb from the role"
   kubectl apply --filename="${YAML_DIR}/clusterrole-create.yaml"
   debug::log "Nomos should revert the permission to what it is in the source of truth"
@@ -119,4 +123,3 @@ function check_cluster_scoped_resource() {
     '["get","list"]' \
     '["get","list","create"]'
 }
-

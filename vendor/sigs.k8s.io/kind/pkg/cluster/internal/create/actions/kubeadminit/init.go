@@ -60,9 +60,9 @@ func (a *action) Execute(ctx *actions.ActionContext) error {
 	cmd := node.Command(
 		// init because this is the control plane node
 		"kubeadm", "init",
-		// skip preflight checks, as these have undesirable side effects
-		// and don't tell us much. requires kubeadm 1.13+
-		"--skip-phases=preflight",
+		// preflight errors are expected, in particular for swap being enabled
+		// TODO(bentheelder): limit the set of acceptable errors
+		"--ignore-preflight-errors=all",
 		// specify our generated config file
 		"--config=/kind/kubeadm.conf",
 		"--skip-token-print",
