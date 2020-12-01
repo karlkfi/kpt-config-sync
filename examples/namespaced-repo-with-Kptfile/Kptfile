@@ -12,5 +12,5 @@ upstream:
 packageMetadata:
   shortDescription: example blueprint for kpt fn export
 inventory:
-  identifier: some-name
+  name: some-name
   namespace: foo

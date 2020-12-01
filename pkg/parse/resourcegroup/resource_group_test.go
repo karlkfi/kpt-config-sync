@@ -1,18 +1,19 @@
-package kptfile
+package resourcegroup
 
 import (
 	"testing"
 
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configsync"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func fakeKptfile(labels, annotations map[string]string) *Kptfile {
-	obj := &Kptfile{}
-	obj.Inventory = Inventory{
-		Identifier:  "test-rg",
+func fakeKptfile(labels, annotations map[string]string) *kptfile.KptFile {
+	obj := &kptfile.KptFile{}
+	obj.Inventory = kptfile.Inventory{
+		Name:        "test-rg",
 		Namespace:   "test-namespace",
 		Labels:      labels,
 		Annotations: annotations,
@@ -57,7 +58,7 @@ func fakeObjMetadata() []ObjMetadata {
 func TestGenerateResourceGroup(t *testing.T) {
 	tcs := []struct {
 		testName string
-		kptFile  *Kptfile
+		kptFile  *kptfile.KptFile
 		ids      []ObjMetadata
 		expect   *ResourceGroup
 	}{
@@ -97,7 +98,7 @@ func TestGenerateResourceGroup(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.testName, func(t *testing.T) {
-			actual := ResourceGroupFromKptFile(tc.kptFile, tc.ids)
+			actual := FromKptFile(tc.kptFile, tc.ids)
 			if diff := cmp.Diff(tc.expect, actual, cmpopts.EquateEmpty()); diff != "" {
 				t.Error(diff)
 			}

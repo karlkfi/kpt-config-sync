@@ -3,10 +3,10 @@ package kinds
 import (
 	"fmt"
 
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/parse/kptfile"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -205,5 +205,5 @@ func ServiceAccount() schema.GroupVersionKind {
 
 // KptFile returns the canonical Kptfile GroupVersionKind.
 func KptFile() schema.GroupVersionKind {
-	return kptfile.SchemeGroupVersion.WithKind(kptfile.Kind)
+	return schema.GroupVersionKind{Group: kptfile.KptFileGroup, Version: kptfile.KptFileVersion, Kind: kptfile.KptFileName}
 }

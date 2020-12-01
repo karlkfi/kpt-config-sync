@@ -1,10 +1,11 @@
 package parse
 
 import (
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/parse/kptfile"
+	"github.com/google/nomos/pkg/parse/resourcegroup"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
@@ -25,12 +26,11 @@ func AsResourceGroup(objs []core.Object) ([]core.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = validateKptfile(kpt)
-		if err != nil {
-			return nil, err
+		if kpt != nil {
+			rg := resourcegroup.FromKptFile(kpt, getIDs(resources))
+			resources = append(resources, rg)
 		}
-		rg := kptfile.ResourceGroupFromKptFile(kpt, getIDs(resources))
-		return append(resources, rg), nil
+		return resources, nil
 	default:
 		return resources, MultipleKptfilesError(kptfiles...)
 	}
@@ -49,11 +49,11 @@ func peelOffKptFiles(objs []core.Object) ([]core.Object, []core.Object) {
 	return kptfiles, resources
 }
 
-func getIDs(objs []core.Object) []kptfile.ObjMetadata {
-	var ids []kptfile.ObjMetadata
+func getIDs(objs []core.Object) []resourcegroup.ObjMetadata {
+	var ids []resourcegroup.ObjMetadata
 	for _, obj := range objs {
 		coreID := core.IDOf(obj)
-		ids = append(ids, kptfile.ObjMetadata{
+		ids = append(ids, resourcegroup.ObjMetadata{
 			Name:      coreID.Name,
 			Namespace: coreID.Namespace,
 			Group:     coreID.Group,
@@ -97,31 +97,57 @@ func isKptfile(id core.Object) bool {
 }
 
 // fromKptfile converts the core.Object to a *Kptfile.
-func fromKptfile(obj core.Object) (*kptfile.Kptfile, error) {
+func fromKptfile(obj core.Object) (*kptfile.KptFile, error) {
+	result, err := toKptfile(obj)
+	if err != nil {
+		return nil, err
+	}
+	// Skip the Kptfile when it doesn't specify the Inventory field.
+	if isEmptyInventory(result.Inventory) {
+		return nil, nil
+	}
+	err = validateInventory(result.Inventory, obj)
+	return result, err
+}
+
+func toKptfile(obj core.Object) (*kptfile.KptFile, error) {
 	if !isKptfile(obj) {
 		return nil, errors.Errorf("not a Kptfile: %v", core.IDOf(obj))
-	}
-	if result, isKptfile := obj.(*kptfile.Kptfile); isKptfile {
-		return result, nil
 	}
 	data, err := yaml.Marshal(obj)
 	if err != nil {
 		return nil, err
 	}
-	result := &kptfile.Kptfile{}
+	result := &kptfile.KptFile{}
 	err = yaml.Unmarshal(data, result)
 	return result, err
 }
 
-func validateKptfile(kf *kptfile.Kptfile) status.Error {
-	if kf == nil {
-		return InvalidKptfileError("Kptfile shouldn't be nil", kf)
+func validateInventory(inv kptfile.Inventory, kfObj core.Object) error {
+	if inv.Namespace == "" {
+		return InvalidKptfileError(".inventory.namespace shouldn't be empty", kfObj)
 	}
-	if kf.Inventory.Namespace == "" {
-		return InvalidKptfileError(".inventory.namespace shouldn't be empty", kf)
-	}
-	if kf.Inventory.Identifier == "" {
-		return InvalidKptfileError(".inventory.identifier shouldn't be empty", kf)
+	if inv.Name == "" {
+		return InvalidKptfileError(".inventory.name shouldn't be empty", kfObj)
 	}
 	return nil
+}
+
+func isEmptyInventory(inv kptfile.Inventory) bool {
+	if inv.Namespace != "" {
+		return false
+	}
+	if inv.Name != "" {
+		return false
+	}
+	if inv.InventoryID != "" {
+		return false
+	}
+	if len(inv.Labels) > 0 {
+		return false
+	}
+	if len(inv.Annotations) > 0 {
+		return false
+	}
+	return true
 }

@@ -1,6 +1,7 @@
-package kptfile
+package resourcegroup
 
 import (
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,8 +15,8 @@ const (
 	application = "Application"
 )
 
-// ResourceGroupSpec defines the spec of ResourceGroup.
-type ResourceGroupSpec struct {
+// Spec defines the spec of ResourceGroup.
+type Spec struct {
 	Resources  []ObjMetadata `json:"resources,omitempty"`
 	Descriptor Descriptor    `json:"descriptor,omitempty"`
 }
@@ -65,7 +66,7 @@ type Descriptor struct {
 type ResourceGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ResourceGroupSpec `json:"spec,omitempty"`
+	Spec              Spec `json:"spec,omitempty"`
 }
 
 func (in *ResourceGroup) deepCopy() *ResourceGroup {
@@ -88,17 +89,17 @@ func (in *ResourceGroup) DeepCopyObject() runtime.Object {
 	return nil
 }
 
-// ResourceGroupFromKptFile creates a ResourceGroup based on the inventory field
+// FromKptFile creates a ResourceGroup based on the inventory field
 // of a KptFile with the following mapping:
-// inventory.identifer -> resourcegroup name
+// inventory.name -> resourcegroup name
 // inventory.namespace -> resourcegroup namespace
 // inventory.annotations -> resourcegroup annotations
 // inventory.labels -> resourcegroup labels
-func ResourceGroupFromKptFile(kpt *Kptfile, ids []ObjMetadata) core.Object {
-	name := kpt.Inventory.Identifier
-	namespace := kpt.Inventory.Namespace
-	labels := kpt.Inventory.Labels
-	annotations := kpt.Inventory.Annotations
+func FromKptFile(kf *kptfile.KptFile, ids []ObjMetadata) core.Object {
+	name := kf.Inventory.Name
+	namespace := kf.Inventory.Namespace
+	labels := kf.Inventory.Labels
+	annotations := kf.Inventory.Annotations
 
 	rg := NewResourceGroup(name, namespace, labels, annotations, ids)
 	return rg
@@ -121,4 +122,15 @@ func NewResourceGroup(name, namespace string, labels, annotations map[string]str
 	copy(rg.Spec.Resources, ids)
 
 	return rg
+}
+
+func deepCopyMap(in map[string]string) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

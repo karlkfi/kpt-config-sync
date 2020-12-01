@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/parse/kptfile"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -372,11 +372,19 @@ func KptFile(path string, opts ...core.MetaMutator) ast.FileObject {
 
 // KptFileObject returns a default-initialized Kptfile with the passed opts
 // applied.
-func KptFileObject(opts ...core.MetaMutator) *kptfile.Kptfile {
-	result := &kptfile.Kptfile{TypeMeta: ToTypeMeta(kinds.KptFile())}
+func KptFileObject(opts ...core.MetaMutator) *unstructured.Unstructured {
+	result := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": kptfile.KptFileAPIVersion,
+			"kind":       kptfile.KptFileName,
+			"metadata": map[string]interface{}{
+				"name":      "kptfile",
+				"namespace": "namespace",
+			},
+		},
+	}
 	defaultMutate(result)
 	mutate(result, opts...)
-
 	return result
 }
 
