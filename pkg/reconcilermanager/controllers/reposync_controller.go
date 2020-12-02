@@ -19,13 +19,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -143,24 +141,12 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 
 // SetupWithManager registers RepoSync controller with reconciler-manager.
 func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
-	// mapSecretToRepoSync define a mapping from the Secret object in the event to
-	// the RepoSync object to reconcile.
-	mapSecretToRepoSync := handler.ToRequestsFunc(
-		func(a handler.MapObject) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{
-					Name:      v1alpha1.RepoSyncName,
-					Namespace: a.Meta.GetNamespace(),
-				}},
-			}
-		})
-
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RepoSync{}).
 		// Watch Secrets and trigger Reconciles for RepoSync object.
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync}).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync()}).
 		Owns(&corev1.ConfigMap{}).
-		Owns(&appsv1.Deployment{}).
+		Watches(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapDeploymentToRepoSync()}).
 		Complete(r)
 }
 

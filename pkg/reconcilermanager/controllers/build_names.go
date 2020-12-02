@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
 )
@@ -14,6 +15,16 @@ func repoSyncName(namespace string) string {
 // repoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
 func repoSyncResourceName(namespace, resourceName string) string {
 	return fmt.Sprintf("%s-%s-%s", repoSyncReconcilerPrefix, namespace, resourceName)
+}
+
+// parseRepoSyncReconciler parses namespace reconciler deployment name ns-reconciler-<namespace>
+// and returns namespace.
+func parseRepoSyncReconciler(name string) string {
+	prefix := repoSyncReconcilerPrefix + "-"
+	if strings.HasPrefix(name, prefix) {
+		return strings.TrimPrefix(name, prefix)
+	}
+	return ""
 }
 
 // rootSyncResourceName returns name in the format root-reconciler-<resourcename>.

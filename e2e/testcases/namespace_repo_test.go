@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -25,12 +26,15 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 		ntopts.WithCentralizedControl,
 	)
 
-	// Validate status condition "Reconciling" is set to "False" after the Reconciler
-	// Deployment is successfully created.
-	// Log error if the Reconciling condition does not progress to False before the timeout
-	// expires.
+	// Validate status condition "Reconciling" and "Stalled "is set to "False"
+	// after the reconciler deployment is successfully created.
+	// RepoSync status conditions "Reconciling" and "Stalled" are derived from
+	// namespace reconciler deployment.
+	// Log error if the Reconciling condition does not progress to False before
+	// the timeout expires.
 	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{}, hasReconcilingStatus(metav1.ConditionFalse))
+		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
 		t.Errorf("RepoSync did not finish reconciling: %v", err)
@@ -66,8 +70,21 @@ func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
 		rs := o.(*v1alpha1.RepoSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
-			if condition.Type == "Reconciling" && condition.Status != r {
-				return fmt.Errorf("object %q have %q condition status %q; wanted %q", o.GetName(), condition.Type, string(condition.Status), r)
+			if condition.Type == v1alpha1.RepoSyncReconciling && condition.Status != r {
+				return fmt.Errorf("object %q has %q condition status %q; want %q", o.GetName(), condition.Type, string(condition.Status), r)
+			}
+		}
+		return nil
+	}
+}
+
+func hasStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
+	return func(o core.Object) error {
+		rs := o.(*v1alpha1.RepoSync)
+		conditions := rs.Status.Conditions
+		for _, condition := range conditions {
+			if condition.Type == v1alpha1.RepoSyncStalled && condition.Status != r {
+				return fmt.Errorf("object %q has %q condition status %q; want %q", o.GetName(), condition.Type, string(condition.Status), r)
 			}
 		}
 		return nil
@@ -169,8 +186,8 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 	}
 
 	// validate Namespace Reconciler configmaps are no longer present.
-	err1 := nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject())
-	err2 := nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject())
+	err1 := nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", configsync.ControllerNamespace, fake.ConfigMapObject())
+	err2 := nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", configsync.ControllerNamespace, fake.ConfigMapObject())
 	if err1 != nil || err2 != nil {
 		if err1 != nil {
 			nt.T.Error(err1)
@@ -179,5 +196,39 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 			nt.T.Error(err2)
 		}
 		nt.T.FailNow()
+	}
+}
+
+func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
+	bsNamespace := "bookstore"
+	nt := nomostest.New(
+		t,
+		ntopts.SkipMonoRepo,
+		ntopts.NamespaceRepo(bsNamespace),
+		ntopts.WithCentralizedControl,
+	)
+
+	// Validate status condition "Reconciling" and Stalled is set to "False" after
+	// the reconciler reployment is successfully created.
+	// RepoSync status conditions "Reconciling" and "Stalled" are derived from
+	// namespace reconciler deployment.
+	err := nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+		hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
+	if err != nil {
+		t.Errorf("RepoSync did not finish reconciling: %v", err)
+	}
+
+	// Delete namespace reconciler deployment in bookstore namespace.
+	nsReconcilerDeployment := "ns-reconciler-bookstore"
+	nt.Kubectl("delete", "deployment", nsReconcilerDeployment, "-n", configsync.ControllerNamespace)
+
+	// Verify that the deployment is re-created after deletion by checking the
+	// Reconciling and Stalled condition in RepoSync resource..
+	_, err = nomostest.Retry(15*time.Second, func() error {
+		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
+	})
+	if err != nil {
+		t.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 }
