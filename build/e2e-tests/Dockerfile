@@ -37,9 +37,9 @@ RUN go get github.com/filmil/tap2junit/cmd/tap2junit@afa095c33668ed9abcaeaee5cf0
 RUN go get github.com/filmil/gotopt2/cmd/gotopt2@v0.1.2
 
 # kind can run kubernetes clusters in docker
-# v0.2.1
+# v0.9.0
 # TODO(juliankatz): Reevaluate the use of GO111MODULE.  It conflicts with declaration at the top.
-RUN go get sigs.k8s.io/kind@v0.2.1
+RUN go get sigs.k8s.io/kind@v0.9.0
 
 # Build intermediate image for gcloud / kubectl
 FROM marketplace.gcr.io/google/ubuntu1804 as gcloud-install

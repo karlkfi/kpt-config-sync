@@ -149,7 +149,7 @@ if ${gotopt2_use_ephemeral_cluster:-false}; then
   echo "kind" >./product_name
   cat <<EOF > "./kind-config.yaml"
 kind: Cluster
-apiVersion: kind.sigs.k8s.io/v1alpha3
+apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
   extraMounts:

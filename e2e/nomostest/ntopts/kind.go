@@ -19,15 +19,15 @@ import (
 // KindVersion is a specific Kind version associated with a Kubernetes minor version.
 type KindVersion string
 
-// The most recent
+// The v0.9.0 images from https://github.com/kubernetes-sigs/kind/releases
 const (
-	Kind1_18 KindVersion = "kindest/node:v1.18.2@sha256:7b27a6d0f2517ff88ba444025beae41491b016bc6af573ba467b70c5e8e0d85f"
-	Kind1_17 KindVersion = "kindest/node:v1.17.5@sha256:ab3f9e6ec5ad8840eeb1f76c89bb7948c77bbf76bcebe1a8b59790b8ae9a283a"
-	Kind1_16 KindVersion = "kindest/node:v1.16.9@sha256:7175872357bc85847ec4b1aba46ed1d12fa054c83ac7a8a11f5c268957fd5765"
-	Kind1_15 KindVersion = "kindest/node:v1.15.11@sha256:6cc31f3533deb138792db2c7d1ffc36f7456a06f1db5556ad3b6927641016f50"
-	Kind1_14 KindVersion = "kindest/node:v1.14.10@sha256:6cd43ff41ae9f02bb46c8f455d5323819aec858b99534a290517ebc181b443c6"
-	Kind1_13 KindVersion = "kindest/node:v1.13.12@sha256:214476f1514e47fe3f6f54d0f9e24cfb1e4cda449529791286c7161b7f9c08e7"
-	Kind1_12 KindVersion = "kindest/node:v1.12.10@sha256:faeb82453af2f9373447bb63f50bae02b8020968e0889c7fa308e19b348916cb"
+	Kind1_19 KindVersion = "kindest/node:v1.19.1@sha256:98cf5288864662e37115e362b23e4369c8c4a408f99cbc06e58ac30ddc721600"
+	Kind1_18 KindVersion = "kindest/node:v1.18.8@sha256:f4bcc97a0ad6e7abaf3f643d890add7efe6ee4ab90baeb374b4f41a4c95567eb"
+	Kind1_17 KindVersion = "kindest/node:v1.17.11@sha256:5240a7a2c34bf241afb54ac05669f8a46661912eab05705d660971eeb12f6555"
+	Kind1_16 KindVersion = "kindest/node:v1.16.15@sha256:a89c771f7de234e6547d43695c7ab047809ffc71a0c3b65aa54eda051c45ed20"
+	Kind1_15 KindVersion = "kindest/node:v1.15.12@sha256:d9b939055c1e852fe3d86955ee24976cab46cba518abcb8b13ba70917e6547a6"
+	Kind1_14 KindVersion = "kindest/node:v1.14.10@sha256:ce4355398a704fca68006f8a29f37aafb49f8fc2f64ede3ccd0d9198da910146"
+	Kind1_13 KindVersion = "kindest/node:v1.13.12@sha256:1c1a48c2bfcbae4d5f4fa4310b5ed10756facad0b7a2ca93c7a4b5bae5db29f5"
 
 	// Kubeconfig is the filename of the KUBECONFIG file.
 	Kubeconfig = "KUBECONFIG"
@@ -54,8 +54,6 @@ func asKindVersion(t *testing.T, version string) KindVersion {
 	t.Helper()
 
 	switch version {
-	case "1.12":
-		return Kind1_12
 	case "1.13":
 		return Kind1_13
 	case "1.14":
@@ -68,6 +66,8 @@ func asKindVersion(t *testing.T, version string) KindVersion {
 		return Kind1_17
 	case "1.18":
 		return Kind1_18
+	case "1.19":
+		return Kind1_19
 	}
 	t.Fatalf("Unrecognized Kind version: %q", version)
 	return ""
@@ -151,8 +151,7 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string, version KindV
 		}
 
 		err = p.Create(name,
-			// Use Kubernetes 1.14
-			// TODO(willbeason): Allow specifying Kubernetes version.
+			// Use the specified version per --kubernetes-version.
 			cluster.CreateWithNodeImage(string(version)),
 			// Store the KUBECONFIG at the specified path.
 			cluster.CreateWithKubeconfigPath(kcfgPath),
