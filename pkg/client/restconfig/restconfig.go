@@ -3,6 +3,7 @@ package restconfig
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
@@ -39,6 +40,14 @@ func NewRestConfig() (*rest.Config, error) {
 		if err == nil {
 			glog.V(1).Infof("Created rest config from source %s", source.name)
 			glog.V(7).Infof("Config: %#v", *config)
+			// Comfortable QPS limits for us to run smoothly.
+			// The defaults are too low. It is probably safe to increase these if
+			// we see problems in the future or need to accommodate VERY large numbers
+			// of resources.
+			config.QPS = 20
+			config.Burst = 40
+			// Limit individual API Server calls to time out at 5 seconds.
+			config.Timeout = 5 * time.Second
 			return config, nil
 		}
 
