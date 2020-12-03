@@ -90,6 +90,28 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, 
 	return nil
 }
 
+func (r *reconcilerBase) upsertService(ctx context.Context, name, namespace string, refs []metav1.OwnerReference) error {
+	var childSer corev1.Service
+	if err := parseService(&childSer); err != nil {
+		return err
+	}
+
+	childSer.Name = name
+	childSer.Namespace = namespace
+
+	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSer, func() error {
+		childSer.OwnerReferences = refs
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.log.Info("Service successfully reconciled", executedOperation, op)
+	}
+	return nil
+}
+
 type mutateFn func(*appsv1.Deployment) error
 
 func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, f mutateFn) (controllerutil.OperationResult, error) {

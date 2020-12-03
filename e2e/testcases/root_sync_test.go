@@ -41,10 +41,18 @@ func TestDeleteRootSync(t *testing.T) {
 		return nt.ValidateNotFound("root-reconciler", v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
-		t.Errorf("RootSync present after deletion: %v", err)
+		t.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
-	// validate Root Reconcoiler configmaps are no longer present.
+	// Verify Root Reconciler service no longer present.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound("root-reconciler", v1.NSConfigManagementSystem, fake.ServiceObject())
+	})
+	if err != nil {
+		t.Errorf("Reconciler service present after deletion: %v", err)
+	}
+
+	// validate Root Reconciler configmaps are no longer present.
 	err1 := nt.ValidateNotFound("root-reconciler-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject())
 	err2 := nt.ValidateNotFound("root-reconciler-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject())
 	err3 := nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject())

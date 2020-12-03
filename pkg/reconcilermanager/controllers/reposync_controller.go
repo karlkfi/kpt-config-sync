@@ -116,6 +116,14 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
 	}
 
+	// Upsert Namespace reconciler service.
+	if err := r.upsertService(ctx, repoSyncName(rs.Namespace), v1.NSConfigManagementSystem, owRefs); err != nil {
+		log.Error(err, "Failed to create/update Service")
+		reposync.SetStalled(&rs, "Service", err)
+		_ = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, errors.Wrap(err, "Service reconcile failed")
+	}
+
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.

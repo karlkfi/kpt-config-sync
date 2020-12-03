@@ -33,8 +33,8 @@ kubectl apply -f manifests/reconciler-manager-service-account.yaml
 
 # Fill in configmap template
 sed -e "s|IMAGE_NAME|$REC_TAG|" \
-  manifests/templates/reconciler-manager-deployment-configmap.yaml \
-  | tee reconciler-manager-deployment-configmap.generated.yaml \
+  manifests/templates/reconciler-manager-configmap.yaml \
+  | tee reconciler-manager-configmap.generated.yaml \
   | kubectl apply -f -
 
 # Install the CRD's for RootSync and RepoSync types (Verify after installation).

@@ -60,7 +60,7 @@ var (
 		"git-importer.yaml",
 		"monitor.yaml",
 		"reconciler-manager.yaml",
-		"reconciler-manager-deployment-configmap.yaml",
+		"reconciler-manager-configmap.yaml",
 	}
 
 	// monoObjects contains the names of all objects that are necessary to install
@@ -145,7 +145,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	}
 
 	if nomos.MultiRepo {
-		return validateMultiRepoDeployments
+		return validateMultiRepoServiceAndDeployments
 	}
 	return validateMonoRepoDeployments
 }
@@ -259,7 +259,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		case "reconciler-manager.yaml":
 			// For the reconciler manager template, we want the latest image for the reconciler manager.
 			imgName = *e2e.ImagePrefix + "/reconciler-manager:latest"
-		case "reconciler-manager-deployment-configmap.yaml":
+		case "reconciler-manager-configmap.yaml":
 			// For the reconciler deployment template, we want the latest image for the reconciler.
 			imgName = *e2e.ImagePrefix + "/reconciler:latest"
 		default:
@@ -359,7 +359,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 	return nil
 }
 
-func validateMultiRepoDeployments(nt *NT) error {
+func validateMultiRepoServiceAndDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
@@ -377,6 +377,10 @@ func validateMultiRepoDeployments(nt *NT) error {
 	took, err := Retry(60*time.Second, func() error {
 		err := nt.Validate("reconciler-manager", configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
+		if err != nil {
+			return err
+		}
+		err = nt.Validate("root-reconciler", configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {
 			return err
 		}
@@ -400,6 +404,10 @@ func setupRepoSync(nt *NT, ns string) {
 
 func waitForRepoReconciler(nt *NT, ns string) error {
 	took, err := Retry(60*time.Second, func() error {
+		err := nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace, &corev1.Service{})
+		if err != nil {
+			return err
+		}
 		return nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
@@ -486,7 +494,7 @@ func setReconcilerDebugMode(t *testing.T, obj core.Object) {
 			// Prefix of 8 spaces as the run arguments are indented 8 spaces relative
 			// to the embedded YAML string. The embedded YAML is indented 3 spaces,
 			// so this is equivalent to indenting 11 spaces in the original file:
-			// manifests/templates/reconciler-manager-deployment-configmap.yaml.
+			// manifests/templates/reconciler-manager-configmap.yaml.
 			lines[i+1] = "        - \"--debug\""
 			found = true
 			break

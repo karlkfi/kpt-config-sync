@@ -7,6 +7,23 @@ metadata:
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
 data:
+  service.yaml: |
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: reconciler
+     namespace: config-management-system
+     labels:
+       monitored: "true"
+       configmanagement.gke.io/system: "true"
+       configmanagement.gke.io/arch: "csmr"
+   spec:
+     selector:
+       app: reconciler
+     ports:
+       - name: metrics
+         port: 8675
+         targetPort: metrics-port
   deployment.yaml: |
    apiVersion: apps/v1
    kind: Deployment
@@ -29,7 +46,6 @@ data:
        metadata:
          labels:
            app: reconciler
-           monitored: "true"
        spec:
          serviceAccountName: reconciler
          containers:

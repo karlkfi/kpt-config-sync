@@ -108,6 +108,14 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "ClusterRoleBinding reconcile failed")
 	}
 
+	// Upsert Root reconciler service.
+	if err := r.upsertService(ctx, rootSyncReconcilerName, v1.NSConfigManagementSystem, owRefs); err != nil {
+		log.Error(err, "Failed to create/update Service")
+		rootsync.SetStalled(&rs, "Service", err)
+		_ = r.updateStatus(ctx, &rs, log)
+		return controllerruntime.Result{}, errors.Wrap(err, "Service reconcile failed")
+	}
+
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.

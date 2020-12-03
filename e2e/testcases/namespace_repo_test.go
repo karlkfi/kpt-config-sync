@@ -177,6 +177,14 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 		nt.T.Errorf("RepoSync present after deletion: %v", err)
 	}
 
+	// Verify Namespace Reconciler service no longer present.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound(fmt.Sprintf("%s-%s", "ns-reconciler", namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
+	})
+	if err != nil {
+		nt.T.Errorf("Reconciler service present after deletion: %v", err)
+	}
+
 	// Verify Namespace Reconciler deployment no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
 		return nt.ValidateNotFound(fmt.Sprintf("%s-%s", "ns-reconciler", namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())

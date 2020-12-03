@@ -83,7 +83,7 @@ generate-deployments: \
 		__clean-deployments-dir \
 		$(GEN_DEPLOYMENT_DIR)/git-importer.yaml \
 		$(GEN_DEPLOYMENT_DIR)/monitor.yaml \
-		$(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml \
+		$(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml \
 		$(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml
 	@echo "+++ Finished generating all yaml"
 
@@ -100,9 +100,9 @@ $(GEN_DEPLOYMENT_DIR)/monitor.yaml: manifests/templates/monitor.yaml
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(NOMOS_TAG)|' < $< > $@
 
-.PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml
-$(GEN_DEPLOYMENT_DIR)/reconciler-manager-deployment-configmap.yaml: \
-		manifests/templates/reconciler-manager-deployment-configmap.yaml
+.PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml
+$(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml: \
+		manifests/templates/reconciler-manager-configmap.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@

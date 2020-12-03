@@ -57,6 +57,9 @@ spec:
         - name: configs
           mountPath: /deployment.yaml
           subPath: deployment.yaml
+        - name: configs
+          mountPath: /service.yaml
+          subPath: service.yaml
         envFrom:
           - configMapRef:
               name: reconciler-manager
