@@ -150,15 +150,48 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, errors.Wrap(err, "Deployment reconcile failed")
 	}
-	if op != controllerutil.OperationResultNone {
+	if op == controllerutil.OperationResultNone {
+		// check the reconciler deployment conditions.
+		result, err := r.deploymentStatus(ctx, client.ObjectKey{
+			Namespace: v1.NSConfigManagementSystem,
+			Name:      repoSyncName(rs.Namespace),
+		})
+		if err != nil {
+			log.Error(err, "Failed to check reconciler deployment conditions")
+			reposync.SetStalled(&rs, "Deployment", err)
+			_ = r.updateStatus(ctx, &rs, log)
+			return controllerruntime.Result{}, errors.Wrap(err, result.message)
+		}
+
+		// Update RepoSync status based on reconciler deployment condition result.
+		switch result.status {
+		case statusInProgress:
+			// inProgressStatus indicates that the deployment is not yet
+			// available. Hence update the Reconciling status condition.
+			reposync.SetReconciling(&rs, "Deployment", result.message)
+			// Clear Stalled condition.
+			reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
+		case statusFailed:
+			// statusFailed indicates that the deployment failed to reconcile. Update
+			// Reconciling status condition with appropriate message specifying the
+			// reason for failure.
+			reposync.SetReconciling(&rs, "Deployment", result.message)
+			// Set Stalled condition with the deployment statusFailed.
+			reposync.SetStalled(&rs, "Deployment", errors.New(string(result.status)))
+		case statusCurrent:
+			// currentStatus indicates that the deployment is available, which qualifies
+			// to clear the Reconciling status condition in RepoSync.
+			reposync.ClearCondition(&rs, v1alpha1.RepoSyncReconciling)
+			// Since there were no errors, we can clear any previous Stalled condition.
+			reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
+		}
+	} else {
 		r.log.Info("Deployment successfully reconciled", executedOperation, op)
 		rs.Status.Reconciler = repoSyncName(rs.Namespace)
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(&rs, "Deployment", msg)
 	}
 
-	// Since there were no errors, we can clear any previous Stalled condition.
-	reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
 	err = r.updateStatus(ctx, &rs, log)
 	metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
 	return controllerruntime.Result{}, err

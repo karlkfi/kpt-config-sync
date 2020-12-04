@@ -159,8 +159,8 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 			// inProgressStatus indicates that the deployment is not yet
 			// available. Hence update the Reconciling status condition.
 			rootsync.SetReconciling(&rs, "Deployment", result.message)
-			// SetStalled condition.
-			rootsync.SetStalled(&rs, "Deployment", errors.New(string(result.status)))
+			// Clear Stalled condition.
+			rootsync.ClearCondition(&rs, v1alpha1.RootSyncStalled)
 		case statusFailed:
 			// statusFailed indicates that the deployment failed to reconcile. Update
 			// Reconciling status condition with appropriate message specifying the

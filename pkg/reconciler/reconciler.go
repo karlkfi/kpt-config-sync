@@ -185,7 +185,6 @@ func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace decla
 			return
 		}
 
-		reposync.ClearCondition(&rs, v1alpha1.RepoSyncReconciling)
 		rs.Status.Source.Git = v1alpha1.GitStatus{
 			Repo:     opts.GitRepo,
 			Revision: opts.GitRev,

@@ -17,7 +17,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -139,6 +138,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
+			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -234,27 +234,6 @@ func TestRepoSyncReconciler(t *testing.T) {
 	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap, ServiceAccount, RoleBinding, Service, and Deployment successfully created")
 
-	// Verify status updates.
-	gotStatus := fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RepoSync).Status
-	wantStatus := v1alpha1.RepoSyncStatus{
-		SyncStatus: v1alpha1.SyncStatus{
-			ObservedGeneration: rs.Generation,
-			Reconciler:         repoSyncName(reqNamespacedName.Namespace),
-		},
-		Conditions: []v1alpha1.RepoSyncCondition{
-			{
-				Type:    v1alpha1.RepoSyncReconciling,
-				Status:  metav1.ConditionTrue,
-				Reason:  "Deployment",
-				Message: "Reconciler deployment was created",
-			},
-		},
-	}
-	ignoreTimes := cmpopts.IgnoreFields(wantStatus.Conditions[0], "LastTransitionTime", "LastUpdateTime")
-	if diff := cmp.Diff(wantStatus, gotStatus, ignoreTimes); diff != "" {
-		t.Errorf("Status diff:\n%s", diff)
-	}
-
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
 	if err := fakeClient.Update(context.Background(), rs); err != nil {
@@ -303,13 +282,6 @@ func TestRepoSyncReconciler(t *testing.T) {
 
 	validateDeployments(t, wantDeployments, fakeClient)
 	t.Log("ConfigMap and Deployement successfully updated")
-
-	// Verify status updates.
-	gotStatus = fakeClient.Objects[core.IDOf(rs)].(*v1alpha1.RepoSync).Status
-	wantStatus.Conditions[0].Message = "Reconciler deployment was updated"
-	if diff := cmp.Diff(wantStatus, gotStatus, ignoreTimes); diff != "" {
-		t.Errorf("Status diff:\n%s", diff)
-	}
 }
 
 // validateDeployments validates that important fields in the `wants` deployments match those same fields in the deployments found in the fakeClient
