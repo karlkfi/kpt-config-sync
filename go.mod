@@ -8,7 +8,7 @@ replace k8s.io/code-generator => k8s.io/code-generator v0.19.4
 
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.2.0
-	github.com/GoogleContainerTools/kpt v0.37.1-0.20201202171313-1387f08be4e7
+	github.com/GoogleContainerTools/kpt v0.37.1-0.20201204215539-76c7b628074d
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.3.0

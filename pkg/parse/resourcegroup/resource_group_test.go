@@ -12,7 +12,7 @@ import (
 
 func fakeKptfile(labels, annotations map[string]string) *kptfile.KptFile {
 	obj := &kptfile.KptFile{}
-	obj.Inventory = kptfile.Inventory{
+	obj.Inventory = &kptfile.Inventory{
 		Name:        "test-rg",
 		Namespace:   "test-namespace",
 		Labels:      labels,
