@@ -116,7 +116,7 @@ func UnableToReadAPIResources(path cmpath.Absolute, err error) status.Error {
 
 // InvalidScopeValue means that a line had an unexpected scope for its type.
 func InvalidScopeValue(path cmpath.Absolute, line, value string) status.Error {
-	return invalidAPIResourcesBuilder.Sprintf("invalid NAMESPACED column value %q in line\n%s\n\nRe-run %q in the root policy directory", value, line, APIResourcesCommand).BuildWithPaths(path)
+	return invalidAPIResourcesBuilder.Sprintf("invalid NAMESPACED column value %q in line:\n%s\n\nRe-run %q in the root policy directory", value, line, APIResourcesCommand).BuildWithPaths(path)
 }
 
 // MissingAPIGroup means that the api-resources.txt is either missing the header

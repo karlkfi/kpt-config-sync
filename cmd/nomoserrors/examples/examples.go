@@ -2,6 +2,7 @@ package examples
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -302,7 +303,9 @@ func Generate() AllExamples {
 	result.add(vet.MissingAPIGroup(p))
 
 	// 1065
-	result.add(clusterconfig.MalformedCRDError(errors.New("malformed CRD"), cmpath.Relative{}))
+	result.add(clusterconfig.MalformedCRDError(
+		fmt.Errorf("spec.names.shortNames accessor error: foo is of the type string, expected []interface{}"),
+		cmpath.RelativeSlash("namespaces/foo/crd.yaml")))
 
 	// 1066
 	result.add(selectors.ClusterSelectorAnnotationConflictError(fake.NamespaceObject("my-namespace")))
