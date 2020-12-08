@@ -109,6 +109,12 @@ func TestGenerateResourceGroup(t *testing.T) {
 			input:    []core.Object{fake.KptFileObject(inventoryIdentifier(t, ""))},
 			wantErr:  InvalidKptfileError(".inventory.name shouldn't be empty", fake.KptFileObject(inventoryIdentifier(t, ""))),
 		},
+		{
+			testName: "Kptfile with empty inventory field doesn't generate ResourceGroup",
+			input:    []core.Object{fake.KptFileObject()},
+			want:     nil,
+			wantErr:  nil,
+		},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.testName, func(t *testing.T) {

@@ -102,6 +102,10 @@ func fromKptfile(obj core.Object) (*kptfile.KptFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Skip the Kptfile when it doesn't specify the Inventory field.
+	if result.Inventory == nil {
+		return nil, nil
+	}
 	err = validateInventory(result.Inventory, obj)
 	return result, err
 }
@@ -120,10 +124,6 @@ func toKptfile(obj core.Object) (*kptfile.KptFile, error) {
 }
 
 func validateInventory(inv *kptfile.Inventory, kfObj core.Object) error {
-	// Skip the Kptfile when it doesn't specify the Inventory field.
-	if inv == nil {
-		return nil
-	}
 	if inv.Namespace == "" {
 		return InvalidKptfileError(".inventory.namespace shouldn't be empty", kfObj)
 	}
