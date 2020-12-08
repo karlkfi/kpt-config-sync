@@ -15,10 +15,12 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/google/nomos/pkg/reposync"
+	nomosstatus "github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -58,7 +60,11 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	var rs v1alpha1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, v1alpha1.RepoSyncName, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, client.IgnoreNotFound(err)
+
+		if apierrors.IsNotFound(err) {
+			return controllerruntime.Result{}, nil
+		}
+		return controllerruntime.Result{}, nomosstatus.APIServerError(err, "failed to get RepoSync")
 	}
 
 	owRefs := ownerReference(

@@ -107,7 +107,7 @@ func (w *Worker) refresh(ctx context.Context, o core.Object) status.Error {
 	case err != nil:
 		// We encountered some other error that we don't know how to solve, so
 		// surface it.
-		return status.APIServerErrorBuilder.Wrap(err).BuildWithResources(o)
+		return status.APIServerError(err, "failed to get updated object for worker cache", o)
 	default:
 		// Update the cached version of the resource.
 		w.objectQueue.Add(u)

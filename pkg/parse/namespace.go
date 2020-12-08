@@ -17,7 +17,6 @@ import (
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -168,7 +167,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	// source of truth.
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		return errors.Wrap(err, "failed to get RepoSync for parser")
+		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
 	if !status.HasErrors(errs) {
@@ -189,7 +188,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	metrics.RecordReconcilerErrors(ctx, v1alpha1.RepoSyncName, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		return errors.Wrap(err, "failed to update RepoSync source status from parser")
+		return status.APIServerError(err, "failed to update RepoSync source status from parser")
 	}
 	return nil
 }
@@ -199,7 +198,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		return errors.Wrap(err, "failed to get RepoSync for parser")
+		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
 	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
@@ -217,7 +216,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs statu
 	metrics.RecordLastSync(ctx, v1alpha1.RootSyncName, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		return errors.Wrap(err, "failed to update RepoSync sync status from parser")
+		return status.APIServerError(err, "failed to update RepoSync sync status from parser")
 	}
 	return nil
 }

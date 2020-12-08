@@ -188,7 +188,7 @@ func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
 func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
-		return errors.Wrap(err, "failed to get RootSync for parser")
+		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
 	if !status.HasErrors(errs) {
@@ -208,7 +208,7 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 	metrics.RecordReconcilerErrors(ctx, v1alpha1.RootSyncName, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		return errors.Wrap(err, "failed to update RootSync source status from parser")
+		return status.APIServerError(err, "failed to update RootSync source status from parser")
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
-		return errors.Wrap(err, "failed to get RootSync for parser")
+		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
 	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
@@ -234,7 +234,7 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 	metrics.RecordLastSync(ctx, v1alpha1.RootSyncName, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		return errors.Wrap(err, "failed to update RootSync sync status from parser")
+		return status.APIServerError(err, "failed to update RootSync sync status from parser")
 	}
 	return nil
 }

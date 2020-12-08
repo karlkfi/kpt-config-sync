@@ -13,10 +13,12 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/rootsync"
+	nomosstatus "github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -58,7 +60,10 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	var rs v1alpha1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, v1alpha1.RootSyncName, metrics.StatusTagKey(err), start)
-		return controllerruntime.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			return controllerruntime.Result{}, nil
+		}
+		return controllerruntime.Result{}, nomosstatus.APIServerError(err, "failed to get RootSync")
 	}
 
 	owRefs := ownerReference(

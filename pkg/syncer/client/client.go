@@ -59,7 +59,7 @@ func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
 	case apierrors.IsAlreadyExists(err):
 		return ConflictCreateAlreadyExists(err, obj)
 	case err != nil:
-		return status.APIServerErrorBuilder.Wrap(err).BuildWithResources(obj)
+		return status.APIServerError(err, "failed to create object", obj)
 	}
 
 	glog.Infof("Created %s", description)

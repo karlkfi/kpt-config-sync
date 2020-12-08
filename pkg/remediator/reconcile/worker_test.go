@@ -152,7 +152,7 @@ func TestWorker_Refresh(t *testing.T) {
 			client:      syncertestfake.NewErrorClient(errors.New("some error")),
 			want:        fake.UnstructuredObject(kinds.Role(), core.Name(name), core.Namespace(namespace)),
 			wantDeleted: false,
-			wantErr:     status.APIServerErrorBuilder.Sprint("some error").Build(),
+			wantErr:     status.APIServerError(errors.New("some error"), ""),
 		},
 	}
 
