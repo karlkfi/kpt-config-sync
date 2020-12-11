@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -55,9 +56,15 @@ func RunImporter() {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
 
+	// Normalize policyDirRelative.
+	// Some users specify the directory as if the root of the repository is "/".
+	// Strip this from the front of the passed directory so behavior is as
+	// expected.
+	dir := strings.TrimPrefix(*policyDirRelative, "/")
+
 	// Set up controllers.
 	if err := filesystem.AddController(*clusterName, mgr, *gitDir,
-		*policyDirRelative, *pollPeriod); err != nil {
+		dir, *pollPeriod); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 

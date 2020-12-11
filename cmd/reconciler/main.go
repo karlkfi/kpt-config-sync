@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -28,7 +29,7 @@ var (
 		"Scope of the reconciler, either a namespace or ':root'.")
 
 	// Git configuration flags. These values originate in the ConfigManagement and
-	//configure git-sync to clone the desired repository/reference we want.
+	// configure git-sync to clone the desired repository/reference we want.
 	gitRepo = flag.String("git-repo", os.Getenv("GIT_REPO"),
 		"The URL of the git repo being synced.")
 	gitBranch = flag.String("git-branch", os.Getenv("GIT_BRANCH"),
@@ -86,7 +87,12 @@ func main() {
 	// Register the Prometheus exporter
 	go service.ServePrometheusMetrics(true)
 
-	relPolicyDir := cmpath.RelativeOS(*policyDir)
+	// Normalize policyDirRelative.
+	// Some users specify the directory as if the root of the repository is "/".
+	// Strip this from the front of the passed directory so behavior is as
+	// expected.
+	dir := strings.TrimPrefix(*policyDir, "/")
+	relPolicyDir := cmpath.RelativeOS(dir)
 	absGitDir, err := cmpath.AbsoluteOS(*gitDir)
 	if err != nil {
 		glog.Fatalf("%s must be an absolute path: %v", flags.gitDir, err)
