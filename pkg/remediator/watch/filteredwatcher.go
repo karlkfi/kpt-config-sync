@@ -29,6 +29,8 @@ var (
 type Runnable interface {
 	Stop()
 	Run() status.Error
+	ManagementConflict() bool
+	SetManagementConflict(v bool)
 }
 
 // filteredWatcher is wrapper around a watch interface.
@@ -43,9 +45,10 @@ type filteredWatcher struct {
 	reconciler declared.Scope
 
 	// The following fields are guarded by the mutex.
-	mux     sync.Mutex
-	base    watch.Interface
-	stopped bool
+	mux                sync.Mutex
+	base               watch.Interface
+	stopped            bool
+	managementConflict bool
 }
 
 // filteredWatcher implements the Runnable interface.
@@ -61,6 +64,18 @@ func NewFiltered(cfg watcherConfig) Runnable {
 		reconciler: cfg.reconciler,
 		base:       watch.NewEmptyWatch(),
 	}
+}
+
+func (w *filteredWatcher) ManagementConflict() bool {
+	w.mux.Lock()
+	defer w.mux.Unlock()
+	return w.managementConflict
+}
+
+func (w *filteredWatcher) SetManagementConflict(v bool) {
+	w.mux.Lock()
+	w.managementConflict = v
+	w.mux.Unlock()
 }
 
 // Stop fully stops the filteredWatcher in a threadsafe manner. This means that
@@ -188,6 +203,8 @@ func (w *filteredWatcher) handle(event watch.Event) string {
 // watcher for processing.
 func (w *filteredWatcher) shouldProcess(object core.Object) bool {
 	if !diff.CanManage(w.reconciler, object) {
+		glog.Infof("Found management conflict for object: %v", object)
+		w.SetManagementConflict(true)
 		return false
 	}
 

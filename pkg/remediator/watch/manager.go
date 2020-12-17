@@ -88,13 +88,23 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 	}, nil
 }
 
-// NeedsUpdate returns true if the Manager's watches need to be updated. This
-// function is threadsafe.
+// NeedsUpdate returns true if the Manager's watches need to be updated or any watcher
+// notices any management conflicts. This function is threadsafe.
 func (m *Manager) NeedsUpdate() bool {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
-	return m.needsUpdate
+	managementConflict := false
+	// If one of the watchers noticed a management conflict, the remediator will indicate that
+	// it needs an update so that the parse-apply-watch loop can also detect the conflict and
+	//report it as an error status.
+	for _, watcher := range m.watcherMap {
+		if watcher.ManagementConflict() {
+			managementConflict = true
+			watcher.SetManagementConflict(false)
+		}
+	}
+	return m.needsUpdate || managementConflict
 }
 
 // UpdateWatches accepts a map of GVKs that should be watched and takes the

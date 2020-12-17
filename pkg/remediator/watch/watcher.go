@@ -44,8 +44,14 @@ func createWatcher(ctx context.Context, cfg watcherConfig) (Runnable, status.Err
 			return nil, status.APIServerErrorf(err, "watcher failed to get dynamic client for %s", cfg.gvk.String())
 		}
 
-		cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
-			return dynamicClient.Resource(mapping.Resource).Watch(ctx, options)
+		if cfg.reconciler == declared.RootReconciler {
+			cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
+				return dynamicClient.Resource(mapping.Resource).Watch(ctx, options)
+			}
+		} else {
+			cfg.startWatch = func(options metav1.ListOptions) (watch.Interface, error) {
+				return dynamicClient.Resource(mapping.Resource).Namespace(string(cfg.reconciler)).Watch(ctx, options)
+			}
 		}
 	}
 
