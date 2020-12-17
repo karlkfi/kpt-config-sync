@@ -145,7 +145,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	}
 
 	if nomos.MultiRepo {
-		return validateMultiRepoServiceAndDeployments
+		return validateMultiRepoDeployments
 	}
 	return validateMonoRepoDeployments
 }
@@ -359,7 +359,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 	return nil
 }
 
-func validateMultiRepoServiceAndDeployments(nt *NT) error {
+func validateMultiRepoDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
@@ -375,12 +375,13 @@ func validateMultiRepoServiceAndDeployments(nt *NT) error {
 	}
 
 	took, err := Retry(60*time.Second, func() error {
+		// USE CAUTION WHEN ADDING THINGS HERE.
+		// This is not a place for test code. The only things that belong here are
+		// test preconditions, i.e. things that mean *every* test that uses
+		// multi-repo functionality will fail, and none of these tests should
+		// continue.
 		err := nt.Validate("reconciler-manager", configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
-		if err != nil {
-			return err
-		}
-		err = nt.Validate("root-reconciler", configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {
 			return err
 		}
@@ -404,10 +405,11 @@ func setupRepoSync(nt *NT, ns string) {
 
 func waitForRepoReconciler(nt *NT, ns string) error {
 	took, err := Retry(60*time.Second, func() error {
-		err := nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace, &corev1.Service{})
-		if err != nil {
-			return err
-		}
+		// USE CAUTION WHEN ADDING THINGS HERE.
+		// This is not a place for test code. The only things that belong here are
+		// test preconditions, i.e. things that mean *every* test that uses
+		// multi-repo functionality will fail, and none of these tests should
+		// continue.
 		return nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
