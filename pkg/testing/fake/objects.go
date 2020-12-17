@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -243,8 +244,26 @@ func CustomResourceDefinitionV1Beta1Unstructured(opts ...core.MetaMutator) *unst
 	return u
 }
 
+// CustomResourceDefinitionV1Object returns an initialized CustomResourceDefinition.
+func CustomResourceDefinitionV1Object(opts ...core.MetaMutator) *apiextensionsv1.CustomResourceDefinition {
+	result := &apiextensionsv1.CustomResourceDefinition{
+		TypeMeta: ToTypeMeta(kinds.CustomResourceDefinitionV1()),
+	}
+	defaultMutate(result)
+	mutate(result, opts...)
+
+	return result
+}
+
+// CustomResourceDefinitionV1 returns a FileObject containing a
+// CustomResourceDefinition at a default path.
+func CustomResourceDefinitionV1(opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(CustomResourceDefinitionV1Object(opts...), "cluster/crd.yaml")
+}
+
 // ToCustomResourceDefinitionV1Object converts a v1beta1.CustomResourceDefinition
 // to an Unstructured masquerading as a v1.CRD.
+// Deprecated: Use CustomResourceDefinitionV1Object instead.
 func ToCustomResourceDefinitionV1Object(o *v1beta1.CustomResourceDefinition) *unstructured.Unstructured {
 	jsn, err := json.Marshal(o)
 	if err != nil {
@@ -263,6 +282,7 @@ func ToCustomResourceDefinitionV1Object(o *v1beta1.CustomResourceDefinition) *un
 
 // ToCustomResourceDefinitionV1 converts the type inside a FileObject into an
 // unstructured.Unstructured masquerading as a
+// Deprecated: Use CustomResourceDefinitionV1 instead.
 func ToCustomResourceDefinitionV1(o ast.FileObject) ast.FileObject {
 	// This will panic if o.Object isn't a v1beta1.CRD, but this is what we want
 	// and this is test code so it's fine.
