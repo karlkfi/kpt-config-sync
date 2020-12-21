@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // repoSyncName returns name in the format ns-reconciler-<namespace>.
@@ -19,12 +21,37 @@ func repoSyncResourceName(namespace, resourceName string) string {
 
 // parseRepoSyncReconciler parses namespace reconciler deployment name ns-reconciler-<namespace>
 // and returns namespace.
-func parseRepoSyncReconciler(name string) string {
+func parseRepoSyncReconciler(name string, obj runtime.Object) string {
 	prefix := repoSyncReconcilerPrefix + "-"
-	if strings.HasPrefix(name, prefix) {
-		return strings.TrimPrefix(name, prefix)
+	var ns string
+	if !strings.HasPrefix(name, prefix) {
+		return ""
 	}
-	return ""
+	ns = strings.TrimPrefix(name, prefix)
+
+	// If an obj is a ConfigMap then trim following suffix from the name of the
+	// object.
+	gitSyncSuffix := "-" + gitSync
+	reconcilerSufix := "-" + reconciler
+	if _, ok := obj.(*corev1.ConfigMap); ok {
+		ns = trimConfigMapSuffix(ns, gitSyncSuffix, reconcilerSufix)
+	}
+
+	// If an obj is a Secret then trim following suffix from the name of the
+	// object.
+	sshKeySuffix := "-ssh-key"
+	if _, ok := obj.(*corev1.Secret); ok {
+		ns = trimConfigMapSuffix(ns, sshKeySuffix)
+	}
+
+	return ns
+}
+
+func trimConfigMapSuffix(name string, opts ...string) string {
+	for _, opt := range opts {
+		name = strings.TrimSuffix(name, opt)
+	}
+	return name
 }
 
 // rootSyncResourceName returns name in the format root-reconciler-<resourcename>.

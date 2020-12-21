@@ -83,15 +83,15 @@ func TestCreate(t *testing.T) {
 			name:       "Secret created",
 			reposync:   reposync(sshAuth, core.Namespace(ns)),
 			client:     fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(ns))),
-			wantSecret: secret(t, RepoSyncSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 		},
 		{
 			name:     "Secret updated",
 			reposync: reposync(sshAuth, core.Namespace(ns)),
 			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, core.Namespace(ns)),
-				secret(t, RepoSyncSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+				secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 			),
-			wantSecret: secret(t, RepoSyncSecretName(ns, namespaceKey), updatedKeyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), updatedKeyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 		},
 		{
 			name:      "Secret not found",
@@ -102,7 +102,7 @@ func TestCreate(t *testing.T) {
 		{
 			name:      "Secret not updated, secret not present",
 			reposync:  reposync(sshAuth, core.Namespace(ns)),
-			client:    fakeClient(t, secret(t, RepoSyncSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem))),
+			client:    fakeClient(t, secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem))),
 			wantError: true,
 		},
 	}

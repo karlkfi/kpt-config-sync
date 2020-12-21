@@ -201,10 +201,13 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RepoSync{}).
-		// Watch Secrets and trigger Reconciles for RepoSync object.
+		// Custom Watch to trigger Reconcile for objects created by RepoSync controller.
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync()}).
-		Owns(&corev1.ConfigMap{}).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapDeploymentToRepoSync()}).
+		Watches(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
+		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
+		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
+		Watches(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
 		Complete(r)
 }
 
@@ -311,7 +314,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		// Secret reference is the name of the secret used by git-sync container to
 		// authenticate with the git repository using the authorization method specified
 		// in the RepoSync CR.
-		secretName := secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
+		secretName := secret.NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
 		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
 		var updatedContainers []corev1.Container
 		// Mutate spec.Containers to update name, configmap references and volumemounts.
@@ -331,7 +334,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 				// Update Environment variables for `token` Auth, which
 				// passes the credentials as the Username and Password.
 				if authTypeToken(rs.Spec.Auth) {
-					container.Env = gitSyncTokenAuthEnv(secret.RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
+					container.Env = gitSyncTokenAuthEnv(secret.NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
 				}
 			case gceNodeAskpassSidecarName:
 				// The no-op case to avoid unknown container error after

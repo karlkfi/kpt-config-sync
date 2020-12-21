@@ -35,11 +35,11 @@ func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
 
 	// existingsecret represent secret in config-management-system namespace.
 	existingsecret := &corev1.Secret{}
-	if err := get(ctx, RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name),
+	if err := get(ctx, NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name),
 		v1.NSConfigManagementSystem, existingsecret, c); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return errors.Wrapf(err,
-				"failed to get secret %s in namespace %s", RepoSyncSecretName(rs.Namespace, rs.Spec.SecretRef.Name), v1.NSConfigManagementSystem)
+				"failed to get secret %s in namespace %s", NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name), v1.NSConfigManagementSystem)
 		}
 		// Secret not present in config-management-system namespace. Create one using
 		// secret in reposync.namespace.
@@ -91,7 +91,7 @@ func create(ctx context.Context, reposync *v1alpha1.RepoSync, namespaceSecret *c
 	}
 
 	// mutate newSecret with values from the secret in reposync.namespace.
-	newSecret.Name = RepoSyncSecretName(namespaceSecret.Namespace, namespaceSecret.Name)
+	newSecret.Name = NamespaceReconcilerSecretName(namespaceSecret.Namespace, namespaceSecret.Name)
 	newSecret.Namespace = v1.NSConfigManagementSystem
 	newSecret.Data = namespaceSecret.Data
 	newSecret.Type = namespaceSecret.Type
@@ -111,16 +111,10 @@ func update(ctx context.Context, existingsecret *corev1.Secret, namespaceSecret 
 	return c.Update(ctx, existingsecret)
 }
 
-const (
-	// RepoSyncSecret represet suffix used for reposync secret name in
-	// config-management-system.
-	RepoSyncSecret = "reposync-secret"
-)
-
-// RepoSyncSecretName return name of the reposync secret eg.
-// reposync-secret-<namespace>-<name>
-func RepoSyncSecretName(namespace, name string) string {
-	prefix := []string{RepoSyncSecret}
+// NamespaceReconcilerSecretName return name of the Namespace reconciler secret.
+// e.g. ns-reconciler-<namespace>-<name>
+func NamespaceReconcilerSecretName(namespace, name string) string {
+	prefix := []string{"ns-reconciler"}
 	return strings.Join(append(prefix, namespace, name), "-")
 }
 
