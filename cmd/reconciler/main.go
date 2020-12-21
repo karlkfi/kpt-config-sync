@@ -87,14 +87,6 @@ func main() {
 	// Register the Prometheus exporter
 	go service.ServePrometheusMetrics(true)
 
-	// Register the OpenCensus exporter
-	sde, err := metrics.RegisterStackdriverExporter()
-	if err != nil {
-		glog.Fatalf("Failed to register Stackdriver exporter: %v", err)
-	}
-	defer sde.Flush()
-	defer sde.StopMetricsExporter()
-
 	// Normalize policyDirRelative.
 	// Some users specify the directory as if the root of the repository is "/".
 	// Strip this from the front of the passed directory so behavior is as

@@ -7,25 +7,19 @@ go 1.15
 replace k8s.io/code-generator => k8s.io/code-generator v0.19.4
 
 require (
-	cloud.google.com/go v0.74.0 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.2.0
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.4
 	github.com/GoogleContainerTools/kpt v0.37.1-0.20201204215539-76c7b628074d
-	github.com/aws/aws-sdk-go v1.36.8 // indirect
-	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-cmp v0.5.4
+	github.com/google/go-cmp v0.5.3
 	github.com/googleapis/gnostic v0.4.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
 	github.com/spf13/cobra v1.1.1
-	go.opencensus.io v0.22.5
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
-	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e // indirect
-	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
+	go.opencensus.io v0.22.2
+	golang.org/x/tools v0.0.0-20201119132711-4783bc9bebf0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.4
 	k8s.io/apiextensions-apiserver v0.19.4
