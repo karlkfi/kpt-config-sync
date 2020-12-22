@@ -32,6 +32,23 @@ import (
 
 const nilGitContext = `{"repo":"","branch":"","rev":""}`
 
+type noOpRemediator struct {
+	needsUpdate bool
+}
+
+func (r *noOpRemediator) NeedsUpdate() bool {
+	return r.needsUpdate
+}
+
+func (r *noOpRemediator) ManagementConflict() bool {
+	return false
+}
+
+func (r *noOpRemediator) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+	r.needsUpdate = false
+	return nil
+}
+
 func TestRoot_Parse(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -100,6 +117,7 @@ func TestRoot_Parse(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
+						cache:      cache{},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
@@ -110,7 +128,7 @@ func TestRoot_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = parser.Parse(context.Background(), &gitState{policyDir: fakeAbs})
+			err = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -164,6 +182,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
+						cache:      cache{},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
@@ -174,7 +193,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_ = parser.Parse(context.Background(), &gitState{policyDir: fakeAbs})
+			_ = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
 			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 			}
@@ -241,6 +260,7 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    &fakeApplier{errors: tc.applyErrors},
+						cache:      cache{},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
@@ -251,7 +271,7 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_ = parser.Parse(context.Background(), &gitState{policyDir: fakeAbs})
+			_ = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
 			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 			}

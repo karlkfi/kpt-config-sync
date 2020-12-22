@@ -283,10 +283,11 @@ func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, p
 		return nt.Validate(name, namespace, o, predicates...)
 	})
 	if err != nil {
-		nt.T.Logf("failed after %v to wait for sync", took)
+		nt.T.Logf("failed after %v to wait for %s/%s %v to be synced", took, namespace, name, gvk)
+
 		nt.T.Fatal(err)
 	}
-	nt.T.Logf("took %v to wait for sync", took)
+	nt.T.Logf("took %v to wait for %s/%s %v to be synced", took, namespace, name, gvk)
 
 	// Automatically renew the Client. We don't have tests that depend on behavior
 	// when the test's client is out of date, and if ConfigSync reports that

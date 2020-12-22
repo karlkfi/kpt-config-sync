@@ -2,6 +2,7 @@ package applier
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -23,9 +24,11 @@ import (
 type Applier struct {
 	// applier provides the basic resource creation, updating and deletion functions.
 	applier syncerreconcile.Applier
-	// cachedObjects stores the previously parsed git resources in memory. The applier uses this
-	// cachedResources to compare with newly parsed resources from git to determine which
-	// previously declared resources should be deleted.
+	// cachedObjects stores the successfully-applied resources.
+	// The applier uses this field to compare with newly parsed resources from git to
+	// determine which previously declared resources should be deleted.
+	// In cases when the applier fails to apply all the declared resources, the
+	// successfully-applied resources will still be added into `cacheObjects`.
 	cachedObjects map[core.ID]core.Object
 	// client reads and lists the resources from API server and updates RepoSync status.
 	client client.Client
@@ -43,8 +46,10 @@ type Applier struct {
 // Placed here to make discovering the production implementation (above) easier.
 type Interface interface {
 	// Apply updates the resource API server with the latest parsed git resource.
-	// This is called when a new change in the git resource is detected. It also
-	// returns a map of the GVKs which were successfully applied by the Applier.
+	// This is called when the latest state of the git repo has not been fully applied.
+	// It returns:
+	//   1) a map of the GVKs which were successfully applied by the Applier;
+	//   2) the errors encountered.
 	Apply(ctx context.Context, desiredResources []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
 }
 
@@ -84,9 +89,27 @@ func NewRootApplier(c client.Client, applier syncerreconcile.Applier) *Applier {
 	return a
 }
 
+// applyProgress tracks how many resources were created, updated, deleted and unmanaged
+type applyProgress struct {
+	created   uint64
+	updated   uint64
+	deleted   uint64
+	unmanaged uint64
+}
+
+func (p applyProgress) empty() bool {
+	return p.created == 0 && p.updated == 0 && p.deleted == 0 && p.unmanaged == 0
+}
+
+func (p applyProgress) string() string {
+	return fmt.Sprintf("created %d objects, deleted %d objects, updated %d objects, unmanaged %d objects",
+		p.created, p.deleted, p.updated, p.unmanaged)
+}
+
 // sync actuates a list of Diff to make sure the actual resources in the API service are
 // in sync with the declared resources.
 func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError {
+	var progress applyProgress
 	var errs status.MultiError
 
 	// Sort diffs so that cluster-scoped resources are first.
@@ -121,6 +144,8 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("created resource %v", coreID)
+				progress.created++
+				a.cachedObjects[coreID] = d.Declared
 			}
 		case diff.Update:
 			u, err := d.UnstructuredDeclared()
@@ -133,10 +158,13 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				errs = status.Append(errs, err)
 				continue
 			}
-			if _, err := a.applier.Update(ctx, u, actual); err != nil {
+			updated, err := a.applier.Update(ctx, u, actual)
+			if err != nil {
 				errs = status.Append(errs, err)
-			} else {
+			} else if updated {
 				glog.V(4).Infof("updated resource %v", coreID)
+				progress.updated++
+				a.cachedObjects[coreID] = d.Declared
 			}
 		case diff.Delete:
 			actual, err := d.UnstructuredActual()
@@ -148,6 +176,8 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("deleted resource %v", coreID)
+				progress.deleted++
+				delete(a.cachedObjects, coreID)
 			}
 		case diff.Unmanage:
 			actual, err := d.UnstructuredActual()
@@ -159,6 +189,8 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				errs = status.Append(errs, err)
 			} else {
 				glog.V(4).Infof("unmanaged the resource %v", coreID)
+				progress.unmanaged++
+				a.cachedObjects[coreID] = d.Declared
 			}
 		case diff.ManagementConflict:
 			err := kptapplier.ManagementConflictError(d.Declared)
@@ -168,7 +200,14 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 			errs = status.Append(errs, err)
 		}
 	}
-	glog.V(4).Infof("all resources are up to date.")
+	if errs == nil {
+		glog.V(4).Infof("all resources are up to date.")
+	}
+	if progress.empty() {
+		glog.V(4).Infof("The applier made no new progress")
+	} else {
+		glog.Infof("The applier made new progress: %s.", progress.string())
+	}
 	return errs
 }
 
@@ -199,27 +238,7 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map
 	diffs := diff.ThreeWay(newCache, a.cachedObjects, actualObjects)
 	// Sync the API resource state to the git resource.
 	syncErrs := a.sync(ctx, diffs)
-	errs = status.Append(errs, syncErrs)
-
-	if errs == nil {
-		// Only update the cache on complete success.
-		a.cachedObjects = newCache
-	}
-	return gvks, errs
-}
-
-// Refresh syncs and updates the API server with the (cached) git resource states.
-func (a *Applier) Refresh(ctx context.Context) status.MultiError {
-	a.mux.Lock()
-	defer a.mux.Unlock()
-
-	actualObjects, _, err := a.getActualObjects(ctx, a.cachedObjects)
-	// Two way merge. Compare between the cached declared and the actual states to decide the create and update.
-	diffs := diff.TwoWay(a.cachedObjects, actualObjects)
-	// Sync the API resource state to the git resource.
-	syncErrs := a.sync(ctx, diffs)
-
-	return status.Append(err, syncErrs)
+	return gvks, status.Append(errs, syncErrs)
 }
 
 // getActualObjects fetches and returns the current resources from the API

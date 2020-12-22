@@ -121,7 +121,6 @@ type mutateFn func(*appsv1.Deployment) error
 
 func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, f mutateFn) (controllerutil.OperationResult, error) {
 	var childDep appsv1.Deployment
-
 	if err := parseDeployment(&childDep); err != nil {
 		return controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
 	}

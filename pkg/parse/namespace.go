@@ -23,13 +23,14 @@ import (
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
+func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Parser {
 	return &namespace{
 		opts: opts{
 			clusterName:      clusterName,
 			client:           c,
 			reconcilerName:   reconcilerName,
 			pollingFrequency: pollingFrequency,
+			resyncPeriod:     resyncPeriod,
 			files:            files{FileSource: fs},
 			parser:           NewNamespace(fileReader, dc, scope),
 			updater: updater{
@@ -37,6 +38,7 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 				resources:  resources,
 				applier:    app,
 				remediator: rem,
+				cache:      cache{},
 			},
 			discoveryInterface: dc,
 		},
@@ -53,48 +55,9 @@ type namespace struct {
 	scope declared.Scope
 }
 
-// Run implements Runnable.
-func (p *namespace) Run(ctx context.Context) {
-	ticker := time.NewTicker(p.pollingFrequency)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C: // every clock tick
-			state, err := p.Read(ctx)
-			if err != nil {
-				// Invalidate state on error since this could be the result of switching
-				// branches or some other operation where inverting the operation would
-				// result in repeating a previous state that was checkpointed.
-				p.invalidate()
-				glog.Error(err)
-				continue
-			}
+var _ Parser = &namespace{}
 
-			err = p.Parse(ctx, state)
-			if err != nil {
-				// See comment above.
-				p.invalidate()
-				glog.Error(err)
-			}
-		}
-	}
-}
-
-// Read implements Runnable.
-func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState(p.reconcilerName)
-	if err != nil {
-		// We don't want to bail out immediately as we want to surface this error to
-		// the user in the RepoSync's status field.
-		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
-			return nil, status.APIServerError(err2, "setting source status")
-		}
-		return nil, err
-	}
-	return &state, nil
-}
-
+// parseSource implements the Parser interface
 func (p *namespace) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
 	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
@@ -118,47 +81,8 @@ func (p *namespace) parseSource(ctx context.Context, state *gitState) ([]core.Ob
 	return cos, nil
 }
 
-// Parse implements Runnable.
-func (p *namespace) Parse(ctx context.Context, state *gitState) status.MultiError {
-	if p.upToDate(state.policyDir.OSPath()) {
-		return nil
-	}
-
-	cos, err := p.parseSource(ctx, state)
-	if err != nil {
-		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
-			glog.Errorf("Failed to set source status: %v", err2)
-		}
-		return err
-	}
-
-	err = p.update(ctx, cos)
-	if err != nil {
-		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
-			glog.Errorf("Failed to set sync status: %v", err2)
-		}
-		return err
-	}
-
-	// Update status to clear errors
-	if err2 := p.setSourceStatus(ctx, *state, nil); err2 != nil {
-		glog.Errorf("Failed to set source status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err2 := p.setSyncStatus(ctx, state.commit, nil); err2 != nil {
-		glog.Errorf("Failed to set sync status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err != nil {
-		return err
-	}
-
-	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-	// Only checkpoint our state *everything* succeeded, including status update.
-	p.checkpoint(state.policyDir.OSPath())
-	return nil
-}
-
+// setSourceStatus implements the Parser interface
+//
 // setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
 func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
@@ -195,6 +119,8 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 	return nil
 }
 
+// setSyncStatus implements the Parser interface
+//
 // setSyncStatus sets the sync status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
 func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {

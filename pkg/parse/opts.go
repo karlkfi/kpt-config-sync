@@ -1,16 +1,18 @@
 package parse
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// opts holds configuration and core functionality required by all
-// parse.Runnables.
+// opts holds configuration and core functionality required by all parsers.
 type opts struct {
 	parser filesystem.ConfigParser
 
@@ -28,42 +30,97 @@ type opts struct {
 	// For tests, use zero as it will poll continuously.
 	pollingFrequency time.Duration
 
-	// lastApplied is the directory (including git commit hash) last successfully
-	// applied by the Applier.
-	lastApplied string
+	// ResyncPeriod is the period of time between forced re-sync from Git (even
+	// without a new commit).
+	resyncPeriod time.Duration
 
 	// discoveryInterface is how the parser learns what types are currently
 	// available on the cluster.
 	discoveryInterface discovery.ServerResourcer
 
+	// lastApplied keeps the state for the last successful-applied policyDir.
+	lastApplied string
+
 	files
 	updater
 }
 
-// TODO(b/167677315): This functionality should be on a DRY component of the
-// root/namespace parsers rather than an "opts" struct.
+// Parser represents a parser that can be pointed at and continuously parse
+// a git repository.
+type Parser interface {
+	parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError)
+	setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error
+	setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error
+
+	// readGitState returns the current state read from the mounted Git repo.
+	readGitState(reconcilerName string) (gitState, status.Error)
+
+	// getPollingFrequency returns how often to re-import configuration from the filesystem.
+	getPollingFrequency() time.Duration
+	// getResyncPeriod returns the period of time between forced re-sync from Git (even
+	// without a new commit).
+	getResyncPeriod() time.Duration
+
+	// update updates the declared resources in memory, applies the resources, and sets up the watches.
+	update(ctx context.Context, cos []core.Object) status.MultiError
+
+	// needToUpdateWatch returns true if the Remediator needs its watches to be updated.
+	needToUpdateWatch() bool
+
+	// managementConflict returns true if one of the watchers noticed a management conflict.
+	managementConflict() bool
+
+	// getCache returns the cache
+	getCache() *cache
+
+	// checkpoint marks the given string as the most recent checkpoint for state
+	// tracking and up-to-date checks.
+	checkpoint(applied string)
+
+	// invalidate clears the state tracking information and sets needToRetry to true.
+	// invalidate does not clean up the cache.
+	invalidate(err status.MultiError)
+
+	resetCache()
+
+	getReconcilerName() string
+}
+
+func (o *opts) getPollingFrequency() time.Duration {
+	return o.pollingFrequency
+}
+
+func (o *opts) getResyncPeriod() time.Duration {
+	return o.resyncPeriod
+}
+
+func (o *opts) getCache() *cache {
+	return &o.cache
+}
 
 // checkpoint marks the given string as the most recent checkpoint for state
-// tracking and up-to-date checks.
+// tracking and up-to-date checks if `applied` has not been checkpointed.
 func (o *opts) checkpoint(applied string) {
-	glog.Infof("Reconciler checkpoint updated to %s", applied)
-	o.lastApplied = applied
-}
-
-// invalidate clears the current checkpoint from state tracking.
-func (o *opts) invalidate() {
-	glog.Info("Reconciler checkpoint invalidated.")
-	// Currently the only state that we track is the directory from the locally
-	// mounted Git repo that was last applied fully.
-	o.lastApplied = ""
-}
-
-// upToDate returns true if the given string matches the current checkpoint and
-// if other components are up-to-date as well.
-func (o *opts) upToDate(toApply string) bool {
-	if o.lastApplied != toApply {
-		glog.V(4).Infof("Reconciler checkpoint %s is not up-to-date with %s", o.lastApplied, toApply)
-		return false
+	if applied != o.lastApplied {
+		glog.Infof("Reconciler checkpoint updated to %s", applied)
+		o.lastApplied = applied
+		o.cache.needToRetry = false
 	}
-	return !o.updater.needsUpdate()
+}
+
+// invalidate clears the state tracking information and sets needToRetry to true.
+// invalidate does not clean up the cache.
+func (o *opts) invalidate(err status.MultiError) {
+	glog.Error(err)
+	glog.Info("Reconciler checkpoint invalidated.")
+	o.lastApplied = ""
+	o.cache.needToRetry = true
+}
+
+func (o *opts) resetCache() {
+	o.cache = cache{}
+}
+
+func (o *opts) getReconcilerName() string {
+	return o.reconcilerName
 }

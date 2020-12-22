@@ -41,6 +41,8 @@ type gitState struct {
 	files []cmpath.Absolute
 }
 
+// TODO(b/177554523): separate reading the Git commit hash and the files into two methods.
+
 // readGitState returns the current state read from the mounted Git repo.
 //
 // Returns an error if there is some problem resolving symbolic links or in

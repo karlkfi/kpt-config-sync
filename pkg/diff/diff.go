@@ -216,11 +216,6 @@ func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []D
 	return diffs
 }
 
-// TwoWay does a two way diff and returns the FileObjectDiff list.
-func TwoWay(declared, actual map[core.ID]core.Object) []Diff {
-	return ThreeWay(declared, nil, actual)
-}
-
 // GetName returns the metadata.name of the object being considered.
 func (d *Diff) GetName() string {
 	if d.Declared != nil {

@@ -113,7 +113,7 @@ func main() {
 		FightDetectionThreshold:    *fightDetectionThreshold,
 		NumWorkers:                 *workers,
 		ReconcilerScope:            declared.Scope(*scope),
-		ApplierResyncPeriod:        *resyncPeriod,
+		ResyncPeriod:               *resyncPeriod,
 		FilesystemPollingFrequency: *filesystemPollingPeriod,
 		GitRoot:                    absGitDir,
 		GitRev:                     *gitRev,

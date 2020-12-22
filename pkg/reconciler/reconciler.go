@@ -47,10 +47,9 @@ type Options struct {
 	// At most one Reconciler may have a given value for Scope on a cluster. More
 	// than one results in undefined behavior.
 	ReconcilerScope declared.Scope
-	// ApplierResyncPeriod is the period of time between forced re-sync runs of
-	// the Applier. At the end of each period, the Applier will re-apply its
-	// current set of declared resources to the cluster.
-	ApplierResyncPeriod time.Duration
+	// ResyncPeriod is the period of time between forced re-sync from Git (even
+	// without a new commit).
+	ResyncPeriod time.Duration
 	// FilesystemPollingFrequency is how often to check the local git repository for
 	// changes.
 	FilesystemPollingFrequency time.Duration
@@ -136,7 +135,7 @@ func Run(ctx context.Context, opts Options) {
 	}
 
 	// Configure the Parser.
-	var parser parse.Runnable
+	var parser parse.Parser
 	fs := parse.FileSource{
 		GitDir:    opts.GitRoot,
 		PolicyDir: opts.PolicyDir,
@@ -146,13 +145,13 @@ func Run(ctx context.Context, opts Options) {
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootRunner(opts.ClusterName, RootSyncName, opts.SourceFormat, &reader.File{}, cl,
-			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
+			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
 		parser = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
-			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
+			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
@@ -166,13 +165,11 @@ func Run(ctx context.Context, opts Options) {
 	stopChan := signals.SetupSignalHandler()
 	// Start the Remediator (non-blocking).
 	rem.Start(stoppableContext(ctx, stopChan))
-	// Start the Applier (blocking, so using goroutine).
-	go a.Run(ctx, opts.ApplierResyncPeriod, stopChan)
 	// Start the Parser (blocking).
 	// This will not return until:
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
-	parser.Run(stoppableContext(ctx, stopChan))
+	parse.Run(stoppableContext(ctx, stopChan), parser)
 }
 
 // updateRepoSyncStatus loops (with exponential backoff) until it is able to

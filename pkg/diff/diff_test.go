@@ -351,83 +351,6 @@ func TestThreeWay(t *testing.T) {
 	}
 }
 
-func TestTwoWay(t *testing.T) {
-	tcs := []struct {
-		name string
-		// the git resource to which the applier syncs the state to.
-		declared []core.Object
-		// The actual state of the resources.
-		actual []core.Object
-		// expected diff.
-		want []Diff
-	}{
-		{
-			name: "No Diff when declared is nil",
-			actual: []core.Object{
-				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
-			},
-			want: nil,
-		},
-		{
-			name: "Diff - no actual",
-			declared: []core.Object{
-				fake.NamespaceObject("namespace/" + testNs1),
-				fake.NamespaceObject("namespace/" + testNs2),
-			},
-			want: []Diff{
-				{
-					Declared: fake.NamespaceObject("namespace/" + testNs1),
-					Actual:   nil,
-				},
-				{
-					Declared: fake.NamespaceObject("namespace/" + testNs2),
-					Actual:   nil,
-				},
-			},
-		},
-		{
-			name: "Diff for update- with previousDeclared and actual",
-			declared: []core.Object{
-				fake.NamespaceObject("namespace/" + testNs1),
-				fake.NamespaceObject("namespace/" + testNs2),
-			},
-			actual: []core.Object{
-				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
-			},
-			want: []Diff{
-				{
-					Declared: fake.NamespaceObject("namespace/" + testNs1),
-					Actual:   nil,
-				},
-				{
-					Declared: fake.NamespaceObject("namespace/" + testNs2),
-					Actual:   fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
-				},
-			},
-		},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			decl := make(map[core.ID]core.Object)
-			actual := make(map[core.ID]core.Object)
-
-			for _, d := range tc.declared {
-				decl[core.IDOf(d)] = d
-			}
-			for _, a := range tc.actual {
-				actual[core.IDOf(a)] = a
-			}
-
-			diffs := TwoWay(decl, actual)
-			if diff := cmp.Diff(diffs, tc.want,
-				cmpopts.SortSlices(func(x, y Diff) bool { return x.GetName() < y.GetName() })); diff != "" {
-				t.Errorf(diff)
-			}
-		})
-	}
-}
-
 func TestUnknown(t *testing.T) {
 	obj := fake.NamespaceObject("hello")
 	decl := map[core.ID]core.Object{
@@ -436,11 +359,7 @@ func TestUnknown(t *testing.T) {
 	actual := map[core.ID]core.Object{
 		core.IDOf(obj): Unknown(),
 	}
-	diffs := TwoWay(decl, actual)
-	if len(diffs) != 0 {
-		t.Errorf("Want empty diffs with unknown; got %v", diffs)
-	}
-	diffs = ThreeWay(decl, nil, actual)
+	diffs := ThreeWay(decl, nil, actual)
 	if len(diffs) != 0 {
 		t.Errorf("Want empty diffs with unknown; got %v", diffs)
 	}

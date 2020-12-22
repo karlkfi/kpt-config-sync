@@ -88,9 +88,15 @@ func NewManager(reconciler declared.Scope, cfg *rest.Config, q *queue.ObjectQueu
 	}, nil
 }
 
-// NeedsUpdate returns true if the Manager's watches need to be updated or any watcher
-// notices any management conflicts. This function is threadsafe.
+// NeedsUpdate returns true if the Manager's watches need to be updated. This function is threadsafe.
 func (m *Manager) NeedsUpdate() bool {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	return m.needsUpdate
+}
+
+// ManagementConflict returns true if any watcher notices any management conflicts. This function is threadsafe.
+func (m *Manager) ManagementConflict() bool {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -104,7 +110,7 @@ func (m *Manager) NeedsUpdate() bool {
 			watcher.SetManagementConflict(false)
 		}
 	}
-	return m.needsUpdate || managementConflict
+	return managementConflict
 }
 
 // UpdateWatches accepts a map of GVKs that should be watched and takes the
@@ -119,13 +125,18 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
+	m.needsUpdate = false
+
+	var startedWatches, stoppedWatches uint64
 	// Stop obsolete watchers.
 	for gvk := range m.watcherMap {
 		if _, keepWatching := gvkMap[gvk]; !keepWatching {
 			// We were watching the type, but no longer have declarations for it.
 			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
+			stoppedWatches++
 			metrics.RecordWatches(ctx, gvk, -1)
+
 		}
 	}
 
@@ -139,11 +150,15 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			} else {
 				metrics.RecordWatches(ctx, gvk, 1)
 			}
+			startedWatches++
 		}
 	}
 
-	// If any errors occurred, then the Manager still needs to be updated.
-	m.needsUpdate = errs != nil
+	if startedWatches > 0 || stoppedWatches > 0 {
+		glog.Infof("The remediator made new progress: started %d new watches, and stopped %d watches", startedWatches, stoppedWatches)
+	} else {
+		glog.V(4).Infof("The remediator made no new progress")
+	}
 	return errs
 }
 

@@ -73,10 +73,10 @@ test_teardown() {
 
   debug::log "Custom Resource exists on cluster"
   # we need to specify the version of anvil in kubectl. Otherwise, it may try to get a version that doesn't exist.
-  kubectl get anvil.v1.acme.com e2e-test-anvil -n prod
+  wait::for -t 30 -- kubectl get anvil.v1.acme.com e2e-test-anvil -n prod
 
   debug::log "CRD exists on cluster"
-  kubectl get crd anvils.acme.com
+  wait::for -t 30 -- kubectl get crd anvils.acme.com
 
   debug::log "Updating CRD version"
   git::update "${YAML_DIR}/customresources/v1beta1_crds/anvil-crd-v2.yaml" acme/cluster/anvil-crd.yaml
@@ -150,10 +150,10 @@ test_teardown() {
   wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Custom Resource exists on cluster"
-  kubectl get clusteranvil e2e-test-clusteranvil
+  wait::for -t 30 -- kubectl get clusteranvil e2e-test-clusteranvil
 
   debug::log "CRD exists on cluster"
-  kubectl get crd clusteranvils.acme.com
+  wait::for -t 30 -- kubectl get crd clusteranvils.acme.com
 
   debug::log "Updating CRD version"
   git::update "${YAML_DIR}/customresources/v1beta1_crds/clusteranvil-crd-v2.yaml" acme/cluster/clusteranvil-crd.yaml

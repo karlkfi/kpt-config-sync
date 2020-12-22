@@ -27,18 +27,20 @@ import (
 )
 
 // NewRootRunner creates a new runnable parser for parsing a Root repository.
-func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
+func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Parser, error) {
 	opts := opts{
 		clusterName:      clusterName,
 		reconcilerName:   reconcilerName,
 		client:           c,
 		pollingFrequency: pollingFrequency,
+		resyncPeriod:     resyncPeriod,
 		files:            files{FileSource: fs},
 		updater: updater{
 			scope:      declared.RootReconciler,
 			resources:  resources,
 			applier:    app,
 			remediator: rem,
+			cache:      cache{},
 		},
 		discoveryInterface: dc,
 	}
@@ -64,46 +66,9 @@ type root struct {
 	sourceFormat filesystem.SourceFormat
 }
 
-// Run implements Runnable.
-func (p *root) Run(ctx context.Context) {
-	ticker := time.NewTicker(p.pollingFrequency)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C: // every clock tick
-			state, err := p.Read(ctx)
-			if err != nil {
-				// Invalidate state on error since this could be the result of switching
-				// branches or some other operation where inverting the operation would
-				// result in repeating a previous state that was checkpointed.
-				p.invalidate()
-				glog.Error(err)
-				continue
-			}
+var _ Parser = &root{}
 
-			err = p.Parse(ctx, state)
-			if err != nil {
-				// See comment above.
-				p.invalidate()
-				glog.Error(err)
-			}
-		}
-	}
-}
-
-// Read implements Runnable.
-func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState(p.reconcilerName)
-	if err != nil {
-		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
-			return nil, status.APIServerError(err2, "setting source status")
-		}
-		return nil, err
-	}
-	return &state, nil
-}
-
+// parseSource implements the Parser interface
 func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
@@ -145,48 +110,7 @@ func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object,
 	return cos, nil
 }
 
-// Parse implements Runnable.
-// TODO(b/167677315): DRY this with the namespace version.
-func (p *root) Parse(ctx context.Context, state *gitState) status.MultiError {
-	if p.upToDate(state.policyDir.OSPath()) {
-		return nil
-	}
-
-	cos, err := p.parseSource(ctx, state)
-	if err != nil {
-		if err2 := p.setSourceStatus(ctx, *state, err); err2 != nil {
-			glog.Errorf("Failed to set source status: %v", err2)
-		}
-		return err
-	}
-
-	err = p.update(ctx, cos)
-	if err != nil {
-		if err2 := p.setSyncStatus(ctx, state.commit, err); err2 != nil {
-			glog.Errorf("Failed to set sync status: %v", err2)
-		}
-		return err
-	}
-
-	// Update status to clear errors
-	if err2 := p.setSourceStatus(ctx, *state, nil); err2 != nil {
-		glog.Errorf("Failed to set source status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err2 := p.setSyncStatus(ctx, state.commit, nil); err2 != nil {
-		glog.Errorf("Failed to set sync status: %v", err2)
-		err = status.Append(err, err2)
-	}
-	if err != nil {
-		return err
-	}
-
-	glog.V(4).Infof("Successfully applied all files from git dir: %s", state.policyDir.OSPath())
-	// Only checkpoint our state *everything* succeeded, including status update.
-	p.checkpoint(state.policyDir.OSPath())
-	return nil
-}
-
+// setSourceStatus implements the Parser interface
 func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
@@ -215,6 +139,7 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 	return nil
 }
 
+// setSyncStatus implements the Parser interface
 func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
