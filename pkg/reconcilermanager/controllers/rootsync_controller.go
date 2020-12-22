@@ -356,6 +356,10 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 				if authTypeToken(rs.Spec.Auth) {
 					container.Env = gitSyncTokenAuthEnv(rs.Spec.SecretRef.Name)
 				}
+			case gceNodeAskpassSidecarName:
+				// The no-op case to avoid unknown container error after
+				// first-ever reconcile where the container gcenode-askpass-sidecar is
+				// added to the reconciler deployment when secretType: gcenode.
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 			}
