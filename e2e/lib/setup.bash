@@ -212,18 +212,37 @@ setup::git::commit_minimal_repo_contents() {
   wait::for -t 60 -- nomos::repo_synced
 }
 
-# This removes the specified folder, leaving behind the other files in the project root
+# This removes the namespaces/ and cluster/ subdirectories from the repo root.
 #
 # This is part of the tests that evaluate behavior with undefined POLICY_DIR
 #
-setup::git::remove_folder() {
-  local DIR_NAME=${1}
+setup::git::remove_all_from_root() {
+  rm -rf "${TEST_REPO:?}/cluster"
+  rm -rf "${TEST_REPO:?}/namespaces"
 
-  rm -r "${TEST_REPO:?}/${DIR_NAME}"
+  # Add a cluster-scoped resource and a namespace to avoid failing the safety check.
+  mkdir -p "${TEST_REPO}/cluster"
+  cp "${NOMOS_DIR}/examples/acme/cluster/admin-clusterrole.yaml" "${TEST_REPO}/cluster/admin-clusterrole.yaml"
+
+  mkdir -p "${TEST_REPO}/namespaces/new-prj"
+  cp "${NOMOS_DIR}/examples/acme/namespaces/rnd/new-prj/namespace.yaml" "${TEST_REPO}/namespaces/new-prj/namespace.yaml"
 
   cd "${TEST_REPO}"
   git add -A
-  git commit -m "add files to root"
+  git status
+  git commit -m "wiping almost all of root"
+  git push -u origin main:main -f
+
+  wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 60 -- kubectl get ns new-prj
+  wait::for -t 60 -- kubectl get clusterrole acme-admin
+
+  rm -rf "cluster"
+  rm -rf "namespaces"
+
+  git add -A
+  git status
+  git commit -m "wiping contents of root"
   git push -u origin main:main -f
 
   wait::for -t 60 -- nomos::repo_synced

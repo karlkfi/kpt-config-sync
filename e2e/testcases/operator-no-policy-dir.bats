@@ -57,7 +57,7 @@ set_importer_no_policy_dir() {
 
   set_importer_no_policy_dir
 
-  setup::git::remove_folder acme
+  setup::git::remove_all_from_root
 
   wait::for -t 60 -- nomos::repo_synced
   nomos::import_error_code ""
