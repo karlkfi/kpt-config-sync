@@ -125,7 +125,7 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			// We were watching the type, but no longer have declarations for it.
 			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
-			metrics.RecordWatches(ctx, declared.ScopeName(m.reconciler), gvk, -1)
+			metrics.RecordWatches(ctx, gvk, -1)
 		}
 	}
 
@@ -137,7 +137,7 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			if err := m.startWatcher(ctx, gvk); err != nil {
 				errs = status.Append(errs, err)
 			} else {
-				metrics.RecordWatches(ctx, declared.ScopeName(m.reconciler), gvk, 1)
+				metrics.RecordWatches(ctx, gvk, 1)
 			}
 		}
 	}

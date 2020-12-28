@@ -18,44 +18,42 @@ func RecordAPICallDuration(ctx context.Context, operation, status string, gvk sc
 }
 
 // RecordReconcilerErrors produces a measurement for the ReconcilerErrors view.
-func RecordReconcilerErrors(ctx context.Context, scope, component string, numErrors int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyComponent, component))
+func RecordReconcilerErrors(ctx context.Context, component string, numErrors int) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyComponent, component))
 	measurement := ReconcilerErrors.M(int64(numErrors))
 	stats.Record(tagCtx, measurement)
 }
 
 // RecordReconcileDuration produces a measurement for the ReconcileDuration view.
-func RecordReconcileDuration(ctx context.Context, scope string, status string, startTime time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, status))
+func RecordReconcileDuration(ctx context.Context, status string, startTime time.Time) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))
 	measurement := ReconcileDuration.M(time.Since(startTime).Seconds())
 	stats.Record(tagCtx, measurement)
 }
 
 // RecordLastSync produces a measurement for the LastSync view.
-func RecordLastSync(ctx context.Context, scope string, timestamp time.Time) {
-	tagContext, _ := tag.New(ctx, tag.Upsert(KeyScope, scope))
+func RecordLastSync(ctx context.Context, timestamp time.Time) {
 	measurement := LastSync.M(timestamp.Unix())
-	stats.Record(tagContext, measurement)
+	stats.Record(ctx, measurement)
 }
 
 // RecordParseErrorAndDuration produces measurements for the ParseDuration and ParseErrors views.
-func RecordParseErrorAndDuration(ctx context.Context, scope string, errs status.MultiError, startTime time.Time) {
-	durationTagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, StatusTagKey(errs)))
+func RecordParseErrorAndDuration(ctx context.Context, errs status.MultiError, startTime time.Time) {
+	durationTagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, StatusTagKey(errs)))
 	durationMeasurement := ParseDuration.M(time.Since(startTime).Seconds())
 	stats.Record(durationTagCtx, durationMeasurement)
 
 	errsMeasurement := ParseErrors.M(1)
 	for _, err := range status.ToCSE(errs) {
-		tagContext, _ := tag.New(context.Background(), tag.Upsert(KeyScope, scope), tag.Upsert(KeyErrorCode, err.Code))
+		tagContext, _ := tag.New(context.Background(), tag.Upsert(KeyErrorCode, err.Code))
 		stats.Record(tagContext, errsMeasurement)
 	}
 }
 
 // RecordDeclaredResources produces a measurement for the DeclaredResources view.
-func RecordDeclaredResources(ctx context.Context, scope string, numResources int) {
-	tagContext, _ := tag.New(ctx, tag.Upsert(KeyScope, scope))
+func RecordDeclaredResources(ctx context.Context, numResources int) {
 	measurement := DeclaredResources.M(int64(numResources))
-	stats.Record(tagContext, measurement)
+	stats.Record(ctx, measurement)
 }
 
 // RecordApplyOperation produces a measurement for the ApplyOperations view.
@@ -66,9 +64,9 @@ func RecordApplyOperation(ctx context.Context, operation, status string, gvk sch
 }
 
 // RecordLastApplyAndDuration produces measurements for the ApplyDuration and LastApplyTimestamp views.
-func RecordLastApplyAndDuration(ctx context.Context, scope string, status string, startTime time.Time) {
+func RecordLastApplyAndDuration(ctx context.Context, status string, startTime time.Time) {
 	now := time.Now()
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, status))
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))
 
 	durationMeasurement := ApplyDuration.M(now.Sub(startTime).Seconds())
 	lastApplyMeasurement := LastApply.M(now.Unix())
@@ -84,15 +82,15 @@ func RecordResourceFight(ctx context.Context, operation string, gvk schema.Group
 }
 
 // RecordWatches produces measurements for the Watches view.
-func RecordWatches(ctx context.Context, scope string, gvk schema.GroupVersionKind, count int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyType, gvk.Kind))
+func RecordWatches(ctx context.Context, gvk schema.GroupVersionKind, count int) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyType, gvk.Kind))
 	measurement := Watches.M(int64(count))
 	stats.Record(tagCtx, measurement)
 }
 
 // RecordWatchManagerUpdateAndDuration produces measurements for the WatchManagerUpdates and WatchManagerUpdatesDuration views.
-func RecordWatchManagerUpdateAndDuration(ctx context.Context, scope string, status string, startTime time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyScope, scope), tag.Upsert(KeyStatus, status))
+func RecordWatchManagerUpdateAndDuration(ctx context.Context, status string, startTime time.Time) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))
 
 	updatesMeasurement := WatchManagerUpdates.M(1)
 	durationMeasurement := WatchManagerUpdatesDuration.M(time.Since(startTime).Seconds())

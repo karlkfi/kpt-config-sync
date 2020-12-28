@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -15,10 +16,15 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/testmetrics"
 	"github.com/google/nomos/pkg/vet"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -115,6 +121,143 @@ func TestRoot_Parse(t *testing.T) {
 	}
 }
 
+func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
+	testCases := []struct {
+		name        string
+		errors      []status.Error
+		wantMetrics []*view.Row
+	}{
+		{
+			name: "single parse error",
+			errors: []status.Error{
+				status.InternalError("internal error"),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.InternalErrorCode}}},
+			},
+		},
+		{
+			name: "multiple parse errors",
+			errors: []status.Error{
+				status.InternalError("internal error"),
+				status.SourceError.Sprintf("source error").Build(),
+				status.InternalError("another internal error"),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.InternalErrorCode}}},
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.SourceErrorCode}}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := testmetrics.RegisterMetrics(metrics.ParseErrorsView)
+			a := &fakeApplier{}
+			parser := &root{
+				sourceFormat: filesystem.SourceFormatUnstructured,
+				opts: opts{
+					parser: &fakeParser{errors: tc.errors},
+					updater: updater{
+						scope:      declared.RootReconciler,
+						resources:  &declared.Resources{},
+						remediator: &noOpRemediator{},
+						applier:    a,
+					},
+					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+				},
+			}
+
+			fakeAbs, err := cmpath.AbsoluteOS("/fake")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_ = parser.Parse(context.Background(), &gitState{policyDir: fakeAbs})
+			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
+				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+			}
+		})
+	}
+}
+
+func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
+	testCases := []struct {
+		name        string
+		parseErrors []status.Error
+		applyErrors []status.Error
+		wantMetrics []*view.Row
+	}{
+		{
+			name: "single reconciler error in source component",
+			parseErrors: []status.Error{
+				status.SourceError.Sprintf("source error").Build(),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
+			},
+		},
+		{
+			name: "multiple reconciler errors in source component",
+			parseErrors: []status.Error{
+				status.SourceError.Sprintf("source error").Build(),
+				status.InternalError("internal error"),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
+			},
+		},
+		{
+			name: "single reconciler error in sync component",
+			applyErrors: []status.Error{
+				applier.FailedToListResources(errors.New("sync error")),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
+			},
+		},
+		{
+			name: "multiple reconciler errors in sync component",
+			applyErrors: []status.Error{
+				applier.FailedToListResources(errors.New("sync error")),
+				status.InternalError("internal error"),
+			},
+			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := testmetrics.RegisterMetrics(metrics.ReconcilerErrorsView)
+			parser := &root{
+				sourceFormat: filesystem.SourceFormatUnstructured,
+				opts: opts{
+					parser: &fakeParser{errors: tc.parseErrors},
+					updater: updater{
+						scope:      declared.RootReconciler,
+						resources:  &declared.Resources{},
+						remediator: &noOpRemediator{},
+						applier:    &fakeApplier{errors: tc.applyErrors},
+					},
+					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+				},
+			}
+
+			fakeAbs, err := cmpath.AbsoluteOS("/fake")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_ = parser.Parse(context.Background(), &gitState{policyDir: fakeAbs})
+			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
+				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+			}
+		})
+	}
+}
+
 func sortObjects(left, right core.Object) bool {
 	leftID := core.IDOf(left)
 	rightID := core.IDOf(right)
@@ -122,11 +265,19 @@ func sortObjects(left, right core.Object) bool {
 }
 
 type fakeParser struct {
-	parse []core.Object
+	parse  []core.Object
+	errors []status.Error
 }
 
 func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
-	return p.parse, nil
+	if p.errors == nil {
+		return p.parse, nil
+	}
+	var errs status.MultiError
+	for _, e := range p.errors {
+		errs = status.Append(errs, e)
+	}
+	return nil, errs
 }
 
 func (p *fakeParser) ReadClusterRegistryResources(filePaths filesystem.FilePaths) []ast.FileObject {
@@ -134,14 +285,22 @@ func (p *fakeParser) ReadClusterRegistryResources(filePaths filesystem.FilePaths
 }
 
 type fakeApplier struct {
-	got []core.Object
+	got    []core.Object
+	errors []status.Error
 }
 
 func (a *fakeApplier) Apply(ctx context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
-	a.got = objs
-	gvks := make(map[schema.GroupVersionKind]struct{})
-	for _, obj := range objs {
-		gvks[obj.GroupVersionKind()] = struct{}{}
+	if a.errors == nil {
+		a.got = objs
+		gvks := make(map[schema.GroupVersionKind]struct{})
+		for _, obj := range objs {
+			gvks[obj.GroupVersionKind()] = struct{}{}
+		}
+		return gvks, nil
 	}
-	return gvks, nil
+	var errs status.MultiError
+	for _, e := range a.errors {
+		errs = status.Append(errs, e)
+	}
+	return nil, errs
 }

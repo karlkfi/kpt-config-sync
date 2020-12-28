@@ -6,8 +6,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/testmetrics"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -17,6 +21,7 @@ var (
 	obj2 = fake.ResourceQuotaObject()
 
 	testSet = []core.Object{obj1, obj2}
+	nilSet  = []core.Object{nil}
 )
 
 func TestUpdate(t *testing.T) {
@@ -149,6 +154,20 @@ func TestGVKSet(t *testing.T) {
 	}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Error(diff)
+	}
+}
+
+func TestResources_InternalErrorMetricValidation(t *testing.T) {
+	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
+	dr := Resources{}
+	if err := dr.Update(nilSet); err != nil {
+		t.Fatal(err)
+	}
+	wantMetrics := []*view.Row{
+		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeySource, Value: "parser"}}},
+	}
+	if diff := m.ValidateMetrics(metrics.InternalErrorsView, wantMetrics); diff != "" {
+		t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 	}
 }
 

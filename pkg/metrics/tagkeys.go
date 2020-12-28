@@ -3,9 +3,6 @@ package metrics
 import "go.opencensus.io/tag"
 
 var (
-	// KeyScope groups metrics by their scope. Possible values: root-sync, repo-sync.
-	KeyScope, _ = tag.NewKey("scope")
-
 	// KeyOperation groups metrics by their operation. Possible values: create, patch, update, delete.
 	KeyOperation, _ = tag.NewKey("operation")
 

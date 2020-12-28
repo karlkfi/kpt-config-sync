@@ -30,7 +30,7 @@ func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiEr
 	if err := u.resources.Update(objs); err != nil {
 		return status.Append(nil, err)
 	}
-	metrics.RecordDeclaredResources(ctx, declared.ScopeName(u.scope), len(objs))
+	metrics.RecordDeclaredResources(ctx, len(objs))
 
 	// Then apply all new declared resources.
 	// TODO(b/168223472): This will show users a transient error if they apply a
@@ -39,13 +39,13 @@ func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiEr
 	//  path.
 	applyStart := time.Now()
 	gvks, applyErrs := u.applier.Apply(ctx, objs)
-	metrics.RecordLastApplyAndDuration(ctx, declared.ScopeName(u.scope), metrics.StatusTagKey(applyErrs), applyStart)
+	metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), applyStart)
 
 	// Finally update the Remediator's watches to start new ones and stop old
 	// ones.
 	remediatorStart := time.Now()
 	watchErrs := u.remediator.UpdateWatches(ctx, gvks)
-	metrics.RecordWatchManagerUpdateAndDuration(ctx, declared.ScopeName(u.scope), metrics.StatusTagKey(watchErrs), remediatorStart)
+	metrics.RecordWatchManagerUpdateAndDuration(ctx, metrics.StatusTagKey(watchErrs), remediatorStart)
 
 	return status.Append(applyErrs, watchErrs)
 }

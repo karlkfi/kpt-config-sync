@@ -31,7 +31,7 @@ func (a *Applier) Run(ctx context.Context, resyncPeriod time.Duration, stopChann
 		}
 		start := time.Now()
 		errs := a.Refresh(ctx)
-		metrics.RecordLastApplyAndDuration(ctx, declared.ScopeName(a.scope), metrics.StatusTagKey(errs), start)
+		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(errs), start)
 
 		if errs != nil {
 			glog.Errorf("applier run failed: %v", errs)

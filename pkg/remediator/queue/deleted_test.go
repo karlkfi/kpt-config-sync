@@ -4,7 +4,11 @@ import (
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/testmetrics"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 )
 
 func TestWasDeleted(t *testing.T) {
@@ -38,5 +42,16 @@ func TestWasDeleted(t *testing.T) {
 				t.Errorf("deleted object was not detected: %v", tc.obj)
 			}
 		})
+	}
+}
+
+func TestDeleted_InternalErrorMetricValidation(t *testing.T) {
+	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
+	MarkDeleted(nil)
+	wantMetrics := []*view.Row{
+		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeySource, Value: "remediator"}}},
+	}
+	if diff := m.ValidateMetrics(metrics.InternalErrorsView, wantMetrics); diff != "" {
+		t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 	}
 }

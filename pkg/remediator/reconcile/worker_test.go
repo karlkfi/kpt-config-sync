@@ -9,11 +9,16 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
+	c "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	syncertestfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/testmetrics"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -192,6 +197,49 @@ func TestWorker_Refresh(t *testing.T) {
 	}
 }
 
+func TestWorker_ResourceConflictMetricValidation(t *testing.T) {
+	testCases := []struct {
+		name        string
+		objects     []core.Object
+		wantMetrics []*view.Row
+	}{
+		{
+			name:    "single resource conflict for Role object",
+			objects: []core.Object{fake.UnstructuredObject(kinds.Role())},
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyType, Value: fake.UnstructuredObject(kinds.Role()).GetKind()}}},
+			},
+		},
+		{
+			name:    "multiple resource conflicts for Role object",
+			objects: []core.Object{fake.UnstructuredObject(kinds.Role()), fake.UnstructuredObject(kinds.Role())},
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyType, Value: fake.UnstructuredObject(kinds.Role()).GetKind()}}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := testmetrics.RegisterMetrics(metrics.ResourceConflictsView)
+
+			for _, obj := range tc.objects {
+				w := &Worker{
+					objectQueue: &fakeQueue{},
+					reconciler: fakeReconciler{
+						client:       fakeClient(t),
+						remediateErr: c.ConflictUpdateDoesNotExist(errors.New("resource conflict error"), obj),
+					},
+				}
+				w.process(context.Background(), obj)
+			}
+			if diff := m.ValidateMetrics(metrics.ResourceConflictsView, tc.wantMetrics); diff != "" {
+				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+			}
+		})
+	}
+}
+
 type fakeReconciler struct {
 	client       client.Client
 	remediateErr status.Error
@@ -214,4 +262,12 @@ type fakeQueue struct {
 
 func (q *fakeQueue) Add(o core.Object) {
 	q.element = o
+}
+
+func (q *fakeQueue) Retry(o core.Object) {
+	q.element = o
+}
+
+func (q *fakeQueue) Forget(o core.Object) {
+	q.element = nil
 }

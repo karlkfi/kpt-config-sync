@@ -8,7 +8,8 @@ import (
 var distributionBounds = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10}
 
 var (
-	apiCallDurationView = &view.View{
+	// APICallDurationView aggregates the APICallDuration metric measurements.
+	APICallDurationView = &view.View{
 		Name:        APICallDuration.Name(),
 		Measure:     APICallDuration,
 		Description: "The latency distribution of API server calls",
@@ -16,55 +17,60 @@ var (
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	reconcilerErrorsView = &view.View{
+	// ReconcilerErrorsView aggregates the ReconcilerErrors metric measurements.
+	ReconcilerErrorsView = &view.View{
 		Name:        ReconcilerErrors.Name(),
 		Measure:     ReconcilerErrors,
 		Description: "The current number of errors in the RootSync and RepoSync reconcilers",
-		TagKeys:     []tag.Key{KeyScope, KeyComponent},
+		TagKeys:     []tag.Key{KeyComponent},
 		Aggregation: view.LastValue(),
 	}
 
-	reconcileDurationView = &view.View{
+	// ReconcileDurationView aggregates the ReconcileDuration metric measurements.
+	ReconcileDurationView = &view.View{
 		Name:        ReconcileDuration.Name(),
 		Measure:     ReconcileDuration,
 		Description: "The latency distribution of RootSync and RepoSync reconcile events",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	lastSyncTimestampView = &view.View{
+	// LastSyncTimestampView aggregates the LastSyncTimestamp metric measurements.
+	LastSyncTimestampView = &view.View{
 		Name:        LastSync.Name(),
 		Measure:     LastSync,
 		Description: "The timestamp of the most recent sync from Git grouped by the scope",
-		TagKeys:     []tag.Key{KeyScope},
 		Aggregation: view.LastValue(),
 	}
 
-	parseDurationView = &view.View{
+	// ParseDurationView aggregates the ParseDuration metric measurements.
+	ParseDurationView = &view.View{
 		Name:        ParseDuration.Name(),
 		Measure:     ParseDuration,
 		Description: "The latency distribution of parse events",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	parseErrorsView = &view.View{
+	// ParseErrorsView aggregates the ParseErrors metric measurements.
+	ParseErrorsView = &view.View{
 		Name:        ParseErrors.Name() + "_total",
 		Measure:     ParseErrors,
 		Description: "The total number of errors that occurred during parsing",
-		TagKeys:     []tag.Key{KeyScope, KeyErrorCode},
+		TagKeys:     []tag.Key{KeyErrorCode},
 		Aggregation: view.Count(),
 	}
 
-	declaredResourcesView = &view.View{
+	// DeclaredResourcesView aggregates the DeclaredResources metric measurements.
+	DeclaredResourcesView = &view.View{
 		Name:        DeclaredResources.Name(),
 		Measure:     DeclaredResources,
 		Description: "The current number of declared resources parsed from Git",
-		TagKeys:     []tag.Key{KeyScope},
 		Aggregation: view.LastValue(),
 	}
 
-	applyOperationsView = &view.View{
+	// ApplyOperationsView aggregates the ApplyOperations metric measurements.
+	ApplyOperationsView = &view.View{
 		Name:        ApplyOperations.Name() + "_total",
 		Measure:     ApplyOperations,
 		Description: "The total number of operations that have been performed to sync resources to source of truth",
@@ -72,55 +78,62 @@ var (
 		Aggregation: view.Count(),
 	}
 
-	applyDurationView = &view.View{
+	// ApplyDurationView aggregates the ApplyDuration metric measurements.
+	ApplyDurationView = &view.View{
 		Name:        ApplyDuration.Name(),
 		Measure:     ApplyDuration,
 		Description: "The latency distribution of applier resource sync events",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	lastApplyTimestampView = &view.View{
+	// LastApplyTimestampView aggregates the LastApplyTimestamp metric measurements.
+	LastApplyTimestampView = &view.View{
 		Name:        LastApply.Name(),
 		Measure:     LastApply,
 		Description: "The timestamp of the most recent applier resource sync event",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.LastValue(),
 	}
 
-	resourceFightsView = &view.View{
+	// ResourceFightsView aggregates the ResourceFights metric measurements.
+	ResourceFightsView = &view.View{
 		Name:        ResourceFights.Name() + "_total",
 		Measure:     ResourceFights,
 		Description: "The total number of resources that are being synced too frequently",
-		TagKeys:     []tag.Key{KeyScope, KeyType},
+		TagKeys:     []tag.Key{KeyOperation, KeyType},
 		Aggregation: view.Count(),
 	}
 
-	watchesView = &view.View{
+	// WatchesView aggregates the Watches metric measurements.
+	WatchesView = &view.View{
 		Name:        Watches.Name(),
 		Measure:     Watches,
 		Description: "The current number of watches on the declared resources",
-		TagKeys:     []tag.Key{KeyScope, KeyType},
+		TagKeys:     []tag.Key{KeyType},
 		Aggregation: view.Sum(),
 	}
 
-	watchManagerUpdatesView = &view.View{
+	// WatchManagerUpdatesView aggregates the WatchManagerUpdates metric measurements.
+	WatchManagerUpdatesView = &view.View{
 		Name:        WatchManagerUpdates.Name() + "_total",
 		Measure:     WatchManagerUpdates,
 		Description: "The total number of times the watch manager updates the watches on the declared resources",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.Count(),
 	}
 
-	watchManagerUpdatesDurationView = &view.View{
+	// WatchManagerUpdatesDurationView aggregates the WatchManagerUpdatesDuration metric measurements.
+	WatchManagerUpdatesDurationView = &view.View{
 		Name:        WatchManagerUpdatesDuration.Name(),
 		Measure:     WatchManagerUpdatesDuration,
 		Description: "The latency distribution of watch manager updates",
-		TagKeys:     []tag.Key{KeyScope, KeyStatus},
+		TagKeys:     []tag.Key{KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	remediateDurationView = &view.View{
+	// RemediateDurationView aggregates the RemediateDuration metric measurements.
+	RemediateDurationView = &view.View{
 		Name:        RemediateDuration.Name(),
 		Measure:     RemediateDuration,
 		Description: "The latency distribution of remediator reconciliation events",
@@ -128,7 +141,8 @@ var (
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
-	resourceConflictsView = &view.View{
+	// ResourceConflictsView aggregates the ResourceConflicts metric measurements.
+	ResourceConflictsView = &view.View{
 		Name:        ResourceConflicts.Name() + "_total",
 		Measure:     ResourceConflicts,
 		Description: "The total number of resource conflicts resulting from a mismatch between the cached resources and cluster resources",
@@ -136,7 +150,8 @@ var (
 		Aggregation: view.Count(),
 	}
 
-	internalErrorsView = &view.View{
+	// InternalErrorsView aggregates the InternalErrors metric measurements.
+	InternalErrorsView = &view.View{
 		Name:        InternalErrors.Name() + "_total",
 		Measure:     InternalErrors,
 		Description: "The total number of internal errors triggered by Config Sync",

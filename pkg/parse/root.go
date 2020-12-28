@@ -119,7 +119,7 @@ func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object,
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
 	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
-	metrics.RecordParseErrorAndDuration(ctx, v1alpha1.RootSyncName, err, start)
+	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 	rs.Status.Source.Commit = state.commit
 	rs.Status.Source.Errors = cse
 
-	metrics.RecordReconcilerErrors(ctx, v1alpha1.RootSyncName, "source", len(cse))
+	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync source status from parser")
@@ -230,8 +230,8 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 	rs.Status.Sync.Errors = cse
 	rs.Status.Sync.LastUpdate = now
 
-	metrics.RecordReconcilerErrors(ctx, v1alpha1.RootSyncName, "sync", len(cse))
-	metrics.RecordLastSync(ctx, v1alpha1.RootSyncName, now.Time)
+	metrics.RecordReconcilerErrors(ctx, "sync", len(cse))
+	metrics.RecordLastSync(ctx, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync sync status from parser")

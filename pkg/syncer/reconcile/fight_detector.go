@@ -1,11 +1,14 @@
 package reconcile
 
 import (
+	ctx "context"
 	"math"
 	"time"
 
 	"github.com/google/nomos/pkg/importer/id"
+	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -55,6 +58,18 @@ func newFightDetector() fightDetector {
 	return fightDetector{
 		fights: make(map[gknn]*fight),
 	}
+}
+
+// detectFight detects whether the resource is needing updates too frequently.
+// If so, it increments the resource_fights metric and logs to glog.Warning.
+func (d *fightDetector) detectFight(ctx ctx.Context, time time.Time, obj *unstructured.Unstructured, fLogger *fightLogger, operation string) bool {
+	if fight := d.markUpdated(time, obj); fight != nil {
+		m.RecordResourceFight(ctx, operation, obj.GroupVersionKind())
+		if fLogger.logFight(time, fight) {
+			return true
+		}
+	}
+	return false
 }
 
 // markUpdated marks that API resource `resource` was updated at time `now`.

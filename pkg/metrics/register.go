@@ -19,26 +19,26 @@ func RegisterPrometheusExporter() (*prometheus.Exporter, error) {
 
 // RegisterReconcilerManagerMetricsViews registers the views so that recorded metrics can be exported in the reconciler manager.
 func RegisterReconcilerManagerMetricsViews() error {
-	return view.Register(reconcileDurationView)
+	return view.Register(ReconcileDurationView)
 }
 
 // RegisterReconcilerMetricsViews registers the views so that recorded metrics can be exported in the reconcilers.
 func RegisterReconcilerMetricsViews() error {
 	return view.Register(
-		apiCallDurationView,
-		reconcilerErrorsView,
-		lastSyncTimestampView,
-		parseDurationView,
-		parseErrorsView,
-		declaredResourcesView,
-		applyOperationsView,
-		applyDurationView,
-		lastApplyTimestampView,
-		resourceFightsView,
-		watchesView,
-		watchManagerUpdatesView,
-		watchManagerUpdatesDurationView,
-		remediateDurationView,
-		resourceConflictsView,
-		internalErrorsView)
+		APICallDurationView,
+		ReconcilerErrorsView,
+		LastSyncTimestampView,
+		ParseDurationView,
+		ParseErrorsView,
+		DeclaredResourcesView,
+		ApplyOperationsView,
+		ApplyDurationView,
+		LastApplyTimestampView,
+		ResourceFightsView,
+		WatchesView,
+		WatchManagerUpdatesView,
+		WatchManagerUpdatesDurationView,
+		RemediateDurationView,
+		ResourceConflictsView,
+		InternalErrorsView)
 }

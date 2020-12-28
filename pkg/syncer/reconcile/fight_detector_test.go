@@ -1,12 +1,18 @@
 package reconcile
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/testing/testmetrics"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // durations creates a sequence of evenly-spaced time.Durations.
@@ -181,6 +187,66 @@ func TestFightDetector(t *testing.T) {
 				} else if !tc.wantAboveThreshold[o] && aboveThreshold {
 					t.Errorf("got markUpdated(%v) = true, want false", o)
 				}
+			}
+		})
+	}
+}
+
+func TestResourceFightsMetricValidation(t *testing.T) {
+	roleGVK := kinds.Role().GroupKind().WithVersion("")
+	roleBindingGVK := kinds.RoleBinding().GroupKind().WithVersion("")
+	fl := newFightLogger()
+	testCases := []struct {
+		name           string
+		fightThreshold float64
+		operations     []string
+		gvk            schema.GroupVersionKind
+		wantMetrics    []*view.Row
+	}{
+		{
+			name:           "fight detected while creating Role",
+			fightThreshold: 0, // Setting to 0 to guarantee a fight is detected
+			operations:     []string{"create"},
+			gvk:            roleGVK,
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{
+					{Key: metrics.KeyOperation, Value: "create"},
+					{Key: metrics.KeyType, Value: "Role"}}},
+			},
+		},
+		{
+			name:           "multiple fights detected while deleting RoleBinding",
+			fightThreshold: 0,
+			operations:     []string{"delete", "delete"},
+			gvk:            roleBindingGVK,
+			wantMetrics: []*view.Row{
+				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{
+					{Key: metrics.KeyOperation, Value: "delete"},
+					{Key: metrics.KeyType, Value: "RoleBinding"}}},
+			},
+		},
+		{
+			name:           "no fights detected while updating Role",
+			fightThreshold: 5.0,
+			operations:     []string{"update"},
+			gvk:            roleGVK,
+			wantMetrics:    []*view.Row{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := testmetrics.RegisterMetrics(metrics.ResourceFightsView)
+			fd := newFightDetector()
+			SetFightThreshold(tc.fightThreshold)
+			u := fake.UnstructuredObject(tc.gvk)
+
+			for _, op := range tc.operations {
+				fd.detectFight(context.Background(), time.Now(), u, &fl, op)
+			}
+
+			if diff := m.ValidateMetrics(metrics.ResourceFightsView, tc.wantMetrics); diff != "" {
+				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 			}
 		})
 	}

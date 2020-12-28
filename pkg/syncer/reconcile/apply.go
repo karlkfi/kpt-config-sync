@@ -89,11 +89,8 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if err != nil {
 		return false, err
 	}
-	if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
-		if c.fLogger.logFight(time.Now(), fight) {
-			m.RecordResourceFight(ctx, "create", intendedState.GroupVersionKind())
-			glog.Warningf("Fight detected on create of %s.", description(intendedState))
-		}
+	if c.fights.detectFight(ctx, time.Now(), intendedState, &c.fLogger, "create") {
+		glog.Warningf("Fight detected on create of %s.", description(intendedState))
 	}
 	return true, nil
 }
@@ -115,11 +112,8 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 
 	updated := !isNoOpPatch(patch)
 	if updated {
-		if fight := c.fights.markUpdated(time.Now(), intendedState); fight != nil {
-			if c.fLogger.logFight(time.Now(), fight) {
-				m.RecordResourceFight(ctx, "update", intendedState.GroupVersionKind())
-				glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
-			}
+		if c.fights.detectFight(ctx, time.Now(), intendedState, &c.fLogger, "update") {
+			glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
 		}
 	}
 	return updated, nil
@@ -150,11 +144,8 @@ func (c *clientApplier) Delete(ctx context.Context, obj *unstructured.Unstructur
 	if err != nil {
 		return false, err
 	}
-	if fight := c.fights.markUpdated(time.Now(), obj); fight != nil {
-		if c.fLogger.logFight(time.Now(), fight) {
-			m.RecordResourceFight(ctx, "delete", obj.GroupVersionKind())
-			glog.Warningf("Fight detected on delete of %s.", description(obj))
-		}
+	if c.fights.detectFight(ctx, time.Now(), obj, &c.fLogger, "delete") {
+		glog.Warningf("Fight detected on delete of %s.", description(obj))
 	}
 	return true, nil
 }
