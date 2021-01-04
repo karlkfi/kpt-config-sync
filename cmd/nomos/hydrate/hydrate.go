@@ -161,7 +161,7 @@ clusters.`,
 func printFlatOutput(fileObjects []ast.FileObject) error {
 	var objects []*unstructured.Unstructured
 	for _, o := range fileObjects {
-		u, err := toUnstructured(o)
+		u, err := toUnstructured(o.Object)
 		if err != nil {
 			return err
 		}
