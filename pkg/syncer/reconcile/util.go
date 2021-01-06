@@ -56,9 +56,21 @@ func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementErr
 }
 
 // clusterConfigNeedsUpdate returns true if the given ClusterConfig will need a status update with the other given arguments.
-func clusterConfigNeedsUpdate(config *v1.ClusterConfig, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
+// initTime is the syncer-controller's instantiation time. It skips updating the sync state if the
+// import time is stale (not after the init time) so the repostatus-reconciler can force-update everything on startup.
+// An update is needed
+// - if the sync state is not synced, or
+// - if the sync time is stale (not after the init time), or
+// - if errors occur, or
+// - if resourceConditions are not empty.
+func clusterConfigNeedsUpdate(config *v1.ClusterConfig, initTime metav1.Time, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
+	if !config.Spec.ImportTime.After(initTime.Time) {
+		glog.V(3).Infof("Ignoring previously imported config %q", config.Name)
+		return false
+	}
 	return !config.Status.SyncState.IsSynced() ||
 		config.Status.Token != config.Spec.Token ||
+		!config.Status.SyncTime.After(initTime.Time) ||
 		len(errs) > 0 ||
 		len(config.Status.SyncErrors) > 0 ||
 		len(resConditions) > 0 ||
@@ -66,8 +78,11 @@ func clusterConfigNeedsUpdate(config *v1.ClusterConfig, errs []v1.ConfigManageme
 }
 
 // SetClusterConfigStatus updates the status sub-resource of the ClusterConfig based on reconciling the ClusterConfig.
-func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
-	if !clusterConfigNeedsUpdate(config, errs, rcs) {
+// initTime is the syncer-controller's instantiation time. It is used to avoid updating
+// the sync state and the sync time for the imported stale configs, so that the
+// repostatus-reconciler can force-update the stalled configs on startup.
+func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, initTime metav1.Time, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+	if !clusterConfigNeedsUpdate(config, initTime, errs, rcs) {
 		glog.Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}

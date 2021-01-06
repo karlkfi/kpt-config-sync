@@ -27,7 +27,7 @@ const namespaceConfigControllerName = "namespaceconfig-resources"
 
 // AddNamespaceConfig adds NamespaceConfig sync controllers to the Manager.
 func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
-	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
+	resourceTypes map[schema.GroupVersionKind]runtime.Object, mgrInitTime metav1.Time) error {
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
@@ -44,6 +44,7 @@ func AddNamespaceConfig(ctx context.Context, mgr manager.Manager, decoder decode
 			decoder,
 			metav1.Now,
 			extractGVKs(resourceTypes),
+			mgrInitTime,
 		),
 	})
 	if err != nil {

@@ -64,6 +64,13 @@ func ClusterConfigImportToken(t string) fake.ClusterConfigMutator {
 	}
 }
 
+// ClusterConfigImportTime adds an ImportTime to a ClusterConfig.
+func ClusterConfigImportTime(time metav1.Time) fake.ClusterConfigMutator {
+	return func(cc *v1.ClusterConfig) {
+		cc.Spec.ImportTime = time
+	}
+}
+
 // ClusterConfigSyncTime adds a SyncTime to a ClusterConfig.
 func ClusterConfigSyncTime() fake.ClusterConfigMutator {
 	return func(cc *v1.ClusterConfig) {
@@ -83,6 +90,14 @@ func NamespaceConfigImportToken(t string) core.MetaMutator {
 	return func(o core.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.Token = t
+	}
+}
+
+// NamespaceConfigImportTime adds an ImportTime to a Namespace Config.
+func NamespaceConfigImportTime(time metav1.Time) core.MetaMutator {
+	return func(o core.Object) {
+		nc := o.(*v1.NamespaceConfig)
+		nc.Spec.ImportTime = time
 	}
 }
 

@@ -63,6 +63,8 @@ type reconciler struct {
 	// be handling (in this case gatekeeper will add CRDs to the cluster and we
 	// need to restart in order to have the syncer work properly).
 	allCrds map[schema.GroupVersionKind]struct{}
+	//initTime is the reconciler's instantiation time
+	initTime metav1.Time
 }
 
 // NewReconciler returns a new Reconciler.
@@ -77,6 +79,7 @@ func newReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
 		decoder:  decoder,
 		now:      now,
 		signal:   signal,
+		initTime: now(),
 	}
 }
 
@@ -175,7 +178,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	if err != nil {
 		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1Beta1()))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil))
+		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.initTime, r.now, syncErrs, nil))
 		return mErr
 	}
 	var actualV1Beta1 []*unstructured.Unstructured
@@ -194,7 +197,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		if err != nil {
 			mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1()))
 			syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-			mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil))
+			mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.initTime, r.now, syncErrs, nil))
 			return mErr
 		}
 	}
@@ -252,7 +255,7 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		r.signal.Restart(restartSignal)
 	}
 
-	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, clusterConfig.Status.ResourceConditions); err != nil {
+	if err := syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.initTime, r.now, syncErrs, clusterConfig.Status.ResourceConditions); err != nil {
 		r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update ClusterConfig status: %v", err)
 		mErr = status.Append(mErr, err)

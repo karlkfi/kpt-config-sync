@@ -17,7 +17,7 @@ const commit3 = "beadfadebeadfadebeadfadebeadfadebeadfade"
 var err1 = v1.ConfigManagementError{ErrorMessage: "KNV9999: oops"}
 var err2 = v1.ConfigManagementError{ErrorMessage: "KNV9999: fail"}
 
-func fakeClusterConfig(importToken, syncToken string, errs ...v1.ConfigManagementError) v1.ClusterConfig {
+func fakeClusterConfig(importToken, syncToken string, syncTime metav1.Time, errs ...v1.ConfigManagementError) v1.ClusterConfig {
 	return v1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1.ClusterConfigName,
@@ -28,17 +28,19 @@ func fakeClusterConfig(importToken, syncToken string, errs ...v1.ConfigManagemen
 		Status: v1.ClusterConfigStatus{
 			Token:      syncToken,
 			SyncErrors: errs,
+			SyncState:  v1.StateSynced,
+			SyncTime:   syncTime,
 		},
 	}
 }
 
 func fakeClusterConfigWithResourceConditions(importToken, syncToken string, resourceConditions []v1.ResourceCondition, errs ...v1.ConfigManagementError) v1.ClusterConfig {
-	nc := fakeClusterConfig(importToken, syncToken, errs...)
+	nc := fakeClusterConfig(importToken, syncToken, metav1.Now(), errs...)
 	nc.Status.ResourceConditions = resourceConditions
 	return nc
 }
 
-func fakeNamespaceConfig(name, importToken, syncToken string, errs ...v1.ConfigManagementError) v1.NamespaceConfig {
+func fakeNamespaceConfig(name, importToken, syncToken string, syncTime metav1.Time, errs ...v1.ConfigManagementError) v1.NamespaceConfig {
 	return v1.NamespaceConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -50,17 +52,22 @@ func fakeNamespaceConfig(name, importToken, syncToken string, errs ...v1.ConfigM
 			Token:              syncToken,
 			SyncErrors:         errs,
 			ResourceConditions: nil,
+			SyncState:          v1.StateSynced,
+			SyncTime:           syncTime,
 		},
 	}
 }
 
 func fakeNamespaceConfigWithResourceConditions(name, importToken, syncToken string, resourceConditions []v1.ResourceCondition, errs ...v1.ConfigManagementError) v1.NamespaceConfig {
-	nc := fakeNamespaceConfig(name, importToken, syncToken, errs...)
+	nc := fakeNamespaceConfig(name, importToken, syncToken, metav1.Now(), errs...)
 	nc.Status.ResourceConditions = resourceConditions
 	return nc
 }
 
 func TestSyncStateBuilding(t *testing.T) {
+	instantiationTime := metav1.Now()
+	syncBeforeInstantiation := metav1.NewTime(instantiationTime.Add(-1))
+	syncAfterInstantiation := metav1.NewTime(instantiationTime.Add(1))
 	testCases := []struct {
 		name      string
 		clCfgList *v1.ClusterConfigList
@@ -71,13 +78,13 @@ func TestSyncStateBuilding(t *testing.T) {
 			name: "build commits that are unreconciled",
 			clCfgList: &v1.ClusterConfigList{
 				Items: []v1.ClusterConfig{
-					fakeClusterConfig(commit2, commit1),
+					fakeClusterConfig(commit2, commit1, syncAfterInstantiation),
 				},
 			},
 			nsCfgList: &v1.NamespaceConfigList{
 				Items: []v1.NamespaceConfig{
-					fakeNamespaceConfig("shipping-dev", commit2, commit1),
-					fakeNamespaceConfig("audit", commit3, commit2),
+					fakeNamespaceConfig("shipping-dev", commit2, commit1, syncAfterInstantiation),
+					fakeNamespaceConfig("audit", commit3, commit2, syncAfterInstantiation),
 				},
 			},
 			wantState: &syncState{
@@ -97,13 +104,13 @@ func TestSyncStateBuilding(t *testing.T) {
 			name: "build configs that have reconcile errors",
 			clCfgList: &v1.ClusterConfigList{
 				Items: []v1.ClusterConfig{
-					fakeClusterConfig(commit1, commit1, err1),
+					fakeClusterConfig(commit1, commit1, syncAfterInstantiation, err1),
 				},
 			},
 			nsCfgList: &v1.NamespaceConfigList{
 				Items: []v1.NamespaceConfig{
-					fakeNamespaceConfig("shipping-dev", commit2, commit2, err2),
-					fakeNamespaceConfig("audit", commit3, commit3, err1),
+					fakeNamespaceConfig("shipping-dev", commit2, commit2, syncAfterInstantiation, err2),
+					fakeNamespaceConfig("audit", commit3, commit3, syncAfterInstantiation, err1),
 				},
 			},
 			wantState: &syncState{
@@ -124,13 +131,13 @@ func TestSyncStateBuilding(t *testing.T) {
 			name: "ignore configs that are already reconciled",
 			clCfgList: &v1.ClusterConfigList{
 				Items: []v1.ClusterConfig{
-					fakeClusterConfig(commit1, commit1),
+					fakeClusterConfig(commit1, commit1, syncAfterInstantiation),
 				},
 			},
 			nsCfgList: &v1.NamespaceConfigList{
 				Items: []v1.NamespaceConfig{
-					fakeNamespaceConfig("shipping-dev", commit2, commit2),
-					fakeNamespaceConfig("audit", commit3, commit2),
+					fakeNamespaceConfig("shipping-dev", commit2, commit2, syncAfterInstantiation),
+					fakeNamespaceConfig("audit", commit3, commit2, syncAfterInstantiation),
 				},
 			},
 			wantState: &syncState{
@@ -146,13 +153,40 @@ func TestSyncStateBuilding(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "build commits that are stale (synced before instantiation time)",
+			clCfgList: &v1.ClusterConfigList{
+				Items: []v1.ClusterConfig{
+					fakeClusterConfig(commit1, commit1, syncBeforeInstantiation),
+				},
+			},
+			nsCfgList: &v1.NamespaceConfigList{
+				Items: []v1.NamespaceConfig{
+					fakeNamespaceConfig("shipping-dev", commit2, commit2, syncBeforeInstantiation),
+					fakeNamespaceConfig("audit", commit3, commit2, syncBeforeInstantiation),
+				},
+			},
+			wantState: &syncState{
+				reconciledCommits: map[string]bool{},
+				unreconciledCommits: map[string][]string{
+					commit1: {clusterPrefix(v1.ClusterConfigName)},
+					commit2: {namespacePrefix("shipping-dev")},
+					commit3: {namespacePrefix("audit")},
+				},
+				configs: map[string]configState{
+					clusterPrefix(v1.ClusterConfigName): {commit: commit1},
+					namespacePrefix("shipping-dev"):     {commit: commit2},
+					namespacePrefix("audit"):            {commit: commit3},
+				},
+			},
+		},
 	}
 
 	cmpOpts := []cmp.Option{
 		cmp.AllowUnexported(syncState{}),
 		cmp.AllowUnexported(configState{}),
 	}
-	repoStatus := &repoStatus{}
+	repoStatus := &repoStatus{initTime: instantiationTime}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

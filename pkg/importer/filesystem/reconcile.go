@@ -60,6 +60,8 @@ type reconciler struct {
 	// string so the importer will retry indefinitely to attempt to recover from
 	// an error state.
 	appliedGitDir string
+	//initTime is the reconciler's instantiation time
+	initTime time.Time
 }
 
 // gitState contains the parsed state of the mounted git repo at a certain revision.
@@ -125,6 +127,7 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 		cache:           cache,
 		decoder:         decoder,
 		format:          format,
+		initTime:        time.Now(),
 	}, nil
 }
 
@@ -282,7 +285,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs); errs != nil {
+	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs, c.initTime); errs != nil {
 		glog.Warningf("Failed to apply actions: %v", status.FormatError(false, errs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))

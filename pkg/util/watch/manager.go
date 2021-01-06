@@ -42,6 +42,8 @@ type subManager struct {
 	errCh chan event.GenericEvent
 	// watching is a map of GVKs that the manager is currently watching
 	watching map[schema.GroupVersionKind]bool
+	// initTime is the instantiation time of the subManager
+	initTime metav1.Time
 }
 
 // NewManager returns a new RestartableManager
@@ -53,10 +55,11 @@ func NewManager(mgr manager.Manager, builder ControllerBuilder) (RestartableMana
 
 	errCh := make(chan event.GenericEvent)
 	r := &subManager{
-		mgr:     sm,
-		builder: builder,
-		baseCfg: rest.CopyConfig(mgr.GetConfig()),
-		errCh:   errCh,
+		mgr:      sm,
+		builder:  builder,
+		baseCfg:  rest.CopyConfig(mgr.GetConfig()),
+		errCh:    errCh,
+		initTime: metav1.Now(),
 	}
 
 	// Configure a controller strictly for restarting the underlying manager if it fails to Start.
@@ -117,7 +120,7 @@ func (m *subManager) Restart(gvks map[schema.GroupVersionKind]bool, force bool) 
 	}
 	m.mgr = sm
 
-	if err := m.builder.StartControllers(ctx, m.mgr, gvks); err != nil {
+	if err := m.builder.StartControllers(ctx, m.mgr, gvks, m.initTime); err != nil {
 		return true, errors.Wrap(err, "could not start controllers")
 	}
 

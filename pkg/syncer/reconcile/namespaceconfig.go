@@ -53,22 +53,25 @@ type namespaceConfigReconciler struct {
 	toSync   []schema.GroupVersionKind
 	// A cancelable ambient context for all reconciler operations.
 	ctx context.Context
+	//mgrInitTime is the subManager's instantiation time
+	mgrInitTime metav1.Time
 }
 
 var _ reconcile.Reconciler = &namespaceConfigReconciler{}
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
 func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
-	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) reconcile.Reconciler {
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind, mgrInitTime metav1.Time) reconcile.Reconciler {
 	return &namespaceConfigReconciler{
-		client:   c,
-		applier:  applier,
-		cache:    syncercache.NewGenericResourceCache(reader),
-		recorder: recorder,
-		decoder:  decoder,
-		toSync:   toSync,
-		now:      now,
-		ctx:      ctx,
+		client:      c,
+		applier:     applier,
+		cache:       syncercache.NewGenericResourceCache(reader),
+		recorder:    recorder,
+		decoder:     decoder,
+		toSync:      toSync,
+		now:         now,
+		ctx:         ctx,
+		mgrInitTime: mgrInitTime,
 	}
 }
 
@@ -158,7 +161,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 	case differ.Create:
 		if err := r.createNamespace(ctx, config); err != nil {
 			syncErrs = append(syncErrs, newSyncError(config, err))
-			if err2 := r.setNamespaceConfigStatus(ctx, config, syncErrs, nil); err2 != nil {
+			if err2 := r.setNamespaceConfigStatus(ctx, config, r.mgrInitTime, syncErrs, nil); err2 != nil {
 				glog.Warningf("Failed to set status on NamespaceConfig after namespace creation error: %s", err2)
 			}
 			return err
@@ -277,7 +280,7 @@ func (r *namespaceConfigReconciler) manageConfigs(ctx context.Context, namespace
 		}
 	}
 
-	if err := r.setNamespaceConfigStatus(ctx, config, syncErrs, resConditions); err != nil {
+	if err := r.setNamespaceConfigStatus(ctx, config, r.mgrInitTime, syncErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, status.APIServerErrorf(err, "failed to set status for NamespaceConfig %q", namespace))
 		r.recorder.Eventf(config, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update NamespaceConfig status: %s", err)
@@ -291,12 +294,26 @@ func (r *namespaceConfigReconciler) manageConfigs(ctx context.Context, namespace
 }
 
 // needsUpdate returns true if the given NamespaceConfig will need a status update with the other given arguments.
-func needsUpdate(config *v1.NamespaceConfig, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
+// initTime is the syncer-controller's instantiation time. It skips updating the sync state if the
+// import time is stale (not after the init time or not after the deleteSyncedTime) so the
+// repostatus-reconciler can force-update everything on startup.
+// An update is needed
+// - if the sync state is not synced, or
+// - if the sync time is stale (not after the init time or not after the deleteSyncedTime), or
+// - if errors occur, or
+// - if resourceConditions are not empty.
+func needsUpdate(config *v1.NamespaceConfig, initTime metav1.Time, errs []v1.ConfigManagementError, resConditions []v1.ResourceCondition) bool {
 	if config == reservedNamespaceConfig {
+		return false
+	}
+	if !config.Spec.ImportTime.After(initTime.Time) || !config.Spec.ImportTime.After(config.Spec.DeleteSyncedTime.Time) {
+		glog.V(3).Infof("Ignoring previously imported config %q", config.Name)
 		return false
 	}
 	return !config.Status.SyncState.IsSynced() ||
 		config.Status.Token != config.Spec.Token ||
+		!config.Status.SyncTime.After(initTime.Time) ||
+		!config.Status.SyncTime.After(config.Spec.DeleteSyncedTime.Time) ||
 		len(errs) > 0 ||
 		len(config.Status.SyncErrors) > 0 ||
 		len(resConditions) > 0 ||
@@ -304,8 +321,11 @@ func needsUpdate(config *v1.NamespaceConfig, errs []v1.ConfigManagementError, re
 }
 
 // setNamespaceConfigStatus updates the status of the given NamespaceConfig.
-func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
-	if !needsUpdate(config, errs, rcs) {
+// initTime is the syncer-controller's instantiation time. It is used to avoid updating
+// the sync state and the sync time for the imported stale configs, so that the
+// repostatus-reconciler can force-update the stalled configs on startup.
+func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context, config *v1.NamespaceConfig, initTime metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+	if !needsUpdate(config, initTime, errs, rcs) {
 		glog.V(3).Infof("Skipping status update for NamespaceConfig %q; status is already up-to-date.", config.Name)
 		return nil
 	}

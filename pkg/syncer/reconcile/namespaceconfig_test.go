@@ -3,6 +3,7 @@ package reconcile_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
@@ -44,8 +45,10 @@ var (
 	eng              = "eng"
 	managedNamespace = namespace(eng, syncertest.ManagementEnabled, syncertest.TokenAnnotation)
 
-	namespaceCfg       = namespaceConfig(eng, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token))
+	namespaceCfg = namespaceConfig(eng, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token),
+		syncertest.NamespaceConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))))
 	namespaceCfgSynced = namespaceConfig(eng, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token),
+		syncertest.NamespaceConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))),
 		syncertest.NamespaceConfigSyncTime(), syncertest.NamespaceConfigSyncToken())
 
 	managedNamespaceReconcileComplete = testingfake.NewEvent(namespaceCfg, corev1.EventTypeNormal, v1.EventReasonReconcileComplete)
@@ -197,7 +200,7 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -278,7 +281,7 @@ func TestUnmanagedNamespaceReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -320,11 +323,13 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 		want          *v1.NamespaceConfig
 	}{
 		{
-			name:          "do not add quota enforcement label on managed kube-system",
-			declared:      namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token)),
+			name: "do not add quota enforcement label on managed kube-system",
+			declared: namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token),
+				syncertest.NamespaceConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute)))),
 			actual:        namespace(metav1.NamespaceSystem, syncertest.ManagementEnabled),
 			wantNamespace: namespace(metav1.NamespaceSystem, syncertest.ManagementEnabled, syncertest.TokenAnnotation),
 			want: namespaceConfig(metav1.NamespaceSystem, v1.StateSynced, syncertest.NamespaceConfigImportToken(syncertest.Token),
+				syncertest.NamespaceConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))),
 				syncertest.NamespaceConfigSyncTime(), syncertest.NamespaceConfigSyncToken()),
 		},
 		{
@@ -358,7 +363,7 @@ func TestSpecialNamespaceReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, tc.declared, tc.actual)
 
 			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -508,7 +513,7 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := syncerreconcile.NewNamespaceConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

@@ -29,6 +29,9 @@ type repoStatus struct {
 
 	// now returns the current time.
 	now func() metav1.Time
+
+	//initTime is the reconciler's instantiation time
+	initTime metav1.Time
 }
 
 // syncState represents the current status of the syncer and all commits that it is reconciling.
@@ -56,10 +59,11 @@ type configState struct {
 // NewRepoStatus returns a reconciler for maintaining the status field of the Repo resource.
 func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() metav1.Time) reconcile.Reconciler {
 	return &repoStatus{
-		ctx:     ctx,
-		client:  sClient,
-		rClient: repo.New(sClient),
-		now:     now,
+		ctx:      ctx,
+		client:   sClient,
+		rClient:  repo.New(sClient),
+		now:      now,
+		initTime: now(),
 	}
 }
 
@@ -129,24 +133,39 @@ func (r *repoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.Nam
 	}
 
 	for _, cc := range ccList.Items {
-		state.addConfigToCommit(clusterPrefix(cc.Name), cc.Spec.Token, cc.Status.Token, cc.Status.SyncErrors)
+		state.addConfigToCommit(clusterPrefix(cc.Name), cc.Spec.Token, cc.Status.Token, cc.Status.SyncState, r.initTime, cc.Status.SyncTime, metav1.Time{}, cc.Status.SyncErrors)
 		state.resourceConditions = append(state.resourceConditions, cc.Status.ResourceConditions...)
 	}
 	for _, nc := range ncList.Items {
-		state.addConfigToCommit(namespacePrefix(nc.Name), nc.Spec.Token, nc.Status.Token, nc.Status.SyncErrors)
+		state.addConfigToCommit(namespacePrefix(nc.Name), nc.Spec.Token, nc.Status.Token, nc.Status.SyncState, r.initTime, nc.Status.SyncTime, nc.Spec.DeleteSyncedTime, nc.Status.SyncErrors)
 		state.resourceConditions = append(state.resourceConditions, nc.Status.ResourceConditions...)
 	}
 
 	return state
 }
 
+// isConfigReconciled checks if the config is reconciled.
+// initTime is the repostatus-reconciler's instantiation time. It is used to force-update
+// everything on startup so we don't assume everything is already correctly synced.
+// A config is reconciled when the import token is the same as the sync token, and
+// the sync state is `synced`, and
+// the sync time is after the reconciler's instantiation time, and
+// the sync time is after the deleteSyncedTime if set.
+func isConfigReconciled(importToken, syncToken string,
+	syncState v1.ConfigSyncState, initTime, syncTime, deleteSyncedTime metav1.Time) bool {
+	return importToken == syncToken && syncState == v1.StateSynced &&
+		syncTime.After(initTime.Time) && syncTime.After(deleteSyncedTime.Time)
+}
+
 // addConfigToCommit adds the specified config data to the commit for the specified syncToken.
-func (s *syncState) addConfigToCommit(name, importToken, syncToken string, errs []v1.ConfigManagementError) {
+// initTime is the repostatus-reconciler's instantiation time. It is used to force-update
+// everything on startup so we don't assume everything is already correctly synced.
+func (s *syncState) addConfigToCommit(name, importToken, syncToken string, syncState v1.ConfigSyncState, initTime, syncTime, deleteSyncedTime metav1.Time, errs []v1.ConfigManagementError) {
 	var commitHash string
 	if len(errs) > 0 {
 		// If there are errors, then the syncToken indicates the unreconciled commit.
 		commitHash = syncToken
-	} else if importToken == syncToken {
+	} else if isConfigReconciled(importToken, syncToken, syncState, initTime, syncTime, deleteSyncedTime) {
 		// If the tokens match and there are no errors, then the config is already done being processed.
 		if _, ok := s.unreconciledCommits[syncToken]; !ok {
 			s.reconciledCommits[syncToken] = true

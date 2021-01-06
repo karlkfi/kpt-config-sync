@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/util/watch"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -18,7 +19,7 @@ var _ watch.ControllerBuilder = &builder{}
 // StartControllers starts a new constraint controller for each of the specified
 // constraint GVKs. It also starts the controller for ConstraintTemplates if
 // their CRD is present.
-func (b *builder) StartControllers(ctx context.Context, mgr manager.Manager, gvks map[schema.GroupVersionKind]bool) error {
+func (b *builder) StartControllers(ctx context.Context, mgr manager.Manager, gvks map[schema.GroupVersionKind]bool, _ metav1.Time) error {
 	ctGVK := constrainttemplate.GVK.String()
 	for gvk := range gvks {
 		if gvk.String() == ctGVK {

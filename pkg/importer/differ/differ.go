@@ -2,6 +2,7 @@ package differ
 
 import (
 	"context"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -20,11 +21,13 @@ import (
 var now = metav1.Now
 
 // Update updates the nomos CRs on the cluster based on the difference between the desired and current state.
-func Update(ctx context.Context, client *syncerclient.Client, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) status.MultiError {
+// initTime is the importer-reconciler's instantiation time. It is used to update the stalled import time of
+// ClusterConfigs and NamespaceConfigs so syncer-reconcilers can force-update everything on startup.
+func Update(ctx context.Context, client *syncerclient.Client, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs, initTime time.Time) status.MultiError {
 	var errs status.MultiError
 	impl := &differ{client: client, errs: errs}
-	impl.updateNamespaceConfigs(ctx, decoder, current, desired)
-	impl.updateClusterConfigs(ctx, decoder, current, desired)
+	impl.updateNamespaceConfigs(ctx, decoder, current, desired, initTime)
+	impl.updateClusterConfigs(ctx, decoder, current, desired, initTime)
 	impl.updateSyncs(ctx, current, desired)
 	return impl.errs
 }
@@ -35,19 +38,31 @@ type differ struct {
 	errs   status.MultiError
 }
 
-// updateNamespaceConfigs compares the given sets of current and desired NamespaaceConfigs and performs the necessary
+// namespaceConfigNeedsUpdate checks if the NamespaceConfig resource needs an update.
+// initTime is the importer-reconciler's instantiation time. It is used to update
+// the stalled import time of ClusterConfigs and NamespaceConfigs so syncer-reconcilers
+// can force-update everything on startup.
+// An update is needed if NamespaceConfigs are not equivalent or `.spec.ImportTime`
+// is stale (not after importer-reconciler's init time or not after deleteSyncedTime).
+func (d *differ) namespaceConfigNeedsUpdate(decoder decode.Decoder, intent, actual *v1.NamespaceConfig, initTime time.Time) bool {
+	equal, err := namespaceconfig.NamespaceConfigsEqual(decoder, intent, actual)
+	if err != nil {
+		d.errs = status.Append(d.errs, err)
+		return false
+	}
+	return !equal || !actual.Spec.ImportTime.After(initTime) || !actual.Spec.ImportTime.After(actual.Spec.DeleteSyncedTime.Time)
+}
+
+// updateNamespaceConfigs compares the given sets of current and desired NamespaceConfigs and performs the necessary
 // actions to update the current set to match the desired set.
-func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) {
+// initTime is the importer-reconciler's instantiation time. It is used to update the stalled import time of
+// ClusterConfigs and NamespaceConfigs so syncer-reconcilers can force-update everything on startup.
+func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs, initTime time.Time) {
 	var deletes, creates, updates int
 	for name := range desired.NamespaceConfigs {
 		intent := desired.NamespaceConfigs[name]
 		if actual, found := current.NamespaceConfigs[name]; found {
-			equal, err := namespaceconfig.NamespaceConfigsEqual(decoder, &intent, &actual)
-			if err != nil {
-				d.errs = status.Append(d.errs, err)
-				continue
-			}
-			if !equal {
+			if d.namespaceConfigNeedsUpdate(decoder, &intent, &actual, initTime) {
 				err := d.updateNamespaceConfig(ctx, &intent)
 				d.errs = status.Append(d.errs, err)
 				updates++
@@ -110,12 +125,29 @@ func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.Namespace
 	return err
 }
 
-func (d *differ) updateClusterConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs) {
-	d.updateClusterConfig(ctx, decoder, current.ClusterConfig, desired.ClusterConfig)
-	d.updateClusterConfig(ctx, decoder, current.CRDClusterConfig, desired.CRDClusterConfig)
+func (d *differ) updateClusterConfigs(ctx context.Context, decoder decode.Decoder, current, desired namespaceconfig.AllConfigs, initTime time.Time) {
+	d.updateClusterConfig(ctx, decoder, current.ClusterConfig, desired.ClusterConfig, initTime)
+	d.updateClusterConfig(ctx, decoder, current.CRDClusterConfig, desired.CRDClusterConfig, initTime)
 }
 
-func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder, current, desired *v1.ClusterConfig) {
+// clusterConfigNeedsUpdate checks if the ClusterConfig resource needs an update.
+// An update is needed if ClusterConfigs are not equivalent or `.spec.ImportTime` is stale (not after importer-reconciler's init time).
+// initTime is the importer-reconciler's instantiation time. It is used to update the stalled import time of
+// ClusterConfigs and NamespaceConfigs so syncer-reconcilers can force-update everything on startup.
+func (d *differ) clusterConfigNeedsUpdate(decoder decode.Decoder, current, desired *v1.ClusterConfig, initTime time.Time) bool {
+	equal, err := compare.GenericResourcesEqual(decoder, desired.Spec.Resources, current.Spec.Resources)
+	if err != nil {
+		d.errs = status.Append(d.errs, err)
+		return false
+	}
+	return !equal || !current.Spec.ImportTime.After(initTime)
+}
+
+// updateClusterConfig compares the given sets of current and desired ClusterConfigs and performs the necessary
+// actions to update the current set to match the desired set.
+// initTime is the importer-reconciler's instantiation time. It is used to update the stalled import time of
+// ClusterConfigs and NamespaceConfigs so syncer-reconcilers can force-update everything on startup.
+func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder, current, desired *v1.ClusterConfig, initTime time.Time) {
 	if current == nil && desired == nil {
 		return
 	}
@@ -128,12 +160,7 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 		return
 	}
 
-	equal, err := compare.GenericResourcesEqual(decoder, desired.Spec.Resources, current.Spec.Resources)
-	if err != nil {
-		d.errs = status.Append(d.errs, err)
-		return
-	}
-	if !equal {
+	if d.clusterConfigNeedsUpdate(decoder, current, desired, initTime) {
 		_, err := d.client.Update(ctx, desired, func(obj core.Object) (core.Object, error) {
 			oldObj := obj.(*v1.ClusterConfig)
 			newObj := desired.DeepCopy()

@@ -3,6 +3,7 @@ package reconcile_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -15,6 +16,7 @@ import (
 	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,8 +47,11 @@ func persistentVolume(reclaimPolicy corev1.PersistentVolumeReclaimPolicy, opts .
 }
 
 var (
-	clusterCfg       = clusterConfig(v1.StateSynced, syncertest.ClusterConfigImportToken(syncertest.Token))
+	mgrInitTime = syncertest.Now()
+	clusterCfg  = clusterConfig(v1.StateSynced, syncertest.ClusterConfigImportToken(syncertest.Token),
+		syncertest.ClusterConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))))
 	clusterCfgSynced = clusterConfig(v1.StateSynced, syncertest.ClusterConfigImportToken(syncertest.Token),
+		syncertest.ClusterConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))),
 		syncertest.ClusterConfigSyncTime(), syncertest.ClusterConfigSyncToken())
 )
 
@@ -211,7 +216,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			fakeClient := testingfake.NewClient(t, s, actual...)
 
 			testReconciler := syncerreconcile.NewClusterConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{
@@ -241,10 +246,12 @@ func TestInvalidClusterConfig(t *testing.T) {
 		wantEvent *testingfake.Event
 	}{
 		{
-			name:   "error on clusterconfig with invalid name",
-			actual: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name"))),
+			name: "error on clusterconfig with invalid name",
+			actual: clusterConfig(v1.StateSynced, fake.ClusterConfigMeta(core.Name("some-incorrect-name")),
+				syncertest.ClusterConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute)))),
 			want: clusterConfig(v1.StateError,
 				fake.ClusterConfigMeta(core.Name("some-incorrect-name")),
+				syncertest.ClusterConfigImportTime(metav1.NewTime(mgrInitTime.Add(time.Minute))),
 				syncertest.ClusterConfigSyncTime(),
 				clusterSyncError(v1.ConfigManagementError{
 					ErrorResources: []v1.ErrorResource{
@@ -275,7 +282,7 @@ func TestInvalidClusterConfig(t *testing.T) {
 			fakeEventRecorder := testingfake.NewEventRecorder(t)
 			fakeClient := testingfake.NewClient(t, runtime.NewScheme(), tc.actual)
 			testReconciler := syncerreconcile.NewClusterConfigReconciler(ctx,
-				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync)
+				client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder, fakeDecoder, syncertest.Now, toSync, mgrInitTime)
 
 			_, err := testReconciler.Reconcile(
 				reconcile.Request{

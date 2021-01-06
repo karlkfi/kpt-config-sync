@@ -19,25 +19,45 @@ import (
 
 var testTime = metav1.NewTime(time.Unix(1234, 5678)).Rfc3339Copy()
 
-func namespaceConfigWithSyncState(name string, syncState v1.ConfigSyncState, opts ...core.MetaMutator) *v1.NamespaceConfig {
+func namespaceConfig(name string, opts ...core.MetaMutator) *v1.NamespaceConfig {
 	opts = append(opts, core.Name(name))
 	nc := fake.NamespaceConfigObject(opts...)
+	nc.Spec.ImportTime = metav1.NewTime(testTime.Add(time.Minute)).Rfc3339Copy()
+	return nc
+}
+
+func stalledNamespaceConfig(name string, syncState v1.ConfigSyncState, opts ...core.MetaMutator) *v1.NamespaceConfig {
+	opts = append(opts, core.Name(name))
+	nc := fake.NamespaceConfigObject(opts...)
+	nc.Spec.ImportTime = metav1.NewTime(testTime.Add(-time.Minute)).Rfc3339Copy()
 	nc.Status.SyncState = syncState
 	return nc
 }
 
-func namespaceConfig(name string, opts ...core.MetaMutator) *v1.NamespaceConfig {
-	return namespaceConfigWithSyncState(name, v1.StateUnknown, opts...)
+func clusterConfig(opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	cc := fake.ClusterConfigObject(opts...)
+	cc.Spec.ImportTime = metav1.NewTime(testTime.Add(time.Minute)).Rfc3339Copy()
+	return cc
 }
 
-func clusterConfigWithSyncState(syncState v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+func stalledClusterConfig(syncState v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
 	cc := fake.ClusterConfigObject(opts...)
+	cc.Spec.ImportTime = metav1.NewTime(testTime.Add(-time.Minute)).Rfc3339Copy()
 	cc.Status.SyncState = syncState
 	return cc
 }
 
-func clusterConfig(opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
-	return clusterConfigWithSyncState(v1.StateUnknown, opts...)
+func crdClusterConfig(opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	ccc := fake.CRDClusterConfigObject(opts...)
+	ccc.Spec.ImportTime = metav1.NewTime(testTime.Add(time.Minute)).Rfc3339Copy()
+	return ccc
+}
+
+func stalledCRDClusterConfig(syncState v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	ccc := fake.CRDClusterConfigObject(opts...)
+	ccc.Spec.ImportTime = metav1.NewTime(testTime.Add(-time.Minute)).Rfc3339Copy()
+	ccc.Status.SyncState = syncState
+	return ccc
 }
 
 func markedForDeletion(o core.Object) {
@@ -103,6 +123,21 @@ func TestDiffer(t *testing.T) {
 			actual:   []runtime.Object{namespaceConfig("foo")},
 			declared: []runtime.Object{namespaceConfig("foo")},
 			want:     []runtime.Object{namespaceConfig("foo")},
+		},
+		{
+			testName: "update stalled Namespace nodes",
+			actual: []runtime.Object{
+				stalledNamespaceConfig("foo", v1.StateSynced),
+				stalledNamespaceConfig("bar", v1.StateSynced),
+			},
+			declared: []runtime.Object{
+				stalledNamespaceConfig("foo", v1.StateUnknown),
+				stalledNamespaceConfig("bar", v1.StateStale),
+			},
+			want: []runtime.Object{
+				stalledNamespaceConfig("foo", v1.StateSynced),
+				stalledNamespaceConfig("bar", v1.StateStale),
+			},
 		},
 		{
 			testName: "update Namespace node",
@@ -171,23 +206,47 @@ func TestDiffer(t *testing.T) {
 			want:     []runtime.Object{clusterConfig()},
 		},
 		{
+			testName: "update stalled ClusterConfig to its original state",
+			actual:   []runtime.Object{stalledClusterConfig(v1.StateSynced)},
+			declared: []runtime.Object{stalledClusterConfig(v1.StateUnknown)},
+			want:     []runtime.Object{stalledClusterConfig(v1.StateSynced)},
+		},
+		{
+			testName: "update stalled ClusterConfig to the desired state",
+			actual:   []runtime.Object{stalledClusterConfig(v1.StateSynced)},
+			declared: []runtime.Object{stalledClusterConfig(v1.StateStale)},
+			want:     []runtime.Object{stalledClusterConfig(v1.StateStale)},
+		},
+		{
 			testName: "delete ClusterConfig",
 			actual:   []runtime.Object{clusterConfig()},
 		},
 		{
 			testName: "create CRD ClusterConfig",
-			declared: []runtime.Object{fake.CRDClusterConfigObject()},
-			want:     []runtime.Object{fake.CRDClusterConfigObject()},
+			declared: []runtime.Object{crdClusterConfig()},
+			want:     []runtime.Object{crdClusterConfig()},
 		},
 		{
 			testName: "no-op CRD ClusterConfig",
-			actual:   []runtime.Object{fake.CRDClusterConfigObject()},
-			declared: []runtime.Object{fake.CRDClusterConfigObject()},
-			want:     []runtime.Object{fake.CRDClusterConfigObject()},
+			actual:   []runtime.Object{crdClusterConfig()},
+			declared: []runtime.Object{crdClusterConfig()},
+			want:     []runtime.Object{crdClusterConfig()},
+		},
+		{
+			testName: "update stalled CRD ClusterConfig to its original state",
+			actual:   []runtime.Object{stalledCRDClusterConfig(v1.StateSynced)},
+			declared: []runtime.Object{stalledCRDClusterConfig(v1.StateUnknown)},
+			want:     []runtime.Object{stalledCRDClusterConfig(v1.StateSynced)},
+		},
+		{
+			testName: "update stalled CRD ClusterConfig to the desired state",
+			actual:   []runtime.Object{stalledCRDClusterConfig(v1.StateSynced)},
+			declared: []runtime.Object{stalledCRDClusterConfig(v1.StateStale)},
+			want:     []runtime.Object{stalledCRDClusterConfig(v1.StateStale)},
 		},
 		{
 			testName: "delete CRD ClusterConfig",
-			actual:   []runtime.Object{fake.CRDClusterConfigObject()},
+			actual:   []runtime.Object{crdClusterConfig()},
 		},
 		// Sync tests
 		{
@@ -209,7 +268,7 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "multiple diffs at once",
 			actual: []runtime.Object{
-				fake.CRDClusterConfigObject(),
+				crdClusterConfig(),
 				namespaceConfig("foo"),
 				namespaceConfig("bar"),
 			},
@@ -228,25 +287,28 @@ func TestDiffer(t *testing.T) {
 		{
 			testName: "multiple diffs at once with various sync states",
 			actual: []runtime.Object{
-				clusterConfigWithSyncState(v1.StateSynced),
-				namespaceConfigWithSyncState("foo", v1.StateSynced, core.Annotation("key", "old")),
-				namespaceConfigWithSyncState("bar", v1.StateSynced, core.Annotation("key", "old")),
-				namespaceConfigWithSyncState("baz", v1.StateSynced, core.Annotation("key", "old")),
+				stalledClusterConfig(v1.StateSynced),
+				stalledCRDClusterConfig(v1.StateSynced),
+				stalledNamespaceConfig("foo", v1.StateSynced),
+				stalledNamespaceConfig("bar", v1.StateSynced),
+				stalledNamespaceConfig("baz", v1.StateSynced),
 			},
 			declared: []runtime.Object{
-				clusterConfigWithSyncState(v1.StateStale),
-				namespaceConfigWithSyncState("foo", v1.StateStale, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("bar", v1.StateUnknown, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("qux", v1.StateStale, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("quux", v1.StateUnknown, core.Annotation("key", "new")),
+				stalledClusterConfig(v1.StateStale),
+				stalledCRDClusterConfig(v1.StateUnknown),
+				stalledNamespaceConfig("foo", v1.StateStale),
+				stalledNamespaceConfig("bar", v1.StateUnknown),
+				stalledNamespaceConfig("qux", v1.StateStale),
+				stalledNamespaceConfig("quux", v1.StateUnknown),
 			},
 			want: []runtime.Object{
-				clusterConfigWithSyncState(v1.StateSynced),
-				namespaceConfigWithSyncState("foo", v1.StateStale, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("bar", v1.StateSynced, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("baz", v1.StateSynced, markedForDeletion, core.Annotation("key", "old")),
-				namespaceConfigWithSyncState("qux", v1.StateStale, core.Annotation("key", "new")),
-				namespaceConfigWithSyncState("quux", v1.StateUnknown, core.Annotation("key", "new")),
+				stalledClusterConfig(v1.StateStale),
+				stalledCRDClusterConfig(v1.StateSynced),
+				stalledNamespaceConfig("foo", v1.StateStale),
+				stalledNamespaceConfig("bar", v1.StateSynced),
+				stalledNamespaceConfig("baz", v1.StateSynced, markedForDeletion),
+				stalledNamespaceConfig("qux", v1.StateStale),
+				stalledNamespaceConfig("quux", v1.StateUnknown),
 			},
 		},
 	}
@@ -260,7 +322,7 @@ func TestDiffer(t *testing.T) {
 			declared := allConfigs(t, tc.declared)
 
 			err := Update(context.Background(), client.New(fakeClient, metrics.APICallDuration),
-				testingfake.NewDecoder(nil), *actual, *declared)
+				testingfake.NewDecoder(nil), *actual, *declared, testTime.Time)
 
 			if err != nil {
 				t.Errorf("unexpected error in diff: %v", err)

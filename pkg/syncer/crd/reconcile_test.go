@@ -3,6 +3,7 @@ package crd
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -80,11 +81,13 @@ func crdList(gvks []schema.GroupVersionKind) []v1beta1.CustomResourceDefinition 
 var (
 	clusterCfg = clusterConfig(v1.StateSynced,
 		syncertest.ClusterConfigImportToken(syncertest.Token),
+		syncertest.ClusterConfigImportTime(metav1.NewTime(syncertest.Now().Add(time.Minute))),
 		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)),
 	)
 
 	clusterCfgSynced = clusterConfig(v1.StateSynced,
 		syncertest.ClusterConfigImportToken(syncertest.Token),
+		syncertest.ClusterConfigImportTime(metav1.NewTime(syncertest.Now().Add(time.Minute))),
 		fake.ClusterConfigMeta(core.Name(v1.CRDClusterConfigName)),
 		syncertest.ClusterConfigSyncTime(),
 		syncertest.ClusterConfigSyncToken(),

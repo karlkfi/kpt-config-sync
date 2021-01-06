@@ -5,9 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
@@ -21,7 +18,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -38,21 +37,24 @@ type clusterConfigReconciler struct {
 	now      func() metav1.Time
 	// A cancelable ambient context for all reconciler operations.
 	ctx context.Context
+	//mgrInitTime is the submanager's instantiation time
+	mgrInitTime metav1.Time
 }
 
 // NewClusterConfigReconciler returns a new clusterConfigReconciler.  ctx is the ambient context
 // to use for all reconciler operations.
 func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
-	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind) reconcile.Reconciler {
+	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind, mgrInitTime metav1.Time) reconcile.Reconciler {
 	return &clusterConfigReconciler{
-		client:   c,
-		applier:  applier,
-		cache:    syncercache.NewGenericResourceCache(reader),
-		recorder: recorder,
-		decoder:  decoder,
-		toSync:   toSync,
-		now:      now,
-		ctx:      ctx,
+		client:      c,
+		applier:     applier,
+		cache:       syncercache.NewGenericResourceCache(reader),
+		recorder:    recorder,
+		decoder:     decoder,
+		toSync:      toSync,
+		now:         now,
+		ctx:         ctx,
+		mgrInitTime: mgrInitTime,
 	}
 }
 
@@ -92,7 +94,7 @@ func (r *clusterConfigReconciler) reconcileConfig(ctx context.Context, name type
 		// Update the status on a best effort basis. We don't want to retry handling a ClusterConfig
 		// we want to ignore and it's possible it has been deleted by the time we reconcile it.
 		syncErrs := []v1.ConfigManagementError{NewConfigManagementError(clusterConfig, err)}
-		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.now, syncErrs, nil); err2 != nil {
+		if err2 := SetClusterConfigStatus(ctx, r.client, clusterConfig, r.mgrInitTime, r.now, syncErrs, nil); err2 != nil {
 			r.recorder.Eventf(clusterConfig, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 				"failed to update cluster config status: %v", err2)
 		}
@@ -169,7 +171,7 @@ func (r *clusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 	}
 
 	cmErrs := status.ToCME(errBuilder)
-	if err := SetClusterConfigStatus(ctx, r.client, config, r.now, cmErrs, resConditions); err != nil {
+	if err := SetClusterConfigStatus(ctx, r.client, config, r.mgrInitTime, r.now, cmErrs, resConditions); err != nil {
 		errBuilder = status.Append(errBuilder, err)
 		r.recorder.Eventf(config, corev1.EventTypeWarning, v1.EventReasonStatusUpdateFailed,
 			"failed to update cluster config status: %v", err)

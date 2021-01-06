@@ -25,7 +25,7 @@ const clusterConfigControllerName = "clusterconfig-resources"
 
 // AddClusterConfig adds ClusterConfig sync controllers to the Manager.
 func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
-	resourceTypes map[schema.GroupVersionKind]runtime.Object) error {
+	resourceTypes map[schema.GroupVersionKind]runtime.Object, mgrInitTime metav1.Time) error {
 	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
@@ -42,6 +42,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 			decoder,
 			metav1.Now,
 			extractGVKs(resourceTypes),
+			mgrInitTime,
 		),
 	})
 	if err != nil {
