@@ -90,6 +90,16 @@ func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.Namespace
 			return nil, e
 		}
 		newObj.ResourceVersion = oldObj.ResourceVersion
+		return newObj, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = d.client.UpdateStatus(ctx, intent, func(obj core.Object) (core.Object, error) {
+		oldObj := obj.(*v1.NamespaceConfig)
+		newObj := intent.DeepCopy()
+		newObj.ResourceVersion = oldObj.ResourceVersion
 		newSyncState := newObj.Status.SyncState
 		oldObj.Status.DeepCopyInto(&newObj.Status)
 		if !newSyncState.IsUnknown() {
@@ -125,6 +135,14 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 	}
 	if !equal {
 		_, err := d.client.Update(ctx, desired, func(obj core.Object) (core.Object, error) {
+			oldObj := obj.(*v1.ClusterConfig)
+			newObj := desired.DeepCopy()
+			newObj.ResourceVersion = oldObj.ResourceVersion
+			return newObj, nil
+		})
+		d.errs = status.Append(d.errs, err)
+
+		_, err = d.client.UpdateStatus(ctx, desired, func(obj core.Object) (core.Object, error) {
 			oldObj := obj.(*v1.ClusterConfig)
 			newObj := desired.DeepCopy()
 			newObj.ResourceVersion = oldObj.ResourceVersion

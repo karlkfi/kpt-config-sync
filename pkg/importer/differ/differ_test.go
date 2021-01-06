@@ -17,11 +17,27 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var testTime = metav1.NewTime(time.Unix(1234, 5678))
+var testTime = metav1.NewTime(time.Unix(1234, 5678)).Rfc3339Copy()
+
+func namespaceConfigWithSyncState(name string, syncState v1.ConfigSyncState, opts ...core.MetaMutator) *v1.NamespaceConfig {
+	opts = append(opts, core.Name(name))
+	nc := fake.NamespaceConfigObject(opts...)
+	nc.Status.SyncState = syncState
+	return nc
+}
 
 func namespaceConfig(name string, opts ...core.MetaMutator) *v1.NamespaceConfig {
-	opts = append(opts, core.Name(name))
-	return fake.NamespaceConfigObject(opts...)
+	return namespaceConfigWithSyncState(name, v1.StateUnknown, opts...)
+}
+
+func clusterConfigWithSyncState(syncState v1.ConfigSyncState, opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	cc := fake.ClusterConfigObject(opts...)
+	cc.Status.SyncState = syncState
+	return cc
+}
+
+func clusterConfig(opts ...fake.ClusterConfigMutator) *v1.ClusterConfig {
+	return clusterConfigWithSyncState(v1.StateUnknown, opts...)
 }
 
 func markedForDeletion(o core.Object) {
@@ -145,18 +161,18 @@ func TestDiffer(t *testing.T) {
 		// ClusterConfig tests
 		{
 			testName: "create ClusterConfig",
-			declared: []runtime.Object{fake.ClusterConfigObject()},
-			want:     []runtime.Object{fake.ClusterConfigObject()},
+			declared: []runtime.Object{clusterConfig()},
+			want:     []runtime.Object{clusterConfig()},
 		},
 		{
 			testName: "no-op ClusterConfig",
-			actual:   []runtime.Object{fake.ClusterConfigObject()},
-			declared: []runtime.Object{fake.ClusterConfigObject()},
-			want:     []runtime.Object{fake.ClusterConfigObject()},
+			actual:   []runtime.Object{clusterConfig()},
+			declared: []runtime.Object{clusterConfig()},
+			want:     []runtime.Object{clusterConfig()},
 		},
 		{
 			testName: "delete ClusterConfig",
-			actual:   []runtime.Object{fake.ClusterConfigObject()},
+			actual:   []runtime.Object{clusterConfig()},
 		},
 		{
 			testName: "create CRD ClusterConfig",
@@ -198,15 +214,39 @@ func TestDiffer(t *testing.T) {
 				namespaceConfig("bar"),
 			},
 			declared: []runtime.Object{
-				fake.ClusterConfigObject(),
+				clusterConfig(),
 				namespaceConfig("foo"),
 				namespaceConfig("qux"),
 			},
 			want: []runtime.Object{
-				fake.ClusterConfigObject(),
+				clusterConfig(),
 				namespaceConfig("foo"),
 				namespaceConfig("bar", markedForDeletion),
 				namespaceConfig("qux"),
+			},
+		},
+		{
+			testName: "multiple diffs at once with various sync states",
+			actual: []runtime.Object{
+				clusterConfigWithSyncState(v1.StateSynced),
+				namespaceConfigWithSyncState("foo", v1.StateSynced, core.Annotation("key", "old")),
+				namespaceConfigWithSyncState("bar", v1.StateSynced, core.Annotation("key", "old")),
+				namespaceConfigWithSyncState("baz", v1.StateSynced, core.Annotation("key", "old")),
+			},
+			declared: []runtime.Object{
+				clusterConfigWithSyncState(v1.StateStale),
+				namespaceConfigWithSyncState("foo", v1.StateStale, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("bar", v1.StateUnknown, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("qux", v1.StateStale, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("quux", v1.StateUnknown, core.Annotation("key", "new")),
+			},
+			want: []runtime.Object{
+				clusterConfigWithSyncState(v1.StateSynced),
+				namespaceConfigWithSyncState("foo", v1.StateStale, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("bar", v1.StateSynced, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("baz", v1.StateSynced, markedForDeletion, core.Annotation("key", "old")),
+				namespaceConfigWithSyncState("qux", v1.StateStale, core.Annotation("key", "new")),
+				namespaceConfigWithSyncState("quux", v1.StateUnknown, core.Annotation("key", "new")),
 			},
 		},
 	}

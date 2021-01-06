@@ -26,6 +26,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// StatusWriter is a fake implementation of client.StatusWriter.
+type statusWriter struct {
+	Client *Client
+}
+
+var _ client.StatusWriter = &statusWriter{}
+
 // Client is a fake implementation of client.Client.
 type Client struct {
 	Scheme  *runtime.Scheme
@@ -253,7 +260,38 @@ func (c *Client) Delete(_ context.Context, obj runtime.Object, opts ...client.De
 	return nil
 }
 
-// Update implements client.Client.
+func toUnstructured(obj runtime.Object) (unstructured.Unstructured, error) {
+	innerObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	if err != nil {
+		return unstructured.Unstructured{}, err
+	}
+	return unstructured.Unstructured{Object: innerObj}, nil
+}
+
+func getStatusFromObject(obj runtime.Object) (map[string]interface{}, bool, error) {
+	u, err := toUnstructured(obj)
+	if err != nil {
+		return nil, false, err
+	}
+	return unstructured.NestedMap(u.Object, "status")
+}
+
+func (c *Client) updateObjectStatus(obj runtime.Object, status map[string]interface{}) (runtime.Object, error) {
+	u, err := toUnstructured(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = unstructured.SetNestedMap(u.Object, status, "status"); err != nil {
+		return obj, err
+	}
+
+	updated := &unstructured.Unstructured{Object: u.Object}
+	updated.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+	return c.fromUnstructured(updated)
+}
+
+// Update implements client.Client. It does not update the status field.
 func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 	if len(opts) > 0 {
 		jsn, _ := json.MarshalIndent(opts, "", "  ")
@@ -276,7 +314,24 @@ func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.Up
 		return newNotFound(id)
 	}
 
-	c.Objects[id] = co
+	oldStatus, hasStatus, err := getStatusFromObject(c.Objects[id])
+	if err != nil {
+		return err
+	}
+	if hasStatus {
+		updated, err := c.updateObjectStatus(co, oldStatus)
+		if err != nil {
+			return err
+		}
+
+		u, err := core.ObjectOf(updated)
+		if err != nil {
+			return err
+		}
+		c.Objects[id] = u
+	} else {
+		c.Objects[id] = co
+	}
 	return nil
 }
 
@@ -292,9 +347,61 @@ func (c *Client) DeleteAllOf(_ context.Context, obj runtime.Object, opts ...clie
 	return errors.New("fake.Client does not support DeleteAllOf()")
 }
 
+// Update implements client.StatusWriter. It only updates the status field.
+func (s *statusWriter) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	if len(opts) > 0 {
+		jsn, _ := json.MarshalIndent(opts, "", "  ")
+		return errors.Errorf("fake.StatusWriter.Update does not yet support opts, but got: %v", string(jsn))
+	}
+
+	obj, err := s.Client.fromUnstructured(obj.DeepCopyObject())
+	if err != nil {
+		return err
+	}
+
+	co, err := core.ObjectOf(obj)
+	if err != nil {
+		return err
+	}
+	id := core.IDOf(co)
+
+	_, found := s.Client.Objects[id]
+	if !found {
+		return newNotFound(id)
+	}
+
+	newStatus, hasStatus, err := getStatusFromObject(co)
+	if err != nil {
+		return err
+	}
+	if hasStatus {
+		updated, err := s.Client.updateObjectStatus(s.Client.Objects[id], newStatus)
+		if err != nil {
+			return err
+		}
+
+		u, err := core.ObjectOf(updated)
+		if err != nil {
+			return err
+		}
+
+		s.Client.Objects[id] = u
+	} else {
+		return errors.Errorf("the object %q/%q does not have a status field", co.GroupVersionKind(), co.GetName())
+	}
+	return nil
+}
+
+// Patch implements client.StatusWriter. It only updates the status field.
+func (s *statusWriter) Patch(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) error {
+	return s.Update(ctx, obj)
+}
+
 // Status implements client.Client.
 func (c *Client) Status() client.StatusWriter {
-	return c
+	return &statusWriter{
+		Client: c,
+	}
 }
 
 // Check reports an error to `t` if the passed objects in want do not match the
