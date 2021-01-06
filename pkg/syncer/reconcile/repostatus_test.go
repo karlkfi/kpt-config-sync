@@ -156,7 +156,7 @@ func TestSyncStateBuilding(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			state := repoStatus.processConfigs(tc.clCfgList, tc.nsCfgList, "")
+			state := repoStatus.processConfigs(tc.clCfgList, tc.nsCfgList)
 
 			if diff := cmp.Diff(tc.wantState, state, cmpOpts...); diff != "" {
 				t.Errorf("syncState does not match expectation:\n%v", diff)
@@ -246,7 +246,7 @@ func TestMergeResourceConditions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			syncState := repoStatus.processConfigs(tc.clCfgList, tc.nsCfgList, "")
+			syncState := repoStatus.processConfigs(tc.clCfgList, tc.nsCfgList)
 
 			if diff := cmp.Diff(tc.wantResourceConditions, syncState.resourceConditions, cmpOpts...); diff != "" {
 				t.Errorf("resourceConditions does not match expectation:\n%v", diff)

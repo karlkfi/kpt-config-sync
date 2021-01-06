@@ -81,7 +81,7 @@ func (r *repoStatus) reconcile() (reconcile.Result, error) {
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	state, err := r.buildState(r.ctx, repoObj.Status.Import.Token)
+	state, err := r.buildState(r.ctx)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
 		return reconcile.Result{Requeue: true}, sErr
@@ -108,7 +108,7 @@ func (r *repoStatus) reconcile() (reconcile.Result, error) {
 }
 
 // buildState returns a freshly initialized syncState based upon the current configs on the cluster.
-func (r *repoStatus) buildState(ctx context.Context, importToken string) (*syncState, error) {
+func (r *repoStatus) buildState(ctx context.Context) (*syncState, error) {
 	ccList := &v1.ClusterConfigList{}
 	if err := r.client.List(ctx, ccList); err != nil {
 		return nil, errors.Wrapf(err, "listing ClusterConfigs")
@@ -117,11 +117,11 @@ func (r *repoStatus) buildState(ctx context.Context, importToken string) (*syncS
 	if err := r.client.List(ctx, ncList); err != nil {
 		return nil, errors.Wrapf(err, "listing NamespaceConfigs")
 	}
-	return r.processConfigs(ccList, ncList, importToken), nil
+	return r.processConfigs(ccList, ncList), nil
 }
 
 // processConfigs is broken out to make unit testing easier.
-func (r *repoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.NamespaceConfigList, importToken string) *syncState {
+func (r *repoStatus) processConfigs(ccList *v1.ClusterConfigList, ncList *v1.NamespaceConfigList) *syncState {
 	state := &syncState{
 		reconciledCommits:   make(map[string]bool),
 		unreconciledCommits: make(map[string][]string),
