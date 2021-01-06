@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
@@ -17,6 +19,13 @@ func RepoHasStatusSyncLatestToken(sha1 string) Predicate {
 		repo, ok := o.(*v1.Repo)
 		if !ok {
 			return WrongTypeErr(o, &v1.Repo{})
+		}
+
+		if diff := cmp.Diff([]v1.ConfigManagementError{}, repo.Status.Source.Errors, cmpopts.EquateEmpty()); diff != "" {
+			return fmt.Errorf("status.source.errors contains errors: %v", diff)
+		}
+		if diff := cmp.Diff([]v1.ConfigManagementError{}, repo.Status.Import.Errors, cmpopts.EquateEmpty()); diff != "" {
+			return fmt.Errorf("status.import.errors contains errors: %v", diff)
 		}
 
 		// Ensure there aren't any pending changes to sync.
