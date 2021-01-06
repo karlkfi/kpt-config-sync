@@ -124,7 +124,7 @@ function check_metrics_pages() {
   resource::check -n analytics resourcequota pod-quota -a "configmanagement.gke.io/managed=enabled"
 
   # backend
-  resource::check_count -n backend -r configmap -c 1
+  resource::check_count -n backend -r configmap -c 1 -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
   resource::check -n backend configmap store-inventory -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n backend -r role -c 0
   resource::check_count -n backend -r rolebinding -c 2
@@ -141,7 +141,7 @@ function check_metrics_pages() {
 
   # frontend
   namespace::check_exists frontend -l "env=prod" -a "audit=true"
-  resource::check_count -n frontend -r configmap -c 1
+  resource::check_count -n frontend -r configmap -c 1 -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
   resource::check -n frontend configmap store-inventory -a "configmanagement.gke.io/managed=enabled"
   resource::check_count -n frontend -r role -c 0
   resource::check_count -n frontend -r rolebinding -c 2

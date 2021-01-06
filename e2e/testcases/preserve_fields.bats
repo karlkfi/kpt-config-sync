@@ -159,7 +159,7 @@ function validate_annotation_migrated() {
 
   debug::log "Checking that the configmap with no labels appears on cluster"
   wait::for -t 60 -- kubectl get configmap ${resname} -n ${ns}
-  resource::check_count -n ${ns} -r configmap -c 1
+  resource::check_count -n ${ns} -r configmap -c 1 -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
   resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no user labels specified"
@@ -222,7 +222,7 @@ function validate_configmap_labels() {
   wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Checking that the configmap with no annotations appears on cluster"
-  resource::check_count -n ${ns} -r configmap -c 1
+  resource::check_count -n ${ns} -r configmap -c 1 -l "app.kubernetes.io/managed-by=configmanagement.gke.io"
   resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no annotations specified"
