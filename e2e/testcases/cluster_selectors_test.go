@@ -104,19 +104,15 @@ func TestTargetingDifferentResourceQuotasToDifferentClusters(t *testing.T) {
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "resource quota is changed to test pods", func() error {
-		return nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(testPodsQuota))
-	})
+	if err := nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(testPodsQuota)); err != nil {
+		t.Fatal(err)
+	}
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "resource quota is changed to test pods", func() error {
-		return nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(prodPodsQuota))
-	})
+	if err := nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(prodPodsQuota)); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestClusterSelectorOnObjects(t *testing.T) {
@@ -154,11 +150,9 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "rolebinding reappears", func() error {
-		return nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Log("Revert cluster selector to match prod cluster")
 	rb.Annotations = inlineProdClusterSelectorAnnotation
@@ -171,11 +165,9 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "rolebinding reappears", func() error {
-		return nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestClusterSelectorOnNamespaces(t *testing.T) {
@@ -212,21 +204,16 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	nt.Root.Add("acme/namespaces/eng/backend/namespace.yaml", namespace)
 	nt.Root.CommitAndPush("Change namespace to match test cluster")
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	// The validation failed intermittently only in Mono repo
-	nomostest.Wait(nt.T, "namespace reappears", func() error {
-		return nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "namespace reappears", func() error {
-		return nt.Validate(backendNamespace, "", &corev1.Namespace{})
-	})
+	if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
+		t.Fatal(err)
+	}
 	// bob-rolebinding won't reappear in the backend namespace as the cluster is inactive in the cluster-selector
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
 		t.Fatal(err)
@@ -246,24 +233,19 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	nt.Root.Add("acme/namespaces/eng/backend/namespace.yaml", namespace)
 	nt.Root.CommitAndPush("Revert namespace to match prod cluster")
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	// The validation failed intermittently only in Mono repo
-	nomostest.Wait(nt.T, "namespace reappears", func() error {
-		return nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "namespace reappears", func() error {
-		if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
-			return err
-		}
-		return nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
@@ -405,11 +387,9 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
-	// TODO(b/175227055): ideally no need to retry after nt.WaitForRepoSyncs(), but the test failed intermittently without wait and retry.
-	// More investigation is needed to figure out why resource isn't updated immediately when it is marked as 'synced'.
-	nomostest.Wait(nt.T, "rolebinding reappears", func() error {
-		return nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{})
-	})
+	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Log("Add an empty cluster selector annotation to a role binding")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: ""}
@@ -486,29 +466,60 @@ func renameCluster(nt *nomostest.NT, configMapName, clusterName string) {
 	}
 }
 
+// podHasReadyCondition checks if a pod status has a READY condition.
+func podHasReadyCondition(conditions []corev1.PodCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// newPodReady checks if the new created pods are ready.
+// It also checks the reconcilers if the pod is a reconcielr-manager with multi-repo support.
+func newPodReady(nt *nomostest.NT, labelName, currentLabel, childLabel string, oldCurrentPods, oldChildPods []corev1.Pod) error {
+	if len(oldCurrentPods) == 0 {
+		return nil
+	}
+	newPods := &corev1.PodList{}
+	if err := nt.List(newPods, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{labelName: currentLabel}); err != nil {
+		nt.T.Fatal(err)
+	}
+	for _, newPod := range newPods.Items {
+		for _, oldPod := range oldCurrentPods {
+			if newPod.Name == oldPod.Name {
+				return fmt.Errorf("old pod %s is still alive", oldPod.Name)
+			}
+		}
+		if !podHasReadyCondition(newPod.Status.Conditions) {
+			return fmt.Errorf("new pod %s is not ready yet", currentLabel)
+		}
+	}
+	return newPodReady(nt, labelName, childLabel, "", oldChildPods, nil)
+}
+
 // deletePodByLabel deletes pods that have the label and waits until new pods come up.
 func deletePodByLabel(nt *nomostest.NT, label, value string) {
 	oldPods := &corev1.PodList{}
 	if err := nt.List(oldPods, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
 		nt.T.Fatal(err)
 	}
+	oldReconcilers := &corev1.PodList{}
+	if value == "reconciler-manager" {
+		if err := nt.List(oldReconcilers, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: "reconciler"}); err != nil {
+			nt.T.Fatal(err)
+		}
+	}
 	if err := nt.DeleteAllOf(&corev1.Pod{}, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
 		nt.T.Fatalf("Pod delete failed: %v", err)
 	}
 	nomostest.Wait(nt.T, "new pods come up", func() error {
-		podList := &corev1.PodList{}
-		if err := nt.List(podList, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
-			nt.T.Fatal(err)
+		if value == "reconciler-manager" {
+			return newPodReady(nt, label, value, "reconciler", oldPods.Items, oldReconcilers.Items)
 		}
-		for _, newPod := range podList.Items {
-			for _, oldPod := range oldPods.Items {
-				if newPod.Name == oldPod.Name {
-					return fmt.Errorf("old pod %s is still alive", oldPod.Name)
-				}
-			}
-		}
-		return nil
-	}, nomostest.WaitTimeout(time.Minute))
+		return newPodReady(nt, label, value, "", oldPods.Items, nil)
+	}, nomostest.WaitTimeout(2*time.Minute))
 }
 
 // clusterNameConfigMapName returns the name of the ConfigMap that has the CLUSTER_NAME.
