@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/syncer/syncertest"
@@ -173,7 +174,7 @@ func TestApply(t *testing.T) {
 			wantGVKs: map[schema.GroupVersionKind]struct{}{
 				kinds.Role(): {},
 			},
-			wantErr: ManagementConflictError(fake.Role()),
+			wantErr: kptapplier.ManagementConflictError(fake.Role()),
 		},
 	}
 	for _, tc := range tcs {
