@@ -101,8 +101,12 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 		return nil, syntax.IllegalFieldsInConfigError(oid, id.Status)
 	}
 
-	// TODO: Remove the validateMetadata check when we migrate to
-	//  apimachinery 1.17 since it is fixed then.
+	// This is a workaround for k8s.io/apimachinery. Such invalid fields result in
+	// apply errors returned by the API Server. Rather than rely on that behavior,
+	// we return an error here. This is better UX as it allows this set of very
+	// common user errors to be caught by nomos vet or in the Parser, rather than
+	// in the sycing step. As-is the user can catch this before they've committed
+	// the mistake to Git.
 	if err := validateMetadata(u, oid); err != nil {
 		return nil, err
 	}
@@ -211,12 +215,7 @@ func asDefaultVersionedOrOriginal(obj runtime.Object) runtime.Object {
 }
 
 // validateMetadata returns a status.MultiError if metadata.annotations/labels
-// has a value that wasn't parsed as a string. This is a workaround the
-// k8s.io/apimachinery bug that causes the entire annotations field to be
-// silently discarded if any values aren't strings.
-//
-// TODO(b/154838005): Remove this once we upgrade and don't need to explicitly
-//  check for this.
+// has a value that wasn't parsed as a string.
 func validateMetadata(u runtime.Unstructured, oid core.IDPath) status.ResourceError {
 	content := u.UnstructuredContent()
 
@@ -225,6 +224,13 @@ func validateMetadata(u runtime.Unstructured, oid core.IDPath) status.ResourceEr
 		return status.ResourceErrorBuilder.Sprint("resource does not define metadata").BuildWithResources(oid)
 	}
 
+	// We could try to json.Unmarshal into an metav1.ObjectMeta, which would catch
+	// these, but the returned error is very generic and unhelpful as it does not
+	// help finding which value is invalid - problematic for objects with many
+	// annotations or labels, or which have an unmarshalling error elsewhere.
+	// As-is does miss structural errors elsewhere in metadata, but that is out of
+	// scope of this code and such errors are far less common than
+	// labels/annotations.
 	if annotations, hasAnnotations := metadata["annotations"]; hasAnnotations {
 		invalidAnnotations, err := getInvalidKeys(annotations)
 		if err != nil {
