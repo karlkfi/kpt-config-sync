@@ -12,12 +12,13 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/visitors"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 )
 
 // hierarchicalVisitors returns the set of Visitors used specifically for
 // validating hierarchical repositories.
-func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
+func hierarchicalVisitors(policyDir cmpath.Relative, configs []*v1.HierarchyConfig) []ast.Visitor {
 
 	specs := toInheritanceSpecs(configs)
 	return []ast.Visitor{
@@ -38,7 +39,7 @@ func hierarchicalVisitors(configs []*v1.HierarchyConfig) []ast.Visitor {
 		hnc.NewDepthLabelValidator(),
 		validation.NewInputValidator(specs),
 		semantic.NewAbstractResourceValidator(),
-		transform.NewPathAnnotationVisitor(),
+		transform.NewPathAnnotationVisitor(policyDir),
 		transform.NewInheritanceVisitor(),
 		hnc.NewNamespaceVisitor(),
 	}

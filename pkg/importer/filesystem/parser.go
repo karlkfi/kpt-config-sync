@@ -73,7 +73,7 @@ func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCached
 		return nil, p.errors
 	}
 
-	visitors := generateVisitors(flatRoot)
+	visitors := generateVisitors(filePaths.PolicyDir, flatRoot)
 	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs, filePaths.PolicyDir)
 
 	return AsCoreObjects(fileObjects), p.errors
@@ -91,7 +91,7 @@ func (p *Parser) readObjects(filePaths FilePaths) *ast.FlatRoot {
 }
 
 // generateVisitors creates the Visitors to use to hydrate and validate the root.
-func generateVisitors(flatRoot *ast.FlatRoot) []ast.Visitor {
+func generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.Visitor {
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(flatRoot.SystemObjects),
 		tree.NewClusterBuilderVisitor(flatRoot.ClusterObjects),
@@ -99,7 +99,7 @@ func generateVisitors(flatRoot *ast.FlatRoot) []ast.Visitor {
 		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
 	}
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
-	visitors = append(visitors, hierarchicalVisitors(hierarchyConfigs)...)
+	visitors = append(visitors, hierarchicalVisitors(policyDir, hierarchyConfigs)...)
 	visitors = append(visitors, transform.NewSyncGenerator())
 	return visitors
 }
@@ -136,7 +136,7 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 		return nil
 	}
 
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, policyDir).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper).Validate(fileObjects))
 	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)

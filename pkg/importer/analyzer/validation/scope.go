@@ -1,8 +1,6 @@
 package validation
 
 import (
-	"path/filepath"
-
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -55,13 +53,13 @@ func getExpectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, sta
 // Returns an UnknownObjectKindError if unable to determine which top-level directory
 // the resource should live. This happens when the resource is neither present
 // on the APIServer nor has a CRD defined.
-func NewTopLevelDirectoryValidator(scoper discovery.Scoper, policyDir cmpath.Relative) nonhierarchical.Validator {
+func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
-		return validateTopLevelDirectory(scoper, o, policyDir)
+		return validateTopLevelDirectory(scoper, o)
 	})
 }
 
-func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject, policyDir cmpath.Relative) status.Error {
+func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status.Error {
 	expectedTopLevelDir, err := getExpectedTopLevelDir(scoper, o)
 	if err != nil {
 		return err
@@ -72,10 +70,7 @@ func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject, policy
 		return nil
 	}
 
-	sourcePath, e := filepath.Rel(policyDir.OSPath(), o.Relative.OSPath())
-	if e != nil {
-		return status.InternalErrorf("unable to get relative path to %s", o.Relative.OSPath())
-	}
+	sourcePath := o.Relative.OSPath()
 	if cmpath.RelativeSlash(sourcePath).Split()[0] == expectedTopLevelDir {
 		return nil
 	}

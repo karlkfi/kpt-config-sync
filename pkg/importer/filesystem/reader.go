@@ -136,8 +136,7 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 			BuildWithPaths(path)
 	}
 
-	join := filepath.Join(policyDir.SlashPath(), rel)
-	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(join))}, nil
+	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(rel))}, nil
 }
 
 func flattenList(list runtime.Unstructured, rootDir cmpath.Absolute, policyDir cmpath.Relative, path cmpath.Absolute) ([]ast.FileObject, status.MultiError) {

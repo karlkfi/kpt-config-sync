@@ -28,7 +28,7 @@ func adminRoleBindingWithAnnotation() *rbacv1.RoleBinding {
 
 var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 	VisitorCtor: func() ast.Visitor {
-		return NewPathAnnotationVisitor()
+		return NewPathAnnotationVisitor(cmpath.RelativeSlash("acme"))
 	},
 	Options: func() []cmp.Option {
 		return []cmp.Option{
@@ -78,7 +78,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
-									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "acme/namespaces/bar/namespace.yaml"))},
 							},
 						},
 					},
@@ -92,7 +92,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type:     node.AbstractNamespace,
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(vt.AdminRoleBinding(), cmpath.RelativeSlash("acme/admin.yaml")),
+						ast.NewFileObject(vt.AdminRoleBinding(), cmpath.RelativeSlash("namespaces/shipping/admin.yaml")),
 					),
 				},
 			},
@@ -101,7 +101,8 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type:     node.AbstractNamespace,
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(vt.AdminRoleBinding(), "acme/admin.yaml"), cmpath.RelativeSlash("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(vt.AdminRoleBinding(), "acme/namespaces/shipping/admin.yaml"),
+							cmpath.RelativeSlash("namespaces/shipping/admin.yaml")),
 					),
 				},
 			},
@@ -134,9 +135,9 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 							Relative: cmpath.RelativeSlash("namespaces/bar"),
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/bar",
-									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/namespace.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "acme/namespaces/bar/namespace.yaml"))},
 								{FileObject: fake.RoleAtPath("namespaces/bar/rb.yaml",
-									core.Annotation(v1.SourcePathAnnotationKey, "namespaces/bar/rb.yaml"))},
+									core.Annotation(v1.SourcePathAnnotationKey, "acme/namespaces/bar/rb.yaml"))},
 							},
 						},
 					},
@@ -150,7 +151,7 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type:     node.Namespace,
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(adminRoleBindingWithAnnotation(), cmpath.RelativeSlash("acme/admin.yaml")),
+						ast.NewFileObject(adminRoleBindingWithAnnotation(), cmpath.RelativeSlash("namespaces/shipping/admin.yaml")),
 					),
 				},
 			},
@@ -159,7 +160,8 @@ var pathAnnotationVisitorTestcases = vt.MutatingVisitorTestcases{
 					Type:     node.Namespace,
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Objects: vt.FileObjectSets(
-						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/admin.yaml"), cmpath.RelativeSlash("acme/admin.yaml")),
+						ast.NewFileObject(withSourceAnnotation(adminRoleBindingWithAnnotation(), "acme/namespaces/shipping/admin.yaml"),
+							cmpath.RelativeSlash("namespaces/shipping/admin.yaml")),
 					),
 				},
 			},
