@@ -57,11 +57,11 @@ func TestNewAllConfigs(t *testing.T) {
 		{
 			name: "v1 CRD",
 			fileObjects: []ast.FileObject{
-				fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1()),
+				fake.CustomResourceDefinitionV1(),
 			},
 			want: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: fake.CRDClusterConfigObject(withClusterResources(
-					fake.ToCustomResourceDefinitionV1Object(fake.CustomResourceDefinitionV1Beta1Object()),
+					fake.CustomResourceDefinitionV1Object(),
 				)),
 				Syncs: testoutput.Syncs(kinds.CustomResourceDefinitionV1()),
 			},
@@ -69,12 +69,12 @@ func TestNewAllConfigs(t *testing.T) {
 		{
 			name: "both v1 and v1beta1 CRDs",
 			fileObjects: []ast.FileObject{
-				fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1()),
+				fake.CustomResourceDefinitionV1(),
 				fake.CustomResourceDefinitionV1Beta1(),
 			},
 			want: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: fake.CRDClusterConfigObject(withClusterResources(
-					fake.ToCustomResourceDefinitionV1Object(fake.CustomResourceDefinitionV1Beta1Object()),
+					fake.CustomResourceDefinitionV1Object(),
 					fake.CustomResourceDefinitionV1Beta1Object(),
 				)),
 				Syncs: testoutput.Syncs(

@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/vet"
@@ -80,19 +81,19 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 				namespaceFlag, sourceFormatFlag)
 		}
 
-		parser = filesystem.NewParser(&filesystem.FileReader{}, dc)
+		parser = filesystem.NewParser(&reader.File{}, dc)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case filesystem.SourceFormatUnstructured:
 		if namespace == "" {
-			parser = filesystem.NewRawParser(&filesystem.FileReader{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
+			parser = filesystem.NewRawParser(&reader.File{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
 		} else {
-			parser = parse.NewNamespace(&filesystem.FileReader{}, dc, declared.Scope(namespace))
+			parser = parse.NewNamespace(&reader.File{}, dc, declared.Scope(namespace))
 		}
 	default:
 		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
 	}
 
-	filePaths := filesystem.FilePaths{
+	filePaths := reader.FilePaths{
 		RootDir:   rootDir,
 		PolicyDir: cmpath.RelativeOS(root),
 		Files:     files,

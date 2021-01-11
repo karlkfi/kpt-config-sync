@@ -1,4 +1,4 @@
-package filesystem
+package reader
 
 import (
 	"fmt"
@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // Reader reads a list of FileObjects.
@@ -39,12 +38,12 @@ type FilePaths struct {
 	Files []cmpath.Absolute
 }
 
-// FileReader reads FileObjects from a filesystem.
-type FileReader struct{}
+// File reads FileObjects from a filesystem.
+type File struct{}
 
-var _ Reader = &FileReader{}
+var _ Reader = &File{}
 
-func (r *FileReader) Read(filePaths FilePaths) ([]ast.FileObject, status.MultiError) {
+func (r *File) Read(filePaths FilePaths) ([]ast.FileObject, status.MultiError) {
 	var objs []ast.FileObject
 	var errs status.MultiError
 	for _, f := range filePaths.Files {
@@ -62,7 +61,7 @@ func (r *FileReader) Read(filePaths FilePaths) ([]ast.FileObject, status.MultiEr
 }
 
 // Read implements Reader.
-func (r *FileReader) read(rootDir cmpath.Absolute, policyDir cmpath.Relative, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
+func (r *File) read(rootDir cmpath.Absolute, policyDir cmpath.Relative, file cmpath.Absolute) ([]ast.FileObject, status.MultiError) {
 	unstructureds, err := parseFile(file.OSPath())
 	if err != nil {
 		return nil, status.PathWrapError(err, file.OSPath())
@@ -116,7 +115,7 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 		// The type doesn't declare required fields, but is registered.
 		// User-specified types are implicitly Unstructured, which defines Labels/Annotations/etc. even
 		// if the underlying type definition does _NOT_. It isn't clear how this code would ever be reached.
-		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %s", obj.GroupVersionKind().String())
+		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %T %s", obj, obj.GroupVersionKind().String())
 	}
 
 	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
@@ -124,13 +123,13 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 	// unstructured format unless we specifically require them for importer pre-processing. These
 	// resources are mostly limited to ACM custom resources which we know are safe.
 	if mustBeStructured(obj.GroupVersionKind()) {
-		rObj, err := asDefaultVersioned(obj)
+		rObj, err := AsStruct(obj)
 		if err != nil {
-			return nil, ObjectParseError(oid, err)
+			return nil, ObjectParseError(obj, err)
 		}
 		var ok bool
 		if obj, ok = rObj.(core.Object); !ok {
-			return nil, ObjectParseError(oid, errNotKubernetes)
+			return nil, ObjectParseError(obj, errNotKubernetes)
 		}
 	}
 
@@ -183,36 +182,12 @@ func isList(uList runtime.Unstructured) bool {
 	}
 
 	// Parse the object into memory. If it is a List type, it MUST match the ListInterface.
-	listObj := asDefaultVersionedOrOriginal(uList)
+	listObj := asStructOrOriginal(uList)
 	_, isList := listObj.(metav1.ListInterface)
 	return isList
 }
 
 var errNotKubernetes = errors.New("converted Kubernetes object to non-Kubernetes type")
-
-// asDefaultVersioned converts a runtime.Object to the literal Go struct, if
-// one is available. Returns an error if this process fails.
-func asDefaultVersioned(obj runtime.Object) (runtime.Object, error) {
-	// Determine the GroupVersion to convert the object to.
-	groupVersioner := runtime.GroupVersioner(schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()))
-	if _, ok := groupVersioner.KindForGroupVersionKinds([]schema.GroupVersionKind{obj.GetObjectKind().GroupVersionKind()}); !ok {
-		// If the scheme doesn't have the GVK, try to serialize to the declared GV.
-		groupVersioner = obj.GetObjectKind().GroupVersionKind().GroupVersion()
-	}
-
-	converter := runtime.ObjectConvertor(scheme.Scheme)
-	return converter.ConvertToVersion(obj, groupVersioner)
-}
-
-// asDefaultVersionedOrOriginal returns the object as a Go object in the external form.
-// If the GVK is registered in scheme.Scheme, return that version. Otherwise, try to return the declared version.
-// If this fails, returns the original runtime.Unstructured.
-func asDefaultVersionedOrOriginal(obj runtime.Object) runtime.Object {
-	if cObj, err := asDefaultVersioned(obj); err == nil {
-		return cObj
-	}
-	return obj
-}
 
 // validateMetadata returns a status.MultiError if metadata.annotations/labels
 // has a value that wasn't parsed as a string.

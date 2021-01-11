@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -158,7 +159,7 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 }
 
 // newTestParser creates a parser that processes the passed FileObjects.
-func newTestParser(reader filesystem.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
+func newTestParser(reader reader.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
 	f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(syncedCRDs))
 
 	return filesystem.NewParser(reader, f)
@@ -181,13 +182,13 @@ func (pt Test) RunAll(t *testing.T) {
 				t.Fatal(err)
 			}
 			policyDir := cmpath.RelativeSlash("")
-			reader := ft.NewFakeReader(root, objects)
-			filePaths := filesystem.FilePaths{
+			fakeReader := ft.NewFakeReader(root, objects)
+			filePaths := reader.FilePaths{
 				RootDir:   root,
 				PolicyDir: policyDir,
-				Files:     reader.ToFileList(),
+				Files:     fakeReader.ToFileList(),
 			}
-			parser := newTestParser(reader, tc.SyncedCRDs)
+			parser := newTestParser(fakeReader, tc.SyncedCRDs)
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.SyncedCRDs, nil

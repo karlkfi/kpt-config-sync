@@ -11,9 +11,9 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
@@ -199,7 +199,7 @@ metadata:
     number: 0000
 `,
 			},
-			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+			expectedErrorCodes: []string{reader.InvalidAnnotationValueErrorCode},
 		},
 		{
 			testName: "metadata.annotations with quoted number value",
@@ -227,7 +227,7 @@ metadata:
     boolean: true
 `,
 			},
-			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+			expectedErrorCodes: []string{reader.InvalidAnnotationValueErrorCode},
 		},
 		{
 			testName: "metadata.annotations with quoted boolean value",
@@ -255,7 +255,7 @@ metadata:
     boolean: true
 `,
 			},
-			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+			expectedErrorCodes: []string{reader.InvalidAnnotationValueErrorCode},
 		},
 		{
 			testName: "metadata.labels with quoted boolean value",
@@ -283,7 +283,7 @@ metadata:
     number: 123456789
 `,
 			},
-			expectedErrorCodes: []string{filesystem.InvalidAnnotationValueErrorCode},
+			expectedErrorCodes: []string{reader.InvalidAnnotationValueErrorCode},
 		},
 		{
 			testName: "metadata.labels with quoted numerical value",
@@ -359,8 +359,8 @@ items:
 				files = append(files, d.Root().Join(cmpath.RelativeSlash(f)))
 			}
 
-			r := &filesystem.FileReader{}
-			fp := filesystem.FilePaths{RootDir: d.Root(), Files: files}
+			r := &reader.File{}
+			fp := reader.FilePaths{RootDir: d.Root(), Files: files}
 			actual, mErr := r.Read(fp)
 
 			vettesting.ExpectErrors(tc.expectedErrorCodes, mErr, t)

@@ -3,8 +3,10 @@ package examples
 import (
 	"errors"
 	"fmt"
-	"github.com/google/nomos/pkg/applier"
 	"strings"
+
+	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/importer/reader"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -20,7 +22,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
@@ -73,7 +74,7 @@ func Generate() AllExamples {
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
 
 	// 1006
-	result.add(filesystem.ObjectParseError(fake.Role(), errors.New("wrong type")))
+	result.add(reader.ObjectParseError(fake.Role(), errors.New("wrong type")))
 
 	// 1007
 	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/foo/bar/role.yaml")))
@@ -223,7 +224,7 @@ func Generate() AllExamples {
 
 	// 1043
 	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinitionV1Beta1()))
-	result.add(nonhierarchical.UnsupportedObjectError(fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1())))
+	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinitionV1()))
 
 	// 1044
 	result.add(semantic.UnsyncableResourcesInLeaf(node("namespaces/foo")))
@@ -266,7 +267,7 @@ func Generate() AllExamples {
 	result.add(nonhierarchical.MissingNamespaceOnNamespacedResourceError(fake.Role(core.Namespace(""))))
 
 	// 1054
-	result.add(filesystem.InvalidAnnotationValueError(fake.Role(), []string{"foo", "bar"}))
+	result.add(reader.InvalidAnnotationValueError(fake.Role(), []string{"foo", "bar"}))
 
 	// 1055
 	result.add(nonhierarchical.InvalidNamespaceError(fake.Repo(core.Namespace("FOO"))))
@@ -306,7 +307,7 @@ func Generate() AllExamples {
 	// 1065
 	result.add(clusterconfig.MalformedCRDError(
 		fmt.Errorf("spec.names.shortNames accessor error: foo is of the type string, expected []interface{}"),
-		cmpath.RelativeSlash("namespaces/foo/crd.yaml")))
+		fake.CustomResourceDefinitionV1Object()))
 
 	// 1066
 	result.add(selectors.ClusterSelectorAnnotationConflictError(fake.NamespaceObject("my-namespace")))
@@ -338,8 +339,8 @@ func Generate() AllExamples {
 	result.add(client.ConflictUpdateOldVersion(errors.New("old version"), fake.RoleObject()))
 	result.add(client.ConflictUpdateDoesNotExist(errors.New("does not exist"), fake.RoleObject()))
 
-    // 2009
-    result.add(kptapplier.ApplierInitError(errors.New("failed to initialize an error")))
+	// 2009
+	result.add(kptapplier.ApplierInitError(errors.New("failed to initialize an error")))
 
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))

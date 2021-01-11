@@ -25,8 +25,8 @@ import (
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -36,17 +36,17 @@ var engineerGVK = schema.GroupVersionKind{
 	Kind:    "Engineer",
 }
 
-func engineerCRDV1Beta1(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
+func engineerCRDV1Beta1(opts ...core.MetaMutator) *apiextensionsv1beta1.CustomResourceDefinition {
 	obj := fake.CustomResourceDefinitionV1Beta1Object(opts...)
 	obj.Name = "engineers.employees"
 	obj.Spec.Group = "employees"
-	obj.Spec.Scope = v1beta1.NamespaceScoped
-	obj.Spec.Names = v1beta1.CustomResourceDefinitionNames{
+	obj.Spec.Scope = apiextensionsv1beta1.NamespaceScoped
+	obj.Spec.Names = apiextensionsv1beta1.CustomResourceDefinitionNames{
 		Plural:   "engineers",
 		Singular: "engineer",
 		Kind:     "Engineer",
 	}
-	obj.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{
+	obj.Spec.Versions = []apiextensionsv1beta1.CustomResourceDefinitionVersion{
 		{
 			Name:    "v1alpha1",
 			Served:  true,
@@ -56,8 +56,24 @@ func engineerCRDV1Beta1(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinit
 	return obj
 }
 
-func engineerCRDV1(opts ...core.MetaMutator) *unstructured.Unstructured {
-	return fake.ToCustomResourceDefinitionV1Object(engineerCRDV1Beta1(opts...))
+func engineerCRDV1(opts ...core.MetaMutator) *apiextensionsv1.CustomResourceDefinition {
+	obj := fake.CustomResourceDefinitionV1Object(opts...)
+	obj.Name = "engineers.employees"
+	obj.Spec.Group = "employees"
+	obj.Spec.Scope = apiextensionsv1.NamespaceScoped
+	obj.Spec.Names = apiextensionsv1.CustomResourceDefinitionNames{
+		Plural:   "engineers",
+		Singular: "engineer",
+		Kind:     "Engineer",
+	}
+	obj.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
+		{
+			Name:    "v1alpha1",
+			Served:  true,
+			Storage: true,
+		},
+	}
+	return obj
 }
 
 func scopedResourceQuota(path string, opts ...core.MetaMutator) ast.FileObject {
@@ -103,15 +119,15 @@ func TestParserVetErrors(t *testing.T) {
 			fake.Namespace("namespaces/bar"),
 			scopedResourceQuota("namespaces/bar/rq.yaml"),
 		),
-		// v1beta1 CRDs
-		parsertest.Success("Engineer CustomResourceDefinition v1beta1",
+		// apiextensionsv1beta1 CRDs
+		parsertest.Success("Engineer CustomResourceDefinition apiextensionsv1beta1",
 			testoutput.NewAllConfigs(
 				fake.FileObject(engineerCRDV1Beta1(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
 			),
 			fake.FileObject(engineerCRDV1Beta1(), "cluster/engineer-crd.yaml"),
 		),
-		parsertest.Success("Engineer CustomResourceDefinition v1beta1 and CustomResource",
+		parsertest.Success("Engineer CustomResourceDefinition apiextensionsv1beta1 and CustomResource",
 			testoutput.NewAllConfigs(
 				fake.FileObject(engineerCRDV1Beta1(testoutput.Source("cluster/engineer-crd.yaml")),
 					"cluster/engineer-crd.yaml"),
@@ -887,7 +903,7 @@ func TestParserVetCRDs(t *testing.T) {
 			Objects: []ast.FileObject{
 				fake.AnvilAtPath("cluster/anvil.yaml"),
 			},
-			SyncedCRDs: []*v1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
+			SyncedCRDs: []*apiextensionsv1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
 			Errors:     []string{nonhierarchical.UnsupportedCRDRemovalErrorCode},
 		},
 		parsertest.TestCase{
@@ -896,7 +912,7 @@ func TestParserVetCRDs(t *testing.T) {
 				fake.FileObject(fakeCRD(kinds.Anvil()), "cluster/anvil-crd.yaml"),
 				fake.AnvilAtPath("cluster/anvil.yaml"),
 			},
-			SyncedCRDs: []*v1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
+			SyncedCRDs: []*apiextensionsv1beta1.CustomResourceDefinition{fakeCRD(kinds.Anvil())},
 			Expected: testoutput.NewAllConfigs(
 				fake.AnvilAtPath("cluster/anvil.yaml", testoutput.Source("cluster/anvil.yaml")),
 				fake.FileObject(fakeCRD(kinds.Anvil(), testoutput.Source("cluster/anvil-crd.yaml")), "cluster/anvil-crd.yaml"),
@@ -907,16 +923,16 @@ func TestParserVetCRDs(t *testing.T) {
 	test.RunAll(t)
 }
 
-func fakeCRD(gvk schema.GroupVersionKind, opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
+func fakeCRD(gvk schema.GroupVersionKind, opts ...core.MetaMutator) *apiextensionsv1beta1.CustomResourceDefinition {
 	o := fake.CustomResourceDefinitionV1Beta1Object()
 	o.Spec.Names.Plural = strings.ToLower(gvk.Kind) + "s"
 	o.SetName(o.Spec.Names.Plural + "." + gvk.Group)
 	o.Spec.Group = gvk.Group
 	o.Spec.Names.Kind = gvk.Kind
 	o.Spec.Versions = append(o.Spec.Versions,
-		v1beta1.CustomResourceDefinitionVersion{Name: gvk.Version, Served: true},
+		apiextensionsv1beta1.CustomResourceDefinitionVersion{Name: gvk.Version, Served: true},
 	)
-	o.Spec.Scope = v1beta1.ClusterScoped
+	o.Spec.Scope = apiextensionsv1beta1.ClusterScoped
 
 	for _, opt := range opts {
 		opt(o)

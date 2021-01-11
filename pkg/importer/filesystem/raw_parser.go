@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/customresources"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
@@ -17,7 +18,7 @@ import (
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
-	reader                Reader
+	reader                reader.Reader
 	dc                    utildiscovery.ServerResourcer
 	defaultNamespace      string
 	inNamespaceReconciler bool
@@ -26,7 +27,7 @@ type rawParser struct {
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamespace string, reconcilerScope declared.Scope) ConfigParser {
+func NewRawParser(reader reader.Reader, dc utildiscovery.ServerResourcer, defaultNamespace string, reconcilerScope declared.Scope) ConfigParser {
 	return &rawParser{
 		reader:                reader,
 		dc:                    dc,
@@ -36,7 +37,7 @@ func NewRawParser(reader Reader, dc utildiscovery.ServerResourcer, defaultNamesp
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths FilePaths) ([]core.Object, status.MultiError) {
+func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(filePaths)
 	if errs != nil {
@@ -79,7 +80,7 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCac
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical
 // parsing is disabled.
-func (p *rawParser) ReadClusterRegistryResources(_ FilePaths) []ast.FileObject {
+func (p *rawParser) ReadClusterRegistryResources(_ reader.FilePaths) []ast.FileObject {
 	return nil
 }
 

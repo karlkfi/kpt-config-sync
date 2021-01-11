@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
@@ -144,13 +145,13 @@ func Run(ctx context.Context, opts Options) {
 		GitRev:    opts.GitRev,
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
-		parser, err = parse.NewRootRunner(opts.ClusterName, opts.SourceFormat, &filesystem.FileReader{}, cl,
+		parser, err = parse.NewRootRunner(opts.ClusterName, opts.SourceFormat, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser = parse.NewNamespaceRunner(opts.ClusterName, opts.ReconcilerScope, &filesystem.FileReader{}, cl,
+		parser = parse.NewNamespaceRunner(opts.ClusterName, opts.ReconcilerScope, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 

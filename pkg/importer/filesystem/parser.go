@@ -3,10 +3,8 @@
 package filesystem
 
 import (
-	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -17,38 +15,24 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
-	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 )
-
-func init() {
-	// Add Nomos types to the Scheme used by asDefaultVersionedOrOriginal for
-	// converting Unstructured to specific types.
-	utilruntime.Must(apiextensions.AddToScheme(scheme.Scheme))
-	utilruntime.Must(v1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(clusterregistry.AddToScheme(scheme.Scheme))
-}
 
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
 	dc     utildiscovery.ServerResourcer
-	reader Reader
+	reader reader.Reader
 	errors status.MultiError
 }
 
 var _ ConfigParser = &Parser{}
 
 // NewParser creates a new Parser using the specified DiscoveryClient and parser options.
-func NewParser(reader Reader, dc utildiscovery.ServerResourcer) *Parser {
+func NewParser(reader reader.Reader, dc utildiscovery.ServerResourcer) *Parser {
 	return &Parser{
 		dc:     dc,
 		reader: reader,
@@ -65,7 +49,7 @@ func NewParser(reader Reader, dc utildiscovery.ServerResourcer) *Parser {
 // filePaths is the list of absolute file paths to parse and the absolute and
 //   relative paths of the Nomos root.
 // It is an error for any files not to be present.
-func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths FilePaths) ([]core.Object, status.MultiError) {
+func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects(filePaths)
@@ -74,14 +58,14 @@ func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCached
 	}
 
 	visitors := generateVisitors(filePaths.PolicyDir, flatRoot)
-	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs, filePaths.PolicyDir)
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs)
 
 	return AsCoreObjects(fileObjects), p.errors
 }
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
 // manifests.
-func (p *Parser) readObjects(filePaths FilePaths) *ast.FlatRoot {
+func (p *Parser) readObjects(filePaths reader.FilePaths) *ast.FlatRoot {
 	return &ast.FlatRoot{
 		SystemObjects:          p.readSystemResources(filePaths),
 		ClusterRegistryObjects: p.ReadClusterRegistryResources(filePaths),
@@ -105,7 +89,7 @@ func generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.V
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, policyDir cmpath.Relative) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -200,7 +184,7 @@ func (p *Parser) runVisitors(root *ast.Root, visitors []ast.Visitor) *ast.Root {
 // filterTopDir returns the set of files contained in the top directory of root
 //   along with the absolute and relative paths of root.
 // Assumes all files are within root.
-func filterTopDir(filePaths FilePaths, topDir string) FilePaths {
+func filterTopDir(filePaths reader.FilePaths, topDir string) reader.FilePaths {
 	rootSplits := filePaths.RootDir.Split()
 	var result []cmpath.Absolute
 	for _, f := range filePaths.Files {
@@ -209,43 +193,36 @@ func filterTopDir(filePaths FilePaths, topDir string) FilePaths {
 		}
 		result = append(result, f)
 	}
-	return FilePaths{filePaths.RootDir, filePaths.PolicyDir, result}
+	return reader.FilePaths{
+		RootDir:   filePaths.RootDir,
+		PolicyDir: filePaths.PolicyDir,
+		Files:     result,
+	}
 }
 
-func (p *Parser) readSystemResources(filePaths FilePaths) []ast.FileObject {
+func (p *Parser) readSystemResources(filePaths reader.FilePaths) []ast.FileObject {
 	result, errs := p.reader.Read(filterTopDir(filePaths, repo.SystemDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readNamespaceResources(filePaths FilePaths) []ast.FileObject {
+func (p *Parser) readNamespaceResources(filePaths reader.FilePaths) []ast.FileObject {
 	result, errs := p.reader.Read(filterTopDir(filePaths, repo.NamespacesDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
-func (p *Parser) readClusterResources(filePaths FilePaths) []ast.FileObject {
+func (p *Parser) readClusterResources(filePaths reader.FilePaths) []ast.FileObject {
 	result, errs := p.reader.Read(filterTopDir(filePaths, repo.ClusterDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
 }
 
 // ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
-func (p *Parser) ReadClusterRegistryResources(filePaths FilePaths) []ast.FileObject {
+func (p *Parser) ReadClusterRegistryResources(filePaths reader.FilePaths) []ast.FileObject {
 	result, errs := p.reader.Read(filterTopDir(filePaths, repo.ClusterRegistryDir))
 	p.errors = status.Append(p.errors, errs)
 	return result
-}
-
-func hasStatusField(u runtime.Unstructured) bool {
-	// The following call will only error out if the UnstructuredContent returns something that is not a map.
-	// This has already been verified upstream.
-	m, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status")
-	if err != nil {
-		// This should never happen!!!
-		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
-	}
-	return ok && m != nil && len(m.(map[string]interface{})) != 0
 }
 
 // toInheritanceSpecs converts HierarchyConfigs to InheritanceSpecs. It also evaluates defaults so that later

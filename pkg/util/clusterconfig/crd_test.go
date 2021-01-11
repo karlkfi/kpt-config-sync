@@ -12,21 +12,20 @@ import (
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/testing/testoutput"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func servedStorage(t *testing.T, served, storage bool) core.MetaMutator {
+func preserveUnknownFields(t *testing.T, preserved bool) core.MetaMutator {
 	return func(o core.Object) {
-		crd, ok := o.(*v1beta1.CustomResourceDefinition)
-		if !ok {
-			t.Fatalf("not a v1beta1.CRD: %T", o)
-		}
-		crd.Spec.Versions = []v1beta1.CustomResourceDefinitionVersion{
-			{
-				Served:  served,
-				Storage: storage,
-			},
+		switch crd := o.(type) {
+		case *apiextensionsv1beta1.CustomResourceDefinition:
+			crd.Spec.PreserveUnknownFields = &preserved
+		case *apiextensionsv1.CustomResourceDefinition:
+			crd.Spec.PreserveUnknownFields = preserved
+		default:
+			t.Fatalf("not a v1beta1.CRD or v1.CRD: %T", o)
 		}
 	}
 }
@@ -35,28 +34,28 @@ func TestGetCRDs(t *testing.T) {
 	testCases := []struct {
 		name string
 		objs []core.Object
-		want []*v1beta1.CustomResourceDefinition
+		want []*apiextensionsv1beta1.CustomResourceDefinition
 	}{
 		{
 			name: "No CRDs",
-			want: []*v1beta1.CustomResourceDefinition{},
+			want: []*apiextensionsv1beta1.CustomResourceDefinition{},
 		},
 		{
 			name: "v1Beta1 CRD",
 			objs: []core.Object{
 				fake.CustomResourceDefinitionV1Beta1Unstructured(),
 			},
-			want: []*v1beta1.CustomResourceDefinition{
-				fake.CustomResourceDefinitionV1Beta1Object(servedStorage(t, true, true)),
+			want: []*apiextensionsv1beta1.CustomResourceDefinition{
+				fake.CustomResourceDefinitionV1Beta1Object(),
 			},
 		},
 		{
 			name: "v1 CRD",
 			objs: []core.Object{
-				fake.ToCustomResourceDefinitionV1Object(fake.CustomResourceDefinitionV1Beta1Object()),
+				fake.CustomResourceDefinitionV1Object(),
 			},
-			want: []*v1beta1.CustomResourceDefinition{
-				fake.CustomResourceDefinitionV1Beta1Object(servedStorage(t, true, true)),
+			want: []*apiextensionsv1beta1.CustomResourceDefinition{
+				fake.CustomResourceDefinitionV1Beta1Object(preserveUnknownFields(t, false)),
 			},
 		},
 	}
@@ -71,7 +70,8 @@ func TestGetCRDs(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, actual, cmpopts.EquateEmpty()); diff != "" {
+			if diff := cmp.Diff(tc.want, actual, cmpopts.EquateEmpty(),
+				cmpopts.IgnoreFields(apiextensionsv1beta1.CustomResourceDefinition{}, "TypeMeta")); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -96,8 +96,13 @@ func TestAsCRD(t *testing.T) {
 		wantErr status.Error
 	}{
 		{
-			name:    "well-formed CRD",
+			name:    "well-formed v1beta1 CRD",
 			obj:     fake.CustomResourceDefinitionV1Beta1Object(),
+			wantErr: nil,
+		},
+		{
+			name:    "well-formed v1 CRD",
+			obj:     fake.CustomResourceDefinitionV1Object(),
 			wantErr: nil,
 		},
 		{

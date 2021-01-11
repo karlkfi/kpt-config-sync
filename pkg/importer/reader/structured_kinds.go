@@ -1,4 +1,4 @@
-package filesystem
+package reader
 
 import (
 	"github.com/google/nomos/pkg/importer/id"
@@ -15,6 +15,7 @@ var structuredKinds = map[schema.GroupKind]bool{
 	kinds.Repo().GroupKind():              true,
 	kinds.RepoSync().GroupKind():          true,
 	kinds.RootSync().GroupKind():          true,
+	kinds.CustomResourceDefinition():      true,
 }
 
 // mustBeStructured returns true if the importer logic requires the given GroupKind

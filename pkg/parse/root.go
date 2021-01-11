@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
@@ -26,7 +27,7 @@ import (
 )
 
 // NewRootRunner creates a new runnable parser for parsing a Root repository.
-func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
+func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
 	opts := opts{
 		clusterName:      clusterName,
 		client:           c,
@@ -110,7 +111,7 @@ func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object,
 		wantFiles = filesystem.FilterHierarchyFiles(state.policyDir, wantFiles)
 	}
 
-	filePaths := filesystem.FilePaths{
+	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,
 		Files:     wantFiles,

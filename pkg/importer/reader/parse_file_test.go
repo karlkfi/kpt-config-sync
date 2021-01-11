@@ -1,4 +1,4 @@
-package filesystem
+package reader
 
 import (
 	"testing"

@@ -4,15 +4,15 @@ import (
 	"os"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 )
 
 // FakeReader is a fake implementation of filesystem.Reader.
 type FakeReader map[cmpath.Absolute][]ast.FileObject
 
-var _ filesystem.Reader = &FakeReader{}
+var _ reader.Reader = &FakeReader{}
 
 // NewFakeReader initializes a FakeReader from a set of FileObjects.
 func NewFakeReader(root cmpath.Absolute, objs []ast.FileObject) FakeReader {
@@ -24,7 +24,7 @@ func NewFakeReader(root cmpath.Absolute, objs []ast.FileObject) FakeReader {
 	return result
 }
 
-func (r FakeReader) Read(filePaths filesystem.FilePaths) ([]ast.FileObject, status.MultiError) {
+func (r FakeReader) Read(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	var result []ast.FileObject
 	for _, f := range filePaths.Files {
 		if objs, ok := r[f]; ok {

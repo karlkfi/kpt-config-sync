@@ -46,7 +46,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 
 		crd, err := gatekeeper.ConstraintTemplateCRD(f.Object)
 		if err != nil {
-			errs = status.Append(errs, clusterconfig.MalformedCRDError(err, f.Relative))
+			errs = status.Append(errs, clusterconfig.MalformedCRDError(err, f.Object))
 			continue
 		}
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/vet"
 
@@ -22,7 +23,7 @@ import (
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(clusterName string, scope declared.Scope, fileReader filesystem.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
+func NewNamespaceRunner(clusterName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
 	return &namespace{
 		opts: opts{
 			clusterName:      clusterName,
@@ -94,7 +95,7 @@ func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
 }
 
 func (p *namespace) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
-	filePaths := filesystem.FilePaths{
+	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,
 		Files:     state.files,

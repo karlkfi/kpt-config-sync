@@ -280,17 +280,6 @@ func ToCustomResourceDefinitionV1Object(o *v1beta1.CustomResourceDefinition) *un
 	return u
 }
 
-// ToCustomResourceDefinitionV1 converts the type inside a FileObject into an
-// unstructured.Unstructured masquerading as a
-// Deprecated: Use CustomResourceDefinitionV1 instead.
-func ToCustomResourceDefinitionV1(o ast.FileObject) ast.FileObject {
-	// This will panic if o.Object isn't a v1beta1.CRD, but this is what we want
-	// and this is test code so it's fine.
-	crd := o.Object.(*v1beta1.CustomResourceDefinition)
-	o.Object = ToCustomResourceDefinitionV1Object(crd)
-	return o
-}
-
 // AnvilAtPath returns an Anvil Custom Resource.
 func AnvilAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	obj := &v1beta1.CustomResourceDefinition{

@@ -1,4 +1,4 @@
-package filesystem_test
+package reader_test
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/filesystem"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -15,9 +15,9 @@ func TestFileReader_Read_NotExist(t *testing.T) {
 	dir := ft.NewTestDir(t)
 	fps := dir.FilePaths("no-exist")
 
-	reader := filesystem.FileReader{}
+	r := reader.File{}
 
-	objs, err := reader.Read(fps)
+	objs, err := r.Read(fps)
 	if err != nil || len(objs) > 0 {
 		t.Errorf("got Read(nonexistent path) = %+v, %v; want nil, nil", objs, err)
 	}
@@ -37,9 +37,9 @@ func TestFileReader_Read_BadPermissionsParent(t *testing.T) {
 	)
 	fps := dir.FilePaths(tmpRelative)
 
-	reader := filesystem.FileReader{}
+	r := reader.File{}
 
-	objs, err := reader.Read(fps)
+	objs, err := r.Read(fps)
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on parent dir) = %+v, %v; want nil, error", objs, err)
 	}
@@ -60,9 +60,9 @@ func TestFileReader_Read_BadPermissionsChild(t *testing.T) {
 	)
 	fps := dir.FilePaths(tmpRelative)
 
-	reader := filesystem.FileReader{}
+	r := reader.File{}
 
-	objs, err := reader.Read(fps)
+	objs, err := r.Read(fps)
 	if err == nil || len(objs) > 0 {
 		t.Errorf("got Read(bad permissions on child dir) = %+v, %v; want nil, error", objs, err)
 	}
@@ -107,8 +107,8 @@ metadata:
   %s
 `, tc.metadata)))
 			fps := dir.FilePaths(nsFile)
-			reader := filesystem.FileReader{}
-			_, err := reader.Read(fps)
+			r := reader.File{}
+			_, err := r.Read(fps)
 
 			if err != nil {
 				t.Fatalf("got Read() = %v, want nil", err)
@@ -128,8 +128,8 @@ metadata:
   annotations: a
 `))
 	fps := dir.FilePaths(nsFile)
-	reader := filesystem.FileReader{}
-	_, err := reader.Read(fps)
+	r := reader.File{}
+	_, err := r.Read(fps)
 
 	if err == nil {
 		t.Fatal("got Read() = nil, want err")
@@ -156,8 +156,8 @@ spec:
   version: 1.0
 `))
 	fps := dir.FilePaths(nsFile)
-	reader := filesystem.FileReader{}
-	_, err := reader.Read(fps)
+	r := reader.File{}
+	_, err := r.Read(fps)
 
 	if err == nil {
 		t.Fatal("got Read() = nil, want err")
@@ -184,8 +184,8 @@ spec:
   version: "1.0"
 `))
 	fps := dir.FilePaths(nsFile)
-	reader := filesystem.FileReader{}
-	_, err := reader.Read(fps)
+	r := reader.File{}
+	_, err := r.Read(fps)
 
 	if err != nil {
 		t.Fatalf("got Read() = %v, want nil", err)

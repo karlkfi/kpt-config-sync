@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
@@ -21,16 +19,17 @@ func RepoHasStatusSyncLatestToken(sha1 string) Predicate {
 			return WrongTypeErr(o, &v1.Repo{})
 		}
 
-		if diff := cmp.Diff([]v1.ConfigManagementError{}, repo.Status.Source.Errors, cmpopts.EquateEmpty()); diff != "" {
-			return fmt.Errorf("status.source.errors contains errors: %v", diff)
+		if len(repo.Status.Source.Errors) > 0 {
+			return fmt.Errorf("status.source.errors contains errors: %+v", repo.Status.Source.Errors)
 		}
-		if diff := cmp.Diff([]v1.ConfigManagementError{}, repo.Status.Import.Errors, cmpopts.EquateEmpty()); diff != "" {
-			return fmt.Errorf("status.import.errors contains errors: %v", diff)
+		if len(repo.Status.Import.Errors) > 0 {
+			return fmt.Errorf("status.source.errors contains errors: %+v", repo.Status.Import.Errors)
 		}
 
 		// Ensure there aren't any pending changes to sync.
-		if inProgress := len(repo.Status.Sync.InProgress); inProgress > 0 {
-			return fmt.Errorf("status.sync.inProgress contains %d changes that haven't been synced", inProgress)
+		if len(repo.Status.Sync.InProgress) > 0 {
+			return fmt.Errorf("status.sync.inProgress contains changes that haven't been synced: %+v",
+				repo.Status.Sync.InProgress)
 		}
 
 		// Check the Sync.LatestToken as:

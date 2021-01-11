@@ -9,17 +9,18 @@ import (
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 )
 
-func TestMultipleVersions_CustomResource(t *testing.T) {
+func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	nt := nomostest.New(t)
 
 	// Add the Anvil CRD.
-	nt.Root.Add("acme/cluster/anvil-crd.yaml", anvilCRD())
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", anvilV1Beta1CRD())
 	nt.Root.CommitAndPush("Adding Anvil CRD")
 	nt.WaitForRepoSyncs()
 	nt.RenewClient()
@@ -56,7 +57,7 @@ func TestMultipleVersions_CustomResource(t *testing.T) {
 	}
 }
 
-func anvilCRD() *apiextensionsv1beta1.CustomResourceDefinition {
+func anvilV1Beta1CRD() *apiextensionsv1beta1.CustomResourceDefinition {
 	crd := fake.CustomResourceDefinitionV1Beta1Object(core.Name("anvils.acme.com"))
 	crd.Spec.Group = "acme.com"
 	crd.Spec.Names = apiextensionsv1beta1.CustomResourceDefinitionNames{
@@ -88,6 +89,107 @@ func anvilCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 							Type:    "integer",
 							Minimum: pointer.Float64Ptr(1.0),
 							Maximum: pointer.Float64Ptr(9000.0),
+						},
+					},
+				},
+			},
+		},
+	}
+	return crd
+}
+
+func TestMultipleVersions_CustomResourceV1(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Add the Anvil CRD.
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", anvilV1CRD())
+	nt.Root.CommitAndPush("Adding Anvil CRD")
+	nt.WaitForRepoSyncs()
+	nt.RenewClient()
+
+	// Add the v1 and v1beta1 Anvils and verify they are created.
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
+	nt.Root.Add("acme/namespaces/foo/anvilv1.yaml", anvilCR("v1", "first", 10))
+	nt.Root.Add("acme/namespaces/foo/anvilv2.yaml", anvilCR("v2", "second", 100))
+	nt.Root.CommitAndPush("Adding v1 and v2 Anvil CRs")
+	nt.WaitForRepoSyncs()
+
+	err := nt.Validate("first", "foo", anvilCR("v1", "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Modify the v1 and v1beta1 Anvils and verify they are updated.
+	nt.Root.Add("acme/namespaces/foo/anvilv1.yaml", anvilCR("v1", "first", 20))
+	nt.Root.Add("acme/namespaces/foo/anvilv2.yaml", anvilCR("v2", "second", 200))
+	nt.Root.CommitAndPush("Modifying v1 and v2 Anvil CRs")
+	nt.WaitForRepoSyncs()
+
+	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func anvilV1CRD() *apiextensionsv1.CustomResourceDefinition {
+	crd := fake.CustomResourceDefinitionV1Object(core.Name("anvils.acme.com"))
+	crd.Spec.Group = "acme.com"
+	crd.Spec.Names = apiextensionsv1.CustomResourceDefinitionNames{
+		Plural:   "anvils",
+		Singular: "anvil",
+		Kind:     "Anvil",
+	}
+	crd.Spec.Scope = apiextensionsv1.NamespaceScoped
+	crd.Spec.Versions = []apiextensionsv1.CustomResourceDefinitionVersion{
+		{
+			Name:    "v1",
+			Served:  true,
+			Storage: false,
+			Schema: &apiextensionsv1.CustomResourceValidation{
+				OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+					Type: "object",
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"spec": {
+							Type:     "object",
+							Required: []string{"lbs"},
+							Properties: map[string]apiextensionsv1.JSONSchemaProps{
+								"lbs": {
+									Type:    "integer",
+									Minimum: pointer.Float64Ptr(1.0),
+									Maximum: pointer.Float64Ptr(9000.0),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Name:    "v2",
+			Served:  true,
+			Storage: true,
+			Schema: &apiextensionsv1.CustomResourceValidation{
+				OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+					Type: "object",
+					Properties: map[string]apiextensionsv1.JSONSchemaProps{
+						"spec": {
+							Type:     "object",
+							Required: []string{"lbs"},
+							Properties: map[string]apiextensionsv1.JSONSchemaProps{
+								"lbs": {
+									Type:    "integer",
+									Minimum: pointer.Float64Ptr(1.0),
+									Maximum: pointer.Float64Ptr(9000.0),
+								},
+							},
 						},
 					},
 				},

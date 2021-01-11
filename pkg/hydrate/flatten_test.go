@@ -34,18 +34,18 @@ func TestFlatten(t *testing.T) {
 				),
 			},
 			expected: []core.Object{
-				fake.CustomResourceDefinitionV1Beta1().Object,
+				fake.CustomResourceDefinitionV1Beta1Object(),
 			},
 		},
 		{
 			name: "one v1 CRD",
 			configs: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: testoutput.CRDClusterConfig(
-					fake.ToCustomResourceDefinitionV1Object(fake.CustomResourceDefinitionV1Beta1Object()),
+					fake.CustomResourceDefinitionV1Object(),
 				),
 			},
 			expected: []core.Object{
-				fake.ToCustomResourceDefinitionV1(fake.CustomResourceDefinitionV1Beta1()).Object,
+				fake.CustomResourceDefinitionV1Object(),
 			},
 		},
 		{

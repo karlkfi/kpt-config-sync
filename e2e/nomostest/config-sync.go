@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -124,13 +125,13 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
 	objs := installationManifests(nt, tmpManifestsDir)
+	objs = convertObjects(nt, objs)
 	if nomos.MultiRepo {
 		filesystemPollingPeriod = nt.FilesystemPollingPeriod
 		objs = multiRepoObjects(nt.T, objs, setReconcilerDebugMode, setReconcilerFilesystemPollingPeriod)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
-	objs = convertObjects(nt, objs)
 
 	for _, o := range objs {
 		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == controllers.SourceFormat {
@@ -158,8 +159,10 @@ func convertObjects(nt *NT, objs []core.Object) []core.Object {
 	for i, obj := range objs {
 		u, ok := obj.(*unstructured.Unstructured)
 		if !ok {
-			// Somehow already converted, or added manually.
+			// Already converted when read from the disk, or added manually.
+			// We don't need to convert, so insert and go to the next element.
 			result[i] = obj
+			continue
 		}
 
 		o, err := nt.scheme.New(u.GroupVersionKind())
@@ -275,7 +278,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		}
 	}
 
-	// Create the list of paths for the FileReader to read.
+	// Create the list of paths for the File to read.
 	readPath, err := cmpath.AbsoluteOS(tmpManifestsDir)
 	if err != nil {
 		nt.T.Fatal(err)
@@ -289,12 +292,12 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		paths[i] = readPath.Join(cmpath.RelativeSlash(f.Name()))
 	}
 	// Read the manifests cached in the tmpdir.
-	reader := filesystem.FileReader{}
-	filePaths := filesystem.FilePaths{
+	r := reader.File{}
+	filePaths := reader.FilePaths{
 		RootDir: readPath,
 		Files:   paths,
 	}
-	fos, err := reader.Read(filePaths)
+	fos, err := r.Read(filePaths)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -320,10 +323,6 @@ func multiRepoObjects(t *testing.T, objects []core.Object, opts ...func(t *testi
 	var filtered []core.Object
 	found := false
 	for _, obj := range objects {
-		u, ok := obj.(*unstructured.Unstructured)
-		if !ok {
-			t.Fatalf("parsed multi repo object: %q was not Unstructured %v", u.GetName(), u)
-		}
 		if IsReconcilerManagerConfigMap(obj) {
 			// Mark that we've found the ReconcilerManager ConfigMap.
 			// This way we know we've enabled debug mode.
@@ -463,27 +462,26 @@ func setupRepoSyncRoleBinding(nt *NT, ns string) error {
 
 // setReconcilerDebugMode ensures the Reconciler deployments are run in debug mode.
 func setReconcilerDebugMode(t *testing.T, obj core.Object) {
-	u, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		t.Fatalf("parsed Reconciler Manager ConfigMap was not Unstructured %v", u)
-	}
-
-	if !IsReconcilerManagerConfigMap(u) {
+	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
-	deploymentYaml, found, err := unstructured.NestedString(u.Object, "data", "deployment.yaml")
+
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		t.Fatalf("parsed Reconciler Manager ConfigMap was %T %v", obj, obj)
+	}
+
+	key := "deployment.yaml"
+	deploymentYAML, found := cm.Data[key]
 	if !found {
 		t.Fatal("Reconciler Manager ConfigMap has no deployment.yaml entry")
-	}
-	if err != nil {
-		t.Fatalf("Getting deployment.yaml entry from Reconciler Manager ConfigMap: %v", err)
 	}
 
 	// The Deployment YAML for Reconciler deployments is a raw YAML string embedded
 	// in the ConfigMap. Unmarshalling/marshalling is likely to lead to errors, so
 	// this modifies the YAML string directly by finding the line we want to insert
 	// the debug flag after, and then inserting the line we want to add.
-	lines := strings.Split(deploymentYaml, "\n")
+	lines := strings.Split(deploymentYAML, "\n")
 	found = false
 	for i, line := range lines {
 		// We want to set the debug flag immediately after setting the git-dir flag.
@@ -504,29 +502,23 @@ func setReconcilerDebugMode(t *testing.T, obj core.Object) {
 		t.Fatal("Unable to set debug mode for reconciler")
 	}
 
-	err = unstructured.SetNestedField(u.Object,
-		strings.Join(lines, "\n"), "data", "deployment.yaml")
-	if err != nil {
-		t.Fatalf("Setting deployment.yaml: %v", err)
-	}
+	cm.Data[key] = strings.Join(lines, "\n")
 	t.Log("Set deployment.yaml")
 }
 
 // setReconcilerFilesystemPollingPeriod update Reconciler Manager configmap
 // reconciler-manager-cm with filesystem polling period to override the default.
 func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
-	u, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		t.Fatalf("parsed Reconciler Manager ConfigMap was not Unstructured %v", u)
-	}
-	if !IsReconcilerManagerConfigMap(u) {
+	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
-	err := unstructured.SetNestedField(u.Object,
-		filesystemPollingPeriod.String(), "data", controllers.FilesystemPollingPeriod)
-	if err != nil {
-		t.Fatalf("Setting filesystem polling period: %v", err)
+
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		t.Fatalf("parsed Reconciler Manager ConfigMap was not ConfigMap %T %v", obj, obj)
 	}
+
+	cm.Data[controllers.FilesystemPollingPeriod] = filesystemPollingPeriod.String()
 	t.Log("Set filesystem polling period")
 }
 

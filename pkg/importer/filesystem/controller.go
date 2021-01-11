@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,9 +62,9 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	switch format {
 	case SourceFormatUnstructured:
 		// SourceFormat is unstructured, so use the RawParser.
-		cfgParser = NewRawParser(&FileReader{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
+		cfgParser = NewRawParser(&reader.File{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
 	case SourceFormatHierarchy, "":
-		cfgParser = NewParser(&FileReader{}, dc)
+		cfgParser = NewParser(&reader.File{}, dc)
 		format = SourceFormatHierarchy
 	default:
 		return errors.Errorf("unknown SOURCE_FORMAT type %q", string(format))

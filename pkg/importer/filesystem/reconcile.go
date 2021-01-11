@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
@@ -235,7 +236,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		wantFiles = FilterHierarchyFiles(absPolicyDir, wantFiles)
 	}
 
-	filePaths := FilePaths{
+	filePaths := reader.FilePaths{
 		RootDir:   absPolicyDir,
 		PolicyDir: c.policyDir,
 		Files:     wantFiles,

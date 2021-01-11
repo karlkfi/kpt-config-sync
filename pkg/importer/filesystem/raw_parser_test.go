@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/syncertest"
@@ -173,7 +174,7 @@ func TestRawParser_Parse(t *testing.T) {
 			r := ft.NewFakeReader(root, tc.objects)
 
 			policyDir := cmpath.RelativeSlash("/")
-			fps := filesystem.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
+			fps := reader.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
 
 			scope := tc.defaultNamespace
 			if scope == "" {
@@ -235,7 +236,7 @@ func TestRawParser_ParseErrors(t *testing.T) {
 			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault, declared.RootReconciler)
 
 			policyDir := cmpath.RelativeSlash("/")
-			fps := filesystem.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
+			fps := reader.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
 
 			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 				return tc.syncedCRDs, nil

@@ -1,4 +1,4 @@
-package filesystem
+package reader
 
 import (
 	"errors"
@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -121,4 +122,15 @@ func parseKptfile(contents []byte) ([]*unstructured.Unstructured, error) {
 	default:
 		return nil, fmt.Errorf("only one resource of type Kptfile allowed in Kptfile")
 	}
+}
+
+func hasStatusField(u runtime.Unstructured) bool {
+	// The following call will only error out if the UnstructuredContent returns something that is not a map.
+	// This has already been verified upstream.
+	m, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status")
+	if err != nil {
+		// This should never happen!!!
+		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
+	}
+	return ok && m != nil && len(m.(map[string]interface{})) != 0
 }

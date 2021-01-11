@@ -6,8 +6,8 @@ import (
 	"path"
 	"testing"
 
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 )
 
 // FileContentMap specifies files that should be created as part of a parser
@@ -59,13 +59,13 @@ func (d TestDir) Root() cmpath.Absolute {
 // and relative paths of the root directory of the TestDir.
 //
 // filePaths is a list of slash-delimited paths relative to the test directory root.
-func (d TestDir) FilePaths(filePaths ...string) filesystem.FilePaths {
+func (d TestDir) FilePaths(filePaths ...string) reader.FilePaths {
 	var files []cmpath.Absolute
 	for _, f := range filePaths {
 		files = append(files, d.tmpDir.Join(cmpath.RelativeSlash(f)))
 	}
 
-	return filesystem.FilePaths{
+	return reader.FilePaths{
 		RootDir:   d.tmpDir,
 		PolicyDir: d.policyDir,
 		Files:     files,

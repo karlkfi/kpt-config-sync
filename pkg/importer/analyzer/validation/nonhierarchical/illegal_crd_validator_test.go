@@ -12,22 +12,17 @@ import (
 func TestIllegalCrdValidator(t *testing.T) {
 	testCases := []nht.ValidatorTestCase{
 		// v1beta1.CRD
-		nht.Fail("ClusterConfig", crd("crd", kinds.ClusterConfig())),
-		nht.Fail("Namespaceconfig", crd("crd", kinds.NamespaceConfig())),
-		nht.Fail("Sync", crd("crd", kinds.Sync())),
-		nht.Pass("Anvil", crd("crd", kinds.Anvil())),
+		nht.Fail("ClusterConfig v1beta1", crdv1beta1("crd", kinds.ClusterConfig())),
+		nht.Fail("NamespaceConfig v1beta1", crdv1beta1("crd", kinds.NamespaceConfig())),
+		nht.Fail("Sync", crdv1beta1("crd", kinds.Sync())),
+		nht.Pass("Anvil v1beta1", crdv1beta1("crd", kinds.Anvil())),
 		nht.Pass("non-crd", fake.ClusterRole()),
 		// v1.CRD
-		nht.Fail("ClusterConfig",
-			fake.ToCustomResourceDefinitionV1(crd("crd", kinds.ClusterConfig()))),
-		nht.Fail("Namespaceconfig",
-			fake.ToCustomResourceDefinitionV1(crd("crd", kinds.NamespaceConfig()))),
-		nht.Fail("Sync",
-			fake.ToCustomResourceDefinitionV1(crd("crd", kinds.Sync()))),
-		nht.Pass("Anvil",
-			fake.ToCustomResourceDefinitionV1(crd("crd", kinds.Anvil()))),
-		nht.Pass("non-crd",
-			fake.ClusterRole()),
+		nht.Fail("ClusterConfig v1", crdv1("crd", kinds.ClusterConfig())),
+		nht.Fail("NamespaceConfig v1", crdv1("crd", kinds.NamespaceConfig())),
+		nht.Fail("Sync v1", crdv1("crd", kinds.Sync())),
+		nht.Pass("Anvil v1", crdv1("crd", kinds.Anvil())),
+		nht.Pass("non-crd", fake.ClusterRole()),
 	}
 
 	nht.RunAll(t, nonhierarchical.IllegalCRDValidator, testCases)

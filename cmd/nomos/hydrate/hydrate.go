@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
@@ -96,7 +97,7 @@ clusters.`,
 		// Hydrate is only used in hierarchical mode.
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 
-		filePaths := filesystem.FilePaths{
+		filePaths := reader.FilePaths{
 			RootDir:   rootDir,
 			PolicyDir: policyDir,
 			Files:     files,
@@ -106,7 +107,7 @@ clusters.`,
 		if err != nil {
 			return err
 		}
-		parser := filesystem.NewParser(&filesystem.FileReader{}, dc)
+		parser := filesystem.NewParser(&reader.File{}, dc)
 
 		var allObjects []ast.FileObject
 

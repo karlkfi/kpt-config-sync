@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/vet"
 )
@@ -32,7 +33,7 @@ const (
 //    err, the MultiError which Parser.Parse returned, if there was one.
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
-func ForEachCluster(parser filesystem.ConfigParser, getSyncedCRDs filesystem.GetSyncedCRDs, enableAPIServerChecks bool, apiResources cmpath.Absolute, filePaths filesystem.FilePaths, runKptfileExistenceValidator bool, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
+func ForEachCluster(parser filesystem.ConfigParser, getSyncedCRDs filesystem.GetSyncedCRDs, enableAPIServerChecks bool, apiResources cmpath.Absolute, filePaths reader.FilePaths, runKptfileExistenceValidator bool, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
 	// Hydrate for empty string cluster name. This is the default configuration.
 	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, vet.AddCachedAPIResources(apiResources), getSyncedCRDs, filePaths)
 	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)

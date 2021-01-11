@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
@@ -269,7 +270,7 @@ type fakeParser struct {
 	errors []status.Error
 }
 
-func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths filesystem.FilePaths) ([]core.Object, status.MultiError) {
+func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	if p.errors == nil {
 		return p.parse, nil
 	}
@@ -280,7 +281,7 @@ func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCa
 	return nil, errs
 }
 
-func (p *fakeParser) ReadClusterRegistryResources(filePaths filesystem.FilePaths) []ast.FileObject {
+func (p *fakeParser) ReadClusterRegistryResources(filePaths reader.FilePaths) []ast.FileObject {
 	return nil
 }
 
