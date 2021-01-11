@@ -11,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -161,7 +160,7 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 				glog.V(4).Infof("unmanaged the resource %v", coreID)
 			}
 		case diff.ManagementConflict:
-			err := kptapplier.ManagementConflictError(d.Declared)
+			err := ManagementConflictError(d.Declared)
 			errs = status.Append(errs, err)
 		default:
 			err := status.InternalErrorf("diff type not supported: %v", t)
