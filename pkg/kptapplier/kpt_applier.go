@@ -28,13 +28,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type kptApplier interface {
+	Initialize() error
+	Run(context.Context, inventory.InventoryInfo, []*unstructured.Unstructured, apply.Options) <-chan event.Event
+}
+
 // Applier declares the Applier component in the Multi Repo Reconciler Process.
 type Applier struct {
 	// inventory policy for the applier.
 	policy inventory.InventoryPolicy
 
-	//inventory is the InventoryInfo for current Applier.
+	// inventory is the InventoryInfo for current Applier.
 	inventory inventory.InventoryInfo
+	// kptApplierFunc is the function to create a kpt applier.
+	kptApplierFunc func() kptApplier
 	// client get and updates RepoSync and its status.
 	client client.Client
 	// cache stores the previously parsed git resources in memory. The applier uses this
@@ -64,11 +71,12 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	u := newInventoryUnstructured(configmanagement.ControllerNamespace, string(namespace))
 	a := &Applier{
-		inventory: live.WrapInventoryInfoObj(u),
-		client:    c,
-		cache:     make(map[core.ID]core.Object),
-		scope:     namespace,
-		policy:    inventory.AdoptIfNoInventory,
+		inventory:      live.WrapInventoryInfoObj(u),
+		client:         c,
+		kptApplierFunc: newKptApplier,
+		cache:          make(map[core.ID]core.Object),
+		scope:          namespace,
+		policy:         inventory.AdoptIfNoInventory,
 	}
 	glog.V(4).Infof("Applier %v is initialized", namespace)
 	return a
@@ -79,20 +87,21 @@ func NewRootApplier(c client.Client) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	u := newInventoryUnstructured(configmanagement.ControllerNamespace, configmanagement.ControllerNamespace)
 	a := &Applier{
-		inventory: live.WrapInventoryInfoObj(u),
-		client:    c,
-		cache:     make(map[core.ID]core.Object),
-		scope:     declared.RootReconciler,
-		policy:    inventory.AdoptAll,
+		inventory:      live.WrapInventoryInfoObj(u),
+		client:         c,
+		kptApplierFunc: newKptApplier,
+		cache:          make(map[core.ID]core.Object),
+		scope:          declared.RootReconciler,
+		policy:         inventory.AdoptAll,
 	}
 	glog.V(4).Infof("Root applier is initialized and synced with the API server")
 	return a
 }
 
 // sync triggers a kpt live apply library call to apply a set of resources.
-func (a *Applier) sync(ctx context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.ID]core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	var errs status.MultiError
-	applier := newKptApplier()
+	applier := a.kptApplierFunc()
 	err := applier.Initialize()
 	if err != nil {
 		return nil, ApplierInitError(err)
@@ -124,10 +133,15 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object) (map[schema.Grou
 			if e.ApplyEvent.Type == event.ApplyEventResourceUpdate {
 				id := identifierToID(e.ApplyEvent.Identifier)
 				if e.ApplyEvent.Error != nil {
-					errs = status.Append(errs, ApplierError(e.ApplyEvent.Error))
-					_, isUnknownType := e.ApplyEvent.Error.(*applyerror.UnknownTypeError)
-					if isUnknownType {
+					switch e.ApplyEvent.Error.(type) {
+					case *applyerror.UnknownTypeError:
+						errs = status.Append(errs, ApplierError(e.ApplyEvent.Error))
 						unknownTypeResources[id] = struct{}{}
+					case *inventory.InventoryOverlapError:
+						errs = status.Append(errs, ManagementConflictError(cache[id]))
+					default:
+						// The default case covers other reason for failed applying a resource.
+						errs = status.Append(errs, ApplierError(e.ApplyEvent.Error))
 					}
 				} else {
 					glog.V(4).Infof("applied resource %v", id)
@@ -181,7 +195,7 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map
 	// in a previous cycle (eg ignore an error about a CR so that we can apply the
 	// CRD, then a future cycle is able to apply the CR).
 	// TODO(b/169717222): Here and elsewhere, pass the MultiError as a parameter.
-	gvks, errs := a.sync(ctx, desiredResource)
+	gvks, errs := a.sync(ctx, desiredResource, newCache)
 	if errs == nil {
 		// Only update the cache on complete success.
 		a.cache = newCache
@@ -198,7 +212,7 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 	for _, obj := range a.cache {
 		objs = append(objs, obj)
 	}
-	_, errs := a.sync(ctx, objs)
+	_, errs := a.sync(ctx, objs, a.cache)
 	return errs
 }
 
@@ -264,7 +278,7 @@ func identifierToID(identifier object.ObjMetadata) core.ID {
 	}
 }
 
-func newKptApplier() *apply.Applier {
+func newKptApplier() kptApplier {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(&factory.CachingRESTClientGetter{
 		Delegate: kubeConfigFlags,
