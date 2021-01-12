@@ -137,7 +137,7 @@ func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err erro
 	glog.Errorf("Failed to resolve config directory: %v", status.FormatError(false, err))
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 	sErr := status.SourceError.Wrap(err).Sprint("unable to sync repo\n" +
-		"Check git-sync logs for more info: kubectl logs -n config-management-system  -l app=git-importer -c git-sync").Build()
+		"Check git-sync logs for more info: kubectl logs -n config-management-system -l app=git-importer -c git-sync").Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
 	return reconcile.Result{}, nil
 }
@@ -192,7 +192,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if err != nil {
 		glog.Warningf("Invalid format for config directory format: %v", err)
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-		c.updateSourceStatus(ctx, nil, status.SourceError.Sprintf("unable to parse commit hash: %v", err).Build().ToCME())
+		c.updateSourceStatus(ctx, nil, status.SourceError.Wrap(err).Sprintf("unable to parse commit hash").Build().ToCME())
 		return reconcile.Result{}, nil
 	}
 

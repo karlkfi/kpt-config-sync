@@ -239,31 +239,13 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	}
 }
 
-func TestInvalidRootSyncBranchStatus(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo)
-
-	// Update RootSync to invalid branch name
-	rs := fake.RootSyncObject()
-	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "invalid-branch"}}}`)
-
-	// Check for error code 2001 (this is a generic error code for the curent impl, this may change if we
-	// make better git error reporting.
-	nt.WaitForRootSyncSourceErrorCode("2001")
-
-	// Update RootSync to valid branch name
-	rs = fake.RootSyncObject()
-	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "main"}}}`)
-
-	nt.WaitForRootSyncSourceErrorClear()
-}
-
 func TestForceRevert(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
 	nt.Root.Remove("acme/system/repo.yaml")
 	nt.Root.CommitAndPush("Cause source error")
 
-	nt.WaitForRootSyncSourceErrorCode("1017")
+	nt.WaitForRootSyncSourceError("1017", "must declare a Repo Resource")
 
 	nt.Root.Git("reset", "--hard", "HEAD^")
 	nt.Root.Git("push", "-f", "origin", "main")

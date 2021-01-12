@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/vet"
 
 	"github.com/golang/glog"
@@ -82,7 +83,7 @@ func (p *namespace) Run(ctx context.Context) {
 
 // Read implements Runnable.
 func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState()
+	state, err := p.readGitState(controllers.RepoSyncName(string(p.scope)))
 	if err != nil {
 		// We don't want to bail out immediately as we want to surface this error to
 		// the user in the RepoSync's status field.

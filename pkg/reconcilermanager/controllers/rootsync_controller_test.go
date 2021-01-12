@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -49,7 +50,7 @@ func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRo
 
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
-	sub.Name = rootSyncReconcilerName
+	sub.Name = RootSyncReconcilerName
 	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
@@ -154,6 +155,11 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					reconciler: reconciler,
+				},
+			},
 			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -205,7 +211,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		rootSyncReconcilerName,
+		RootSyncReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -216,7 +222,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	)
 
 	wantService := service(
-		core.Name(rootSyncReconcilerName),
+		core.Name(RootSyncReconcilerName),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -224,7 +230,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentAnnotation()),
-			setServiceAccountName(rootSyncReconcilerName),
+			setServiceAccountName(RootSyncReconcilerName),
 		),
 	}
 
@@ -294,7 +300,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments = []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentUpdatedAnnotation()),
-			setServiceAccountName(rootSyncReconcilerName),
+			setServiceAccountName(RootSyncReconcilerName),
 		),
 	}
 
@@ -313,7 +319,7 @@ type depMutator func(*appsv1.Deployment)
 func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Name(rootSyncReconcilerName),
+		core.Name(RootSyncReconcilerName),
 	)
 	for _, mut := range muts {
 		mut(dep)

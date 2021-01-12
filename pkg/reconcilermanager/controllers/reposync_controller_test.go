@@ -17,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -80,7 +81,7 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
-	sub.Name = repoSyncName(namespace)
+	sub.Name = RepoSyncName(namespace)
 	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
@@ -138,6 +139,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					reconciler: reconciler,
+				},
+			},
 			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
@@ -183,7 +189,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		repoSyncName(reposyncReqNamespace),
+		RepoSyncName(reposyncReqNamespace),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
@@ -196,7 +202,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	)
 
 	wantService := service(
-		core.Name(repoSyncName(rs.Namespace)),
+		core.Name(RepoSyncName(rs.Namespace)),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
@@ -205,7 +211,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		repoSyncDeployment(
 			rs,
 			setAnnotations(nsDeploymentAnnotation()),
-			setServiceAccountName(repoSyncName(rs.Namespace)),
+			setServiceAccountName(RepoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -270,7 +276,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		repoSyncDeployment(
 			rs,
 			setAnnotations(nsDeploymentUpdatedAnnotation()),
-			setServiceAccountName(repoSyncName(rs.Namespace)),
+			setServiceAccountName(RepoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -333,7 +339,7 @@ func namespacedName(name, namespace string) reconcile.Request {
 func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Name(repoSyncName(rs.Namespace)),
+		core.Name(RepoSyncName(rs.Namespace)),
 	)
 	for _, mut := range muts {
 		mut(dep)

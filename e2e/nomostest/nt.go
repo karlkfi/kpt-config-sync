@@ -360,9 +360,149 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 	return err
 }
 
+func validateError(errs []v1alpha1.ConfigSyncError, code, msg string) error {
+	if len(errs) == 0 {
+		return errors.Errorf("no errors present")
+	}
+	var codes []string
+	for _, e := range errs {
+		if e.Code == code {
+			if strings.Contains(e.ErrorMessage, msg) {
+				return nil
+			}
+			return errors.Errorf("error %s is present, but the actual message does not contain the expected snippet: got %s, want %s", code, e.ErrorMessage, msg)
+		}
+		codes = append(codes, e.Code)
+	}
+	return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
+}
+
+func validateErrorClear(errs []v1alpha1.ConfigSyncError) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	var messages []string
+	for _, e := range errs {
+		messages = append(messages, e.ErrorMessage)
+	}
+	return errors.Errorf("got errors %s", strings.Join(messages, ", "))
+}
+
+// WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
+func (nt *NT) WaitForRootSyncSourceError(code, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RootSync error code %s and message snippet %s", code, message),
+		func() error {
+			rs := fake.RootSyncObject()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			return validateError(rs.Status.Source.Errors, code, message)
+		},
+		opts...,
+	)
+}
+
+// WaitForRootSyncSourceErrorClear waits until the given error code disappears from the RootSync resource
+func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
+	Wait(nt.T, "RootSync errors cleared",
+		func() error {
+			rs := fake.RootSyncObject()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			return validateErrorClear(rs.Status.Source.Errors)
+		},
+		opts...,
+	)
+}
+
+// WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
+func (nt *NT) WaitForRepoSyncSourceError(namespace, code, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RepoSync error code %s and message snippet %s", code, message),
+		func() error {
+			rs := fake.RepoSyncObject(core.Namespace(namespace))
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			return validateError(rs.Status.Source.Errors, code, message)
+		},
+		opts...,
+	)
+}
+
+// WaitForRepoSyncSourceErrorClear waits until the given error code disappears from the RepoSync resource
+func (nt *NT) WaitForRepoSyncSourceErrorClear(namespace string, opts ...WaitOption) {
+	Wait(nt.T, "RepoSync errors cleared",
+		func() error {
+			rs := fake.RepoSyncObject(core.Namespace(namespace))
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			return validateErrorClear(rs.Status.Source.Errors)
+		},
+		opts...,
+	)
+}
+
+// WaitForRepoSourceError waits until the given error (code and message) is present on the Repo resource
+func (nt *NT) WaitForRepoSourceError(code, message string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("Repo source error code %s and message snippet %s", code, message),
+		func() error {
+			repo := &v1.Repo{}
+			err := nt.Get("repo", "", repo)
+			if err != nil {
+				return err
+			}
+			errs := repo.Status.Source.Errors
+			if len(errs) == 0 {
+				return errors.Errorf("no errors present")
+			}
+			var codes []string
+			for _, e := range errs {
+				if e.Code == fmt.Sprintf("KNV%s", code) {
+					if strings.Contains(e.ErrorMessage, message) {
+						return nil
+					}
+					return errors.Errorf("error %s is present, but the actual message does not contain the expected snippet: got %s, want %s", code, e.ErrorMessage, message)
+				}
+				codes = append(codes, e.Code)
+			}
+			return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
+		},
+		opts...,
+	)
+}
+
+// WaitForRepoSourceErrorClear waits until the given error code disappears from the Repo resource
+func (nt *NT) WaitForRepoSourceErrorClear(opts ...WaitOption) {
+	Wait(nt.T, "Repo errors cleared",
+		func() error {
+			repo := &v1.Repo{}
+			err := nt.Get("repo", "", repo)
+			if err != nil {
+				return err
+			}
+			errs := repo.Status.Source.Errors
+			if len(errs) == 0 {
+				return nil
+			}
+			var messages []string
+			for _, e := range errs {
+				messages = append(messages, e.ErrorMessage)
+			}
+			return errors.Errorf("got errors %s", strings.Join(messages, ", "))
+		},
+		opts...,
+	)
+}
+
 // WaitForRepoImportErrorCode waits until the given error code is present on the Repo resource.
 func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("Repo error code %s", code),
+	Wait(nt.T, fmt.Sprintf("Repo import error code %s", code),
 		func() error {
 			r := &v1.Repo{}
 			err := nt.Get("repo", "", r)
@@ -382,55 +522,6 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 				codes = append(codes, e.Code)
 			}
 			return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
-		},
-		opts...,
-	)
-}
-
-// WaitForRootSyncSourceErrorCode waits until the given error code is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSourceErrorCode(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync error code %s", code),
-		func() error {
-			rs := fake.RootSyncObject()
-			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
-			if err != nil {
-				return err
-			}
-			errs := rs.Status.Source.Errors
-			if len(errs) == 0 {
-				return errors.Errorf("no errors present")
-			}
-			var codes []string
-			for _, e := range errs {
-				if e.Code == code {
-					return nil
-				}
-				codes = append(codes, e.Code)
-			}
-			return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
-		},
-		opts...,
-	)
-}
-
-// WaitForRootSyncSourceErrorClear waits until the given error code is present on the RootSync resource
-func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
-	Wait(nt.T, "RootSync errors cleared",
-		func() error {
-			rs := fake.RootSyncObject()
-			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
-			if err != nil {
-				return err
-			}
-			errs := rs.Status.Source.Errors
-			if len(errs) == 0 {
-				return nil
-			}
-			var messages []string
-			for _, e := range errs {
-				messages = append(messages, e.ErrorMessage)
-			}
-			return errors.Errorf("got errors %s", strings.Join(messages, ", "))
 		},
 		opts...,
 	)

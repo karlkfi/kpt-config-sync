@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// repoSyncName returns name in the format ns-reconciler-<namespace>.
-func repoSyncName(namespace string) string {
+// RepoSyncName returns name in the format ns-reconciler-<namespace>.
+func RepoSyncName(namespace string) string {
 	return fmt.Sprintf("%s-%s", repoSyncReconcilerPrefix, namespace)
 }
 
@@ -56,7 +56,7 @@ func trimConfigMapSuffix(name string, opts ...string) string {
 
 // rootSyncResourceName returns name in the format root-reconciler-<resourcename>.
 func rootSyncResourceName(resourceName string) string {
-	return fmt.Sprintf("%s-%s", rootSyncReconcilerName, resourceName)
+	return fmt.Sprintf("%s-%s", RootSyncReconcilerName, resourceName)
 }
 
 // repoSyncPermissionsName returns namespace reconciler permissions name.
@@ -68,5 +68,5 @@ func repoSyncPermissionsName() string {
 // rootSyncPermissionsName returns root reconciler permissions name.
 // e.g. configsync.gke.io:root-reconciler
 func rootSyncPermissionsName() string {
-	return fmt.Sprintf("%s:%s", configsync.GroupName, rootSyncReconcilerName)
+	return fmt.Sprintf("%s:%s", configsync.GroupName, RootSyncReconcilerName)
 }

@@ -395,7 +395,7 @@ func validateMultiRepoServiceAndDeployments(nt *NT) error {
 
 func setupRepoSync(nt *NT, ns string) {
 	// create RepoSync to initialize the Namespace reconciler.
-	rs := repoSyncObject(ns)
+	rs := RepoSyncObject(ns)
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -559,7 +559,8 @@ func StructuredNSPath(namespace, resourceName string) string {
 	return fmt.Sprintf("acme/namespaces/%s/%s", namespace, resourceName)
 }
 
-func repoSyncObject(ns string) *v1alpha1.RepoSync {
+// RepoSyncObject returns the default RepoSync object in the given namespace.
+func RepoSyncObject(ns string) *v1alpha1.RepoSync {
 	rs := fake.RepoSyncObject(core.Namespace(ns))
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:   gitRepo(ns),
@@ -579,7 +580,7 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
 		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
 
-		rs := repoSyncObject(ns)
+		rs := RepoSyncObject(ns)
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")

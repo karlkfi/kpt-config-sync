@@ -6,7 +6,8 @@ import (
 
 const (
 	repoSyncReconcilerPrefix = "ns-reconciler"
-	rootSyncReconcilerName   = "root-reconciler"
+	// RootSyncReconcilerName is the name of the root reconciler resources, including service account, service, deployment and etc.
+	RootSyncReconcilerName = "root-reconciler"
 
 	executedOperation = "operation"
 

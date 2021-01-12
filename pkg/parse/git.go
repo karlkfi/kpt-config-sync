@@ -46,18 +46,18 @@ type gitState struct {
 // Returns an error if there is some problem resolving symbolic links or in
 // listing the files. Returns as much information as possible about the state
 // of the git repo on error.
-func (o *files) readGitState() (gitState, status.Error) {
+func (o *files) readGitState(reconcilerName string) (gitState, status.Error) {
 	result := gitState{}
 
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
-		return result, status.PathWrapError(
-			errors.Wrap(err, "evaluating symbolic link to git dir"), o.GitDir.OSPath())
+		return result, status.SourceError.Wrap(err).Sprintf("unable to sync repo\n"+
+			"Check git-sync logs for more info: kubectl logs -n config-management-system -l reconciler=%s -c git-sync", reconcilerName).Build()
 	}
 
 	commit, e := git.CommitHash(gitDir.OSPath())
 	if e != nil {
-		return result, status.SourceError.Sprintf("unable to parse commit hash: %v", e).Build()
+		return result, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash").Build()
 	}
 	result.commit = commit
 

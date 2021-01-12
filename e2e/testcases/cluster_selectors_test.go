@@ -442,7 +442,7 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add both cluster selector annotations to a role binding")
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceErrorCode(selectors.ClusterSelectorAnnotationConflictErrorCode)
+		nt.WaitForRootSyncSourceError(selectors.ClusterSelectorAnnotationConflictErrorCode, "MUST declare ONLY ONE cluster-selector annotation")
 	} else {
 		nt.WaitForRepoImportErrorCode(selectors.ClusterSelectorAnnotationConflictErrorCode)
 	}

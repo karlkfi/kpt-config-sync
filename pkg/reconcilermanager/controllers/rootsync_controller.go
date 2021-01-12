@@ -104,7 +104,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, rootSyncReconcilerName, owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, RootSyncReconcilerName, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -122,7 +122,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Upsert Root reconciler service.
-	if err := r.upsertService(ctx, rootSyncReconcilerName, v1.NSConfigManagementSystem, owRefs); err != nil {
+	if err := r.upsertService(ctx, RootSyncReconcilerName, v1.NSConfigManagementSystem, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service")
 		rootsync.SetStalled(&rs, "Service", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -132,7 +132,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.
-	op, err := r.upsertDeployment(ctx, rootSyncReconcilerName, v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, RootSyncReconcilerName, v1.NSConfigManagementSystem, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		rootsync.SetStalled(&rs, "Deployment", err)
@@ -144,7 +144,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// check the reconciler deployment conditions.
 		result, err := r.deploymentStatus(ctx, client.ObjectKey{
 			Namespace: v1.NSConfigManagementSystem,
-			Name:      rootSyncReconcilerName,
+			Name:      RootSyncReconcilerName,
 		})
 		if err != nil {
 			log.Error(err, "Failed to check reconciler deployment conditions")
@@ -177,7 +177,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		}
 	} else {
 		r.log.Info("Deployment successfully reconciled", executedOperation, op)
-		rs.Status.Reconciler = rootSyncReconcilerName
+		rs.Status.Reconciler = RootSyncReconcilerName
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		rootsync.SetReconciling(&rs, "Deployment", msg)
 	}
@@ -290,7 +290,7 @@ func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.Cluster
 	crb.RoleRef = rolereference("cluster-admin", "ClusterRole")
 
 	var subjects []rbacv1.Subject
-	subjects = append(subjects, subject(rootSyncReconcilerName,
+	subjects = append(subjects, subject(RootSyncReconcilerName,
 		configsync.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
@@ -322,10 +322,14 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
+		// Add label used by service
+		core.SetLabel(&d.Spec.Template, reconciler, RootSyncReconcilerName)
+		d.Spec.Selector.MatchLabels[reconciler] = RootSyncReconcilerName
+
 		templateSpec := &d.Spec.Template.Spec
 
 		// Update ServiceAccountName.
-		templateSpec.ServiceAccountName = rootSyncReconcilerName
+		templateSpec.ServiceAccountName = RootSyncReconcilerName
 
 		// Mutate secret.secretname to secret reference specified in RootSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
