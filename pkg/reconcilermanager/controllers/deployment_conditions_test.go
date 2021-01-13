@@ -48,7 +48,7 @@ func TestDeploymentConditions(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		reconcilerDeployment *appsv1.Deployment
-		wantStatus           *status
+		wantStatus           *deploymentStatus
 		wantError            bool
 	}{
 		{
@@ -57,7 +57,7 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionTrue),
 			),
-			wantStatus: &status{
+			wantStatus: &deploymentStatus{
 				status:  statusCurrent,
 				message: fmt.Sprintf("Deployment is available. Replicas: %d", reconcilerDeploymentReplicaCount),
 			},
@@ -68,7 +68,7 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionFalse),
 			),
-			wantStatus: &status{
+			wantStatus: &deploymentStatus{
 				status:  statusInProgress,
 				message: "Reconciler Deployment not Available",
 			},
@@ -79,7 +79,7 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(2, reconcilerDeploymentReplicaCount),
 				setStateConditions("Reconciler ReplicaSet not Available", corev1.ConditionTrue),
 			),
-			wantStatus: &status{
+			wantStatus: &deploymentStatus{
 				status:  statusInProgress,
 				message: fmt.Sprintf("Replicas: %d/%d", reconcilerDeploymentReplicaCount, 2),
 			},
@@ -90,7 +90,7 @@ func TestDeploymentConditions(t *testing.T) {
 				setReplicas(reconcilerDeploymentReplicaCount, 0),
 				setStateConditions("ProgressDeadlineExceeded", corev1.ConditionFalse),
 			),
-			wantStatus: &status{
+			wantStatus: &deploymentStatus{
 				status:  statusFailed,
 				message: "Reconciler Deployment progress deadline exceeded",
 			},
@@ -106,7 +106,7 @@ func TestDeploymentConditions(t *testing.T) {
 				t.Errorf("deploymentConditions() got error: %q, want error: nil", err)
 			}
 			if !tc.wantError {
-				if !cmp.Equal(gotResult, tc.wantStatus, cmp.AllowUnexported(status{})) {
+				if !cmp.Equal(gotResult, tc.wantStatus, cmp.AllowUnexported(deploymentStatus{})) {
 					t.Errorf("deploymentConditions() got result: %v, want result: %v", gotResult, tc.wantStatus)
 				}
 			}

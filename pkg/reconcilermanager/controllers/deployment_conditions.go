@@ -18,7 +18,7 @@ const (
 type statusType string
 
 // status contains the deployment status and message.
-type status struct {
+type deploymentStatus struct {
 	// status
 	status statusType
 	// message
@@ -26,14 +26,14 @@ type status struct {
 }
 
 // inProgressStatus creates a status result with the InProgress status.
-func inProgressStatus(message string) *status {
-	return &status{
+func inProgressStatus(message string) *deploymentStatus {
+	return &deploymentStatus{
 		status:  statusInProgress,
 		message: message,
 	}
 }
 
-func checkDeploymentConditions(depObj *appsv1.Deployment) (*status, error) {
+func checkDeploymentConditions(depObj *appsv1.Deployment) (*deploymentStatus, error) {
 	available := false
 	progressing := false
 
@@ -41,7 +41,7 @@ func checkDeploymentConditions(depObj *appsv1.Deployment) (*status, error) {
 		switch c.Type {
 		case appsv1.DeploymentProgressing:
 			if c.Reason == "ProgressDeadlineExceeded" {
-				return &status{
+				return &deploymentStatus{
 					status:  statusFailed,
 					message: "Reconciler Deployment progress deadline exceeded",
 				}, nil
@@ -97,7 +97,7 @@ func checkDeploymentConditions(depObj *appsv1.Deployment) (*status, error) {
 	}
 
 	// All ok.
-	return &status{
+	return &deploymentStatus{
 		status:  statusCurrent,
 		message: fmt.Sprintf("Deployment is available. Replicas: %d", statusReplicas),
 	}, nil

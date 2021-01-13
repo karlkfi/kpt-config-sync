@@ -192,7 +192,7 @@ func filterVolumes(existing []corev1.Volume, authType string, secretName string)
 // under .status. Status will be Failed if the progress deadline has been exceeded.
 // Code Reference: https://github.com/kubernetes-sigs/cli-utils/blob/v0.22.0/pkg/kstatus/status/core.go
 // TODO (akulkapoor) Update to use the library kstatus once available.
-func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.ObjectKey) (*status, error) {
+func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.ObjectKey) (*deploymentStatus, error) {
 	var depObj appsv1.Deployment
 	if err := r.client.Get(ctx, key, &depObj); err != nil {
 		if apierrors.IsNotFound(err) {
