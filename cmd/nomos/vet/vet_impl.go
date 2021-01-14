@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/parse"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
@@ -78,7 +79,7 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 			// The user could technically provide --source-format=unstructured.
 			// This nuance isn't necessary to communicate nor confusing to omit.
 			return errors.Errorf("if --%s is provided, --%s must be omitted",
-				namespaceFlag, sourceFormatFlag)
+				namespaceFlag, reconcilermanager.SourceFormat)
 		}
 
 		parser = filesystem.NewParser(&reader.File{}, dc)
@@ -90,7 +91,7 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 			parser = parse.NewNamespace(&reader.File{}, dc, declared.Scope(namespace))
 		}
 	default:
-		return fmt.Errorf("unknown %s value %q", sourceFormatFlag, sourceFormat)
+		return fmt.Errorf("unknown %s value %q", reconcilermanager.SourceFormat, sourceFormat)
 	}
 
 	filePaths := reader.FilePaths{

@@ -15,7 +15,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	clusterName = flag.String(flags.clusterName, os.Getenv("CLUSTER_NAME"),
+	clusterName = flag.String(flags.clusterName, os.Getenv(reconcilermanager.ClusterNameKey),
 		"Cluster name to use for Cluster selection")
 	scope = flag.String("scope", os.Getenv("SCOPE"),
 		"Scope of the reconciler, either a namespace or ':root'.")
@@ -68,7 +68,7 @@ var flags = struct {
 }{
 	gitDir:       "git-dir",
 	clusterName:  "cluster-name",
-	sourceFormat: "source-format",
+	sourceFormat: reconcilermanager.SourceFormat,
 }
 
 func main() {
@@ -146,12 +146,12 @@ func main() {
 }
 
 func pollingPeriod() time.Duration {
-	val, present := os.LookupEnv(controllers.FilesystemPollingPeriod)
+	val, present := os.LookupEnv(reconcilermanager.FilesystemPollingPeriod)
 	if present {
 		pollingFreq, err := time.ParseDuration(val)
 		if err != nil {
 			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
-				"got value: %v, want err: nil", controllers.FilesystemPollingPeriod, pollingFreq))
+				"got value: %v, want err: nil", reconcilermanager.FilesystemPollingPeriod, pollingFreq))
 		}
 		return pollingFreq
 	}

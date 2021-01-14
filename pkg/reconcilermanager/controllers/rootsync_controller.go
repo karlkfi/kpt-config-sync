@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -104,7 +105,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, RootSyncReconcilerName, owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconcilermanager.RootSyncName, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -122,7 +123,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Upsert Root reconciler service.
-	if err := r.upsertService(ctx, RootSyncReconcilerName, v1.NSConfigManagementSystem, owRefs); err != nil {
+	if err := r.upsertService(ctx, reconcilermanager.RootSyncName, v1.NSConfigManagementSystem, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service")
 		rootsync.SetStalled(&rs, "Service", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -132,7 +133,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.
-	op, err := r.upsertDeployment(ctx, RootSyncReconcilerName, v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, reconcilermanager.RootSyncName, v1.NSConfigManagementSystem, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		rootsync.SetStalled(&rs, "Deployment", err)
@@ -144,7 +145,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// check the reconciler deployment conditions.
 		result, err := r.deploymentStatus(ctx, client.ObjectKey{
 			Namespace: v1.NSConfigManagementSystem,
-			Name:      RootSyncReconcilerName,
+			Name:      reconcilermanager.RootSyncName,
 		})
 		if err != nil {
 			log.Error(err, "Failed to check reconciler deployment conditions")
@@ -177,7 +178,7 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		}
 	} else {
 		r.log.Info("Deployment successfully reconciled", executedOperation, op)
-		rs.Status.Reconciler = RootSyncReconcilerName
+		rs.Status.Reconciler = reconcilermanager.RootSyncName
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		rootsync.SetReconciling(&rs, "Deployment", msg)
 	}
@@ -212,11 +213,11 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []configMapMutation {
 	return []configMapMutation{
 		{
-			cmName: rootSyncResourceName(SourceFormat),
+			cmName: rootSyncResourceName(reconcilermanager.SourceFormat),
 			data:   sourceFormatData(rs.Spec.SourceFormat),
 		},
 		{
-			cmName: rootSyncResourceName(gitSync),
+			cmName: rootSyncResourceName(reconcilermanager.GitSync),
 			data: gitSyncData(options{
 				ref:        rs.Spec.Git.Revision,
 				branch:     rs.Spec.Git.Branch,
@@ -227,7 +228,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 			}),
 		},
 		{
-			cmName: rootSyncResourceName(reconciler),
+			cmName: rootSyncResourceName(reconcilermanager.Reconciler),
 			data:   reconcilerData(r.clusterName, declared.RootReconciler, &rs.Spec.Git, r.filesystemPollingPeriod.String()),
 		},
 	}
@@ -290,7 +291,7 @@ func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.Cluster
 	crb.RoleRef = rolereference("cluster-admin", "ClusterRole")
 
 	var subjects []rbacv1.Subject
-	subjects = append(subjects, subject(RootSyncReconcilerName,
+	subjects = append(subjects, subject(reconcilermanager.RootSyncName,
 		configsync.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
@@ -323,13 +324,13 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 		// Add label used by service
-		core.SetLabel(&d.Spec.Template, reconciler, RootSyncReconcilerName)
-		d.Spec.Selector.MatchLabels[reconciler] = RootSyncReconcilerName
+		core.SetLabel(&d.Spec.Template, reconcilermanager.Reconciler, reconcilermanager.RootSyncName)
+		d.Spec.Selector.MatchLabels[reconcilermanager.Reconciler] = reconcilermanager.RootSyncName
 
 		templateSpec := &d.Spec.Template.Spec
 
 		// Update ServiceAccountName.
-		templateSpec.ServiceAccountName = RootSyncReconcilerName
+		templateSpec.ServiceAccountName = reconcilermanager.RootSyncName
 
 		// Mutate secret.secretname to secret reference specified in RootSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
@@ -343,14 +344,14 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// ConfigMap references are updated for the respective containers.
 		for _, container := range templateSpec.Containers {
 			switch container.Name {
-			case reconciler:
+			case reconcilermanager.Reconciler:
 				configmapRef := make(map[string]*bool)
-				configmapRef[rootSyncResourceName(reconciler)] = pointer.BoolPtr(false)
-				configmapRef[rootSyncResourceName(SourceFormat)] = pointer.BoolPtr(true)
+				configmapRef[rootSyncResourceName(reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
+				configmapRef[rootSyncResourceName(reconcilermanager.SourceFormat)] = pointer.BoolPtr(true)
 				container.EnvFrom = envFromSources(configmapRef)
-			case gitSync:
+			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
-				configmapRef[rootSyncResourceName(gitSync)] = pointer.BoolPtr(false)
+				configmapRef[rootSyncResourceName(reconcilermanager.GitSync)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 				container.VolumeMounts = volumeMounts(rs.Spec.Auth,

@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/google/nomos/pkg/reconcilermanager"
 )
 
 // RegistryName is the name of the local Docker registry.
@@ -57,8 +59,8 @@ func CheckImages(t *testing.T) {
 
 	var images = []string{
 		"nomos",
-		"reconciler",
-		"reconciler-manager",
+		reconcilermanager.Reconciler,
+		reconcilermanager.ManagerName,
 	}
 
 	for _, image := range images {

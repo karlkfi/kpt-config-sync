@@ -15,7 +15,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
@@ -94,7 +94,7 @@ func (p *root) Run(ctx context.Context) {
 
 // Read implements Runnable.
 func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState(controllers.RootSyncReconcilerName)
+	state, err := p.readGitState(reconcilermanager.RootSyncName)
 	if err != nil {
 		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
 			return nil, status.APIServerError(err2, "setting source status")

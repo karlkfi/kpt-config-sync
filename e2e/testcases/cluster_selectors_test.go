@@ -12,7 +12,9 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -456,12 +458,12 @@ func renameCluster(nt *nomostest.NT, configMapName, clusterName string) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.MustMergePatch(cm, fmt.Sprintf(`{"data":{"CLUSTER_NAME":"%s"}}`, clusterName))
+	nt.MustMergePatch(cm, fmt.Sprintf(`{"data":{"%s":"%s"}}`, reconcilermanager.ClusterNameKey, clusterName))
 
 	if nt.MultiRepo {
-		deletePodByLabel(nt, "app", "reconciler-manager")
+		deletePodByLabel(nt, "app", reconcilermanager.ManagerName)
 	} else {
-		deletePodByLabel(nt, "app", "git-importer")
+		deletePodByLabel(nt, "app", filesystem.GitImporterName)
 		deletePodByLabel(nt, "app", "monitor")
 	}
 }
@@ -506,8 +508,8 @@ func deletePodByLabel(nt *nomostest.NT, label, value string) {
 		nt.T.Fatal(err)
 	}
 	oldReconcilers := &corev1.PodList{}
-	if value == "reconciler-manager" {
-		if err := nt.List(oldReconcilers, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: "reconciler"}); err != nil {
+	if value == reconcilermanager.ManagerName {
+		if err := nt.List(oldReconcilers, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: reconcilermanager.Reconciler}); err != nil {
 			nt.T.Fatal(err)
 		}
 	}
@@ -515,8 +517,8 @@ func deletePodByLabel(nt *nomostest.NT, label, value string) {
 		nt.T.Fatalf("Pod delete failed: %v", err)
 	}
 	nomostest.Wait(nt.T, "new pods come up", func() error {
-		if value == "reconciler-manager" {
-			return newPodReady(nt, label, value, "reconciler", oldPods.Items, oldReconcilers.Items)
+		if value == reconcilermanager.ManagerName {
+			return newPodReady(nt, label, value, reconcilermanager.Reconciler, oldPods.Items, oldReconcilers.Items)
 		}
 		return newPodReady(nt, label, value, "", oldPods.Items, nil)
 	}, nomostest.WaitTimeout(2*time.Minute))
@@ -527,7 +529,7 @@ func clusterNameConfigMapName(nt *nomostest.NT) string {
 	var configMapName string
 	if nt.MultiRepo {
 		// The value is defined in manifests/templates/reconciler-manager.yaml
-		configMapName = "reconciler-manager"
+		configMapName = reconcilermanager.ManagerName
 	} else {
 		// The value is defined in manifests/templates/git-importer.yaml
 		return "cluster-name"
@@ -547,7 +549,7 @@ func configMapHasClusterName(clusterName string) nomostest.Predicate {
 		if !ok {
 			return nomostest.WrongTypeErr(cm, &corev1.ConfigMap{})
 		}
-		actual := cm.Data["CLUSTER_NAME"]
+		actual := cm.Data[reconcilermanager.ClusterNameKey]
 		if clusterName != actual {
 			return fmt.Errorf("cluster name %q is not equal to the expected %q", actual, clusterName)
 		}

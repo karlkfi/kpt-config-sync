@@ -223,7 +223,7 @@ func TestPreserveLastApplied(t *testing.T) {
 	// "last-declared" and deletes "last-applied".
 	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
 	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
-	nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
+	nt.MustKubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
 
 	annotationKeys := []string{
 		v1.ClusterNameAnnotationKey,

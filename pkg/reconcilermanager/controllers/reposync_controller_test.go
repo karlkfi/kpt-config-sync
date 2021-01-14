@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -81,7 +82,7 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
-	sub.Name = RepoSyncName(namespace)
+	sub.Name = reconcilermanager.RepoSyncName(namespace)
 	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
@@ -128,7 +129,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseService for testing.
 	parseService = func(se *corev1.Service) error {
 		se.Spec = corev1.ServiceSpec{
-			Selector: map[string]string{"app": reconciler},
+			Selector: map[string]string{"app": reconcilermanager.Reconciler},
 			Ports: []corev1.ServicePort{
 				{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")},
 			},
@@ -141,15 +142,15 @@ func TestRepoSyncReconciler(t *testing.T) {
 		de.Spec = appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					reconciler: reconciler,
+					reconcilermanager.Reconciler: reconcilermanager.Reconciler,
 				},
 			},
 			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: reconciler},
-						{Name: gitSync},
+						{Name: reconcilermanager.Reconciler},
+						{Name: reconcilermanager.GitSync},
 					},
 				},
 			},
@@ -169,7 +170,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, gitSync),
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -182,14 +183,14 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconciler),
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		RepoSyncName(reposyncReqNamespace),
+		reconcilermanager.RepoSyncName(reposyncReqNamespace),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
@@ -202,7 +203,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	)
 
 	wantService := service(
-		core.Name(RepoSyncName(rs.Namespace)),
+		core.Name(reconcilermanager.RepoSyncName(rs.Namespace)),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
@@ -211,7 +212,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		repoSyncDeployment(
 			rs,
 			setAnnotations(nsDeploymentAnnotation()),
-			setServiceAccountName(RepoSyncName(rs.Namespace)),
+			setServiceAccountName(reconcilermanager.RepoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -253,7 +254,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, gitSync),
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
@@ -266,7 +267,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconciler),
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
@@ -276,7 +277,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		repoSyncDeployment(
 			rs,
 			setAnnotations(nsDeploymentUpdatedAnnotation()),
-			setServiceAccountName(RepoSyncName(rs.Namespace)),
+			setServiceAccountName(reconcilermanager.RepoSyncName(rs.Namespace)),
 		),
 	}
 
@@ -339,7 +340,7 @@ func namespacedName(name, namespace string) reconcile.Request {
 func repoSyncDeployment(rs *v1alpha1.RepoSync, muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Name(RepoSyncName(rs.Namespace)),
+		core.Name(reconcilermanager.RepoSyncName(rs.Namespace)),
 	)
 	for _, mut := range muts {
 		mut(dep)

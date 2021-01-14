@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,7 +51,7 @@ func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRo
 
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
-	sub.Name = RootSyncReconcilerName
+	sub.Name = reconcilermanager.RootSyncName
 	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
@@ -68,7 +69,7 @@ func configMapWithData(namespace, name string, data map[string]string, opts ...c
 func service(opts ...core.MetaMutator) *corev1.Service {
 	result := fake.ServiceObject(opts...)
 
-	result.Spec.Selector = map[string]string{"app": reconciler}
+	result.Spec.Selector = map[string]string{"app": reconcilermanager.Reconciler}
 	result.Spec.Ports = []corev1.ServicePort{{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")}}
 	return result
 }
@@ -144,7 +145,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseService for testing.
 	parseService = func(se *corev1.Service) error {
 		se.Spec = corev1.ServiceSpec{
-			Selector: map[string]string{"app": reconciler},
+			Selector: map[string]string{"app": reconcilermanager.Reconciler},
 			Ports: []corev1.ServicePort{
 				{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")},
 			},
@@ -157,15 +158,15 @@ func TestRootSyncReconciler(t *testing.T) {
 		de.Spec = appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					reconciler: reconciler,
+					reconcilermanager.Reconciler: reconcilermanager.Reconciler,
 				},
 			},
 			Replicas: &reconcilerDeploymentReplicaCount,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: reconciler},
-						{Name: gitSync},
+						{Name: reconcilermanager.Reconciler},
+						{Name: reconcilermanager.GitSync},
 					},
 				},
 			},
@@ -185,7 +186,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(gitSync),
+			rootSyncResourceName(reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -198,20 +199,20 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(reconciler),
+			rootSyncResourceName(reconcilermanager.Reconciler),
 			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(SourceFormat),
+			rootSyncResourceName(reconcilermanager.SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		RootSyncReconcilerName,
+		reconcilermanager.RootSyncName,
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -222,7 +223,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	)
 
 	wantService := service(
-		core.Name(RootSyncReconcilerName),
+		core.Name(reconcilermanager.RootSyncName),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -230,7 +231,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentAnnotation()),
-			setServiceAccountName(RootSyncReconcilerName),
+			setServiceAccountName(reconcilermanager.RootSyncName),
 		),
 	}
 
@@ -272,7 +273,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(gitSync),
+			rootSyncResourceName(reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
@@ -285,13 +286,13 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(reconciler),
+			rootSyncResourceName(reconcilermanager.Reconciler),
 			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
-			rootSyncResourceName(SourceFormat),
+			rootSyncResourceName(reconcilermanager.SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 		),
@@ -300,7 +301,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments = []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentUpdatedAnnotation()),
-			setServiceAccountName(RootSyncReconcilerName),
+			setServiceAccountName(reconcilermanager.RootSyncName),
 		),
 	}
 
@@ -319,7 +320,7 @@ type depMutator func(*appsv1.Deployment)
 func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Name(RootSyncReconcilerName),
+		core.Name(reconcilermanager.RootSyncName),
 	)
 	for _, mut := range muts {
 		mut(dep)

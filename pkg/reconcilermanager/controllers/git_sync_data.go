@@ -7,6 +7,8 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 )
 
+var gceNodeAskpassURL = fmt.Sprintf("http://localhost:%v/git_askpass", gceNodeAskpassPort)
+
 type options struct {
 	// ref is the git revision being synced.
 	ref string

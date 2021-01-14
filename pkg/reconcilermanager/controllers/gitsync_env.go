@@ -5,6 +5,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	// git-sync container specific environment variables.
+	gitSyncName     = "GIT_SYNC_USERNAME"
+	gitSyncPassword = "GIT_SYNC_PASSWORD"
+)
+
 // gitSyncTokenAuthEnv returns environment variables for git-sync container for 'token' Auth.
 func gitSyncTokenAuthEnv(secretRef string) []corev1.EnvVar {
 	gitSyncUsername := &corev1.EnvVarSource{

@@ -177,13 +177,13 @@ func portForwardGitServer(nt *NT, repos ...string) int {
 	podName := podList.Items[0].Name
 
 	for _, repo := range repos {
-		nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "init", "--bare", "--shared", fmt.Sprintf("/git-server/repos/%s", repo))
 		// We set receive.denyNonFastforwards to allow force pushes for legacy test support (bats).  In the future we may
 		// need this support for testing GKE clusters since we will likely be re-using the cluster in that case.
 		// Alternatively, we could also run "rm -rf /git-server/repos/*" to clear out the state of the git server and
 		// re-initialize.
-		nt.Kubectl("exec", "-n", testGitNamespace, podName, "--",
+		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
 	}
 	return forwardToFreePort(nt.T, nt.kubeconfigPath, podName)

@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -179,7 +180,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 
 	// Verify Namespace Reconciler service no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(fmt.Sprintf("%s-%s", "ns-reconciler", namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
+		return nt.ValidateNotFound(reconcilermanager.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler service present after deletion: %v", err)
@@ -187,7 +188,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 
 	// Verify Namespace Reconciler deployment no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(fmt.Sprintf("%s-%s", "ns-reconciler", namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())
+		return nt.ValidateNotFound(reconcilermanager.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
@@ -217,7 +218,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	)
 
 	// Validate status condition "Reconciling" and Stalled is set to "False" after
-	// the reconciler reployment is successfully created.
+	// the reconciler deployment is successfully created.
 	// RepoSync status conditions "Reconciling" and "Stalled" are derived from
 	// namespace reconciler deployment.
 	// Retry before checking for Reconciling and Stalled conditions since the
@@ -226,7 +227,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// Here we are checking for false condition which requires atleast 2 reconcile
 	// request to be processed by the controller.
 	_, err := nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
@@ -234,13 +235,16 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	}
 
 	// Delete namespace reconciler deployment in bookstore namespace.
+	// The point here is to test that we properly respond to kubectl commands,
+	// so this should NOT be replaced with nt.Delete.
 	nsReconcilerDeployment := "ns-reconciler-bookstore"
-	nt.Kubectl("delete", "deployment", nsReconcilerDeployment, "-n", configsync.ControllerNamespace)
+	nt.MustKubectl("delete", "deployment", nsReconcilerDeployment,
+		"-n", configsync.ControllerNamespace)
 
 	// Verify that the deployment is re-created after deletion by checking the
 	// Reconciling and Stalled condition in RepoSync resource.
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {

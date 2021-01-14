@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers/secret"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +16,12 @@ import (
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
+
+const (
+	// These are used as keys in calls to r.log.Info
+	executedOperation    = "operation"
+	operationSubjectName = "name"
 )
 
 // reconcilerBase provides common data and methods for the RepoSync and RootSync reconcilers
@@ -167,23 +172,6 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, dep *appsv
 	}
 
 	return controllerutil.OperationResultUpdated, nil
-}
-
-func filterVolumes(existing []corev1.Volume, authType string, secretName string) []corev1.Volume {
-	var updatedVolumes []corev1.Volume
-
-	for _, volume := range existing {
-		if volume.Name == gitCredentialVolume {
-			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
-			if secret.SkipForAuth(authType) {
-				continue
-			}
-			volume.Secret.SecretName = secretName
-		}
-		updatedVolumes = append(updatedVolumes, volume)
-	}
-
-	return updatedVolumes
 }
 
 // deploymentStatus return standardized status for Deployment.

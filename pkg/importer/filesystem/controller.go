@@ -31,7 +31,9 @@ import (
 )
 
 const (
-	controllerName = "git-importer"
+	// GitImporterName is the name of the git-importer Deployment.
+	GitImporterName = "git-importer"
+
 	// pollFilesystem is an invalid resource name used to signal that the event
 	// triggering the reconcile is a periodic poll of the filesystem. The reason
 	// it is an invalid name is we want to prevent treating a namespaceconfig
@@ -76,7 +78,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	if err != nil {
 		return errors.Wrap(err, "failure creating reconciler")
 	}
-	c, err := controller.New(controllerName, mgr, controller.Options{
+	c, err := controller.New(GitImporterName, mgr, controller.Options{
 		Reconciler: r,
 	})
 	if err != nil {
@@ -93,13 +95,13 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 
 	// Watch all Nomos CRs that are managed by the importer.
 	if err = c.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, mapToConstant); err != nil {
-		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", controllerName)
+		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", GitImporterName)
 	}
 	if err = c.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, mapToConstant); err != nil {
-		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", controllerName)
+		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", GitImporterName)
 	}
 	if err = c.Watch(&source.Kind{Type: &v1.Sync{}}, mapToConstant); err != nil {
-		return errors.Wrapf(err, "could not watch Syncs in the %q controller", controllerName)
+		return errors.Wrapf(err, "could not watch Syncs in the %q controller", GitImporterName)
 	}
 
 	return watchFileSystem(c, pollPeriod)
@@ -130,7 +132,7 @@ func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
 
 	pollSource := &source.Channel{Source: pollCh}
 	if err := c.Watch(pollSource, &handler.EnqueueRequestForObject{}); err != nil {
-		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", controllerName)
+		return errors.Wrapf(err, "could not watch manager initialization errors in the %q controller", GitImporterName)
 	}
 
 	return nil

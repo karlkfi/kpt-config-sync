@@ -16,11 +16,13 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers"
+	"github.com/google/nomos/pkg/monitor/state"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,7 +55,7 @@ var (
 	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, multiConfigMapsName)
 
 	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
-	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, "ns-reconciler")
+	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconcilermanager.RepoSyncReconcilerPrefix)
 	// RepoSyncFileName specifies the filename containing RepoSync.
 	RepoSyncFileName = "repo-sync.yaml"
 
@@ -71,21 +73,21 @@ var (
 		"configmanagement.gke.io:monitor":          true,
 		"clusterconfigs.configmanagement.gke.io":   true,
 		"cluster-name":                             true,
-		"git-importer":                             true,
-		"git-sync":                                 true,
+		filesystem.GitImporterName:                 true,
+		reconcilermanager.GitSync:                  true,
 		"hierarchyconfigs.configmanagement.gke.io": true,
-		"importer":                                 true,
-		"monitor":                                  true,
+		importer.Name:                              true,
+		state.MonitorName:                          true,
 		"namespaceconfigs.configmanagement.gke.io": true,
 		"repos.configmanagement.gke.io":            true,
-		"source-format":                            true,
+		reconcilermanager.SourceFormat:             true,
 		"syncs.configmanagement.gke.io":            true,
 	}
 	// multiObjects contains the names of all objects that are necessary to
 	// install and run multi-repo Config Sync.
 	multiObjects = map[string]bool{
 		"configsync.gke.io:reconciler-manager": true,
-		"reconciler-manager":                   true,
+		reconcilermanager.ManagerName:          true,
 		"reconciler-manager-cm":                true,
 		"reposyncs.configsync.gke.io":          true,
 		"rootsyncs.configsync.gke.io":          true,
@@ -134,7 +136,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	}
 
 	for _, o := range objs {
-		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == controllers.SourceFormat {
+		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
 			cm := o.(*corev1.ConfigMap)
 			cm.Data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
 		}
@@ -227,12 +229,12 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		nt.T.Fatal(err)
 	}
 
-	nt.T.Log("copying test-only-resources")
+	nt.DebugLog("copying test-only-resources")
 	err = copyDirContents(testResourcesDir, tmpManifestsDir)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	nt.T.Log("copying manifests, not including manifests/templates/")
+	nt.DebugLog("copying manifests, not including manifests/templates/")
 	err = copyDirContents(manifestsDir, tmpManifestsDir)
 	if err != nil {
 		nt.T.Fatal(err)
@@ -348,7 +350,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 		if err != nil {
 			return err
 		}
-		return nt.Validate("git-importer", configmanagement.ControllerNamespace,
+		return nt.Validate(filesystem.GitImporterName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
 	if err != nil {
@@ -374,22 +376,22 @@ func validateMultiRepoServiceAndDeployments(nt *NT) error {
 	}
 
 	took, err := Retry(60*time.Second, func() error {
-		err := nt.Validate("reconciler-manager", configmanagement.ControllerNamespace,
+		err := nt.Validate(reconcilermanager.ManagerName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
 			return err
 		}
-		err = nt.Validate("root-reconciler", configmanagement.ControllerNamespace, &corev1.Service{})
+		err = nt.Validate(reconcilermanager.RootSyncName, configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {
 			return err
 		}
-		return nt.Validate("root-reconciler", configmanagement.ControllerNamespace,
+		return nt.Validate(reconcilermanager.RootSyncName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for reconciler-manager and root-reconciler", took)
+	nt.T.Logf("took %v to wait for %s and %s", reconcilermanager.ManagerName, reconcilermanager.RootSyncName, took)
 	return nil
 }
 
@@ -402,18 +404,19 @@ func setupRepoSync(nt *NT, ns string) {
 }
 
 func waitForRepoReconciler(nt *NT, ns string) error {
+	name := reconcilermanager.RepoSyncName(ns)
 	took, err := Retry(60*time.Second, func() error {
-		err := nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace, &corev1.Service{})
+		err := nt.Validate(name, configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {
 			return err
 		}
-		return nt.Validate(fmt.Sprintf("ns-reconciler-%s", ns), configmanagement.ControllerNamespace,
+		return nt.Validate(name, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for ns-reconciler", took)
+	nt.T.Logf("took %v to wait for %s", took, name)
 
 	return nil
 }
@@ -518,7 +521,7 @@ func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
 		t.Fatalf("parsed Reconciler Manager ConfigMap was not ConfigMap %T %v", obj, obj)
 	}
 
-	cm.Data[controllers.FilesystemPollingPeriod] = filesystemPollingPeriod.String()
+	cm.Data[reconcilermanager.FilesystemPollingPeriod] = filesystemPollingPeriod.String()
 	t.Log("Set filesystem polling period")
 }
 

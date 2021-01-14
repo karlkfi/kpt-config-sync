@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/dirwatcher"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/policycontroller"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/meta"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	clusterName       = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"), "Cluster name to use for Cluster selection")
+	clusterName       = flag.String("cluster-name", os.Getenv(reconcilermanager.ClusterNameKey), "Cluster name to use for Cluster selection")
 	gitDir            = flag.String("git-dir", "/repo/rev", "Absolute path to the git repo")
 	policyDirRelative = flag.String("policy-dir", os.Getenv("POLICY_DIR"), "Relative path of root policy directory in the repo")
 	pollPeriod        = flag.Duration("poll-period", time.Second*5, "Poll period for checking if --git-dir target directory has changed")

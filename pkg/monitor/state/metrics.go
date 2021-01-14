@@ -5,6 +5,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// MonitorName is the name of the monitor Deployment.
+const MonitorName = "monitor"
+
 // Metrics contains the Prometheus metrics for the monitor state.
 var metrics = struct {
 	Configs     *prometheus.GaugeVec
@@ -17,7 +20,7 @@ var metrics = struct {
 		prometheus.GaugeOpts{
 			Help:      "Current number of configs (cluster and namespace) grouped by their sync status",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "monitor",
+			Subsystem: MonitorName,
 			Name:      "configs",
 		},
 		// status: synced, stale, error
@@ -27,7 +30,7 @@ var metrics = struct {
 		prometheus.GaugeOpts{
 			Help:      "Current number of errors in the config repo, grouped by the component where they occurred",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "monitor",
+			Subsystem: MonitorName,
 			Name:      "errors",
 		},
 		// component: source, importer, syncer
@@ -37,7 +40,7 @@ var metrics = struct {
 		prometheus.GaugeOpts{
 			Help:      "Timestamp of the most recent import",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "monitor",
+			Subsystem: MonitorName,
 			Name:      "last_import_timestamp",
 		},
 	),
@@ -45,7 +48,7 @@ var metrics = struct {
 		prometheus.GaugeOpts{
 			Help:      "Timestamp of the most recent sync",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "monitor",
+			Subsystem: MonitorName,
 			Name:      "last_sync_timestamp",
 		},
 	),
@@ -53,7 +56,7 @@ var metrics = struct {
 		prometheus.HistogramOpts{
 			Help:      "Distribution of the latencies between importing and syncing each config",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "monitor",
+			Subsystem: MonitorName,
 			Name:      "sync_latency_seconds",
 			Buckets:   prometheus.DefBuckets,
 		},

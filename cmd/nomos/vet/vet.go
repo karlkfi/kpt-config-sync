@@ -6,11 +6,11 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/spf13/cobra"
 )
 
 var (
-	sourceFormatFlag  = "source-format"
 	sourceFormatValue string
 
 	namespaceFlag  = "namespace"
@@ -21,7 +21,7 @@ func init() {
 	flags.AddClusters(Cmd)
 	flags.AddPath(Cmd)
 	flags.AddSkipAPIServerCheck(Cmd)
-	Cmd.Flags().StringVar(&sourceFormatValue, sourceFormatFlag, "",
+	Cmd.Flags().StringVar(&sourceFormatValue, reconcilermanager.SourceFormat, "",
 		fmt.Sprintf("If %q or unset, validate as a %s repository. If %q, validate as an unstructured repository.",
 			string(filesystem.SourceFormatHierarchy), configmanagement.ProductName,
 			string(filesystem.SourceFormatUnstructured)))

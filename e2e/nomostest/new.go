@@ -160,6 +160,11 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// create the Namespaces + Secrets before anything else.
 	nt.gitPrivateKeyPath = generateSSHKeys(nt)
 
+	t.Cleanup(func() {
+		if t.Failed() {
+			nt.testLogs()
+		}
+	})
 	waitForGit := installGitServer(nt)
 	waitForConfigSync := installConfigSync(nt, opts.Nomos)
 

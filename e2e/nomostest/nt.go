@@ -9,11 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -100,8 +104,8 @@ func (nt *NT) KubeconfigPath() string {
 	return nt.kubeconfigPath
 }
 
-func fmtObj(name, namespace string, obj runtime.Object) string {
-	return fmt.Sprintf("%s/%s %T", namespace, name, obj)
+func fmtObj(obj core.Object) string {
+	return fmt.Sprintf("%s/%s %T", obj.GetNamespace(), obj.GetName(), obj)
 }
 
 // Get is identical to Get defined for client.Client, except:
@@ -131,7 +135,7 @@ func (nt *NT) List(obj runtime.Object, opts ...client.ListOption) error {
 // Create is identical to Create defined for client.Client, but without requiring Context.
 func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
-	nt.T.Logf("creating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
+	nt.DebugLogf("creating %s", fmtObj(obj))
 	AddTestLabel(obj)
 	return nt.Client.Create(nt.Context, obj, opts...)
 }
@@ -139,28 +143,28 @@ func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
 // Update is identical to Update defined for client.Client, but without requiring Context.
 func (nt *NT) Update(obj core.Object, opts ...client.UpdateOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
-	nt.T.Logf("updating %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
+	nt.DebugLogf("updating %s", fmtObj(obj))
 	return nt.Client.Update(nt.Context, obj, opts...)
 }
 
 // Delete is identical to Delete defined for client.Client, but without requiring Context.
 func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
-	nt.T.Logf("deleting %s", fmtObj(obj.GetName(), obj.GetNamespace(), obj))
+	nt.DebugLogf("deleting %s", fmtObj(obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
 }
 
 // DeleteAllOf is identical to DeleteAllOf defined for client.Client, but without requiring Context.
 func (nt *NT) DeleteAllOf(obj core.Object, opts ...client.DeleteAllOfOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
-	nt.T.Logf("deleting all of %T", obj)
+	nt.DebugLogf("deleting all of %T", obj)
 	return nt.Client.DeleteAllOf(nt.Context, obj, opts...)
 }
 
 // MergePatch uses the object to construct a merge patch for the fields provided.
 func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
-	nt.T.Logf("Applying patch %s", patch)
+	nt.DebugLogf("Applying patch %s", patch)
 	AddTestLabel(obj)
 	return nt.Client.Patch(nt.Context, obj, client.RawPatch(types.MergePatchType, []byte(patch)), opts...)
 }
@@ -327,20 +331,88 @@ func (nt *NT) RenewClient() {
 }
 
 // Kubectl is a convenience method for calling kubectl against the
-// currently-connected cluster.
+// currently-connected cluster. Returns STDOUT, and an error if kubectl exited
+// abnormally.
 //
-// Fails the test if the kubectl command fails - call kubectl directly if you
-// want specialized behavior.
-func (nt *NT) Kubectl(args ...string) {
+// If you want to fail the test immediately on failure, use MustKubectl.
+func (nt *NT) Kubectl(args ...string) ([]byte, error) {
 	nt.T.Helper()
 
 	prefix := []string{"--kubeconfig", nt.kubeconfigPath}
 	args = append(prefix, args...)
-	out, err := exec.Command("kubectl", args...).CombinedOutput()
+	nt.DebugLogf("kubectl %s", strings.Join(args, " "))
+	return exec.Command("kubectl", args...).CombinedOutput()
+}
+
+// MustKubectl fails the test immediately if the kubectl command fails. On
+// success, returns STDOUT.
+func (nt *NT) MustKubectl(args ...string) []byte {
+	out, err := nt.Kubectl(args...)
 	if err != nil {
 		nt.T.Log(append([]string{"kubectl"}, args...))
 		nt.T.Log(string(out))
 		nt.T.Fatal(err)
+	}
+	return out
+}
+
+// DebugLog is like nt.T.Log, but only prints the message if --debug is passed.
+// Use for fine-grained information that is unlikely to cause failures in CI.
+func (nt *NT) DebugLog(args ...interface{}) {
+	if *e2e.Debug {
+		nt.T.Log(args...)
+	}
+}
+
+// DebugLogf is like nt.T.Logf, but only prints the message if --debug is passed.
+// Use for fine-grained information that is unlikely to cause failures in CI.
+func (nt *NT) DebugLogf(format string, args ...interface{}) {
+	if *e2e.Debug {
+		nt.T.Logf(format, args...)
+	}
+}
+
+// PodLogs prints the logs from the specified deployment.
+// If there is an error getting the logs for the specified deployment, prints
+// the error.
+func (nt *NT) PodLogs(namespace, deployment, container string) {
+	args := []string{"logs", fmt.Sprintf("deployment/%s", deployment), "-n", namespace}
+	if container != "" {
+		args = append(args, container)
+	}
+	out, err := nt.Kubectl(args...)
+	// Print a standardized header before each printed log to make ctrl+F-ing the
+	// log you want easier.
+	nt.T.Logf(`
+%s/%s %s
+%s`, namespace, deployment, container, string(out))
+	if err != nil {
+		nt.T.Log("error getting logs:", err)
+	}
+}
+
+// testLogs prints all available pod logs for the test.
+func (nt *NT) testLogs() {
+	// These pods/containers are noisy and rarely contain useful information:
+	// - git-sync
+	// - fs-watcher
+	// - monitor
+	// Don't merge with any of these uncommented, but feel free to uncomment
+	// temporarily to see how presubmit responds.
+	if nt.MultiRepo {
+		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, "")
+		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.Reconciler)
+		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync)
+		for ns := range nt.NamespaceRepos {
+			nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns),
+				reconcilermanager.Reconciler)
+			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns), reconcilermanager.GitSync)
+		}
+	} else {
+		nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, importer.Name)
+		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, "fs-watcher")
+		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, reconcilermanager.GitSync)
+		//nt.PodLogs(configmanagement.ControllerNamespace, state.MonitorName, "")
 	}
 }
 
@@ -352,7 +424,7 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 
 	// We have to set validate=false because the default Gatekeeper YAMLs can't be
 	// applied without it, and we aren't going to define our own compliant version.
-	nt.Kubectl("apply", "-f", absPath, "--validate=false")
+	nt.MustKubectl("apply", "-f", absPath, "--validate=false")
 	err := waitForCRDs(nt, []string{crd})
 	if err != nil {
 		nt.RenewClient()

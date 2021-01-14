@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/glogr"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	clusterName = flag.String("cluster-name", os.Getenv("CLUSTER_NAME"),
+	clusterName = flag.String("cluster-name", os.Getenv(reconcilermanager.ClusterNameKey),
 		"Cluster name to use for Cluster selection")
 
 	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", pollingPeriod(),
@@ -95,12 +96,12 @@ func main() {
 }
 
 func pollingPeriod() time.Duration {
-	val, present := os.LookupEnv(controllers.FilesystemPollingPeriod)
+	val, present := os.LookupEnv(reconcilermanager.FilesystemPollingPeriod)
 	if present {
 		pollingFreq, err := time.ParseDuration(val)
 		if err != nil {
 			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
-				"got value: %v, want err: nil", controllers.FilesystemPollingPeriod, pollingFreq))
+				"got value: %v, want err: nil", reconcilermanager.FilesystemPollingPeriod, pollingFreq))
 		}
 		return pollingFreq
 	}

@@ -5,6 +5,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Name is the name of the importer Deployment.
+const Name = "importer"
+
 // Metrics contains the Prometheus metrics for the Importer.
 var Metrics = struct {
 	CycleDuration    *prometheus.HistogramVec
@@ -15,7 +18,7 @@ var Metrics = struct {
 		prometheus.HistogramOpts{
 			Help:      "Distribution of durations of cycles that the importer has attempted to complete",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "importer",
+			Subsystem: Name,
 			Name:      "cycle_duration_seconds",
 		},
 		// status: success, error
@@ -25,7 +28,7 @@ var Metrics = struct {
 		prometheus.GaugeOpts{
 			Help:      "Number of namespace configs present in current state",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "importer",
+			Subsystem: Name,
 			Name:      "namespace_configs",
 		},
 	),
@@ -33,7 +36,7 @@ var Metrics = struct {
 		prometheus.CounterOpts{
 			Help:      "Total number of safety violations that the importer has encountered.",
 			Namespace: configmanagement.MetricsNamespace,
-			Subsystem: "importer",
+			Subsystem: Name,
 			Name:      "violations_total",
 		}),
 }

@@ -72,9 +72,9 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	}
 
 	// Test adding error annotations.
-	nt.Kubectl("annotate", "clusterrole", crName,
+	nt.MustKubectl("annotate", "clusterrole", crName,
 		`configmanagement.gke.io/errors=["CrashLoopBackOff"]`)
-	nt.Kubectl("annotate", "configmap", cmName, "-n", ns,
+	nt.MustKubectl("annotate", "configmap", cmName, "-n", ns,
 		`configmanagement.gke.io/errors=["CrashLoopBackOff"]`)
 
 	// Ensure error conditions are added.
@@ -103,9 +103,9 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	}
 
 	// Test removing error annotations.
-	nt.Kubectl("annotate", "clusterrole", crName,
+	nt.MustKubectl("annotate", "clusterrole", crName,
 		`configmanagement.gke.io/errors-`)
-	nt.Kubectl("annotate", "configmap", cmName, "-n", ns,
+	nt.MustKubectl("annotate", "configmap", cmName, "-n", ns,
 		`configmanagement.gke.io/errors-`)
 
 	// Ensure error conditions are removed.
@@ -133,9 +133,9 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	}
 
 	// Test adding reconciling annotations
-	nt.Kubectl("annotate", "clusterrole", crName,
+	nt.MustKubectl("annotate", "clusterrole", crName,
 		`configmanagement.gke.io/reconciling=["ConfigMap is incomplete", "ConfigMap is not ready"]`)
-	nt.Kubectl("annotate", "configmap", cmName, "-n", ns,
+	nt.MustKubectl("annotate", "configmap", cmName, "-n", ns,
 		`configmanagement.gke.io/reconciling=["ClusterRole needs... something..."]`)
 
 	// Ensure reconciling conditions are added.
@@ -164,9 +164,9 @@ func TestResourceConditionAnnotations(t *testing.T) {
 	}
 
 	// Test removing reconciling annotations.
-	nt.Kubectl("annotate", "clusterrole", crName,
+	nt.MustKubectl("annotate", "clusterrole", crName,
 		`configmanagement.gke.io/reconciling-`)
-	nt.Kubectl("annotate", "configmap", cmName, "-n", ns,
+	nt.MustKubectl("annotate", "configmap", cmName, "-n", ns,
 		`configmanagement.gke.io/reconciling-`)
 
 	// Ensure reconciling conditions are removed.

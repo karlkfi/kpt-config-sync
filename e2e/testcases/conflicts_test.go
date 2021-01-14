@@ -45,7 +45,7 @@ metadata:
 	}
 
 	// Add a new label via kubectl.
-	nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml"))
+	nt.MustKubectl("apply", "-f", filepath.Join(nt.TmpDir, "conflict.yaml"))
 
 	_, err = nomostest.Retry(time.Second*5, func() error {
 		// Test that the Namespace "foo" exists with the manually added label.

@@ -7,6 +7,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
+	gceNodeAskpassImageTag    = "20200616014202"
+	gceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
+	gceNodeAskpassPort        = 9102
+)
+
 func gceNodeAskPassSidecar() corev1.Container {
 	return corev1.Container{
 		Name:  gceNodeAskpassSidecarName,

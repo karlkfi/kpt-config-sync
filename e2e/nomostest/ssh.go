@@ -48,7 +48,7 @@ func createSecret(nt *NT, namespace, name, keyPath string) {
 	// kubectl create secret generic 'name' \
 	//   -n='namespace' \
 	//   --from-file='keyPath'
-	nt.Kubectl("create", "secret", "generic", name,
+	nt.MustKubectl("create", "secret", "generic", name,
 		"-n", namespace,
 		"--from-file", keyPath)
 }

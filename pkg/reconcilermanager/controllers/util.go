@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
@@ -16,13 +17,13 @@ import (
 // reconcilerData returns configmap data for namespace reconciler.
 func reconcilerData(clusterName string, reconcilerScope declared.Scope, gitConfig *v1alpha1.Git, pollPeriod string) map[string]string {
 	result := make(map[string]string)
-	result["CLUSTER_NAME"] = clusterName
+	result[reconcilermanager.ClusterNameKey] = clusterName
 	result["SCOPE"] = string(reconcilerScope)
 	result["POLICY_DIR"] = gitConfig.Dir
 	result["GIT_REPO"] = gitConfig.Repo
 
 	// Add Filesystem Polling Period.
-	result[FilesystemPollingPeriod] = pollPeriod
+	result[reconcilermanager.FilesystemPollingPeriod] = pollPeriod
 
 	if gitConfig.Branch != "" {
 		result["GIT_BRANCH"] = gitConfig.Branch
