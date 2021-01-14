@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
-	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/cli-utils/pkg/util/factory"
@@ -37,7 +36,6 @@ type kptApplier interface {
 type Applier struct {
 	// inventory policy for the applier.
 	policy inventory.InventoryPolicy
-
 	// inventory is the InventoryInfo for current Applier.
 	inventory inventory.InventoryInfo
 	// kptApplierFunc is the function to create a kpt applier.
@@ -101,6 +99,9 @@ func NewRootApplier(c client.Client) *Applier {
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.ID]core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	var errs status.MultiError
+	// TODO(b/177469646): The applier needs to be re-initialized
+	// to capture the new applied CRDs. We can optimize this by
+	// avoiding unnecessary re-initialization.
 	applier := a.kptApplierFunc()
 	err := applier.Initialize()
 	if err != nil {
@@ -289,22 +290,13 @@ func newKptApplier() kptApplier {
 	return applier
 }
 
-// TODO(jingfangliu): Replace this function by a utility function in kpt.
+// newInventoryUnstructured creates an inventory object as an unstructured.
 func newInventoryUnstructured(namespace, name string) *unstructured.Unstructured {
-	u := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": live.ResourceGroupGVK.Group + "/" + live.ResourceGroupGVK.Version,
-			"kind":       live.ResourceGroupGVK.Kind,
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					common.InventoryLabel: namespace + "_" + name,
-					v1.ManagedByKey:       v1.ManagedByValue,
-				},
-			},
-		},
-	}
+	id := namespace + "_" + name
+	u := live.ResourceGroupUnstructured(name, namespace, id)
+	labels := u.GetLabels()
+	labels[v1.ManagedByKey] = v1.ManagedByValue
+	u.SetLabels(labels)
 	return u
 }
 

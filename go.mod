@@ -12,7 +12,7 @@ replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.2.0
-	github.com/GoogleContainerTools/kpt v0.37.1-0.20201228163110-655b215629ac
+	github.com/GoogleContainerTools/kpt v0.37.1-0.20210113183418-e3cee45fbf49
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.3.0
@@ -35,7 +35,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
 	k8s.io/kubectl v0.19.4
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
-	sigs.k8s.io/cli-utils v0.22.3
+	sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384
 	sigs.k8s.io/controller-runtime v0.6.3
 	sigs.k8s.io/kind v0.9.0
 	sigs.k8s.io/yaml v1.2.0
