@@ -20,6 +20,9 @@ type opts struct {
 	// client knows how to read objects from a Kubernetes cluster and update status.
 	client client.Client
 
+	// reconcilerName is the name of the reconciler resources, such as service account, service, deployment and etc.
+	reconcilerName string
+
 	// pollingFrequency is how often to re-import configuration from the filesystem.
 	//
 	// For tests, use zero as it will poll continuously.

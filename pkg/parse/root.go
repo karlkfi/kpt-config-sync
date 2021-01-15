@@ -15,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
@@ -28,9 +27,10 @@ import (
 )
 
 // NewRootRunner creates a new runnable parser for parsing a Root repository.
-func NewRootRunner(clusterName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
+func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Runnable, error) {
 	opts := opts{
 		clusterName:      clusterName,
+		reconcilerName:   reconcilerName,
 		client:           c,
 		pollingFrequency: pollingFrequency,
 		files:            files{FileSource: fs},
@@ -94,7 +94,7 @@ func (p *root) Run(ctx context.Context) {
 
 // Read implements Runnable.
 func (p *root) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState(reconcilermanager.RootSyncName)
+	state, err := p.readGitState(p.reconcilerName)
 	if err != nil {
 		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
 			return nil, status.APIServerError(err2, "setting source status")

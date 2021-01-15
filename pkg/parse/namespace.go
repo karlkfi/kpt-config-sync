@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/vet"
 
 	"github.com/golang/glog"
@@ -24,11 +23,12 @@ import (
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(clusterName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
+func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app applier.Interface, rem remediator.Interface) Runnable {
 	return &namespace{
 		opts: opts{
 			clusterName:      clusterName,
 			client:           c,
+			reconcilerName:   reconcilerName,
 			pollingFrequency: pollingFrequency,
 			files:            files{FileSource: fs},
 			parser:           NewNamespace(fileReader, dc, scope),
@@ -83,7 +83,7 @@ func (p *namespace) Run(ctx context.Context) {
 
 // Read implements Runnable.
 func (p *namespace) Read(ctx context.Context) (*gitState, status.MultiError) {
-	state, err := p.readGitState(reconcilermanager.RepoSyncName(string(p.scope)))
+	state, err := p.readGitState(p.reconcilerName)
 	if err != nil {
 		// We don't want to bail out immediately as we want to surface this error to
 		// the user in the RepoSync's status field.

@@ -22,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/monitor/state"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,7 +56,7 @@ var (
 	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, multiConfigMapsName)
 
 	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
-	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconcilermanager.RepoSyncReconcilerPrefix)
+	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
 	// RepoSyncFileName specifies the filename containing RepoSync.
 	RepoSyncFileName = "repo-sync.yaml"
 
@@ -381,17 +382,17 @@ func validateMultiRepoServiceAndDeployments(nt *NT) error {
 		if err != nil {
 			return err
 		}
-		err = nt.Validate(reconcilermanager.RootSyncName, configmanagement.ControllerNamespace, &corev1.Service{})
+		err = nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {
 			return err
 		}
-		return nt.Validate(reconcilermanager.RootSyncName, configmanagement.ControllerNamespace,
+		return nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for %s and %s", reconcilermanager.ManagerName, reconcilermanager.RootSyncName, took)
+	nt.T.Logf("took %v to wait for %s and %s", reconcilermanager.ManagerName, reconciler.RootSyncName, took)
 	return nil
 }
 
@@ -404,7 +405,7 @@ func setupRepoSync(nt *NT, ns string) {
 }
 
 func waitForRepoReconciler(nt *NT, ns string) error {
-	name := reconcilermanager.RepoSyncName(ns)
+	name := reconciler.RepoSyncName(ns)
 	took, err := Retry(60*time.Second, func() error {
 		err := nt.Validate(name, configmanagement.ControllerNamespace, &corev1.Service{})
 		if err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -401,10 +402,10 @@ func (nt *NT) testLogs() {
 	// temporarily to see how presubmit responds.
 	if nt.MultiRepo {
 		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, "")
-		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.Reconciler)
+		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler)
 		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync)
 		for ns := range nt.NamespaceRepos {
-			nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns),
+			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RepoSyncName(ns),
 				reconcilermanager.Reconciler)
 			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns), reconcilermanager.GitSync)
 		}
@@ -462,7 +463,7 @@ func validateErrorClear(errs []v1alpha1.ConfigSyncError) error {
 
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceError(code, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync error code %s and message snippet %s", code, message),
+	Wait(nt.T, fmt.Sprintf("RootSync source error code %s and message snippet %s", code, message),
 		func() error {
 			rs := fake.RootSyncObject()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -477,7 +478,7 @@ func (nt *NT) WaitForRootSyncSourceError(code, message string, opts ...WaitOptio
 
 // WaitForRootSyncSourceErrorClear waits until the given error code disappears from the RootSync resource
 func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
-	Wait(nt.T, "RootSync errors cleared",
+	Wait(nt.T, "RootSync source errors cleared",
 		func() error {
 			rs := fake.RootSyncObject()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -492,7 +493,7 @@ func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
 
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
 func (nt *NT) WaitForRepoSyncSourceError(namespace, code, message string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RepoSync error code %s and message snippet %s", code, message),
+	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s and message snippet %s", code, message),
 		func() error {
 			rs := fake.RepoSyncObject(core.Namespace(namespace))
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -507,7 +508,7 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code, message string, opts .
 
 // WaitForRepoSyncSourceErrorClear waits until the given error code disappears from the RepoSync resource
 func (nt *NT) WaitForRepoSyncSourceErrorClear(namespace string, opts ...WaitOption) {
-	Wait(nt.T, "RepoSync errors cleared",
+	Wait(nt.T, "RepoSync source errors cleared",
 		func() error {
 			rs := fake.RepoSyncObject(core.Namespace(namespace))
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -551,7 +552,7 @@ func (nt *NT) WaitForRepoSourceError(code, message string, opts ...WaitOption) {
 
 // WaitForRepoSourceErrorClear waits until the given error code disappears from the Repo resource
 func (nt *NT) WaitForRepoSourceErrorClear(opts ...WaitOption) {
-	Wait(nt.T, "Repo errors cleared",
+	Wait(nt.T, "Repo source errors cleared",
 		func() error {
 			repo := &v1.Repo{}
 			err := nt.Get("repo", "", repo)

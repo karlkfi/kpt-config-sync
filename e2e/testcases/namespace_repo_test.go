@@ -11,7 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -180,7 +180,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 
 	// Verify Namespace Reconciler service no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconcilermanager.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
+		return nt.ValidateNotFound(reconciler.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler service present after deletion: %v", err)
@@ -188,7 +188,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 
 	// Verify Namespace Reconciler deployment no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconcilermanager.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())
+		return nt.ValidateNotFound(reconciler.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)

@@ -7,7 +7,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -115,7 +115,7 @@ func update(ctx context.Context, existingsecret *corev1.Secret, namespaceSecret 
 // NamespaceReconcilerSecretName return name of the Namespace reconciler secret.
 // e.g. ns-reconciler-<namespace>-<name>
 func NamespaceReconcilerSecretName(namespace, name string) string {
-	return fmt.Sprintf("%s-%s", reconcilermanager.RepoSyncName(namespace), name)
+	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), name)
 }
 
 // SkipForAuth returns true if the passed auth is either 'none' or 'gcenode'.

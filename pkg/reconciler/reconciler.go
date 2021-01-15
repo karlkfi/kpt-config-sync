@@ -145,13 +145,13 @@ func Run(ctx context.Context, opts Options) {
 		GitRev:    opts.GitRev,
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
-		parser, err = parse.NewRootRunner(opts.ClusterName, opts.SourceFormat, &reader.File{}, cl,
+		parser, err = parse.NewRootRunner(opts.ClusterName, RootSyncName, opts.SourceFormat, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser = parse.NewNamespaceRunner(opts.ClusterName, opts.ReconcilerScope, &reader.File{}, cl,
+		parser = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 

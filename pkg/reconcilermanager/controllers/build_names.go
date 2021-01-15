@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,13 +13,13 @@ import (
 
 // repoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
 func repoSyncResourceName(namespace, resourceName string) string {
-	return fmt.Sprintf("%s-%s", reconcilermanager.RepoSyncName(namespace), resourceName)
+	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), resourceName)
 }
 
 // parseRepoSyncReconciler parses namespacreconciler deployment name ns-reconciler-<namespace>
 // and returns namespace.
 func parseRepoSyncReconciler(name string, obj runtime.Object) string {
-	prefix := reconcilermanager.RepoSyncReconcilerPrefix + "-"
+	prefix := reconciler.RepoSyncPrefix + "-"
 	var ns string
 	if !strings.HasPrefix(name, prefix) {
 		return ""
@@ -52,17 +53,17 @@ func trimConfigMapSuffix(name string, opts ...string) string {
 
 // rootSyncResourceName returns name in the format root-reconciler-<resourcename>.
 func rootSyncResourceName(resourceName string) string {
-	return fmt.Sprintf("%s-%s", reconcilermanager.RootSyncName, resourceName)
+	return fmt.Sprintf("%s-%s", reconciler.RootSyncName, resourceName)
 }
 
 // repoSyncPermissionsName returns namespace reconciler permissions name.
 // e.g. configsync.gke.io:ns-reconciler
 func repoSyncPermissionsName() string {
-	return fmt.Sprintf("%s:%s", configsync.GroupName, reconcilermanager.RepoSyncReconcilerPrefix)
+	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
 }
 
 // rootSyncPermissionsName returns root reconciler permissions name.
 // e.g. configsync.gke.io:root-reconciler
 func rootSyncPermissionsName() string {
-	return fmt.Sprintf("%s:%s", configsync.GroupName, reconcilermanager.RootSyncName)
+	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RootSyncName)
 }

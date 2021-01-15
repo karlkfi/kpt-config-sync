@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -51,7 +52,7 @@ func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRo
 
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
-	sub.Name = reconcilermanager.RootSyncName
+	sub.Name = reconciler.RootSyncName
 	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
@@ -212,7 +213,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
-		reconcilermanager.RootSyncName,
+		reconciler.RootSyncName,
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -223,7 +224,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	)
 
 	wantService := service(
-		core.Name(reconcilermanager.RootSyncName),
+		core.Name(reconciler.RootSyncName),
 		core.Namespace(v1.NSConfigManagementSystem),
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
@@ -231,7 +232,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentAnnotation()),
-			setServiceAccountName(reconcilermanager.RootSyncName),
+			setServiceAccountName(reconciler.RootSyncName),
 		),
 	}
 
@@ -301,7 +302,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	wantDeployments = []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentUpdatedAnnotation()),
-			setServiceAccountName(reconcilermanager.RootSyncName),
+			setServiceAccountName(reconciler.RootSyncName),
 		),
 	}
 
@@ -320,7 +321,7 @@ type depMutator func(*appsv1.Deployment)
 func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	dep := fake.DeploymentObject(
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Name(reconcilermanager.RootSyncName),
+		core.Name(reconciler.RootSyncName),
 	)
 	for _, mut := range muts {
 		mut(dep)

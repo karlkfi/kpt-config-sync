@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	"github.com/google/nomos/pkg/reposync"
@@ -115,7 +116,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconcilermanager.RepoSyncName(rs.Namespace), owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace), owRefs); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -133,7 +134,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	}
 
 	// Upsert Namespace reconciler service.
-	if err := r.upsertService(ctx, reconcilermanager.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, owRefs); err != nil {
+	if err := r.upsertService(ctx, reconciler.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service")
 		reposync.SetStalled(&rs, "Service", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -143,7 +144,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.
-	op, err := r.upsertDeployment(ctx, reconcilermanager.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, reconciler.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
@@ -155,7 +156,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		// check the reconciler deployment conditions.
 		result, err := r.deploymentStatus(ctx, client.ObjectKey{
 			Namespace: v1.NSConfigManagementSystem,
-			Name:      reconcilermanager.RepoSyncName(rs.Namespace),
+			Name:      reconciler.RepoSyncName(rs.Namespace),
 		})
 		if err != nil {
 			log.Error(err, "Failed to check reconciler deployment conditions")
@@ -188,7 +189,7 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		}
 	} else {
 		r.log.Info("Deployment successfully reconciled", executedOperation, op)
-		rs.Status.Reconciler = reconcilermanager.RepoSyncName(rs.Namespace)
+		rs.Status.Reconciler = reconciler.RepoSyncName(rs.Namespace)
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(&rs, "Deployment", msg)
 	}
@@ -278,7 +279,7 @@ func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
 	rb.RoleRef = rolereference(repoSyncPermissionsName(), "ClusterRole")
 
 	var subjects []rbacv1.Subject
-	subjects = append(subjects, subject(reconcilermanager.RepoSyncName(rs.Namespace),
+	subjects = append(subjects, subject(reconciler.RepoSyncName(rs.Namespace),
 		configsync.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
@@ -309,11 +310,11 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 		// Add label used by service
-		core.SetLabel(&d.Spec.Template, reconcilermanager.Reconciler, reconcilermanager.RepoSyncName(rs.Namespace))
-		d.Spec.Selector.MatchLabels[reconcilermanager.Reconciler] = reconcilermanager.RepoSyncName(rs.Namespace)
+		core.SetLabel(&d.Spec.Template, reconcilermanager.Reconciler, reconciler.RepoSyncName(rs.Namespace))
+		d.Spec.Selector.MatchLabels[reconcilermanager.Reconciler] = reconciler.RepoSyncName(rs.Namespace)
 		templateSpec := &d.Spec.Template.Spec
 		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
-		templateSpec.ServiceAccountName = reconcilermanager.RepoSyncName(rs.Namespace)
+		templateSpec.ServiceAccountName = reconciler.RepoSyncName(rs.Namespace)
 		// Mutate secret.secretname to secret reference specified in RepoSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
 		// authenticate with the git repository using the authorization method specified

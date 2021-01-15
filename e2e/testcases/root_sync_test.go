@@ -10,7 +10,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,7 +39,7 @@ func TestDeleteRootSync(t *testing.T) {
 
 	// Verify Root Reconciler deployment no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconcilermanager.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
+		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
 		t.Errorf("Reconciler deployment present after deletion: %v", err)
@@ -47,7 +47,7 @@ func TestDeleteRootSync(t *testing.T) {
 
 	// Verify Root Reconciler service no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconcilermanager.RootSyncName, v1.NSConfigManagementSystem, fake.ServiceObject())
+		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.ServiceObject())
 	})
 	if err != nil {
 		t.Errorf("Reconciler service present after deletion: %v", err)

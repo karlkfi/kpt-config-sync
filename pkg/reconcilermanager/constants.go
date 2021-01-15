@@ -1,12 +1,6 @@
 package reconcilermanager
 
-import "fmt"
-
 const (
-	// RepoSyncReconcilerPrefix is the prefix used for all Namespace reconcilers.
-	RepoSyncReconcilerPrefix = "ns-reconciler"
-	// RootSyncName is the name of the Root repository reconciler.
-	RootSyncName = "root-reconciler"
 	// ManagerName is the name of the controller which creates reconcilers.
 	ManagerName = "reconciler-manager"
 )
@@ -34,8 +28,3 @@ const (
 	// for git updates.
 	FilesystemPollingPeriod = "FILESYSTEM_POLLING_PERIOD"
 )
-
-// RepoSyncName returns name in the format ns-reconciler-<namespace>.
-func RepoSyncName(namespace string) string {
-	return fmt.Sprintf("%s-%s", RepoSyncReconcilerPrefix, namespace)
-}
