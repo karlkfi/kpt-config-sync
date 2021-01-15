@@ -17,12 +17,6 @@ type MultiError interface {
 	Errors() []Error
 }
 
-// HasErrors returns true if the passed MultiError exists and contains at least
-// one error.
-func HasErrors(errs MultiError) bool {
-	return errs != nil && len(errs.Errors()) > 0
-}
-
 // Append adds one or more errors to an existing MultiError.
 // If m, err, and errs are nil, returns nil.
 //
@@ -115,7 +109,7 @@ func (m *multiError) Error() string {
 
 // Errors returns a list of the contained errors
 func (m *multiError) Errors() []Error {
-	if m == nil {
+	if m == nil || len(m.errs) == 0 {
 		return nil
 	}
 	return m.errs

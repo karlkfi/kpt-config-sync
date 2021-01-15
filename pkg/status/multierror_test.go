@@ -125,3 +125,21 @@ func TestFormatError(t *testing.T) {
 		})
 	}
 }
+
+func TestErrors(t *testing.T) {
+	var nilMultiError multiError
+	for _, tc := range []struct {
+		name   string
+		errors multiError
+	}{
+		{"a nil multiError has no errors", nilMultiError},
+		{"an empty multiError has no errors", multiError{errs: []Error{}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := tc.errors.Errors()
+			if errs != nil {
+				t.Errorf("multiError.Errors() = %v, want nil", errs)
+			}
+		})
+	}
+}

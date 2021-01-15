@@ -172,7 +172,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	if !status.HasErrors(errs) {
+	if errs == nil {
 		// There were no errors getting the git state.
 		hasErrs := len(rs.Status.Source.Errors) > 0
 		if rs.Status.Source.Commit == state.commit && !hasErrs {
@@ -203,7 +203,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs statu
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
+	hasErrs := errs != nil || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
 		return nil
 	}

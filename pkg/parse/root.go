@@ -193,7 +193,7 @@ func (p *root) setSourceStatus(ctx context.Context, state gitState, errs status.
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
-	if !status.HasErrors(errs) {
+	if errs == nil {
 		// There were no errors getting the git state.
 		hasErrs := len(rs.Status.Source.Errors) > 0
 		if rs.Status.Source.Commit == state.commit && !hasErrs {
@@ -221,7 +221,7 @@ func (p *root) setSyncStatus(ctx context.Context, commit string, errs status.Mul
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
-	hasErrs := status.HasErrors(errs) || len(rs.Status.Sync.Errors) > 0
+	hasErrs := errs != nil || len(rs.Status.Sync.Errors) > 0
 	if rs.Status.Sync.Commit == commit && !hasErrs {
 		return nil
 	}
