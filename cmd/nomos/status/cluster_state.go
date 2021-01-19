@@ -75,7 +75,7 @@ func gitString(git v1alpha1.Git) string {
 		gitStr = git.Repo
 	}
 
-	if git.Revision != "" {
+	if git.Revision != "" && git.Revision != "HEAD" {
 		gitStr = fmt.Sprintf("%s@%s", gitStr, git.Revision)
 	} else if git.Branch != "" {
 		gitStr = fmt.Sprintf("%s@%s", gitStr, git.Branch)

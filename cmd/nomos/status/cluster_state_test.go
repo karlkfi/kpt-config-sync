@@ -69,6 +69,33 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"  bookstore\tgit@github.com:tester/sample@v1\t\n  SYNCED\tabc123\t\n",
 		},
 		{
+			"optional default git revision HEAD specified",
+			&repoState{
+				scope: "bookstore",
+				git: v1alpha1.Git{
+					Repo:     "git@github.com:tester/sample",
+					Revision: "HEAD",
+				},
+				status: "SYNCED",
+				commit: "abc123",
+			},
+			"  bookstore\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n",
+		},
+		{
+			"optional default git revision HEAD and branch specified",
+			&repoState{
+				scope: "bookstore",
+				git: v1alpha1.Git{
+					Repo:     "git@github.com:tester/sample",
+					Revision: "HEAD",
+					Branch:   "feature",
+				},
+				status: "SYNCED",
+				commit: "abc123",
+			},
+			"  bookstore\tgit@github.com:tester/sample@feature\t\n  SYNCED\tabc123\t\n",
+		},
+		{
 			"all optional git fields specified",
 			&repoState{
 				scope: "bookstore",
