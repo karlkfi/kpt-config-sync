@@ -48,6 +48,10 @@ type ExamplesOrDeprecated struct {
 type AllExamples map[string]ExamplesOrDeprecated
 
 // Generate generates example errors for documentation.
+// KNV1XXX means the user has a mistake in their repository they need to fix.
+// KNV2XXX means something went wrong in the cluster - it could be transient or users may need to change something on the cluster.
+// KNV9XXX means we made a mistake programming, and users should file a bug.
+// More details in go/nomos-style.
 func Generate() AllExamples {
 	// exampleErrors is a map of exampleErrors of each error type. For documentation purposes, i.e. for use
 	// in the internal-only nomoserrors command.
@@ -339,7 +343,7 @@ func Generate() AllExamples {
 	result.add(client.ConflictUpdateDoesNotExist(errors.New("does not exist"), fake.RoleObject()))
 
 	// 2009
-	result.add(kptapplier.ApplierInitError(errors.New("failed to initialize an error")))
+	result.add(kptapplier.ApplierError(errors.New("failed to initialize an error")))
 
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))
@@ -354,9 +358,6 @@ func Generate() AllExamples {
 	// 2013
 	result.add(status.InsufficientPermissionErrorBuilder.Sprint("could not create resources").Wrap(
 		errors.New("deployments.apps is forbidden: User 'Bob' cannot create resources")).Build())
-
-	// 2014
-	result.add(kptapplier.ApplierError(errors.New("failed to apply resource")))
 
 	// 9998
 	result.add(status.InternalError("we made a mistake"))

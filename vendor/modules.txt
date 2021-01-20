@@ -8,8 +8,9 @@ github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
-# github.com/GoogleContainerTools/kpt v0.37.1-0.20210113183418-e3cee45fbf49
+# github.com/GoogleContainerTools/kpt v0.37.1-0.20210115183403-ed0566174fd8
 ## explicit
+github.com/GoogleContainerTools/kpt/pkg/client
 github.com/GoogleContainerTools/kpt/pkg/kptfile
 github.com/GoogleContainerTools/kpt/pkg/kptfile/kptfileutil
 github.com/GoogleContainerTools/kpt/pkg/live

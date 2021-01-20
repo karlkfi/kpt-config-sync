@@ -33,10 +33,6 @@ func newFakeApplier(err error, events []event.Event) *fakeApplier {
 	}
 }
 
-func (a *fakeApplier) Initialize() error {
-	return a.initErr
-}
-
 func (a *fakeApplier) Run(ctx context.Context, invInfo inventory.InventoryInfo, objects []*unstructured.Unstructured, options apply.Options) <-chan event.Event {
 	events := make(chan event.Event, len(a.events))
 	go func() {
@@ -61,7 +57,7 @@ func TestSync(t *testing.T) {
 		{
 			name:     "applier init error",
 			initErr:  errors.New("init error"),
-			multiErr: ApplierInitError(errors.New("init error")),
+			multiErr: ApplierError(errors.New("init error")),
 		},
 		{
 			name: "unknown type for some resource",
@@ -149,11 +145,13 @@ func TestSync(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		applierFunc := func() kptApplier {
-			return newFakeApplier(tc.initErr, tc.events)
+		applierFunc := func() (*clientSet, error) {
+			return &clientSet{
+				kptApplier: newFakeApplier(tc.initErr, tc.events),
+			}, tc.initErr
 		}
 		applier := NewNamespaceApplier(nil, "test-namespace")
-		applier.kptApplierFunc = applierFunc
+		applier.clientSetFunc = applierFunc
 		gvks, errs := applier.sync(context.TODO(), resources, cache)
 		if diff := cmp.Diff(tc.gvks, gvks, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("%s: Diff of GVK map from Apply(): %s", tc.name, diff)

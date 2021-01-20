@@ -11,26 +11,14 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
-	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
-	"sigs.k8s.io/cli-utils/pkg/object"
-	"sigs.k8s.io/cli-utils/pkg/util/factory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-type kptApplier interface {
-	Initialize() error
-	Run(context.Context, inventory.InventoryInfo, []*unstructured.Unstructured, apply.Options) <-chan event.Event
-}
 
 // Applier declares the Applier component in the Multi Repo Reconciler Process.
 type Applier struct {
@@ -38,8 +26,10 @@ type Applier struct {
 	policy inventory.InventoryPolicy
 	// inventory is the InventoryInfo for current Applier.
 	inventory inventory.InventoryInfo
-	// kptApplierFunc is the function to create a kpt applier.
-	kptApplierFunc func() kptApplier
+	// clientSetFunc is the function to create kpt clientSet.
+	// Use this as a function so that the unit testing can mock
+	// the clientSet.
+	clientSetFunc func() (*clientSet, error)
 	// client get and updates RepoSync and its status.
 	client client.Client
 	// cache stores the previously parsed git resources in memory. The applier uses this
@@ -69,12 +59,12 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	u := newInventoryUnstructured(configmanagement.ControllerNamespace, string(namespace))
 	a := &Applier{
-		inventory:      live.WrapInventoryInfoObj(u),
-		client:         c,
-		kptApplierFunc: newKptApplier,
-		cache:          make(map[core.ID]core.Object),
-		scope:          namespace,
-		policy:         inventory.AdoptIfNoInventory,
+		inventory:     live.WrapInventoryInfoObj(u),
+		client:        c,
+		clientSetFunc: newClientSet,
+		cache:         make(map[core.ID]core.Object),
+		scope:         namespace,
+		policy:        inventory.AdoptIfNoInventory,
 	}
 	glog.V(4).Infof("Applier %v is initialized", namespace)
 	return a
@@ -85,12 +75,12 @@ func NewRootApplier(c client.Client) *Applier {
 	// TODO(b/161256730): Constrains the resources due to the new labeling strategy.
 	u := newInventoryUnstructured(configmanagement.ControllerNamespace, configmanagement.ControllerNamespace)
 	a := &Applier{
-		inventory:      live.WrapInventoryInfoObj(u),
-		client:         c,
-		kptApplierFunc: newKptApplier,
-		cache:          make(map[core.ID]core.Object),
-		scope:          declared.RootReconciler,
-		policy:         inventory.AdoptAll,
+		inventory:     live.WrapInventoryInfoObj(u),
+		client:        c,
+		clientSetFunc: newClientSet,
+		cache:         make(map[core.ID]core.Object),
+		scope:         declared.RootReconciler,
+		policy:        inventory.AdoptAll,
 	}
 	glog.V(4).Infof("Root applier is initialized and synced with the API server")
 	return a
@@ -99,20 +89,19 @@ func NewRootApplier(c client.Client) *Applier {
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.ID]core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	var errs status.MultiError
-	// TODO(b/177469646): The applier needs to be re-initialized
-	// to capture the new applied CRDs. We can optimize this by
-	// avoiding unnecessary re-initialization.
-	applier := a.kptApplierFunc()
-	err := applier.Initialize()
+	cs, err := a.clientSetFunc()
 	if err != nil {
-		return nil, ApplierInitError(err)
+		return nil, ApplierError(err)
 	}
 
+	// disabledObjs are objects for which the management are disabled
+	// through annotation.
 	enabledObjs, disabledObjs := partitionObjs(objs)
-	err = a.handleDisabledObjects(disabledObjs)
-	if err != nil {
-		// TODO(jingfangliu): use KNV for this error.
-		return nil, status.Append(errs, err)
+	if len(disabledObjs) > 0 {
+		err = cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
+		if err != nil {
+			return nil, status.Append(errs, err)
+		}
 	}
 
 	resources, toUnsErrs := toUnstructured(enabledObjs)
@@ -122,7 +111,7 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 
 	unknownTypeResources := make(map[core.ID]struct{})
 
-	events := applier.Run(ctx, a.inventory, resources, apply.Options{InventoryPolicy: a.policy})
+	events := cs.apply(ctx, a.inventory, resources, apply.Options{InventoryPolicy: a.policy})
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
@@ -132,7 +121,7 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 			// ApplyEventResourceUpdate is for applying a single resource;
 			// ApplyEventCompleted indicates all resources have been applied.
 			if e.ApplyEvent.Type == event.ApplyEventResourceUpdate {
-				id := identifierToID(e.ApplyEvent.Identifier)
+				id := idFrom(e.ApplyEvent.Identifier)
 				if e.ApplyEvent.Error != nil {
 					switch e.ApplyEvent.Error.(type) {
 					case *applyerror.UnknownTypeError:
@@ -152,7 +141,7 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 			if e.PruneEvent.Error != nil {
 				errs = status.Append(errs, ApplierError(e.PruneEvent.Error))
 			} else if glog.V(4) {
-				id := identifierToID(e.PruneEvent.Identifier)
+				id := idFrom(e.PruneEvent.Identifier)
 				if e.PruneEvent.Operation == event.PruneSkipped {
 					glog.Infof("skipped pruning resource %v", id)
 				} else {
@@ -217,79 +206,6 @@ func (a *Applier) Refresh(ctx context.Context) status.MultiError {
 	return errs
 }
 
-func (a *Applier) handleDisabledObjects(objs []core.Object) error {
-	for _, obj := range objs {
-		id := core.IDOf(obj)
-		if _, found := a.cache[id]; !found {
-			continue
-		}
-		err := a.unmanageObject(obj)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (a *Applier) unmanageObject(obj core.Object) error {
-	u := &unstructured.Unstructured{}
-	err := a.client.Get(context.TODO(), client.ObjectKey{
-		Namespace: obj.GetNamespace(),
-		Name:      obj.GetName(),
-	}, u)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	if differ.HasNomosMeta(u) {
-		updated := syncerreconcile.RemoveNomosLabelsAndAnnotations(obj)
-		if !updated {
-			return nil
-		}
-		// TODO(jingfangliu): Remove the nomos meta and remove the object
-		// from the inventory object.
-	}
-	return nil
-}
-
-func toUnstructured(objs []core.Object) ([]*unstructured.Unstructured, status.MultiError) {
-	var errs status.MultiError
-	unstructureds := []*unstructured.Unstructured{}
-	for _, obj := range objs {
-		u, err := syncerreconcile.AsUnstructuredSanitized(obj)
-		if err != nil {
-			// This should never happen.
-			errs = status.Append(errs, status.InternalErrorBuilder.Wrap(err).
-				Sprintf("converting %v to unstructured.Unstructured", core.IDOf(obj)).Build())
-		}
-		unstructureds = append(unstructureds, u)
-	}
-	return unstructureds, errs
-}
-
-func identifierToID(identifier object.ObjMetadata) core.ID {
-	return core.ID{
-		GroupKind: identifier.GroupKind,
-		ObjectKey: client.ObjectKey{
-			Name:      identifier.Name,
-			Namespace: identifier.Namespace,
-		},
-	}
-}
-
-func newKptApplier() kptApplier {
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(&factory.CachingRESTClientGetter{
-		Delegate: kubeConfigFlags,
-	})
-	f := util.NewFactory(matchVersionKubeConfigFlags)
-	provider := live.NewResourceGroupProvider(f)
-	applier := apply.NewApplier(provider)
-	return applier
-}
-
 // newInventoryUnstructured creates an inventory object as an unstructured.
 func newInventoryUnstructured(namespace, name string) *unstructured.Unstructured {
 	id := namespace + "_" + name
@@ -298,17 +214,4 @@ func newInventoryUnstructured(namespace, name string) *unstructured.Unstructured
 	labels[v1.ManagedByKey] = v1.ManagedByValue
 	u.SetLabels(labels)
 	return u
-}
-
-func partitionObjs(objs []core.Object) ([]core.Object, []core.Object) {
-	var enabled []core.Object
-	var disabled []core.Object
-	for _, obj := range objs {
-		if obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled {
-			disabled = append(disabled, obj)
-		} else {
-			enabled = append(enabled, obj)
-		}
-	}
-	return enabled, disabled
 }

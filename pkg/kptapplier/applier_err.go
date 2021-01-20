@@ -5,7 +5,7 @@ import (
 )
 
 // ApplierErrorCode is the error code for apply failures.
-const ApplierErrorCode = "2014"
+const ApplierErrorCode = "2009"
 
 var applierErrorBuilder = status.NewErrorBuilder(ApplierErrorCode)
 
