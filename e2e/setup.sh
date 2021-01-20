@@ -240,7 +240,7 @@ function main() {
 
   if (( ${#all_test_files[@]} != 0 )); then
     for file in "${all_test_files[@]}"; do
-      if echo "${file}" | grep "${file_filter}" &> /dev/null; then
+      if echo "${file}" | grep -E "${file_filter}" &> /dev/null; then
         if [ -x "${file}" ]  && [ -r "${file}" ]; then
           echo "+++ Will run ${file}"
           filtered_test_files+=("${file}")
