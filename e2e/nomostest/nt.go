@@ -417,6 +417,21 @@ func (nt *NT) testLogs() {
 	}
 }
 
+// testPods prints the output of `kubectl get pods`, which includes a 'RESTARTS' column
+// indicating how many times each pod has restarted. If a pod has restarted, the following
+// two commands can be used to get more information:
+//   1) kubectl get pods -n config-management-system -o yaml
+//   2) kubectl logs deployment/<deploy-name> <container-name> -n config-management-system -p
+func (nt *NT) testPods() {
+	out, err := nt.Kubectl("get", "pods", "-n", configmanagement.ControllerNamespace)
+	// Print a standardized header before each printed log to make ctrl+F-ing the
+	// log you want easier.
+	nt.T.Logf("kubectl get pods -n %s: \n%s", configmanagement.ControllerNamespace, string(out))
+	if err != nil {
+		nt.T.Log("error running `kubectl get pods`:", err)
+	}
+}
+
 // ApplyGatekeeperTestData is an exception to the "all test data is specified inline"
 // rule. It isn't informative to literally have the CRD specifications in the
 // test code, and we have strict type requirements on how the CRD is laid out.

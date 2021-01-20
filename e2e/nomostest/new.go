@@ -163,6 +163,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	t.Cleanup(func() {
 		if t.Failed() {
 			nt.testLogs()
+			nt.testPods()
 		}
 	})
 	waitForGit := installGitServer(nt)
