@@ -12,7 +12,7 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
-	c "github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	syncertestfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -228,7 +228,7 @@ func TestWorker_ResourceConflictMetricValidation(t *testing.T) {
 					objectQueue: &fakeQueue{},
 					reconciler: fakeReconciler{
 						client:       fakeClient(t),
-						remediateErr: c.ConflictUpdateDoesNotExist(errors.New("resource conflict error"), obj),
+						remediateErr: syncerclient.ConflictUpdateDoesNotExist(errors.New("resource conflict error"), obj),
 					},
 				}
 				w.process(context.Background(), obj)

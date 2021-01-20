@@ -409,17 +409,17 @@ func TestTwoWay(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			declared := make(map[core.ID]core.Object)
+			decl := make(map[core.ID]core.Object)
 			actual := make(map[core.ID]core.Object)
 
 			for _, d := range tc.declared {
-				declared[core.IDOf(d)] = d
+				decl[core.IDOf(d)] = d
 			}
 			for _, a := range tc.actual {
 				actual[core.IDOf(a)] = a
 			}
 
-			diffs := TwoWay(declared, actual)
+			diffs := TwoWay(decl, actual)
 			if diff := cmp.Diff(diffs, tc.want,
 				cmpopts.SortSlices(func(x, y Diff) bool { return x.GetName() < y.GetName() })); diff != "" {
 				t.Errorf(diff)
@@ -430,17 +430,17 @@ func TestTwoWay(t *testing.T) {
 
 func TestUnknown(t *testing.T) {
 	obj := fake.NamespaceObject("hello")
-	declared := map[core.ID]core.Object{
+	decl := map[core.ID]core.Object{
 		core.IDOf(obj): obj,
 	}
 	actual := map[core.ID]core.Object{
 		core.IDOf(obj): Unknown(),
 	}
-	diffs := TwoWay(declared, actual)
+	diffs := TwoWay(decl, actual)
 	if len(diffs) != 0 {
 		t.Errorf("Want empty diffs with unknown; got %v", diffs)
 	}
-	diffs = ThreeWay(declared, nil, actual)
+	diffs = ThreeWay(decl, nil, actual)
 	if len(diffs) != 0 {
 		t.Errorf("Want empty diffs with unknown; got %v", diffs)
 	}

@@ -207,16 +207,16 @@ func TestApply(t *testing.T) {
 				return
 			}
 
-			if diff := cmp.Diff(tc.wantGVKs, gvks); diff != "" {
-				t.Errorf("Diff of GVK map from Apply(): %s", diff)
+			if d := cmp.Diff(tc.wantGVKs, gvks); d != "" {
+				t.Errorf("Diff of GVK map from Apply(): %s", d)
 			}
 
 			if len(clientApplier.WantActions) == 0 && len(clientApplier.GotActions) == 0 {
 				return
 			}
-			if diff := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
-				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); diff != "" {
-				t.Errorf(diff)
+			if d := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
+				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action })); d != "" {
+				t.Errorf(d)
 			}
 		})
 	}
@@ -294,10 +294,10 @@ func TestRefresh(t *testing.T) {
 				t.Error(err)
 			}
 
-			if diff := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
+			if d := cmp.Diff(clientApplier.WantActions, clientApplier.GotActions,
 				cmpopts.SortSlices(func(x, y Event) bool { return x.Action < y.Action }),
-				cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf(diff)
+				cmpopts.EquateEmpty()); d != "" {
+				t.Errorf(d)
 			}
 		})
 	}

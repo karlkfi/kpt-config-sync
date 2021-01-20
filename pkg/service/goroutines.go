@@ -14,7 +14,7 @@ func goRoutineHandler(w http.ResponseWriter, _ *http.Request) {
 			if err := p.WriteTo(w, 2); err != nil {
 				response := fmt.Sprintf("error while writing goroutine stakcs: %s", err)
 				// nolint:errcheck
-				w.Write([]byte(response))
+				_, _ = w.Write([]byte(response))
 			}
 			return
 		}
@@ -22,5 +22,5 @@ func goRoutineHandler(w http.ResponseWriter, _ *http.Request) {
 
 	response := "unable to find profile for goroutines"
 	// nolint:errcheck
-	w.Write([]byte(response))
+	_, _ = w.Write([]byte(response))
 }

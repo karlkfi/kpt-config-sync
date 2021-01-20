@@ -13,7 +13,8 @@ const InvalidAnnotationValueErrorCode = "1054"
 
 var invalidAnnotationValueErrorBase = status.NewErrorBuilder(InvalidAnnotationValueErrorCode)
 
-// InvalidAnnotationValueError reports that an object has been illegally defined in cluster/
+// InvalidAnnotationValueError reports that an annotation value is coerced to
+// a non-string type.
 func InvalidAnnotationValueError(resource id.Resource, keys []string) status.ResourceError {
 	return invalidAnnotationValueErrorBase.
 		Sprintf("Values in metadata.annotations MUST be strings. "+
@@ -21,16 +22,5 @@ func InvalidAnnotationValueError(resource id.Resource, keys []string) status.Res
 
 metadata.annotations.%s `,
 			strings.Join(keys, "\nmetadata.annotations.")).
-		BuildWithResources(resource)
-}
-
-// InvalidLabelValueError reports that an object has been illegally defined in cluster/
-func InvalidLabelValueError(resource id.Resource, keys []string) status.ResourceError {
-	return invalidAnnotationValueErrorBase.
-		Sprintf("Values in metadata.labels MUST be strings. "+
-			`To fix, add quotes around the values. Non-string values for:
-
-metadata.labels.%s `,
-			strings.Join(keys, "\nmetadata.labels.")).
 		BuildWithResources(resource)
 }

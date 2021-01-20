@@ -1,8 +1,6 @@
 package kinds
 
 import (
-	"fmt"
-
 	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -181,11 +179,6 @@ func RepoSync() schema.GroupVersionKind {
 // RootSync returns the canonical RootSync GroupVersionKind.
 func RootSync() schema.GroupVersionKind {
 	return v1alpha1.SchemeGroupVersion.WithKind("RootSync")
-}
-
-// ResourceString returns a string describing the GroupVersionKind using fields specified in Kubernetes Objects.
-func ResourceString(gvk schema.GroupVersionKind) string {
-	return fmt.Sprintf("apiVersion=%s/%s, kind=%s", gvk.Group, gvk.Version, gvk.Kind)
 }
 
 // Service returns the canonical Service GroupVersionKind.
