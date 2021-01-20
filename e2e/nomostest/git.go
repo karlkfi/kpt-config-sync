@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -244,7 +245,7 @@ func (g *Repository) CommitAndPushBranch(msg, branch string) {
 
 	g.Git("commit", "-m", msg)
 
-	g.T.Logf("committing %q", msg)
+	g.T.Logf("[repo %s] committing %q (%s)", path.Base(g.Root), msg, g.Hash())
 	g.Git("push", "-u", remoteName, branch)
 }
 
