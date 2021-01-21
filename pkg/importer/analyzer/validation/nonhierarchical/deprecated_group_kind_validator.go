@@ -12,9 +12,10 @@ import (
 // invalidToValidGroupKinds is a mapping from deprecated GroupKinds to the current version of the GroupKind that the
 // config in the repo should be replaced with.
 var invalidToValidGroupKinds = map[schema.GroupKind]schema.GroupVersionKind{
-	v1beta1.SchemeGroupVersion.WithKind("Deployment").GroupKind():        kinds.Deployment(),
-	v1beta1.SchemeGroupVersion.WithKind("ReplicaSet").GroupKind():        kinds.ReplicaSet(),
 	v1beta1.SchemeGroupVersion.WithKind("DaemonSet").GroupKind():         kinds.DaemonSet(),
+	v1beta1.SchemeGroupVersion.WithKind("Deployment").GroupKind():        kinds.Deployment(),
+	v1beta1.SchemeGroupVersion.WithKind("Ingress").GroupKind():           kinds.Ingress(),
+	v1beta1.SchemeGroupVersion.WithKind("ReplicaSet").GroupKind():        kinds.ReplicaSet(),
 	v1beta1.SchemeGroupVersion.WithKind("NetworkPolicy").GroupKind():     kinds.NetworkPolicy(),
 	v1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy").GroupKind(): kinds.PodSecurityPolicy(),
 	v1beta1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():       kinds.StatefulSet(),

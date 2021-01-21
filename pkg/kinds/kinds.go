@@ -24,57 +24,57 @@ func Anvil() schema.GroupVersionKind {
 	}
 }
 
-// Sync returns the canonical Sync GroupVersionKind
+// Sync returns the canonical Sync GroupVersionKind.
 func Sync() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.SyncKind)
 }
 
-// RoleBinding returns the canonical RoleBinding GroupVersionKind
+// RoleBinding returns the canonical RoleBinding GroupVersionKind.
 func RoleBinding() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("RoleBinding")
 }
 
-// RoleBindingV1Beta1 returns the canonical v1beta1 RoleBinding GroupVersionKind
+// RoleBindingV1Beta1 returns the canonical v1beta1 RoleBinding GroupVersionKind.
 func RoleBindingV1Beta1() schema.GroupVersionKind {
 	return rbacv1beta1.SchemeGroupVersion.WithKind("RoleBinding")
 }
 
-// Role returns the canonical Role GroupVersionKind
+// Role returns the canonical Role GroupVersionKind.
 func Role() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("Role")
 }
 
-// ResourceQuota returns the canonical ResourceQuota GroupVersionKind
+// ResourceQuota returns the canonical ResourceQuota GroupVersionKind.
 func ResourceQuota() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("ResourceQuota")
 }
 
-// Repo returns the canonical Repo GroupVersionKind
+// Repo returns the canonical Repo GroupVersionKind.
 func Repo() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.RepoKind)
 }
 
-// PersistentVolume returns the canonical PersistentVolume GroupVersionKind
+// PersistentVolume returns the canonical PersistentVolume GroupVersionKind.
 func PersistentVolume() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("PersistentVolume")
 }
 
-// NamespaceConfig returns the canonical NamespaceConfig GroupVersionKind
+// NamespaceConfig returns the canonical NamespaceConfig GroupVersionKind.
 func NamespaceConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.NamespaceConfigKind)
 }
 
-// PodSecurityPolicy returns the canonical PodSecurityPolicy GroupVersionKind
+// PodSecurityPolicy returns the canonical PodSecurityPolicy GroupVersionKind.
 func PodSecurityPolicy() schema.GroupVersionKind {
 	return policyv1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy")
 }
 
-// NamespaceSelector returns the canonical NamespaceSelector GroupVersionKind
+// NamespaceSelector returns the canonical NamespaceSelector GroupVersionKind.
 func NamespaceSelector() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.NamespaceSelectorKind)
 }
 
-// Namespace returns the canonical Namespace GroupVersionKind
+// Namespace returns the canonical Namespace GroupVersionKind.
 func Namespace() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Namespace")
 }
@@ -82,12 +82,12 @@ func Namespace() schema.GroupVersionKind {
 // CustomResourceDefinitionKind is the Kind for CustomResourceDefinitions
 const CustomResourceDefinitionKind = "CustomResourceDefinition"
 
-// CustomResourceDefinitionV1Beta1 returns the v1beta1 CustomResourceDefinition GroupVersionKind
+// CustomResourceDefinitionV1Beta1 returns the v1beta1 CustomResourceDefinition GroupVersionKind.
 func CustomResourceDefinitionV1Beta1() schema.GroupVersionKind {
 	return CustomResourceDefinition().WithVersion(v1beta1.SchemeGroupVersion.Version)
 }
 
-// CustomResourceDefinitionV1 returns the v1 CustomResourceDefinition GroupVersionKind
+// CustomResourceDefinitionV1 returns the v1 CustomResourceDefinition GroupVersionKind.
 func CustomResourceDefinitionV1() schema.GroupVersionKind {
 	return CustomResourceDefinition().WithVersion("v1")
 }
@@ -100,67 +100,72 @@ func CustomResourceDefinition() schema.GroupKind {
 	}
 }
 
-// ClusterSelector returns the canonical ClusterSelector GroupVersionKind
+// ClusterSelector returns the canonical ClusterSelector GroupVersionKind.
 func ClusterSelector() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.ClusterSelectorKind)
 }
 
-// ClusterRoleBinding returns the canonical ClusterRoleBinding GroupVersionKind
+// ClusterRoleBinding returns the canonical ClusterRoleBinding GroupVersionKind.
 func ClusterRoleBinding() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
 }
 
-// ClusterRoleBindingV1Beta1 returns the canonical ClusterRoleBinding GroupVersionKind
+// ClusterRoleBindingV1Beta1 returns the canonical ClusterRoleBinding GroupVersionKind.
 func ClusterRoleBindingV1Beta1() schema.GroupVersionKind {
 	return rbacv1beta1.SchemeGroupVersion.WithKind("ClusterRoleBinding")
 }
 
-// ClusterRole returns the canonical ClusterRole GroupVersionKind
+// ClusterRole returns the canonical ClusterRole GroupVersionKind.
 func ClusterRole() schema.GroupVersionKind {
 	return rbacv1.SchemeGroupVersion.WithKind("ClusterRole")
 }
 
-// ClusterConfig returns the canonical ClusterConfig GroupVersionKind
+// ClusterConfig returns the canonical ClusterConfig GroupVersionKind.
 func ClusterConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.ClusterConfigKind)
 }
 
-// Cluster returns the canonical Cluster GroupVersionKind
+// Cluster returns the canonical Cluster GroupVersionKind.
 func Cluster() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "clusterregistry.k8s.io", Version: "v1alpha1", Kind: "Cluster"}
 }
 
-// Deployment returns the canonical Deployment GroupVersionKind
+// Deployment returns the canonical Deployment GroupVersionKind.
 func Deployment() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("Deployment")
 }
 
-// DaemonSet returns the canonical DaemonSet GroupVersionKind
+// DaemonSet returns the canonical DaemonSet GroupVersionKind.
 func DaemonSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("DaemonSet")
 }
 
-// ReplicaSet returns the canonical ReplicaSet GroupVersionKind
+// Ingress returns the canonical Ingress GroupVersionKind.
+func Ingress() schema.GroupVersionKind {
+	return networkingv1.SchemeGroupVersion.WithKind("Ingress")
+}
+
+// ReplicaSet returns the canonical ReplicaSet GroupVersionKind.
 func ReplicaSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("ReplicaSet")
 }
 
-// HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind
+// HierarchyConfig returns the canonical HierarchyConfig GroupVersionKind.
 func HierarchyConfig() schema.GroupVersionKind {
 	return v1.SchemeGroupVersion.WithKind(configmanagement.HierarchyConfigKind)
 }
 
-// NetworkPolicy returns the canonical NetworkPolicy GroupVersionKind
+// NetworkPolicy returns the canonical NetworkPolicy GroupVersionKind.
 func NetworkPolicy() schema.GroupVersionKind {
 	return networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy")
 }
 
-// ConfigMap returns the canconical ConfigMap GroupVersionKind
+// ConfigMap returns the canconical ConfigMap GroupVersionKind.
 func ConfigMap() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("ConfigMap")
 }
 
-// StatefulSet returns the canonical StatefulSet GroupVersionKind
+// StatefulSet returns the canonical StatefulSet GroupVersionKind.
 func StatefulSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("StatefulSet")
 }

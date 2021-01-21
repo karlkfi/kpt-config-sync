@@ -17,7 +17,7 @@ func TestDeprecatedGroupKindValidator(t *testing.T) {
 		nht.Fail("deprecated PodSecurityPolicy",
 			fake.UnstructuredAtPath(v1beta1.SchemeGroupVersion.WithKind("PodSecurityPolicy"),
 				"namespaces/deployment.yaml")),
-		nht.Pass("non-deprecated ingress",
+		nht.Fail("non-deprecated ingress",
 			fake.UnstructuredAtPath(v1beta1.SchemeGroupVersion.WithKind("Ingress"),
 				"namespaces/ingress.yaml")),
 		nht.Pass("non-deprecated Deployment",
