@@ -866,6 +866,14 @@ func TestParseClusterSelector(t *testing.T) {
 		parsertest.Success("A subdir of clusterregistry/ is ok",
 			testoutput.NewAllConfigs(),
 			fake.ClusterAtPath("clusterregistry/foo/cluster.yaml")),
+
+		parsertest.Failure("",
+			nonhierarchical.DeprecatedGroupKindErrorCode,
+			fake.Namespace("namespaces/foo"),
+			fake.UnstructuredAtPath(kinds.Deployment(), "namespaces/foo/d.yaml"),
+			fake.Namespace("namespaces/bar"),
+			fake.UnstructuredAtPath(schema.GroupVersionKind{Group: "extensions", Version: "v1beta1", Kind: "Deployment"}, "namespaces/bar/d.yaml"),
+		),
 	)
 
 	test.RunAll(t)
