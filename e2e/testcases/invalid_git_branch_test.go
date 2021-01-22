@@ -22,8 +22,6 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	rs := fake.RootSyncObject()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "invalid-branch"}}}`)
 
-	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
-	// make better git error reporting.
 	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
 
 	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
@@ -65,8 +63,6 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	nt.Root.Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
 	nt.Root.CommitAndPush("Update RepoSync to invalid branch name")
 
-	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
-	// make better git error reporting.
 	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode)
 
 	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
@@ -105,8 +101,6 @@ func TestInvalidMonoRepoBranchStatus(t *testing.T) {
 
 	resetGitBranch(nt, "invalid-branch")
 
-	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
-	// make better git error reporting.
 	nt.WaitForRepoSourceError(status.SourceErrorCode)
 
 	resetGitBranch(nt, "main")

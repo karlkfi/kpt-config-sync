@@ -62,8 +62,8 @@ data:
                cpu: "150m"
                memory: "100Mi"
          - name: git-sync
-           image: gcr.io/config-management-release/git-sync:v3.2.2__linux_amd64
-           args: ["--root=/repo/root", "--dest=rev", "--max-sync-failures=30", "--v=5"]
+           image: gcr.io/config-management-release/git-sync:v3.3.2-gke.0__linux_amd64
+           args: ["--root=/repo/root", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
            volumeMounts:
            - name: repo
              mountPath: /repo

@@ -12,32 +12,26 @@ func TestCommitHash(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"Invalid path nested",
-			"/repo/rev-abcdef123/path/to/my/configs",
-			"",
-			true,
-		},
-		{
-			"Valid path root",
-			"/repo/rev-abcdef123",
-			"abcdef123",
+			"valid commit hash",
+			"/repo/3f8c6da2622fec5896c1e230bda3c53c17f61e8a",
+			"3f8c6da2622fec5896c1e230bda3c53c17f61e8a",
 			false,
 		},
 		{
-			"Pathological (no pun intended) invalid stuff before rev-",
-			"/repo/pathological-dirname-rev-abcdef123",
+			"invalid length",
+			"/repo/abcdef123",
 			"",
 			true,
 		},
 		{
-			"Invalid path",
-			"/abcdef123",
+			"invalid characters",
+			"/repo/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
 			"",
 			true,
 		},
 		{
-			"Missing git-sync prefix",
-			"/repo/abdef123/my-configs",
+			"more characters after commit hash",
+			"/repo/3f8c6da2622fec5896c1e230bda3c53c17f61e8a1111",
 			"",
 			true,
 		},
