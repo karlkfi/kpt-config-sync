@@ -83,7 +83,7 @@ func TestValidatorForResourceGroups(t *testing.T) {
 					},
 				},
 			}
-			v := &validator{}
+			v := &Validator{}
 			response := v.Handle(context.TODO(), request)
 			if tc.allow != response.Allowed {
 				t.Errorf("expected %v but got %v", tc.allow, response.Allowed)

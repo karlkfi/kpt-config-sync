@@ -2,6 +2,7 @@ package parse
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -23,7 +24,7 @@ type gitContext struct {
 func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc gitContext, commitHash string) error {
 	gcVal, err := json.Marshal(gc)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling gitContext: %w", err)
 	}
 	var inventoryID string
 	if scope == declared.RootReconciler {

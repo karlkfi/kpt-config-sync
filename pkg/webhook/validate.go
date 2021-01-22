@@ -8,22 +8,40 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kptapplier"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// validator is the part of the validating webhook which handles admission
+// Validator is the part of the validating webhook which handles admission
 // requests and admits or denies them.
-type validator struct{}
+type Validator struct {
+	differ *ObjectDiffer
+}
 
-var _ admission.Handler = &validator{}
+var _ admission.Handler = &Validator{}
+
+// Handler returns a validator which satisfies the admission.Handler interface.
+func Handler(cfg *rest.Config) (*Validator, error) {
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	vc, err := declared.NewValueConverter(dc)
+	if err != nil {
+		return nil, err
+	}
+	return &Validator{&ObjectDiffer{vc}}, nil
+}
 
 // Handle implements admission.Handler
-func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	if reason := skipValidation(req); reason != "" {
 		// This admission controller is part of a defense-in-depth strategy. Config
 		// Sync is still running a reconciler which will revert any unwanted changes

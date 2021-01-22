@@ -17,7 +17,9 @@ require (
 	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.4
+	github.com/googleapis/gnostic v0.5.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
@@ -43,5 +45,6 @@ require (
 	sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384
 	sigs.k8s.io/controller-runtime v0.8.2
 	sigs.k8s.io/kind v0.10.0
+	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
 	sigs.k8s.io/yaml v1.2.0
 )

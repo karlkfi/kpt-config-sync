@@ -10,6 +10,10 @@ const (
 	// required to run root reconciler and namespace reconciler process.
 	ConfigMapAnnotationKey = ConfigSyncPrefix + "configmap"
 
+	// DeclaredFieldsKey is the annotation key that stores the declared configuration of
+	// a resource in Git. This uses the same format as the managed fields of server-side apply.
+	DeclaredFieldsKey = ConfigSyncPrefix + "declared-fields"
+
 	// GitContextKey is the annotation key for the git source-of-truth a resource is synced from.
 	GitContextKey = ConfigSyncPrefix + "git-context"
 
