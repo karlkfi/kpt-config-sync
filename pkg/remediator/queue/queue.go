@@ -96,6 +96,10 @@ func (q *ObjectQueue) Add(obj core.Object) {
 	// 10. The reconciler finishes processing gen2 of the resource and calls Done().
 	// 11. Since the gvknn is not marked dirty, we remove the resource from q.objects.
 	glog.V(2).Infof("Upserting object into queue: %v", obj)
+	if obj == nil {
+		// Add this to debug the memory leak issue described in http://b/178044278#comment3
+		glog.Warningf("Upserting an empty object into queue for %v", gvknn)
+	}
 	q.objects[gvknn] = obj
 	q.dirty[gvknn] = true
 	q.underlying.Add(gvknn)
@@ -147,6 +151,10 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 	obj := q.objects[gvknn]
 	delete(q.dirty, gvknn)
 	glog.V(4).Infof("Fetched object for processing: %v", obj)
+	if obj == nil {
+		// Add this to debug the memory leak issue described in http://b/178044278#comment3
+		glog.Warningf("Found no obj for %v", gvknn)
+	}
 	return obj.DeepCopyObject().(core.Object), false
 }
 

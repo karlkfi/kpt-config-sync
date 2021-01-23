@@ -377,8 +377,11 @@ func (nt *NT) DebugLogf(format string, args ...interface{}) {
 // PodLogs prints the logs from the specified deployment.
 // If there is an error getting the logs for the specified deployment, prints
 // the error.
-func (nt *NT) PodLogs(namespace, deployment, container string) {
+func (nt *NT) PodLogs(namespace, deployment, container string, previousPodLog bool) {
 	args := []string{"logs", fmt.Sprintf("deployment/%s", deployment), "-n", namespace}
+	if previousPodLog {
+		args = append(args, "-p")
+	}
 	if container != "" {
 		args = append(args, container)
 	}
@@ -386,15 +389,15 @@ func (nt *NT) PodLogs(namespace, deployment, container string) {
 	// Print a standardized header before each printed log to make ctrl+F-ing the
 	// log you want easier.
 	nt.T.Logf(`
-%s/%s %s
-%s`, namespace, deployment, container, string(out))
+%s/%s %s [previous = %v]
+%s`, namespace, deployment, container, previousPodLog, string(out))
 	if err != nil {
 		nt.T.Log("error getting logs:", err)
 	}
 }
 
 // testLogs prints all available pod logs for the test.
-func (nt *NT) testLogs() {
+func (nt *NT) testLogs(previousPodLog bool) {
 	// These pods/containers are noisy and rarely contain useful information:
 	// - git-sync
 	// - fs-watcher
@@ -402,19 +405,19 @@ func (nt *NT) testLogs() {
 	// Don't merge with any of these uncommented, but feel free to uncomment
 	// temporarily to see how presubmit responds.
 	if nt.MultiRepo {
-		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, "")
-		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler)
-		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync)
+		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, "", previousPodLog)
+		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler, previousPodLog)
+		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync, previousPodLog)
 		for ns := range nt.NamespaceRepos {
 			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RepoSyncName(ns),
-				reconcilermanager.Reconciler)
-			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns), reconcilermanager.GitSync)
+				reconcilermanager.Reconciler, previousPodLog)
+			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns), reconcilermanager.GitSync, previousPodLog)
 		}
 	} else {
-		nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, importer.Name)
-		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, "fs-watcher")
-		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, reconcilermanager.GitSync)
-		//nt.PodLogs(configmanagement.ControllerNamespace, state.MonitorName, "")
+		nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, importer.Name, previousPodLog)
+		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, "fs-watcher", previousPodLog)
+		//nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, reconcilermanager.GitSync, previousPodLog)
+		//nt.PodLogs(configmanagement.ControllerNamespace, state.MonitorName, "", previousPodLog)
 	}
 }
 
