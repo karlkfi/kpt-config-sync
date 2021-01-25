@@ -32,9 +32,6 @@ type Applier struct {
 	clientSetFunc func() (*clientSet, error)
 	// client get and updates RepoSync and its status.
 	client client.Client
-	// cache stores the previously parsed git resources in memory. The applier uses this
-	// cache for refresh.
-	cache map[core.ID]core.Object
 	// scope is the scope of the applier (eg root or a namespace).
 	scope declared.Scope
 	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
@@ -62,7 +59,6 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 		inventory:     live.WrapInventoryInfoObj(u),
 		client:        c,
 		clientSetFunc: newClientSet,
-		cache:         make(map[core.ID]core.Object),
 		scope:         namespace,
 		policy:        inventory.AdoptIfNoInventory,
 	}
@@ -78,12 +74,60 @@ func NewRootApplier(c client.Client) *Applier {
 		inventory:     live.WrapInventoryInfoObj(u),
 		client:        c,
 		clientSetFunc: newClientSet,
-		cache:         make(map[core.ID]core.Object),
 		scope:         declared.RootReconciler,
 		policy:        inventory.AdoptAll,
 	}
 	glog.V(4).Infof("Root applier is initialized and synced with the API server")
 	return a
+}
+
+func processApplyEvent(e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]core.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
+	// ApplyEvent.Type has two types: ApplyEventResourceUpdate and ApplyEventCompleted.
+	// ApplyEventResourceUpdate is for applying a single resource;
+	// ApplyEventCompleted indicates all resources have been applied.
+	if e.Type != event.ApplyEventResourceUpdate {
+		return nil
+	}
+
+	id := idFrom(e.Identifier)
+	if e.Error != nil {
+		stats.errCount++
+		switch e.Error.(type) {
+		case *applyerror.UnknownTypeError:
+			unknownTypeResources[id] = struct{}{}
+			return ApplierError(e.Error)
+		case *inventory.InventoryOverlapError:
+			return ManagementConflictError(cache[id])
+		default:
+			// The default case covers other reason for failed applying a resource.
+			return ApplierError(e.Error)
+		}
+	}
+
+	if e.Operation == event.Unchanged {
+		glog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
+	} else {
+		glog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
+		stats.eventByOp[e.Operation]++
+	}
+	return nil
+}
+
+func processPruneEvent(e event.PruneEvent, stats *pruneEventStats) status.Error {
+	if e.Error != nil {
+		stats.errCount++
+		return ApplierError(e.Error)
+	}
+
+	id := idFrom(e.Identifier)
+	if e.Operation == event.PruneSkipped {
+		// A PruneSkipped event indicates no change on any cluster object.
+		glog.V(4).Infof("skipped pruning resource %v", id)
+	} else {
+		glog.V(4).Infof("pruned resource %v", id)
+		stats.eventByOp[e.Operation]++
+	}
+	return nil
 }
 
 // sync triggers a kpt live apply library call to apply a set of resources.
@@ -94,13 +138,18 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 		return nil, ApplierError(err)
 	}
 
+	stats := newApplyStats()
 	// disabledObjs are objects for which the management are disabled
 	// through annotation.
 	enabledObjs, disabledObjs := partitionObjs(objs)
 	if len(disabledObjs) > 0 {
-		err = cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
+		disabledCount, err := cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
 		if err != nil {
 			return nil, status.Append(errs, err)
+		}
+		stats.disableObjs = disabledObjStats{
+			total:     uint64(len(disabledObjs)),
+			succeeded: disabledCount,
 		}
 	}
 
@@ -116,38 +165,11 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 		switch e.Type {
 		case event.ErrorType:
 			errs = status.Append(errs, ApplierError(e.ErrorEvent.Err))
+			stats.errorTypeEvents++
 		case event.ApplyType:
-			// ApplyEvent.Type has two types: ApplyEventResourceUpdate and ApplyEventCompleted.
-			// ApplyEventResourceUpdate is for applying a single resource;
-			// ApplyEventCompleted indicates all resources have been applied.
-			if e.ApplyEvent.Type == event.ApplyEventResourceUpdate {
-				id := idFrom(e.ApplyEvent.Identifier)
-				if e.ApplyEvent.Error != nil {
-					switch e.ApplyEvent.Error.(type) {
-					case *applyerror.UnknownTypeError:
-						errs = status.Append(errs, ApplierError(e.ApplyEvent.Error))
-						unknownTypeResources[id] = struct{}{}
-					case *inventory.InventoryOverlapError:
-						errs = status.Append(errs, ManagementConflictError(cache[id]))
-					default:
-						// The default case covers other reason for failed applying a resource.
-						errs = status.Append(errs, ApplierError(e.ApplyEvent.Error))
-					}
-				} else {
-					glog.V(4).Infof("applied resource %v", id)
-				}
-			}
+			errs = status.Append(errs, processApplyEvent(e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
-			if e.PruneEvent.Error != nil {
-				errs = status.Append(errs, ApplierError(e.PruneEvent.Error))
-			} else if glog.V(4) {
-				id := idFrom(e.PruneEvent.Identifier)
-				if e.PruneEvent.Operation == event.PruneSkipped {
-					glog.Infof("skipped pruning resource %v", id)
-				} else {
-					glog.Infof("pruned resource %v", id)
-				}
-			}
+			errs = status.Append(errs, processPruneEvent(e.PruneEvent, &stats.pruneEvent))
 		default:
 			glog.V(4).Infof("skipped %v event", e.Type)
 		}
@@ -161,8 +183,15 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 		}
 		gvks[resource.GroupVersionKind()] = struct{}{}
 	}
+	if errs == nil {
+		glog.V(4).Infof("all resources are up to date.")
+	}
 
-	glog.V(4).Infof("all resources are up to date.")
+	if stats.empty() {
+		glog.V(4).Infof("The applier made no new progress")
+	} else {
+		glog.Infof("The applier made new progress: %s.", stats.string())
+	}
 	return gvks, errs
 }
 
@@ -185,25 +214,7 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map
 	// in a previous cycle (eg ignore an error about a CR so that we can apply the
 	// CRD, then a future cycle is able to apply the CR).
 	// TODO(b/169717222): Here and elsewhere, pass the MultiError as a parameter.
-	gvks, errs := a.sync(ctx, desiredResource, newCache)
-	if errs == nil {
-		// Only update the cache on complete success.
-		a.cache = newCache
-	}
-	return gvks, errs
-}
-
-// Refresh syncs and updates the API server with the (cached) git resource states.
-func (a *Applier) Refresh(ctx context.Context) status.MultiError {
-	a.mux.Lock()
-	defer a.mux.Unlock()
-
-	objs := []core.Object{}
-	for _, obj := range a.cache {
-		objs = append(objs, obj)
-	}
-	_, errs := a.sync(ctx, objs, a.cache)
-	return errs
+	return a.sync(ctx, desiredResource, newCache)
 }
 
 // newInventoryUnstructured creates an inventory object as an unstructured.

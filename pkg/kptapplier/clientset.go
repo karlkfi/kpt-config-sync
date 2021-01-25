@@ -5,6 +5,7 @@ import (
 
 	kptclient "github.com/GoogleContainerTools/kpt/pkg/client"
 	"github.com/GoogleContainerTools/kpt/pkg/live"
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
@@ -67,19 +68,28 @@ func (cs *clientSet) apply(ctx context.Context, inv inventory.InventoryInfo, res
 	return cs.kptApplier.Run(ctx, inv, resources, option)
 }
 
-func (cs *clientSet) handleDisabledObjects(ctx context.Context, inv inventory.InventoryInfo, objs []core.Object) status.MultiError {
+// handleDisabledObjects remove the specified objects from the inventory, and then disable them
+// one by one by removing the nomos metadata.
+// It returns the number of objects which are disabled successfully, and the errors encountered.
+func (cs *clientSet) handleDisabledObjects(ctx context.Context, inv inventory.InventoryInfo, objs []core.Object) (uint64, status.MultiError) {
+	// disabledCount tracks the number of objects which are disabled successfully
+	var disabledCount uint64
 	err := cs.removeFromInventory(inv, objs)
 	if err != nil {
-		return ApplierError(err)
+		return disabledCount, ApplierError(err)
 	}
 	var errs status.MultiError
 	for _, obj := range objs {
 		err := cs.disableObject(ctx, obj)
 		if err != nil {
+			glog.Warningf("failed to disable object %v", core.IDOf(obj))
 			errs = status.Append(errs, ApplierError(err))
+		} else {
+			glog.V(4).Infof("disabled object %v", core.IDOf(obj))
+			disabledCount++
 		}
 	}
-	return errs
+	return disabledCount, errs
 }
 
 func (cs *clientSet) removeFromInventory(inv inventory.InventoryInfo, objs []core.Object) error {
