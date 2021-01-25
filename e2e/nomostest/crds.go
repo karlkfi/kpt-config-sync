@@ -34,7 +34,7 @@ var (
 func waitForCRDs(nt *NT, crds []string) error {
 	took, err := Retry(60*time.Second, func() error {
 		for _, crd := range crds {
-			err := nt.Validate(crd, "", &v1beta1.CustomResourceDefinition{}, isEstablished)
+			err := nt.Validate(crd, "", &v1beta1.CustomResourceDefinition{}, IsEstablished)
 			if err != nil {
 				return err
 			}
@@ -48,10 +48,10 @@ func waitForCRDs(nt *NT, crds []string) error {
 	return nil
 }
 
-// isEstablished returns true if the given CRD is established on the cluster,
+// IsEstablished returns true if the given CRD is established on the cluster,
 // which indicates if discovery knows about it yet. For more info see
 // https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition
-func isEstablished(o core.Object) error {
+func IsEstablished(o core.Object) error {
 	crd, ok := o.(*v1beta1.CustomResourceDefinition)
 	if !ok {
 		return WrongTypeErr(o, crd)
