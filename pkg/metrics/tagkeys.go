@@ -18,8 +18,14 @@ var (
 	// KeyType groups metrics by their resource GVK.
 	KeyType, _ = tag.NewKey("type")
 
-	// KeySource groups metrics by their source. Possible values: parser, differ, remediator.
-	KeySource, _ = tag.NewKey("source")
+	// KeyInternalErrorSource groups the InternalError metrics by their source. Possible values: parser, differ, remediator.
+	KeyInternalErrorSource, _ = tag.NewKey("source")
+
+	// KeyParserSource groups the metrics for the parser by their source. Possible values: read, parse.
+	KeyParserSource, _ = tag.NewKey("source")
+
+	// KeyTrigger groups metrics by their trigger. Possible values: retry, watchUpdate, managementConflict, resync, reimport.
+	KeyTrigger, _ = tag.NewKey("trigger")
 )
 
 // StatusTagKey returns a string representation of the error, if it exists, otherwise success.

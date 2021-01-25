@@ -164,7 +164,7 @@ func TestResources_InternalErrorMetricValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantMetrics := []*view.Row{
-		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeySource, Value: "parser"}}},
+		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyInternalErrorSource, Value: "parser"}}},
 	}
 	if diff := m.ValidateMetrics(metrics.InternalErrorsView, wantMetrics); diff != "" {
 		t.Errorf("Unexpected metric data, -got, +want: %s", diff)

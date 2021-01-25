@@ -31,6 +31,13 @@ func RecordReconcileDuration(ctx context.Context, status string, startTime time.
 	stats.Record(tagCtx, measurement)
 }
 
+// RecordParserDuration produces a measurement for the ParserDuration view.
+func RecordParserDuration(ctx context.Context, trigger, source, status string, startTime time.Time) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status), tag.Upsert(KeyTrigger, trigger), tag.Upsert(KeyParserSource, source))
+	measurement := ParserDuration.M(time.Since(startTime).Seconds())
+	stats.Record(tagCtx, measurement)
+}
+
 // RecordLastSync produces a measurement for the LastSync view.
 func RecordLastSync(ctx context.Context, timestamp time.Time) {
 	measurement := LastSync.M(timestamp.Unix())
@@ -114,7 +121,7 @@ func RecordResourceConflict(ctx context.Context, gvk schema.GroupVersionKind) {
 
 // RecordInternalError produces measurements for the InternalErrors view.
 func RecordInternalError(source string) {
-	tagCtx, _ := tag.New(context.Background(), tag.Upsert(KeySource, source))
+	tagCtx, _ := tag.New(context.Background(), tag.Upsert(KeyInternalErrorSource, source))
 	measurement := InternalErrors.M(1)
 	stats.Record(tagCtx, measurement)
 }

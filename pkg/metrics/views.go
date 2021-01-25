@@ -35,6 +35,15 @@ var (
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
+	// ParserDurationView aggregates the ParserDuration metric measurements.
+	ParserDurationView = &view.View{
+		Name:        ParserDuration.Name(),
+		Measure:     ParserDuration,
+		Description: "The latency distribution of the parse-apply-watch loop",
+		TagKeys:     []tag.Key{KeyStatus, KeyTrigger, KeyParserSource},
+		Aggregation: view.Distribution(distributionBounds...),
+	}
+
 	// LastSyncTimestampView aggregates the LastSyncTimestamp metric measurements.
 	LastSyncTimestampView = &view.View{
 		Name:        LastSync.Name(),
@@ -155,7 +164,7 @@ var (
 		Name:        InternalErrors.Name() + "_total",
 		Measure:     InternalErrors,
 		Description: "The total number of internal errors triggered by Config Sync",
-		TagKeys:     []tag.Key{KeySource},
+		TagKeys:     []tag.Key{KeyInternalErrorSource},
 		Aggregation: view.Count(),
 	}
 )

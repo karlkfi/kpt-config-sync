@@ -49,7 +49,7 @@ func TestDeleted_InternalErrorMetricValidation(t *testing.T) {
 	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
 	MarkDeleted(nil)
 	wantMetrics := []*view.Row{
-		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeySource, Value: "remediator"}}},
+		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyInternalErrorSource, Value: "remediator"}}},
 	}
 	if diff := m.ValidateMetrics(metrics.InternalErrorsView, wantMetrics); diff != "" {
 		t.Errorf("Unexpected metric data, -got, +want: %s", diff)

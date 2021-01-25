@@ -21,6 +21,12 @@ var (
 		"The duration of reconcile events in seconds",
 		stats.UnitSeconds)
 
+	// ParserDuration metric measures the latency of the parse-apply-watch loop.
+	ParserDuration = stats.Float64(
+		"parser_duration_seconds",
+		"The duration of the parse-apply-watch loop in seconds",
+		stats.UnitSeconds)
+
 	// LastSync metric measures the timestamp of the latest Git sync.
 	LastSync = stats.Int64(
 		"last_sync_timestamp",

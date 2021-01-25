@@ -6,7 +6,16 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
+)
+
+const (
+	triggerResync             = "resync"
+	triggerReimport           = "reimport"
+	triggerRetry              = "retry"
+	triggerManagementConflict = "managementConflict"
+	triggerWatchUpdate        = "watchUpdate"
 )
 
 // Run keeps checking whether a parse-apply-watch loop is necessary and starts a loop if needed.
@@ -25,32 +34,38 @@ func Run(ctx context.Context, p Parser) {
 			glog.Infof("It is time for a force-resync")
 			// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 			p.resetCache()
-			readAndParse(ctx, p)
+			readAndParse(ctx, p, triggerResync)
 
 		// it is time to re-import the configuration from the filesystem
 		case <-tickerPoll.C:
-			readAndParse(ctx, p)
+			readAndParse(ctx, p, triggerReimport)
 
 		// it is time to check whether the last parse-apply-watch loop failed or any watches need to be updated
 		case <-tickerRetryOrWatchUpdate.C:
+			var trigger string
 			if p.managementConflict() {
 				glog.Infof("One of the watchers noticed a management conflict")
 				// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 				p.resetCache()
+				trigger = triggerManagementConflict
 			} else if p.getCache().needToRetry {
 				glog.Infof("The last parse-apply-watch loop failed")
+				trigger = triggerRetry
 			} else if p.needToUpdateWatch() {
 				glog.Infof("Some watches need to be updated")
+				trigger = triggerWatchUpdate
 			} else {
 				continue
 			}
-			readAndParse(ctx, p)
+			readAndParse(ctx, p, trigger)
 		}
 	}
 }
 
-func readAndParse(ctx context.Context, p Parser) {
+func readAndParse(ctx context.Context, p Parser, trigger string) {
+	start := time.Now()
 	state, errs := read(ctx, p)
+	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(errs), start)
 	if errs != nil {
 		// Invalidate state on error since this could be the result of switching
 		// branches or some other operation where inverting the operation would
@@ -59,7 +74,9 @@ func readAndParse(ctx context.Context, p Parser) {
 		return
 	}
 
+	start = time.Now()
 	errs = parse(ctx, state, p)
+	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(errs), start)
 	if errs != nil {
 		// Invalidate state on error since this could be the result of switching
 		// branches or some other operation where inverting the operation would
