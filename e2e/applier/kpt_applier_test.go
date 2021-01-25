@@ -45,7 +45,7 @@ func prepare(t *testing.T) {
 	var err error
 
 	optsStruct := ntopts.New{}
-	ntopts.Kind(t, *e2e.KubernetesVersion)(&optsStruct)
+	nomostest.RestConfig(t, &optsStruct)
 	cfg = optsStruct.RESTConfig
 
 	orgKubeConfigEnv = os.Getenv("KUBECONFIG")

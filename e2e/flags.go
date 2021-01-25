@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"flag"
+	"fmt"
 
 	// kubectl auth provider plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -47,6 +48,16 @@ var ImagePrefix = flag.String("image-prefix", DefaultImagePrefix,
 var Manual = flag.Bool("manual", false,
 	"Specify that the test is being run manually.")
 
+// TestCluster specifies the cluster config used for testing.
+var TestCluster = flag.String("test-cluster", Kind,
+	fmt.Sprintf("The cluster config used for testing. Allowed values are: %s and %s. "+
+		"If --test-cluster=%s, create a Kind cluster. Otherwise use the context specified in %s.",
+		Kubeconfig, Kind, Kind, Kubeconfig))
+
+// KubeConfig specifies the file path to the kubeconfig file.
+var KubeConfig = flag.String(Kubeconfig, "",
+	"The file path to the kubeconfig file. If not set, use the default context.")
+
 const (
 	// RunAll runs all tests whether skipped or not
 	RunAll = "runAll"
@@ -54,4 +65,11 @@ const (
 	RunSkipped = "runSkipped"
 	// RunDefault runs tests as normal and skips skipped tests
 	RunDefault = ""
+)
+
+const (
+	// Kind indicates creating a Kind cluster for testing.
+	Kind = "kind"
+	// Kubeconfig indicates using a cluster via KUBECONFIG for testing.
+	Kubeconfig = "kubeconfig"
 )

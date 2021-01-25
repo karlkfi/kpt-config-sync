@@ -1,6 +1,9 @@
 package ntopts
 
 import (
+	"testing"
+
+	"github.com/google/nomos/e2e"
 	"k8s.io/client-go/rest"
 )
 
@@ -22,4 +25,13 @@ type New struct {
 
 	Nomos
 	MultiRepo
+}
+
+// RequireManual requires the --manual flag is set. Otherwise it will skip the test.
+// This avoids running tests (e.g stress tests) that aren't safe to run against a remote cluster automatically.
+func RequireManual(t *testing.T) Opt {
+	if !*e2e.Manual {
+		t.Skip("Must pass --manual so this isn't accidentally run against a test cluster automatically.")
+	}
+	return func(opt *New) {}
 }

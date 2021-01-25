@@ -1,8 +1,12 @@
 package nomostest
 
 import (
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/e2e/nomostest/ntopts"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -63,4 +67,23 @@ func newScheme(t *testing.T) *runtime.Scheme {
 		}
 	}
 	return s
+}
+
+// RestConfig sets up the config for creating a Client connection to a K8s cluster.
+// If --test-cluster=kind, it creates a Kind cluster.
+// If --test-cluster=kubeconfig, it uses the context specified in kubeconfig.
+func RestConfig(t *testing.T, optsStruct *ntopts.New) {
+	switch strings.ToLower(*e2e.TestCluster) {
+	case e2e.Kind:
+		ntopts.Kind(t, *e2e.KubernetesVersion)(optsStruct)
+	case e2e.Kubeconfig:
+		if len(*e2e.KubeConfig) > 0 {
+			if err := os.Setenv(ntopts.Kubeconfig, *e2e.KubeConfig); err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+		}
+		ntopts.RemoteCluster(t)(optsStruct)
+	default:
+		t.Fatalf("unsupported test cluster config %s. Allowed values are kubeconfig and kind.", *e2e.TestCluster)
+	}
 }

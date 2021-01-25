@@ -6,32 +6,32 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/nomos/e2e"
-	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/client/restconfig"
 )
 
-// RemoteCluster tells the test to use the remote cluster pointed to by the
-// default context instead of creating a Kind cluster.
+// RemoteCluster tells the test to use the remote cluster pointed to by the config flags.
 func RemoteCluster(t *testing.T) Opt {
-	if !*e2e.Manual {
-		t.Skip("Must pass --manual so this isn't accidentally run against a test cluster automatically.")
-	}
-
 	return func(opt *New) {
 		t.Helper()
 
-		restConfig, err := importer.DefaultCLIOptions.ToRESTConfig()
+		restConfig, err := restconfig.NewRestConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
 		opt.RESTConfig = restConfig
 
 		kcfgPath := filepath.Join(opt.TmpDir, Kubeconfig)
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatal(err)
+
+		kubeconfig := os.Getenv(Kubeconfig)
+		if len(kubeconfig) == 0 {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			kubeconfig = filepath.Join(home, ".kube", "config")
 		}
-		data, err := ioutil.ReadFile(filepath.Join(home, ".kube", "config"))
+
+		data, err := ioutil.ReadFile(kubeconfig)
 		if err != nil {
 			t.Fatal(err)
 		}
