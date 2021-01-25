@@ -1,4 +1,4 @@
-package validate
+package parsed
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/visitor"
 )
 
 // TreeRoot is a structured, hierarchical collection of declared configs.
@@ -24,7 +23,7 @@ type TreeRoot struct {
 var _ Root = &TreeRoot{}
 
 // VisitAllObjects implements Root.
-func (t *TreeRoot) VisitAllObjects(visit visitor.Func) status.MultiError {
+func (t *TreeRoot) VisitAllObjects(visit VisitorFunc) status.MultiError {
 	err := t.VisitSystemObjects(visit)
 	err = status.Append(err, t.VisitClusterRegistryObjects(visit))
 	err = status.Append(err, t.VisitClusterObjects(visit))
@@ -32,26 +31,29 @@ func (t *TreeRoot) VisitAllObjects(visit visitor.Func) status.MultiError {
 }
 
 // VisitClusterObjects implements Root.
-func (t *TreeRoot) VisitClusterObjects(visit visitor.Func) status.MultiError {
+func (t *TreeRoot) VisitClusterObjects(visit VisitorFunc) status.MultiError {
 	return visit(t.ClusterObjects)
 }
 
 // VisitClusterRegistryObjects implements Root.
-func (t *TreeRoot) VisitClusterRegistryObjects(visit visitor.Func) status.MultiError {
+func (t *TreeRoot) VisitClusterRegistryObjects(visit VisitorFunc) status.MultiError {
 	return visit(t.ClusterRegistryObjects)
 }
 
 // VisitNamespaceObjects implements Root.
-func (t *TreeRoot) VisitNamespaceObjects(visit visitor.Func) status.MultiError {
+func (t *TreeRoot) VisitNamespaceObjects(visit VisitorFunc) status.MultiError {
+	if t.Tree == nil {
+		return nil
+	}
 	return visitTreeNode(visit, t.Tree)
 }
 
 // VisitSystemObjects implements Root.
-func (t *TreeRoot) VisitSystemObjects(visit visitor.Func) status.MultiError {
+func (t *TreeRoot) VisitSystemObjects(visit VisitorFunc) status.MultiError {
 	return visit(t.SystemObjects)
 }
 
-func visitTreeNode(visit visitor.Func, node *ast.TreeNode) status.MultiError {
+func visitTreeNode(visit VisitorFunc, node *ast.TreeNode) status.MultiError {
 	var objs []ast.FileObject
 	for _, o := range node.Objects {
 		objs = append(objs, o.FileObject)
@@ -81,7 +83,7 @@ func BuildTree(from Root) (*TreeRoot, status.MultiError) {
 	return root, nil
 }
 
-func systemVisitor(root *TreeRoot) visitor.Func {
+func systemVisitor(root *TreeRoot) VisitorFunc {
 	return func(objs []ast.FileObject) status.MultiError {
 		foundRepo := false
 		for _, o := range objs {
@@ -97,21 +99,21 @@ func systemVisitor(root *TreeRoot) visitor.Func {
 	}
 }
 
-func clusterRegistryVisitor(root *TreeRoot) visitor.Func {
-	return visitor.PerObjectFunc(func(obj ast.FileObject) status.Error {
+func clusterRegistryVisitor(root *TreeRoot) VisitorFunc {
+	return PerObjectVisitor(func(obj ast.FileObject) status.Error {
 		root.ClusterRegistryObjects = append(root.ClusterRegistryObjects, obj)
 		return nil
 	})
 }
 
-func clusterVisitor(root *TreeRoot) visitor.Func {
-	return visitor.PerObjectFunc(func(obj ast.FileObject) status.Error {
+func clusterVisitor(root *TreeRoot) VisitorFunc {
+	return PerObjectVisitor(func(obj ast.FileObject) status.Error {
 		root.ClusterObjects = append(root.ClusterObjects, obj)
 		return nil
 	})
 }
 
-func namespaceVisitor(root *TreeRoot) visitor.Func {
+func namespaceVisitor(root *TreeRoot) VisitorFunc {
 	return func(objs []ast.FileObject) status.MultiError {
 		v := tree.NewBuilderVisitor(objs)
 		astRoot := v.VisitRoot(&ast.Root{})

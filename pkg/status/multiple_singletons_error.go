@@ -19,5 +19,5 @@ func resourceName(dups []id.Resource) string {
 	if len(dups) == 0 {
 		return "singleton"
 	}
-	return dups[0].GetName()
+	return dups[0].GroupVersionKind().GroupKind().String()
 }
