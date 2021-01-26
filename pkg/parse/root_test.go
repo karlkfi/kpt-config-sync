@@ -108,6 +108,12 @@ func TestRoot_Parse(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			a := &fakeApplier{}
+
+			fakeAbs, err := cmpath.AbsoluteOS("/fake")
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			parser := &root{
 				sourceFormat: tc.format,
 				opts: opts{
@@ -117,18 +123,16 @@ func TestRoot_Parse(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
-						cache:      cache{},
+						cache: cache{
+							git: gitState{
+								policyDir: fakeAbs,
+							},
+						},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
 			}
-
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
+			err = parse(context.Background(), parser)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -173,6 +177,12 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := testmetrics.RegisterMetrics(metrics.ParseErrorsView)
 			a := &fakeApplier{}
+
+			fakeAbs, err := cmpath.AbsoluteOS("/fake")
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
@@ -182,18 +192,16 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
-						cache:      cache{},
+						cache: cache{
+							git: gitState{
+								policyDir: fakeAbs,
+							},
+						},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
 			}
-
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_ = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
+			_ = parse(context.Background(), parser)
 			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 			}
@@ -251,6 +259,12 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			m := testmetrics.RegisterMetrics(metrics.ReconcilerErrorsView)
+
+			fakeAbs, err := cmpath.AbsoluteOS("/fake")
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
@@ -260,18 +274,16 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    &fakeApplier{errors: tc.applyErrors},
-						cache:      cache{},
+						cache: cache{
+							git: gitState{
+								policyDir: fakeAbs,
+							},
+						},
 					},
 					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 				},
 			}
-
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_ = parse(context.Background(), &gitState{policyDir: fakeAbs}, parser)
+			_ = parse(context.Background(), parser)
 			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
 			}

@@ -48,12 +48,13 @@ type opts struct {
 // Parser represents a parser that can be pointed at and continuously parse
 // a git repository.
 type Parser interface {
-	parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError)
+	parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError)
 	setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error
 	setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error
 
-	// readGitState returns the current state read from the mounted Git repo.
-	readGitState(reconcilerName string) (gitState, status.Error)
+	readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error)
+	// readGitState reads all the files under state.policyDir and sets state.files.
+	readGitFiles(state *gitState) status.Error
 
 	// getPollingFrequency returns how often to re-import configuration from the filesystem.
 	getPollingFrequency() time.Duration
@@ -108,7 +109,7 @@ func (o *opts) checkpoint(applied string) {
 	}
 }
 
-// invalidate clears the state tracking information and sets needToRetry to true.
+// invalidate logs the errors, clears the state tracking information and sets needToRetry to true.
 // invalidate does not clean up the cache.
 func (o *opts) invalidate(err status.MultiError) {
 	glog.Error(err)

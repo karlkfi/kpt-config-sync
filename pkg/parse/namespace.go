@@ -58,7 +58,7 @@ type namespace struct {
 var _ Parser = &namespace{}
 
 // parseSource implements the Parser interface
-func (p *namespace) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
+func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
 	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,

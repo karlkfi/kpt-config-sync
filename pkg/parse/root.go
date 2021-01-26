@@ -69,7 +69,7 @@ type root struct {
 var _ Parser = &root{}
 
 // parseSource implements the Parser interface
-func (p *root) parseSource(ctx context.Context, state *gitState) ([]core.Object, status.MultiError) {
+func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files

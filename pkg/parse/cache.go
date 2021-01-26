@@ -7,8 +7,7 @@ import (
 
 // cache tracks the progress made by the updater
 type cache struct {
-	// policyDir is the absolute path to the policy directory.
-	policyDir string
+	git gitState
 
 	// hasParserResult indicates whether the cache includes the parser result
 	//
@@ -17,7 +16,7 @@ type cache struct {
 	// field may also indicate that the git repo is empty.
 	hasParserResult bool
 
-	// parserResult containes the parser result
+	// parserResult contains the parser result
 	// The field is only set when the parser succeeded.
 	parserResult []core.Object
 
@@ -31,7 +30,7 @@ type cache struct {
 	// field may also indicate that the git repo is empty and there is nothing to be applied.
 	hasApplierResult bool
 
-	// applierResult containes the applier result
+	// applierResult contains the applier result
 	// The field is only set when the applier succeeded applied all the declared resources.
 	applierResult map[schema.GroupVersionKind]struct{}
 
@@ -47,8 +46,7 @@ type cache struct {
 	needToRetry bool
 }
 
-func (c *cache) setParserResult(policyDir string, result []core.Object) {
-	c.policyDir = policyDir
+func (c *cache) setParserResult(result []core.Object) {
 	c.hasParserResult = true
 	c.parserResult = result
 }

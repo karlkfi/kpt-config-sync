@@ -64,7 +64,7 @@ func Run(ctx context.Context, p Parser) {
 
 func readAndParse(ctx context.Context, p Parser, trigger string) {
 	start := time.Now()
-	state, errs := read(ctx, p)
+	errs := read(ctx, p)
 	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(errs), start)
 	if errs != nil {
 		// Invalidate state on error since this could be the result of switching
@@ -75,7 +75,7 @@ func readAndParse(ctx context.Context, p Parser, trigger string) {
 	}
 
 	start = time.Now()
-	errs = parse(ctx, state, p)
+	errs = parse(ctx, p)
 	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(errs), start)
 	if errs != nil {
 		// Invalidate state on error since this could be the result of switching
@@ -85,66 +85,75 @@ func readAndParse(ctx context.Context, p Parser, trigger string) {
 	}
 }
 
-func read(ctx context.Context, p Parser) (*gitState, status.MultiError) {
-	state, err := p.readGitState(p.getReconcilerName())
+// read reads the git commit and policyDir from the git repo, checks whether the gitstate in
+// the cache is up-to-date. If the cache is not up-to-date, reads all the git files from the
+// git repo and caches the gitstate.
+//
+// read does not log any error encountered, instead returns them to its caller.
+func read(ctx context.Context, p Parser) status.MultiError {
+	state, err := p.readGitCommitAndPolicyDir(p.getReconcilerName())
 	if err != nil {
 		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
-			glog.Errorf("Failed to set source status: %v", err2)
-			return nil, status.Append(err, err2)
+			return status.Append(err, err2)
 		}
-		return nil, err
+		return err
 	}
-	return &state, nil
+
+	if state.policyDir == p.getCache().git.policyDir {
+		return nil
+	}
+
+	glog.Infof("New git changes (%s) detected, reset the cache", state.policyDir.OSPath())
+
+	// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
+	p.resetCache()
+
+	// Read all the files under state.policyDir
+	if err := p.readGitFiles(&state); err != nil {
+		if err2 := p.setSourceStatus(ctx, state, err); err2 != nil {
+			return status.Append(err, err2)
+		}
+		return err
+	}
+
+	// Set p.getCache().git after p.readGitFiles succeeded
+	p.getCache().git = state
+	return nil
 }
 
-func setSourceStatus(ctx context.Context, state gitState, p Parser, sourceErrs status.MultiError) error {
-	err := p.setSourceStatus(ctx, state, sourceErrs)
-	if err != nil {
-		glog.Errorf("Failed to set source status: %v", err)
-		p.getCache().sourceStatusUpdated = false
-	} else {
-		p.getCache().sourceStatusUpdated = true
-	}
-	return err
-}
-
-func parse(ctx context.Context, state *gitState, p Parser) status.MultiError {
-	if state.policyDir.OSPath() != p.getCache().policyDir {
-		glog.Infof("New git changes (%s) detected, reset the cache", state.policyDir.OSPath())
-		// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
-		p.resetCache()
-	}
-
+// parse implements the parse-apply-watch loop.
+//
+// parse does not log any error encountered, instead returns them to its caller.
+func parse(ctx context.Context, p Parser) status.MultiError {
 	// Parse the declared resources
 	var cos []core.Object
-	var sourceErrs status.MultiError
+	var sourceErrs, syncErrs status.MultiError
+	var setSourceStatusErr, setSyncStatusErr error
+
+	gitState := p.getCache().git
+
 	if p.getCache().hasParserResult {
 		cos = p.getCache().parserResult
 	} else {
-		cos, sourceErrs = p.parseSource(ctx, state)
+		cos, sourceErrs = p.parseSource(ctx, gitState)
 		if sourceErrs == nil {
-			p.getCache().setParserResult(state.policyDir.OSPath(), cos)
+			p.getCache().setParserResult(cos)
 		}
 	}
 
 	if !p.getCache().sourceStatusUpdated {
-		// At this point, `sourceErrs` only include the errors returned from `p.parseSource`.
-		// `setSourceStatus` needs to be called no matter `sourceErrs` are empty or not.
-		// Errors from `p.parseSource` will cause this function to return; however,
-		// errors from `setSourceStatus` will not.
-		err := setSourceStatus(ctx, *state, p, sourceErrs)
-		if sourceErrs != nil {
-			return status.Append(sourceErrs, err)
+		setSourceStatusErr = p.setSourceStatus(ctx, gitState, sourceErrs)
+		if setSourceStatusErr == nil {
+			p.getCache().sourceStatusUpdated = true
 		}
-		sourceErrs = status.Append(sourceErrs, err)
-		// At this point, `sourceErrs` only include the errors returned from `setSourceStatus`.
+		if sourceErrs != nil {
+			return status.Append(sourceErrs, setSourceStatusErr)
+		}
 	}
 
-	syncErrs := p.update(ctx, cos)
+	syncErrs = p.update(ctx, cos)
 	if syncErrs != nil || !p.getCache().syncStatusUpdated {
-		if err := p.setSyncStatus(ctx, state.commit, syncErrs); err != nil {
-			glog.Errorf("Failed to set sync status: %v", err)
-			syncErrs = status.Append(syncErrs, err)
+		if setSyncStatusErr = p.setSyncStatus(ctx, gitState.commit, syncErrs); setSyncStatusErr != nil {
 			p.getCache().syncStatusUpdated = false
 		} else {
 			p.getCache().syncStatusUpdated = true
@@ -152,10 +161,10 @@ func parse(ctx context.Context, state *gitState, p Parser) status.MultiError {
 	}
 
 	// Only checkpoint our state *everything* succeeded, including status update.
-	if sourceErrs == nil && syncErrs == nil {
-		p.checkpoint(state.policyDir.OSPath())
+	if sourceErrs == nil && syncErrs == nil && setSourceStatusErr == nil && setSyncStatusErr == nil {
+		p.checkpoint(gitState.policyDir.OSPath())
 		return nil
 	}
 
-	return status.Append(sourceErrs, syncErrs)
+	return status.Append(sourceErrs, syncErrs, setSourceStatusErr, setSyncStatusErr)
 }

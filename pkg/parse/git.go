@@ -41,14 +41,7 @@ type gitState struct {
 	files []cmpath.Absolute
 }
 
-// TODO(b/177554523): separate reading the Git commit hash and the files into two methods.
-
-// readGitState returns the current state read from the mounted Git repo.
-//
-// Returns an error if there is some problem resolving symbolic links or in
-// listing the files. Returns as much information as possible about the state
-// of the git repo on error.
-func (o *files) readGitState(reconcilerName string) (gitState, status.Error) {
+func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error) {
 	result := gitState{}
 
 	gitDir, err := o.GitDir.EvalSymlinks()
@@ -76,7 +69,16 @@ func (o *files) readGitState(reconcilerName string) (gitState, status.Error) {
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
 	}
 	result.policyDir = policyDir
+	return result, nil
+}
 
+// readGitState reads all the files under state.policyDir and sets state.files.
+// readGitFiles should be called after readGitCommitAndPolicyDir.
+func (o *files) readGitFiles(state *gitState) status.Error {
+	if state == nil || state.commit == "" || state.policyDir.OSPath() == "" {
+		return status.InternalError("readGitCommitAndPolicyDir should be called first")
+	}
+	policyDir := state.policyDir
 	if policyDir.OSPath() == o.currentPolicyDir {
 		glog.V(4).Infof("Git directory is unchanged: %s", policyDir.OSPath())
 	} else {
@@ -86,12 +88,10 @@ func (o *files) readGitState(reconcilerName string) (gitState, status.Error) {
 
 	files, err := git.ListFiles(policyDir)
 	if err != nil {
-		return result, status.PathWrapError(
-			errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
+		return status.PathWrapError(errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
 	}
-	result.files = files
-
-	return result, nil
+	state.files = files
+	return nil
 }
 
 func (o *files) gitContext() gitContext {
