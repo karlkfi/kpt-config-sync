@@ -43,7 +43,7 @@ func TestRepoVersionValidator(t *testing.T) {
 					fake.Repo(fake.RepoVersion(notAllowedRepoVersion)),
 				},
 			},
-			wantErr: status.Append(nil, system.UnsupportedRepoSpecVersion(fake.Repo(fake.RepoVersion(notAllowedRepoVersion)), notAllowedRepoVersion)),
+			wantErr: system.UnsupportedRepoSpecVersion(fake.Repo(fake.RepoVersion(notAllowedRepoVersion)), notAllowedRepoVersion),
 		},
 	}
 

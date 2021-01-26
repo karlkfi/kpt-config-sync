@@ -19,5 +19,6 @@ func HierarchicalValidators() []parsed.ValidatorFunc {
 		hierarchical.RepoVersionValidator(),
 		hierarchical.SingletonValidator(kinds.Repo()),
 		hierarchical.TreeNodeSingletonValidator(kinds.Namespace()),
+		hierarchical.HierarchyConfigValidator(),
 	}
 }
