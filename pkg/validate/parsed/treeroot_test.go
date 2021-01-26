@@ -1,6 +1,7 @@
 package parsed
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,7 +33,6 @@ func TestBuildTree(t *testing.T) {
 					fake.Repo(),
 				},
 			},
-			wantErr: nil,
 		},
 		{
 			name: "populated tree",
@@ -98,7 +98,6 @@ func TestBuildTree(t *testing.T) {
 					},
 				},
 			},
-			wantErr: nil,
 		},
 		{
 			name: "missing Repo",
@@ -108,22 +107,15 @@ func TestBuildTree(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: status.Append(nil, system.MissingRepoError()),
+			wantErr: system.MissingRepoError(),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := BuildTree(tc.from)
-			var gotErr, wantErr string
-			if err != nil {
-				gotErr = err.Error()
-			}
-			if tc.wantErr != nil {
-				wantErr = tc.wantErr.Error()
-			}
-			if gotErr != wantErr {
-				t.Errorf("Got BuildTree() error %v, want %v", gotErr, wantErr)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("Got BuildTree() error %v, want %v", err, tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Error(diff)
