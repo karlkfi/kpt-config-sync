@@ -68,6 +68,10 @@ type root struct {
 
 var _ Parser = &root{}
 
+func (p *root) options() *opts {
+	return &(p.opts)
+}
+
 // parseSource implements the Parser interface
 func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
 	wantFiles := state.files

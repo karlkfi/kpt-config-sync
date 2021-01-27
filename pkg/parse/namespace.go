@@ -57,6 +57,10 @@ type namespace struct {
 
 var _ Parser = &namespace{}
 
+func (p *namespace) options() *opts {
+	return &(p.opts)
+}
+
 // parseSource implements the Parser interface
 func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
 	filePaths := reader.FilePaths{

@@ -51,52 +51,7 @@ type Parser interface {
 	parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError)
 	setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error
 	setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error
-
-	readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error)
-	// readGitState reads all the files under state.policyDir and sets state.files.
-	readGitFiles(state *gitState) status.Error
-
-	// getPollingFrequency returns how often to re-import configuration from the filesystem.
-	getPollingFrequency() time.Duration
-	// getResyncPeriod returns the period of time between forced re-sync from Git (even
-	// without a new commit).
-	getResyncPeriod() time.Duration
-
-	// update updates the declared resources in memory, applies the resources, and sets up the watches.
-	update(ctx context.Context, cos []core.Object) status.MultiError
-
-	// needToUpdateWatch returns true if the Remediator needs its watches to be updated.
-	needToUpdateWatch() bool
-
-	// managementConflict returns true if one of the watchers noticed a management conflict.
-	managementConflict() bool
-
-	// getCache returns the cache
-	getCache() *cache
-
-	// checkpoint marks the given string as the most recent checkpoint for state
-	// tracking and up-to-date checks.
-	checkpoint(applied string)
-
-	// invalidate clears the state tracking information and sets needToRetry to true.
-	// invalidate does not clean up the cache.
-	invalidate(err status.MultiError)
-
-	resetCache()
-
-	getReconcilerName() string
-}
-
-func (o *opts) getPollingFrequency() time.Duration {
-	return o.pollingFrequency
-}
-
-func (o *opts) getResyncPeriod() time.Duration {
-	return o.resyncPeriod
-}
-
-func (o *opts) getCache() *cache {
-	return &o.cache
+	options() *opts
 }
 
 // checkpoint marks the given string as the most recent checkpoint for state
@@ -120,8 +75,4 @@ func (o *opts) invalidate(err status.MultiError) {
 
 func (o *opts) resetCache() {
 	o.cache = cache{}
-}
-
-func (o *opts) getReconcilerName() string {
-	return o.reconcilerName
 }
