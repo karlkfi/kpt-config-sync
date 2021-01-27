@@ -8,15 +8,21 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/parse/webhook"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -107,9 +113,7 @@ func dumpForFiles(objs []ast.FileObject) string {
 // successive directory polls. parser is used to convert the contents of
 // configDir into a set of Nomos configs.  client is the catch-all client used
 // to call configmanagement and other Kubernetes APIs.
-func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client,
-	discoveryClient discovery.DiscoveryInterface, cache cache.Cache,
-	decoder decode.Decoder, format SourceFormat) (*reconciler, error) {
+func newReconciler(clusterName string, gitDir string, policyDir string, parser ConfigParser, client *syncerclient.Client, discoveryClient discovery.DiscoveryInterface, cache cache.Cache, decoder decode.Decoder, format SourceFormat) (*reconciler, error) {
 	repoClient := repo.New(client)
 
 	absGitDir, err := cmpath.AbsoluteOS(gitDir)
@@ -252,6 +256,12 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
+	err = c.updateAdmissionWebhookConfiguration(ctx, desiredCoreObjects)
+	if err != nil {
+		// Don't block if updating the admission webhook fails.
+		glog.Errorf("Failed to update admission webhook: %v", err)
+	}
+
 	gs := makeGitState(absGitDir.OSPath(), desiredFileObjects)
 	if c.parsedGit == nil {
 		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
@@ -300,6 +310,64 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	glog.V(4).Infof("Reconcile completed")
 	return reconcile.Result{}, nil
+}
+
+func (c *reconciler) updateAdmissionWebhookConfiguration(ctx context.Context, objs []core.Object) status.MultiError {
+	_, lists, err := c.discoveryClient.ServerGroupsAndResources()
+	if err != nil {
+		// Likely transient. If not, there's either a serious bug in our code or
+		// something very wrong with the API Server.
+		return status.APIServerError(err, "unable to list API Resources")
+	}
+
+	gvks := toGVKs(objs)
+	newCfg, mErr := webhook.ToWebhookConfiguration(lists, gvks)
+	if mErr != nil {
+		// Either there's something wrong with the resources the API Server gave us
+		// or there's an error in our parsing logic.
+		//
+		// There's also a small chance of transient errors if a user or process
+		// deletes a CRD just after we've successfully parsed a repository, and so
+		// the type isn't available on the API Server.
+		return mErr
+	}
+
+	oldCfg := admissionv1.ValidatingWebhookConfiguration{}
+	err = c.client.Client.Get(ctx, client.ObjectKey{Name: webhook.Name}, &oldCfg)
+	switch {
+	case apierrors.IsNotFound(err):
+		// There is no Configuration yet, so nothing to merge.
+		if err = c.client.Client.Create(ctx, &newCfg); err != nil {
+			return status.APIServerError(err, "creating admission webhook")
+		}
+		return nil
+	case err != nil:
+		// Should be rare, but most likely will be a permission error.
+		return status.APIServerError(err, "getting admission webhook from API Server")
+	}
+
+	// We aren't yet concerned with removing stale rules, so just merge the two
+	// together.
+	newCfg = webhook.MergeWebhookConfigurations(oldCfg, newCfg)
+	if err = c.client.Client.Update(ctx, &newCfg); err != nil {
+		return status.APIServerError(err, "applying changes to admission webhook")
+	}
+	return nil
+}
+
+func toGVKs(objs []core.Object) []schema.GroupVersionKind {
+	seen := make(map[schema.GroupVersionKind]bool)
+	var gvks []schema.GroupVersionKind
+	for _, o := range objs {
+		gvk := o.GroupVersionKind()
+		if !seen[gvk] {
+			seen[gvk] = true
+			gvks = append(gvks, gvk)
+		}
+	}
+	// The order of GVKs is not deterministic, but we're using it for
+	// ToWebhookConfiguration which does not require its input to be sorted.
+	return gvks
 }
 
 // safetyCheck reports if the importer would cause the cluster to drop to zero

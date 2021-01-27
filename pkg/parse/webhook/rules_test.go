@@ -17,14 +17,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestToRules(t *testing.T) {
+func TestToWebhookConfiguration(t *testing.T) {
 	equivalent := admissionv1.Equivalent
 
 	testCases := []struct {
 		name         string
 		apiResources []*metav1.APIResourceList
 		gvks         []schema.GroupVersionKind
-		want         *admissionv1.ValidatingWebhookConfiguration
+		want         admissionv1.ValidatingWebhookConfiguration
 		wantErr      status.MultiError
 	}{
 		{
@@ -54,7 +54,7 @@ func TestToRules(t *testing.T) {
 			apiResources: []*metav1.APIResourceList{
 				apiResourceList(rbacv1.SchemeGroupVersion, apiResource("roles", "Role")),
 			},
-			want: &admissionv1.ValidatingWebhookConfiguration{
+			want: admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
@@ -82,7 +82,7 @@ func TestToRules(t *testing.T) {
 					apiResource("roles", "Role"),
 					apiResource("rolebindings", "RoleBinding")),
 			},
-			want: &admissionv1.ValidatingWebhookConfiguration{
+			want: admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
@@ -111,7 +111,7 @@ func TestToRules(t *testing.T) {
 				apiResourceList(rbacv1beta1.SchemeGroupVersion,
 					apiResource("rolebindings", "RoleBinding")),
 			},
-			want: &admissionv1.ValidatingWebhookConfiguration{
+			want: admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
@@ -150,7 +150,7 @@ func TestToRules(t *testing.T) {
 				apiResourceList(corev1.SchemeGroupVersion,
 					apiResource("namespaces", "Namespace")),
 			},
-			want: &admissionv1.ValidatingWebhookConfiguration{
+			want: admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
@@ -184,10 +184,10 @@ func TestToRules(t *testing.T) {
 			got, err := ToWebhookConfiguration(tc.apiResources, tc.gvks)
 
 			if diff := cmp.Diff(got, tc.want, cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf("newRules() diff (-want +got):\n%s", diff)
+				t.Errorf("TestToWebhookConfiguration() diff (-want +got):\n%s", diff)
 			}
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got newRules() err %v, want %v", err, tc.wantErr)
+				t.Errorf("got TestToWebhookConfiguration() err %v, want %v", err, tc.wantErr)
 			}
 		})
 	}

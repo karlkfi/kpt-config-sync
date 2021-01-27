@@ -16,18 +16,18 @@ import (
 // There is one ValidatingWebhook for every unique GroupVersion.
 // Each ValidatingWebhook contains exactly one Rule with all Resources which
 // correspond to the passed GroupVersionKinds.
-func ToWebhookConfiguration(apiResources []*metav1.APIResourceList, gvks []schema.GroupVersionKind) (*admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
+func ToWebhookConfiguration(apiResources []*metav1.APIResourceList, gvks []schema.GroupVersionKind) (admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
 	if len(gvks) == 0 {
-		return nil, nil
+		return admissionv1.ValidatingWebhookConfiguration{}, nil
 	}
 
-	webhookCfg := &admissionv1.ValidatingWebhookConfiguration{}
+	webhookCfg := admissionv1.ValidatingWebhookConfiguration{}
 	webhookCfg.SetNamespace(configsync.ControllerNamespace)
 	webhookCfg.SetName(Name)
 
 	webhooks, errs := newWebhooks(apiResources, gvks)
 	if errs != nil {
-		return nil, errs
+		return admissionv1.ValidatingWebhookConfiguration{}, errs
 	}
 	webhookCfg.Webhooks = webhooks
 
