@@ -76,8 +76,8 @@ const IllegalKindInNamespacesErrorCode = "1038"
 var illegalKindInNamespacesError = status.NewErrorBuilder(IllegalKindInNamespacesErrorCode)
 
 // IllegalKindInNamespacesError reports that an object has been illegally defined in namespaces/
-func IllegalKindInNamespacesError(resource id.Resource) status.Error {
+func IllegalKindInNamespacesError(resources ...id.Resource) status.Error {
 	return illegalKindInNamespacesError.
 		Sprintf("Configs of the below Kind MUST not be declared in `%s`/:", repo.NamespacesDir).
-		BuildWithResources(resource)
+		BuildWithResources(resources...)
 }
