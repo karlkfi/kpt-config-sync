@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/golang/glog"
@@ -64,6 +65,12 @@ func New(name string) *ObjectQueue {
 	}
 }
 
+// Add this to debug the memory leak issue described in http://b/178044278#comment5
+// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+func (q *ObjectQueue) print() string {
+	return fmt.Sprintf("q.objects: %v, q.dirty: %v, len(q.underlying): %v", q.objects, q.dirty, q.underlying.Len())
+}
+
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
 func (q *ObjectQueue) Add(obj core.Object) {
@@ -97,12 +104,19 @@ func (q *ObjectQueue) Add(obj core.Object) {
 	// 11. Since the gvknn is not marked dirty, we remove the resource from q.objects.
 	glog.V(2).Infof("Upserting object into queue: %v", obj)
 	if obj == nil {
-		// Add this to debug the memory leak issue described in http://b/178044278#comment3
+		// Add this to debug the memory leak issue described in http://b/178044278#comment5
+		// TODO(haiyanmeng): remove this after b/178044278 is fixed.
 		glog.Warningf("Upserting an empty object into queue for %v", gvknn)
 	}
+	// Add this to debug the memory leak issue described in http://b/178044278#comment5
+	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+	glog.Infof("Before adding %v: %v", gvknn, q.print())
 	q.objects[gvknn] = obj
 	q.dirty[gvknn] = true
 	q.underlying.Add(gvknn)
+	// Add this to debug the memory leak issue described in http://b/178044278#comment5
+	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+	glog.Infof("After adding %v: %v", gvknn, q.print())
 }
 
 // Retry schedules the object to be requeued using the rate limiter.
@@ -149,12 +163,16 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 	}
 
 	obj := q.objects[gvknn]
+	if obj == nil {
+		// Add this to debug the memory leak issue described in http://b/178044278#comment5
+		// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+		glog.Warningf("Found no obj for %v", gvknn)
+		glog.Info(q.print())
+	}
+	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+	glog.Infof("Called Get on %v: %p   len(q.underlying): %v", gvknn, obj, q.underlying.Len())
 	delete(q.dirty, gvknn)
 	glog.V(4).Infof("Fetched object for processing: %v", obj)
-	if obj == nil {
-		// Add this to debug the memory leak issue described in http://b/178044278#comment3
-		glog.Warningf("Found no obj for %v", gvknn)
-	}
 	return obj.DeepCopyObject().(core.Object), false
 }
 
@@ -168,6 +186,9 @@ func (q *ObjectQueue) Done(obj core.Object) {
 	gvknn := gvknnOfObject(obj)
 	q.underlying.Done(gvknn)
 
+	// Add this to debug the memory leak issue described in http://b/178044278#comment5
+	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
+	glog.Infof("Called Done on %v: %p   len(q.underlying): %v", gvknn, q.objects[gvknn], q.underlying.Len())
 	if q.dirty[gvknn] {
 		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
 	} else {

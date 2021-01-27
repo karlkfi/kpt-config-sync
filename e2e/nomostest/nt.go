@@ -388,15 +388,16 @@ func (nt *NT) PodLogs(namespace, deployment, container string, previousPodLog bo
 	out, err := nt.Kubectl(args...)
 	// Print a standardized header before each printed log to make ctrl+F-ing the
 	// log you want easier.
-	nt.T.Logf(`
-%s/%s %s [previous = %v]
-%s`, namespace, deployment, container, previousPodLog, string(out))
+	cmd := fmt.Sprintf("kubectl %s", strings.Join(args, " "))
 	if err != nil {
-		nt.T.Log("error getting logs:", err)
+		nt.T.Logf("failed to run %q: %v", cmd, err)
+		return
 	}
+	nt.T.Logf("%s\n%s", cmd, string(out))
 }
 
-// testLogs prints all available pod logs for the test.
+// testLogs print the logs for the current container instances when `previousPodLog` is false.
+// testLogs print the logs for the previous container instances if they exist when `previousPodLog` is true.
 func (nt *NT) testLogs(previousPodLog bool) {
 	// These pods/containers are noisy and rarely contain useful information:
 	// - git-sync

@@ -162,7 +162,9 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 
 	t.Cleanup(func() {
 		if t.Failed() {
+			// Print the logs for the current container instances.
 			nt.testLogs(false)
+			// print the logs for the previous container instances if they exist.
 			nt.testLogs(true)
 			nt.testPods()
 		}
