@@ -62,7 +62,10 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 	}
 	var repoSyncs []*v1alpha1.RepoSync
 	for _, rs := range rsl.Items {
-		repoSyncs = append(repoSyncs, &rs)
+		// Use local copy of the iteration variable to correctly get the value in
+		// each iteration and avoid the last value getting overwritten.
+		localRS := rs
+		repoSyncs = append(repoSyncs, &localRS)
 	}
 	return repoSyncs, nil
 }
