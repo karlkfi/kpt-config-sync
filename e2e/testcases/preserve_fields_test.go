@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -231,7 +231,7 @@ func TestPreserveLastApplied(t *testing.T) {
 		v1.SourcePathAnnotationKey,
 		v1.SyncTokenAnnotationKey}
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey)
+		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation, v1.DeclaredConfigAnnotationKey}, annotationKeys...)
 
@@ -315,7 +315,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		v1.SourcePathAnnotationKey,
 		v1.SyncTokenAnnotationKey}
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey)
+		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}
 	withDeclared := append([]string{v1.DeclaredConfigAnnotationKey}, annotationKeys...)
 

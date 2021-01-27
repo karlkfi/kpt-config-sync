@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
@@ -16,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
@@ -73,6 +75,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
+					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
 				fake.RoleObject(core.Namespace("foo"),
@@ -80,6 +83,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
+					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
 			},
@@ -99,6 +103,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
+					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
 			},

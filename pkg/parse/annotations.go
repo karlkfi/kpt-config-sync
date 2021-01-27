@@ -3,10 +3,12 @@ package parse
 import (
 	"encoding/json"
 
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/kptapplier"
 )
 
 // gitContext contains the fields which identify where a resource is being synced
@@ -22,13 +24,22 @@ func addAnnotationsAndLabels(objs []core.Object, scope declared.Scope, gc gitCon
 	if err != nil {
 		return err
 	}
+	var inventoryID string
+	if scope == declared.RootReconciler {
+		inventoryID = kptapplier.InventoryID(configmanagement.ControllerNamespace)
+	} else {
+		inventoryID = kptapplier.InventoryID(string(scope))
+	}
 	for _, obj := range objs {
-		// TODO(b/165798652): Set the declared config for the key v1.DeclaredConfigAnnotationKey
-		// here once the new apply logic as required in b/165798652 is implemented.
 		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 		core.SetAnnotation(obj, v1alpha1.GitContextKey, string(gcVal))
 		core.SetAnnotation(obj, v1alpha1.ResourceManagerKey, string(scope))
 		core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, commitHash)
+
+		// set the owning-inventory annotation
+		// TODO(b/178744996): Remove setting the owning-inventory once the remediator
+		// is able to use kpt live apply library.
+		core.SetAnnotation(obj, kptapplier.OwningInventoryKey, inventoryID)
 
 		value := core.GetAnnotation(obj, v1.ResourceManagementKey)
 		if value != v1.ResourceManagementDisabled {
