@@ -1,3 +1,5 @@
+GCS_PROBER_CREDS_URL ?= "gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json"
+
 # Environment:
 #   E2E_FLAGS: flag passed into the test container
 #   TEST_E2E_RUN_FLAGS: flags passed to the e2e/e2e.sh script.
@@ -29,7 +31,7 @@ test-e2e-ci-local:
 		$(E2E_FLAGS) \
 	 " \
      TEST_E2E_RUN_FLAGS="\
-		--gcs-prober-cred gs://stolos-dev/e2e/nomos-e2e.joonix.net/prober_runner_client_key.json \
+		--gcs-prober-cred $(GCS_PROBER_CREDS_URL) \
 	 " \
      test-e2e
 
@@ -54,3 +56,62 @@ test-e2e-stresstest-ci-local:
 			  --testcases-dir=stresstests \
 			" \
 			test-e2e-ci-local
+
+### Golang e2e tests targets running against a GKE cluster
+
+# Build a test docker container with gcloud and kubectl installed.
+__build-e2e-go-container:
+	@echo "+++ Building build/test-e2e-go/gke/Dockerfile nomos-gcloud-image"
+	@docker build . \
+	 	--network host \
+		-f build/test-e2e-go/gke/Dockerfile \
+		-t nomos-gcloud-image
+
+# Download the prober service account credentials from GCS.
+__download_prober_creds:
+	@echo "+++ Setting up prober credentials"
+	@gsutil cp $(GCS_PROBER_CREDS_URL) /tmp/prober_runner_client_key.json
+
+GCP_CLUSTER ?= $(USER)-cluster-1
+GCP_ZONE ?= us-central1-a
+
+# Run the golang e2e tests sequentially (--parallel 1) on a GKE cluster.
+# It requires a GKE cluster to be installed in `$(GCP_PROJECT)` and `$(GCP_ZONE)`.
+# The cluster name should follow the pattern `$(USER)-cluster-1`.
+__docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
+	@echo "+++ Running go e2e tests $(E2E_ARGS)"
+	@echo "GCP_PROJECT=$(GCP_PROJECT)"
+	@echo "GCP_CLUSTER=$(GCP_CLUSTER)"
+	@echo "GCP_ZONE=$(GCP_ZONE)"
+	@docker run \
+		$(DOCKER_RUN_ARGS) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		--env GCP_PROBER_CREDS=/etc/prober-gcp-service-account/prober_runner_client_key.json \
+		--env GCP_PROJECT=$(GCP_PROJECT) \
+		--env GCP_CLUSTER=$(GCP_CLUSTER) \
+		--env GCP_ZONE=$(GCP_ZONE) \
+		--network=host \
+		nomos-gcloud-image \
+		./build/test-e2e-go/e2e.sh $(E2E_ARGS) \
+			--timeout 100m \
+			--parallel 1 \
+			--test-cluster=kubeconfig \
+			--image-prefix=gcr.io/$(GCR_PREFIX)
+
+# The CI target that runs the golang e2e test for mono repo on a GKE cluster in prow.
+test-e2e-go-ci-mono-repo:
+	$(MAKE) __docker-run-e2e-go
+
+# The CI target that runs the golang e2e test for multi repo on a GKE cluster in prow.
+test-e2e-go-ci-multi-repo:
+	$(MAKE) E2E_ARGS="--multirepo" __docker-run-e2e-go
+
+# The CI target that runs the golang e2e test for mono repo on a GKE cluster from a local machine.
+test-e2e-go-local-mono-repo: __download_prober_creds
+	$(MAKE) DOCKER_RUN_ARGS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" __docker-run-e2e-go
+
+# The CI target that runs the golang e2e test for multi repo on a GKE cluster from a local machine.
+test-e2e-go-local-multi-repo: __download_prober_creds
+	$(MAKE) E2E_ARGS="--multirepo" \
+		DOCKER_RUN_ARGS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" \
+		__docker-run-e2e-go

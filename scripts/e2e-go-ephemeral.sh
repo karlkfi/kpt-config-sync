@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "+++ Building build/test-e2e-go/Dockerfile prow-image"
-docker build . -f build/test-e2e-go/Dockerfile -t prow-image
+echo "+++ Building build/test-e2e-go/kind/Dockerfile prow-image"
+docker build . -f build/test-e2e-go/kind/Dockerfile -t prow-image
 # The .sock volume allows you to connect to the Docker daemon of the host.
 # Part of the docker-in-docker pattern.
 

@@ -22,7 +22,7 @@ RUN mv ./kubectl /bin
 
 # Steps after here can't be cached since they touch the local filesystem.
 
-# Just copy everyhing in the nomos repository so we have whatever we might need.
+# Just copy everything in the nomos repository so we have whatever we might need.
 COPY . .
 
 # Make sure the nomos command is available for tests.
