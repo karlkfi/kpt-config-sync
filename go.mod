@@ -19,7 +19,6 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.5.4
-	github.com/googleapis/gnostic v0.4.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0

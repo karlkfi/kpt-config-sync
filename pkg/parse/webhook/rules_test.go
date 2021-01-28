@@ -36,19 +36,6 @@ func TestToWebhookConfiguration(t *testing.T) {
 			wantErr: status.InternalError(""),
 		},
 		{
-			name: "one GVK invalid API Resource",
-			gvks: []schema.GroupVersionKind{kinds.Role()},
-			apiResources: []*metav1.APIResourceList{
-				{
-					GroupVersion: "//",
-					APIResources: []metav1.APIResource{
-						apiResource("roles", "Role"),
-					},
-				},
-			},
-			wantErr: status.APIServerError(errors.New("some error"), ""),
-		},
-		{
 			name: "one GVK",
 			gvks: []schema.GroupVersionKind{kinds.Role()},
 			apiResources: []*metav1.APIResourceList{
@@ -181,7 +168,11 @@ func TestToWebhookConfiguration(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := ToWebhookConfiguration(tc.apiResources, tc.gvks)
+			mapper, err := newKindResourceMapper(tc.apiResources)
+			if err != nil {
+				t.Fatalf("creating mapper: %v", err)
+			}
+			got, err := ToWebhookConfiguration(mapper, tc.gvks)
 
 			if diff := cmp.Diff(got, tc.want, cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("TestToWebhookConfiguration() diff (-want +got):\n%s", diff)

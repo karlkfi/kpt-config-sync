@@ -16,7 +16,7 @@ import (
 // There is one ValidatingWebhook for every unique GroupVersion.
 // Each ValidatingWebhook contains exactly one Rule with all Resources which
 // correspond to the passed GroupVersionKinds.
-func ToWebhookConfiguration(apiResources []*metav1.APIResourceList, gvks []schema.GroupVersionKind) (admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
+func ToWebhookConfiguration(mapper kindResourceMapper, gvks []schema.GroupVersionKind) (admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
 	if len(gvks) == 0 {
 		return admissionv1.ValidatingWebhookConfiguration{}, nil
 	}
@@ -25,7 +25,7 @@ func ToWebhookConfiguration(apiResources []*metav1.APIResourceList, gvks []schem
 	webhookCfg.SetNamespace(configsync.ControllerNamespace)
 	webhookCfg.SetName(Name)
 
-	webhooks, errs := newWebhooks(apiResources, gvks)
+	webhooks, errs := newWebhooks(mapper, gvks)
 	if errs != nil {
 		return admissionv1.ValidatingWebhookConfiguration{}, errs
 	}
@@ -39,13 +39,7 @@ func ToWebhookConfiguration(apiResources []*metav1.APIResourceList, gvks []schem
 //
 // Returns an error if the API Resource List is malformed or there is a declared
 // GVK that is not on the API Server.
-func newWebhooks(apiResources []*metav1.APIResourceList, gvks []schema.GroupVersionKind) ([]admissionv1.ValidatingWebhook, status.MultiError) {
-	mapper, err := newKindResourceMapper(apiResources)
-	if err != nil {
-		// The API Server's resources are invalid. It's better to bail out early.
-		return nil, err
-	}
-
+func newWebhooks(mapper kindResourceMapper, gvks []schema.GroupVersionKind) ([]admissionv1.ValidatingWebhook, status.MultiError) {
 	gvrs, err := toGVRs(mapper, gvks)
 	if err != nil {
 		// Parsing wasn't done properly. It's better to bail early than try to

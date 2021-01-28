@@ -1,6 +1,8 @@
 package fake
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/util/discovery"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,8 +15,8 @@ type discoveryClient struct {
 }
 
 // ServerResources implements discovery.ServerResourcer.
-func (d discoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	return d.resources, nil
+func (d discoveryClient) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
+	return nil, d.resources, nil
 }
 
 var _ discovery.ServerResourcer = discoveryClient{}
@@ -42,6 +44,7 @@ func NewDiscoveryClient(gvks ...schema.GroupVersionKind) discovery.ServerResourc
 		for _, k := range kinds {
 			resource.APIResources = append(resource.APIResources,
 				metav1.APIResource{
+					Name: strings.ToLower(k) + "s",
 					Kind: k,
 				})
 		}

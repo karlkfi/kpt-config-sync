@@ -6,58 +6,30 @@ package filesystemtest
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"
 )
 
 // NewTestDiscoveryClient returns a new test DiscoveryClient that has mappings for test and provided resources.
 func NewTestDiscoveryClient(extraResources []*restmapper.APIGroupResources) utildiscovery.ServerResourcer {
-	return newFakeCachedDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))
+	return newFakeDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))
 }
 
-// fakeCachedDiscoveryClient is a DiscoveryClient with stubbed API Resources.
-type fakeCachedDiscoveryClient struct {
-	discovery.DiscoveryInterface
+// fakeDiscoveryClient is a DiscoveryClient with stubbed API Resources.
+type fakeDiscoveryClient struct {
 	APIGroupResources []*metav1.APIResourceList
 }
 
-// newFakeCachedDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
-func newFakeCachedDiscoveryClient(res []*metav1.APIResourceList) discovery.CachedDiscoveryInterface {
-	return &fakeCachedDiscoveryClient{APIGroupResources: res}
-}
-
-// OpenAPISchema implements DiscoveryClient.
-func (d *fakeCachedDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
-	return nil, nil
-}
-
-// Fresh always returns that the client is fresh.
-func (d *fakeCachedDiscoveryClient) Fresh() bool {
-	return true
-}
-
-// Invalidate is a no-op for the fake.
-func (d *fakeCachedDiscoveryClient) Invalidate() {
+// newFakeDiscoveryClient returns a DiscoveryClient with stubbed API Resources.
+func newFakeDiscoveryClient(res []*metav1.APIResourceList) utildiscovery.ServerResourcer {
+	return &fakeDiscoveryClient{APIGroupResources: res}
 }
 
 // ServerResources returns the stubbed list of available resources.
-func (d *fakeCachedDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	return d.APIGroupResources, nil
-}
-
-// ServerResourcesForGroupVersion returns the stubbed list of available resources in a given groupVersion.
-func (d *fakeCachedDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
-	for _, list := range d.APIGroupResources {
-		if list.GroupVersion == groupVersion {
-			return list, nil
-		}
-	}
-	return nil, status.InternalErrorf("%T wasn't given any %s resources", d, groupVersion)
+func (d *fakeDiscoveryClient) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
+	return nil, d.APIGroupResources, nil
 }
 
 // testAPIResourceList returns the API ResourceList as would be returned by the DiscoveryClient ServerResources

@@ -2,6 +2,8 @@ package webhook
 
 import (
 	"github.com/google/nomos/pkg/status"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -32,7 +34,51 @@ func newKindResourceMapper(lists []*metav1.APIResourceList) (kindResourceMapper,
 		}
 	}
 
-	return mapper, errs
+	if errs != nil {
+		return nil, errs
+	}
+	return mapper, nil
+}
+
+func (m *kindResourceMapper) addV1CRDs(crds []apiextensionsv1.CustomResourceDefinition) {
+	for _, crd := range crds {
+		group := crd.Spec.Group
+		kind := crd.Spec.Names.Kind
+		gk := schema.GroupKind{Group: group, Kind: kind}
+		name := crd.Spec.Names.Plural
+		gr := schema.GroupResource{Group: group, Resource: name}
+		for _, v := range crd.Spec.Versions {
+			if v.Served {
+				gvk := gk.WithVersion(v.Name)
+				gvr := gr.WithVersion(v.Name)
+				(*m)[gvk] = gvr
+			}
+		}
+	}
+}
+
+func (m *kindResourceMapper) addV1Beta1CRDs(crds []apiextensionsv1beta1.CustomResourceDefinition) {
+	for _, crd := range crds {
+		group := crd.Spec.Group
+		kind := crd.Spec.Names.Kind
+		gk := schema.GroupKind{Group: group, Kind: kind}
+		name := crd.Spec.Names.Plural
+		gr := schema.GroupResource{Group: group, Resource: name}
+		for _, v := range crd.Spec.Versions {
+			if v.Served {
+				gvk := gk.WithVersion(v.Name)
+				gvr := gr.WithVersion(v.Name)
+				(*m)[gvk] = gvr
+			}
+		}
+		// If using the deprecated spec.version field.
+		//noinspection GoDeprecation
+		if v := crd.Spec.Version; v != "" {
+			gvk := gk.WithVersion(v)
+			gvr := gr.WithVersion(v)
+			(*m)[gvk] = gvr
+		}
+	}
 }
 
 func toGVRs(mapper kindResourceMapper, gvks []schema.GroupVersionKind) ([]schema.GroupVersionResource, status.MultiError) {

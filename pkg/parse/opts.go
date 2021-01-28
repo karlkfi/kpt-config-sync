@@ -76,3 +76,11 @@ func (o *opts) invalidate(err status.MultiError) {
 func (o *opts) resetCache() {
 	o.cache = cache{}
 }
+
+func (o *opts) k8sClient() client.Client {
+	return o.client
+}
+
+func (o *opts) discoveryClient() discovery.ServerResourcer {
+	return o.discoveryInterface
+}

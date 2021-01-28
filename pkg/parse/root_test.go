@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
@@ -134,7 +135,8 @@ func TestRoot_Parse(t *testing.T) {
 							},
 						},
 					},
-					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
 			err = parse(context.Background(), parser)
@@ -203,7 +205,8 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 							},
 						},
 					},
-					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
 			_ = parse(context.Background(), parser)
@@ -285,7 +288,8 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 							},
 						},
 					},
-					client: syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
 			_ = parse(context.Background(), parser)

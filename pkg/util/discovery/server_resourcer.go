@@ -7,12 +7,12 @@ import (
 	"k8s.io/client-go/discovery"
 )
 
-// ServerResourcer returns a list of APIResources, or an error if unable to
-// retrieve them.
+// ServerResourcer returns a the API Groups and API Resources available on the
+// API Server.
 //
 // DiscoveryInterface satisfies this interface.
 type ServerResourcer interface {
-	ServerResources() ([]*metav1.APIResourceList, error)
+	ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error)
 }
 
 type invalidatable interface {
@@ -26,7 +26,7 @@ func GetResources(discoveryClient ServerResourcer) ([]*metav1.APIResourceList, s
 		// Non-cached DiscoveryClients aren't invalidatable, so we have to allow for this possibility.
 		invalidatableDiscoveryClient.Invalidate()
 	}
-	resourceLists, discoveryErr := discoveryClient.ServerResources()
+	_, resourceLists, discoveryErr := discoveryClient.ServerGroupsAndResources()
 	if discoveryErr != nil {
 		// Apparently the ServerResources batches a bunch of discovery requests calls
 		// and the author decided that it's perfectly reasonable to return an error

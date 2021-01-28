@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/parse/webhook"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -143,6 +144,17 @@ func parse(ctx context.Context, p Parser) status.MultiError {
 		cos, sourceErrs = p.parseSource(ctx, gitState)
 		if sourceErrs == nil {
 			opts.cache.setParserResult(cos)
+		}
+		err := webhook.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), cos)
+		if err != nil {
+			// Don't block if updating the admission webhook fails.
+			// Return an error instead if we remove the remediator as otherwise we
+			// will simply never correct the type.
+			// This should be treated as a warning (go/nomos-warning) once we have
+			// that capability.
+			glog.Errorf("Failed to update admission webhook: %v", err)
+			// TODO(b/178605725): Handle case where multiple reconciler Pods try to
+			//  create or update the Configuration simultaneously.
 		}
 	}
 
