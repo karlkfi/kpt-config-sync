@@ -12,7 +12,7 @@ replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.2.0
-	github.com/GoogleContainerTools/kpt v0.37.1-0.20210115183403-ed0566174fd8
+	github.com/GoogleContainerTools/kpt v0.37.1-0.20210128185716-8a1032f5571e
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
 	github.com/go-logr/logr v0.3.0

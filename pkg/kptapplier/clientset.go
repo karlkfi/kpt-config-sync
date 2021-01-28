@@ -71,10 +71,10 @@ func (cs *clientSet) apply(ctx context.Context, inv inventory.InventoryInfo, res
 // handleDisabledObjects remove the specified objects from the inventory, and then disable them
 // one by one by removing the nomos metadata.
 // It returns the number of objects which are disabled successfully, and the errors encountered.
-func (cs *clientSet) handleDisabledObjects(ctx context.Context, inv inventory.InventoryInfo, objs []core.Object) (uint64, status.MultiError) {
+func (cs *clientSet) handleDisabledObjects(ctx context.Context, rg *live.InventoryResourceGroup, objs []core.Object) (uint64, status.MultiError) {
 	// disabledCount tracks the number of objects which are disabled successfully
 	var disabledCount uint64
-	err := cs.removeFromInventory(inv, objs)
+	err := cs.removeFromInventory(rg, objs)
 	if err != nil {
 		return disabledCount, ApplierError(err)
 	}
@@ -92,9 +92,7 @@ func (cs *clientSet) handleDisabledObjects(ctx context.Context, inv inventory.In
 	return disabledCount, errs
 }
 
-func (cs *clientSet) removeFromInventory(inv inventory.InventoryInfo, objs []core.Object) error {
-	// TODO(b/178016280): change a.inventory to *live.InventoryResourceGroup.
-	rg := inv.(*live.InventoryResourceGroup)
+func (cs *clientSet) removeFromInventory(rg *live.InventoryResourceGroup, objs []core.Object) error {
 	oldObjs, err := rg.Load()
 	if err != nil {
 		return err
@@ -104,7 +102,7 @@ func (cs *clientSet) removeFromInventory(inv inventory.InventoryInfo, objs []cor
 	if err != nil {
 		return err
 	}
-	return cs.invClient.Replace(inv, newObjs)
+	return cs.invClient.Replace(rg, newObjs)
 }
 
 // disableObject disables the management for a single object by removing

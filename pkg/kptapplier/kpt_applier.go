@@ -24,8 +24,8 @@ import (
 type Applier struct {
 	// inventory policy for the applier.
 	policy inventory.InventoryPolicy
-	// inventory is the InventoryInfo for current Applier.
-	inventory inventory.InventoryInfo
+	// inventory is the inventory ResourceGroup for current Applier.
+	inventory *live.InventoryResourceGroup
 	// clientSetFunc is the function to create kpt clientSet.
 	// Use this as a function so that the unit testing can mock
 	// the clientSet.
@@ -55,7 +55,7 @@ var _ Interface = &Applier{}
 func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 	u := newInventoryUnstructured(string(namespace))
 	a := &Applier{
-		inventory:     live.WrapInventoryInfoObj(u),
+		inventory:     live.WrapInventoryResourceGroup(u),
 		client:        c,
 		clientSetFunc: newClientSet,
 		scope:         namespace,
@@ -69,7 +69,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 func NewRootApplier(c client.Client) *Applier {
 	u := newInventoryUnstructured(configmanagement.ControllerNamespace)
 	a := &Applier{
-		inventory:     live.WrapInventoryInfoObj(u),
+		inventory:     live.WrapInventoryResourceGroup(u),
 		client:        c,
 		clientSetFunc: newClientSet,
 		scope:         declared.RootReconciler,
