@@ -12,23 +12,23 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// InheritanceHydrator is a TreeHydrator that copies inherited objects from
+// inheritanceHydrator is a TreeHydrator that copies inherited objects from
 // abstract namespaces down into child Namespaces.
-type InheritanceHydrator struct {
+type inheritanceHydrator struct {
 	specs map[schema.GroupKind]transform.InheritanceSpec
 }
 
-var _ parsed.TreeHydrator = &InheritanceHydrator{}
+var _ parsed.TreeHydrator = &inheritanceHydrator{}
 
-// NewInheritanceHydrator returns an instantiated InheritanceHydrator.
-func NewInheritanceHydrator() *InheritanceHydrator {
-	return &InheritanceHydrator{
+// InheritanceHydrator returns an instantiated InheritanceHydrator.
+func InheritanceHydrator() parsed.TreeHydrator {
+	return &inheritanceHydrator{
 		specs: map[schema.GroupKind]transform.InheritanceSpec{},
 	}
 }
 
 // Hydrate implements TreeHydrator.
-func (h *InheritanceHydrator) Hydrate(root *parsed.TreeRoot) status.MultiError {
+func (h *inheritanceHydrator) Hydrate(root *parsed.TreeRoot) status.MultiError {
 	if err := root.VisitSystemObjects(h.buildInheritanceSpecs); err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (h *InheritanceHydrator) Hydrate(root *parsed.TreeRoot) status.MultiError {
 
 // buildInheritanceSpecs populates the InheritanceHydrator with InheritanceSpecs
 // based upon the HierarchyConfigs in the system directory.
-func (h *InheritanceHydrator) buildInheritanceSpecs(objs []ast.FileObject) status.MultiError {
+func (h *inheritanceHydrator) buildInheritanceSpecs(objs []ast.FileObject) status.MultiError {
 	for _, obj := range objs {
 		switch o := obj.Object.(type) {
 		case *v1.HierarchyConfig:
@@ -62,7 +62,7 @@ func (h *InheritanceHydrator) buildInheritanceSpecs(objs []ast.FileObject) statu
 
 // visitTreeNode recursively hydrates Namespaces by copying inherited resource
 // objects down into child Namespaces.
-func (h *InheritanceHydrator) visitTreeNode(node *ast.TreeNode, inherited []ast.FileObject) status.MultiError {
+func (h *inheritanceHydrator) visitTreeNode(node *ast.TreeNode, inherited []ast.FileObject) status.MultiError {
 	var nodeObjs []ast.FileObject
 	isNamespace := false
 	for _, o := range node.Objects {
@@ -88,7 +88,7 @@ func (h *InheritanceHydrator) visitTreeNode(node *ast.TreeNode, inherited []ast.
 
 // validateAbstractObjects returns an error if any invalid objects are declared
 // in an abstract namespace.
-func (h *InheritanceHydrator) validateAbstractObjects(objs []ast.FileObject) status.MultiError {
+func (h *inheritanceHydrator) validateAbstractObjects(objs []ast.FileObject) status.MultiError {
 	var err status.MultiError
 	for _, o := range objs {
 		gvk := o.GroupVersionKind()

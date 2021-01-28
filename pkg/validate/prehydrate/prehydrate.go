@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/validate/parsed"
 	"github.com/google/nomos/pkg/validate/prehydrate/common"
 	"github.com/google/nomos/pkg/validate/prehydrate/hierarchical"
+	"github.com/google/nomos/pkg/validate/prehydrate/hnc"
 )
 
 // FlatValidators returns the list of visitors to validate a flat repo
@@ -25,5 +26,6 @@ func HierarchicalValidators() []parsed.ValidatorFunc {
 		hierarchical.ObjectDirectoryValidator(),
 		hierarchical.DirectoryNameValidator(),
 		hierarchical.NamespaceSelectorValidator(),
+		hnc.DepthLabelValidator(),
 	}
 }

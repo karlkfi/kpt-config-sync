@@ -237,7 +237,7 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewInheritanceHydrator()
+			h := InheritanceHydrator()
 			err := h.Hydrate(tc.root)
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("Got Hydrate() error %v, want %v", err, tc.wantErr)

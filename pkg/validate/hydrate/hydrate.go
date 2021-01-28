@@ -2,6 +2,7 @@ package hydrate
 
 import (
 	"github.com/google/nomos/pkg/validate/hydrate/hierarchical"
+	"github.com/google/nomos/pkg/validate/hydrate/hnc"
 	"github.com/google/nomos/pkg/validate/parsed"
 )
 
@@ -9,6 +10,7 @@ import (
 // repo.
 func HierarchicalHydrators() []parsed.TreeHydrator {
 	return []parsed.TreeHydrator{
-		hierarchical.NewInheritanceHydrator(),
+		hierarchical.InheritanceHydrator(),
+		hnc.DepthHydrator(),
 	}
 }
