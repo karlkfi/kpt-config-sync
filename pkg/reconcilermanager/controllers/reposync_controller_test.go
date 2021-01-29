@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -46,10 +47,33 @@ const (
 	nsAnnotation = "a4fe2c51bedbb0e502883b3847f4bec3"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
 	nsUpdatedAnnotation = "92cc88e614c4eba1ce6adc081b955edf"
+
+	nsAnnotationGCENode        = "7cb81b5b4f4bee65c6f0f374d43afc7a"
+	nsUpdatedAnnotationGCENode = "e4da7a11889b93b5db572c02bea8f0b2"
 )
 
 // Set in init.
 var filesystemPollingPeriod time.Duration
+
+var parsedDeployment = func(de *appsv1.Deployment) error {
+	de.Spec = appsv1.DeploymentSpec{
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				reconcilermanager.Reconciler: reconcilermanager.Reconciler,
+			},
+		},
+		Replicas: &reconcilerDeploymentReplicaCount,
+		Template: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: reconcilermanager.Reconciler},
+					{Name: reconcilermanager.GitSync},
+				},
+			},
+		},
+	}
+	return nil
+}
 
 func init() {
 	var err error
@@ -62,13 +86,16 @@ func init() {
 func repoSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := fake.RepoSyncObject(opts...)
 	result.Spec.Git = v1alpha1.Git{
-		Repo:      reposyncRepo,
-		Revision:  ref,
-		Branch:    branch,
-		Dir:       reposyncDir,
-		Auth:      secretType,
-		SecretRef: v1alpha1.SecretReference{Name: secretRef},
+		Repo:     reposyncRepo,
+		Revision: ref,
+		Branch:   branch,
+		Dir:      reposyncDir,
+		Auth:     secretType,
 	}
+	if secretRef != "" {
+		result.Spec.Git.SecretRef = v1alpha1.SecretReference{Name: secretRef}
+	}
+
 	return result
 }
 
@@ -89,15 +116,9 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 	return result
 }
 
-func nsDeploymentAnnotation() map[string]string {
+func deploymentAnnotation(value string) map[string]string {
 	return map[string]string{
-		v1alpha1.ConfigMapAnnotationKey: nsAnnotation,
-	}
-}
-
-func nsDeploymentUpdatedAnnotation() map[string]string {
-	return map[string]string{
-		v1alpha1.ConfigMapAnnotationKey: nsUpdatedAnnotation,
+		v1alpha1.ConfigMapAnnotationKey: value,
 	}
 }
 
@@ -127,25 +148,7 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 
 func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
-	parseDeployment = func(de *appsv1.Deployment) error {
-		de.Spec = appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					reconcilermanager.Reconciler: reconcilermanager.Reconciler,
-				},
-			},
-			Replicas: &reconcilerDeploymentReplicaCount,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: reconcilermanager.Reconciler},
-						{Name: reconcilermanager.GitSync},
-					},
-				},
-			},
-		}
-		return nil
-	}
+	parseDeployment = parsedDeployment
 
 	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
@@ -194,7 +197,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantDeployments := []*appsv1.Deployment{
 		repoSyncDeployment(
 			rs,
-			setAnnotations(nsDeploymentAnnotation()),
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 		),
 	}
@@ -216,8 +219,10 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Errorf("RoleBinding diff %s", diff)
 	}
 
-	validateDeployments(t, wantDeployments, fakeClient)
-	t.Log("ConfigMap, ServiceAccount, RoleBinding, and Deployment successfully created")
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap, ServiceAccount, RoleBinding, Service, and Deployment successfully created")
 
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
@@ -254,7 +259,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantDeployments = []*appsv1.Deployment{
 		repoSyncDeployment(
 			rs,
-			setAnnotations(nsDeploymentUpdatedAnnotation()),
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 		),
 	}
@@ -265,25 +270,76 @@ func TestRepoSyncReconciler(t *testing.T) {
 		}
 	}
 
-	validateDeployments(t, wantDeployments, fakeClient)
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
 	t.Log("ConfigMap and Deployement successfully updated")
 }
 
+func TestRepoSyncAuthGCENode(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(gitRevision, branch, v1alpha1.GitSecretGCENode, "", core.Namespace(reposyncReqNamespace))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs)
+
+	// Test creating Configmaps and Deployment resources.
+	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotationGCENode)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployment successfully created")
+
+	// Test updating Configmaps and Deployment resources.
+	rs.Spec.Git.Revision = gitUpdatedRevision
+	if err := fakeClient.Update(context.Background(), rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationGCENode)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployement successfully updated")
+}
+
 // validateDeployments validates that important fields in the `wants` deployments match those same fields in the deployments found in the fakeClient
-func validateDeployments(t *testing.T, wants []*appsv1.Deployment, fakeClient *syncerFake.Client) {
-	t.Helper()
+func validateDeployments(wants []*appsv1.Deployment, fakeClient *syncerFake.Client) error {
 	for _, want := range wants {
 		gotCoreObject := fakeClient.Objects[core.IDOf(want)]
 		got := gotCoreObject.(*appsv1.Deployment)
 
 		// Compare Annotations.
 		if diff := cmp.Diff(want.Spec.Template.Annotations, got.Spec.Template.Annotations); diff != "" {
-			t.Errorf("Unexpected Annotations found. Diff: %v", diff)
+			return errors.Errorf("Unexpected Annotations found. Diff: %v", diff)
 		}
 
 		// Compare ServiceAccountName.
 		if diff := cmp.Diff(want.Spec.Template.Spec.ServiceAccountName, got.Spec.Template.Spec.ServiceAccountName); diff != "" {
-			t.Errorf("Unexpected ServiceAccountName. Diff: %v", diff)
+			return errors.Errorf("Unexpected ServiceAccountName. Diff: %v", diff)
 		}
 
 		// Compare Containers.
@@ -293,17 +349,18 @@ func validateDeployments(t *testing.T, wants []*appsv1.Deployment, fakeClient *s
 					// Compare EnvFrom fields in the container.
 					if diff := cmp.Diff(i.EnvFrom, j.EnvFrom,
 						cmpopts.SortSlices(func(x, y corev1.EnvFromSource) bool { return x.ConfigMapRef.Name < y.ConfigMapRef.Name })); diff != "" {
-						t.Errorf("Unexpected configMapRef found, diff %s", diff)
+						return errors.Errorf("Unexpected configMapRef found, diff %s", diff)
 					}
 					// Compare VolumeMount fields in the container.
 					if diff := cmp.Diff(i.VolumeMounts, j.VolumeMounts,
 						cmpopts.SortSlices(func(x, y corev1.VolumeMount) bool { return x.Name < y.Name })); diff != "" {
-						t.Errorf("Unexpected volumeMount found, diff %s", diff)
+						return errors.Errorf("Unexpected volumeMount found, diff %s", diff)
 					}
 				}
 			}
 		}
 	}
+	return nil
 }
 
 func namespacedName(name, namespace string) reconcile.Request {

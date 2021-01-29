@@ -14,12 +14,20 @@ const (
 	gceNodeAskpassPort        = 9102
 )
 
+func gceNodeAskPassContainerImage(name, tag string) string {
+	return fmt.Sprintf("gcr.io/config-management-release/%v:%v", name, tag)
+}
+
+func configureGceNodeAskPass(cr *corev1.Container) {
+	cr.Name = gceNodeAskpassSidecarName
+	cr.Image = gceNodeAskPassContainerImage(gceNodeAskpassSidecarName, gceNodeAskpassImageTag)
+	cr.Args = addPort(gceNodeAskpassPort)
+}
+
 func gceNodeAskPassSidecar() corev1.Container {
-	return corev1.Container{
-		Name:  gceNodeAskpassSidecarName,
-		Image: fmt.Sprintf("gcr.io/config-management-release/%v:%v", gceNodeAskpassSidecarName, gceNodeAskpassImageTag),
-		Args:  addPort(gceNodeAskpassPort),
-	}
+	var cr corev1.Container
+	configureGceNodeAskPass(&cr)
+	return cr
 }
 
 func authTypeGCENode(secret string) bool {
@@ -28,4 +36,15 @@ func authTypeGCENode(secret string) bool {
 
 func addPort(port int) []string {
 	return []string{fmt.Sprintf("--port=%v", port)}
+}
+
+// containsGCENodeAskPassSidecar checks whether gcenode-askpass-sidecar is
+// already present in templateSpec.Containers
+func containsGCENodeAskPassSidecar(cs []corev1.Container) bool {
+	for _, c := range cs {
+		if c.Name == gceNodeAskpassSidecarName {
+			return true
+		}
+	}
+	return false
 }

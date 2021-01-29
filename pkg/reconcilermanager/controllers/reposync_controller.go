@@ -332,19 +332,25 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 				if authTypeToken(rs.Spec.Auth) {
 					container.Env = gitSyncTokenAuthEnv(secrets.NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
 				}
-			case gceNodeAskpassSidecarName, metrics.OtelAgentName:
+			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
-				// first-ever reconcile where the container gcenode-askpass-sidecar is
-				// added to the reconciler deployment when secretType: gcenode.
+				// first-ever reconcile.
+			case gceNodeAskpassSidecarName:
+				// container gcenode-askpass-sidecar is added to the reconciler
+				// deployment when auth: gcenode.
+				configureGceNodeAskPass(&container)
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
 			}
 			updatedContainers = append(updatedContainers, container)
 		}
+
 		// Add container spec for the "gcenode-askpass-sidecar" (defined as
 		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
-		if authTypeGCENode(rs.Spec.Auth) {
-			updatedContainers = append(updatedContainers, gceNodeAskPassSidecar())
+		// The container is added first time when the reconciler deployment is created.
+		if authTypeGCENode(rs.Spec.Auth) && !containsGCENodeAskPassSidecar(updatedContainers) {
+			sidecar := gceNodeAskPassSidecar()
+			updatedContainers = append(updatedContainers, sidecar)
 		}
 		templateSpec.Containers = updatedContainers
 		return nil
