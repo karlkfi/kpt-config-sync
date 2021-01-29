@@ -246,7 +246,7 @@ func TestResourceFightsMetricValidation(t *testing.T) {
 			}
 
 			if diff := m.ValidateMetrics(metrics.ResourceFightsView, tc.wantMetrics); diff != "" {
-				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+				t.Errorf(diff)
 			}
 		})
 	}

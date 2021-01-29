@@ -13,10 +13,9 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/metrics"
+	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
@@ -80,12 +79,21 @@ func main() {
 	}
 
 	// Register the OpenCensus views
-	if err := metrics.RegisterReconcilerMetricsViews(); err != nil {
+	if err := ocmetrics.RegisterReconcilerMetricsViews(); err != nil {
 		glog.Fatalf("Failed to register OpenCensus views: %v", err)
 	}
 
-	// Register the Prometheus exporter
-	go service.ServePrometheusMetrics(true)
+	// Register the OC Agent exporter
+	oce, err := ocmetrics.RegisterOCAgentExporter()
+	if err != nil {
+		glog.Fatalf("Failed to register the OC Agent exporter: %v", err)
+	}
+
+	defer func() {
+		if err := oce.Stop(); err != nil {
+			glog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
+		}
+	}()
 
 	// Normalize policyDirRelative.
 	// Some users specify the directory as if the root of the repository is "/".

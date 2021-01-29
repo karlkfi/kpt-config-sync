@@ -4,3 +4,10 @@ metadata:
   name: config-management-system
   labels:
     configmanagement.gke.io/system: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: config-management-monitoring
+  labels:
+    configmanagement.gke.io/system: "true"

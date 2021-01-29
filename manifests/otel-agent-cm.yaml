@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-agent
+  namespace: config-management-system
+  labels:
+    app: opentelemetry
+    component: otel-agent
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
+data:
+  otel-agent-config.yaml: |
+    receivers:
+      opencensus:
+    exporters:
+      opencensus:
+        endpoint: otel-collector.config-management-monitoring:55678
+        insecure: true
+    processors:
+      batch:
+    extensions:
+      health_check:
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [opencensus]
+          processors: [batch]
+          exporters: [opencensus]

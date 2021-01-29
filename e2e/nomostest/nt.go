@@ -406,7 +406,7 @@ func (nt *NT) testLogs(previousPodLog bool) {
 	// Don't merge with any of these uncommented, but feel free to uncomment
 	// temporarily to see how presubmit responds.
 	if nt.MultiRepo {
-		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, "", previousPodLog)
+		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, reconcilermanager.ManagerName, previousPodLog)
 		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler, previousPodLog)
 		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync, previousPodLog)
 		for ns := range nt.NamespaceRepos {

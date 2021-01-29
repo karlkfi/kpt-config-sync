@@ -7,23 +7,6 @@ metadata:
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
 data:
-  service.yaml: |
-   apiVersion: v1
-   kind: Service
-   metadata:
-     name: reconciler
-     namespace: config-management-system
-     labels:
-       monitored: "true"
-       configmanagement.gke.io/system: "true"
-       configmanagement.gke.io/arch: "csmr"
-   spec:
-     selector:
-       app: reconciler
-     ports:
-       - name: metrics
-         port: 8675
-         targetPort: metrics-port
   deployment.yaml: |
    apiVersion: apps/v1
    kind: Deployment
@@ -56,9 +39,6 @@ data:
            args:
            - "--v=0"
            - "--git-dir=/repo/root/rev"
-           ports:
-             - containerPort: 8675
-               name: metrics-port
            volumeMounts:
              - name: repo
                mountPath: /repo
@@ -87,11 +67,41 @@ data:
            envFrom:
            - configMapRef:
                name: git-sync
+         - name: otel-agent
+           image: otel/opentelemetry-collector:0.19.0
+           command:
+           - /otelcol
+           args:
+           - "--config=/conf/otel-agent-config.yaml"
+           resources:
+             limits:
+               cpu: 500m
+               memory: 500Mi
+             requests:
+               cpu: 100m
+               memory: 100Mi
+           ports:
+           - containerPort: 55678 # Default OpenCensus receiver port.
+           - containerPort: 8888  # Metrics.
+           volumeMounts:
+           - name: otel-agent-config-vol
+             mountPath: /conf
+           livenessProbe:
+             httpGet:
+               path: /
+               port: 13133 # Health Check extension default port.
+           readinessProbe:
+             httpGet:
+               path: /
+               port: 13133 # Health Check extension default port.
          volumes:
          - name: repo
          - name: git-creds
            secret:
              secretName: git-creds
              defaultMode: 288
+         - name: otel-agent-config-vol
+           configMap:
+             name: otel-agent
          securityContext:
            fsGroup: 65533

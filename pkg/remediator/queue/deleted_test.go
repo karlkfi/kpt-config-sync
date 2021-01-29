@@ -52,6 +52,6 @@ func TestDeleted_InternalErrorMetricValidation(t *testing.T) {
 		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyInternalErrorSource, Value: "remediator"}}},
 	}
 	if diff := m.ValidateMetrics(metrics.InternalErrorsView, wantMetrics); diff != "" {
-		t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+		t.Errorf(diff)
 	}
 }

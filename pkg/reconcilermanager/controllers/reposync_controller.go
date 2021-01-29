@@ -133,14 +133,6 @@ func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "RoleBinding reconcile failed")
 	}
 
-	// Upsert Namespace reconciler service.
-	if err := r.upsertService(ctx, reconciler.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, owRefs); err != nil {
-		log.Error(err, "Failed to create/update Service")
-		reposync.SetStalled(&rs, "Service", err)
-		_ = r.updateStatus(ctx, &rs, log)
-		return controllerruntime.Result{}, errors.Wrap(err, "Service reconcile failed")
-	}
-
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.
@@ -209,7 +201,6 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
 		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
 		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
-		Watches(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
 		Complete(r)
 }
 
@@ -309,7 +300,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
-		// Add label used by service
+		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, reconcilermanager.Reconciler, reconciler.RepoSyncName(rs.Namespace))
 		d.Spec.Selector.MatchLabels[reconcilermanager.Reconciler] = reconciler.RepoSyncName(rs.Namespace)
 		templateSpec := &d.Spec.Template.Spec
@@ -341,7 +332,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 				if authTypeToken(rs.Spec.Auth) {
 					container.Env = gitSyncTokenAuthEnv(secrets.NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name))
 				}
-			case gceNodeAskpassSidecarName:
+			case gceNodeAskpassSidecarName, metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile where the container gcenode-askpass-sidecar is
 				// added to the reconciler deployment when secretType: gcenode.

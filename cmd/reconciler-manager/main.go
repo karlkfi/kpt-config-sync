@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
-	"github.com/google/nomos/pkg/service"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -54,14 +53,6 @@ func main() {
 
 	ctrl.SetLogger(glogr.New())
 
-	// Register the OpenCensus views
-	if err := metrics.RegisterReconcilerManagerMetricsViews(); err != nil {
-		setupLog.Error(err, "failed to register OpenCensus views")
-	}
-
-	// Register the Prometheus exporter
-	go service.ServePrometheusMetrics(true)
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 	})
@@ -86,11 +77,33 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Register the OpenCensus views
+	if err := metrics.RegisterReconcilerManagerMetricsViews(); err != nil {
+		setupLog.Error(err, "failed to register OpenCensus views")
+	}
+
+	// Register the OC Agent exporter
+	oce, err := metrics.RegisterOCAgentExporter()
+	if err != nil {
+		setupLog.Error(err, "failed to register the OC Agent exporter")
+		os.Exit(1)
+	}
+
+	defer func() {
+		if err := oce.Stop(); err != nil {
+			setupLog.Error(err, "unable to stop the OC Agent exporter")
+		}
+	}()
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
+		// os.Exit(1) does not run deferred functions so explicitly stopping the OC Agent exporter.
+		if err := oce.Stop(); err != nil {
+			setupLog.Error(err, "unable to stop the OC Agent exporter")
+		}
 		os.Exit(1)
 	}
 }

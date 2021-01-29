@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -127,17 +126,6 @@ func setupNSReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client
 }
 
 func TestRepoSyncReconciler(t *testing.T) {
-	// Mock out parseService for testing.
-	parseService = func(se *corev1.Service) error {
-		se.Spec = corev1.ServiceSpec{
-			Selector: map[string]string{"app": reconcilermanager.Reconciler},
-			Ports: []corev1.ServicePort{
-				{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")},
-			},
-		}
-		return nil
-	}
-
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
@@ -203,12 +191,6 @@ func TestRepoSyncReconciler(t *testing.T) {
 		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
 
-	wantService := service(
-		core.Name(reconciler.RepoSyncName(rs.Namespace)),
-		core.Namespace(v1.NSConfigManagementSystem),
-		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
-	)
-
 	wantDeployments := []*appsv1.Deployment{
 		repoSyncDeployment(
 			rs,
@@ -234,13 +216,8 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Errorf("RoleBinding diff %s", diff)
 	}
 
-	// compare Service.
-	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantService)], wantService, cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("Service diff %s", diff)
-	}
-
 	validateDeployments(t, wantDeployments, fakeClient)
-	t.Log("ConfigMap, ServiceAccount, RoleBinding, Service, and Deployment successfully created")
+	t.Log("ConfigMap, ServiceAccount, RoleBinding, and Deployment successfully created")
 
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision

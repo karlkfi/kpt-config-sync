@@ -1,20 +1,21 @@
 package metrics
 
 import (
-	"contrib.go.opencensus.io/exporter/prometheus"
+	"contrib.go.opencensus.io/exporter/ocagent"
 	"go.opencensus.io/stats/view"
 )
 
-var (
-	// The namespace for the OpenCensus Prometheus and Stackdriver metrics.
-	namespace = "configsync"
-)
+// RegisterOCAgentExporter creates the OC Agent metrics exporter.
+func RegisterOCAgentExporter() (*ocagent.Exporter, error) {
+	oce, err := ocagent.NewExporter(
+		ocagent.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
 
-// RegisterPrometheusExporter creates the OpenCensus Prometheus metrics exporter.
-func RegisterPrometheusExporter() (*prometheus.Exporter, error) {
-	return prometheus.NewExporter(prometheus.Options{
-		Namespace: namespace,
-	})
+	view.RegisterExporter(oce)
+	return oce, nil
 }
 
 // RegisterReconcilerManagerMetricsViews registers the views so that recorded metrics can be exported in the reconciler manager.

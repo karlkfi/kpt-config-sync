@@ -21,6 +21,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -65,6 +66,7 @@ var (
 		"monitor.yaml",
 		"reconciler-manager.yaml",
 		"reconciler-manager-configmap.yaml",
+		"otel-collector.yaml",
 	}
 
 	// monoObjects contains the names of all objects that are necessary to install
@@ -92,6 +94,8 @@ var (
 		"reconciler-manager-cm":                true,
 		"reposyncs.configsync.gke.io":          true,
 		"rootsyncs.configsync.gke.io":          true,
+		metrics.OtelAgentName:                  true,
+		metrics.OtelCollectorName:              true,
 	}
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.
@@ -149,7 +153,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	}
 
 	if nomos.MultiRepo {
-		return validateMultiRepoServiceAndDeployments
+		return validateMultiRepoDeployments
 	}
 	return validateMonoRepoDeployments
 }
@@ -361,7 +365,7 @@ func validateMonoRepoDeployments(nt *NT) error {
 	return nil
 }
 
-func validateMultiRepoServiceAndDeployments(nt *NT) error {
+func validateMultiRepoDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
@@ -382,17 +386,18 @@ func validateMultiRepoServiceAndDeployments(nt *NT) error {
 		if err != nil {
 			return err
 		}
-		err = nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace, &corev1.Service{})
+		err = nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
 			return err
 		}
-		return nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace,
+		return nt.Validate(metrics.OtelCollectorName, metrics.MonitoringNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for %s and %s", reconcilermanager.ManagerName, reconciler.RootSyncName, took)
+	nt.T.Logf("took %v to wait for %s, %s, and %s", took, reconcilermanager.ManagerName, reconciler.RootSyncName, metrics.OtelCollectorName)
 	return nil
 }
 
@@ -407,10 +412,6 @@ func setupRepoSync(nt *NT, ns string) {
 func waitForRepoReconciler(nt *NT, ns string) error {
 	name := reconciler.RepoSyncName(ns)
 	took, err := Retry(60*time.Second, func() error {
-		err := nt.Validate(name, configmanagement.ControllerNamespace, &corev1.Service{})
-		if err != nil {
-			return err
-		}
 		return nt.Validate(name, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 	})

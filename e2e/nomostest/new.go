@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -149,6 +150,10 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 
 	// You can't add Secrets to Namespaces that don't exist, so create them now.
 	err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	err = nt.Create(fake.NamespaceObject(metrics.MonitoringNamespace))
 	if err != nil {
 		nt.T.Fatal(err)
 	}

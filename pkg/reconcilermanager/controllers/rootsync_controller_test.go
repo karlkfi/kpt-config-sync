@@ -20,7 +20,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/json"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 )
@@ -64,14 +63,6 @@ func configMapWithData(namespace, name string, data map[string]string, opts ...c
 	result.Namespace = namespace
 	result.Name = name
 	result.Data = data
-	return result
-}
-
-func service(opts ...core.MetaMutator) *corev1.Service {
-	result := fake.ServiceObject(opts...)
-
-	result.Spec.Selector = map[string]string{"app": reconcilermanager.Reconciler}
-	result.Spec.Ports = []corev1.ServicePort{{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")}}
 	return result
 }
 
@@ -143,17 +134,6 @@ func rootSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutato
 }
 
 func TestRootSyncReconciler(t *testing.T) {
-	// Mock out parseService for testing.
-	parseService = func(se *corev1.Service) error {
-		se.Spec = corev1.ServiceSpec{
-			Selector: map[string]string{"app": reconcilermanager.Reconciler},
-			Ports: []corev1.ServicePort{
-				{Name: "metrics", Port: 8675, TargetPort: intstr.FromString("metrics-port")},
-			},
-		}
-		return nil
-	}
-
 	// Mock out parseDeployment for testing.
 	parseDeployment = func(de *appsv1.Deployment) error {
 		de.Spec = appsv1.DeploymentSpec{
@@ -223,12 +203,6 @@ func TestRootSyncReconciler(t *testing.T) {
 		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
 	)
 
-	wantService := service(
-		core.Name(reconciler.RootSyncName),
-		core.Namespace(v1.NSConfigManagementSystem),
-		core.OwnerReference(ownerReference(rootsyncKind, rootsyncName, "")),
-	)
-
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
 			setAnnotations(rsDeploymentAnnotation()),
@@ -251,11 +225,6 @@ func TestRootSyncReconciler(t *testing.T) {
 	// compare RoleBinding.
 	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantClusterRoleBinding)], wantClusterRoleBinding, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("ClusterRoleBinding diff %s", diff)
-	}
-
-	// compare Service.
-	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantService)], wantService, cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("Service diff %s", diff)
 	}
 
 	validateDeployments(t, wantDeployments, fakeClient)

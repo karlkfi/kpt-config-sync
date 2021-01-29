@@ -208,7 +208,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 			}
 			_ = parse(context.Background(), parser)
 			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
-				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+				t.Errorf(diff)
 			}
 		})
 	}
@@ -290,7 +290,7 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 			}
 			_ = parse(context.Background(), parser)
 			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
-				t.Errorf("Unexpected metric data, -got, +want: %s", diff)
+				t.Errorf(diff)
 			}
 		})
 	}

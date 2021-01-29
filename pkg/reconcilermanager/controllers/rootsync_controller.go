@@ -123,14 +123,6 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 		return controllerruntime.Result{}, errors.Wrap(err, "ClusterRoleBinding reconcile failed")
 	}
 
-	// Upsert Root reconciler service.
-	if err := r.upsertService(ctx, reconciler.RootSyncName, v1.NSConfigManagementSystem, owRefs); err != nil {
-		log.Error(err, "Failed to create/update Service")
-		rootsync.SetStalled(&rs, "Service", err)
-		_ = r.updateStatus(ctx, &rs, log)
-		return controllerruntime.Result{}, errors.Wrap(err, "Service reconcile failed")
-	}
-
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.
@@ -324,7 +316,7 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
-		// Add label used by service
+		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, reconcilermanager.Reconciler, reconciler.RootSyncName)
 		d.Spec.Selector.MatchLabels[reconcilermanager.Reconciler] = reconciler.RootSyncName
 
@@ -362,7 +354,7 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 				if authTypeToken(rs.Spec.Auth) {
 					container.Env = gitSyncTokenAuthEnv(rs.Spec.SecretRef.Name)
 				}
-			case gceNodeAskpassSidecarName:
+			case gceNodeAskpassSidecarName, metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile where the container gcenode-askpass-sidecar is
 				// added to the reconciler deployment when secretType: gcenode.
