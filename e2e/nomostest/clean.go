@@ -30,13 +30,18 @@ const TestLabelValue = "enabled"
 // bypass this.
 var AddTestLabel = core.Label(TestLabel, TestLabelValue)
 
+// FailOnError indicates whether the clean task should fail the test. If it is false, it only logs the failure without failing the test.
+// The test should fail if the cleanup task fails before running a test.
+// We tolerate the after-test cleanup failure as the before-test cleanup will guarantee the cluster is clean.
+type FailOnError bool
+
 // Clean removes all objects of types registered in the scheme, with the above
 // caveats. It should be run before and after a test is run against any
 // non-ephemeral cluster.
 //
 // It is unnecessary to run this on Kind clusters that exist only for the
 // duration of a single test.
-func Clean(nt *NT) {
+func Clean(nt *NT, failOnError FailOnError) {
 	nt.T.Helper()
 
 	// errDeleting ensures we delete everything possible to delete before failing.
@@ -48,7 +53,7 @@ func Clean(nt *NT) {
 
 		list, err := listType(nt, gvk)
 		if err != nil {
-			nt.T.Error(err)
+			nt.T.Log(err)
 			errDeleting = true
 		}
 
@@ -64,12 +69,12 @@ func Clean(nt *NT) {
 		for _, u := range list {
 			err := deleteObject(nt, &u)
 			if err != nil {
-				nt.T.Error(err)
+				nt.T.Log(err)
 				errDeleting = true
 			}
 		}
 	}
-	if errDeleting {
+	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error cleaning cluster")
 	}
 
@@ -88,7 +93,7 @@ func Clean(nt *NT) {
 
 		list, err := listType(nt, gvk)
 		if err != nil {
-			nt.T.Error(err)
+			nt.T.Log(err)
 			errDeleting = true
 		}
 
@@ -100,10 +105,14 @@ func Clean(nt *NT) {
 		}
 
 		for _, u := range list {
-			WaitToTerminate(nt, u.GroupVersionKind(), u.GetName(), u.GetNamespace())
+			if failOnError {
+				WaitToTerminate(nt, u.GroupVersionKind(), u.GetName(), u.GetNamespace())
+			} else {
+				WaitToTerminate(nt, u.GroupVersionKind(), u.GetName(), u.GetNamespace(), WaitNoFail())
+			}
 		}
 	}
-	if errDeleting {
+	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error waiting for test objects to be deleted")
 	}
 }

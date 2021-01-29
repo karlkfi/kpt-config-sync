@@ -33,7 +33,7 @@ const nomosE2E = "nomos-e2e"
 // Use newWithOptions for customization.
 func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 	t.Helper()
-	t.Parallel()
+	e2e.EnableParallel(t)
 
 	// TODO: we should probably put ntopts.New members inside of NT use the go-convention of mutating NT with option functions.
 	optsStruct := ntopts.New{
@@ -140,10 +140,10 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	} else {
 		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
 		// clean before and after running the test.
-		Clean(nt)
+		Clean(nt, FailOnError(true))
 		t.Cleanup(func() {
 			// Clean the cluster now that the test is over.
-			Clean(nt)
+			Clean(nt, FailOnError(false))
 		})
 	}
 

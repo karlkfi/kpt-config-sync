@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -28,7 +29,7 @@ func (bt *BatsTest) batsPath() string {
 }
 
 func (bt *BatsTest) Run(t *testing.T) {
-	t.Parallel()
+	e2e.EnableParallel(t)
 
 	countCmd := exec.Command(bt.batsPath(), "--count", bt.fileName)
 	out, err := countCmd.CombinedOutput()
@@ -149,7 +150,7 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 }
 
 func TestBats(t *testing.T) {
-	t.Parallel()
+	e2e.EnableParallel(t)
 	allTests := func(int) bool {
 		return true
 	}

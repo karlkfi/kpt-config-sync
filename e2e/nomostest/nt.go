@@ -625,6 +625,8 @@ type WaitOption func(wait *waitSpec)
 
 type waitSpec struct {
 	timeout time.Duration
+	// failOnError is the flag to control whether to fail the test or not when errors occur.
+	failOnError bool
 }
 
 // WaitTimeout provides the timeout option to Wait.
@@ -634,12 +636,21 @@ func WaitTimeout(timeout time.Duration) WaitOption {
 	}
 }
 
+// WaitNoFail sets failOnError to false so the Wait function only logs the error but not fails the test.
+func WaitNoFail() WaitOption {
+	return func(wait *waitSpec) {
+		wait.failOnError = false
+	}
+}
+
 // Wait provides a logged wait for condition to return nil with options for timeout.
+// It fails the test on errors.
 func Wait(t *testing.T, opName string, condition func() error, opts ...WaitOption) {
 	t.Helper()
 
 	wait := waitSpec{
-		timeout: time.Second * 120,
+		timeout:     time.Second * 120,
+		failOnError: true,
 	}
 	for _, opt := range opts {
 		opt(&wait)
@@ -649,7 +660,9 @@ func Wait(t *testing.T, opName string, condition func() error, opts ...WaitOptio
 	took, err := Retry(wait.timeout, condition)
 	if err != nil {
 		t.Logf("failed after %v to wait for %s", took, opName)
-		t.Fatal(err)
+		if wait.failOnError {
+			t.Fatal(err)
+		}
 	}
 	t.Logf("took %v to wait for %s", took, opName)
 }

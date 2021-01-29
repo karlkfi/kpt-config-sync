@@ -93,7 +93,7 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 		--network=host \
 		nomos-gcloud-image \
 		./build/test-e2e-go/e2e.sh $(E2E_ARGS) \
-			--timeout 100m \
+			--timeout 300m \
 			--parallel 1 \
 			--test-cluster=kubeconfig \
 			--image-prefix=gcr.io/$(GCR_PREFIX)

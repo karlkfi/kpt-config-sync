@@ -5,6 +5,7 @@ package e2e
 import (
 	"flag"
 	"fmt"
+	"testing"
 
 	// kubectl auth provider plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -73,3 +74,12 @@ const (
 	// Kubeconfig indicates using a cluster via KUBECONFIG for testing.
 	Kubeconfig = "kubeconfig"
 )
+
+// EnableParallel allows parallel execution of test functions that call t.Parallel
+// if test.parallel is greater than 1.
+func EnableParallel(t *testing.T) {
+	parallel := flag.Lookup("test.parallel").Value.(flag.Getter).Get().(int)
+	if parallel > 1 {
+		t.Parallel()
+	}
+}
