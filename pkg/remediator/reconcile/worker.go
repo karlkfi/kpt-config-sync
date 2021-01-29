@@ -48,6 +48,9 @@ func (w *Worker) processNextObject(ctx context.Context) bool {
 	if shutdown {
 		return false
 	}
+	if obj == nil {
+		return true
+	}
 
 	defer w.objectQueue.Done(obj)
 	return w.process(ctx, obj)

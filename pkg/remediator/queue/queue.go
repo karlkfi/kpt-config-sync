@@ -1,7 +1,6 @@
 package queue
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/golang/glog"
@@ -40,42 +39,49 @@ type Interface interface {
 	ShutDown()
 }
 
-// ObjectQueue is a wrapper around workqueue.RateLimitingInterface for use with
-// declared resources. It deduplicates work items by their GVKNN.
+// ObjectQueue is a wrapper around a workqueue.Interface for use with declared
+// resources. It deduplicates work items by their GVKNN.
+// NOTE: This was originally designed to wrap a DelayingInterface, but we have
+// had to copy a lot of that logic here. At some point it may make sense to
+// remove the underlying workqueue.Interface and just consolidate copied logic
+// here.
 type ObjectQueue struct {
-	// The workqueue contains work item keys so that it can maintain the order in
-	// which those items should be worked on.
-	underlying workqueue.RateLimitingInterface
+	// cond is a locking condition which allows us to lock all mutating calls but
+	// also allow any call to yield the lock safely (specifically for Get).
+	cond *sync.Cond
+	// rateLimiter enables the ObjectQueue to support rate-limited retries.
+	rateLimiter workqueue.RateLimiter
+	// delayer is a wrapper around the ObjectQueue which supports delayed Adds.
+	delayer workqueue.DelayingInterface
+	// underlying is the workqueue that contains work item keys so that it can
+	// maintain the order in which those items should be worked on.
+	underlying workqueue.Interface
 	// objects is a map of actual work items which need to be processed.
 	objects map[GVKNN]core.Object
 	// dirty is a map of object keys which will need to be reprocessed even if
 	// they are currently being processed. This is explained further in Add().
 	dirty map[GVKNN]bool
-	// objectLock prevents concurrent access to `objects` and `dirty`.
-	objectLock sync.Mutex
 }
 
 // New creates a new work queue for use in signalling objects that may need
 // remediation.
 func New(name string) *ObjectQueue {
-	return &ObjectQueue{
-		underlying: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), name),
-		objects:    map[GVKNN]core.Object{},
-		dirty:      map[GVKNN]bool{},
+	oq := &ObjectQueue{
+		cond:        sync.NewCond(&sync.Mutex{}),
+		rateLimiter: workqueue.DefaultControllerRateLimiter(),
+		underlying:  workqueue.NewNamed(name),
+		objects:     map[GVKNN]core.Object{},
+		dirty:       map[GVKNN]bool{},
 	}
-}
-
-// Add this to debug the memory leak issue described in http://b/178044278#comment5
-// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-func (q *ObjectQueue) print() string {
-	return fmt.Sprintf("q.objects: %v, q.dirty: %v, len(q.underlying): %v", q.objects, q.dirty, q.underlying.Len())
+	oq.delayer = delayingWrap(oq, name)
+	return oq
 }
 
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
 func (q *ObjectQueue) Add(obj core.Object) {
-	q.objectLock.Lock()
-	defer q.objectLock.Unlock()
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
 
 	gvknn := gvknnOfObject(obj)
 
@@ -103,34 +109,19 @@ func (q *ObjectQueue) Add(obj core.Object) {
 	// 10. The reconciler finishes processing gen2 of the resource and calls Done().
 	// 11. Since the gvknn is not marked dirty, we remove the resource from q.objects.
 	glog.V(2).Infof("Upserting object into queue: %v", obj)
-	if obj == nil {
-		// Add this to debug the memory leak issue described in http://b/178044278#comment5
-		// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-		glog.Warningf("Upserting an empty object into queue for %v", gvknn)
-	}
-	// Add this to debug the memory leak issue described in http://b/178044278#comment5
-	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-	glog.Infof("Before adding %v: %v", gvknn, q.print())
 	q.objects[gvknn] = obj
-	q.dirty[gvknn] = true
 	q.underlying.Add(gvknn)
-	// Add this to debug the memory leak issue described in http://b/178044278#comment5
-	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-	glog.Infof("After adding %v: %v", gvknn, q.print())
+
+	if !q.dirty[gvknn] {
+		q.dirty[gvknn] = true
+		q.cond.Signal()
+	}
 }
 
 // Retry schedules the object to be requeued using the rate limiter.
-//
-// It is possible that the object has been updated since processing began, so we
-// don't want to overwrite the changes but we do want to signal that we want
-// the object to be processed again.
 func (q *ObjectQueue) Retry(obj core.Object) {
-	q.objectLock.Lock()
-	defer q.objectLock.Unlock()
-
 	gvknn := gvknnOfObject(obj)
-	q.dirty[gvknn] = true
-	q.underlying.AddRateLimited(gvknn)
+	q.delayer.AddAfter(obj, q.rateLimiter.When(gvknn))
 }
 
 // Get blocks until it can return an item to be processed.
@@ -143,34 +134,29 @@ func (q *ObjectQueue) Retry(obj core.Object) {
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
 func (q *ObjectQueue) Get() (core.Object, bool) {
-	// This call is a yielding block that will allow Add() and Done() to be called
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
+
+	// This is a yielding block that will allow Add() and Done() to be called
 	// while it blocks.
+	for q.underlying.Len() == 0 && !q.underlying.ShuttingDown() {
+		q.cond.Wait()
+	}
+
 	item, shutdown := q.underlying.Get()
 	if item == nil || shutdown {
 		return nil, shutdown
 	}
 
-	// Now that we are past that blocking call, we need to lock to prevent
-	// concurrent access to our data structures.
-	q.objectLock.Lock()
-	defer q.objectLock.Unlock()
-
 	gvknn, isID := item.(GVKNN)
 	if !isID {
 		glog.Warningf("Got non GVKNN from work queue: %v", item)
-		q.underlying.Forget(item)
+		q.underlying.Done(item)
+		q.rateLimiter.Forget(item)
 		return nil, false
 	}
 
 	obj := q.objects[gvknn]
-	if obj == nil {
-		// Add this to debug the memory leak issue described in http://b/178044278#comment5
-		// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-		glog.Warningf("Found no obj for %v", gvknn)
-		glog.Info(q.print())
-	}
-	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-	glog.Infof("Called Get on %v: %p   len(q.underlying): %v", gvknn, obj, q.underlying.Len())
 	delete(q.dirty, gvknn)
 	glog.V(4).Infof("Fetched object for processing: %v", obj)
 	return obj.DeepCopyObject().(core.Object), false
@@ -180,17 +166,15 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
 func (q *ObjectQueue) Done(obj core.Object) {
-	q.objectLock.Lock()
-	defer q.objectLock.Unlock()
+	q.cond.L.Lock()
+	defer q.cond.L.Unlock()
 
 	gvknn := gvknnOfObject(obj)
 	q.underlying.Done(gvknn)
 
-	// Add this to debug the memory leak issue described in http://b/178044278#comment5
-	// TODO(haiyanmeng): remove this after b/178044278 is fixed.
-	glog.Infof("Called Done on %v: %p   len(q.underlying): %v", gvknn, q.objects[gvknn], q.underlying.Len())
 	if q.dirty[gvknn] {
 		glog.V(4).Infof("Leaving dirty object reference in place: %v", q.objects[gvknn])
+		q.cond.Signal()
 	} else {
 		glog.V(2).Infof("Removing clean object reference: %v", q.objects[gvknn])
 		delete(q.objects, gvknn)
@@ -201,7 +185,7 @@ func (q *ObjectQueue) Done(obj core.Object) {
 // RateLimitingInterface to forget a specific core.Object.
 func (q *ObjectQueue) Forget(obj core.Object) {
 	gvknn := gvknnOfObject(obj)
-	q.underlying.Forget(gvknn)
+	q.rateLimiter.Forget(gvknn)
 }
 
 // Len returns the length of the underlying queue.
@@ -212,4 +196,56 @@ func (q *ObjectQueue) Len() int {
 // ShutDown shuts down the object queue.
 func (q *ObjectQueue) ShutDown() {
 	q.underlying.ShutDown()
+}
+
+// ShuttingDown returns true if the object queue is shutting down.
+func (q *ObjectQueue) ShuttingDown() bool {
+	return q.underlying.ShuttingDown()
+}
+
+// delayingWrap returns the given ObjectQueue wrapped in a DelayingInterface to
+// enable rate-limited retries.
+func delayingWrap(oq *ObjectQueue, name string) workqueue.DelayingInterface {
+	gw := &genericWrapper{oq}
+	return workqueue.NewDelayingQueueWithCustomQueue(gw, name)
+}
+
+// genericWrapper is an internal wrapper that allows us to pass an ObjectQueue
+// to a DelayingInterface to enable rate-limited retries. It uses unsafe type
+// conversion because it should only ever be used in this file and so we know
+// that all of the item interfaces are actually core.Objects.
+type genericWrapper struct {
+	oq *ObjectQueue
+}
+
+var _ workqueue.Interface = &genericWrapper{}
+
+// Add implements workqueue.Interface.
+func (g *genericWrapper) Add(item interface{}) {
+	g.oq.Add(item.(core.Object))
+}
+
+// Get implements workqueue.Interface.
+func (g *genericWrapper) Get() (item interface{}, shutdown bool) {
+	return g.oq.Get()
+}
+
+// Done implements workqueue.Interface.
+func (g *genericWrapper) Done(item interface{}) {
+	g.oq.Done(item.(core.Object))
+}
+
+// Len implements workqueue.Interface.
+func (g *genericWrapper) Len() int {
+	return g.oq.Len()
+}
+
+// ShutDown implements workqueue.Interface.
+func (g *genericWrapper) ShutDown() {
+	g.oq.ShutDown()
+}
+
+// ShuttingDown implements workqueue.Interface.
+func (g *genericWrapper) ShuttingDown() bool {
+	return g.oq.ShuttingDown()
 }
