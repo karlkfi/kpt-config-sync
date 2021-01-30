@@ -8,6 +8,18 @@ import (
 // it.
 type ValidatorFunc func(root Root) status.MultiError
 
+// TreeValidator returns a ValidatorFunc that wraps the given validation
+// function which is specific to a TreeRoot.
+func TreeValidator(f func(root *TreeRoot) status.MultiError) ValidatorFunc {
+	return func(root Root) status.MultiError {
+		t, ok := root.(*TreeRoot)
+		if !ok {
+			return status.InternalError("hierarchical validation applied to non-hierarchical repo")
+		}
+		return f(t)
+	}
+}
+
 // ValidateAllObjects returns a ValidatorFunc that calls the given visitor VisitorFunc
 // on all objects in a Root.
 func ValidateAllObjects(f VisitorFunc) ValidatorFunc {

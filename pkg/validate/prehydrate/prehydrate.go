@@ -26,6 +26,7 @@ func HierarchicalValidators() []parsed.ValidatorFunc {
 		hierarchical.ObjectDirectoryValidator(),
 		hierarchical.DirectoryNameValidator(),
 		hierarchical.NamespaceSelectorValidator(),
+		hierarchical.InheritanceValidator(),
 		hnc.DepthLabelValidator(),
 	}
 }
