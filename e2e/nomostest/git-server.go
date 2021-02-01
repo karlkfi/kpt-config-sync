@@ -20,7 +20,7 @@ import (
 
 const testGitNamespace = "config-management-system-test"
 const testGitServer = "test-git-server"
-const testGitServerImage = "gcr.io/nomos-public/git-server:v1.0.0"
+const testGitServerImage = "gcr.io/stolos-dev/git-server:v1.0.0"
 const rootRepo = "sot.git"
 
 func testGitServerSelector() map[string]string {

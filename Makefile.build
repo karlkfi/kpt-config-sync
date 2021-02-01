@@ -158,6 +158,6 @@ build-git-server:
 	@cd $(GIT_SERVER_DOCKER) && git checkout $(GIT_SERVER_RELEASE)
 	@docker build $(DOCKER_BUILD_QUIET) \
 			$(GIT_SERVER_DOCKER) \
-			-t gcr.io/nomos-public/git-server:$(GIT_SERVER_RELEASE)
+			-t gcr.io/stolos-dev/git-server:$(GIT_SERVER_RELEASE)
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
-	@docker push gcr.io/nomos-public/git-server:$(GIT_SERVER_RELEASE)
+	@docker push gcr.io/stolos-dev/git-server:$(GIT_SERVER_RELEASE)

@@ -70,11 +70,7 @@ GCP_PROJECT ?= stolos-dev
 GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 
 # Docker image used for build and test. This image does not support CGO.
-# NOTE: nomos-public is fully accessible publicly, do not use for anything
-# other than buildenv
-BUILDENV_PROJECT ?= nomos-public
-BUILDENV_IMAGE_VERSION ?= v0.2.5
-BUILDENV_IMAGE ?= gcr.io/$(BUILDENV_PROJECT)/buildenv:$(BUILDENV_IMAGE_VERSION)
+BUILDENV_IMAGE ?= gcr.io/stolos-dev/buildenv:v0.2.5
 
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := git-importer monitor

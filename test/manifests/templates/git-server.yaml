@@ -42,7 +42,7 @@ spec:
           emptyDir: {}
       containers:
         - name: test-git-server
-          image: gcr.io/nomos-public/git-server:v1.0.0
+          image: gcr.io/stolos-dev/git-server:v1.0.0
           ports:
             - containerPort: 22
           volumeMounts:
