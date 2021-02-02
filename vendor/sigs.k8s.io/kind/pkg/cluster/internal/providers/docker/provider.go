@@ -66,7 +66,7 @@ func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error
 		return err
 	}
 
-	// ensure the pre-requesite network exists
+	// ensure the pre-requisite network exists
 	networkName := fixedNetworkName
 	if n := os.Getenv("KIND_EXPERIMENTAL_DOCKER_NETWORK"); n != "" {
 		p.logger.Warn("WARNING: Overriding docker network due to KIND_EXPERIMENTAL_DOCKER_NETWORK")
@@ -246,7 +246,6 @@ func (p *provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	}
 	// construct a slice of methods to collect logs
 	fns := []func() error{
-		// TODO(bentheelder): record the kind version here as well
 		// record info about the host docker
 		execToPathFn(
 			exec.Command("docker", "info"),

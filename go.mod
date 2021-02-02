@@ -44,6 +44,6 @@ require (
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384
 	sigs.k8s.io/controller-runtime v0.6.3
-	sigs.k8s.io/kind v0.9.0
+	sigs.k8s.io/kind v0.10.0
 	sigs.k8s.io/yaml v1.2.0
 )

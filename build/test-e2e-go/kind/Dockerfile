@@ -7,10 +7,10 @@ ENV GO111MODULE=on
 # Build static binaries; otherwise go test complains.
 ENV CGO_ENABLED=0
 
-# We're running tests within kind v0.9.0 clusters.
-# If you upgrade the version, you also need to update the speciak kubekins-with-Kind
+# We're running tests within kind v0.10.0 clusters.
+# If you upgrade the version, you also need to update the special kubekins-with-Kind
 # images we use in the test-infra repository. See Makefile.prow.
-RUN go get sigs.k8s.io/kind@v0.9.0
+RUN go get sigs.k8s.io/kind@v0.10.0
 
 RUN apk add --no-cache \
   bash curl docker gcc git jq make openssh-client

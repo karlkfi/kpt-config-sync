@@ -7,7 +7,7 @@ set -euxo pipefail
 # Required for Go e2e tests to work. See e2e/doc.go.
 #
 # Installs kind if it is not already installed. If you already have kind
-# installed but this does not work, make sure you're on version 0.9.0 or later.
+# installed but this does not work, make sure you're on version 0.10.0 or later.
 
 # create registry container unless it already exists
 reg_name='kind-registry'
@@ -23,17 +23,17 @@ docker inspect "${reg_name}" &>/dev/null || (
 # It's safe to run this even if the container is already running.
 docker start "${reg_name}"
 
-# Ensure kind v0.9.0 is installed.
+# Ensure kind v0.10.0 is installed.
 # Dear future people: Feel free to upgrade this as new versions are released.
 # Note that upgrading the kind version will require updating the image versions:
 # https://github.com/kubernetes-sigs/kind/releases
 kind &> /dev/null || (
-  echo "Kind is not installed. Install v0.9.0."
+  echo "Kind is not installed. Install v0.10.0."
   echo "https://kind.sigs.k8s.io/docs/user/quick-start/"
   exit 1
 )
-kind version | grep v0.9.0 || (
-  echo "Using unsupported kind version. Install v0.9.0."
+kind version | grep v0.10.0 || (
+  echo "Using unsupported kind version. Install v0.10.0."
   echo "https://kind.sigs.k8s.io/docs/user/quick-start/"
   exit 1
 )
