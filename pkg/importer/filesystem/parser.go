@@ -84,7 +84,6 @@ func generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.V
 	}
 	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
 	visitors = append(visitors, hierarchicalVisitors(policyDir, hierarchyConfigs)...)
-	visitors = append(visitors, transform.NewSyncGenerator())
 	return visitors
 }
 
