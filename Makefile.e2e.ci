@@ -83,8 +83,10 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 	@echo "GCP_PROJECT=$(GCP_PROJECT)"
 	@echo "GCP_CLUSTER=$(GCP_CLUSTER)"
 	@echo "GCP_ZONE=$(GCP_ZONE)"
+	@echo "GCR_PREFIX=$(GCR_PREFIX)"
+	@echo "DOCKER_RUN_PARAMS=$(DOCKER_RUN_PARAMS)"
 	@docker run \
-		$(DOCKER_RUN_ARGS) \
+		$(DOCKER_RUN_PARAMS) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		--env GCP_PROBER_CREDS=/etc/prober-gcp-service-account/prober_runner_client_key.json \
 		--env GCP_PROJECT=$(GCP_PROJECT) \
@@ -108,10 +110,10 @@ test-e2e-go-ci-multi-repo:
 
 # The CI target that runs the golang e2e test for mono repo on a GKE cluster from a local machine.
 test-e2e-go-local-mono-repo: __download_prober_creds
-	$(MAKE) DOCKER_RUN_ARGS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" __docker-run-e2e-go
+	$(MAKE) DOCKER_RUN_PARAMS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" __docker-run-e2e-go
 
 # The CI target that runs the golang e2e test for multi repo on a GKE cluster from a local machine.
 test-e2e-go-local-multi-repo: __download_prober_creds
 	$(MAKE) E2E_ARGS="--multirepo" \
-		DOCKER_RUN_ARGS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" \
+		DOCKER_RUN_PARAMS="-v /tmp/prober_runner_client_key.json:/etc/prober-gcp-service-account/prober_runner_client_key.json" \
 		__docker-run-e2e-go
