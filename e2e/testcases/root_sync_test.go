@@ -222,6 +222,8 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
+	// Checkout back to 'main' branch to get the correct HEAD commit sha1.
+	nt.Root.CheckoutBranch(nomostest.MainBranch)
 	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'acme' present.
