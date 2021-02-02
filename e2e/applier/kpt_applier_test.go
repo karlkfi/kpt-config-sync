@@ -6,6 +6,7 @@ package applier
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -66,7 +67,10 @@ func prepare(t *testing.T) {
 
 	// Apply the CRD
 	ctx = context.Background()
-	rgCRD := resourcegroupCRD(t)
+	rgCRD, err := resourcegroupCRD()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
 	err = k8sClient.Create(ctx, rgCRD)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
@@ -82,6 +86,45 @@ func prepare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
+
+	t.Cleanup(func() {
+		if err := cleanup(); err != nil {
+			t.Fatalf("failed to clean up %v", err)
+		}
+	})
+}
+
+func cleanup() error {
+	// Delete the CRD
+	ctx = context.Background()
+	rgCRD, err := resourcegroupCRD()
+	if err != nil {
+		return err
+	}
+	err = k8sClient.Delete(ctx, rgCRD)
+	if err != nil {
+		return err
+	}
+
+	// Delete the namespace config-management-system
+	namespace := configManagementNamespace()
+	err = k8sClient.Delete(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	_, err = nomostest.Retry(120*time.Second, func() error {
+		err2 := k8sClient.Get(ctx, client.ObjectKey{
+			Name: namespace.GetName(),
+		}, namespace)
+		if err2 != nil {
+			if apierrors.IsNotFound(err2) {
+				return nil
+			}
+			return err2
+		}
+		return fmt.Errorf("namespace hasn't been removed")
+	})
+	return err
 }
 
 func configManagementNamespace() *unstructured.Unstructured {
@@ -90,17 +133,17 @@ func configManagementNamespace() *unstructured.Unstructured {
 	return namespace
 }
 
-func resourcegroupCRD(t *testing.T) *unstructured.Unstructured {
+func resourcegroupCRD() (*unstructured.Unstructured, error) {
 	data, err := ioutil.ReadFile(filepath.Join("..", "..", "manifests", "test-resources", "kpt-resourcegroup-crd.yaml"))
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		return nil, err
 	}
 	u := &unstructured.Unstructured{}
 	err = yaml.Unmarshal(data, u)
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		return nil, err
 	}
-	return u
+	return u, nil
 }
 
 func waitForCRD(crd *unstructured.Unstructured) error {
@@ -392,6 +435,15 @@ func TestConflictResource(t *testing.T) {
 		t.Errorf("should be applied from the namespace applier")
 	}
 
+	// cleanup the applied resources
+	_, errs = nsApplier.Apply(ctx, nil)
+	if errs != nil {
+		t.Fatalf("unexpected error %v", errs)
+	}
+	_, errs = rootApplier.Apply(ctx, nil)
+	if errs != nil {
+		t.Fatalf("unexpected error %v", errs)
+	}
 }
 
 func TestUnknownType(t *testing.T) {
@@ -486,6 +538,16 @@ func TestUnknownType(t *testing.T) {
 		func(x, y schema.GroupVersionKind) bool { return x.String() < y.String() })); diff != "" {
 		t.Errorf("Diff of GVK map from Apply(): %s", diff)
 	}
+
+	// cleanup the applied resources
+	_, errs = applier.Apply(ctx, nil)
+	if errs != nil {
+		t.Fatalf("unexpected error %v", errs)
+	}
+	_, errs = rootApplier.Apply(ctx, nil)
+	if errs != nil {
+		t.Fatalf("unexpected error %v", errs)
+	}
 }
 
 func TestDisabledResource(t *testing.T) {
@@ -576,6 +638,12 @@ func TestDisabledResource(t *testing.T) {
 	}
 	if _, found := cmObject.GetAnnotations()["config.k8s.io/owning-inventory"]; !found {
 		t.Errorf("should have the annotation %s", "config.k8s.io/owning-inventory")
+	}
+
+	// cleanup the applied resources
+	_, errs = applier.Apply(ctx, nil)
+	if errs != nil {
+		t.Fatalf("unexpected error %v", errs)
 	}
 }
 
