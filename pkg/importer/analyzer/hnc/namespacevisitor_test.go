@@ -3,8 +3,6 @@
 package hnc
 
 import (
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -17,19 +15,6 @@ import (
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/testing/fake"
 )
-
-// depthLabels labels namespaces with depths to other hierarchy.
-func depthLabels(path string) core.MetaMutator {
-	tl := make(map[string]string)
-	p := strings.Split(path, "/")
-	p = append([]string{DepthLabelRootName}, p...)
-	for i, ans := range p {
-		l := ans + DepthSuffix
-		dist := strconv.Itoa(len(p) - i - 1)
-		tl[l] = dist
-	}
-	return core.Labels(tl)
-}
 
 func TestBuilderVisitor(t *testing.T) {
 	testCases := []struct {
@@ -79,7 +64,8 @@ func TestBuilderVisitor(t *testing.T) {
 										"namespaces/foo/bar",
 										core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
 										core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
-										depthLabels("foo/bar"))}},
+										core.Label("foo.tree.hnc.x-k8s.io/depth", "1"),
+										core.Label("bar.tree.hnc.x-k8s.io/depth", "0"))}},
 								},
 							},
 						},
@@ -89,7 +75,7 @@ func TestBuilderVisitor(t *testing.T) {
 							Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux",
 								core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
 								core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
-								depthLabels("qux"))}},
+								core.Label("qux.tree.hnc.x-k8s.io/depth", "0"))}},
 						},
 					},
 				},

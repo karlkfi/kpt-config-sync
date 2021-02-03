@@ -65,36 +65,31 @@ function check_metrics_pages() {
     -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
     -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" \
     -l "analytics.tree.hnc.x-k8s.io/depth=0" \
-    -l "eng.tree.hnc.x-k8s.io/depth=1" \
-    -l "config-sync-root.tree.hnc.x-k8s.io/depth=2"
+    -l "eng.tree.hnc.x-k8s.io/depth=1"
   namespace::check_exists backend \
     -a "configmanagement.gke.io/managed=enabled" \
     -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
     -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" \
     -l "backend.tree.hnc.x-k8s.io/depth=0" \
-    -l "eng.tree.hnc.x-k8s.io/depth=1" \
-    -l "config-sync-root.tree.hnc.x-k8s.io/depth=2"
+    -l "eng.tree.hnc.x-k8s.io/depth=1"
   namespace::check_exists frontend \
     -a "configmanagement.gke.io/managed=enabled" \
     -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
     -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" \
     -l "frontend.tree.hnc.x-k8s.io/depth=0" \
-    -l "eng.tree.hnc.x-k8s.io/depth=1" \
-    -l "config-sync-root.tree.hnc.x-k8s.io/depth=2"
+    -l "eng.tree.hnc.x-k8s.io/depth=1"
   namespace::check_exists new-prj \
     -a "configmanagement.gke.io/managed=enabled" \
     -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
     -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" \
     -l "new-prj.tree.hnc.x-k8s.io/depth=0" \
-    -l "rnd.tree.hnc.x-k8s.io/depth=1" \
-    -l "config-sync-root.tree.hnc.x-k8s.io/depth=2"
+    -l "rnd.tree.hnc.x-k8s.io/depth=1"
   namespace::check_exists newer-prj \
     -a "configmanagement.gke.io/managed=enabled" \
     -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
     -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" \
     -l "newer-prj.tree.hnc.x-k8s.io/depth=0" \
-    -l "rnd.tree.hnc.x-k8s.io/depth=1" \
-    -l "config-sync-root.tree.hnc.x-k8s.io/depth=2"
+    -l "rnd.tree.hnc.x-k8s.io/depth=1"
   resource::check_count -a "configmanagement.gke.io/managed=enabled" -r clusterrole -c 3
   resource::check_count -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" -r clusterrole -c 0
   resource::check_count -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io" -r clusterrole -c 0

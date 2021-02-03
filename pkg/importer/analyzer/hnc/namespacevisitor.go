@@ -28,9 +28,6 @@ const (
 	// DepthSuffix is a label suffix for hierarchical namespace depth.
 	// See definition at http://bit.ly/k8s-hnc-design#heading=h.1wg2oqxxn6ka.
 	DepthSuffix = ".tree.hnc.x-k8s.io/depth"
-
-	// DepthLabelRootName is the depth label name for the root node "namespaces" in the hierarchy.
-	DepthLabelRootName = "config-sync-root"
 )
 
 // namespaceVisitor sets hierarchy controller annotation and labels on namespaces.
@@ -60,29 +57,23 @@ func (v *namespaceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	return newObject
 }
 
-// addDepthLabels adds depth labels to namespaces from its relative path. For example,
-// for "namespaces/dev/namespace.yaml", it will add the following two depth labels:
-// - "dev.tree.hnc.x-k8s.io/depth: 0"
-// - "config-sync-root.tree.hnc.x-k8s.io/depth: 1"
-// Note: "config-sync-root" is used as root in the hierarchy.
+// addDepthLabels adds depth labels to namespaces from its relative path. For
+// example, for "namespaces/foo/bar/namespace.yaml", it will add the following
+// two depth labels:
+// - "foo.tree.hnc.x-k8s.io/depth: 1"
+// - "bar.tree.hnc.x-k8s.io/depth: 0"
 func addDepthLabels(o *ast.NamespaceObject, r cmpath.Relative) {
-	// Relative path for namespaces should start with the policyDir, contain the
-	// "namespaces" directory, and end with "namespace.yaml".
-	// If not, early exit.
+	// Relative path for namespaces should start with the "namespaces" directory,
+	// include at least one directory matching the name of the namespace, and end
+	// with "namespace.yaml". If not, early exit.
 	p := r.Split()
 	if len(p) < 3 {
 		return
 	}
 
-	for i, ans := range p {
-		// Replace "namespaces" with "config-sync-root" as the root in the hierarchy and
-		// add depth labels for all names in the path except the last "namespace.yaml".
-		if ans == "namespaces" {
-			p[i] = DepthLabelRootName
-			p = p[i : len(p)-1]
-			break
-		}
-	}
+	// Add depth labels for all names in the path except the first "namespaces"
+	// directory and the last "namespace.yaml".
+	p = p[1 : len(p)-1]
 
 	for i, ans := range p {
 		l := ans + DepthSuffix
