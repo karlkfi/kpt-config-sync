@@ -10,6 +10,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -248,7 +249,7 @@ func TestForceRevert(t *testing.T) {
 	nt.Root.Remove("acme/system/repo.yaml")
 	nt.Root.CommitAndPush("Cause source error")
 
-	nt.WaitForRootSyncSourceError("1017", "must declare a Repo Resource")
+	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
 
 	nt.Root.Git("reset", "--hard", "HEAD^")
 	nt.Root.Git("push", "-f", "origin", "main")

@@ -21,7 +21,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
 	// make better git error reporting.
-	nt.WaitForRootSyncSourceError(status.SourceErrorCode, "Check git-sync logs for more info: kubectl logs -n config-management-system -l reconciler=root-reconciler -c git-sync")
+	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
 
 	// Update RootSync to valid branch name
 	rs = fake.RootSyncObject()
@@ -40,7 +40,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 
 	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
 	// make better git error reporting.
-	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode, "Check git-sync logs for more info: kubectl logs -n config-management-system -l reconciler=ns-reconciler-bookstore -c git-sync")
+	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode)
 
 	rs.Spec.Branch = nomostest.MainBranch
 	nt.Root.Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
@@ -56,7 +56,7 @@ func TestInvalidMonoRepoBranchStatus(t *testing.T) {
 
 	// Check for error code 2004 (this is a generic error code for the current impl, this may change if we
 	// make better git error reporting.
-	nt.WaitForRepoSourceError(status.SourceErrorCode, "Check git-sync logs for more info: kubectl logs -n config-management-system -l app=git-importer -c git-sync")
+	nt.WaitForRepoSourceError(status.SourceErrorCode)
 
 	resetGitBranch(nt, "main")
 	nt.WaitForRepoSourceErrorClear()

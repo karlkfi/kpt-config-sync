@@ -28,7 +28,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 	nt.Root.CommitAndPush("Removing Anvil CRD but leaving Anvil CR")
 
 	if nt.MultiRepo {
-		nt.WaitForRootSyncSourceError(nonhierarchical.UnsupportedCRDRemovalErrorCode, "Custom Resources MUST be removed")
+		nt.WaitForRootSyncSourceError(nonhierarchical.UnsupportedCRDRemovalErrorCode)
 	} else {
 		nt.WaitForRepoImportErrorCode(nonhierarchical.UnsupportedCRDRemovalErrorCode)
 	}
