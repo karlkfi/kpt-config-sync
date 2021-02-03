@@ -169,10 +169,9 @@ func parse(ctx context.Context, p Parser) status.MultiError {
 	}
 
 	syncErrs = opts.update(ctx, cos)
-	if syncErrs != nil || !opts.cache.syncStatusUpdated {
-		if setSyncStatusErr = p.setSyncStatus(ctx, gitState.commit, syncErrs); setSyncStatusErr != nil {
-			opts.cache.syncStatusUpdated = false
-		} else {
+	if !opts.cache.syncStatusUpdated {
+		setSyncStatusErr = p.setSyncStatus(ctx, gitState.commit, syncErrs)
+		if setSyncStatusErr == nil && syncErrs == nil {
 			opts.cache.syncStatusUpdated = true
 		}
 	}
