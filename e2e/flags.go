@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	// kubectl auth provider plugins
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 // E2E enables running end-to-end tests.

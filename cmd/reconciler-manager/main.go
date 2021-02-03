@@ -12,7 +12,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
