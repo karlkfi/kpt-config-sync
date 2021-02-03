@@ -13,7 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/namespaces
 
 test_setup() {
   local active=()
-  mapfile -t active < <(kubectl get ns -l "testdata=true" | grep Active)
+  mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active)
   if (( ${#active[@]} != 0 )); then
     local ns
     for ns in "${active[@]}"; do
@@ -27,7 +27,7 @@ test_setup() {
 # This cleans up any namespaces that were created by a testcase
 test_teardown() {
   setup::git::remove_all acme
-  kubectl delete ns -l "testdata=true" --ignore-not-found=true
+  kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
 }
 
 @test "${FILE_NAME}: label and annotation lifecycle" {

@@ -24,7 +24,7 @@ source "$DIR/wait.bash"
 function namespace::create() {
   local tmp
   tmp="$(mktemp -up "${BATS_TMPDIR}" ns-XXXXXX).yaml"
-  namespace::__genyaml "$@" "${tmp}"
+  namespace::__genyaml -l 'configmanagement.gke.io/testdata=true' "$@" "${tmp}"
   echo "Creating Cluster Namespace:"
   cat "${tmp}"
   echo
@@ -84,7 +84,7 @@ function namespace::declare() {
 #   -t [timeout_sec]: set a timeout to other than default, example: "-t 42"
 function namespace::check_exists() {
   local args=()
-  local check_args=('-l testdata=true')
+  local check_args=()
   local timeout_sec="200"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
@@ -125,7 +125,7 @@ function namespace::check_exists() {
 # Params
 #   -t [timeout_sec]: set a timeout to other than default, example: "-t 42"
 function namespace::check_not_found() {
-  local args=('-l testdata=true')
+  local args=()
   local timeout_sec="60"
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
@@ -158,7 +158,7 @@ function namespace::__genyaml() {
   debug::log "namespace::__genyaml" "$@"
   local args=()
   local annotations=()
-  local labels=('testdata=true')
+  local labels=()
   while [[ $# -gt 0 ]]; do
     local arg="${1:-}"
     shift

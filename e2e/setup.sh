@@ -188,7 +188,7 @@ function dump_diagnostics() {
 }
 
 function clean_up_test_resources() {
-  kubectl delete --ignore-not-found ns -l "testdata=true"
+  kubectl delete --ignore-not-found ns -l "configmanagement.gke.io/testdata=true"
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 
   echo "killing kubectl port forward..."
