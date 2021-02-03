@@ -89,7 +89,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, 
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
+	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, p.declaredCRDs, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err

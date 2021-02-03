@@ -17,7 +17,6 @@ import (
 type GetSyncedCRDs func() ([]*v1beta1.CustomResourceDefinition, status.MultiError)
 
 // NoSyncedCRDs is a no-op GetSyncedCRDs.
-// CSMR doesn't use ClusterConfigs, so it is unnecessary.
 var NoSyncedCRDs GetSyncedCRDs = func() ([]*apiextensionsv1beta1.CustomResourceDefinition, status.MultiError) {
 	return nil, nil
 }

@@ -213,7 +213,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 		// Don't preemptively get the synced CRDs since we may not need them.
 		decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
-		return clusterconfig.GetCRDs(decoder, currentConfigs.ClusterConfig)
+		return clusterconfig.GetCRDs(decoder, currentConfigs.CRDClusterConfig)
 	}
 
 	// check git status, blow up if we see issues

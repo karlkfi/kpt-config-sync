@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
@@ -70,7 +69,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Obj
 	}
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, filesystem.NoSyncedCRDs, filePaths)
+	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, p.declaredCRDs, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err

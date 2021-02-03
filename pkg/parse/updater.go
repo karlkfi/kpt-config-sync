@@ -7,9 +7,13 @@ import (
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/clusterconfig"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -29,6 +33,25 @@ func (u *updater) needToUpdateWatch() bool {
 
 func (u *updater) managementConflict() bool {
 	return u.remediator.ManagementConflict()
+}
+
+// declaredCRDs returns the list of CRDs which are present in the updater's
+// declared resources.
+func (u *updater) declaredCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
+	var crds []*v1beta1.CustomResourceDefinition
+	for _, obj := range u.resources.Declarations() {
+		if obj.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
+			continue
+		}
+		if s, err := reader.AsStruct(obj); err != nil {
+			return nil, reader.ObjectParseError(obj, err)
+		} else if crd, err := clusterconfig.AsCRD(s.(core.Object)); err != nil {
+			return nil, err
+		} else {
+			crds = append(crds, crd)
+		}
+	}
+	return crds, nil
 }
 
 // update updates the declared resources in memory, applies the resources, and sets
