@@ -18,7 +18,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kptapplier"
-	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -30,6 +29,7 @@ import (
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
 const nilGitContext = `{"repo":"","branch":"","rev":""}`
@@ -71,7 +71,7 @@ func TestRoot_Parse(t *testing.T) {
 			want: []core.Object{
 				fake.NamespaceObject("foo",
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
-					core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),

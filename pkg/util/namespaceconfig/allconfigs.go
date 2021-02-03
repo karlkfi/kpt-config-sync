@@ -8,8 +8,8 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/lifecycle"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
 // AllConfigs holds things that Importer wants to sync. It is only used in-process, not written
@@ -123,7 +123,7 @@ func (c *AllConfigs) addNamespaceResource(namespace string, importToken string, 
 		// Add an implicit Namespace, and mark it "deletion: prevent", which means
 		// it won't be deleted when its members are removed from the SOT.
 		c.addNamespaceConfig(namespace, importToken, loadTime, map[string]string{
-			lifecycle.Deletion: lifecycle.PreventDeletion,
+			common.LifecycleDeleteAnnotation: common.PreventDeletion,
 		}, nil)
 		ns = c.NamespaceConfigs[namespace]
 	}

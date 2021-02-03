@@ -9,11 +9,11 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
 func withClusterResources(os ...core.Object) fake.ClusterConfigMutator {
@@ -128,7 +128,7 @@ func TestNewAllConfigs(t *testing.T) {
 				NamespaceConfigs: map[string]v1.NamespaceConfig{
 					"shipping": *fake.NamespaceConfigObject(
 						core.Name("shipping"),
-						core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion),
+						core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 						withNamespaceResources(
 							fake.RoleObject(core.Name("my-role"), core.Namespace("shipping")),
 						)),

@@ -6,13 +6,13 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
-var preventDeletion = core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)
+var preventDeletion = core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)
 
 func TestPreventDeletionNamespace(t *testing.T) {
 	nt := nomostest.New(t)
@@ -148,7 +148,7 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	err := nt.Validate("delivery", "", &corev1.Namespace{},
-		nomostest.HasAnnotation(lifecycle.Deletion, lifecycle.PreventDeletion))
+		nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
 	if err != nil {
 		t.Fatal(err)
 	}

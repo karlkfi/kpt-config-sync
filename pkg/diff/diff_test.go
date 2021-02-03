@@ -8,11 +8,11 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
-	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/policycontroller"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
 const (
@@ -145,7 +145,7 @@ func TestDiffType(t *testing.T) {
 		{
 			name: "actual + no declared, prevent deletion: unmanage",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion)),
+				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)),
 			want: Unmanage,
 		},
 		{

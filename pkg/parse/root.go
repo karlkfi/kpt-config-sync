@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/lifecycle"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
@@ -23,6 +22,7 @@ import (
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -195,7 +195,7 @@ func addImplicitNamespaces(cos []core.Object) []core.Object {
 			// inside them are removed. Note that if the user later declares
 			// the Namespace without this annotation, the annotation is removed as
 			// expected.
-			core.Annotation(lifecycle.Deletion, lifecycle.PreventDeletion),
+			core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 		))
 	}
 

@@ -9,19 +9,9 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
-const prefix = "client.lifecycle.config.k8s.io"
-
-// Deletion is the directive that specifies what happens when an object is
-// removed from the repository.
-const Deletion = prefix + "/deletion"
-
-// PreventDeletion specifies that the resource should NOT be removed from the
-// cluster if its manifest is removed from the repository.
-const PreventDeletion = common.PreventDeletion
-
-// HasPreventDeletion returns true if the object has the PreventDeletion annotation
+// HasPreventDeletion returns true if the object has the LifecycleDeleteAnnotation
 // and it is set to "detach".
 func HasPreventDeletion(o core.Object) bool {
-	deletion, hasDeletion := o.GetAnnotations()[Deletion]
-	return hasDeletion && (deletion == PreventDeletion)
+	deletion, hasDeletion := o.GetAnnotations()[common.LifecycleDeleteAnnotation]
+	return hasDeletion && (deletion == common.PreventDeletion)
 }
