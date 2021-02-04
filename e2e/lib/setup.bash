@@ -123,7 +123,7 @@ setup::git::remove_all() {
 
   mkdir -p "${TEST_REPO}/${DIR_NAME}/cluster"
   cp "${NOMOS_DIR}/examples/${DIR_NAME}/cluster/admin-clusterrole.yaml" "${TEST_REPO}/${DIR_NAME}/cluster/admin-clusterrole.yaml"
-  namespace::declare safety
+  namespace::declare safety -l "testdata=true"
 
   cd "${TEST_REPO}"
   git add -A

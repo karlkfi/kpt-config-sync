@@ -39,7 +39,7 @@ test_teardown() {
 
   debug::log "Adding Custom Resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
-  namespace::declare prod
+  namespace::declare prod -l "testdata=true"
   git::commit
   wait::for -t 60 -- nomos::repo_synced
 
@@ -67,7 +67,7 @@ test_teardown() {
   debug::log "Adding CRD and Custom Resource"
   git::add "${YAML_DIR}/customresources/v1beta1_crds/anvil-crd.yaml" acme/cluster/anvil-crd.yaml
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
-  namespace::declare prod
+  namespace::declare prod -l "testdata=true"
   git::commit
   wait::for -t 60 -- nomos::repo_synced
 
@@ -226,7 +226,7 @@ test_teardown() {
 
   debug::log "Adding Custom Resource"
   git::add "${YAML_DIR}/customresources/anvil.yaml" acme/namespaces/prod/anvil.yaml
-  namespace::declare prod
+  namespace::declare prod -l "testdata=true"
   git::commit
   wait::for -t 60 -- nomos::repo_synced
 

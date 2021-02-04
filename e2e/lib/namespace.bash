@@ -24,7 +24,7 @@ source "$DIR/wait.bash"
 function namespace::create() {
   local tmp
   tmp="$(mktemp -up "${BATS_TMPDIR}" ns-XXXXXX).yaml"
-  namespace::__genyaml -l 'configmanagement.gke.io/testdata=true' "$@" "${tmp}"
+  namespace::__genyaml -l 'testdata=true' "$@" "${tmp}"
   echo "Creating Cluster Namespace:"
   cat "${tmp}"
   echo

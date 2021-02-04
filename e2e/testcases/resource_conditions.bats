@@ -74,7 +74,7 @@ test_teardown() {
   local nsresname="e2e-test-configmap"
   local ns="rc-annotations"
 
-  namespace::declare $ns
+  namespace::declare $ns -l "testdata=true"
 
   debug::log "Adding clusterrole with no annotations to repo"
   git::add "${YAML_DIR}/resource_conditions/clusterrole.yaml" acme/cluster/clusterrole.yaml

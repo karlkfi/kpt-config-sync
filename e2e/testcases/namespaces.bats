@@ -13,7 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/namespaces
 
 test_setup() {
   local active=()
-  mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active | awk '{print $1}')
+  mapfile -t active < <(kubectl get ns -l "testdata=true" | grep Active | awk '{print $1}')
   if (( ${#active[@]} != 0 )); then
     local ns
     for ns in "${active[@]}"; do
@@ -27,7 +27,7 @@ test_setup() {
 # This cleans up any namespaces that were created by a testcase
 test_teardown() {
   setup::git::remove_all acme
-  kubectl delete ns -l "configmanagement.gke.io/testdata=true" --ignore-not-found=true
+  kubectl delete ns -l "testdata=true" --ignore-not-found=true
 }
 
 @test "${FILE_NAME}: label and annotation lifecycle" {
@@ -58,7 +58,7 @@ test_teardown() {
 @test "${FILE_NAME}: Namespace exists and declared" {
   local ns=decl-namespace-annotation-none
   namespace::create $ns
-  namespace::declare $ns
+  namespace::declare $ns -l "testdata=true"
   git::commit
 
   namespace::check_exists $ns
@@ -76,7 +76,7 @@ test_teardown() {
   local ns=unmanage-test
 
   debug::log "Declare namespace and wait for it to exist"
-  namespace::declare $ns
+  namespace::declare $ns -l "testdata=true"
   git::commit
   wait::for -t 30 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
   namespace::check_exists $ns
@@ -93,7 +93,7 @@ test_teardown() {
   [[ "${annotationValue}" != "null" ]] || debug::error "sync token annotation not added"
 
   debug::log "Declare management disabled on Namespace and wait for management to be disabled"
-  namespace::declare $ns -a "configmanagement.gke.io/managed=disabled"
+  namespace::declare $ns -a "configmanagement.gke.io/managed=disabled" -l "testdata=true"
   git::commit
   wait::for -f -t 30 -- namespace::check_exists $ns -a "configmanagement.gke.io/managed=enabled"
 
@@ -115,7 +115,7 @@ test_teardown() {
   local validns=valid-annotation
   local invalidns=invalid-annotation
 
-  namespace::declare $validns
+  namespace::declare $validns -l "testdata=true"
   namespace::create $invalidns -a "configmanagement.gke.io/managed=a-garbage-annotation"
   git::commit
 
