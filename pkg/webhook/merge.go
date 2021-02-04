@@ -24,7 +24,7 @@ import (
 // Cannot return error or panic as we never want this to get stuck.
 //
 // Modifies left.
-func MergeWebhookConfigurations(left, right admissionv1.ValidatingWebhookConfiguration) admissionv1.ValidatingWebhookConfiguration {
+func MergeWebhookConfigurations(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1.ValidatingWebhookConfiguration {
 	webhooksMap := make(map[schema.GroupVersion]admissionv1.ValidatingWebhook)
 	for _, webhook := range append(left.Webhooks, right.Webhooks...) {
 		if len(webhook.Rules) == 0 ||

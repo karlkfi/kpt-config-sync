@@ -40,7 +40,7 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 	mapper.addV1CRDs(getV1CRDs(objs))
 
 	gvks := toGVKs(objs)
-	newCfg, mErr := ToWebhookConfiguration(mapper, gvks)
+	newCfg, mErr := toWebhookConfiguration(mapper, gvks)
 	if mErr != nil {
 		// Either there's something wrong with the resources the API Server gave us
 		// or there's an error in our parsing logic.
@@ -50,13 +50,17 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 		// the type isn't available on the API Server.
 		return mErr
 	}
+	if newCfg == nil {
+		// The repository declares no objects, so there's nothing to do.
+		return nil
+	}
 
-	oldCfg := admissionv1.ValidatingWebhookConfiguration{}
-	err = c.Get(ctx, client.ObjectKey{Name: Name}, &oldCfg)
+	oldCfg := &admissionv1.ValidatingWebhookConfiguration{}
+	err = c.Get(ctx, client.ObjectKey{Name: Name}, oldCfg)
 	switch {
 	case apierrors.IsNotFound(err):
 		// There is no Configuration yet, so nothing to merge.
-		if err = c.Create(ctx, &newCfg); err != nil {
+		if err = c.Create(ctx, newCfg); err != nil {
 			return status.APIServerError(err, "creating admission webhook")
 		}
 		return nil
@@ -68,7 +72,7 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 	// We aren't yet concerned with removing stale rules, so just merge the two
 	// together.
 	newCfg = MergeWebhookConfigurations(oldCfg, newCfg)
-	if err = c.Update(ctx, &newCfg); err != nil {
+	if err = c.Update(ctx, newCfg); err != nil {
 		return status.APIServerError(err, "applying changes to admission webhook")
 	}
 	return nil
@@ -105,6 +109,6 @@ func toGVKs(objs []core.Object) []schema.GroupVersionKind {
 		}
 	}
 	// The order of GVKs is not deterministic, but we're using it for
-	// ToWebhookConfiguration which does not require its input to be sorted.
+	// toWebhookConfiguration which does not require its input to be sorted.
 	return gvks
 }

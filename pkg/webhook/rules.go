@@ -1,7 +1,9 @@
 package webhook
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/status"
@@ -10,24 +12,24 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// ToWebhookConfiguration creates a ValidatingWebhookConfiguration for all
+// toWebhookConfiguration creates a ValidatingWebhookConfiguration for all
 // declared GroupVersionKinds.
 //
 // There is one ValidatingWebhook for every unique GroupVersion.
 // Each ValidatingWebhook contains exactly one Rule with all Resources which
 // correspond to the passed GroupVersionKinds.
-func ToWebhookConfiguration(mapper kindResourceMapper, gvks []schema.GroupVersionKind) (admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
+func toWebhookConfiguration(mapper kindResourceMapper, gvks []schema.GroupVersionKind) (*admissionv1.ValidatingWebhookConfiguration, status.MultiError) {
 	if len(gvks) == 0 {
-		return admissionv1.ValidatingWebhookConfiguration{}, nil
+		return nil, nil
 	}
 
-	webhookCfg := admissionv1.ValidatingWebhookConfiguration{}
+	webhookCfg := &admissionv1.ValidatingWebhookConfiguration{}
 	webhookCfg.SetNamespace(configsync.ControllerNamespace)
 	webhookCfg.SetName(Name)
 
 	webhooks, errs := newWebhooks(mapper, gvks)
 	if errs != nil {
-		return admissionv1.ValidatingWebhookConfiguration{}, errs
+		return nil, errs
 	}
 	webhookCfg.Webhooks = webhooks
 
@@ -89,8 +91,9 @@ func toWebhooks(gvrs []schema.GroupVersionResource) []admissionv1.ValidatingWebh
 func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 	// You cannot take address of constants in Go.
 	equivalent := admissionv1.Equivalent
+	none := admissionv1.SideEffectClassNone
 	return admissionv1.ValidatingWebhook{
-		Name:  Name,
+		Name:  webhookName(gv),
 		Rules: []admissionv1.RuleWithOperations{toRule(gv)},
 		// FailurePolicy is unset, so it defaults to Fail.
 		ObjectSelector: &metav1.LabelSelector{
@@ -98,7 +101,18 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 				"configmanagement.gke.io/declared-version": gv.Version,
 			},
 		},
+		// Match objects with the same GKNN but a different Version.
 		MatchPolicy: &equivalent,
+		// Checking to see if the update includes a conflict causes no side effects.
+		SideEffects: &none,
+		// Prefer v1 AdmissionReviews if available, otherwise fall back to v1beta1.
+		AdmissionReviewVersions: []string{"v1", "v1beta1"},
+		ClientConfig: admissionv1.WebhookClientConfig{
+			Service: &admissionv1.ServiceReference{
+				Namespace: configsync.ControllerNamespace,
+				Name:      Name,
+			},
+		},
 	}
 }
 
@@ -110,4 +124,15 @@ func toRule(gv schema.GroupVersion) admissionv1.RuleWithOperations {
 		},
 		Operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete},
 	}
+}
+
+func webhookName(gv schema.GroupVersion) string {
+	// Each Webhook in the WebhookConfiguration needs a unqiue name. We have
+	// exactly one Webhook for each GroupVersion, so including both in the name
+	// guarantees name uniqueness.
+	if gv.Group != "" {
+		return fmt.Sprintf("%s.%s.%s", strings.ToLower(gv.Group), strings.ToLower(gv.Version), Name)
+	}
+	// We can't start a Webhook name with a leading "."
+	return fmt.Sprintf("%s.%s", strings.ToLower(gv.Version), Name)
 }

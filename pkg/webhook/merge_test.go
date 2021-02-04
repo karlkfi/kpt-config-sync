@@ -16,24 +16,24 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		left, right admissionv1.ValidatingWebhookConfiguration
-		want        admissionv1.ValidatingWebhookConfiguration
+		left, right *admissionv1.ValidatingWebhookConfiguration
+		want        *admissionv1.ValidatingWebhookConfiguration
 	}{
 		{
 			name:  "empty",
-			left:  admissionv1.ValidatingWebhookConfiguration{},
-			right: admissionv1.ValidatingWebhookConfiguration{},
-			want:  admissionv1.ValidatingWebhookConfiguration{},
+			left:  &admissionv1.ValidatingWebhookConfiguration{},
+			right: &admissionv1.ValidatingWebhookConfiguration{},
+			want:  &admissionv1.ValidatingWebhookConfiguration{},
 		},
 		{
 			name: "one vs zero webhooks",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{},
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
@@ -41,17 +41,17 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "duplicate webhooks",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
@@ -59,17 +59,17 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "different resources",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "rolebindings"),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "rolebindings", "roles"),
 				}},
@@ -77,17 +77,17 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "different versions",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1beta1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}, {
@@ -97,17 +97,17 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "different groups",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(corev1.SchemeGroupVersion, "namespaces"),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(corev1.SchemeGroupVersion, "namespaces"),
 				}, {
@@ -117,18 +117,18 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "honor FailurePolicy set to Ignore",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules:         rules(rbacv1.SchemeGroupVersion, "roles"),
 					FailurePolicy: &ignore,
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules:         rules(rbacv1.SchemeGroupVersion, "roles"),
 					FailurePolicy: &ignore,
@@ -138,15 +138,15 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		// Invalid Webhooks
 		{
 			name: "webhook missing Rules",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
@@ -154,12 +154,12 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "drop webhook missing APIGroup",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: []admissionv1.RuleWithOperations{{
 						Rule: admissionv1.Rule{
@@ -169,7 +169,7 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 					}},
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
@@ -177,12 +177,12 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "drop webhook missing APIVersion",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: []admissionv1.RuleWithOperations{{
 						Rule: admissionv1.Rule{
@@ -192,7 +192,7 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 					}},
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}},
@@ -200,19 +200,19 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 		},
 		{
 			name: "drop extra rules",
-			left: admissionv1.ValidatingWebhookConfiguration{
+			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: append(rules(rbacv1.SchemeGroupVersion, "roles"),
 						rules(rbacv1.SchemeGroupVersion, "rolebindings")...),
 				}},
 			},
-			right: admissionv1.ValidatingWebhookConfiguration{
+			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: append(rules(rbacv1.SchemeGroupVersion, "clusterroles"),
 						rules(rbacv1.SchemeGroupVersion, "clusterrolebindings")...),
 				}},
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Rules: rules(rbacv1.SchemeGroupVersion, "clusterroles", "roles"),
 				}},

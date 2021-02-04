@@ -24,7 +24,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 		name         string
 		apiResources []*metav1.APIResourceList
 		gvks         []schema.GroupVersionKind
-		want         admissionv1.ValidatingWebhookConfiguration
+		want         *admissionv1.ValidatingWebhookConfiguration
 		wantErr      status.MultiError
 	}{
 		{
@@ -41,13 +41,13 @@ func TestToWebhookConfiguration(t *testing.T) {
 			apiResources: []*metav1.APIResourceList{
 				apiResourceList(rbacv1.SchemeGroupVersion, apiResource("roles", "Role")),
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
-					Name:        Name,
+					Name:        webhookName(rbacv1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -69,13 +69,13 @@ func TestToWebhookConfiguration(t *testing.T) {
 					apiResource("roles", "Role"),
 					apiResource("rolebindings", "RoleBinding")),
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
-					Name:        Name,
+					Name:        webhookName(rbacv1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -98,13 +98,13 @@ func TestToWebhookConfiguration(t *testing.T) {
 				apiResourceList(rbacv1beta1.SchemeGroupVersion,
 					apiResource("rolebindings", "RoleBinding")),
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
-					Name:        Name,
+					Name:        webhookName(rbacv1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -113,7 +113,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					},
 					Rules: rules(rbacv1.SchemeGroupVersion, "roles"),
 				}, {
-					Name:        Name,
+					Name:        webhookName(rbacv1beta1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -137,13 +137,13 @@ func TestToWebhookConfiguration(t *testing.T) {
 				apiResourceList(corev1.SchemeGroupVersion,
 					apiResource("namespaces", "Namespace")),
 			},
-			want: admissionv1.ValidatingWebhookConfiguration{
+			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      Name,
 					Namespace: configsync.ControllerNamespace,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
-					Name:        Name,
+					Name:        webhookName(corev1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -152,7 +152,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					},
 					Rules: rules(corev1.SchemeGroupVersion, "namespaces"),
 				}, {
-					Name:        Name,
+					Name:        webhookName(rbacv1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -172,9 +172,11 @@ func TestToWebhookConfiguration(t *testing.T) {
 			if err != nil {
 				t.Fatalf("creating mapper: %v", err)
 			}
-			got, err := ToWebhookConfiguration(mapper, tc.gvks)
+			got, err := toWebhookConfiguration(mapper, tc.gvks)
 
-			if diff := cmp.Diff(got, tc.want, cmpopts.EquateEmpty()); diff != "" {
+			if diff := cmp.Diff(got, tc.want, cmpopts.EquateEmpty(),
+				cmpopts.IgnoreFields(admissionv1.ValidatingWebhook{}, "SideEffects", "AdmissionReviewVersions"),
+				cmpopts.IgnoreFields(admissionv1.WebhookClientConfig{}, "Service")); diff != "" {
 				t.Errorf("TestToWebhookConfiguration() diff (-want +got):\n%s", diff)
 			}
 			if !errors.Is(err, tc.wantErr) {
