@@ -24,7 +24,7 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/google/nomos/pkg/vet"
-	webhook2 "github.com/google/nomos/pkg/webhook"
+	"github.com/google/nomos/pkg/webhook"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -250,7 +250,8 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	err = webhook2.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, desiredCoreObjects)
+	// TODO(b/179505403): Re-enable after 1.6.2 by replacing objs: nil.
+	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, nil)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		glog.Errorf("Failed to update admission webhook: %v", err)

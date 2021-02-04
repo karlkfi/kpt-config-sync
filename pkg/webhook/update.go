@@ -21,6 +21,11 @@ import (
 // Returns an error if the API Server returns invalid API Resource lists or
 // there is a problem updating the Configuration.
 func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, dc discovery.ServerResourcer, objs []core.Object) status.MultiError {
+	if len(objs) == 0 {
+		// Nothing to do.
+		return nil
+	}
+
 	_, lists, err := dc.ServerGroupsAndResources()
 	if err != nil {
 		// Likely transient. If not, there's either a serious bug in our code or
