@@ -65,6 +65,15 @@ func prepare(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	if err := cleanup(); err != nil {
+		t.Fatalf("failed to clean up before the test %v", err)
+	}
+	t.Cleanup(func() {
+		if err := cleanup(); err != nil {
+			t.Logf("failed to clean up after the test %v", err)
+		}
+	})
+
 	// Apply the CRD
 	ctx = context.Background()
 	rgCRD, err := resourcegroupCRD()
@@ -86,12 +95,6 @@ func prepare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-
-	t.Cleanup(func() {
-		if err := cleanup(); err != nil {
-			t.Fatalf("failed to clean up %v", err)
-		}
-	})
 }
 
 func cleanup() error {
@@ -102,14 +105,14 @@ func cleanup() error {
 		return err
 	}
 	err = k8sClient.Delete(ctx, rgCRD)
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	// Delete the namespace config-management-system
 	namespace := configManagementNamespace()
 	err = k8sClient.Delete(ctx, namespace)
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	_, err = nomostest.Retry(120*time.Second, func() error {
