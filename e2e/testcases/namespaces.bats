@@ -13,7 +13,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata/namespaces
 
 test_setup() {
   local active=()
-  mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active)
+  mapfile -t active < <(kubectl get ns -l "configmanagement.gke.io/testdata=true" | grep Active | awk '{print $1}')
   if (( ${#active[@]} != 0 )); then
     local ns
     for ns in "${active[@]}"; do
