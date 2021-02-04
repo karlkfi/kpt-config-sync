@@ -10,7 +10,7 @@ import (
 )
 
 func TestScope(t *testing.T) {
-	scoper := discovery.CoreScoper(true)
+	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Role in namespaces/",
@@ -31,11 +31,11 @@ func TestScope(t *testing.T) {
 			fake.AnvilAtPath("cluster/anvil.yaml")),
 	}
 
-	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper), testCases)
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, true), testCases)
 }
 
 func TestScopeServerless(t *testing.T) {
-	scoper := discovery.CoreScoper(false)
+	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
 		nht.Pass("Role in namespaces/",
@@ -56,5 +56,5 @@ func TestScopeServerless(t *testing.T) {
 			fake.AnvilAtPath("cluster/anvil.yaml")),
 	}
 
-	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper), testCases)
+	nht.RunAll(t, validation.NewTopLevelDirectoryValidator(scoper, false), testCases)
 }

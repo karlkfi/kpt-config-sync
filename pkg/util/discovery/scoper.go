@@ -23,21 +23,9 @@ const (
 	UnknownScope = ScopeType("Unknown")
 )
 
-// NewScoper returns a Scoper for determining whether objects/types are Namespaced.
-//
-// errOnUnknown is whether to return an error if the scope for an object or type
-// is either explicitly marked Unknown or is not in the initially passed map.
-func NewScoper(scopes map[schema.GroupKind]ScopeType, errOnUnknown bool) Scoper {
-	return Scoper{
-		scope:        scopes,
-		errOnUnknown: errOnUnknown,
-	}
-}
-
 // Scoper wraps a map from GroupKinds to ScopeType.
 type Scoper struct {
-	scope        map[schema.GroupKind]ScopeType
-	errOnUnknown bool
+	scope map[schema.GroupKind]ScopeType
 }
 
 // GetObjectScope implements Scoper
@@ -60,10 +48,7 @@ func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (ScopeType, status.Error
 		return scope, nil
 	}
 	// We weren't able to get the scope for this type.
-	if s.errOnUnknown {
-		return UnknownScope, UnknownGroupKindError(gk)
-	}
-	return UnknownScope, nil
+	return UnknownScope, UnknownGroupKindError(gk)
 }
 
 // HasScopesFor returns true if the Scoper knows the scopes for every type in the

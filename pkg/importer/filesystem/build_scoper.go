@@ -31,7 +31,7 @@ func BuildScoper(
 ) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
 	// Initialize the scoper with the default set of Kubernetes resources and the
 	// declared CRDs.
-	scoper := utildiscovery.CoreScoper(useAPIServer)
+	scoper := utildiscovery.CoreScoper()
 
 	// It is possible that the cached API Resources conflicts with declared CRDs.
 	// For this edge case, the declared CRD takes precedence as, once synced,
@@ -48,7 +48,7 @@ func BuildScoper(
 	if useAPIServer && !scoper.HasScopesFor(fileObjects) {
 		// We're allowed to talk to the API Server, and we don't have the scopes
 		// for some types.
-		return addSyncedCRDs(scoper, dc, useAPIServer, getSyncedCRDs)
+		return addSyncedCRDs(scoper, dc, getSyncedCRDs)
 	}
 
 	// Note that we return declaredCRDs as syncedCRDs in this case. We've
@@ -59,10 +59,10 @@ func BuildScoper(
 	return scoper, declaredCRDs, nil
 }
 
-func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer, useAPIServer bool, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
+func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
 	// Build a new Scoper from the cluster's API resource lists and any previously
 	// synced CRDs.
-	newScoper := utildiscovery.NewScoper(nil, useAPIServer)
+	newScoper := utildiscovery.Scoper{}
 
 	// List the APIResources from the API Server and add them.
 	lists, discoveryErr := utildiscovery.GetResources(dc)

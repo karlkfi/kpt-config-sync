@@ -125,7 +125,7 @@ func TestAddLine(t *testing.T) {
 			}
 
 			gotScope, err := scoper.GetGroupKindScope(tc.groupKind)
-			if err != nil {
+			if err != nil && tc.wantErr == nil {
 				// Scoper error behavior is not under test.
 				t.Fatalf("got GetGroupKindScope() err = %v, want nil", err)
 			}

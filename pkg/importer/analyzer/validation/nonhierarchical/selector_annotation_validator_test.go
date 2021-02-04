@@ -123,7 +123,7 @@ func TestClusterSelectorAnnotationValidator(t *testing.T) {
 }
 
 func TestNamespaceSelectorAnnotationValidator(t *testing.T) {
-	scoper := discovery.CoreScoper(true)
+	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
 		// Trivial Cases
@@ -194,7 +194,7 @@ func TestNamespaceSelectorAnnotationValidator(t *testing.T) {
 }
 
 func TestNamespaceSelectorAnnotationValidatorServerless(t *testing.T) {
-	scoper := discovery.CoreScoper(true)
+	scoper := discovery.CoreScoper()
 
 	testCases := []nht.ValidatorTestCase{
 		// Trivial Cases

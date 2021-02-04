@@ -54,12 +54,12 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCac
 		return nil, scoperErr
 	}
 
-	scopeErrs := nonhierarchical.ScopeValidator(p.inNamespaceReconciler, p.defaultNamespace, scoper).Validate(fileObjects)
+	scopeErrs := nonhierarchical.ScopeValidator(p.inNamespaceReconciler, p.defaultNamespace, scoper, enableAPIServerChecks).Validate(fileObjects)
 	if scopeErrs != nil {
 		// Don't try to resolve selectors if scopes are incorrect.
 		return nil, scopeErrs
 	}
-	fileObjects, selErr := resolveFlatSelectors(scoper, clusterName, fileObjects)
+	fileObjects, selErr := resolveFlatSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
 	if selErr != nil {
 		return nil, selErr
 	}
@@ -84,7 +84,7 @@ func (p *rawParser) ReadClusterRegistryResources(_ reader.FilePaths) []ast.FileO
 	return nil
 }
 
-func resolveFlatSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
+func resolveFlatSelectors(scoper utildiscovery.Scoper, clusterName string, fileObjects []ast.FileObject, enableAPIServerChecks bool) ([]ast.FileObject, status.MultiError) {
 	// Validate and resolve cluster selectors.
 	err := nonhierarchical.NewClusterSelectorAnnotationValidator().Validate(fileObjects)
 	if err != nil {
@@ -104,7 +104,7 @@ func resolveFlatSelectors(scoper utildiscovery.Scoper, clusterName string, fileO
 	}
 
 	// Validate and resolve namespace selectors.
-	err = nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, true).Validate(fileObjects)
+	err = nonhierarchical.NewNamespaceSelectorAnnotationValidator(scoper, enableAPIServerChecks).Validate(fileObjects)
 	if err != nil {
 		return nil, err
 	}

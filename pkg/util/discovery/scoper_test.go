@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -12,71 +13,54 @@ import (
 
 func TestScoper_GetScope(t *testing.T) {
 	testCases := []struct {
-		name         string
-		scopes       map[schema.GroupKind]ScopeType
-		groupKind    schema.GroupKind
-		errOnUnknown bool
-		want         ScopeType
-		wantErr      bool
+		name      string
+		scopes    map[schema.GroupKind]ScopeType
+		groupKind schema.GroupKind
+		want      ScopeType
+		wantErr   status.Error
 	}{
 		{
-			name:         "nil scoper returns Unknown and error",
-			errOnUnknown: true,
-			groupKind:    kinds.Role().GroupKind(),
-			want:         UnknownScope,
-			wantErr:      true,
+			name:      "nil scoper returns Unknown and error",
+			groupKind: kinds.Role().GroupKind(),
+			want:      UnknownScope,
+			wantErr:   UnknownGroupKindError(kinds.Namespace().GroupKind()),
 		},
 		{
-			name:         "nil scoper returns Unknown and no error",
-			errOnUnknown: false,
-			groupKind:    kinds.Role().GroupKind(),
-			want:         UnknownScope,
-			wantErr:      false,
-		},
-		{
-			name:         "missing GroupKind returns unknown",
-			scopes:       map[schema.GroupKind]ScopeType{},
-			errOnUnknown: true,
-			groupKind:    kinds.Role().GroupKind(),
-			want:         UnknownScope,
-			wantErr:      true,
+			name:      "missing GroupKind returns unknown",
+			scopes:    map[schema.GroupKind]ScopeType{},
+			groupKind: kinds.Role().GroupKind(),
+			want:      UnknownScope,
+			wantErr:   UnknownGroupKindError(kinds.Namespace().GroupKind()),
 		},
 		{
 			name: "NamespaceScope returns NamespaceScope",
 			scopes: map[schema.GroupKind]ScopeType{
 				kinds.Role().GroupKind(): NamespaceScope,
 			},
-			errOnUnknown: true,
-			groupKind:    kinds.Role().GroupKind(),
-			want:         NamespaceScope,
+			groupKind: kinds.Role().GroupKind(),
+			want:      NamespaceScope,
 		},
 		{
 			name: "ClusterScope returns ClusterScope",
 			scopes: map[schema.GroupKind]ScopeType{
 				kinds.Role().GroupKind(): ClusterScope,
 			},
-			errOnUnknown: true,
-			groupKind:    kinds.Role().GroupKind(),
-			want:         ClusterScope,
+			groupKind: kinds.Role().GroupKind(),
+			want:      ClusterScope,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			scoper := NewScoper(tc.scopes, tc.errOnUnknown)
+			scoper := Scoper{tc.scopes}
 			got, gotErr := scoper.GetGroupKindScope(tc.groupKind)
 
 			if got != tc.want {
 				t.Errorf("got GetGroupKindScope() = %q, want %q", got, tc.want)
 			}
 
-			var wantErr error
-			if tc.wantErr {
-				wantErr = UnknownGroupKindError(kinds.Namespace().GroupKind())
-			}
-			if !errors.Is(gotErr, wantErr) {
-				t.Errorf("got GetGroupKindScope() error = %v, want %v",
-					gotErr, wantErr)
+			if !errors.Is(gotErr, tc.wantErr) {
+				t.Errorf("got GetGroupKindScope() error = %v, want %v", gotErr, tc.wantErr)
 			}
 		})
 	}

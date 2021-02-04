@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -53,16 +54,19 @@ func getExpectedTopLevelDir(scoper discovery.Scoper, o id.Resource) (string, sta
 // Returns an UnknownObjectKindError if unable to determine which top-level directory
 // the resource should live. This happens when the resource is neither present
 // on the APIServer nor has a CRD defined.
-func NewTopLevelDirectoryValidator(scoper discovery.Scoper) nonhierarchical.Validator {
+func NewTopLevelDirectoryValidator(scoper discovery.Scoper, errOnUnknown bool) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
-		return validateTopLevelDirectory(scoper, o)
+		return validateTopLevelDirectory(scoper, o, errOnUnknown)
 	})
 }
 
-func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject) status.Error {
+func validateTopLevelDirectory(scoper discovery.Scoper, o ast.FileObject, errOnUnknown bool) status.Error {
 	expectedTopLevelDir, err := getExpectedTopLevelDir(scoper, o)
 	if err != nil {
-		return err
+		if errOnUnknown {
+			return err
+		}
+		glog.V(6).Infof("ignored error due to --no-api-server-check: %s", err)
 	}
 	if expectedTopLevelDir == unknownDir {
 		// We don't know for sure which directory this should be in, and we can't
