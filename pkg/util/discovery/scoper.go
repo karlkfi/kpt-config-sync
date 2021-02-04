@@ -1,10 +1,11 @@
 package discovery
 
 import (
+	"fmt"
+
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
-	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,7 +26,7 @@ const (
 // NewScoper returns a Scoper for determining whether objects/types are Namespaced.
 //
 // errOnUnknown is whether to return an error if the scope for an object or type
-// is either explicitly marked Unknown or is not in the initially pased map.
+// is either explicitly marked Unknown or is not in the initially passed map.
 func NewScoper(scopes map[schema.GroupKind]ScopeType, errOnUnknown bool) Scoper {
 	return Scoper{
 		scope:        scopes,
@@ -79,11 +80,80 @@ func (s *Scoper) HasScopesFor(objects []ast.FileObject) bool {
 	return true
 }
 
-// AddCustomResources updates Scoper with custom resource metadata from the provided CustomResourceDefinitions.
-// It does not replace anything that already exists in the Scoper.
+// AddCustomResources updates Scoper with custom resource metadata from the
+// provided CustomResourceDefinitions.  It replaces any existing scopes for the
+// GroupKinds of the CRDs.
 func (s *Scoper) AddCustomResources(crds []*v1beta1.CustomResourceDefinition) {
-	gkss := ScopesFromCRDs(crds)
+	gkss := scopesFromCRDs(crds)
 	s.add(gkss)
+}
+
+// AddAPIResourceLists adds APIResourceLists retrieved from an API Server to
+// the Scoper. It replaces any existing scopes for the GroupKinds of the API
+// resources.
+func (s *Scoper) AddAPIResourceLists(resourceLists []*metav1.APIResourceList) status.MultiError {
+	// Collect all of the server-declared scopes.
+	var errs status.MultiError
+	var allGKSs []GroupKindScope
+	for _, list := range resourceLists {
+		gkss, err := toGKSs(list)
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		allGKSs = append(allGKSs, gkss...)
+	}
+
+	// The resource lists contain an invalid GroupVersion. There isn't a clean
+	// way to recover from this.
+	//
+	// This could be more lenient, e.g. if the type we had an error on isn't
+	// actually required, we could ignore it.
+	if errs != nil {
+		return errs
+	}
+
+	// Define scopes for all types on the APIServer for which there are not
+	// already known scopes.
+	s.add(allGKSs)
+	return nil
+}
+
+// toGVKSs flattens an APIResourceList to the set of GVKs and their respective ObjectScopes.
+func toGKSs(lists ...*metav1.APIResourceList) ([]GroupKindScope, error) {
+	var result []GroupKindScope
+
+	for _, list := range lists {
+		groupVersion, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			return nil, fmt.Errorf("discovery client returned invalid GroupVersion %q: %w", list.GroupVersion, err)
+		}
+
+		for _, resource := range list.APIResources {
+			gks := GroupKindScope{
+				GroupKind: schema.GroupKind{
+					Group: groupVersion.Group,
+					Kind:  resource.Kind,
+				}}
+			if resource.Namespaced {
+				gks.ScopeType = NamespaceScope
+			} else {
+				gks.ScopeType = ClusterScope
+			}
+			result = append(result, gks)
+		}
+	}
+
+	return result, nil
+}
+
+// AddScoper adds the scopes from the given Scoper into this one. If the two
+// Scopers have any overlapping scopes defined, the added ones will overwrite
+// the existing ones in this Scope.
+func (s *Scoper) AddScoper(other Scoper) {
+	for gk, st := range other.scope {
+		s.SetGroupKindScope(gk, st)
+	}
 }
 
 // SetGroupKindScope sets the scope for the passed GroupKind.
@@ -95,11 +165,8 @@ func (s *Scoper) SetGroupKindScope(gk schema.GroupKind, scope ScopeType) {
 }
 
 func (s *Scoper) add(gkss []GroupKindScope) {
+	// This will overwrite previously-defined scopes for any of the GroupKinds.
 	for _, gks := range gkss {
-		// Explicitly do not overwrite scopes that have already been added.
-		if _, hasGK := s.scope[gks.GroupKind]; hasGK {
-			continue
-		}
 		s.SetGroupKindScope(gks.GroupKind, gks.ScopeType)
 	}
 }
@@ -110,8 +177,8 @@ type GroupKindScope struct {
 	ScopeType
 }
 
-// ScopesFromCRDs extracts the scopes declared in all passed CRDs.
-func ScopesFromCRDs(crds []*v1beta1.CustomResourceDefinition) []GroupKindScope {
+// scopesFromCRDs extracts the scopes declared in all passed CRDs.
+func scopesFromCRDs(crds []*v1beta1.CustomResourceDefinition) []GroupKindScope {
 	var result []GroupKindScope
 	for _, crd := range crds {
 		if !isServed(crd) {
@@ -152,65 +219,6 @@ func scopeFromCRD(crd *v1beta1.CustomResourceDefinition) GroupKindScope {
 		GroupKind: gk,
 		ScopeType: scope,
 	}
-}
-
-// AddAPIResourceLists adds APIResourceLists retrieved from an API Server to
-// the Scoper, taking care to not overwrite explicitly-defined or
-// implicitly-known scopes.
-func (s *Scoper) AddAPIResourceLists(resourceLists []*metav1.APIResourceList) status.MultiError {
-	// Collect all of the server-declared scopes.
-	var errs status.MultiError
-	var allGKSs []GroupKindScope
-	for _, list := range resourceLists {
-		gkss, err := toGKSs(list)
-		if err != nil {
-			errs = status.Append(errs, err)
-			continue
-		}
-		allGKSs = append(allGKSs, gkss...)
-	}
-
-	// The resource lists contain an invalid GroupVersion. There isn't a clean
-	// way to recover from this.
-	//
-	// This could be more lenient, e.g. if the type we had an error on isn't
-	// actually required, we could ignore it.
-	if errs != nil {
-		return errs
-	}
-
-	// Define scopes for all types on the APIServer for which there are not
-	// already known scopes.
-	s.add(allGKSs)
-	return nil
-}
-
-// toGVKSs flattens an APIResourceList to the set of GVKs and their respective ObjectScopes.
-func toGKSs(lists ...*metav1.APIResourceList) ([]GroupKindScope, error) {
-	var result []GroupKindScope
-
-	for _, list := range lists {
-		groupVersion, err := schema.ParseGroupVersion(list.GroupVersion)
-		if err != nil {
-			return nil, errors.Wrapf(err, "discovery client returned invalid GroupVersion: %q", list.GroupVersion)
-		}
-
-		for _, resource := range list.APIResources {
-			gks := GroupKindScope{
-				GroupKind: schema.GroupKind{
-					Group: groupVersion.Group,
-					Kind:  resource.Kind,
-				}}
-			if resource.Namespaced {
-				gks.ScopeType = NamespaceScope
-			} else {
-				gks.ScopeType = ClusterScope
-			}
-			result = append(result, gks)
-		}
-	}
-
-	return result, nil
 }
 
 // UnknownKindErrorCode is the error code for UnknownObjectKindError

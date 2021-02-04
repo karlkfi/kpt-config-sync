@@ -48,7 +48,7 @@ func BuildScoper(
 	if useAPIServer && !scoper.HasScopesFor(fileObjects) {
 		// We're allowed to talk to the API Server, and we don't have the scopes
 		// for some types.
-		return addSyncedCRDs(scoper, dc, getSyncedCRDs)
+		return addSyncedCRDs(scoper, dc, useAPIServer, getSyncedCRDs)
 	}
 
 	// Note that we return declaredCRDs as syncedCRDs in this case. We've
@@ -59,25 +59,30 @@ func BuildScoper(
 	return scoper, declaredCRDs, nil
 }
 
-func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
-	// Add CRDs from the ClusterConfig first since those may overwrites ones on
-	// the API Server in the future.
-	syncedCRDs, err := getSyncedCRDs()
-	if err != nil {
-		return scoper, nil, err
-	}
-	scoper.AddCustomResources(syncedCRDs)
+func addSyncedCRDs(scoper utildiscovery.Scoper, dc utildiscovery.ServerResourcer, useAPIServer bool, getSyncedCRDs GetSyncedCRDs) (utildiscovery.Scoper, []*v1beta1.CustomResourceDefinition, status.MultiError) {
+	// Build a new Scoper from the cluster's API resource lists and any previously
+	// synced CRDs.
+	newScoper := utildiscovery.NewScoper(nil, useAPIServer)
 
-	// List the APIResources from the API Server.
+	// List the APIResources from the API Server and add them.
 	lists, discoveryErr := utildiscovery.GetResources(dc)
 	if discoveryErr != nil {
 		return scoper, nil, discoveryErr
 	}
 
-	// Add resources from the API Server last.
-	if addListsErr := scoper.AddAPIResourceLists(lists); addListsErr != nil {
+	if addListsErr := newScoper.AddAPIResourceLists(lists); addListsErr != nil {
 		return scoper, nil, addListsErr
 	}
 
-	return scoper, syncedCRDs, nil
+	// Add previously declared CRDs second, as they may overwrite ones on the API Server.
+	syncedCRDs, err := getSyncedCRDs()
+	if err != nil {
+		return scoper, nil, err
+	}
+	newScoper.AddCustomResources(syncedCRDs)
+
+	// Finally add the other scoper on top which includes core resources, cached
+	// API resources, and currently declared CRDs.
+	newScoper.AddScoper(scoper)
+	return newScoper, syncedCRDs, nil
 }

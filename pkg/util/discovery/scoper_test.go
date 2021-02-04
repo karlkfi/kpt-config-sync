@@ -203,7 +203,7 @@ func TestScopesFromCRD(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := ScopesFromCRDs([]*v1beta1.CustomResourceDefinition{tc.crd})
+			actual := scopesFromCRDs([]*v1beta1.CustomResourceDefinition{tc.crd})
 
 			if diff := cmp.Diff(tc.expected, actual); diff != "" {
 				t.Fatal(diff)
