@@ -41,6 +41,8 @@ type gitState struct {
 	files []cmpath.Absolute
 }
 
+// readGitCommitAndPolicyDir returns a gitState object whose `commit` and `policyDir` fields are set if succeeded.
+// It returns an empty gitState object if failed.
 func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error) {
 	result := gitState{}
 
@@ -52,20 +54,20 @@ func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, stat
 
 	commit, e := git.CommitHash(gitDir.OSPath())
 	if e != nil {
-		return result, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash").Build()
+		return gitState{}, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash").Build()
 	}
 	result.commit = commit
 
 	err = git.CheckClean(gitDir.OSPath())
 	if err != nil {
-		return result, status.PathWrapError(
+		return gitState{}, status.PathWrapError(
 			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
 	}
 
 	relPolicyDir := gitDir.Join(o.PolicyDir)
 	policyDir, err := relPolicyDir.EvalSymlinks()
 	if err != nil {
-		return result, status.PathWrapError(
+		return gitState{}, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
 	}
 	result.policyDir = policyDir

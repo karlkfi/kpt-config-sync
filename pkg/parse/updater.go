@@ -23,8 +23,6 @@ type updater struct {
 	resources  *declared.Resources
 	remediator remediator.Interface
 	applier    applier.Interface
-	// cache tracks the progress made by the updater
-	cache
 }
 
 func (u *updater) needToUpdateWatch() bool {
@@ -56,28 +54,25 @@ func (u *updater) declaredCRDs() ([]*v1beta1.CustomResourceDefinition, status.Mu
 
 // update updates the declared resources in memory, applies the resources, and sets
 // up the watches.
-func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiError {
+func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.MultiError {
 	var errs status.MultiError
+	objs := cache.parserResult
 
 	// Update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.
-	//
-	// use `u.cache.resourceDeclSetUpdated` instead of `u.resourceDeclSetUpdated` here to
-	// avoid a false-positive lint issue which does not go away by updating golangci/golangci-lint to v1.35.0:
-	//   `resourceDeclSetUpdated` is unused (structcheck)
-	if !u.cache.resourceDeclSetUpdated {
+	if !cache.resourceDeclSetUpdated {
 		err := u.resources.Update(objs)
 		if err != nil {
 			errs = status.Append(errs, err)
 		} else {
-			u.cache.resourceDeclSetUpdated = true
+			cache.resourceDeclSetUpdated = true
 			metrics.RecordDeclaredResources(ctx, len(objs))
 		}
 	}
 
 	var gvks map[schema.GroupVersionKind]struct{}
-	if u.hasApplierResult {
-		gvks = u.applierResult
+	if cache.hasApplierResult {
+		gvks = cache.applierResult
 	} else {
 		var applyErrs status.MultiError
 		applyStart := time.Now()
@@ -88,7 +83,7 @@ func (u *updater) update(ctx context.Context, objs []core.Object) status.MultiEr
 		gvks, applyErrs = u.applier.Apply(ctx, objs)
 		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), applyStart)
 		if applyErrs == nil {
-			u.setApplierResult(gvks)
+			cache.setApplierResult(gvks)
 		}
 		errs = status.Append(errs, applyErrs)
 	}

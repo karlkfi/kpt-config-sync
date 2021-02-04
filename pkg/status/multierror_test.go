@@ -9,9 +9,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errFoo = UndocumentedError("foo")
-var errBar = APIServerError(errors.New("bar"), "qux")
-var errBaz = UndocumentedError("baz")
+var undocumentedErrFoo = UndocumentedError("foo")
+var apiServerErrBar = APIServerError(errors.New("bar"), "qux")
+var undocumentedErrBaz = UndocumentedError("baz")
 
 var errFooRaw = errors.New("raw foo")
 var errBarRaw = errors.New("raw bar")
@@ -47,8 +47,8 @@ func TestAppend(t *testing.T) {
 		},
 		{
 			"build status Errors",
-			[]error{errFoo, errBar},
-			&multiError{errs: []Error{errFoo, errBar}},
+			[]error{undocumentedErrFoo, apiServerErrBar},
+			&multiError{errs: []Error{undocumentedErrFoo, apiServerErrBar}},
 		},
 		{
 			"build nil errors",
@@ -57,13 +57,13 @@ func TestAppend(t *testing.T) {
 		},
 		{
 			"build mixed errors",
-			[]error{errBaz, nil, errFooRaw},
-			&multiError{errs: []Error{errBaz, undocumented(errFooRaw)}},
+			[]error{undocumentedErrBaz, nil, errFooRaw},
+			&multiError{errs: []Error{undocumentedErrBaz, undocumented(errFooRaw)}},
 		},
 		{
 			"combine MultiErrors",
-			[]error{&multiError{[]Error{errFoo, errBar}}, &multiError{[]Error{errBaz}}},
-			&multiError{[]Error{errFoo, errBar, errBaz}},
+			[]error{&multiError{[]Error{undocumentedErrFoo, apiServerErrBar}}, &multiError{[]Error{undocumentedErrBaz}}},
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar, undocumentedErrBaz}},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -139,6 +139,145 @@ func TestErrors(t *testing.T) {
 			errs := tc.errors.Errors()
 			if errs != nil {
 				t.Errorf("multiError.Errors() = %v, want nil", errs)
+			}
+		})
+	}
+}
+
+func TestDeepEqual(t *testing.T) {
+	var nilErr1, nilErr2 MultiError
+	for _, tc := range []struct {
+		name  string
+		left  MultiError
+		right MultiError
+		want  bool
+	}{
+		{
+			"two nil errors",
+			nilErr1,
+			nilErr2,
+			true,
+		},
+		{
+			"one nil error, one non-nil error",
+			nilErr1,
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar}},
+			false,
+		},
+		{
+			"two empty errors",
+			&multiError{},
+			&multiError{},
+			true,
+		},
+		{
+			"two errors with different lengths",
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar, undocumentedErrBaz}},
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar}},
+			false,
+		},
+		{
+			"two errors with the same code but different bodies",
+			&multiError{[]Error{undocumentedErrFoo}},
+			&multiError{[]Error{undocumentedErrBaz}},
+			false,
+		},
+		{
+			"two errors with the same error sets in different orders",
+			&multiError{[]Error{undocumentedErrFoo, undocumentedErrBaz, apiServerErrBar}},
+			&multiError{[]Error{apiServerErrBar, undocumentedErrFoo, undocumentedErrBaz}},
+			true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DeepEqual(tc.left, tc.right)
+			if tc.want != got {
+				t.Errorf("Is() = %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSortErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		errs []Error
+		want []Error
+	}{
+		{
+			"nil error",
+			nil,
+			nil,
+		},
+		{
+			"three errors in sorted order already",
+			[]Error{apiServerErrBar, undocumentedErrFoo, undocumentedErrBaz},
+			[]Error{apiServerErrBar, undocumentedErrFoo, undocumentedErrBaz},
+		},
+		{
+			"three errors not in sorted order",
+			[]Error{undocumentedErrFoo, undocumentedErrBaz, apiServerErrBar},
+			[]Error{apiServerErrBar, undocumentedErrFoo, undocumentedErrBaz},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sortErrors(tc.errs)
+			sortIncorrectly := false
+			for i := range tc.errs {
+				if !errors.Is(tc.errs[i], tc.want[i]) {
+					sortIncorrectly = true
+				}
+			}
+			if sortIncorrectly {
+				t.Errorf("sortErrors() sorted the errs into %v; \nwant %v", tc.errs, tc.want)
+			}
+		})
+	}
+}
+
+func TestIs(t *testing.T) {
+	var nilErr *multiError
+	for _, tc := range []struct {
+		name  string
+		left  *multiError
+		right *multiError
+		want  bool
+	}{
+		{
+			"nil error",
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar}},
+			nilErr,
+			false,
+		},
+		{
+			"two empty errors",
+			&multiError{},
+			&multiError{},
+			true,
+		},
+		{
+			"two errors with different lengths",
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar, undocumentedErrBaz}},
+			&multiError{[]Error{undocumentedErrFoo, apiServerErrBar}},
+			false,
+		},
+		{
+			"two errors with the same code but different bodies",
+			&multiError{[]Error{undocumentedErrFoo}},
+			&multiError{[]Error{undocumentedErrBaz}},
+			true,
+		},
+		{
+			"two errors with the same error sets in different orders",
+			&multiError{[]Error{undocumentedErrFoo, undocumentedErrBaz, apiServerErrBar}},
+			&multiError{[]Error{apiServerErrBar, undocumentedErrFoo, undocumentedErrBaz}},
+			false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.left.Is(tc.right)
+			if tc.want != got {
+				t.Errorf("Is() = %v; want %v", got, tc.want)
 			}
 		})
 	}

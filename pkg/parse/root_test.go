@@ -15,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/kptapplier"
@@ -115,11 +114,6 @@ func TestRoot_Parse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a := &fakeApplier{}
 
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			parser := &root{
 				sourceFormat: tc.format,
 				opts: opts{
@@ -129,19 +123,15 @@ func TestRoot_Parse(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
-						cache: cache{
-							git: gitState{
-								policyDir: fakeAbs,
-							},
-						},
 					},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			err = parse(context.Background(), parser)
-			if err != nil {
-				t.Fatal(err)
+			state := reconcilerState{}
+			parseAndUpdate(context.Background(), parser, triggerReimport, &state)
+			if state.cache.errs != nil {
+				t.Fatal(state.cache.errs)
 			}
 
 			if diff := cmp.Diff(tc.want, a.got, cmpopts.EquateEmpty(), cmpopts.SortSlices(sortObjects)); diff != "" {
@@ -185,11 +175,6 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 			m := testmetrics.RegisterMetrics(metrics.ParseErrorsView)
 			a := &fakeApplier{}
 
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
@@ -199,17 +184,12 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    a,
-						cache: cache{
-							git: gitState{
-								policyDir: fakeAbs,
-							},
-						},
 					},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			_ = parse(context.Background(), parser)
+			parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf(diff)
 			}
@@ -268,11 +248,6 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := testmetrics.RegisterMetrics(metrics.ReconcilerErrorsView)
 
-			fakeAbs, err := cmpath.AbsoluteOS("/fake")
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
@@ -282,17 +257,12 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 						resources:  &declared.Resources{},
 						remediator: &noOpRemediator{},
 						applier:    &fakeApplier{errors: tc.applyErrors},
-						cache: cache{
-							git: gitState{
-								policyDir: fakeAbs,
-							},
-						},
 					},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			_ = parse(context.Background(), parser)
+			parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf(diff)
 			}

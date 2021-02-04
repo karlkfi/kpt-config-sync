@@ -21,7 +21,7 @@ var (
 	// KeyInternalErrorSource groups the InternalError metrics by their source. Possible values: parser, differ, remediator.
 	KeyInternalErrorSource, _ = tag.NewKey("source")
 
-	// KeyParserSource groups the metrics for the parser by their source. Possible values: read, parse.
+	// KeyParserSource groups the metrics for the parser by their source. Possible values: read, parse, update.
 	KeyParserSource, _ = tag.NewKey("source")
 
 	// KeyTrigger groups metrics by their trigger. Possible values: retry, watchUpdate, managementConflict, resync, reimport.

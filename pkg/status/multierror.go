@@ -75,6 +75,46 @@ func ToCSE(m MultiError) []v1alpha1.ConfigSyncError {
 	return cses
 }
 
+// sortErrors sorts errs according to their codes and body contents.
+func sortErrors(errs []Error) {
+	sort.Slice(errs, func(i, j int) bool {
+		if errs[i].Code() != errs[j].Code() {
+			return errs[i].Code() < errs[j].Code()
+		}
+		return errs[i].Body() < errs[j].Body()
+	})
+}
+
+// DeepEqual determines whether two MultiError objects are equal.
+// DeepEqual sorts the two MultiError objects before comparing them.
+// Two `status.Error` objects are considered equal if they have the same code and body.
+func DeepEqual(left, right MultiError) bool {
+	if left == nil && right == nil {
+		return true
+	}
+
+	if left == nil || right == nil {
+		return false
+	}
+
+	leftErrs := left.Errors()
+	rightErrs := right.Errors()
+
+	if len(leftErrs) != len(rightErrs) {
+		return false
+	}
+
+	sortErrors(leftErrs)
+	sortErrors(rightErrs)
+
+	for i := range leftErrs {
+		if leftErrs[i].Code() != rightErrs[i].Code() || leftErrs[i].Body() != rightErrs[i].Body() {
+			return false
+		}
+	}
+	return true
+}
+
 var _ MultiError = (*multiError)(nil)
 
 // MultiError is an error that contains multiple errors.

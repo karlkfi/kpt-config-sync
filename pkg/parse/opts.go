@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
@@ -38,9 +37,6 @@ type opts struct {
 	// available on the cluster.
 	discoveryInterface discovery.ServerResourcer
 
-	// lastApplied keeps the state for the last successful-applied policyDir.
-	lastApplied string
-
 	files
 	updater
 }
@@ -49,32 +45,9 @@ type opts struct {
 // a git repository.
 type Parser interface {
 	parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError)
-	setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error
-	setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error
+	setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error
+	setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus) error
 	options() *opts
-}
-
-// checkpoint marks the given string as the most recent checkpoint for state
-// tracking and up-to-date checks if `applied` has not been checkpointed.
-func (o *opts) checkpoint(applied string) {
-	if applied != o.lastApplied {
-		glog.Infof("Reconciler checkpoint updated to %s", applied)
-		o.lastApplied = applied
-		o.cache.needToRetry = false
-	}
-}
-
-// invalidate logs the errors, clears the state tracking information and sets needToRetry to true.
-// invalidate does not clean up the cache.
-func (o *opts) invalidate(err status.MultiError) {
-	glog.Error(err)
-	glog.Info("Reconciler checkpoint invalidated.")
-	o.lastApplied = ""
-	o.cache.needToRetry = true
-}
-
-func (o *opts) resetCache() {
-	o.cache = cache{}
 }
 
 func (o *opts) k8sClient() client.Client {

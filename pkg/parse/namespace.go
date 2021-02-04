@@ -37,7 +37,6 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 				resources:  resources,
 				applier:    app,
 				remediator: rem,
-				cache:      cache{},
 			},
 			discoveryInterface: dc,
 		},
@@ -88,7 +87,11 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Obj
 //
 // setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
-func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs status.MultiError) error {
+func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error {
+	if oldStatus.equal(newStatus) {
+		return nil
+	}
+
 	// The main idea here is an error-robust way of surfacing to the user that
 	// we're having problems reading from our local clone of their git repository.
 	// This can happen when Kubernetes does weird things with mounted filesystems,
@@ -99,19 +102,10 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	if errs == nil {
-		// There were no errors getting the git state.
-		hasErrs := len(rs.Status.Source.Errors) > 0
-		if rs.Status.Source.Commit == state.commit && !hasErrs {
-			// We're already synced to this commit and there are no errors to report,
-			// so no need to do anything.
-			return nil
-		}
-	}
-	cse := status.ToCSE(errs)
+	cse := status.ToCSE(newStatus.errs)
 	// If we weren't able to get the commit hash, this replaces the value with
 	// empty string.
-	rs.Status.Source.Commit = state.commit
+	rs.Status.Source.Commit = newStatus.commit
 	// Replace the previous set of errors getting the git state with the current set.
 	rs.Status.Source.Errors = cse
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
@@ -126,20 +120,19 @@ func (p *namespace) setSourceStatus(ctx context.Context, state gitState, errs st
 //
 // setSyncStatus sets the sync status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
-func (p *namespace) setSyncStatus(ctx context.Context, commit string, errs status.MultiError) error {
+func (p *namespace) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus) error {
+	if oldStatus.equal(newStatus) {
+		return nil
+	}
+
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	hasErrs := errs != nil || len(rs.Status.Sync.Errors) > 0
-	if rs.Status.Sync.Commit == commit && !hasErrs {
-		return nil
-	}
-
 	now := metav1.Now()
-	cse := status.ToCSE(errs)
-	rs.Status.Sync.Commit = commit
+	cse := status.ToCSE(newStatus.errs)
+	rs.Status.Sync.Commit = newStatus.commit
 	rs.Status.Sync.Errors = cse
 	rs.Status.Sync.LastUpdate = now
 
