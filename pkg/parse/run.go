@@ -7,8 +7,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/parse/webhook"
 	"github.com/google/nomos/pkg/status"
+	webhook2 "github.com/google/nomos/pkg/webhook"
 )
 
 const (
@@ -145,7 +145,7 @@ func parse(ctx context.Context, p Parser) status.MultiError {
 		if sourceErrs == nil {
 			opts.cache.setParserResult(cos)
 		}
-		err := webhook.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), cos)
+		err := webhook2.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), cos)
 		if err != nil {
 			// Don't block if updating the admission webhook fails.
 			// Return an error instead if we remove the remediator as otherwise we
