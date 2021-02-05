@@ -40,21 +40,18 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var ctx context.Context
-var orgKubeConfigEnv string
 
 func prepare(t *testing.T) {
 	var err error
 
-	optsStruct := ntopts.New{}
+	optsStruct := ntopts.New{
+		TmpDir: nomostest.TestDir(t),
+	}
 	nomostest.RestConfig(t, &optsStruct)
 	cfg = optsStruct.RESTConfig
-
-	orgKubeConfigEnv = os.Getenv("KUBECONFIG")
-	err = os.Setenv("KUBECONFIG", ntopts.Kubeconfig)
-	if err != nil {
+	if err = os.Setenv(ntopts.Kubeconfig, filepath.Join(optsStruct.TmpDir, ntopts.Kubeconfig)); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-
 	s := scheme.Scheme
 	err = v1beta1.AddToScheme(s)
 	if err != nil {
