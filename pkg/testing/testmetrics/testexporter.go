@@ -55,6 +55,9 @@ func diff(r []*view.Row, other []*view.Row) string {
 			return fmt.Sprintf("Unexpected metric value, -got, +want: -%v\n+%v", r[i].Data, other[i].Data)
 		}
 	}
+	if len(other) > len(r) {
+		return fmt.Sprintf("Unexpected metric value(s): %v", other[len(r):])
+	}
 	return ""
 }
 

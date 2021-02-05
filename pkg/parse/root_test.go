@@ -112,29 +112,20 @@ func TestRoot_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			a := &fakeApplier{}
-
 			parser := &root{
 				sourceFormat: tc.format,
 				opts: opts{
-					parser: &fakeParser{parse: tc.parsed},
-					updater: updater{
-						scope:      declared.RootReconciler,
-						resources:  &declared.Resources{},
-						remediator: &noOpRemediator{},
-						applier:    a,
-					},
+					parser:             &fakeParser{parse: tc.parsed},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
 			state := reconcilerState{}
-			parseAndUpdate(context.Background(), parser, triggerReimport, &state)
-			if state.cache.errs != nil {
-				t.Fatal(state.cache.errs)
+			if err := parse(context.Background(), parser, triggerReimport, &state); err != nil {
+				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, a.got, cmpopts.EquateEmpty(), cmpopts.SortSlices(sortObjects)); diff != "" {
+			if diff := cmp.Diff(tc.want, state.cache.parserResult, cmpopts.EquateEmpty(), cmpopts.SortSlices(sortObjects)); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -173,23 +164,18 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			m := testmetrics.RegisterMetrics(metrics.ParseErrorsView)
-			a := &fakeApplier{}
-
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
-					parser: &fakeParser{errors: tc.errors},
-					updater: updater{
-						scope:      declared.RootReconciler,
-						resources:  &declared.Resources{},
-						remediator: &noOpRemediator{},
-						applier:    a,
-					},
+					parser:             &fakeParser{errors: tc.errors},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
+			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
+			if err == nil {
+				t.Errorf("parse() should return errors")
+			}
 			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf(diff)
 			}
@@ -197,11 +183,10 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 	}
 }
 
-func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
+func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 	testCases := []struct {
 		name        string
 		parseErrors []status.Error
-		applyErrors []status.Error
 		wantMetrics []*view.Row
 	}{
 		{
@@ -223,6 +208,37 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 				{Data: &view.LastValueData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
 			},
 		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := testmetrics.RegisterMetrics(metrics.ReconcilerErrorsView)
+
+			parser := &root{
+				sourceFormat: filesystem.SourceFormatUnstructured,
+				opts: opts{
+					parser:             &fakeParser{errors: tc.parseErrors},
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
+					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+				},
+			}
+			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
+			if err == nil {
+				t.Errorf("parse() should return errors")
+			}
+			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
+				t.Errorf(diff)
+			}
+		})
+	}
+}
+
+func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
+	testCases := []struct {
+		name        string
+		applyErrors []status.Error
+		wantMetrics []*view.Row
+	}{
 		{
 			name: "single reconciler error in sync component",
 			applyErrors: []status.Error{
@@ -251,7 +267,6 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
-					parser: &fakeParser{errors: tc.parseErrors},
 					updater: updater{
 						scope:      declared.RootReconciler,
 						resources:  &declared.Resources{},
@@ -262,7 +277,10 @@ func TestRoot_ReconcilerErrorsMetricValidation(t *testing.T) {
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
+			err := update(context.Background(), parser, triggerReimport, &reconcilerState{})
+			if err == nil {
+				t.Errorf("update() should return errors")
+			}
 			if diff := m.ValidateMetrics(metrics.ReconcilerErrorsView, tc.wantMetrics); diff != "" {
 				t.Errorf(diff)
 			}

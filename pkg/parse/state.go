@@ -44,6 +44,9 @@ func (s *reconcilerState) checkpoint() {
 func (s *reconcilerState) invalidate(err status.MultiError) {
 	glog.Errorf("Reconciler checkpoint invalidated with errors: %v", err)
 	s.cache.errs = err
+	// Invalidate state on error since this could be the result of switching
+	// branches or some other operation where inverting the operation would
+	// result in repeating a previous state that was checkpointed.
 	s.lastApplied = ""
 	s.cache.needToRetry = true
 }

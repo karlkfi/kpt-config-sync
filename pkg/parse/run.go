@@ -65,85 +65,62 @@ func Run(ctx context.Context, p Parser) {
 }
 
 func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
-	start := time.Now()
-	sourceErrs := read(ctx, p, state)
-	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceErrs), start)
-	if sourceErrs != nil {
-		gs := gitStatus{
-			commit: "",
-			errs:   sourceErrs,
-		}
-		// Only call `updateSourceStatus` if `read` fails.
-		// If `read` succeeds, `parse` may still fail.
-		setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
-		if setSourceStatusErr == nil {
-			state.sourceStatus = gs
-		}
-
-		// Invalidate state on error since this could be the result of switching
-		// branches or some other operation where inverting the operation would
-		// result in repeating a previous state that was checkpointed.
-		state.invalidate(status.Append(sourceErrs, setSourceStatusErr))
-		return
-	}
-
-	parseAndUpdate(ctx, p, trigger, state)
-}
-
-func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
-	start := time.Now()
-	sourceErrs := parse(ctx, p, state)
-	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(sourceErrs), start)
-
-	gs := gitStatus{
-		commit: state.cache.git.commit,
-		errs:   sourceErrs,
-	}
-	// After `parse` is done, we have all the source errors, and call `updateSourceStatus` even if
-	// sourceErrs is nil to make sure that the `Status.Source` field of RepoSync/RootSync is up-to-date.
-	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
-	if setSourceStatusErr == nil {
-		state.sourceStatus = gs
-	}
-
-	// Only returns if `sourceErrs` is not nil.
-	// If `sourceErrs` is nil, but `setSourceStatusErr` is not, we will not return here to make sure
-	// that `update` is called.
-	if sourceErrs != nil {
-		// Invalidate state on error since this could be the result of switching
-		// branches or some other operation where inverting the operation would
-		// result in repeating a previous state that was checkpointed.
-		state.invalidate(status.Append(sourceErrs, setSourceStatusErr))
-		return
-	}
-
-	start = time.Now()
-	syncErrs := p.options().update(ctx, &state.cache)
-	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
-	gs.errs = syncErrs
-	setSyncStatusErr := p.setSyncStatus(ctx, state.syncStatus, gs)
-	if setSyncStatusErr == nil {
-		state.syncStatus = gs
-	}
-
-	errs := status.Append(syncErrs, setSourceStatusErr, setSyncStatusErr)
+	errs := read(ctx, p, trigger, state)
 	if errs != nil {
-		// Invalidate state on error since this could be the result of switching
-		// branches or some other operation where inverting the operation would
-		// result in repeating a previous state that was checkpointed.
 		state.invalidate(errs)
 		return
 	}
 
-	// Only checkpoint our state *everything* succeeded, including status update.
+	errs = parse(ctx, p, trigger, state)
+	// errs includes the error(s) returned from `parseSource` and `p.setSourceStatus`.
+	// if `parseSource` succeeds, but `p.setSourceStatus` fails, the function calls `state.invalidate` and returns.
+	// Moving forward to `update` in this case may result in confusing `Status` field in RepoSync/RootSync.
+	// Imagine we have two git commits: A and B (which was committed after A). First, commit A is fully synced, and
+	// is recorded in both the `Status.Source` and `Status.Sync` fields. Then while reconciling commit B, `parseSource`
+	// succeeds, but `p.setSourceStatus` fails, which leaves `Status.Source.Commit` as A. If we move forward to
+	// `update` here instead of returning, and both `update` and `p.setSyncStatus` succeed, `Status.Sync.Commit`
+	// will be updated to B. Then the users will see that `Status.Sync.Commit` includes a commit committed after
+	// the commit in `Status.Source.Commit`, and get confused.
+	if errs != nil {
+		state.invalidate(errs)
+		return
+	}
+
+	errs = update(ctx, p, trigger, state)
+	if errs != nil {
+		state.invalidate(errs)
+		return
+	}
+
+	// Only checkpoint the state after *everything* succeeded, including status update.
 	state.checkpoint()
 }
 
-// read reads the git commit and policyDir from the git repo, checks whether the gitstate in
+func read(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
+	sourceErrs := readFromSource(ctx, p, trigger, state)
+	if sourceErrs == nil {
+		return nil
+	}
+
+	gs := gitStatus{
+		commit: "",
+		errs:   sourceErrs,
+	}
+	// Only call `setSourceStatus` if `readFromSource` fails.
+	// If `readFromSource` succeeds, `parse` may still fail.
+	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
+	if setSourceStatusErr == nil {
+		state.sourceStatus = gs
+	}
+	return status.Append(sourceErrs, setSourceStatusErr)
+}
+
+// readFromSource reads the git commit and policyDir from the git repo, checks whether the gitstate in
 // the cache is up-to-date. If the cache is not up-to-date, reads all the git files from the
 // git repo.
-func read(ctx context.Context, p Parser, state *reconcilerState) status.Error {
+func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.Error {
 	opts := p.options()
+	start := time.Now()
 	gitState, sourceErrs := opts.readGitCommitAndPolicyDir(opts.reconcilerName)
 	if sourceErrs != nil {
 		return sourceErrs
@@ -164,21 +141,38 @@ func read(ctx context.Context, p Parser, state *reconcilerState) status.Error {
 		// Set `state.cache.git` after `readGitFiles` succeeded
 		state.cache.git = gitState
 	}
+	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceErrs), start)
 	return sourceErrs
 }
 
-func parse(ctx context.Context, p Parser, state *reconcilerState) status.MultiError {
+func parse(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
+	sourceErrs := parseSource(ctx, p, trigger, state)
+	gs := gitStatus{
+		commit: state.cache.git.commit,
+		errs:   sourceErrs,
+	}
+	// After `parse` is done, we have all the source errors, and call `setSourceStatus` even if
+	// sourceErrs is nil to make sure that the `Status.Source` field of RepoSync/RootSync is up-to-date.
+	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
+	if setSourceStatusErr == nil {
+		state.sourceStatus = gs
+	}
+	return status.Append(sourceErrs, setSourceStatusErr)
+}
+
+func parseSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
 	if state.cache.hasParserResult {
 		return nil
 	}
 
+	start := time.Now()
 	cos, sourceErrs := p.parseSource(ctx, state.cache.git)
+	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(sourceErrs), start)
 	if sourceErrs != nil {
 		return sourceErrs
 	}
 
 	state.cache.setParserResult(cos)
-
 	err := webhook.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), cos)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
@@ -191,4 +185,20 @@ func parse(ctx context.Context, p Parser, state *reconcilerState) status.MultiEr
 		//  create or update the Configuration simultaneously.
 	}
 	return nil
+}
+
+func update(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
+	start := time.Now()
+	syncErrs := p.options().update(ctx, &state.cache)
+	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
+	gs := gitStatus{
+		commit: state.cache.git.commit,
+		errs:   syncErrs,
+	}
+	setSyncStatusErr := p.setSyncStatus(ctx, state.syncStatus, gs)
+	if setSyncStatusErr == nil {
+		state.syncStatus = gs
+	}
+
+	return status.Append(syncErrs, setSyncStatusErr)
 }
