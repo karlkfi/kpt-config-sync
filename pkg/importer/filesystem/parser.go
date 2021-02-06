@@ -18,24 +18,24 @@ import (
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/vet"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Parser reads files on disk and builds Nomos Config objects to be reconciled by the Syncer.
 type Parser struct {
-	dc     utildiscovery.ServerResourcer
-	reader reader.Reader
-	errors status.MultiError
+	reader            reader.Reader
+	errOnUnknownKinds bool
+	errors            status.MultiError
 }
 
 var _ ConfigParser = &Parser{}
 
-// NewParser creates a new Parser using the specified DiscoveryClient and parser options.
-func NewParser(reader reader.Reader, dc utildiscovery.ServerResourcer) *Parser {
+// NewParser creates a new Parser using the given Reader and parser options.
+func NewParser(reader reader.Reader, errOnUnknownKinds bool) *Parser {
 	return &Parser{
-		dc:     dc,
-		reader: reader,
+		reader:            reader,
+		errOnUnknownKinds: errOnUnknownKinds,
 	}
 }
 
@@ -49,7 +49,7 @@ func NewParser(reader reader.Reader, dc utildiscovery.ServerResourcer) *Parser {
 // filePaths is the list of absolute file paths to parse and the absolute and
 //   relative paths of the Nomos root.
 // It is an error for any files not to be present.
-func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *Parser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects(filePaths)
@@ -58,7 +58,7 @@ func (p *Parser) Parse(clusterName string, enableAPIServerChecks bool, addCached
 	}
 
 	visitors := generateVisitors(filePaths.PolicyDir, flatRoot)
-	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs)
+	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, syncedCRDs, buildScoper)
 
 	return AsCoreObjects(fileObjects), p.errors
 }
@@ -88,7 +88,7 @@ func generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.V
 }
 
 // hydrateRootAndFlatten hydrates configuration into a fully-configured Root with the passed visitors.
-func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs) []ast.FileObject {
+func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc) []ast.FileObject {
 	astRoot := &ast.Root{
 		ClusterName: clusterName,
 	}
@@ -99,28 +99,29 @@ func (p *Parser) hydrateRootAndFlatten(visitors []ast.Visitor, clusterName strin
 
 	declaredCRDs, err := customresources.GetCRDs(fileObjects)
 	if err != nil {
-		// We couldn't read the CRDs, so we can't continue without showing a lot of
-		// bogus errors to the user.
+		// We couldn't read the current CRDs, so we can't continue without showing a
+		// lot of bogus errors to the user.
 		p.errors = status.Append(p.errors, err)
 		return nil
 	}
 
-	scoper, syncedCRDs, scoperErrs := BuildScoper(p.dc, enableAPIServerChecks, addCachedAPIResources, fileObjects, declaredCRDs, getSyncedCRDs)
+	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
+
+	scoper, scoperErrs := buildScoper(declaredCRDs, fileObjects)
 	if scoperErrs != nil {
 		p.errors = status.Append(p.errors, scoperErrs)
 		return nil
 	}
-	p.errors = status.Append(p.errors, nonhierarchical.CRDRemovalValidator(syncedCRDs, declaredCRDs).Validate(fileObjects))
 
-	fileObjects, selErr := resolveHierarchicalSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
+	fileObjects, selErr := resolveHierarchicalSelectors(scoper, clusterName, fileObjects, p.errOnUnknownKinds)
 	if selErr != nil {
 		// Don't continue if selection failed; subsequent validation requires that selection succeeded.
 		p.errors = status.Append(p.errors, selErr)
 		return nil
 	}
 
-	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
-	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, enableAPIServerChecks).Validate(fileObjects))
+	p.errors = status.Append(p.errors, validation.NewTopLevelDirectoryValidator(scoper, p.errOnUnknownKinds).Validate(fileObjects))
+	p.errors = status.Append(p.errors, hierarchyconfig.NewHierarchyConfigScopeValidator(scoper, p.errOnUnknownKinds).Validate(fileObjects))
 
 	stdErrs := standardValidation(fileObjects)
 	p.errors = status.Append(p.errors, stdErrs)

@@ -12,14 +12,14 @@ import (
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/vet"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // RawParser parses a directory of raw YAML resource manifests into an AllConfigs usable by the
 // syncer.
 type rawParser struct {
 	reader                reader.Reader
-	dc                    utildiscovery.ServerResourcer
+	errOnUnknownKinds     bool
 	defaultNamespace      string
 	inNamespaceReconciler bool
 }
@@ -27,17 +27,17 @@ type rawParser struct {
 var _ ConfigParser = &rawParser{}
 
 // NewRawParser instantiates a RawParser.
-func NewRawParser(reader reader.Reader, dc utildiscovery.ServerResourcer, defaultNamespace string, reconcilerScope declared.Scope) ConfigParser {
+func NewRawParser(reader reader.Reader, errOnUnknownKinds bool, defaultNamespace string, reconcilerScope declared.Scope) ConfigParser {
 	return &rawParser{
 		reader:                reader,
-		dc:                    dc,
+		errOnUnknownKinds:     errOnUnknownKinds,
 		defaultNamespace:      defaultNamespace,
 		inNamespaceReconciler: reconcilerScope != declared.RootReconciler,
 	}
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *rawParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(filePaths)
 	if errs != nil {
@@ -49,17 +49,17 @@ func (p *rawParser) Parse(clusterName string, enableAPIServerChecks bool, addCac
 		return nil, crdErrs
 	}
 
-	scoper, syncedCRDs, scoperErr := BuildScoper(p.dc, enableAPIServerChecks, addCachedAPIResources, fileObjects, declaredCRDs, getSyncedCRDs)
+	scoper, scoperErr := buildScoper(declaredCRDs, fileObjects)
 	if scoperErr != nil {
 		return nil, scoperErr
 	}
 
-	scopeErrs := nonhierarchical.ScopeValidator(p.inNamespaceReconciler, p.defaultNamespace, scoper, enableAPIServerChecks).Validate(fileObjects)
+	scopeErrs := nonhierarchical.ScopeValidator(p.inNamespaceReconciler, p.defaultNamespace, scoper, p.errOnUnknownKinds).Validate(fileObjects)
 	if scopeErrs != nil {
 		// Don't try to resolve selectors if scopes are incorrect.
 		return nil, scopeErrs
 	}
-	fileObjects, selErr := resolveFlatSelectors(scoper, clusterName, fileObjects, enableAPIServerChecks)
+	fileObjects, selErr := resolveFlatSelectors(scoper, clusterName, fileObjects, p.errOnUnknownKinds)
 	if selErr != nil {
 		return nil, selErr
 	}

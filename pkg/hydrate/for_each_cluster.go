@@ -5,10 +5,10 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/vet"
+	"github.com/google/nomos/pkg/util/discovery"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 const (
@@ -33,9 +33,9 @@ const (
 //    err, the MultiError which Parser.Parse returned, if there was one.
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
-func ForEachCluster(parser filesystem.ConfigParser, getSyncedCRDs filesystem.GetSyncedCRDs, enableAPIServerChecks bool, apiResources cmpath.Absolute, filePaths reader.FilePaths, runKptfileExistenceValidator bool, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
+func ForEachCluster(parser filesystem.ConfigParser, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths, runKptfileExistenceValidator bool, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultCoreObjects, err := parser.Parse(defaultCluster, enableAPIServerChecks, vet.AddCachedAPIResources(apiResources), getSyncedCRDs, filePaths)
+	defaultCoreObjects, err := parser.Parse(defaultCluster, syncedCRDs, buildScoper, filePaths)
 	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)
 	f(defaultCluster, defaultFileObjects, err)
 
@@ -43,7 +43,7 @@ func ForEachCluster(parser filesystem.ConfigParser, getSyncedCRDs filesystem.Get
 	clusters := selectors.FilterClusters(clusterRegistry)
 
 	for _, cluster := range clusters {
-		coreObjects, err2 := parser.Parse(cluster.Name, enableAPIServerChecks, vet.AddCachedAPIResources(apiResources), getSyncedCRDs, filePaths)
+		coreObjects, err2 := parser.Parse(cluster.Name, syncedCRDs, buildScoper, filePaths)
 		fileObjects := filesystem.AsFileObjects(coreObjects)
 
 		// TODO(b/172610552): After the support for Kptfile in a root repo is added, this validator will no longer be needed.

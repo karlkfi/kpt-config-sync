@@ -16,11 +16,10 @@ import (
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/testing/parsertest"
 	"github.com/google/nomos/testing/testoutput"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -181,11 +180,9 @@ func TestRawParser_Parse(t *testing.T) {
 				scope = metav1.NamespaceDefault
 			}
 
-			p := filesystem.NewRawParser(r, f, scope, declared.RootReconciler)
-			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-				return nil, nil
-			}
-			coreObjects, err := p.Parse(tc.clusterName, true, vet.NoCachedAPIResources, getSyncedCRDs, fps)
+			p := filesystem.NewRawParser(r, true, scope, declared.RootReconciler)
+			builder := discovery.ScoperBuilder(f)
+			coreObjects, err := p.Parse(tc.clusterName, nil, builder, fps)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
@@ -233,15 +230,12 @@ func TestRawParser_ParseErrors(t *testing.T) {
 				t.Fatal(err)
 			}
 			r := ft.NewFakeReader(root, tc.objects)
-			p := filesystem.NewRawParser(r, f, metav1.NamespaceDefault, declared.RootReconciler)
+			p := filesystem.NewRawParser(r, true, metav1.NamespaceDefault, declared.RootReconciler)
 
 			policyDir := cmpath.RelativeSlash("/")
 			fps := reader.FilePaths{RootDir: root, PolicyDir: policyDir, Files: r.ToFileList()}
-
-			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-				return tc.syncedCRDs, nil
-			}
-			_, err2 := p.Parse("", true, vet.NoCachedAPIResources, getSyncedCRDs, fps)
+			builder := discovery.ScoperBuilder(f)
+			_, err2 := p.Parse("", tc.syncedCRDs, builder, fps)
 			if err2 == nil {
 				t.Fatal("expected error")
 			}

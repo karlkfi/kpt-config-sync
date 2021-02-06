@@ -46,3 +46,18 @@ func GetResources(discoveryClient ServerResourcer) ([]*metav1.APIResourceList, s
 	}
 	return resourceLists, nil
 }
+
+// APIResourceScoper returns a Scoper that contains scopes for all resources
+// available from the API server.
+func APIResourceScoper(sr ServerResourcer) (Scoper, status.MultiError) {
+	scoper := Scoper{}
+
+	// List the APIResources from the API Server and add them.
+	lists, discoveryErr := GetResources(sr)
+	if discoveryErr != nil {
+		return scoper, discoveryErr
+	}
+
+	addListsErr := scoper.AddAPIResourceLists(lists)
+	return scoper, addListsErr
+}

@@ -19,7 +19,7 @@ func resetFlags() {
 	// independent.
 	flags.Clusters = nil
 	flags.Path = flags.PathDefault
-	flags.SkipAPIServer = false
+	flags.SkipAPIServer = true
 
 	sourceFormatValue = string(filesystem.SourceFormatHierarchy)
 	namespaceValue = ""

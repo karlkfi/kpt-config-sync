@@ -28,7 +28,7 @@ func TestNomosInitVet(t *testing.T) {
 		t.Error(err)
 	}
 
-	out, err = exec.Command("nomos", "vet", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
 	if err != nil {
 		t.Log(string(out))
 		t.Error(err)

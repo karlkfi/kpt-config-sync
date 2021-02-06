@@ -4,15 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/vet"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
@@ -31,7 +29,7 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 			pollingFrequency: pollingFrequency,
 			resyncPeriod:     resyncPeriod,
 			files:            files{FileSource: fs},
-			parser:           NewNamespace(fileReader, dc, scope),
+			parser:           NewNamespace(fileReader, true, scope),
 			updater: updater{
 				scope:      scope,
 				resources:  resources,
@@ -66,9 +64,15 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Obj
 		PolicyDir: p.PolicyDir,
 		Files:     state.files,
 	}
+	crds, err := p.declaredCRDs()
+	if err != nil {
+		return nil, err
+	}
+	builder := discovery.ScoperBuilder(p.discoveryInterface)
+
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, p.declaredCRDs, filePaths)
+	cos, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err

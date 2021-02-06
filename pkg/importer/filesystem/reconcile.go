@@ -23,10 +23,8 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
-	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/pkg/webhook"
 	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -210,12 +208,6 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-		// Don't preemptively get the synced CRDs since we may not need them.
-		decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
-		return clusterconfig.GetCRDs(decoder, currentConfigs.CRDClusterConfig)
-	}
-
 	// check git status, blow up if we see issues
 	if err := git.CheckClean(absGitDir.OSPath()); err != nil {
 		glog.Errorf("git check clean returned error: %v", err)
@@ -240,8 +232,17 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		Files:     wantFiles,
 	}
 
+	decoder := decode.NewGenericResourceDecoder(scheme.Scheme)
+	syncedCRDs, err := clusterconfig.GetCRDs(decoder, currentConfigs.CRDClusterConfig)
+	if err != nil {
+		glog.Error(err)
+		return reconcile.Result{}, errors.Wrap(err, "reading synced CRDs")
+	}
+
+	builder := utildiscovery.ScoperBuilder(c.discoveryClient)
+
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, true, vet.NoCachedAPIResources, getSyncedCRDs, filePaths)
+	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, syncedCRDs, builder, filePaths)
 	desiredFileObjects := AsFileObjects(desiredCoreObjects)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))

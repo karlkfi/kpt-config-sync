@@ -12,15 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// AddCachedAPIResourcesFn is a function that adds known type scopes to a Scoper.
-type AddCachedAPIResourcesFn func(scoper *discovery.Scoper) status.MultiError
-
-// NoCachedAPIResources is a no-op, for when we are running in a cluster and
-// can just check the cluster's available resources.
-func NoCachedAPIResources(scoper *discovery.Scoper) status.MultiError {
-	return nil
-}
-
 // APIResourcesPath is the path from policyDir to the cached API Resources.
 var APIResourcesPath = cmpath.RelativeSlash("api-resources.txt")
 
@@ -33,7 +24,7 @@ var APIResourcesCommand = fmt.Sprintf("kubectl api-resources > %s", APIResources
 //
 // scoper is the Scoper to add resources to.
 // file is the file to read API Resources from.
-func AddCachedAPIResources(file cmpath.Absolute) AddCachedAPIResourcesFn {
+func AddCachedAPIResources(file cmpath.Absolute) discovery.AddResourcesFunc {
 	return func(scoper *discovery.Scoper) status.MultiError {
 		data, err := ioutil.ReadFile(file.OSPath())
 		if err != nil {

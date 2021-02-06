@@ -14,10 +14,9 @@ import (
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/resourcequota"
-	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
-	"github.com/google/nomos/pkg/vet"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/restmapper"
@@ -158,13 +157,6 @@ func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restma
 	return result
 }
 
-// newTestParser creates a parser that processes the passed FileObjects.
-func newTestParser(reader reader.Reader, syncedCRDs []*v1beta1.CustomResourceDefinition) *filesystem.Parser {
-	f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(syncedCRDs))
-
-	return filesystem.NewParser(reader, f)
-}
-
 // RunAll runs each unit test.
 func (pt Test) RunAll(t *testing.T) {
 	t.Helper()
@@ -188,13 +180,11 @@ func (pt Test) RunAll(t *testing.T) {
 				PolicyDir: policyDir,
 				Files:     fakeReader.ToFileList(),
 			}
-			parser := newTestParser(fakeReader, tc.SyncedCRDs)
+			parser := filesystem.NewParser(fakeReader, !tc.Serverless)
+			f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(tc.SyncedCRDs))
+			builder := discovery.ScoperBuilder(f)
 
-			getSyncedCRDs := func() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-				return tc.SyncedCRDs, nil
-			}
-
-			coreObjects, errs := parser.Parse(tc.ClusterName, !tc.Serverless, vet.NoCachedAPIResources, getSyncedCRDs, filePaths)
+			coreObjects, errs := parser.Parse(tc.ClusterName, tc.SyncedCRDs, builder, filePaths)
 			fileObjects := filesystem.AsFileObjects(coreObjects)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 

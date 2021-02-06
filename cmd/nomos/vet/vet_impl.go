@@ -16,8 +16,10 @@ import (
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -67,9 +69,12 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 		}
 	}
 
-	getSyncedCRDs := nomosparse.GetSyncedCRDs
-	if skipAPIServer {
-		getSyncedCRDs = filesystem.NoSyncedCRDs
+	var syncedCRDs []*v1beta1.CustomResourceDefinition
+	if !skipAPIServer {
+		syncedCRDs, err = nomosparse.GetSyncedCRDs()
+		if err != nil {
+			return err
+		}
 	}
 
 	var parser filesystem.ConfigParser
@@ -82,13 +87,13 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 				namespaceFlag, reconcilermanager.SourceFormat)
 		}
 
-		parser = filesystem.NewParser(&reader.File{}, dc)
+		parser = filesystem.NewParser(&reader.File{}, !skipAPIServer)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case filesystem.SourceFormatUnstructured:
 		if namespace == "" {
-			parser = filesystem.NewRawParser(&reader.File{}, dc, metav1.NamespaceDefault, declared.RootReconciler)
+			parser = filesystem.NewRawParser(&reader.File{}, !skipAPIServer, metav1.NamespaceDefault, declared.RootReconciler)
 		} else {
-			parser = parse.NewNamespace(&reader.File{}, dc, declared.Scope(namespace))
+			parser = parse.NewNamespace(&reader.File{}, !skipAPIServer, declared.Scope(namespace))
 		}
 	default:
 		return fmt.Errorf("unknown %s value %q", reconcilermanager.SourceFormat, sourceFormat)
@@ -100,6 +105,9 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 		Files:     files,
 	}
 
+	addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
+	builder := discovery.ScoperBuilder(dc, addFunc)
+
 	var runKptfileExistenceValidator bool
 	if namespace == "" {
 		// Kptfile is not supported in root repos, set runKptfileExistenceValidator to true on root repos.
@@ -109,7 +117,7 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, getSyncedCRDs, !skipAPIServer, rootDir.Join(vet.APIResourcesPath), filePaths,
+	hydrate.ForEachCluster(parser, syncedCRDs, builder, filePaths,
 		runKptfileExistenceValidator, vetCluster(&vetErrs, allClusters, clusters),
 	)
 	if len(vetErrs) > 0 {

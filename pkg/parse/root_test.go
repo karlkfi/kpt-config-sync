@@ -23,10 +23,11 @@ import (
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/testing/testmetrics"
-	"github.com/google/nomos/pkg/vet"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -118,6 +119,10 @@ func TestRoot_Parse(t *testing.T) {
 					parser:             &fakeParser{parse: tc.parsed},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+					updater: updater{
+						scope:     declared.RootReconciler,
+						resources: &declared.Resources{},
+					},
 				},
 			}
 			state := reconcilerState{}
@@ -170,6 +175,10 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 					parser:             &fakeParser{errors: tc.errors},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+					updater: updater{
+						scope:     declared.RootReconciler,
+						resources: &declared.Resources{},
+					},
 				},
 			}
 			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
@@ -220,6 +229,10 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 					parser:             &fakeParser{errors: tc.parseErrors},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+					updater: updater{
+						scope:     declared.RootReconciler,
+						resources: &declared.Resources{},
+					},
 				},
 			}
 			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
@@ -299,7 +312,7 @@ type fakeParser struct {
 	errors []status.Error
 }
 
-func (p *fakeParser) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *fakeParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
 	if p.errors == nil {
 		return p.parse, nil
 	}

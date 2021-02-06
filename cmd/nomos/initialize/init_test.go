@@ -17,6 +17,7 @@ func resetFlags() {
 	// are reset, successive calls to Cmd.Execute aren't guaranteed to be
 	// independent.
 	flags.Path = flags.PathDefault
+	flags.SkipAPIServer = true
 	forceValue = false
 }
 

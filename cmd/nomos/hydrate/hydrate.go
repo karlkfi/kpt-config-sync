@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -107,16 +108,22 @@ clusters.`,
 		if err != nil {
 			return err
 		}
-		parser := filesystem.NewParser(&reader.File{}, dc)
+		parser := filesystem.NewParser(&reader.File{}, !flags.SkipAPIServer)
 
 		var allObjects []ast.FileObject
 
-		encounteredError := false
-		numClusters := 0
+		crds, err := parse.GetSyncedCRDs()
+		if err != nil {
+			return err
+		}
+		addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
+		builder := discovery.ScoperBuilder(dc, addFunc)
 		// Kptfile is supported in namespaced repos, but not supported in root repos.
 		// set runKptfileExistenceValidator to false here since `nomos hydrate` does not differentiate root repos and namespaced repos.
 		runKptfileExistenceValidator := false
-		hydrate.ForEachCluster(parser, parse.GetSyncedCRDs, !flags.SkipAPIServer, rootDir.Join(vet.APIResourcesPath), filePaths, runKptfileExistenceValidator, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		encounteredError := false
+		numClusters := 0
+		hydrate.ForEachCluster(parser, crds, builder, filePaths, runKptfileExistenceValidator, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

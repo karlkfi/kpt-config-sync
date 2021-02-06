@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/vet"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // Namespace is a filesystem.ConfigParser that parses Namespace
@@ -16,25 +16,23 @@ import (
 //
 // It wraps a filesystem.rawParser and adds a few additional validation steps.
 type Namespace struct {
-	discoveryInterface discovery.ServerResourcer
-	parser             filesystem.ConfigParser
-	scope              declared.Scope
+	parser filesystem.ConfigParser
+	scope  declared.Scope
 }
 
 // NewNamespace creates a new Namespace.
-func NewNamespace(fileReader reader.Reader, dc discovery.ServerResourcer, scope declared.Scope) *Namespace {
+func NewNamespace(fileReader reader.Reader, errOnUnknown bool, scope declared.Scope) *Namespace {
 	return &Namespace{
-		discoveryInterface: dc,
-		parser:             filesystem.NewRawParser(fileReader, dc, string(scope), scope),
-		scope:              scope,
+		parser: filesystem.NewRawParser(fileReader, errOnUnknown, string(scope), scope),
+		scope:  scope,
 	}
 }
 
 var _ filesystem.ConfigParser = &Namespace{}
 
 // Parse implements filesystem.ConfigParser.
-func (n Namespace) Parse(clusterName string, enableAPIServerChecks bool, addCachedAPIResources vet.AddCachedAPIResourcesFn, getSyncedCRDs filesystem.GetSyncedCRDs, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
-	cos, err := n.parser.Parse(clusterName, enableAPIServerChecks, addCachedAPIResources, getSyncedCRDs, filePaths)
+func (n Namespace) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+	cos, err := n.parser.Parse(clusterName, syncedCRDs, buildScoper, filePaths)
 	if err != nil {
 		return nil, err
 	}

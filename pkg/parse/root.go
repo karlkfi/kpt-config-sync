@@ -19,7 +19,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -46,9 +45,9 @@ func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceF
 
 	switch format {
 	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewRawParser(fileReader, dc, metav1.NamespaceDefault, declared.RootReconciler)
+		opts.parser = filesystem.NewRawParser(fileReader, true, metav1.NamespaceDefault, declared.RootReconciler)
 	case filesystem.SourceFormatHierarchy:
-		opts.parser = filesystem.NewParser(fileReader, dc)
+		opts.parser = filesystem.NewParser(fileReader, true)
 	default:
 		return nil, errors.Errorf("unknown SourceFormat %q, must be one of %s or %s",
 			format, filesystem.SourceFormatUnstructured, filesystem.SourceFormatHierarchy)
@@ -86,9 +85,15 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, 
 		Files:     wantFiles,
 	}
 
+	crds, err := p.declaredCRDs()
+	if err != nil {
+		return nil, err
+	}
+	builder := discovery.ScoperBuilder(p.discoveryInterface)
+
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, true, vet.NoCachedAPIResources, p.declaredCRDs, filePaths)
+	cos, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
