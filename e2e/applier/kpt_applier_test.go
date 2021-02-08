@@ -69,6 +69,9 @@ func prepare(t *testing.T) {
 		if err := cleanup(); err != nil {
 			t.Logf("failed to clean up after the test %v", err)
 		}
+		if err := os.Unsetenv(ntopts.Kubeconfig); err != nil {
+			t.Log(err)
+		}
 	})
 
 	// Apply the CRD
