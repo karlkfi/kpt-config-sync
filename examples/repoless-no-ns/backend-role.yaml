@@ -3,6 +3,8 @@ kind: Role
 metadata:
   namespace: backend
   name: pod-reader-backend
+  labels:
+    testdata: "true"
 rules:
 - apiGroups: [""] # "" indicates the core API group
   resources: ["pods"]

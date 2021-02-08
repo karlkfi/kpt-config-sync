@@ -3,6 +3,8 @@ kind: Role
 metadata:
   namespace: default
   name: pod-reader-default
+  labels:
+    testdata: "true"
 rules:
 - apiGroups: [""] # "" indicates the core API group
   resources: ["pods"]
