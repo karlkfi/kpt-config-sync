@@ -97,13 +97,13 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 }
 
 func read(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
-	sourceErrs := readFromSource(ctx, p, trigger, state)
+	commit, sourceErrs := readFromSource(ctx, p, trigger, state)
 	if sourceErrs == nil {
 		return nil
 	}
 
 	gs := gitStatus{
-		commit: "",
+		commit: commit,
 		errs:   sourceErrs,
 	}
 	// Only call `setSourceStatus` if `readFromSource` fails.
@@ -118,16 +118,17 @@ func read(ctx context.Context, p Parser, trigger string, state *reconcilerState)
 // readFromSource reads the git commit and policyDir from the git repo, checks whether the gitstate in
 // the cache is up-to-date. If the cache is not up-to-date, reads all the git files from the
 // git repo.
-func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.Error {
+// readFromSource returns the git commit hash, and any encounted error.
+func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) (string, status.Error) {
 	opts := p.options()
 	start := time.Now()
 	gitState, sourceErrs := opts.readGitCommitAndPolicyDir(opts.reconcilerName)
 	if sourceErrs != nil {
-		return sourceErrs
+		return gitState.commit, sourceErrs
 	}
 
 	if gitState.policyDir == state.cache.git.policyDir {
-		return nil
+		return gitState.commit, nil
 	}
 
 	glog.Infof("New git changes (%s) detected, reset the cache", gitState.policyDir.OSPath())
@@ -142,7 +143,7 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 		state.cache.git = gitState
 	}
 	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceErrs), start)
-	return sourceErrs
+	return gitState.commit, sourceErrs
 }
 
 func parse(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {

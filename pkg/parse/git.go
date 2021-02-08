@@ -42,7 +42,6 @@ type gitState struct {
 }
 
 // readGitCommitAndPolicyDir returns a gitState object whose `commit` and `policyDir` fields are set if succeeded.
-// It returns an empty gitState object if failed.
 func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error) {
 	result := gitState{}
 
@@ -60,14 +59,18 @@ func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, stat
 
 	err = git.CheckClean(gitDir.OSPath())
 	if err != nil {
-		return gitState{}, status.PathWrapError(
+		// Return `result` here instead of an empty gitState object so that `result.commit`
+		// can be used to set the `Status.Source.Commit` field of RepoSync/RootSync.
+		return result, status.PathWrapError(
 			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
 	}
 
 	relPolicyDir := gitDir.Join(o.PolicyDir)
 	policyDir, err := relPolicyDir.EvalSymlinks()
 	if err != nil {
-		return gitState{}, status.PathWrapError(
+		// Return `result` here instead of an empty gitState object so that `result.commit`
+		// can be used to set the `Status.Source.Commit` field of RepoSync/RootSync.
+		return result, status.PathWrapError(
 			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
 	}
 	result.policyDir = policyDir
