@@ -6,12 +6,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// cacheForCommit tracks the progress made by the reconciler for a git commit
-// The reconciler resets `cacheForCommit` when:
-//   * a new git commit is detected, or
+// cacheForCommit tracks the progress made by the reconciler for a git commit.
+//
+// The reconciler resets the whole cache when a new git commit is detected.
+//
+// The reconciler resets the whole cache except for the cached gitState when:
 //   * a force-resync happens, or
 //   * one of the watchers noticed a management conflict.
 type cacheForCommit struct {
+	// git tracks the state of the git repo.
+	// This field is only set after the reconciler successfully reads all the git files.
 	git gitState
 
 	// hasParserResult indicates whether the cache includes the parser result

@@ -51,6 +51,20 @@ func (s *reconcilerState) invalidate(err status.MultiError) {
 	s.cache.needToRetry = true
 }
 
+// resetCache resets the whole cache.
+//
+// resetCache is called when a new git commit is detected.
 func (s *reconcilerState) resetCache() {
 	s.cache = cacheForCommit{}
+}
+
+// resetAllButGitState resets the whole cache except for the cached gitState.
+//
+// resetAllButGitState is called when:
+//   * a force-resync happens, or
+//   * one of the watchers noticed a management conflict.
+func (s *reconcilerState) resetAllButGitState() {
+	git := s.cache.git
+	s.cache = cacheForCommit{}
+	s.cache.git = git
 }

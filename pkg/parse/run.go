@@ -35,7 +35,8 @@ func Run(ctx context.Context, p Parser) {
 		case <-tickerResync.C:
 			glog.Infof("It is time for a force-resync")
 			// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
-			state.resetCache()
+			// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
+			state.resetAllButGitState()
 			run(ctx, p, triggerResync, state)
 
 		// it is time to re-import the configuration from the filesystem
@@ -48,7 +49,8 @@ func Run(ctx context.Context, p Parser) {
 			if opts.managementConflict() {
 				glog.Infof("One of the watchers noticed a management conflict")
 				// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
-				state.resetCache()
+				// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
+				state.resetAllButGitState()
 				trigger = triggerManagementConflict
 			} else if state.cache.needToRetry {
 				glog.Infof("The last parse-apply-watch loop failed")
