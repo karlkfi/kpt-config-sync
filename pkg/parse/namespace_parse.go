@@ -37,13 +37,6 @@ func (n Namespace) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourc
 		return nil, err
 	}
 
-	// Parse and generate a ResourceGroup from the Kptfile if it exists
-	cos, e := AsResourceGroup(cos)
-	if e != nil {
-		err = status.Append(err, e)
-		return nil, err
-	}
-
 	objs := filesystem.AsFileObjects(cos)
 
 	nsv := repositoryScopeVisitor(n.scope)

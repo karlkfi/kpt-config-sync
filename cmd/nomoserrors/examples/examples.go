@@ -284,10 +284,8 @@ func Generate() AllExamples {
 	// 1058
 	result.add(parse.BadScopeErr(fake.Role(core.Namespace("shipping")), "dev"))
 
-	// 1059
-	result.add(parse.MultipleKptfilesError(
-		fake.KptFileObject(core.Name("a")),
-		fake.KptFileObject(core.Name("b"))))
+	// 1059 is Deprecated.
+	result.markDeprecated("1059")
 
 	// 1060
 	result.add(kptapplier.ManagementConflictError(fake.Role()))
@@ -295,11 +293,11 @@ func Generate() AllExamples {
 	// 1061
 	result.add(nonhierarchical.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
 
-	// 1062
-	result.add(parse.InvalidKptfileError("invalid name", fake.KptFileObject()))
+	// 1062 is Deprecated.
+	result.markDeprecated("1062")
 
-	// 1063
-	result.add(nonhierarchical.KptfileExistenceError(fake.KptFile("Kptfile")))
+	// 1063 is Deprecated.
+	result.markDeprecated("1063")
 
 	// 1064
 	p, _ := cmpath.AbsoluteSlash("/api-resources.txt")

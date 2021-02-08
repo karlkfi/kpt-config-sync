@@ -108,17 +108,10 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 	addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
 	builder := discovery.ScoperBuilder(dc, addFunc)
 
-	var runKptfileExistenceValidator bool
-	if namespace == "" {
-		// Kptfile is not supported in root repos, set runKptfileExistenceValidator to true on root repos.
-		// TODO(b/172610552): After the support for Kptfile in a root repo is added, this validator will no longer be needed.
-		runKptfileExistenceValidator = true
-	}
-
 	// Track per-cluster vet errors.
 	var vetErrs []string
 	hydrate.ForEachCluster(parser, syncedCRDs, builder, filePaths,
-		runKptfileExistenceValidator, vetCluster(&vetErrs, allClusters, clusters),
+		vetCluster(&vetErrs, allClusters, clusters),
 	)
 	if len(vetErrs) > 0 {
 		return errors.New(strings.Join(vetErrs, "\n\n"))

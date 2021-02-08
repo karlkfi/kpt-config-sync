@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
@@ -96,11 +95,6 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, 
 	cos, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
-		return nil, err
-	}
-
-	// TODO(b/172610552): After the support for Kptfile in a root repo is added, this validator will no longer be needed.
-	if err := nonhierarchical.KptfileExistenceValidator.Validate(filesystem.AsFileObjects(cos)); err != nil {
 		return nil, err
 	}
 

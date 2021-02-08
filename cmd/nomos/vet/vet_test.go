@@ -3,7 +3,6 @@ package vet
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/nomos/cmd/nomos/flags"
@@ -124,42 +123,5 @@ func TestVet_MultiCluster(t *testing.T) {
 				t.Error("got no vet error, want err")
 			}
 		})
-	}
-}
-
-// This test aims to test that Kptfile is not supported in a root repo.
-func TestVet_KptfileExistence_RootRepo(t *testing.T) {
-	resetFlags()
-	Cmd.SilenceUsage = true
-
-	os.Args = []string{
-		"vet", // this first argument does nothing, but is required to exist.
-		"--path", examplesDir.Join(cmpath.RelativeSlash("parse-errors/root-repo-with-Kptfile")).OSPath(),
-		"--clusters", "prod-cluster",
-		"--no-api-server-check",
-	}
-	err := Cmd.Execute()
-	if err == nil {
-		t.Error("got no vet error, want err")
-	} else if !strings.Contains(err.Error(), "KNV1063: Found Kptfile(s) in the Root Repo.") {
-		t.Errorf("got error: %v, want the `KNV1063: Found Kptfile(s) in the Root Repo.` error", err)
-	}
-}
-
-// This test aims to test that Kptfile is supported in a namespaced repo.
-func TestVet_KptfileExistence_NamespacedRepo(t *testing.T) {
-	resetFlags()
-	Cmd.SilenceUsage = true
-
-	os.Args = []string{
-		"vet", // this first argument does nothing, but is required to exist.
-		"--path", examplesDir.Join(cmpath.RelativeSlash("namespaced-repo-with-Kptfile")).OSPath(),
-		"--namespace", "foo",
-		"--source-format", "unstructured",
-		"--no-api-server-check",
-	}
-	err := Cmd.Execute()
-	if err != nil {
-		t.Errorf("got vet errors, want nil:\n%v", err)
 	}
 }

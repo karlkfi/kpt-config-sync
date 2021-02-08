@@ -23,16 +23,6 @@ func parseFile(path string) ([]*unstructured.Unstructured, error) {
 		return nil, errors.New("attempted to read relative path")
 	}
 
-	if filepath.Base(path) == "Kptfile" {
-		contents, err := ioutil.ReadFile(path)
-		if err != nil {
-			glog.Errorf("Failed to read Kptfile declared in git from mounted filesystem: %s", path)
-			importer.Metrics.Violations.Inc()
-			return nil, err
-		}
-		return parseKptfile(contents)
-	}
-
 	switch filepath.Ext(path) {
 	case ".yml", ".yaml":
 		contents, err := ioutil.ReadFile(path)

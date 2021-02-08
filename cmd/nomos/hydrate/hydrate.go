@@ -118,12 +118,9 @@ clusters.`,
 		}
 		addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
 		builder := discovery.ScoperBuilder(dc, addFunc)
-		// Kptfile is supported in namespaced repos, but not supported in root repos.
-		// set runKptfileExistenceValidator to false here since `nomos hydrate` does not differentiate root repos and namespaced repos.
-		runKptfileExistenceValidator := false
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, crds, builder, filePaths, runKptfileExistenceValidator, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, crds, builder, filePaths, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {
