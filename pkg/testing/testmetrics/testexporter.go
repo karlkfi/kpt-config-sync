@@ -46,7 +46,7 @@ func RegisterMetrics(v *view.View) *TestExporter {
 func diff(r []*view.Row, other []*view.Row) string {
 	for i := 0; i < len(r); i++ {
 		if r[i] == other[i] {
-			return ""
+			continue
 		}
 		if !reflect.DeepEqual(r[i].Tags, other[i].Tags) {
 			return fmt.Sprintf("Unexpected metric tags, -got, +want: -%v\n+%v", r[i].Tags, other[i].Tags)
