@@ -30,7 +30,7 @@ wget -O- -nv https://raw.githubusercontent.com/golangci/golangci-lint/master/ins
 HOME=.output/
 
 echo "Running golangci-lint: "
-if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,goimports,golint,unconvert --exclude-use-default=false)"; then
+if ! OUT="$(.output/go/bin/golangci-lint run --enable=gofmt,goimports,golint,unconvert --exclude-use-default=false --timeout=5m0s)"; then
   echo "${OUT}"
 
   NC=''
