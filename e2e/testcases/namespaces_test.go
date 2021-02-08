@@ -12,6 +12,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -43,7 +44,16 @@ func TestDeclareNamespace(t *testing.T) {
 func TestDeclareImplicitNamespace(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
-	err := nt.ValidateNotFound("shipping", "", &corev1.Namespace{})
+	const implicitNamespace = "shipping"
+	ns := fake.NamespaceObject(implicitNamespace)
+	t.Cleanup(func() {
+		if err := nt.Delete(ns); err != nil {
+			t.Fatal(err)
+		}
+		nomostest.WaitToTerminate(nt, kinds.Namespace(), implicitNamespace, "")
+	})
+
+	err := nt.ValidateNotFound(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
 		// Failed test precondition. We want to ensure we create the Namespace.
 		t.Fatal(err)
@@ -52,16 +62,16 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	// Phase 1: Declare a Role in a Namespace that doesn't exist, and ensure it
 	// gets created.
 	nt.Root.Add("acme/role.yaml", fake.RoleObject(core.Name("admin"),
-		core.Namespace("shipping")))
+		core.Namespace(implicitNamespace)))
 	nt.Root.CommitAndPush("add Role in implicit Namespace")
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate("shipping", "", &corev1.Namespace{})
+	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
 		// No need to continue test since Namespace was never created.
 		t.Fatal(err)
 	}
-	err = nt.Validate("admin", "shipping", &rbacv1.Role{})
+	err = nt.Validate("admin", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,11 +81,11 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	nt.Root.CommitAndPush("remove Role")
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate("shipping", "", &corev1.Namespace{})
+	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
 		t.Error(err)
 	}
-	err = nt.ValidateNotFound("admin", "shipping", &rbacv1.Role{})
+	err = nt.ValidateNotFound("admin", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
 		t.Error(err)
 	}
