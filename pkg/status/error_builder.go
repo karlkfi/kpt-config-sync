@@ -15,7 +15,9 @@ import (
 // variations (e.g. different illegal annotations). If you would use essentially the same
 // explanation and suggest the same fix for the problem, reuse the ErrorBuilder for that code. The
 // four digits of an error code have no  meaning except:
-// - 1000, InternalError, and
+// - 1XXX, the user has a mistake in their repository they need to fix.
+// - 2XXX, something went wrong in the cluster - it could be transient or users may need to change something on the cluster.
+// - 9998, InternalError, and
 // - 9999, UndocumentedError.
 //
 // Construct a new ErrorBuilder by passing in a code to NewErrorBuilder. If the code is not unique,
@@ -56,9 +58,7 @@ import (
 //
 
 // ErrorBuilder constructs complex, structured error messages.
-//
-// ErrorBuilder constructs complex error messages. Use NewErrorBuilder to register a KNV for a new
-// code.
+// Use NewErrorBuilder to register a KNV for a new code.
 type ErrorBuilder struct {
 	error Error
 }
@@ -72,12 +72,12 @@ func NewErrorBuilder(code string) ErrorBuilder {
 	}}
 }
 
-// Build implements ErrorBuilder.
+// Build returns the Error inside the ErrorBuilder.
 func (eb ErrorBuilder) Build() Error {
 	return eb.error
 }
 
-// BuildWithPaths implements ErrorBuilder.
+// BuildWithPaths adds paths within the repository to the Error.
 func (eb ErrorBuilder) BuildWithPaths(paths ...id.Path) PathError {
 	if len(paths) == 0 {
 		return nil
@@ -88,7 +88,7 @@ func (eb ErrorBuilder) BuildWithPaths(paths ...id.Path) PathError {
 	}
 }
 
-// BuildWithResources implements ErrorBuilder.
+// BuildWithResources adds resources declared in the repository to the Error.
 func (eb ErrorBuilder) BuildWithResources(resources ...id.Resource) ResourceError {
 	if len(resources) == 0 {
 		return nil
@@ -99,7 +99,7 @@ func (eb ErrorBuilder) BuildWithResources(resources ...id.Resource) ResourceErro
 	}
 }
 
-// Sprint implements ErrorBuilder.
+// Sprint adds a message string into the Error inside the ErrorBuilder.
 func (eb ErrorBuilder) Sprint(message string) ErrorBuilder {
 	return ErrorBuilder{error: messageErrorImpl{
 		underlying: eb.error,
@@ -107,7 +107,7 @@ func (eb ErrorBuilder) Sprint(message string) ErrorBuilder {
 	}}
 }
 
-// Sprintf implements ErrorBuilder.
+// Sprintf adds a formatted string into the Error inside the ErrorBuilder.
 func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 	for _, e := range a {
 		if _, isError := e.(error); isError {
@@ -130,7 +130,7 @@ func (eb ErrorBuilder) Sprintf(format string, a ...interface{}) ErrorBuilder {
 	}}
 }
 
-// Wrap implements ErrorBuilder.
+// Wrap adds an error into the Error inside the ErrorBuilder.
 func (eb ErrorBuilder) Wrap(toWrap error) ErrorBuilder {
 	if e, isStatusError := toWrap.(Error); isStatusError {
 		// We don't allow wrapping KNV errors in other KNV errors.

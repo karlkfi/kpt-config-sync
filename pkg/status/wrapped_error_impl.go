@@ -57,7 +57,7 @@ func (w wrappedErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
 	return cseFromError(w)
 }
 
-// Cause implements causer
+// Cause implements causer.
 func (w wrappedErrorImpl) Cause() error {
 	return w.wrapped
 }

@@ -47,7 +47,7 @@ func (p pathErrorImpl) RelativePaths() []id.Path {
 	return p.paths
 }
 
-// Cause implements causer
+// Cause implements causer.
 func (p pathErrorImpl) Cause() error {
 	return p.underlying.Cause()
 }

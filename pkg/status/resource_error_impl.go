@@ -56,7 +56,7 @@ func (r resourceErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
 	return cseFromResourceError(r)
 }
 
-// Cause implements causer
+// Cause implements causer.
 func (r resourceErrorImpl) Cause() error {
 	return r.underlying.Cause()
 }
