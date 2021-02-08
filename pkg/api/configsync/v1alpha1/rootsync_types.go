@@ -4,12 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="SourceCommit",type="string",JSONPath=".status.source.commit"
 // +kubebuilder:printcolumn:name="SyncCommit",type="string",JSONPath=".status.sync.commit"
-// +protobuf=true
 
 // RootSync is the Schema for the rootsyncs API
 type RootSync struct {
@@ -23,16 +21,10 @@ type RootSync struct {
 	Status RootSyncStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
 	SyncSpec `json:",inline"`
 }
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
 
 // RootSyncStatus defines the observed state of RootSync
 type RootSyncStatus struct {
@@ -61,9 +53,6 @@ const (
 	RootSyncStalled RootSyncConditionType = "Stalled"
 )
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // RootSyncCondition describes the state of a RootSync at a certain point.
 type RootSyncCondition struct {
 	// Type of RootSync condition.
@@ -84,7 +73,6 @@ type RootSyncCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 
 // RootSyncList contains a list of RootSync

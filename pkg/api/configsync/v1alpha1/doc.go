@@ -6,8 +6,6 @@
 //     make clientgen
 //
 // DO NOT MOVE THESE OUT OF THE PACKAGE DOCSTRING, GENERATING CODE PROPERLY DEPENDS ON THEM BEING HERE.
-// +k8s:deepcopy-gen=package,register
-// +k8s:openapi-gen=true
 // +kubebuilder:object:generate=true
 // +groupName=configsync.gke.io
 package v1alpha1

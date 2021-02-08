@@ -4,9 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // SyncSpec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec.
 type SyncSpec struct {
 	// SourceFormat specifies how the repository is formatted.
@@ -24,9 +21,6 @@ type SyncSpec struct {
 	// +optional
 	Git `json:"git,omitempty"`
 }
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
 
 // SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
 type SyncStatus struct {
@@ -51,9 +45,6 @@ type SyncStatus struct {
 	Sync GitSyncStatus `json:"sync,omitempty"`
 }
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // GitSourceStatus describes the status of a git source-of-truth
 type GitSourceStatus struct {
 	// Git contains fields describing the status of a Git source of truth.
@@ -68,9 +59,6 @@ type GitSourceStatus struct {
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
 }
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
 
 // GitSyncStatus provides the status of the syncing of resources from a git source-of-truth on to the cluster
 type GitSyncStatus struct {
@@ -91,9 +79,6 @@ type GitSyncStatus struct {
 	Errors []ConfigSyncError `json:"errors,omitempty"`
 }
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // GitStatus describes the status of a Git source of truth.
 type GitStatus struct {
 	// Repo is the git repository URL being synced from.
@@ -110,9 +95,6 @@ type GitStatus struct {
 	Dir string `json:"dir"`
 }
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // ConfigSyncError represents an error that occurs while parsing, applying, or
 // remediating a resource.
 type ConfigSyncError struct {
@@ -127,9 +109,6 @@ type ConfigSyncError struct {
 	// +optional
 	Resources []ResourceRef `json:"errorResources,omitempty"`
 }
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
 
 // ResourceRef contains the identification bits of a single managed resource.
 type ResourceRef struct {

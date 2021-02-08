@@ -15,12 +15,11 @@ import (
 // These comments must remain outside the package docstring.
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ClusterConfig is the top-level object for the config data definition.
 //
 // It holds a config defined for a single org unit (namespace).
-// +protobuf=true
 type ClusterConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -38,7 +37,6 @@ type ClusterConfig struct {
 }
 
 // ClusterConfigSpec defines the configs that will exist at the cluster level.
-// +protobuf=true
 type ClusterConfigSpec struct {
 	// Token indicates the version of the ClusterConfig last imported from the source of truth.
 	// +optional
@@ -54,7 +52,6 @@ type ClusterConfigSpec struct {
 }
 
 // ClusterConfigStatus contains fields that define the status of a ClusterConfig.
-// +protobuf=true
 type ClusterConfigStatus struct {
 	// Token indicates the version of the config that the Syncer last attempted to update from.
 	// +optional
@@ -78,11 +75,10 @@ type ClusterConfigStatus struct {
 	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ClusterConfigList holds a list of cluster level configs, returned as response to a List call on
 // the cluster config hierarchy.
-// +protobuf=true
 type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -96,12 +92,11 @@ type ClusterConfigList struct {
 // These comments must remain outside the package docstring.
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // NamespaceConfig is the top-level object for the config data definition.
 //
 // It holds a config defined for a single org unit (namespace).
-// +protobuf=true
 type NamespaceConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -119,7 +114,6 @@ type NamespaceConfig struct {
 }
 
 // NamespaceConfigSpec contains all the information about a config linkage.
-// +protobuf=true
 type NamespaceConfigSpec struct {
 	// Token indicates the version of the NamespaceConfig last imported from the source of truth.
 	// +optional
@@ -140,7 +134,6 @@ type NamespaceConfigSpec struct {
 }
 
 // NamespaceConfigStatus contains fields that define the status of a NamespaceConfig.
-// +protobuf=true
 type NamespaceConfigStatus struct {
 	// Token indicates the version of the config that the Syncer last attempted to update from.
 	// +optional
@@ -164,11 +157,10 @@ type NamespaceConfigStatus struct {
 	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // NamespaceConfigList holds a list of NamespaceConfigs, as response to a List call on the config
 // hierarchy API.
-// +protobuf=true
 type NamespaceConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -181,7 +173,6 @@ type NamespaceConfigList struct {
 }
 
 // GenericResources contains API objects of a specified Group and Kind.
-// +protobuf=true
 type GenericResources struct {
 	// Group is the Group for all resources contained within
 	// +optional
@@ -195,7 +186,6 @@ type GenericResources struct {
 }
 
 // GenericVersionResources holds a set of resources of a single version for a Group and Kind.
-// +protobuf=true
 type GenericVersionResources struct {
 	// Version is the version of all objects in Objects.
 	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
@@ -206,12 +196,10 @@ type GenericVersionResources struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ClusterSelector specifies a LabelSelector applied to clusters that exist within a
 // cluster registry.
-//
-// +protobuf=true
 type ClusterSelector struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -224,7 +212,6 @@ type ClusterSelector struct {
 }
 
 // ClusterSelectorSpec contains spec fields for ClusterSelector.
-// +protobuf=true
 type ClusterSelectorSpec struct {
 	// Selects clusters.
 	// This field is NOT optional and follows standard label selector semantics. An empty selector
@@ -232,10 +219,9 @@ type ClusterSelectorSpec struct {
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ClusterSelectorList holds a list of ClusterSelector resources.
-// +protobuf=true
 type ClusterSelectorList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -249,12 +235,10 @@ type ClusterSelectorList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // NamespaceSelector specifies a LabelSelector applied to namespaces that exist within a
 // NamespaceConfig hierarchy.
-//
-// +protobuf=true
 type NamespaceSelector struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -267,7 +251,6 @@ type NamespaceSelector struct {
 }
 
 // NamespaceSelectorSpec contains spec fields for NamespaceSelector.
-// +protobuf=true
 type NamespaceSelectorSpec struct {
 	// Selects namespaces.
 	// This field is NOT optional and follows standard label selector semantics. An empty selector
@@ -275,10 +258,9 @@ type NamespaceSelectorSpec struct {
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // NamespaceSelectorList holds a list of NamespaceSelector resources.
-// +protobuf=true
 type NamespaceSelectorList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -292,7 +274,7 @@ type NamespaceSelectorList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // Sync is used for configuring sync of generic resources.
 type Sync struct {
@@ -358,7 +340,7 @@ type SyncStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // SyncList holds a list of Sync resources.
 type SyncList struct {
@@ -374,10 +356,9 @@ type SyncList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // Repo holds configuration and status about the Nomos source of truth.
-// +protobuf=true
 type Repo struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -393,7 +374,6 @@ type Repo struct {
 }
 
 // RepoSpec contains spec fields for Repo.
-// +protobuf=true
 type RepoSpec struct {
 	// Repo version string, corresponds to how the config importer should handle the directory
 	// structure (implicit assumptions).
@@ -401,7 +381,6 @@ type RepoSpec struct {
 }
 
 // RepoStatus contains status fields for Repo.
-// +protobuf=true
 type RepoStatus struct {
 	// +optional
 	Source RepoSourceStatus `json:"source,omitempty"`
@@ -414,7 +393,6 @@ type RepoStatus struct {
 }
 
 // RepoSourceStatus contains status fields for the Repo's source of truth.
-// +protobuf=true
 type RepoSourceStatus struct {
 	// Most recent version token seen in the source of truth (eg the repo). This token is updated as
 	// soon as the config importer sees a new change in the repo.
@@ -427,7 +405,6 @@ type RepoSourceStatus struct {
 }
 
 // RepoImportStatus contains status fields for the import of the Repo.
-// +protobuf=true
 type RepoImportStatus struct {
 	// Most recent version token imported from the source of truth into Nomos CRs. This token is
 	// updated once the importer finishes processing a change, whether or not there were errors
@@ -446,7 +423,6 @@ type RepoImportStatus struct {
 }
 
 // RepoSyncStatus contains status fields for the sync of the Repo.
-// +protobuf=true
 type RepoSyncStatus struct {
 	// LatestToken is the most recent version token synced from the source of truth to managed K8S
 	// resources. This token is updated as soon as the syncer starts processing a new change, whether
@@ -537,10 +513,9 @@ type ErrorResource struct {
 	ResourceGVK schema.GroupVersionKind `json:"resourceGVK"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // RepoList holds a list of Repo resources.
-// +protobuf=true
 type RepoList struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -554,7 +529,7 @@ type RepoList struct {
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // HierarchyConfig is used for configuring the HierarchyModeType for managed resources.
 type HierarchyConfig struct {
@@ -568,7 +543,7 @@ type HierarchyConfig struct {
 	Spec HierarchyConfigSpec `json:"spec"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // HierarchyConfigList holds a list of HierarchyConfig resources.
 type HierarchyConfigList struct {

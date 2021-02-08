@@ -4,12 +4,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="SourceCommit",type="string",JSONPath=".status.source.commit"
 // +kubebuilder:printcolumn:name="SyncCommit",type="string",JSONPath=".status.sync.commit"
-// +protobuf=true
 
 // RepoSync is the Schema for the reposyncs API
 type RepoSync struct {
@@ -23,16 +21,10 @@ type RepoSync struct {
 	Status RepoSyncStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // RepoSyncSpec defines the desired state of a RepoSync.
 type RepoSyncSpec struct {
 	SyncSpec `json:",inline"`
 }
-
-// +kubebuilder:object:generate=true
-// +protobuf=true
 
 // RepoSyncStatus defines the observed state of a RepoSync.
 type RepoSyncStatus struct {
@@ -61,9 +53,6 @@ const (
 	RepoSyncStalled RepoSyncConditionType = "Stalled"
 )
 
-// +kubebuilder:object:generate=true
-// +protobuf=true
-
 // RepoSyncCondition describes the state of a RepoSync at a certain point.
 type RepoSyncCondition struct {
 	// Type of RepoSync condition.
@@ -84,7 +73,6 @@ type RepoSyncCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 
 // RepoSyncList contains a list of RepoSync
