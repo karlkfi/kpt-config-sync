@@ -250,8 +250,7 @@ func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	// TODO(b/179505403): Re-enable after 1.6.2 by replacing objs: nil.
-	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, nil)
+	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, desiredCoreObjects)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		glog.Errorf("Failed to update admission webhook: %v", err)
