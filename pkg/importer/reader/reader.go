@@ -118,21 +118,6 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %T %s", obj, obj.GroupVersionKind().String())
 	}
 
-	// Unmarshalling and re-marshalling an object can result in spurious JSON fields depending on what
-	// directives are specified for those fields. To be safe, we keep all resources in their raw
-	// unstructured format unless we specifically require them for importer pre-processing. These
-	// resources are mostly limited to ACM custom resources which we know are safe.
-	if mustBeStructured(obj.GroupVersionKind()) {
-		rObj, err := AsStruct(obj)
-		if err != nil {
-			return nil, ObjectParseError(obj, err)
-		}
-		var ok bool
-		if obj, ok = rObj.(core.Object); !ok {
-			return nil, ObjectParseError(obj, errNotKubernetes)
-		}
-	}
-
 	rel, err := filepath.Rel(rootDir.OSPath(), path.OSPath())
 	if err != nil {
 		return nil, status.UndocumentedErrorBuilder.Sprintf("unable to get relative path to %s", rootDir.OSPath()).
@@ -182,12 +167,13 @@ func isList(uList runtime.Unstructured) bool {
 	}
 
 	// Parse the object into memory. If it is a List type, it MUST match the ListInterface.
-	listObj := asStructOrOriginal(uList)
-	_, isList := listObj.(metav1.ListInterface)
+	obj, err := core.RemarshalToStructured(uList)
+	if err != nil {
+		obj = uList
+	}
+	_, isList := obj.(metav1.ListInterface)
 	return isList
 }
-
-var errNotKubernetes = errors.New("converted Kubernetes object to non-Kubernetes type")
 
 // validateMetadata returns a status.MultiError if metadata.annotations/labels
 // has a value that wasn't parsed as a string.

@@ -77,7 +77,7 @@ func Generate() AllExamples {
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
 
 	// 1006
-	result.add(reader.ObjectParseError(fake.Role(), errors.New("wrong type")))
+	result.add(core.ObjectParseError(fake.Role(), errors.New("wrong type")))
 
 	// 1007
 	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/foo/bar/role.yaml")))

@@ -58,7 +58,7 @@ func TestNamespaceScopeVisitor(t *testing.T) {
 				t.Errorf("got error %v, want %v", got, tc.wantErr)
 			}
 
-			if diff := cmp.Diff(tc.want, tc.obj); diff != "" {
+			if diff := cmp.Diff(tc.want, tc.obj, ast.CompareFileObject); diff != "" {
 				// Either the visitor didn't mutate the object, or it unexpectedly did so.
 				t.Error(diff)
 			}

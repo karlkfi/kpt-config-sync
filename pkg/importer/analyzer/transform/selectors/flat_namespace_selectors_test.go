@@ -89,7 +89,7 @@ func TestResolveFlatNamespaceSelectors(t *testing.T) {
 				return
 			}
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, ast.CompareFileObject); diff != "" {
 				t.Fatal(diff)
 			}
 		})

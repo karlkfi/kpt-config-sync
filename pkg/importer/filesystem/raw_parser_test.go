@@ -182,8 +182,7 @@ func TestRawParser_Parse(t *testing.T) {
 
 			p := filesystem.NewRawParser(r, true, scope, declared.RootReconciler)
 			builder := discovery.ScoperBuilder(f)
-			coreObjects, err := p.Parse(tc.clusterName, nil, builder, fps)
-			fileObjects := filesystem.AsFileObjects(coreObjects)
+			fileObjects, err := p.Parse(tc.clusterName, nil, builder, fps)
 			result := namespaceconfig.NewAllConfigs(importToken, loadTime, fileObjects)
 			if err != nil {
 				t.Fatal(err)

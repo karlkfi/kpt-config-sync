@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
@@ -41,13 +40,11 @@ func (u *updater) declaredCRDs() ([]*v1beta1.CustomResourceDefinition, status.Mu
 		if obj.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 			continue
 		}
-		if s, err := reader.AsStruct(obj); err != nil {
-			return nil, reader.ObjectParseError(obj, err)
-		} else if crd, err := clusterconfig.AsCRD(s.(core.Object)); err != nil {
+		crd, err := clusterconfig.AsCRD(obj)
+		if err != nil {
 			return nil, err
-		} else {
-			crds = append(crds, crd)
 		}
+		crds = append(crds, crd)
 	}
 	return crds, nil
 }
@@ -56,7 +53,7 @@ func (u *updater) declaredCRDs() ([]*v1beta1.CustomResourceDefinition, status.Mu
 // up the watches.
 func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.MultiError {
 	var errs status.MultiError
-	objs := cache.parserResult
+	objs := filesystem.AsCoreObjects(cache.parserResult)
 
 	// Update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.

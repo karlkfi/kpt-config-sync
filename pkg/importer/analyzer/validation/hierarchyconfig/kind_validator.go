@@ -15,12 +15,17 @@ import (
 // HierarchyConfigs.
 func NewHierarchyConfigKindValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
-		switch h := o.Object.(type) {
-		case *v1.HierarchyConfig:
-			for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
-				if err := validateKinds(gkc); err != nil {
-					return err
-				}
+		if o.GroupVersionKind() != kinds.HierarchyConfig() {
+			return nil
+		}
+		s, err := o.Structured()
+		if err != nil {
+			return err
+		}
+		hc := s.(*v1.HierarchyConfig)
+		for _, gkc := range newFileHierarchyConfig(hc, o).flatten() {
+			if err := validateKinds(gkc); err != nil {
+				return err
 			}
 		}
 		return nil

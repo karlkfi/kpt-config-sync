@@ -117,7 +117,7 @@ func TestBuildTree(t *testing.T) {
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("Got BuildTree() error %v, want %v", err, tc.wantErr)
 			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
+			if diff := cmp.Diff(tc.want, got, ast.CompareFileObject); diff != "" {
 				t.Error(diff)
 			}
 		})

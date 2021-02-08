@@ -1,10 +1,12 @@
-package reader
+package core
 
 import (
 	"encoding/json"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -16,7 +18,7 @@ import (
 )
 
 func init() {
-	// Add Nomos types to the Scheme used by asStructOrOriginal for
+	// Add ConfigSync types to the Scheme used by RemarshalToStructured for
 	// converting Unstructured to specific types.
 	utilruntime.Must(apiextensionsv1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme.Scheme))
@@ -26,9 +28,9 @@ func init() {
 	utilruntime.Must(v1alpha1.AddToScheme(scheme.Scheme))
 }
 
-// AsStruct converts a client.Object to the literal Go struct, if
+// RemarshalToStructured converts a runtime.Object to the literal Go struct, if
 // one is available. Returns an error if this process fails.
-func AsStruct(obj runtime.Object) (runtime.Object, error) {
+func RemarshalToStructured(obj runtime.Object) (runtime.Object, error) {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		return obj, nil
@@ -52,12 +54,15 @@ func AsStruct(obj runtime.Object) (runtime.Object, error) {
 	return result, nil
 }
 
-// asStructOrOriginal returns the object as a Go object in the external form.
-// If the GVK is registered in scheme.Scheme, return that version. Otherwise, try to return the declared version.
-// If this fails, returns the original runtime.Unstructured.
-func asStructOrOriginal(obj runtime.Object) runtime.Object {
-	if cObj, err := AsStruct(obj); err == nil {
-		return cObj
-	}
-	return obj
+// ObjectParseErrorCode is the code for ObjectParseError.
+const ObjectParseErrorCode = "1006"
+
+var objectParseError = status.NewErrorBuilder(ObjectParseErrorCode)
+
+// ObjectParseError reports that an object of known type did not match its
+// definition, and so it was read in as an *unstructured.Unstructured.
+func ObjectParseError(resource id.Resource, err error) status.Error {
+	return objectParseError.Wrap(err).
+		Sprintf("The following config could not be parsed as a %v", resource.GroupVersionKind()).
+		BuildWithResources(resource)
 }

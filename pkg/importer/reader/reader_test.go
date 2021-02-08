@@ -144,34 +144,6 @@ metadata:
 	}
 }
 
-func TestFileReader_Read_InvalidObject(t *testing.T) {
-	nsFile := "namespace.yaml"
-	dir := ft.NewTestDir(t,
-		ft.FileContents(nsFile, `
-apiVersion: configmanagement.gke.io/v1
-kind: Repo
-metadata:
-  name: repo
-spec:
-  version: 1.0
-`))
-	fps := dir.FilePaths(nsFile)
-	r := reader.File{}
-	_, err := r.Read(fps)
-
-	if err == nil {
-		t.Fatal("got Read() = nil, want err")
-	}
-	errs := err.Errors()
-	if len(errs) != 1 {
-		t.Fatalf("got Read() = %d errors, want 1 err", len(errs))
-	}
-
-	if _, isResourceError := errs[0].(status.ResourceError); !isResourceError {
-		t.Fatalf("got Read() = %T, want ResourceError", errs[0])
-	}
-}
-
 func TestFileReader_Read_ValidObject(t *testing.T) {
 	nsFile := "namespace.yaml"
 	dir := ft.NewTestDir(t,

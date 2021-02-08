@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -31,20 +30,18 @@ func NewNamespace(fileReader reader.Reader, errOnUnknown bool, scope declared.Sc
 var _ filesystem.ConfigParser = &Namespace{}
 
 // Parse implements filesystem.ConfigParser.
-func (n Namespace) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
-	cos, err := n.parser.Parse(clusterName, syncedCRDs, buildScoper, filePaths)
+func (n Namespace) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+	objs, err := n.parser.Parse(clusterName, syncedCRDs, buildScoper, filePaths)
 	if err != nil {
 		return nil, err
 	}
-
-	objs := filesystem.AsFileObjects(cos)
 
 	nsv := repositoryScopeVisitor(n.scope)
 	err = nsv.Validate(objs)
 	if err != nil {
 		return nil, err
 	}
-	return cos, nil
+	return objs, nil
 }
 
 // ReadClusterRegistryResources implements filesystem.ConfigParser.

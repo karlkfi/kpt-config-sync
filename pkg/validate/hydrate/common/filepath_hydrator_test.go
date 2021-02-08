@@ -121,7 +121,7 @@ func TestFilepathTreeHydrator(t *testing.T) {
 				t.Errorf("Got Hydrate() error %v, want nil", err)
 			}
 			if tc.want != nil {
-				if diff := cmp.Diff(tc.want, tc.root); diff != "" {
+				if diff := cmp.Diff(tc.want, tc.root, ast.CompareFileObject); diff != "" {
 					t.Error(diff)
 				}
 			}

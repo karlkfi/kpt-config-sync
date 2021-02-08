@@ -42,18 +42,23 @@ func (h *inheritanceHydrator) Hydrate(root *parsed.TreeRoot) status.MultiError {
 // based upon the HierarchyConfigs in the system directory.
 func (h *inheritanceHydrator) buildInheritanceSpecs(objs []ast.FileObject) status.MultiError {
 	for _, obj := range objs {
-		switch o := obj.Object.(type) {
-		case *v1.HierarchyConfig:
-			for _, r := range o.Spec.Resources {
-				effectiveMode := r.HierarchyMode
-				if r.HierarchyMode == v1.HierarchyModeDefault {
-					effectiveMode = v1.HierarchyModeInherit
-				}
+		if obj.GroupVersionKind() != kinds.HierarchyConfig() {
+			continue
+		}
+		s, err := obj.Structured()
+		if err != nil {
+			return err
+		}
+		hc := s.(*v1.HierarchyConfig)
+		for _, r := range hc.Spec.Resources {
+			effectiveMode := r.HierarchyMode
+			if r.HierarchyMode == v1.HierarchyModeDefault {
+				effectiveMode = v1.HierarchyModeInherit
+			}
 
-				for _, k := range r.Kinds {
-					gk := schema.GroupKind{Group: r.Group, Kind: k}
-					h.specs[gk] = transform.InheritanceSpec{Mode: effectiveMode}
-				}
+			for _, k := range r.Kinds {
+				gk := schema.GroupKind{Group: r.Group, Kind: k}
+				h.specs[gk] = transform.InheritanceSpec{Mode: effectiveMode}
 			}
 		}
 	}

@@ -4,6 +4,8 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/status"
 )
 
 // SystemBuilderVisitor sets up the system/ directory from a set of objects in the system directory,
@@ -11,6 +13,7 @@ import (
 // defined.
 type SystemBuilderVisitor struct {
 	objects []ast.FileObject
+	errs    status.MultiError
 	*visitor.Base
 }
 
@@ -19,6 +22,7 @@ func NewSystemBuilderVisitor(objects []ast.FileObject) *SystemBuilderVisitor {
 	v := &SystemBuilderVisitor{
 		Base:    visitor.NewBase(),
 		objects: objects,
+		errs:    nil,
 	}
 	v.SetImpl(v)
 	return v
@@ -28,10 +32,15 @@ func NewSystemBuilderVisitor(objects []ast.FileObject) *SystemBuilderVisitor {
 // Also sets repo if one exists.
 func (v *SystemBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	for _, object := range v.objects {
-		switch o := object.Object.(type) {
-		case *v1.Repo:
-			r.Repo = o
+		if object.GroupVersionKind() != kinds.Repo() {
+			continue
 		}
+		s, err := object.Structured()
+		if err != nil {
+			v.errs = status.Append(v.errs, err)
+			continue
+		}
+		r.Repo = s.(*v1.Repo)
 	}
 
 	for _, o := range v.objects {
@@ -39,4 +48,8 @@ func (v *SystemBuilderVisitor) VisitRoot(r *ast.Root) *ast.Root {
 	}
 
 	return r
+}
+
+func (v *SystemBuilderVisitor) Error() status.MultiError {
+	return v.errs
 }

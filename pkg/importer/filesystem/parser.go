@@ -5,7 +5,6 @@ package filesystem
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -49,7 +48,7 @@ func NewParser(reader reader.Reader, errOnUnknownKinds bool) *Parser {
 // filePaths is the list of absolute file paths to parse and the absolute and
 //   relative paths of the Nomos root.
 // It is an error for any files not to be present.
-func (p *Parser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *Parser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	p.errors = nil
 
 	flatRoot := p.readObjects(filePaths)
@@ -57,10 +56,10 @@ func (p *Parser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceD
 		return nil, p.errors
 	}
 
-	visitors := generateVisitors(filePaths.PolicyDir, flatRoot)
+	visitors := p.generateVisitors(filePaths.PolicyDir, flatRoot)
 	fileObjects := p.hydrateRootAndFlatten(visitors, clusterName, syncedCRDs, buildScoper)
 
-	return AsCoreObjects(fileObjects), p.errors
+	return fileObjects, p.errors
 }
 
 // readObjects reads all objects in the repo and returns a FlatRoot holding all objects declared in
@@ -75,14 +74,15 @@ func (p *Parser) readObjects(filePaths reader.FilePaths) *ast.FlatRoot {
 }
 
 // generateVisitors creates the Visitors to use to hydrate and validate the root.
-func generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.Visitor {
+func (p *Parser) generateVisitors(policyDir cmpath.Relative, flatRoot *ast.FlatRoot) []ast.Visitor {
 	visitors := []ast.Visitor{
 		tree.NewSystemBuilderVisitor(flatRoot.SystemObjects),
 		tree.NewClusterBuilderVisitor(flatRoot.ClusterObjects),
 		tree.NewClusterRegistryBuilderVisitor(flatRoot.ClusterRegistryObjects),
 		tree.NewBuilderVisitor(flatRoot.NamespaceObjects),
 	}
-	hierarchyConfigs := extractHierarchyConfigs(flatRoot.SystemObjects)
+	hierarchyConfigs, errs := extractHierarchyConfigs(flatRoot.SystemObjects)
+	p.errors = status.Append(p.errors, errs)
 	visitors = append(visitors, hierarchicalVisitors(policyDir, hierarchyConfigs)...)
 	return visitors
 }

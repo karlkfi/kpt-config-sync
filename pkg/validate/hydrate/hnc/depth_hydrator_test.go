@@ -94,7 +94,7 @@ func TestBuilderVisitor(t *testing.T) {
 			if err := dh.Hydrate(tc.root); err != nil {
 				t.Errorf("Got Hydrate() error %v, want nil", err)
 			}
-			if diff := cmp.Diff(tc.want, tc.root); diff != "" {
+			if diff := cmp.Diff(tc.want, tc.root, ast.CompareFileObject); diff != "" {
 				t.Error(diff)
 			}
 		})

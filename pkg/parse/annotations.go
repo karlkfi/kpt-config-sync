@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kptapplier"
 )
 
@@ -19,7 +20,7 @@ type gitContext struct {
 	Rev    string `json:"rev"`
 }
 
-func addAnnotationsAndLabels(objs []core.Object, scope declared.Scope, gc gitContext, commitHash string) error {
+func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc gitContext, commitHash string) error {
 	gcVal, err := json.Marshal(gc)
 	if err != nil {
 		return err

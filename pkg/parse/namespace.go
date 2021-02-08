@@ -7,8 +7,8 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
@@ -58,7 +58,7 @@ func (p *namespace) options() *opts {
 }
 
 // parseSource implements the Parser interface
-func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
+func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError) {
 	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,
@@ -72,19 +72,19 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]core.Obj
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
+	objs, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
 	}
 
 	// Duplicated with root.go.
-	e := addAnnotationsAndLabels(cos, p.scope, p.gitContext(), state.commit)
+	e := addAnnotationsAndLabels(objs, p.scope, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return nil, err
 	}
-	return cos, nil
+	return objs, nil
 }
 
 // setSourceStatus implements the Parser interface

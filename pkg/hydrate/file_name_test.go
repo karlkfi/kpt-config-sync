@@ -71,7 +71,7 @@ func TestToFileObjects(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := GenerateUniqueFileNames("yaml", true, tc.objects...)
-			if diff := cmp.Diff(tc.expected, actual, cmpopts.EquateEmpty(), cmpopts.SortSlices(func(x, y ast.FileObject) bool {
+			if diff := cmp.Diff(tc.expected, actual, cmpopts.EquateEmpty(), ast.CompareFileObject, cmpopts.SortSlices(func(x, y ast.FileObject) bool {
 				return x.SlashPath() < y.SlashPath()
 			})); diff != "" {
 				t.Fatal(diff)

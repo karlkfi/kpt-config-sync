@@ -110,7 +110,7 @@ func TestResolveHierarchicalNamespaceSelectors(t *testing.T) {
 				expected = append(expected, object)
 			}
 
-			if diff := cmp.Diff(expected, actual); diff != "" {
+			if diff := cmp.Diff(expected, actual, ast.CompareFileObject); diff != "" {
 				t.Fatal(diff)
 			}
 		})

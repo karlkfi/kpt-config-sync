@@ -74,14 +74,21 @@ func getNamespaceSelectors(objects []ast.FileObject) ([]selectorFileObject, stat
 	var namespaceSelectors []selectorFileObject
 	var errs status.MultiError
 	for _, object := range objects {
-		if o, ok := object.Object.(*v1.NamespaceSelector); ok {
-			selector, err := asSelectorFileObject(object, o.Spec.Selector)
-			if err != nil {
-				errs = status.Append(errs, err)
-				continue
-			}
-			namespaceSelectors = append(namespaceSelectors, selector)
+		if object.GroupVersionKind() != kinds.NamespaceSelector() {
+			continue
 		}
+		s, err := object.Structured()
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		o := s.(*v1.NamespaceSelector)
+		selector, err := asSelectorFileObject(object, o.Spec.Selector)
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		namespaceSelectors = append(namespaceSelectors, selector)
 	}
 	return namespaceSelectors, errs
 }

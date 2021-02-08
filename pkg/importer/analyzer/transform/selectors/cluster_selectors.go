@@ -56,7 +56,10 @@ const (
 // - a ClusterSelector is invalid or empty.
 func ResolveClusterSelectors(clusterName string, objects []ast.FileObject) ([]ast.FileObject, status.MultiError) {
 	// Get the Cluster matching "clusterName".
-	clusters := FilterClusters(objects)
+	clusters, errs := FilterClusters(objects)
+	if errs != nil {
+		return nil, errs
+	}
 	cluster := getCluster(clusterName, clusters)
 
 	// Get the active/inactive state for all declared legacy ClusterSelectors.
@@ -73,14 +76,21 @@ func ResolveClusterSelectors(clusterName string, objects []ast.FileObject) ([]as
 }
 
 // FilterClusters returns the list of Clusters in the passed array of FileObjects.
-func FilterClusters(objects []ast.FileObject) []clusterregistry.Cluster {
+func FilterClusters(objects []ast.FileObject) ([]clusterregistry.Cluster, status.MultiError) {
 	var clusters []clusterregistry.Cluster
+	var errs status.MultiError
 	for _, object := range objects {
-		if o, ok := object.Object.(*clusterregistry.Cluster); ok {
+		if object.GroupVersionKind() != kinds.Cluster() {
+			continue
+		}
+		if s, err := object.Structured(); err != nil {
+			errs = status.Append(errs, err)
+		} else {
+			o := s.(*clusterregistry.Cluster)
 			clusters = append(clusters, *o)
 		}
 	}
-	return clusters
+	return clusters, errs
 }
 
 // resolveClusterSelectors returns a list of FileObjects either referencing active
@@ -258,16 +268,23 @@ func getClusterSelectors(objects []ast.FileObject) ([]selectorFileObject, status
 	var clusterSelectors []selectorFileObject
 	var errs status.MultiError
 	for _, object := range objects {
-		if o, ok := object.Object.(*v1.ClusterSelector); ok {
-			// Convert selector preemptively, or else we won't show an error for invalid ClusterSelectors
-			// if the Cluster is missing.
-			selector, err := asSelectorFileObject(object, o.Spec.Selector)
-			if err != nil {
-				errs = status.Append(errs, err)
-				continue
-			}
-			clusterSelectors = append(clusterSelectors, selector)
+		if object.GroupVersionKind() != kinds.ClusterSelector() {
+			continue
 		}
+
+		s, err := object.Structured()
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+
+		selector, err := asSelectorFileObject(object, s.(*v1.ClusterSelector).Spec.Selector)
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+
+		clusterSelectors = append(clusterSelectors, selector)
 	}
 	return clusterSelectors, errs
 }

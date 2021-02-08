@@ -32,17 +32,15 @@ const (
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
 func ForEachCluster(parser filesystem.ConfigParser, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
-	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultCoreObjects, err := parser.Parse(defaultCluster, syncedCRDs, buildScoper, filePaths)
-	defaultFileObjects := filesystem.AsFileObjects(defaultCoreObjects)
-	f(defaultCluster, defaultFileObjects, err)
-
 	clusterRegistry := parser.ReadClusterRegistryResources(filePaths)
-	clusters := selectors.FilterClusters(clusterRegistry)
+	clusters, errs := selectors.FilterClusters(clusterRegistry)
+
+	// Hydrate for empty string cluster name. This is the default configuration.
+	defaultFileObjects, err2 := parser.Parse(defaultCluster, syncedCRDs, buildScoper, filePaths)
+	f(defaultCluster, defaultFileObjects, status.Append(errs, err2))
 
 	for _, cluster := range clusters {
-		coreObjects, err2 := parser.Parse(cluster.Name, syncedCRDs, buildScoper, filePaths)
-		fileObjects := filesystem.AsFileObjects(coreObjects)
-		f(cluster.Name, fileObjects, err2)
+		fileObjects, errs := parser.Parse(cluster.Name, syncedCRDs, buildScoper, filePaths)
+		f(cluster.Name, fileObjects, errs)
 	}
 }

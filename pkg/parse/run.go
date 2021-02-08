@@ -182,15 +182,15 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 	}
 
 	start := time.Now()
-	cos, sourceErrs := p.parseSource(ctx, state.cache.git)
+	objs, sourceErrs := p.parseSource(ctx, state.cache.git)
 	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(sourceErrs), start)
 	if sourceErrs != nil {
 		return sourceErrs
 	}
 
-	state.cache.setParserResult(cos)
+	state.cache.setParserResult(objs)
 
-	err := webhook.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), cos)
+	err := webhook.UpdateAdmissionWebhookConfiguration(ctx, p.options().k8sClient(), p.options().discoveryClient(), objs)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		// Return an error instead if we remove the remediator as otherwise we

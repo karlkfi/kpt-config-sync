@@ -55,7 +55,7 @@ func TestCopyAbstractResources(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := CopyAbstractResources(tc.before)
 
-			if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, ast.CompareFileObject); diff != "" {
 				t.Fatal(diff)
 			}
 		})

@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -14,12 +15,17 @@ import (
 // of all GroupKinds defined across HierarchyConfigs.
 func NewInheritanceValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
-		switch h := o.Object.(type) {
-		case *v1.HierarchyConfig:
-			for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
-				if err := validateInheritance(gkc); err != nil {
-					return err
-				}
+		if o.GroupVersionKind() != kinds.HierarchyConfig() {
+			return nil
+		}
+		s, err := o.Structured()
+		if err != nil {
+			return err
+		}
+		h := s.(*v1.HierarchyConfig)
+		for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
+			if err := validateInheritance(gkc); err != nil {
+				return err
 			}
 		}
 		return nil

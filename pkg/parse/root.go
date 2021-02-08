@@ -7,19 +7,20 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -70,7 +71,7 @@ func (p *root) options() *opts {
 }
 
 // parseSource implements the Parser interface
-func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError) {
+func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError) {
 	wantFiles := state.files
 	if p.sourceFormat == filesystem.SourceFormatHierarchy {
 		// We're using hierarchical mode for the root repository, so ignore files
@@ -92,7 +93,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, 
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	cos, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
+	objs, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
@@ -100,16 +101,16 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]core.Object, 
 
 	// TODO(b/167700852): Inject this function into the Parser.
 	if p.sourceFormat == filesystem.SourceFormatUnstructured {
-		cos = addImplicitNamespaces(cos)
+		objs = addImplicitNamespaces(objs)
 	}
 
 	// Duplicated with namespace.go.
-	e := addAnnotationsAndLabels(cos, declared.RootReconciler, p.gitContext(), state.commit)
+	e := addAnnotationsAndLabels(objs, declared.RootReconciler, p.gitContext(), state.commit)
 	if e != nil {
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return nil, err
 	}
-	return cos, nil
+	return objs, nil
 }
 
 // setSourceStatus implements the Parser interface
@@ -161,12 +162,12 @@ func (p *root) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus
 	return nil
 }
 
-func addImplicitNamespaces(cos []core.Object) []core.Object {
+func addImplicitNamespaces(objs []ast.FileObject) []ast.FileObject {
 	// namespaces will track the set of Namespaces we expect to exist, and those
 	// which actually do.
 	namespaces := make(map[string]bool)
 
-	for _, o := range cos {
+	for _, o := range objs {
 		if o.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
 			namespaces[o.GetName()] = true
 		} else if o.GetNamespace() != "" && !namespaces[o.GetNamespace()] {
@@ -180,15 +181,15 @@ func addImplicitNamespaces(cos []core.Object) []core.Object {
 		if isDeclared {
 			continue
 		}
-		cos = append(cos, fake.NamespaceObject(ns,
-			core.Name(ns),
-			// We do NOT want to delete theses implicit Namespaces when the resources
-			// inside them are removed. Note that if the user later declares
-			// the Namespace without this annotation, the annotation is removed as
-			// expected.
-			core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
-		))
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(kinds.Namespace())
+		u.SetName(ns)
+		// We do NOT want to delete theses implicit Namespaces when the resources
+		// inside them are removed. Note that if the user later declares the
+		// Namespace without this annotation, the annotation is removed as expected.
+		u.SetAnnotations(map[string]string{common.LifecycleDeleteAnnotation: common.PreventDeletion})
+		objs = append(objs, ast.NewFileObject(u, cmpath.RelativeOS("")))
 	}
 
-	return cos
+	return objs
 }

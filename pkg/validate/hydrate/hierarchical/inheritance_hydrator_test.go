@@ -243,7 +243,7 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 				t.Errorf("Got Hydrate() error %v, want %v", err, tc.wantErr)
 			}
 			if tc.want != nil {
-				if diff := cmp.Diff(tc.want, tc.root); diff != "" {
+				if diff := cmp.Diff(tc.want, tc.root, ast.CompareFileObject); diff != "" {
 					t.Error(diff)
 				}
 			}

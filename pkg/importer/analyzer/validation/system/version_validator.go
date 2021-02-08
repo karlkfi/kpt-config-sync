@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/repo"
 )
@@ -21,11 +22,16 @@ var allowedRepoVersions = map[string]bool{
 // correct version.
 func NewRepoVersionValidator() ast.Visitor {
 	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
-		switch repoObj := o.Object.(type) {
-		case *v1.Repo:
-			if version := repoObj.Spec.Version; !allowedRepoVersions[version] {
-				return UnsupportedRepoSpecVersion(o, version)
-			}
+		if o.GroupVersionKind() != kinds.Repo() {
+			return nil
+		}
+		s, err := o.Structured()
+		if err != nil {
+			return err
+		}
+		repo := s.(*v1.Repo)
+		if version := repo.Spec.Version; !allowedRepoVersions[version] {
+			return UnsupportedRepoSpecVersion(o, version)
 		}
 		return nil
 	})

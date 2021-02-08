@@ -53,7 +53,7 @@ func TestClusterRegistryBuilderVisitor(t *testing.T) {
 
 			actual.Accept(tree.NewClusterRegistryBuilderVisitor(tc.objects))
 
-			if diff := cmp.Diff(tc.expected, actual, cmp.AllowUnexported(ast.FileObject{})); diff != "" {
+			if diff := cmp.Diff(tc.expected, actual, ast.CompareFileObject); diff != "" {
 				t.Fatal(diff)
 			}
 		})

@@ -6,7 +6,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -34,22 +33,9 @@ func GetCRDs(decoder decode.Decoder, clusterConfig *v1.ClusterConfig) ([]*apiext
 			return nil, status.APIServerErrorf(err, "%s contains non-CRD resources: %v", v1.CRDClusterConfigName, gvk)
 		}
 		for _, u := range unstructureds {
-			obj, err := reader.AsStruct(u)
+			crd, err := AsCRD(u)
 			if err != nil {
-				return nil, status.InternalErrorBuilder.Wrap(err).
-					BuildWithResources(u)
-			}
-
-			cObj, ok := obj.(core.Object)
-			if !ok {
-				return nil, status.InternalErrorBuilder.
-					Sprintf("%T is not a valid CRD type", obj).
-					BuildWithResources(u)
-			}
-
-			crd, err := AsCRD(cObj)
-			if err != nil {
-				return nil, MalformedCRDError(err, u)
+				return nil, err
 			}
 			crdMap[crd.GetName()] = crd
 		}
@@ -76,18 +62,26 @@ func MalformedCRDError(err error, obj id.Resource) status.Error {
 
 // AsCRD returns the typed version of the CustomResourceDefinition passed in.
 func AsCRD(o core.Object) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
-	switch crd := o.(type) {
-	case *apiextensionsv1beta1.CustomResourceDefinition:
-		return crd, nil
-	case *apiextensionsv1.CustomResourceDefinition:
-		return AsV1Beta1CRD(crd)
+	if o.GroupVersionKind() == kinds.CustomResourceDefinitionV1Beta1() {
+		s, err := core.RemarshalToStructured(o)
+		if err != nil {
+			return nil, MalformedCRDError(err, o)
+		}
+		return s.(*apiextensionsv1beta1.CustomResourceDefinition), nil
+	}
+	if o.GroupVersionKind() == kinds.CustomResourceDefinitionV1() {
+		s, err := core.RemarshalToStructured(o)
+		if err != nil {
+			return nil, MalformedCRDError(err, o)
+		}
+		return asV1Beta1CRD(s.(*apiextensionsv1.CustomResourceDefinition))
 	}
 
 	return nil, MalformedCRDError(fmt.Errorf("could not generate a CRD from %T: %#v", o, o), o)
 }
 
-// AsV1Beta1CRD converts a v1 CRD to a v1beta1 CRD.
-func AsV1Beta1CRD(crdV1 *apiextensionsv1.CustomResourceDefinition) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
+// asV1Beta1CRD converts a v1 CRD to a v1beta1 CRD.
+func asV1Beta1CRD(crdV1 *apiextensionsv1.CustomResourceDefinition) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
 	// Use the apiextensions conversion functions to convert to a v1beta1 CRD.
 	crd := &apiextensions.CustomResourceDefinition{}
 	err := apiextensionsv1.Convert_v1_CustomResourceDefinition_To_apiextensions_CustomResourceDefinition(crdV1, crd, nil)

@@ -56,8 +56,8 @@ func TestRoot_Parse(t *testing.T) {
 	testCases := []struct {
 		name   string
 		format filesystem.SourceFormat
-		parsed []core.Object
-		want   []core.Object
+		parsed []ast.FileObject
+		want   []ast.FileObject
 	}{
 		{
 			name:   "no objects",
@@ -66,11 +66,13 @@ func TestRoot_Parse(t *testing.T) {
 		{
 			name:   "implicit namespace if unstructured",
 			format: filesystem.SourceFormatUnstructured,
-			parsed: []core.Object{
-				fake.RoleObject(core.Namespace("foo")),
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
 			},
-			want: []core.Object{
-				fake.NamespaceObject("foo",
+			want: []ast.FileObject{
+				fake.UnstructuredAtPath(kinds.Namespace(),
+					"",
+					core.Name("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
 					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
@@ -79,7 +81,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
-				fake.RoleObject(core.Namespace("foo"),
+				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
@@ -95,11 +97,11 @@ func TestRoot_Parse(t *testing.T) {
 		{
 			name:   "no implicit namespace if hierarchy",
 			format: filesystem.SourceFormatHierarchy,
-			parsed: []core.Object{
-				fake.RoleObject(core.Namespace("foo")),
+			parsed: []ast.FileObject{
+				fake.Role(core.Namespace("foo")),
 			},
-			want: []core.Object{
-				fake.RoleObject(core.Namespace("foo"),
+			want: []ast.FileObject{
+				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
@@ -130,7 +132,7 @@ func TestRoot_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, state.cache.parserResult, cmpopts.EquateEmpty(), cmpopts.SortSlices(sortObjects)); diff != "" {
+			if diff := cmp.Diff(tc.want, state.cache.parserResult, cmpopts.EquateEmpty(), ast.CompareFileObject, cmpopts.SortSlices(sortObjects)); diff != "" {
 				t.Error(diff)
 			}
 		})
@@ -308,11 +310,11 @@ func sortObjects(left, right core.Object) bool {
 }
 
 type fakeParser struct {
-	parse  []core.Object
+	parse  []ast.FileObject
 	errors []status.Error
 }
 
-func (p *fakeParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *fakeParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	if p.errors == nil {
 		return p.parse, nil
 	}

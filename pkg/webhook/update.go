@@ -3,7 +3,8 @@ package webhook
 import (
 	"context"
 
-	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -20,7 +21,7 @@ import (
 //
 // Returns an error if the API Server returns invalid API Resource lists or
 // there is a problem updating the Configuration.
-func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, dc discovery.ServerResourcer, objs []core.Object) status.MultiError {
+func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, dc discovery.ServerResourcer, objs []ast.FileObject) status.MultiError {
 	if len(objs) == 0 {
 		// Nothing to do.
 		return nil
@@ -41,8 +42,16 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 	// don't allow two CRDs to exist with the same metadata.name, and thus there
 	// cannot be two CRDs for the same GroupResource due to the requirements of
 	// CRD naming.
-	mapper.addV1Beta1CRDs(getV1Beta1CRDs(objs))
-	mapper.addV1CRDs(getV1CRDs(objs))
+	v1Beta1CRDs, mErr := getV1Beta1CRDs(objs)
+	if mErr != nil {
+		return mErr
+	}
+	mapper.addV1Beta1CRDs(v1Beta1CRDs)
+	v1CRDs, mErr := getV1CRDs(objs)
+	if mErr != nil {
+		return mErr
+	}
+	mapper.addV1CRDs(v1CRDs)
 
 	gvks := toGVKs(objs)
 	newCfg, mErr := toWebhookConfiguration(mapper, gvks)
@@ -83,27 +92,41 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 	return nil
 }
 
-func getV1CRDs(objs []core.Object) []apiextensionsv1.CustomResourceDefinition {
+func getV1CRDs(objs []ast.FileObject) ([]apiextensionsv1.CustomResourceDefinition, status.MultiError) {
 	var crds []apiextensionsv1.CustomResourceDefinition
+	var errs status.MultiError
 	for _, o := range objs {
-		if crd, isCRD := o.(*apiextensionsv1.CustomResourceDefinition); isCRD {
-			crds = append(crds, *crd)
+		if o.GroupVersionKind() != kinds.CustomResourceDefinitionV1() {
+			continue
 		}
+		s, err := o.Structured()
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		crds = append(crds, *s.(*apiextensionsv1.CustomResourceDefinition))
 	}
-	return crds
+	return crds, errs
 }
 
-func getV1Beta1CRDs(objs []core.Object) []apiextensionsv1beta1.CustomResourceDefinition {
+func getV1Beta1CRDs(objs []ast.FileObject) ([]apiextensionsv1beta1.CustomResourceDefinition, status.MultiError) {
 	var crds []apiextensionsv1beta1.CustomResourceDefinition
+	var errs status.MultiError
 	for _, o := range objs {
-		if crd, isCRD := o.(*apiextensionsv1beta1.CustomResourceDefinition); isCRD {
-			crds = append(crds, *crd)
+		if o.GroupVersionKind() != kinds.CustomResourceDefinitionV1Beta1() {
+			continue
 		}
+		s, err := o.Structured()
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		crds = append(crds, *s.(*apiextensionsv1beta1.CustomResourceDefinition))
 	}
-	return crds
+	return crds, errs
 }
 
-func toGVKs(objs []core.Object) []schema.GroupVersionKind {
+func toGVKs(objs []ast.FileObject) []schema.GroupVersionKind {
 	seen := make(map[schema.GroupVersionKind]bool)
 	var gvks []schema.GroupVersionKind
 	for _, o := range objs {

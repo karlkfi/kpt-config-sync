@@ -4,6 +4,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/google/nomos/pkg/validate/parsed"
@@ -21,11 +22,15 @@ var allowedRepoVersions = map[string]bool{
 // system/ have the correct version.
 func RepoVersionValidator() parsed.ValidatorFunc {
 	f := parsed.PerObjectVisitor(func(obj ast.FileObject) status.Error {
-		switch repoObj := obj.Object.(type) {
-		case *v1.Repo:
-			if version := repoObj.Spec.Version; !allowedRepoVersions[version] {
-				return system.UnsupportedRepoSpecVersion(obj, version)
-			}
+		if obj.GroupVersionKind() != kinds.Repo() {
+			return nil
+		}
+		s, err := obj.Structured()
+		if err != nil {
+			return err
+		}
+		if version := s.(*v1.Repo).Spec.Version; !allowedRepoVersions[version] {
+			return system.UnsupportedRepoSpecVersion(obj, version)
 		}
 		return nil
 	})

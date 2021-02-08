@@ -184,8 +184,7 @@ func (pt Test) RunAll(t *testing.T) {
 			f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(tc.SyncedCRDs))
 			builder := discovery.ScoperBuilder(f)
 
-			coreObjects, errs := parser.Parse(tc.ClusterName, tc.SyncedCRDs, builder, filePaths)
-			fileObjects := filesystem.AsFileObjects(coreObjects)
+			fileObjects, errs := parser.Parse(tc.ClusterName, tc.SyncedCRDs, builder, filePaths)
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 )
@@ -14,10 +15,15 @@ import (
 // HierarchyConfig includes types that are not Namespace-scoped.
 func NewHierarchyConfigScopeValidator(scoper discovery.Scoper, errOnUnknown bool) nonhierarchical.Validator {
 	return nonhierarchical.PerObjectValidator(func(o ast.FileObject) status.Error {
-		if hc, isHierarchyConfig := o.Object.(*v1.HierarchyConfig); isHierarchyConfig {
-			return validateHierarchyConfigScopes(scoper, newFileHierarchyConfig(hc, o), errOnUnknown)
+		if o.GroupVersionKind() != kinds.HierarchyConfig() {
+			return nil
 		}
-		return nil
+		s, err := o.Structured()
+		if err != nil {
+			return err
+		}
+		hc := s.(*v1.HierarchyConfig)
+		return validateHierarchyConfigScopes(scoper, newFileHierarchyConfig(hc, o), errOnUnknown)
 	})
 }
 

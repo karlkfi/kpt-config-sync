@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -44,7 +44,7 @@ type opts struct {
 // Parser represents a parser that can be pointed at and continuously parse
 // a git repository.
 type Parser interface {
-	parseSource(ctx context.Context, state gitState) ([]core.Object, status.MultiError)
+	parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError)
 	setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error
 	setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus) error
 	options() *opts

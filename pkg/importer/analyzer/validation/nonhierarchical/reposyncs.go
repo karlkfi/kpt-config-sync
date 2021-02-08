@@ -12,7 +12,14 @@ import (
 
 // ValidateRepoSyncs validates all RepoSyncs in a passed list of FileObjects.
 var ValidateRepoSyncs = PerObjectValidator(func(o ast.FileObject) status.Error {
-	return ValidateRepoSync(o.Object)
+	if o.GroupVersionKind().GroupKind() != kinds.RepoSync().GroupKind() {
+		return nil
+	}
+	s, err := o.Structured()
+	if err != nil {
+		return err
+	}
+	return ValidateRepoSync(s.(*v1alpha1.RepoSync))
 })
 
 var (
@@ -25,24 +32,15 @@ var (
 
 // ValidateRepoSync validates the content and structure of a RepoSync for any
 // obvious problems.
-func ValidateRepoSync(o core.Object) status.Error {
-	if o.GroupVersionKind().GroupKind() != kinds.RepoSync().GroupKind() {
-		return nil
-	}
-
-	if o.GetName() != v1alpha1.RepoSyncName {
-		return InvalidRepoSyncName(o)
-	}
-	rs, ok := o.(*v1alpha1.RepoSync)
-	if !ok {
-		return status.InternalErrorBuilder.
-			Sprint("Did not convert to RepoSync struct").BuildWithResources(o)
+func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
+	if rs.GetName() != v1alpha1.RepoSyncName {
+		return InvalidRepoSyncName(rs)
 	}
 
 	// We can't connect to the git repo if we don't have the URL.
 	git := rs.Spec.Git
 	if git.Repo == "" {
-		return MissingGitRepo(o)
+		return MissingGitRepo(rs)
 	}
 
 	// Ensure auth is a valid value.
@@ -51,14 +49,14 @@ func ValidateRepoSync(o core.Object) status.Error {
 	switch git.Auth {
 	case authSSH, authCookiefile, authGCENode, authToken, authNone:
 	default:
-		return InvalidAuthType(o)
+		return InvalidAuthType(rs)
 	}
 
 	// Check that proxy isn't unnecessarily declared.
 	switch git.Auth {
 	case authNone, authCookiefile:
 		if git.Proxy != "" {
-			return NoOpProxy(o)
+			return NoOpProxy(rs)
 		}
 	}
 
@@ -66,11 +64,11 @@ func ValidateRepoSync(o core.Object) status.Error {
 	switch git.Auth {
 	case authNone, authGCENode:
 		if git.SecretRef.Name != "" {
-			return IllegalSecretRef(o)
+			return IllegalSecretRef(rs)
 		}
 	default:
 		if git.SecretRef.Name == "" {
-			return MissingSecretRef(o)
+			return MissingSecretRef(rs)
 		}
 	}
 

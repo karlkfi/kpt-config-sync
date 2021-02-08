@@ -84,7 +84,7 @@ func TestBuilderVisitor(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := []cmp.Option{resourcequota.ResourceQuantityEqual(), cmp.AllowUnexported()}
+			opts := []cmp.Option{resourcequota.ResourceQuantityEqual(), cmp.AllowUnexported(), ast.CompareFileObject}
 
 			copier := visitor.NewBase()
 			copier.SetImpl(copier)

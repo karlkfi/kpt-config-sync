@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
@@ -37,7 +36,7 @@ func NewRawParser(reader reader.Reader, errOnUnknownKinds bool, defaultNamespace
 }
 
 // Parse reads a directory of raw, unstructured YAML manifests and outputs the resulting AllConfigs.
-func (p *rawParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]core.Object, status.MultiError) {
+func (p *rawParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper utildiscovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	// Read all manifests and extract them into FileObjects.
 	fileObjects, errs := p.reader.Read(filePaths)
 	if errs != nil {
@@ -75,7 +74,7 @@ func (p *rawParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResour
 	}
 
 	fileObjects = selectors.AnnotateClusterName(clusterName, fileObjects)
-	return AsCoreObjects(fileObjects), errs
+	return fileObjects, errs
 }
 
 // ReadClusterRegistryResources returns empty as Cluster declarations are forbidden if hierarchical

@@ -3,7 +3,7 @@ package parse
 import (
 	"time"
 
-	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -29,7 +29,7 @@ type cacheForCommit struct {
 
 	// parserResult contains the parser result.
 	// The field is only set when the parser succeeded.
-	parserResult []core.Object
+	parserResult []ast.FileObject
 
 	// resourceDeclSetUpdated indicates whether the resource declaration set has been updated.
 	resourceDeclSetUpdated bool
@@ -58,7 +58,7 @@ type cacheForCommit struct {
 	errs status.MultiError
 }
 
-func (c *cacheForCommit) setParserResult(result []core.Object) {
+func (c *cacheForCommit) setParserResult(result []ast.FileObject) {
 	c.hasParserResult = true
 	c.parserResult = result
 }

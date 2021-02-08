@@ -25,7 +25,7 @@ func (tc *MutatingVisitorTestcase) run(
 	visitor ast.Visitor,
 	initRoot func(*ast.Root),
 	options func() []cmp.Option) func(t *testing.T) {
-	opts := []cmp.Option{resourcequota.ResourceQuantityEqual()}
+	opts := []cmp.Option{resourcequota.ResourceQuantityEqual(), ast.CompareFileObject}
 	if options != nil {
 		opts = append(opts, options()...)
 	}

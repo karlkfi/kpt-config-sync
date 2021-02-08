@@ -19,12 +19,12 @@ import (
 func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
 	var errs status.MultiError
 	crdMap := map[schema.GroupKind]*v1beta1.CustomResourceDefinition{}
-	for _, cr := range fileObjects {
-		if cr.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
+	for _, obj := range fileObjects {
+		if obj.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 			continue
 		}
 
-		crd, err := clusterconfig.AsCRD(cr.Object)
+		crd, err := clusterconfig.AsCRD(obj.Object)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue

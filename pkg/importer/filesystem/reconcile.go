@@ -209,7 +209,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// check git status, blow up if we see issues
-	if err := git.CheckClean(absGitDir.OSPath()); err != nil {
+	if err = git.CheckClean(absGitDir.OSPath()); err != nil {
 		glog.Errorf("git check clean returned error: %v", err)
 		logWalkDirectory(absGitDir.OSPath())
 		importer.Metrics.Violations.Inc()
@@ -242,8 +242,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	builder := utildiscovery.ScoperBuilder(c.discoveryClient)
 
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredCoreObjects, mErr := c.parser.Parse(c.clusterName, syncedCRDs, builder, filePaths)
-	desiredFileObjects := AsFileObjects(desiredCoreObjects)
+	desiredFileObjects, mErr := c.parser.Parse(c.clusterName, syncedCRDs, builder, filePaths)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -251,7 +250,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, desiredCoreObjects)
+	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, desiredFileObjects)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		glog.Errorf("Failed to update admission webhook: %v", err)
@@ -286,7 +285,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 	desiredConfigs.ClusterConfig.Status.SyncState = v1.StateStale
 
-	if err := c.updateDecoderWithAPIResources(currentConfigs.Syncs, desiredConfigs.Syncs); err != nil {
+	if err = c.updateDecoderWithAPIResources(currentConfigs.Syncs, desiredConfigs.Syncs); err != nil {
 		glog.Warningf("Failed to parse sync resources: %v", err)
 		return reconcile.Result{}, nil
 	}

@@ -78,6 +78,6 @@ func addDepthLabels(o *ast.NamespaceObject, r cmpath.Relative) {
 	for i, ans := range p {
 		l := ans + DepthSuffix
 		dist := strconv.Itoa(len(p) - i - 1)
-		core.SetLabel(o.Object, l, dist)
+		core.SetLabel(o, l, dist)
 	}
 }

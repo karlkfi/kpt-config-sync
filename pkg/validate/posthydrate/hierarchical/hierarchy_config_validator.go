@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/parsed"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,21 +15,25 @@ import (
 // objects in system/ declare valid resources for hierarchical inheritance.
 func HierarchyConfigValidator() parsed.ValidatorFunc {
 	f := parsed.PerObjectVisitor(func(obj ast.FileObject) status.Error {
-		switch hcObj := obj.Object.(type) {
-		case *v1.HierarchyConfig:
-			for _, res := range hcObj.Spec.Resources {
-				// First validate HierarchyMode.
-				switch res.HierarchyMode {
-				case v1.HierarchyModeNone, v1.HierarchyModeInherit, v1.HierarchyModeDefault:
-				default:
-					return hierarchyconfig.IllegalHierarchyModeError(hc(groupKinds(res)[0], hcObj), res.HierarchyMode)
-				}
+		if obj.GroupVersionKind() != kinds.HierarchyConfig() {
+			return nil
+		}
+		s, err := obj.Structured()
+		if err != nil {
+			return err
+		}
+		for _, res := range s.(*v1.HierarchyConfig).Spec.Resources {
+			// First validate HierarchyMode.
+			switch res.HierarchyMode {
+			case v1.HierarchyModeNone, v1.HierarchyModeInherit, v1.HierarchyModeDefault:
+			default:
+				return hierarchyconfig.IllegalHierarchyModeError(hc(groupKinds(res)[0], obj), res.HierarchyMode)
+			}
 
-				// Then validate resource GroupKinds.
-				for _, gk := range groupKinds(res) {
-					if !hierarchyconfig.AllowedInHierarchyConfigs(gk) {
-						return hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hc(gk, hcObj))
-					}
+			// Then validate resource GroupKinds.
+			for _, gk := range groupKinds(res) {
+				if !hierarchyconfig.AllowedInHierarchyConfigs(gk) {
+					return hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hc(gk, obj))
 				}
 			}
 		}

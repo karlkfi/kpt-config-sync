@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
@@ -14,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/resourcequota"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -184,8 +182,25 @@ spec:
     kinds: [ "Role", "RoleBinding" ]
 `,
 			},
-			expectObject: pointer(fake.HierarchyConfigAtPath("system/config.yaml", core.Name("config"),
-				fake.HierarchyConfigResource(v1.HierarchyModeDefault, kinds.Role().GroupVersion(), kinds.Role().Kind, kinds.RoleBinding().Kind))),
+			expectObject: pointer(ast.NewFileObject(&unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "configmanagement.gke.io/v1",
+					"kind":       "HierarchyConfig",
+					"metadata": map[string]interface{}{
+						"name": "config",
+					},
+					"spec": map[string]interface{}{
+						"resources": []interface{}{
+							map[string]interface{}{
+								"group": "rbac.authorization.k8s.io",
+								"kinds": []interface{}{
+									"Role", "RoleBinding",
+								},
+							},
+						},
+					},
+				},
+			}, cmpath.RelativeSlash("system/config.yaml"))),
 		},
 		{
 			testName: "metadata.annotations with number value",
@@ -375,7 +390,7 @@ items:
 			if len(actual) == 0 {
 				t.Fatal("expected object")
 			}
-			if diff := cmp.Diff(*tc.expectObject, actual[0], cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual()); diff != "" {
+			if diff := cmp.Diff(*tc.expectObject, actual[0], cmpopts.EquateEmpty(), resourcequota.ResourceQuantityEqual(), ast.CompareFileObject); diff != "" {
 				t.Fatal(diff)
 			}
 		})

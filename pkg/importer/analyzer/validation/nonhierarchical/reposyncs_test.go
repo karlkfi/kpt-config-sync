@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -50,7 +49,7 @@ func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
 func TestValidateRepoSync(t *testing.T) {
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  *v1alpha1.RepoSync
 		want error
 	}{
 		{
