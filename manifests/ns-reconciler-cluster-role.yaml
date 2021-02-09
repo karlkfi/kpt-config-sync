@@ -12,3 +12,6 @@ rules:
 - apiGroups: ["configsync.gke.io"]
   resources: ["reposyncs/status"]
   verbs: ["get","list","update"]
+- apiGroups: ["kpt.dev"]
+  resources: ["resourcegroups"]
+  verbs: ["*"]
