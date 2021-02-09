@@ -64,14 +64,13 @@ func RunImporter() {
 	dir := strings.TrimPrefix(*policyDirRelative, "/")
 
 	// Set up controllers.
-	if err := filesystem.AddController(*clusterName, mgr, *gitDir,
-		dir, *pollPeriod); err != nil {
+	if err := meta.AddControllers(mgr); err != nil {
 		glog.Fatalf("Error adding Sync controller: %+v", err)
 	}
 
-	// Set up controllers.
-	if err := meta.AddControllers(mgr); err != nil {
-		glog.Fatalf("Error adding Sync controller: %+v", err)
+	if err := filesystem.AddController(*clusterName, mgr, *gitDir,
+		dir, *pollPeriod); err != nil {
+		glog.Fatalf("Error adding Importer controller: %+v", err)
 	}
 
 	mgrStopChannel := signals.SetupSignalHandler()
