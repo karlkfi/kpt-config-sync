@@ -10,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// TODO(b/166334682): We are no longer able to generate this file.
-
 // These comments must remain outside the package docstring.
 // +genclient
 // +genclient:nonNamespaced
@@ -25,15 +23,15 @@ type ClusterConfig struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// The actual object definition, per K8S object definition style.
 	// +optional
-	Spec ClusterConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec ClusterConfigSpec `json:"spec,omitempty"`
 
 	// The current status of the object, per K8S object definition style.
 	// +optional
-	Status ClusterConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status ClusterConfigStatus `json:"status,omitempty"`
 }
 
 // ClusterConfigSpec defines the configs that will exist at the cluster level.
@@ -44,11 +42,11 @@ type ClusterConfigSpec struct {
 
 	// ImportTime is the timestamp of when the ClusterConfig was updated by the Importer.
 	// +optional
-	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,5,opt,name=importTime"`
+	ImportTime metav1.Time `json:"importTime,omitempty"`
 
 	// Resources contains namespace scoped resources that are synced to the API server.
 	// +optional
-	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	Resources []GenericResources `json:"resources,omitempty"`
 }
 
 // ClusterConfigStatus contains fields that define the status of a ClusterConfig.
@@ -60,11 +58,11 @@ type ClusterConfigStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the ClusterConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty"`
 
 	// SyncTime is the timestamp of when the config resources were last updated by the Syncer.
 	// +optional
-	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
+	SyncTime metav1.Time `json:"syncTime,omitempty"`
 
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
@@ -72,7 +70,7 @@ type ClusterConfigStatus struct {
 
 	// ResourceConditions contains health status of cluster-scope resources
 	// +optional
-	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
+	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -83,10 +81,10 @@ type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of configs that apply.
-	Items []ClusterConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []ClusterConfig `json:"items"`
 }
 
 // These comments must remain outside the package docstring.
@@ -102,15 +100,15 @@ type NamespaceConfig struct {
 
 	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// The actual object definition, per K8S object definition style.
 	// +optional
-	Spec NamespaceConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec NamespaceConfigSpec `json:"spec,omitempty"`
 
 	// The current status of the object, per K8S object definition style.
 	// +optional
-	Status NamespaceConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Status NamespaceConfigStatus `json:"status,omitempty"`
 }
 
 // NamespaceConfigSpec contains all the information about a config linkage.
@@ -121,11 +119,11 @@ type NamespaceConfigSpec struct {
 
 	// ImportTime is the timestamp of when the NamespaceConfig was updated by the Importer.
 	// +optional
-	ImportTime metav1.Time `json:"importTime,omitempty" protobuf:"bytes,7,opt,name=importTime"`
+	ImportTime metav1.Time `json:"importTime,omitempty"`
 
 	// Resources contains namespace scoped resources that are synced to the API server.
 	// +optional
-	Resources []GenericResources `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	Resources []GenericResources `json:"resources,omitempty"`
 
 	// DeleteSyncedTime is the time at which the importer identifed the intent to delete
 	// the corresponding Namespace
@@ -142,19 +140,19 @@ type NamespaceConfigStatus struct {
 	// SyncErrors contains any errors that occurred during the last attempt the Syncer made to update
 	// resources from the NamespaceConfig specs. This field will be empty on success.
 	// +optional
-	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty" protobuf:"bytes,2,rep,name=syncErrors"`
+	SyncErrors []ConfigManagementError `json:"syncErrors,omitempty"`
 
 	// SyncTime is the timestamp of when the config resources were last updated by the Syncer.
 	// +optional
-	SyncTime metav1.Time `json:"syncTime,omitempty" protobuf:"bytes,3,opt,name=syncTime"`
+	SyncTime metav1.Time `json:"syncTime,omitempty"`
 
 	// SyncState is the current state of the config resources (eg synced, stale, error).
 	// +optional
-	SyncState ConfigSyncState `json:"syncState,omitempty" protobuf:"bytes,4,opt,name=syncState"`
+	SyncState ConfigSyncState `json:"syncState,omitempty"`
 
 	// ResourceConditions contains health status of namespaced resources
 	// +optional
-	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty" protobuf:"bytes,5,opt,name=resourceConditions"`
+	ResourceConditions []ResourceCondition `json:"resourceConditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -166,32 +164,32 @@ type NamespaceConfigList struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of configs that apply.
-	Items []NamespaceConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []NamespaceConfig `json:"items"`
 }
 
 // GenericResources contains API objects of a specified Group and Kind.
 type GenericResources struct {
 	// Group is the Group for all resources contained within
 	// +optional
-	Group string `json:"group,omitempty" protobuf:"bytes,1,opt,name=group"`
+	Group string `json:"group,omitempty"`
 
 	// Kind is the Kind for all resoruces contained within.
-	Kind string `json:"kind" protobuf:"bytes,2,opt,name=kind"`
+	Kind string `json:"kind"`
 
 	// Versions is a list Versions corresponding to the Version for this Group and Kind.
-	Versions []GenericVersionResources `json:"versions" protobuf:"bytes,3,opt,name=versions"` // Per version information.
+	Versions []GenericVersionResources `json:"versions"` // Per version information.
 }
 
 // GenericVersionResources holds a set of resources of a single version for a Group and Kind.
 type GenericVersionResources struct {
 	// Version is the version of all objects in Objects.
-	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+	Version string `json:"version"`
 
 	// Objects is the list of objects of a single Group Version and Kind.
-	Objects []runtime.RawExtension `json:"objects" protobuf:"bytes,2,opt,name=object"`
+	Objects []runtime.RawExtension `json:"objects"`
 }
 
 // +genclient
@@ -205,10 +203,10 @@ type ClusterSelector struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// The actual object definition, per K8S object definition style.
-	Spec ClusterSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec ClusterSelectorSpec `json:"spec"`
 }
 
 // ClusterSelectorSpec contains spec fields for ClusterSelector.
@@ -216,7 +214,7 @@ type ClusterSelectorSpec struct {
 	// Selects clusters.
 	// This field is NOT optional and follows standard label selector semantics. An empty selector
 	// matches all clusters.
-	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
+	Selector metav1.LabelSelector `json:"selector"`
 }
 
 // +kubebuilder:object:root=true
@@ -227,10 +225,10 @@ type ClusterSelectorList struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of selectors.
-	Items []ClusterSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []ClusterSelector `json:"items"`
 }
 
 // +genclient
@@ -244,10 +242,10 @@ type NamespaceSelector struct {
 
 	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// The actual object definition, per K8S object definition style.
-	Spec NamespaceSelectorSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec NamespaceSelectorSpec `json:"spec"`
 }
 
 // NamespaceSelectorSpec contains spec fields for NamespaceSelector.
@@ -255,7 +253,7 @@ type NamespaceSelectorSpec struct {
 	// Selects namespaces.
 	// This field is NOT optional and follows standard label selector semantics. An empty selector
 	// matches all namespaces.
-	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,1,opt,name=selector"`
+	Selector metav1.LabelSelector `json:"selector"`
 }
 
 // +kubebuilder:object:root=true
@@ -266,10 +264,10 @@ type NamespaceSelectorList struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of NamespaceSelectors.
-	Items []NamespaceSelector `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []NamespaceSelector `json:"items"`
 }
 
 // +genclient
@@ -282,7 +280,7 @@ type Sync struct {
 
 	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec is the standard spec field.
 	Spec SyncSpec `json:"spec"`
@@ -377,7 +375,7 @@ type Repo struct {
 type RepoSpec struct {
 	// Repo version string, corresponds to how the config importer should handle the directory
 	// structure (implicit assumptions).
-	Version string `json:"version" protobuf:"bytes,1,opt,name=version"`
+	Version string `json:"version"`
 }
 
 // RepoStatus contains status fields for Repo.
@@ -521,10 +519,10 @@ type RepoList struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of Repo declarations.
-	Items []Repo `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []Repo `json:"items"`
 }
 
 // +genclient
@@ -537,7 +535,7 @@ type HierarchyConfig struct {
 
 	// Standard object's metadata. The Name field of the config must match the namespace name.
 	// +optional
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec is the standard spec field.
 	Spec HierarchyConfigSpec `json:"spec"`
@@ -551,28 +549,28 @@ type HierarchyConfigList struct {
 
 	// Standard object's metadata.
 	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is a list of HierarchyConfigs.
-	Items []HierarchyConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []HierarchyConfig `json:"items"`
 }
 
 // HierarchyConfigSpec specifies the HierarchyConfigResources.
 type HierarchyConfigSpec struct {
-	Resources []HierarchyConfigResource `json:"resources" protobuf:"bytes,2,rep,name=resources"`
+	Resources []HierarchyConfigResource `json:"resources"`
 }
 
 // HierarchyConfigResource specifies the HierarchyModeType based on the matching Groups and Kinds enabled.
 type HierarchyConfigResource struct {
 	// Group is the name of the APIGroup that contains the resources.
 	// +optional
-	Group string `json:"group,omitempty" protobuf:"bytes,1,rep,name=group"`
+	Group string `json:"group,omitempty"`
 	// Kinds is a list of kinds this rule applies to.
 	// +optional
-	Kinds []string `json:"kinds,omitempty" protobuf:"bytes,2,rep,name=kinds"`
+	Kinds []string `json:"kinds,omitempty"`
 	// HierarchyMode specifies how the object is treated when it appears in an abstract namespace.
 	// The default is "inherit", meaning objects are inherited from parent abstract namespaces.
 	// If set to "none", the type is not allowed in Abstract Namespaces.
 	// +optional
-	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty" protobuf:"bytes,3,opt,name=hierarchyMode"`
+	HierarchyMode HierarchyModeType `json:"hierarchyMode,omitempty"`
 }
