@@ -39,9 +39,6 @@ const (
 
 	// HierarchyConfigKind is the string constant for the HierarchyConfig GroupVersionKind
 	HierarchyConfigKind = "HierarchyConfig"
-
-	// RepoSyncKind is the string constant for the RepoSync GroupVersionKind
-	RepoSyncKind = "RepoSync"
 )
 
 // IsControllerNamespace returns true if the namespace is the ACM Controller Namespace.

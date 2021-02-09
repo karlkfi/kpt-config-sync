@@ -120,7 +120,7 @@ func read(ctx context.Context, p Parser, trigger string, state *reconcilerState)
 // readFromSource reads the git commit and policyDir from the git repo, checks whether the gitstate in
 // the cache is up-to-date. If the cache is not up-to-date, reads all the git files from the
 // git repo.
-// readFromSource returns the git commit hash, and any encounted error.
+// readFromSource returns the git commit hash, and any encountered error.
 func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) (string, status.Error) {
 	opts := p.options()
 	start := time.Now()

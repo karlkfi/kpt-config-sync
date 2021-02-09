@@ -125,7 +125,7 @@ type NamespaceConfigSpec struct {
 	// +optional
 	Resources []GenericResources `json:"resources,omitempty"`
 
-	// DeleteSyncedTime is the time at which the importer identifed the intent to delete
+	// DeleteSyncedTime is the time at which the importer identified the intent to delete
 	// the corresponding Namespace
 	// +optional
 	DeleteSyncedTime metav1.Time `json:"deleteSyncedTime,omitempty"`
@@ -176,7 +176,7 @@ type GenericResources struct {
 	// +optional
 	Group string `json:"group,omitempty"`
 
-	// Kind is the Kind for all resoruces contained within.
+	// Kind is the Kind for all resources contained within.
 	Kind string `json:"kind"`
 
 	// Versions is a list Versions corresponding to the Version for this Group and Kind.
