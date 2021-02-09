@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/nomos/pkg/core"
@@ -33,12 +34,13 @@ func TestWasDeleted(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// First verify that the object is not detected as deleted.
-			if WasDeleted(tc.obj) {
+			ctx := context.Background()
+			if WasDeleted(ctx, tc.obj) {
 				t.Errorf("object was incorrectly detected as deleted: %v", tc.obj)
 			}
 			// Next mark the object as deleted and verify that it is now detected.
-			deletedObj := MarkDeleted(tc.obj)
-			if !WasDeleted(deletedObj) {
+			deletedObj := MarkDeleted(ctx, tc.obj)
+			if !WasDeleted(ctx, deletedObj) {
 				t.Errorf("deleted object was not detected: %v", tc.obj)
 			}
 		})
@@ -47,7 +49,8 @@ func TestWasDeleted(t *testing.T) {
 
 func TestDeleted_InternalErrorMetricValidation(t *testing.T) {
 	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
-	MarkDeleted(nil)
+	ctx := context.Background()
+	MarkDeleted(ctx, nil)
 	wantMetrics := []*view.Row{
 		{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyInternalErrorSource, Value: "remediator"}}},
 	}

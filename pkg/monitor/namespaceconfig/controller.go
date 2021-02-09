@@ -35,8 +35,8 @@ type reconciler struct {
 }
 
 // Reconcile is the callback for Reconciler.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	config := &v1.NamespaceConfig{}

@@ -17,7 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,7 +39,7 @@ func New(client client.Client, latencyMetric *prometheus.HistogramVec) *Client {
 }
 
 // clientUpdateFn is a Client function signature for updating an entire resource or a resource's status.
-type clientUpdateFn func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
+type clientUpdateFn func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error
 
 // update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
 // so no there is no need to worry about mutating the argument when implementing an Update function.
@@ -110,12 +110,12 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj core.Object, updateFn update) (runtime.Object, status.Error) {
+func (c *Client) Update(ctx context.Context, obj core.Object, updateFn update) (client.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj core.Object, updateFn update) (runtime.Object, status.Error) {
+func (c *Client) UpdateStatus(ctx context.Context, obj core.Object, updateFn update) (client.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
@@ -123,7 +123,7 @@ func (c *Client) UpdateStatus(ctx context.Context, obj core.Object, updateFn upd
 // metrics. In the event of a conflicting update, it will retry.
 // This operation always involves retrieving the resource from API Server before actually updating it.
 func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
-	clientUpdateFn clientUpdateFn) (runtime.Object, status.Error) {
+	clientUpdateFn clientUpdateFn) (client.Object, status.Error) {
 	// We only want to modify the argument after successfully making an update to API Server.
 	workingObj := core.DeepCopy(obj)
 	description := getResourceInfo(workingObj)
@@ -189,7 +189,12 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
-	if err := c.Client.Get(ctx, namespacedName, obj.DeepCopyObject()); err != nil {
+
+	// We don't actually care about the object on the cluster, we just want to
+	// check if it exists before deciding whether to create or update it.
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(obj.GroupVersionKind())
+	if err := c.Client.Get(ctx, namespacedName, u); err != nil {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
 		}

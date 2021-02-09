@@ -35,7 +35,7 @@ var _ client.StatusWriter = &statusWriter{}
 
 // Client is a fake implementation of client.Client.
 type Client struct {
-	Scheme  *runtime.Scheme
+	scheme  *runtime.Scheme
 	Objects map[core.ID]core.Object
 }
 
@@ -45,20 +45,20 @@ var _ client.Client = &Client{}
 // objects.
 //
 // Calls t.Fatal if unable to properly instantiate Client.
-func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...runtime.Object) *Client {
+func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...client.Object) *Client {
 	t.Helper()
 
 	result := Client{
-		Scheme:  scheme,
+		scheme:  scheme,
 		Objects: make(map[core.ID]core.Object),
 	}
 
-	err := v1.AddToScheme(result.Scheme)
+	err := v1.AddToScheme(result.scheme)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
 	}
 
-	err = v1alpha1.AddToScheme(result.Scheme)
+	err = v1alpha1.AddToScheme(result.scheme)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
 	}
@@ -81,7 +81,7 @@ func toGR(gk schema.GroupKind) schema.GroupResource {
 }
 
 // Get implements client.Client.
-func (c *Client) Get(_ context.Context, key client.ObjectKey, obj runtime.Object) error {
+func (c *Client) Get(_ context.Context, key client.ObjectKey, obj client.Object) error {
 	co, err := core.ObjectOf(obj)
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (c *Client) Get(_ context.Context, key client.ObjectKey, obj runtime.Object
 
 	if co.GroupVersionKind().Empty() {
 		// Since many times we call with just an empty struct with no type metadata.
-		gvks, _, err := c.Scheme.ObjectKinds(co)
+		gvks, _, err := c.Scheme().ObjectKinds(co)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,7 @@ func validateListOptions(opts client.ListOptions) error {
 // List implements client.Client.
 //
 // Does not paginate results.
-func (c *Client) List(_ context.Context, list runtime.Object, opts ...client.ListOption) error {
+func (c *Client) List(_ context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	options := client.ListOptions{}
 	options.ApplyOptions(opts)
 	err := validateListOptions(options)
@@ -169,7 +169,7 @@ func (c *Client) List(_ context.Context, list runtime.Object, opts ...client.Lis
 	return errors.Errorf("fake.Client does not support List(%T)", list)
 }
 
-func (c *Client) fromUnstructured(obj runtime.Object) (runtime.Object, error) {
+func (c *Client) fromUnstructured(obj client.Object) (client.Object, error) {
 	// If possible, we want to deal with the non-Unstructured form of objects.
 	// Unstructureds are prone to declare a bunch of empty maps we don't care
 	// about, and can't easily tell cmp.Diff to ignore.
@@ -180,7 +180,7 @@ func (c *Client) fromUnstructured(obj runtime.Object) (runtime.Object, error) {
 		return obj, nil
 	}
 
-	result, err := c.Scheme.New(u.GroupVersionKind())
+	result, err := c.Scheme().New(u.GroupVersionKind())
 	if err != nil {
 		// The type isn't registered.
 		return obj, nil
@@ -191,17 +191,17 @@ func (c *Client) fromUnstructured(obj runtime.Object) (runtime.Object, error) {
 		return nil, err
 	}
 	err = json.Unmarshal(jsn, result)
-	return result, err
+	return result.(client.Object), err
 }
 
 // Create implements client.Client.
-func (c *Client) Create(_ context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+func (c *Client) Create(_ context.Context, obj client.Object, opts ...client.CreateOption) error {
 	if len(opts) > 0 {
 		jsn, _ := json.MarshalIndent(opts, "", "  ")
 		return errors.Errorf("fake.Client.Create does not yet support opts, but got: %+v", string(jsn))
 	}
 
-	obj, err := c.fromUnstructured(obj.DeepCopyObject())
+	obj, err := c.fromUnstructured(obj.DeepCopyObject().(client.Object))
 	if err != nil {
 		return err
 	}
@@ -239,13 +239,13 @@ func validateDeleteOptions(opts []client.DeleteOption) error {
 }
 
 // Delete implements client.Client.
-func (c *Client) Delete(_ context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.DeleteOption) error {
 	err := validateDeleteOptions(opts)
 	if err != nil {
 		return err
 	}
 
-	co, err := core.ObjectOf(obj.DeepCopyObject())
+	co, err := core.ObjectOf(obj.DeepCopyObject().(client.Object))
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (c *Client) Delete(_ context.Context, obj runtime.Object, opts ...client.De
 	return nil
 }
 
-func toUnstructured(obj runtime.Object) (unstructured.Unstructured, error) {
+func toUnstructured(obj client.Object) (unstructured.Unstructured, error) {
 	innerObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 	if err != nil {
 		return unstructured.Unstructured{}, err
@@ -268,7 +268,7 @@ func toUnstructured(obj runtime.Object) (unstructured.Unstructured, error) {
 	return unstructured.Unstructured{Object: innerObj}, nil
 }
 
-func getStatusFromObject(obj runtime.Object) (map[string]interface{}, bool, error) {
+func getStatusFromObject(obj client.Object) (map[string]interface{}, bool, error) {
 	u, err := toUnstructured(obj)
 	if err != nil {
 		return nil, false, err
@@ -276,7 +276,7 @@ func getStatusFromObject(obj runtime.Object) (map[string]interface{}, bool, erro
 	return unstructured.NestedMap(u.Object, "status")
 }
 
-func (c *Client) updateObjectStatus(obj runtime.Object, status map[string]interface{}) (runtime.Object, error) {
+func (c *Client) updateObjectStatus(obj client.Object, status map[string]interface{}) (client.Object, error) {
 	u, err := toUnstructured(obj)
 	if err != nil {
 		return nil, err
@@ -292,13 +292,13 @@ func (c *Client) updateObjectStatus(obj runtime.Object, status map[string]interf
 }
 
 // Update implements client.Client. It does not update the status field.
-func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+func (c *Client) Update(_ context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	if len(opts) > 0 {
 		jsn, _ := json.MarshalIndent(opts, "", "  ")
 		return errors.Errorf("fake.Client.Update does not yet support opts, but got: %v", string(jsn))
 	}
 
-	obj, err := c.fromUnstructured(obj.DeepCopyObject())
+	obj, err := c.fromUnstructured(obj.DeepCopyObject().(client.Object))
 	if err != nil {
 		return err
 	}
@@ -336,25 +336,25 @@ func (c *Client) Update(_ context.Context, obj runtime.Object, opts ...client.Up
 }
 
 // Patch implements client.Client.
-func (c *Client) Patch(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) error {
+func (c *Client) Patch(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) error {
 	// Currently re-using the Update implementation for Patch since it fits the use-case where this is used for unit tests.
 	// Please use this with caution for your use-case.
 	return c.Update(ctx, obj)
 }
 
 // DeleteAllOf implements client.Client.
-func (c *Client) DeleteAllOf(_ context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+func (c *Client) DeleteAllOf(_ context.Context, _ client.Object, _ ...client.DeleteAllOfOption) error {
 	return errors.New("fake.Client does not support DeleteAllOf()")
 }
 
 // Update implements client.StatusWriter. It only updates the status field.
-func (s *statusWriter) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+func (s *statusWriter) Update(_ context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	if len(opts) > 0 {
 		jsn, _ := json.MarshalIndent(opts, "", "  ")
 		return errors.Errorf("fake.StatusWriter.Update does not yet support opts, but got: %v", string(jsn))
 	}
 
-	obj, err := s.Client.fromUnstructured(obj.DeepCopyObject())
+	obj, err := s.Client.fromUnstructured(obj.DeepCopyObject().(client.Object))
 	if err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ func (s *statusWriter) Update(ctx context.Context, obj runtime.Object, opts ...c
 }
 
 // Patch implements client.StatusWriter. It only updates the status field.
-func (s *statusWriter) Patch(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) error {
+func (s *statusWriter) Patch(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) error {
 	return s.Update(ctx, obj)
 }
 
@@ -407,7 +407,7 @@ func (c *Client) Status() client.StatusWriter {
 // Check reports an error to `t` if the passed objects in want do not match the
 // expected set of objects in the fake.Client, and only the passed updates to
 // Status fields were recorded.
-func (c *Client) Check(t *testing.T, wants ...runtime.Object) {
+func (c *Client) Check(t *testing.T, wants ...client.Object) {
 	t.Helper()
 
 	wantMap := make(map[core.ID]core.Object)
@@ -563,4 +563,14 @@ func (c *Client) listUnstructured(list *unstructured.UnstructuredList, options c
 // resulting Applier will read from/write to the original fake.Client.
 func (c *Client) Applier() reconcile.Applier {
 	return &applier{Client: c}
+}
+
+// Scheme implements client.Client.
+func (c *Client) Scheme() *runtime.Scheme {
+	return c.scheme
+}
+
+// RESTMapper implements client.Client.
+func (c *Client) RESTMapper() meta.RESTMapper {
+	panic("fake.Client does not support RESTMapper()")
 }

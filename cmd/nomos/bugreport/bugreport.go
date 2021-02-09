@@ -1,7 +1,6 @@
 package bugreport
 
 import (
-	"context"
 	"flag"
 	"fmt"
 
@@ -33,7 +32,7 @@ var Cmd = &cobra.Command{
 			return errors.Wrapf(err, "failed to create rest config")
 		}
 
-		report, err := bugreport.New(context.Background(), cfg)
+		report, err := bugreport.New(cmd.Context(), cfg)
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize bug reporter")
 		}
@@ -42,13 +41,11 @@ var Cmd = &cobra.Command{
 			return err
 		}
 
-		ctx := context.Background()
-
-		report.WriteRawInZip(report.FetchLogSources(ctx))
-		report.WriteRawInZip(report.FetchCMResources())
-		report.WriteRawInZip(report.FetchCMSystemPods(ctx))
+		report.WriteRawInZip(report.FetchLogSources(cmd.Context()))
+		report.WriteRawInZip(report.FetchCMResources(cmd.Context()))
+		report.WriteRawInZip(report.FetchCMSystemPods(cmd.Context()))
 		report.AddNomosStatusToZip(cmd.Context())
-		report.AddNomosVersionToZip()
+		report.AddNomosVersionToZip(cmd.Context())
 
 		report.Close()
 		return nil

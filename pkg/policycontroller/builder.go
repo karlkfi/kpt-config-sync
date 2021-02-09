@@ -1,8 +1,6 @@
 package policycontroller
 
 import (
-	"context"
-
 	"github.com/google/nomos/pkg/policycontroller/constraint"
 	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/util/watch"
@@ -19,14 +17,14 @@ var _ watch.ControllerBuilder = &builder{}
 // StartControllers starts a new constraint controller for each of the specified
 // constraint GVKs. It also starts the controller for ConstraintTemplates if
 // their CRD is present.
-func (b *builder) StartControllers(ctx context.Context, mgr manager.Manager, gvks map[schema.GroupVersionKind]bool, _ metav1.Time) error {
+func (b *builder) StartControllers(mgr manager.Manager, gvks map[schema.GroupVersionKind]bool, _ metav1.Time) error {
 	ctGVK := constrainttemplate.GVK.String()
 	for gvk := range gvks {
 		if gvk.String() == ctGVK {
-			if err := constrainttemplate.AddController(ctx, mgr); err != nil {
+			if err := constrainttemplate.AddController(mgr); err != nil {
 				return errors.Wrap(err, "controller for ConstraintTemplate")
 			}
-		} else if err := constraint.AddController(ctx, mgr, gvk.Kind); err != nil {
+		} else if err := constraint.AddController(mgr, gvk.Kind); err != nil {
 			return errors.Wrapf(err, "controller for %s", gvk.String())
 		}
 	}

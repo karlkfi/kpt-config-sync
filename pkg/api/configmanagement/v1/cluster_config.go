@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewClusterConfig initializes a ClusterConfig.
@@ -55,20 +56,20 @@ func NewNamespaceConfig(
 	}
 }
 
-// AddResource adds a runtime.Object to this ClusterConfig.
-func (c *ClusterConfig) AddResource(o runtime.Object) {
+// AddResource adds a client.Object to this ClusterConfig.
+func (c *ClusterConfig) AddResource(o client.Object) {
 	c.Spec.Resources = appendResource(c.Spec.Resources, o)
 }
 
-// AddResource adds a runtime.Object to this NamespaceConfig.
-func (c *NamespaceConfig) AddResource(o runtime.Object) {
+// AddResource adds a client.Object to this NamespaceConfig.
+func (c *NamespaceConfig) AddResource(o client.Object) {
 	c.Spec.Resources = appendResource(c.Spec.Resources, o)
 }
 
 // appendResource adds Object o to resources.
 // GenericResources is grouped first by kind and then by version, and this method takes care of
 // adding any required groupings for the new object, or adding to existing groupings if present.
-func appendResource(resources []GenericResources, o runtime.Object) []GenericResources {
+func appendResource(resources []GenericResources, o client.Object) []GenericResources {
 	gvk := o.GetObjectKind().GroupVersionKind()
 	var gr *GenericResources
 	for i := range resources {

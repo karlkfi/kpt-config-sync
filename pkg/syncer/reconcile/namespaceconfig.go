@@ -51,8 +51,6 @@ type namespaceConfigReconciler struct {
 	decoder  decode.Decoder
 	now      func() metav1.Time
 	toSync   []schema.GroupVersionKind
-	// A cancelable ambient context for all reconciler operations.
-	ctx context.Context
 	//mgrInitTime is the subManager's instantiation time
 	mgrInitTime metav1.Time
 }
@@ -60,7 +58,7 @@ type namespaceConfigReconciler struct {
 var _ reconcile.Reconciler = &namespaceConfigReconciler{}
 
 // NewNamespaceConfigReconciler returns a new NamespaceConfigReconciler.
-func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
+func NewNamespaceConfigReconciler(c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
 	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind, mgrInitTime metav1.Time) reconcile.Reconciler {
 	return &namespaceConfigReconciler{
 		client:      c,
@@ -70,13 +68,12 @@ func NewNamespaceConfigReconciler(ctx context.Context, c *syncerclient.Client, a
 		decoder:     decoder,
 		toSync:      toSync,
 		now:         now,
-		ctx:         ctx,
 		mgrInitTime: mgrInitTime,
 	}
 }
 
 // Reconcile is the Reconcile callback for NamespaceConfigReconciler.
-func (r *namespaceConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *namespaceConfigReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("namespace").Set(float64(start.Unix()))
 
@@ -88,7 +85,7 @@ func (r *namespaceConfigReconciler) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	err := r.reconcileNamespaceConfig(ctx, name)

@@ -58,7 +58,7 @@ func (w *Worker) processNextObject(ctx context.Context) bool {
 
 func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 	var toRemediate core.Object
-	if queue.WasDeleted(obj) {
+	if queue.WasDeleted(ctx, obj) {
 		// Passing a nil Object to the reconciler signals that the accompanying ID
 		// is for an Object that was deleted.
 		toRemediate = nil
@@ -106,7 +106,7 @@ func (w *Worker) refresh(ctx context.Context, o core.Object) status.Error {
 	switch {
 	case apierrors.IsNotFound(err):
 		// The object no longer exists on the cluster, so mark it deleted.
-		w.objectQueue.Add(queue.MarkDeleted(o))
+		w.objectQueue.Add(queue.MarkDeleted(ctx, o))
 	case err != nil:
 		// We encountered some other error that we don't know how to solve, so
 		// surface it.

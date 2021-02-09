@@ -23,8 +23,8 @@ const timeout = time.Second * 15
 // GetSyncedCRDs returns the CRDs synced to the cluster in the current context.
 //
 // Times out after 15 seconds.
-func GetSyncedCRDs() ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+func GetSyncedCRDs(ctx context.Context) ([]*v1beta1.CustomResourceDefinition, status.MultiError) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	config, err := restconfig.NewRestConfig()

@@ -8,9 +8,11 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -89,9 +91,7 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 	// The reason we do this is because the logic is the same in the reconcile loop,
 	// regardless of which resource changed. Having a constant used for the reconcile.Request
 	// avoids doing redundant reconciles.
-	mapToConstant := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(nomosResourceRequest),
-	}
+	mapToConstant := handler.EnqueueRequestsFromMapFunc(nomosResourceRequest)
 
 	// Watch all Nomos CRs that are managed by the importer.
 	if err = c.Watch(&source.Kind{Type: &v1.ClusterConfig{}}, mapToConstant); err != nil {
@@ -126,7 +126,10 @@ func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
 	go func() {
 		ticker := time.NewTicker(pollPeriod)
 		for range ticker.C {
-			pollCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: pollFilesystem}}
+			// TODO(b/179816931): Not an intended use case for GenericEvent. Refactor.
+			u := &unstructured.Unstructured{}
+			u.SetName(pollFilesystem)
+			pollCh <- event.GenericEvent{Object: u}
 		}
 	}()
 
@@ -140,7 +143,7 @@ func watchFileSystem(c controller.Controller, pollPeriod time.Duration) error {
 
 // nomosResourceRequest maps resources being watched,
 // to reconciliation requests for a cluster-scoped resource with name "nomos-resource".
-func nomosResourceRequest(_ handler.MapObject) []reconcile.Request {
+func nomosResourceRequest(_ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			Name: "nomos-resource",

@@ -80,7 +80,7 @@ type RootOptions struct {
 }
 
 // Run configures and starts the various components of a reconciler process.
-func Run(ctx context.Context, opts Options) {
+func Run(opts Options) {
 	reconcile.SetFightThreshold(opts.FightDetectionThreshold)
 
 	// Get a config to talk to the apiserver.
@@ -154,6 +154,8 @@ func Run(ctx context.Context, opts Options) {
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 	}
 
+	ctx := signals.SetupSignalHandler()
+
 	// Right before we start everything, mark the RootSync or RepoSync as no longer
 	// Reconciling.
 	if opts.ReconcilerScope == declared.RootReconciler {
@@ -162,14 +164,13 @@ func Run(ctx context.Context, opts Options) {
 		updateRepoSyncStatus(ctx, cl, opts.ReconcilerScope, opts)
 	}
 
-	stopChan := signals.SetupSignalHandler()
 	// Start the Remediator (non-blocking).
-	rem.Start(stoppableContext(ctx, stopChan))
+	rem.Start(ctx)
 	// Start the Parser (blocking).
 	// This will not return until:
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
-	parse.Run(stoppableContext(ctx, stopChan), parser)
+	parse.Run(ctx, parser)
 }
 
 // updateRepoSyncStatus loops (with exponential backoff) until it is able to
@@ -222,15 +223,4 @@ func updateRootSyncStatus(ctx context.Context, cl client.Client, opts Options) {
 			cancel()
 		}
 	}, time.Second)
-}
-
-// stoppableContext returns a Context that will be canceled when the given stop
-// channel is closed.
-func stoppableContext(ctx context.Context, stopChannel <-chan struct{}) context.Context {
-	stoppable, cancel := context.WithCancel(ctx)
-	go func() {
-		<-stopChannel
-		cancel()
-	}()
-	return stoppable
 }

@@ -55,5 +55,5 @@ func createWatcher(ctx context.Context, cfg watcherConfig) (Runnable, status.Err
 		}
 	}
 
-	return NewFiltered(cfg), nil
+	return NewFiltered(ctx, cfg), nil
 }

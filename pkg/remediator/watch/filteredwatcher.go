@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"context"
 	"math/rand"
 	"sync"
 	"time"
@@ -28,7 +29,7 @@ var (
 // Runnable defines the custom watch interface.
 type Runnable interface {
 	Stop()
-	Run() status.Error
+	Run(ctx context.Context) status.Error
 	ManagementConflict() bool
 	SetManagementConflict(v bool)
 }
@@ -55,7 +56,7 @@ type filteredWatcher struct {
 var _ Runnable = &filteredWatcher{}
 
 // NewFiltered returns a new filtered watch initialized with the given options.
-func NewFiltered(cfg watcherConfig) Runnable {
+func NewFiltered(ctx context.Context, cfg watcherConfig) Runnable {
 	return &filteredWatcher{
 		gvk:        cfg.gvk.String(),
 		startWatch: cfg.startWatch,
@@ -92,7 +93,7 @@ func (w *filteredWatcher) Stop() {
 // Run reads the event from the base watch interface,
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
-func (w *filteredWatcher) Run() status.Error {
+func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 	glog.Infof("Watch started for %s", w.gvk)
 	var resourceVersion string
 
@@ -111,7 +112,7 @@ func (w *filteredWatcher) Run() status.Error {
 
 		glog.V(2).Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
 		for event := range w.base.ResultChan() {
-			if newVersion := w.handle(event); newVersion != "" {
+			if newVersion := w.handle(ctx, event); newVersion != "" {
 				resourceVersion = newVersion
 			}
 		}
@@ -155,7 +156,7 @@ func (w *filteredWatcher) start(resourceVersion string) (bool, status.Error) {
 // handle reads the event from the base watch interface,
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
-func (w *filteredWatcher) handle(event watch.Event) string {
+func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) string {
 	var deleted bool
 	switch event.Type {
 	case watch.Added, watch.Modified:
@@ -178,7 +179,7 @@ func (w *filteredWatcher) handle(event watch.Event) string {
 	object, err := core.ObjectOf(event.Object)
 	if err != nil {
 		glog.Warningf("Received non core.Object in watch event: %v", err)
-		metrics.RecordInternalError("remediator")
+		metrics.RecordInternalError(ctx, "remediator")
 		return ""
 	}
 	// filter objects.
@@ -189,7 +190,7 @@ func (w *filteredWatcher) handle(event watch.Event) string {
 
 	if deleted {
 		glog.V(2).Infof("Received watch event for deleted object %q", core.IDOf(object))
-		object = queue.MarkDeleted(object)
+		object = queue.MarkDeleted(ctx, object)
 	} else {
 		glog.V(2).Infof("Received watch event for created/updated object %q", core.IDOf(object))
 	}

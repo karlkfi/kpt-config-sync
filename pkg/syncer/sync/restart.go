@@ -1,7 +1,7 @@
 package sync
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -28,5 +28,9 @@ func (r RestartChannel) Restart(source string) {
 	// We have to shoehorn the source causing the restart into an event that the controller-runtime library understands. So,
 	// we put the source in the Namespace field as a convention and know to only look at the namespace when it's an event that
 	// was triggered by this method.
-	r <- event.GenericEvent{Meta: &metav1.ObjectMeta{Name: forceRestart, Namespace: source}}
+	// TODO(b/179816931): Not an intended use case for GenericEvent. Refactor.
+	u := &unstructured.Unstructured{}
+	u.SetNamespace(source)
+	u.SetName(forceRestart)
+	r <- event.GenericEvent{Object: u}
 }

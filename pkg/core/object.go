@@ -5,20 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// Named defines the metadata.name field, and is required by the Kubernetes API conventions.
-type Named interface {
-	GetName() string
-	SetName(name string)
-}
-
-// Namespaced defines the metadata.namespace field, and is required by the Kubernetes API conventions.
-type Namespaced interface {
-	GetNamespace() string
-	SetNamespace(namespace string)
-}
 
 // LabeledAndAnnotated is a convenience interface.
 // Labels and annotations are optional per the Kubernetes API spec, we require
@@ -36,39 +24,16 @@ type LabeledAndAnnotated interface {
 	SetLabels(map[string]string)
 }
 
-// resourceVersion is optional per the Kubernetes API spec, but we require it to determine whether
-// to update objects. We disallow it for object declarations.
-type resourceVersioned interface {
-	GetResourceVersion() string
-	SetResourceVersion(version string)
-	GetGeneration() int64
-	SetGeneration(generation int64)
-}
-
 // Object defines the minimal interface we expect any resource we allow Nomos to sync.
 type Object interface {
-	Named
-	Namespaced
-	LabeledAndAnnotated
-	OwnerReferenced
-	resourceVersioned
-	HasDeletionTimestamp
+	client.Object
 
-	// GetUID and SetUID define metadata.uid, which all persistent Kubernetes types must define.
-	// Users MUST leave the uid field empty as it is managed by Kubernetes.
-	GetUID() types.UID
-	SetUID(types.UID)
-
-	// GroupVersionKind overlaps with the runtime.Object declaration, but avoids having to call
+	// GroupVersionKind overlaps with the client.Object declaration, but avoids having to call
 	// o.GetObjectKind().GroupVersionKind() everywhere.
 	GroupVersionKind() schema.GroupVersionKind
-
-	// Object is Kubernetes's hacky way around Go's lack of generic interfaces, and required for
-	// interacting with the Kubernetes APIs.
-	runtime.Object
 }
 
-// DeepCopy returns Object rather than runtime.Object after deep copying.
+// DeepCopy returns Object rather than client.Object after deep copying.
 // We can't define this directly on Object as interfaces may not define methods.
 func DeepCopy(o Object) Object {
 	// This unchecked cast is safe as DeepCopyObject returns an object of the same type.
@@ -90,9 +55,4 @@ func ObjectOf(o runtime.Object) (Object, error) {
 		return nil, errors.Errorf("not a Kubernetes object %v", o)
 	}
 	return co, nil
-}
-
-// HasDeletionTimestamp returns the object's DeletionTimestamp, if there is one.
-type HasDeletionTimestamp interface {
-	GetDeletionTimestamp() *metav1.Time
 }

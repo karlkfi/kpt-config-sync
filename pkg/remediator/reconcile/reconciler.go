@@ -42,7 +42,7 @@ func newReconciler(
 	}
 }
 
-// Remediate takes an runtime.Object representing the object to update, and then
+// Remediate takes an client.Object representing the object to update, and then
 // ensures that the version on the server matches it.
 func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
 	declU, found := r.declared.Get(id)
@@ -58,7 +58,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		Declared: decl,
 		Actual:   obj,
 	}
-	switch t := d.Operation(r.scope); t {
+	switch t := d.Operation(ctx, r.scope); t {
 	case diff.NoOp:
 		return nil
 	case diff.Create:
@@ -94,7 +94,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object)
 		return err
 	default:
 		// e.g. differ.DeleteNsConfig, which shouldn't be possible to get to any way.
-		metrics.RecordInternalError("remediator")
+		metrics.RecordInternalError(ctx, "remediator")
 		return status.InternalErrorf("diff type not supported: %v", t)
 	}
 }

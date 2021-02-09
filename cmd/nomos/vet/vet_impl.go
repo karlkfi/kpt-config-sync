@@ -1,6 +1,7 @@
 package vet
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -35,7 +36,7 @@ import (
 // allClusters is whether we are implicitly vetting every cluster.
 // clusters is the set of clusters we are checking.
 //   Only used if allClusters is false.
-func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
+func runVet(ctx context.Context, root string, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return err
@@ -71,7 +72,7 @@ func runVet(root string, namespace string, sourceFormat filesystem.SourceFormat,
 
 	var syncedCRDs []*v1beta1.CustomResourceDefinition
 	if !skipAPIServer {
-		syncedCRDs, err = nomosparse.GetSyncedCRDs()
+		syncedCRDs, err = nomosparse.GetSyncedCRDs(ctx)
 		if err != nil {
 			return err
 		}

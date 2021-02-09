@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -109,7 +110,7 @@ func TestReconcile(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			var actual []runtime.Object
+			var actual []client.Object
 			for i := range tc.actual {
 				actual = append(actual, &tc.actual[i])
 			}
@@ -137,7 +138,8 @@ func TestReconcile(t *testing.T) {
 				now: syncertest.Now,
 			}
 
-			_, err := testReconciler.Reconcile(reconcile.Request{
+			ctx := context.Background()
+			_, err := testReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: apimachinerytypes.NamespacedName{
 					Name: tc.reconcileRequestName,
 				},
@@ -147,7 +149,7 @@ func TestReconcile(t *testing.T) {
 				t.Errorf("unexpected reconciliation error: %v", err)
 			}
 
-			want := make([]runtime.Object, len(tc.want))
+			want := make([]client.Object, len(tc.want))
 			for i := range tc.want {
 				want[i] = &tc.want[i]
 			}

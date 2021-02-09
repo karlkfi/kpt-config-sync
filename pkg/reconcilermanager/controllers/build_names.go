@@ -8,7 +8,7 @@ import (
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // repoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
@@ -18,7 +18,7 @@ func repoSyncResourceName(namespace, resourceName string) string {
 
 // parseRepoSyncReconciler parses namespacreconciler deployment name ns-reconciler-<namespace>
 // and returns namespace.
-func parseRepoSyncReconciler(name string, obj runtime.Object) string {
+func parseRepoSyncReconciler(name string, obj client.Object) string {
 	prefix := reconciler.RepoSyncPrefix + "-"
 	var ns string
 	if !strings.HasPrefix(name, prefix) {

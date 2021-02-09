@@ -1,6 +1,7 @@
 package crd
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/google/nomos/pkg/syncer/syncertest"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimereconcile "sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -96,13 +98,13 @@ var (
 
 type crdTestCase struct {
 	name     string
-	actual   runtime.Object
-	declared runtime.Object
+	actual   client.Object
+	declared client.Object
 	// initialCrds is the list of CRDs on the reconciler at start
 	initialCrds []schema.GroupVersionKind
 	// listCrds if the list of CRDs on the API Server
 	listCrds      []schema.GroupVersionKind
-	want          []runtime.Object
+	want          []client.Object
 	expectEvents  []testingfake.Event
 	expectRestart bool
 }
@@ -112,7 +114,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name:     "create from declared state",
 			declared: customResourceDefinitionV1Beta1(v1Version),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version,
 					syncertest.TokenAnnotation, syncertest.ManagementEnabled),
@@ -123,7 +125,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name:     "do not create if management disabled",
 			declared: customResourceDefinitionV1Beta1(v1Version, syncertest.ManagementDisabled),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 			},
 		},
@@ -131,7 +133,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name:     "do not create if management invalid",
 			declared: customResourceDefinitionV1Beta1(v1Version, syncertest.ManagementInvalid),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 			},
 			expectEvents: []testingfake.Event{
@@ -142,7 +144,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			name:     "update to declared state",
 			declared: customResourceDefinitionV1Beta1(v1Version),
 			actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementEnabled),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version, syncertest.TokenAnnotation, syncertest.ManagementEnabled),
 			},
@@ -153,7 +155,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			name:     "update to declared state even if actual managed unset",
 			declared: customResourceDefinitionV1Beta1(v1Version),
 			actual:   customResourceDefinitionV1Beta1(v1beta1Version),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version, syncertest.TokenAnnotation, syncertest.ManagementEnabled),
 			},
@@ -165,7 +167,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			name:     "update to declared state if actual managed invalid",
 			declared: customResourceDefinitionV1Beta1(v1Version),
 			actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementInvalid),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version, syncertest.TokenAnnotation, syncertest.ManagementEnabled),
 			},
@@ -180,7 +182,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1beta1Version, Kind: ""},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
@@ -192,7 +194,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			name:     "update to unmanaged",
 			declared: customResourceDefinitionV1Beta1(v1Version, syncertest.ManagementDisabled),
 			actual:   customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementEnabled),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
@@ -206,7 +208,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1beta1Version, Kind: ""},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
@@ -214,7 +216,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		{
 			name:   "delete if managed",
 			actual: customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementEnabled),
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 			},
 			expectEvents:  []testingfake.Event{clusterReconcileComplete},
@@ -226,7 +228,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1beta1Version, Kind: ""},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
@@ -239,7 +241,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1beta1Version, Kind: ""},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1beta1Version),
 			},
@@ -256,7 +258,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1Version, Kind: ""},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version, syncertest.ManagementEnabled,
 					fake.OwnerReference(
@@ -275,7 +277,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 				{Group: "foo.xyz", Version: "v1", Kind: "Stuff"},
 				{Group: "bar.xyz", Version: "v1", Kind: "MoreStuff"},
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 				customResourceDefinitionV1Beta1(v1Version,
 					syncertest.TokenAnnotation, syncertest.ManagementEnabled),
@@ -285,7 +287,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "external crd change triggers restart",
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 			},
 			expectEvents: []testingfake.Event{crdUpdated},
@@ -300,7 +302,7 @@ func TestClusterConfigReconcile(t *testing.T) {
 		},
 		{
 			name: "no change",
-			want: []runtime.Object{
+			want: []client.Object{
 				clusterCfgSynced,
 			},
 			initialCrds: []schema.GroupVersionKind{
@@ -343,7 +345,7 @@ func (tc crdTestCase) run(t *testing.T) {
 	fakeDecoder := testingfake.NewDecoder(syncertest.ToUnstructuredList(t, syncertest.Converter, tc.declared))
 	fakeEventRecorder := testingfake.NewEventRecorder(t)
 	fakeSignal := RestartSignalRecorder{}
-	actual := []runtime.Object{clusterCfg}
+	actual := []client.Object{clusterCfg}
 	if tc.actual != nil {
 		actual = append(actual, tc.actual)
 	}
@@ -357,11 +359,11 @@ func (tc crdTestCase) run(t *testing.T) {
 	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1(), &v1beta1.CustomResourceDefinition{})
 	fakeClient := testingfake.NewClient(t, s, actual...)
 
-	testReconciler := newReconciler(client.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,
+	testReconciler := newReconciler(syncerclient.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,
 		fakeDecoder, syncertest.Now, &fakeSignal)
 	testReconciler.allCrds = testReconciler.toCrdSet(crdList(tc.initialCrds))
 
-	_, err := testReconciler.Reconcile(
+	_, err := testReconciler.Reconcile(context.Background(),
 		runtimereconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name: v1.CRDClusterConfigName,

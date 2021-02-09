@@ -1,14 +1,14 @@
 package version
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/client/restconfig"
-
-	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -105,7 +105,8 @@ func TestVersion(t *testing.T) {
 				return test.currentContext, nil
 			}
 			var b strings.Builder
-			versionInternal(test.configs, &b, test.contexts)
+			ctx := context.Background()
+			versionInternal(ctx, test.configs, &b, test.contexts)
 			actuals := strings.Split(b.String(), "\n")
 			if diff := cmp.Diff(test.expected, actuals); diff != "" {
 				t.Errorf(diff)

@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -62,7 +63,7 @@ func secretData(t *testing.T, data, auth string) map[string][]byte {
 	}
 }
 
-func fakeClient(t *testing.T, objs ...runtime.Object) *syncerFake.Client {
+func fakeClient(t *testing.T, objs ...client.Object) *syncerFake.Client {
 	t.Helper()
 	s := runtime.NewScheme()
 	if err := corev1.AddToScheme(s); err != nil {

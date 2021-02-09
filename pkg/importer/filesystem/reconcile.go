@@ -154,8 +154,8 @@ func (c *reconciler) filesystemError(ctx context.Context, rev string) (reconcile
 //   * Gets the Nomos CRs currently stored in Kubernetes API server.
 //   * Compares current and desired Nomos CRs.
 //   * Writes updates to make current match desired.
-func (c *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	glog.V(4).Infof("Reconciling: %v", request)

@@ -30,7 +30,7 @@ func init() {
 }
 
 // GetVersionReadCloser returns a ReadCloser with the output produced by running the "nomos version" command as a string
-func GetVersionReadCloser(contexts []string) (io.ReadCloser, error) {
+func GetVersionReadCloser(ctx context.Context, contexts []string) (io.ReadCloser, error) {
 	r, w, _ := os.Pipe()
 	writer := util.NewWriter(w)
 	allCfgs, err := allKubectlConfigs()
@@ -38,7 +38,7 @@ func GetVersionReadCloser(contexts []string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	versionInternal(allCfgs, writer, contexts)
+	versionInternal(ctx, allCfgs, writer, contexts)
 	err = w.Close()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to close version file writer with error: %v")
@@ -68,7 +68,7 @@ of the "nomos" client binary for debugging purposes.`,
 			cmd.SilenceUsage = true
 
 			allCfgs, err := allKubectlConfigs()
-			versionInternal(allCfgs, os.Stdout, flags.Contexts)
+			versionInternal(cmd.Context(), allCfgs, os.Stdout, flags.Contexts)
 
 			if err != nil {
 				return errors.Wrap(err, "unable to parse kubectl config")
@@ -95,7 +95,7 @@ func allKubectlConfigs() (map[string]*rest.Config, error) {
 }
 
 // versionInternal allows stubbing out the config for tests.
-func versionInternal(configs map[string]*rest.Config, w io.Writer, contexts []string) {
+func versionInternal(ctx context.Context, configs map[string]*rest.Config, w io.Writer, contexts []string) {
 	// See go/nomos-cli-version-design for the output below.
 	if contexts != nil {
 		// filter by specified contexts
@@ -105,7 +105,7 @@ func versionInternal(configs map[string]*rest.Config, w io.Writer, contexts []st
 		}
 	}
 
-	vs := versions(configs)
+	vs := versions(ctx, configs)
 	es := entries(vs)
 	tabulate(es, w)
 }
@@ -124,7 +124,7 @@ func filterConfigs(contexts []string, all map[string]*rest.Config) map[string]*r
 	return cfgs
 }
 
-func lookupVersion(cfg *rest.Config) (string, error) {
+func lookupVersion(ctx context.Context, cfg *rest.Config) (string, error) {
 	cmClient, err := util.NewConfigManagementClient(cfg)
 	if err != nil {
 		return util.ErrorMsg, err
@@ -137,7 +137,7 @@ func lookupVersion(cfg *rest.Config) (string, error) {
 	//     ...
 	//   }
 	// }
-	cmVersion, err := cmClient.NestedString(context.Background(), "status", configManagementVersionName)
+	cmVersion, err := cmClient.NestedString(ctx, "status", configManagementVersionName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return util.NotInstalledMsg, nil
@@ -158,7 +158,7 @@ type vErr struct {
 
 // versions obtains the versions of all configmanagements from the contexts
 // supplied in the named configs.
-func versions(cfgs map[string]*rest.Config) map[string]vErr {
+func versions(ctx context.Context, cfgs map[string]*rest.Config) map[string]vErr {
 	if len(cfgs) == 0 {
 		return nil
 	}
@@ -172,7 +172,7 @@ func versions(cfgs map[string]*rest.Config) map[string]vErr {
 		go func(n string, c *rest.Config) {
 			defer g.Done()
 			var ve vErr
-			ve.version, ve.err = lookupVersion(c)
+			ve.version, ve.err = lookupVersion(ctx, c)
 			m.Lock()
 			vs[n] = ve
 			m.Unlock()

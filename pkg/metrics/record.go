@@ -52,7 +52,7 @@ func RecordParseErrorAndDuration(ctx context.Context, errs status.MultiError, st
 
 	errsMeasurement := ParseErrors.M(1)
 	for _, err := range status.ToCSE(errs) {
-		tagContext, _ := tag.New(context.Background(), tag.Upsert(KeyErrorCode, err.Code))
+		tagContext, _ := tag.New(ctx, tag.Upsert(KeyErrorCode, err.Code))
 		stats.Record(tagContext, errsMeasurement)
 	}
 }
@@ -120,8 +120,8 @@ func RecordResourceConflict(ctx context.Context, gvk schema.GroupVersionKind) {
 }
 
 // RecordInternalError produces measurements for the InternalErrors view.
-func RecordInternalError(source string) {
-	tagCtx, _ := tag.New(context.Background(), tag.Upsert(KeyInternalErrorSource, source))
+func RecordInternalError(ctx context.Context, source string) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyInternalErrorSource, source))
 	measurement := InternalErrors.M(1)
 	stats.Record(tagCtx, measurement)
 }

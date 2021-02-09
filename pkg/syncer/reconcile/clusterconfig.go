@@ -35,15 +35,13 @@ type clusterConfigReconciler struct {
 	decoder  decode.Decoder
 	toSync   []schema.GroupVersionKind
 	now      func() metav1.Time
-	// A cancelable ambient context for all reconciler operations.
-	ctx context.Context
 	//mgrInitTime is the submanager's instantiation time
 	mgrInitTime metav1.Time
 }
 
 // NewClusterConfigReconciler returns a new clusterConfigReconciler.  ctx is the ambient context
 // to use for all reconciler operations.
-func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
+func NewClusterConfigReconciler(c *syncerclient.Client, applier Applier, reader client.Reader, recorder record.EventRecorder,
 	decoder decode.Decoder, now func() metav1.Time, toSync []schema.GroupVersionKind, mgrInitTime metav1.Time) reconcile.Reconciler {
 	return &clusterConfigReconciler{
 		client:      c,
@@ -53,13 +51,12 @@ func NewClusterConfigReconciler(ctx context.Context, c *syncerclient.Client, app
 		decoder:     decoder,
 		toSync:      toSync,
 		now:         now,
-		ctx:         ctx,
 		mgrInitTime: mgrInitTime,
 	}
 }
 
 // Reconcile is the Reconcile callback for clusterConfigReconciler.
-func (r *clusterConfigReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *clusterConfigReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	if request.Name == v1.CRDClusterConfigName {
 		// We handle the CRD Cluster Config in the CRD controller, so don't reconcile it here.
 		return reconcile.Result{}, nil
@@ -68,7 +65,7 @@ func (r *clusterConfigReconciler) Reconcile(request reconcile.Request) (reconcil
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("cluster").Set(float64(start.Unix()))
 
-	ctx, cancel := context.WithTimeout(r.ctx, reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	err := r.reconcileConfig(ctx, request.NamespacedName)

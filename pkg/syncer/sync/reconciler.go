@@ -75,11 +75,11 @@ func newMetaReconciler(mgr manager.Manager, dc discovery.DiscoveryInterface, cli
 // Reconcile is the Reconcile callback for MetaReconciler.
 // It looks at all Syncs in the cluster and restarts the SubManager if its internal state doesn't match the cluster
 // state.
-func (r *metaReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *metaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("sync").Set(float64(start.Unix()))
 
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	err := r.reconcileSyncs(ctx, request)

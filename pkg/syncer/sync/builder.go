@@ -1,8 +1,6 @@
 package sync
 
 import (
-	"context"
-
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/syncer/controller"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -40,7 +38,7 @@ func (r *syncAwareBuilder) updateScheme(scheme *runtime.Scheme, gvks map[schema.
 }
 
 // StartControllers starts all the controllers watching sync-enabled resources.
-func (r *syncAwareBuilder) StartControllers(ctx context.Context, mgr manager.Manager, gvks map[schema.GroupVersionKind]bool, mgrInitTime metav1.Time) error {
+func (r *syncAwareBuilder) StartControllers(mgr manager.Manager, gvks map[schema.GroupVersionKind]bool, mgrInitTime metav1.Time) error {
 	if err := r.updateScheme(mgr.GetScheme(), gvks); err != nil {
 		return errors.Wrap(err, "could not update the scheme")
 	}
@@ -51,10 +49,10 @@ func (r *syncAwareBuilder) StartControllers(ctx context.Context, mgr manager.Man
 	}
 
 	decoder := decode.NewGenericResourceDecoder(mgr.GetScheme())
-	if err := controller.AddNamespaceConfig(ctx, mgr, decoder, namespace, mgrInitTime); err != nil {
+	if err := controller.AddNamespaceConfig(mgr, decoder, namespace, mgrInitTime); err != nil {
 		return errors.Wrap(err, "could not create NamespaceConfig controller")
 	}
-	if err := controller.AddClusterConfig(ctx, mgr, decoder, cluster, mgrInitTime); err != nil {
+	if err := controller.AddClusterConfig(mgr, decoder, cluster, mgrInitTime); err != nil {
 		return errors.Wrap(err, "could not create ClusterConfig controller")
 	}
 

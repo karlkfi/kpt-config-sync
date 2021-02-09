@@ -112,7 +112,7 @@ clusters.`,
 
 		var allObjects []ast.FileObject
 
-		crds, err := parse.GetSyncedCRDs()
+		crds, err := parse.GetSyncedCRDs(cmd.Context())
 		if err != nil {
 			return err
 		}

@@ -129,7 +129,7 @@ func (nt *NT) Get(name, namespace string, obj core.Object) error {
 }
 
 // List is identical to List defined for client.Client, but without requiring Context.
-func (nt *NT) List(obj runtime.Object, opts ...client.ListOption) error {
+func (nt *NT) List(obj client.ObjectList, opts ...client.ListOption) error {
 	return nt.Client.List(nt.Context, obj, opts...)
 }
 

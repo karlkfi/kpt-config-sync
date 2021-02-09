@@ -20,8 +20,6 @@ import (
 // RepoStatus is a reconciler for maintaining the status field of the Repo resource based upon
 // updates from the other syncer reconcilers.
 type repoStatus struct {
-	// ctx is a cancelable ambient context for all reconciler operations.
-	ctx context.Context
 	// client is used to list configs on the cluster when building state for a commit
 	client *syncclient.Client
 	// client is used to perform CRUD operations on the Repo resource
@@ -57,9 +55,8 @@ type configState struct {
 }
 
 // NewRepoStatus returns a reconciler for maintaining the status field of the Repo resource.
-func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() metav1.Time) reconcile.Reconciler {
+func NewRepoStatus(sClient *syncclient.Client, now func() metav1.Time) reconcile.Reconciler {
 	return &repoStatus{
-		ctx:      ctx,
 		client:   sClient,
 		rClient:  repo.New(sClient),
 		now:      now,
@@ -68,24 +65,24 @@ func NewRepoStatus(ctx context.Context, sClient *syncclient.Client, now func() m
 }
 
 // Reconcile is the Reconcile callback for RepoStatus reconciler.
-func (r *repoStatus) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
+func (r *repoStatus) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("repo").Set(float64(start.Unix()))
 
-	result, err := r.reconcile()
+	result, err := r.reconcile(ctx)
 	metrics.ReconcileDuration.WithLabelValues("repo", metrics.StatusLabel(err)).Observe(time.Since(start.Time).Seconds())
 
 	return result, err
 }
 
-func (r *repoStatus) reconcile() (reconcile.Result, error) {
-	repoObj, sErr := r.rClient.GetOrCreateRepo(r.ctx)
+func (r *repoStatus) reconcile(ctx context.Context) (reconcile.Result, error) {
+	repoObj, sErr := r.rClient.GetOrCreateRepo(ctx)
 	if sErr != nil {
 		glog.Errorf("Failed to fetch Repo: %v", sErr)
 		return reconcile.Result{Requeue: true}, sErr
 	}
 
-	state, err := r.buildState(r.ctx)
+	state, err := r.buildState(ctx)
 	if err != nil {
 		glog.Errorf("Failed to build sync state: %v", err)
 		return reconcile.Result{Requeue: true}, sErr
@@ -98,7 +95,7 @@ func (r *repoStatus) reconcile() (reconcile.Result, error) {
 	// status updates are reconciled properly.  See b/131250908 why this is
 	// relevant.  Instead, we rely on UpdateSyncStatus to skip updates if the
 	// new sync status is equal to the old one.
-	updatedRepo, err := r.rClient.UpdateSyncStatus(r.ctx, repoObj)
+	updatedRepo, err := r.rClient.UpdateSyncStatus(ctx, repoObj)
 	if err != nil {
 		glog.Errorf("Failed to update RepoSyncStatus: %v", err)
 		return reconcile.Result{Requeue: true}, sErr

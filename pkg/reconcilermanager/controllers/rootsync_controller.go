@@ -54,8 +54,7 @@ func NewRootSyncReconciler(clusterName string, pollingPeriod time.Duration, clie
 // +kubebuilder:rbac:groups=configsync.gke.io,resources=rootsyncs/status,verbs=get;update;patch
 
 // Reconcile the RootSync resource.
-func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controllerruntime.Result, error) {
-	ctx := context.TODO()
+func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntime.Request) (controllerruntime.Result, error) {
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 	start := time.Now()
 
@@ -185,19 +184,19 @@ func (r *RootSyncReconciler) Reconcile(req controllerruntime.Request) (controlle
 func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
 	// mapSecretToRootSync define a mapping from the Secret object in the event to
 	// the RootSync object to reconcile.
-	mapSecretToRootSync := handler.ToRequestsFunc(
-		func(a handler.MapObject) []reconcile.Request {
+	mapSecretToRootSync := handler.MapFunc(
+		func(a client.Object) []reconcile.Request {
 			return []reconcile.Request{
 				{NamespacedName: types.NamespacedName{
 					Name:      v1alpha1.RootSyncName,
-					Namespace: a.Meta.GetNamespace(),
+					Namespace: a.GetNamespace(),
 				}},
 			}
 		})
 
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RootSync{}).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRootSync}).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync)).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)

@@ -70,7 +70,7 @@ var Cmd = &cobra.Command{
 
 		fmt.Println("Connecting to clusters...")
 
-		clientMap, err := statusClients(context.Background(), flags.Contexts)
+		clientMap, err := statusClients(cmd.Context(), flags.Contexts)
 		if err != nil {
 			// If "no such file or directory" error, unwrap and display before exiting
 			if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {

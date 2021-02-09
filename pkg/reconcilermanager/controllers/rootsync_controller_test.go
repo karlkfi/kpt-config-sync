@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -86,7 +87,7 @@ func secretObj(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev
 	return result
 }
 
-func setupRootReconciler(t *testing.T, objs ...runtime.Object) (*syncerFake.Client, *RootSyncReconciler) {
+func setupRootReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Client, *RootSyncReconciler) {
 	t.Helper()
 	s := runtime.NewScheme()
 	if err := corev1.AddToScheme(s); err != nil {
@@ -132,7 +133,8 @@ func TestRootSyncReconciler(t *testing.T) {
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
 	// Test creating Configmaps and Deployment resources.
-	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
@@ -206,11 +208,11 @@ func TestRootSyncReconciler(t *testing.T) {
 
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
-	if err := fakeClient.Update(context.Background(), rs); err != nil {
+	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
 	}
 
-	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 
@@ -270,7 +272,8 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 	fakeClient, testReconciler := setupRootReconciler(t, rs)
 
 	// Test creating Configmaps and Deployment resources.
-	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
@@ -288,11 +291,11 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 
 	// Test updating Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
-	if err := fakeClient.Update(context.Background(), rs); err != nil {
+	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the root sync request, got error: %v", err)
 	}
 
-	if _, err := testReconciler.Reconcile(reqNamespacedName); err != nil {
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
 	}
 

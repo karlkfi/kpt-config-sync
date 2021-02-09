@@ -20,6 +20,6 @@ const (
 	DeletionTimestamp DisallowedField = "metadata.deletionTimestamp"
 	// DeletionGracePeriodSeconds represents the deletionGracePeriodSeconds field in a metav1.Object.
 	DeletionGracePeriodSeconds DisallowedField = "metadata.deletionGracePeriodSeconds"
-	// Status represents the status field in a runtime.Object.
+	// Status represents the status field in a client.Object.
 	Status DisallowedField = "status"
 )

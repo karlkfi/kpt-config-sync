@@ -113,10 +113,7 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 // object does not exist, Create() will be called. If it does exist, Patch()
 // will be called.
 func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, dep *appsv1.Deployment, mutateDeployment mutateFn) (controllerutil.OperationResult, error) {
-	key, err := client.ObjectKeyFromObject(dep)
-	if err != nil {
-		return controllerutil.OperationResultNone, err
-	}
+	key := client.ObjectKeyFromObject(dep)
 
 	if err := r.client.Get(ctx, key, dep); err != nil {
 		if !apierrors.IsNotFound(err) {

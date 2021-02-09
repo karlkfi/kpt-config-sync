@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,13 +12,13 @@ import (
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type action struct {
 	event watch.EventType
-	obj   runtime.Object
+	obj   client.Object
 }
 
 func TestFilteredWatcher(t *testing.T) {
@@ -164,7 +165,8 @@ func TestFilteredWatcher(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dr := &declared.Resources{}
-			if err := dr.Update(tc.declared); err != nil {
+			ctx := context.Background()
+			if err := dr.Update(ctx, tc.declared); err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
 
@@ -178,7 +180,7 @@ func TestFilteredWatcher(t *testing.T) {
 					return base, nil
 				},
 			}
-			w := NewFiltered(cfg)
+			w := NewFiltered(ctx, cfg)
 
 			go func() {
 				for _, a := range tc.actions {
@@ -191,7 +193,7 @@ func TestFilteredWatcher(t *testing.T) {
 				w.Stop()
 			}()
 			// w.Run() blocks until w.Stop() is called.
-			if err := w.Run(); err != nil {
+			if err := w.Run(ctx); err != nil {
 				t.Fatalf("got Run() = %v, want Run() = <nil>", err)
 			}
 

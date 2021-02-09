@@ -10,6 +10,9 @@ replace k8s.io/code-generator => k8s.io/code-generator v0.20.2
 // github.com/moby/term (b/177232366).
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
 
+// Prevent Go from updating gnostic to a version incompatible with kube-openapi.
+replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
 	github.com/GoogleContainerTools/kpt v0.37.1-0.20210128185716-8a1032f5571e
@@ -40,9 +43,9 @@ require (
 	k8s.io/cluster-registry v0.0.6
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
 	k8s.io/kubectl v0.20.2
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
 	sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384
-	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/controller-runtime v0.8.1
 	sigs.k8s.io/kind v0.10.0
 	sigs.k8s.io/yaml v1.2.0
 )

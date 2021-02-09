@@ -1,13 +1,11 @@
 package controller
 
 import (
-	"context"
-
 	"github.com/google/nomos/pkg/syncer/metrics"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
@@ -24,9 +22,9 @@ import (
 const clusterConfigControllerName = "clusterconfig-resources"
 
 // AddClusterConfig adds ClusterConfig sync controllers to the Manager.
-func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.Decoder,
-	resourceTypes map[schema.GroupVersionKind]runtime.Object, mgrInitTime metav1.Time) error {
-	genericClient := client.New(mgr.GetClient(), metrics.APICallDuration)
+func AddClusterConfig(mgr manager.Manager, decoder decode.Decoder,
+	resourceTypes map[schema.GroupVersionKind]client.Object, mgrInitTime metav1.Time) error {
+	genericClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 	applier, err := genericreconcile.NewApplier(mgr.GetConfig(), genericClient)
 	if err != nil {
 		return err
@@ -34,8 +32,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 
 	cpc, err := k8scontroller.New(clusterConfigControllerName, mgr, k8scontroller.Options{
 		Reconciler: genericreconcile.NewClusterConfigReconciler(
-			ctx,
-			client.New(mgr.GetClient(), metrics.APICallDuration),
+			syncerclient.New(mgr.GetClient(), metrics.APICallDuration),
 			applier,
 			mgr.GetCache(),
 			&cancelFilteringRecorder{mgr.GetEventRecorderFor(clusterConfigControllerName)},
@@ -52,9 +49,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", clusterConfigControllerName)
 	}
 
-	mapToClusterConfig := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(genericResourceToClusterConfig),
-	}
+	mapToClusterConfig := handler.EnqueueRequestsFromMapFunc(genericResourceToClusterConfig)
 	// Set up a watch on all cluster-scoped resources defined in Syncs.
 	// Look up the corresponding ClusterConfig for the changed resources.
 	for gvk, t := range resourceTypes {
@@ -67,7 +62,7 @@ func AddClusterConfig(ctx context.Context, mgr manager.Manager, decoder decode.D
 
 // genericResourceToClusterConfig maps generic resources being watched,
 // to reconciliation requests for the ClusterConfig potentially managing them.
-func genericResourceToClusterConfig(_ handler.MapObject) []reconcile.Request {
+func genericResourceToClusterConfig(_ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			// There is only one ClusterConfig potentially managing generic resources.

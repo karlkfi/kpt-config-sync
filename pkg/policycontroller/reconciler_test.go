@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/util/watch"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,11 +24,10 @@ func TestConstraintGVKs(t *testing.T) {
 	go thr.start(ctx, &restartableManagerStub{})
 
 	cr := &crdReconciler{
-		context.Background(),
-		cm,
-		thr,
-		map[string]schema.GroupVersionKind{},
-		map[schema.GroupVersionKind]bool{},
+		client:          cm,
+		thr:             thr,
+		crdKinds:        map[string]schema.GroupVersionKind{},
+		constraintKinds: map[schema.GroupVersionKind]bool{},
 	}
 
 	// Verify the initial empty case
@@ -40,7 +38,7 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a FooConstraint that is not yet established.
 	cm.nextGet = constraintCRD("FooConstraint", false)
-	_, err := cr.Reconcile(request("foo"))
+	_, err := cr.Reconcile(ctx, request("foo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +49,7 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a random CRD that is established (but should be ignored).
 	cm.nextGet = randomCRD("Anvil", true)
-	_, err = cr.Reconcile(request("anvil"))
+	_, err = cr.Reconcile(ctx, request("anvil"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +60,7 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Create a BarConstraint that is established.
 	cm.nextGet = constraintCRD("BarConstraint", true)
-	_, err = cr.Reconcile(request("bar"))
+	_, err = cr.Reconcile(ctx, request("bar"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +71,7 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Update FooConstraint to be established along with BarConstraint.
 	cm.nextGet = constraintCRD("FooConstraint", true)
-	_, err = cr.Reconcile(request("foo"))
+	_, err = cr.Reconcile(ctx, request("foo"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +82,7 @@ func TestConstraintGVKs(t *testing.T) {
 
 	// Delete BarConstraint from the cluster.
 	cm.nextErr = errors.NewNotFound(schema.GroupResource{}, "bar")
-	_, err = cr.Reconcile(request("bar"))
+	_, err = cr.Reconcile(ctx, request("bar"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,11 +131,11 @@ func randomCRD(kind string, isEstablished bool) *v1beta1.CustomResourceDefinitio
 type clientMock struct {
 	client.Client
 
-	nextGet runtime.Object
+	nextGet client.Object
 	nextErr error
 }
 
-func (c *clientMock) Get(_ context.Context, _ client.ObjectKey, obj runtime.Object) error {
+func (c *clientMock) Get(_ context.Context, _ client.ObjectKey, obj client.Object) error {
 	if c.nextErr != nil {
 		err := c.nextErr
 		c.nextErr = nil

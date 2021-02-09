@@ -1,6 +1,7 @@
 package declared
 
 import (
+	"context"
 	"sort"
 	"testing"
 
@@ -29,7 +30,7 @@ func TestUpdate(t *testing.T) {
 	objects := testSet
 	expectedIDs := getIDs(objects)
 
-	err := dr.Update(objects)
+	err := dr.Update(context.Background(), objects)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -49,7 +50,7 @@ func TestMutateImpossible(t *testing.T) {
 	o1.SetResourceVersion(wantResourceVersion)
 	o2 := asUnstructured(t, fake.RoleObject(core.Name("baz"), core.Namespace("bar")))
 	o2.SetResourceVersion(wantResourceVersion)
-	err := dr.Update([]core.Object{o1, o2})
+	err := dr.Update(context.Background(), []core.Object{o1, o2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +105,7 @@ func asUnstructured(t *testing.T, o core.Object) *unstructured.Unstructured {
 
 func TestDeclarations(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(testSet)
+	err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +127,7 @@ func TestDeclarations(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(testSet)
+	err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestGet(t *testing.T) {
 
 func TestGVKSet(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(testSet)
+	err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +161,7 @@ func TestGVKSet(t *testing.T) {
 func TestResources_InternalErrorMetricValidation(t *testing.T) {
 	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
 	dr := Resources{}
-	if err := dr.Update(nilSet); err != nil {
+	if err := dr.Update(context.Background(), nilSet); err != nil {
 		t.Fatal(err)
 	}
 	wantMetrics := []*view.Row{

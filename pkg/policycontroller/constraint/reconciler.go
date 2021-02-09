@@ -14,22 +14,26 @@ import (
 )
 
 type constraintReconciler struct {
-	ctx    context.Context
 	client client.Client
 	// gvk is the GroupVersionKind of the constraint resources to reconcile.
 	gvk schema.GroupVersionKind
 }
 
-func newReconciler(ctx context.Context, client client.Client, gvk schema.GroupVersionKind) *constraintReconciler {
-	return &constraintReconciler{ctx, client, gvk}
+var _ reconcile.Reconciler = &constraintReconciler{}
+
+func newReconciler(client client.Client, gvk schema.GroupVersionKind) *constraintReconciler {
+	return &constraintReconciler{
+		client: client,
+		gvk:    gvk,
+	}
 }
 
 // Reconcile handles Requests from the constraint controller. It will annotate
 // Constraints based upon their status.
-func (c *constraintReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (c *constraintReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	resource := unstructured.Unstructured{}
 	resource.SetGroupVersionKind(c.gvk)
-	if err := c.client.Get(c.ctx, request.NamespacedName, &resource); err != nil {
+	if err := c.client.Get(ctx, request.NamespacedName, &resource); err != nil {
 		if errors.IsNotFound(err) {
 			glog.Infof("%s %q was deleted", c.gvk, request.NamespacedName)
 			return reconcile.Result{}, nil
@@ -49,7 +53,7 @@ func (c *constraintReconciler) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	glog.Infof("%s %q was upserted", c.gvk, request.NamespacedName)
-	err := c.client.Patch(c.ctx, &resource, patch)
+	err := c.client.Patch(ctx, &resource, patch)
 	if err != nil {
 		glog.Errorf("Failed to patch annotations for %s: %v", c.gvk, err)
 	}

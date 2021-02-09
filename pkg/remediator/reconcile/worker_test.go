@@ -30,7 +30,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 		name      string
 		declared  []core.Object
 		toProcess []core.Object
-		want      []runtime.Object
+		want      []client.Object
 	}{
 		{
 			name: "update actual objects",
@@ -44,7 +44,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				// TODO(b/162547054): Figure out why the reconciler is stripping away labels and annotations.
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
 					core.Label("first", "one")),
@@ -59,7 +59,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
-			want: []runtime.Object{},
+			want: []client.Object{},
 		},
 		{
 			name: "create missing objects",
@@ -68,10 +68,10 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
 			toProcess: []core.Object{
-				queue.MarkDeleted(fake.ClusterRoleBindingObject()),
-				queue.MarkDeleted(fake.ClusterRoleObject()),
+				queue.MarkDeleted(context.Background(), fake.ClusterRoleBindingObject()),
+				queue.MarkDeleted(context.Background(), fake.ClusterRoleObject()),
 			},
-			want: []runtime.Object{
+			want: []client.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
@@ -87,7 +87,7 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 
 			c := fakeClient(t)
 			for _, obj := range tc.toProcess {
-				if !queue.WasDeleted(obj) {
+				if !queue.WasDeleted(context.Background(), obj) {
 					if err := c.Create(context.Background(), obj); err != nil {
 						t.Fatalf("Failed to create object in fake client: %v", err)
 					}
@@ -187,7 +187,7 @@ func TestWorker_Refresh(t *testing.T) {
 
 			var want core.Object = tc.want
 			if tc.wantDeleted {
-				want = queue.MarkDeleted(want)
+				want = queue.MarkDeleted(context.Background(), want)
 			}
 
 			if diff := cmp.Diff(want, tc.queue.element); diff != "" {

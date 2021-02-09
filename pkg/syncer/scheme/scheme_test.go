@@ -12,14 +12,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestResourceScopes(t *testing.T) {
 	testCases := []struct {
 		name                string
 		gvks                map[schema.GroupVersionKind]bool
-		wantNamespacedTypes map[schema.GroupVersionKind]runtime.Object
-		wantClusterTypes    map[schema.GroupVersionKind]runtime.Object
+		wantNamespacedTypes map[schema.GroupVersionKind]client.Object
+		wantClusterTypes    map[schema.GroupVersionKind]client.Object
 		wantErr             bool
 	}{
 		{
@@ -39,7 +40,7 @@ func TestResourceScopes(t *testing.T) {
 			gvks: map[schema.GroupVersionKind]bool{
 				kinds.ClusterRole(): true,
 			},
-			wantClusterTypes: map[schema.GroupVersionKind]runtime.Object{
+			wantClusterTypes: map[schema.GroupVersionKind]client.Object{
 				kinds.ClusterRole(): &rbacv1.ClusterRole{},
 			},
 		},
@@ -48,7 +49,7 @@ func TestResourceScopes(t *testing.T) {
 			gvks: map[schema.GroupVersionKind]bool{
 				kinds.Role(): true,
 			},
-			wantNamespacedTypes: map[schema.GroupVersionKind]runtime.Object{
+			wantNamespacedTypes: map[schema.GroupVersionKind]client.Object{
 				kinds.Role(): &rbacv1.Role{},
 			},
 		},

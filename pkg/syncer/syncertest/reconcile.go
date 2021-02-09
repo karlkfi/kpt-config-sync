@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Token is a test sync token.
@@ -34,7 +35,7 @@ var (
 )
 
 // ToUnstructured converts the object to an unstructured.Unstructured.
-func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj runtime.Object) *unstructured.Unstructured {
+func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj client.Object) *unstructured.Unstructured {
 	if obj == nil {
 		return &unstructured.Unstructured{}
 	}
@@ -49,7 +50,7 @@ func toUnstructured(t *testing.T, converter runtime.UnstructuredConverter, obj r
 }
 
 // ToUnstructuredList converts the objects to an unstructured.UnstructedList.
-func ToUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter, objs ...runtime.Object) []*unstructured.Unstructured {
+func ToUnstructuredList(t *testing.T, converter runtime.UnstructuredConverter, objs ...client.Object) []*unstructured.Unstructured {
 	result := make([]*unstructured.Unstructured, len(objs))
 	for i, obj := range objs {
 		result[i] = toUnstructured(t, converter, obj)

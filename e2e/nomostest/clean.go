@@ -175,7 +175,7 @@ func isListable(kind string) bool {
 
 // FailIfUnknown fails the test if the passed type is not declared in the passed
 // scheme.
-func FailIfUnknown(t *testing.T, scheme *runtime.Scheme, o runtime.Object) {
+func FailIfUnknown(t *testing.T, scheme *runtime.Scheme, o client.Object) {
 	t.Helper()
 
 	gvks, _, _ := scheme.ObjectKinds(o)

@@ -1,12 +1,11 @@
 package controller
 
 import (
-	"context"
-
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	genericreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,18 +20,16 @@ import (
 const repoStatusControllerName = "repo-status"
 
 // AddRepoStatus adds RepoStatus sync controller to the Manager.
-func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
-	syncClient := client.New(mgr.GetClient(), metrics.APICallDuration)
+func AddRepoStatus(mgr manager.Manager) error {
+	syncClient := syncerclient.New(mgr.GetClient(), metrics.APICallDuration)
 	rsc, err := k8scontroller.New(repoStatusControllerName, mgr, k8scontroller.Options{
-		Reconciler: genericreconcile.NewRepoStatus(ctx, syncClient, metav1.Now),
+		Reconciler: genericreconcile.NewRepoStatus(syncClient, metav1.Now),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not create RepoStatus controller")
 	}
 
-	configHandler := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(configMapper),
-	}
+	configHandler := handler.EnqueueRequestsFromMapFunc(configMapper)
 	if err = rsc.Watch(&source.Kind{Type: &v1.NamespaceConfig{}}, configHandler); err != nil {
 		return errors.Wrapf(err, "could not watch NamespaceConfigs in the %q controller", repoStatusControllerName)
 	}
@@ -40,9 +37,7 @@ func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", repoStatusControllerName)
 	}
 
-	repoHandler := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(repoMapper),
-	}
+	repoHandler := handler.EnqueueRequestsFromMapFunc(repoMapper)
 	if err = rsc.Watch(&source.Kind{Type: &v1.Repo{}}, repoHandler); err != nil {
 		return errors.Wrapf(err, "could not watch Repos in the %q controller", repoStatusControllerName)
 	}
@@ -52,7 +47,7 @@ func AddRepoStatus(ctx context.Context, mgr manager.Manager) error {
 
 // Maps all configs into a single request that the RepoStatus controller just treats as an
 // "invalidate" signal for the entire RepoStatus.
-func configMapper(_ handler.MapObject) []reconcile.Request {
+func configMapper(_ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			Name: "invalidate-configs",
@@ -62,7 +57,7 @@ func configMapper(_ handler.MapObject) []reconcile.Request {
 
 // Maps the repo into a separate request to avoid race conditions between the importer and syncer
 // when they are both updating configs and RepoStatus at the same time.
-func repoMapper(_ handler.MapObject) []reconcile.Request {
+func repoMapper(_ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			Name: "invalidate-repo-status",

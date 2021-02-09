@@ -1,6 +1,7 @@
 package declared
 
 import (
+	"context"
 	"sync"
 
 	"github.com/golang/glog"
@@ -26,13 +27,13 @@ type Resources struct {
 }
 
 // Update performs an atomic update on the resource declaration set.
-func (r *Resources) Update(objects []core.Object) status.Error {
+func (r *Resources) Update(ctx context.Context, objects []core.Object) status.Error {
 	// First build up the new map using a local pointer/reference.
 	newSet := make(map[core.ID]*unstructured.Unstructured)
 	for _, obj := range objects {
 		if obj == nil {
 			glog.Warning("Resources received nil declared resource")
-			metrics.RecordInternalError("parser")
+			metrics.RecordInternalError(ctx, "parser")
 			continue
 		}
 		id := core.IDOf(obj)

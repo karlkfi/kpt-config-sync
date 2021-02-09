@@ -8,6 +8,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -120,16 +121,21 @@ func (m *subManager) Restart(gvks map[schema.GroupVersionKind]bool, force bool) 
 	}
 	m.mgr = sm
 
-	if err := m.builder.StartControllers(ctx, m.mgr, gvks, m.initTime); err != nil {
+	if err := m.builder.StartControllers(m.mgr, gvks, m.initTime); err != nil {
 		return true, errors.Wrap(err, "could not start controllers")
 	}
 
 	glog.Info("Starting subManager")
 	go func(ctx context.Context) {
-		if err := m.mgr.Start(ctx.Done()); err != nil {
+		if err := m.mgr.Start(ctx); err != nil {
 			// subManager could not successfully start, so we must force it to restart next reconcile.
 			glog.Errorf("Error starting subManager, restarting: %v", err)
-			m.errCh <- event.GenericEvent{Meta: &metav1.ObjectMeta{Namespace: "Restart", Name: "DueToError"}}
+
+			// TODO(b/179816931): Not an intended use case for GenericEvent. Refactor.
+			u := &unstructured.Unstructured{}
+			u.SetNamespace("Restart")
+			u.SetName("DueToError")
+			m.errCh <- event.GenericEvent{Object: u}
 		}
 	}(ctx)
 
@@ -138,7 +144,7 @@ func (m *subManager) Restart(gvks map[schema.GroupVersionKind]bool, force bool) 
 }
 
 // Reconcile will only be called due to an error starting the submanager on a previous Restart.
-func (m *subManager) Reconcile(_ reconcile.Request) (reconcile.Result, error) {
+func (m *subManager) Reconcile(_ context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	_, err := m.Restart(m.watching, true)
 	return reconcile.Result{}, err
 }

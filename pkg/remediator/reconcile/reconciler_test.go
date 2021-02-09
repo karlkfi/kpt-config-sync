@@ -235,7 +235,7 @@ func fakeClient(t *testing.T, actual ...core.Object) *testingfake.Client {
 func makeDeclared(t *testing.T, objs ...core.Object) *declared.Resources {
 	t.Helper()
 	d := &declared.Resources{}
-	if err := d.Update(objs); err != nil {
+	if err := d.Update(context.Background(), objs); err != nil {
 		// Test precondition; fail early.
 		t.Fatal(err)
 	}

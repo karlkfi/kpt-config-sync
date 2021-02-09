@@ -54,8 +54,7 @@ func NewRepoSyncReconciler(clusterName string, pollingPeriod time.Duration, clie
 // +kubebuilder:rbac:groups=configsync.gke.io,resources=reposyncs/status,verbs=get;update;patch
 
 // Reconcile the RepoSync resource.
-func (r *RepoSyncReconciler) Reconcile(req controllerruntime.Request) (controllerruntime.Result, error) {
-	ctx := context.TODO()
+func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntime.Request) (controllerruntime.Result, error) {
 	log := r.log.WithValues("reposync", req.NamespacedName)
 	start := time.Now()
 
@@ -196,11 +195,11 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RepoSync{}).
 		// Custom Watch to trigger Reconcile for objects created by RepoSync controller.
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapSecretToRepoSync()}).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
-		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
-		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: mapObjectToRepoSync()}).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRepoSync())).
+		Watches(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
+		Watches(&source.Kind{Type: &corev1.ServiceAccount{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
+		Watches(&source.Kind{Type: &rbacv1.RoleBinding{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
 		Complete(r)
 }
 

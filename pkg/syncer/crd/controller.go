@@ -11,6 +11,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8scontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -53,9 +54,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 		return errors.Wrapf(err, "could not watch ClusterConfigs in the %q controller", crdControllerName)
 	}
 
-	mapToClusterConfig := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(crdToClusterConfig),
-	}
+	mapToClusterConfig := handler.EnqueueRequestsFromMapFunc(crdToClusterConfig)
 	if err = cpc.Watch(&source.Kind{Type: &v1beta1.CustomResourceDefinition{}}, mapToClusterConfig); err != nil {
 		return errors.Wrapf(err, "could not watch CustomResourceDefinitions in the %q controller", crdControllerName)
 	}
@@ -65,7 +64,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 
 // genericResourceToClusterConfig maps generic resources being watched,
 // to reconciliation requests for the ClusterConfig potentially managing them.
-func crdToClusterConfig(_ handler.MapObject) []reconcile.Request {
+func crdToClusterConfig(_ client.Object) []reconcile.Request {
 	return []reconcile.Request{{
 		NamespacedName: types.NamespacedName{
 			// There is only one ClusterConfig potentially managing generic resources.

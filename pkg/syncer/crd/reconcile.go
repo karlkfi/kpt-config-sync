@@ -84,7 +84,7 @@ func newReconciler(client *syncerclient.Client, applier syncerreconcile.Applier,
 }
 
 // Reconcile implements Reconciler.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.CRDClusterConfigName {
 		// We only handle the CRD ClusterConfig in this reconciler.
 		return reconcile.Result{}, nil
@@ -93,7 +93,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	start := r.now()
 	metrics.ReconcileEventTimes.WithLabelValues("crd").Set(float64(start.Unix()))
 
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	err := r.reconcile(ctx, request.Name)

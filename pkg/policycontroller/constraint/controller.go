@@ -2,8 +2,6 @@
 package constraint
 
 import (
-	"context"
-
 	"github.com/golang/glog"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,9 +33,9 @@ func MatchesGroup(crd *v1beta1.CustomResourceDefinition) bool {
 }
 
 // AddController adds a controller for the specified constraint kind to the given Manager.
-func AddController(ctx context.Context, mgr manager.Manager, kind string) error {
+func AddController(mgr manager.Manager, kind string) error {
 	gvk := GVK(kind)
-	r := newReconciler(ctx, mgr.GetClient(), gvk)
+	r := newReconciler(mgr.GetClient(), gvk)
 
 	glog.Infof("Adding controller for constraint: %s", gvk)
 	controllerName := controllerPrefix + gvk.String()

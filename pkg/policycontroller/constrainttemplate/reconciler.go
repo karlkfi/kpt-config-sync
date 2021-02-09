@@ -13,19 +13,18 @@ import (
 )
 
 type constraintTemplateReconciler struct {
-	ctx    context.Context
 	client client.Client
 }
 
-func newReconciler(ctx context.Context, cl client.Client) *constraintTemplateReconciler {
-	return &constraintTemplateReconciler{ctx, cl}
+func newReconciler(cl client.Client) *constraintTemplateReconciler {
+	return &constraintTemplateReconciler{cl}
 }
 
 // Reconcile handles Requests from the ConstraintTemplate controller. It will
 // annotate ConstraintTemplates based upon their status.
-func (c *constraintTemplateReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (c *constraintTemplateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	ct := emptyConstraintTemplate()
-	if err := c.client.Get(c.ctx, request.NamespacedName, &ct); err != nil {
+	if err := c.client.Get(ctx, request.NamespacedName, &ct); err != nil {
 		if !errors.IsNotFound(err) {
 			glog.Errorf("Error getting ConstraintTemplate %q: %v", request.NamespacedName, err)
 			return reconcile.Result{}, err
@@ -45,7 +44,7 @@ func (c *constraintTemplateReconciler) Reconcile(request reconcile.Request) (rec
 	}
 
 	glog.Infof("ConstraintTemplate %q was upserted", request.NamespacedName)
-	err := c.client.Patch(c.ctx, &ct, patch)
+	err := c.client.Patch(ctx, &ct, patch)
 	if err != nil {
 		glog.Errorf("Failed to patch annotations for ConstraintTemplate: %v", err)
 	}

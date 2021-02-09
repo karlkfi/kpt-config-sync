@@ -62,7 +62,7 @@ func (d *genericResourceDecoder) DecodeResources(genericResources []v1.GenericRe
 					var err error
 					o, _, err = d.decoder.Decode(genericObject.Raw, &gvk, u)
 					if err != nil {
-						return nil, errors.Wrapf(err, "could not decode runtime.Object from %q RawExtension bytes", gvk)
+						return nil, errors.Wrapf(err, "could not decode client.Object from %q RawExtension bytes", gvk)
 					}
 				}
 				au, ok := o.(*unstructured.Unstructured)

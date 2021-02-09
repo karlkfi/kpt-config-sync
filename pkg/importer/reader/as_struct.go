@@ -26,7 +26,7 @@ func init() {
 	utilruntime.Must(v1alpha1.AddToScheme(scheme.Scheme))
 }
 
-// AsStruct converts a runtime.Object to the literal Go struct, if
+// AsStruct converts a client.Object to the literal Go struct, if
 // one is available. Returns an error if this process fails.
 func AsStruct(obj runtime.Object) (runtime.Object, error) {
 	u, ok := obj.(*unstructured.Unstructured)

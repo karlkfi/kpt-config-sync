@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	"strings"
@@ -150,7 +149,7 @@ func main() {
 				flags.sourceFormat, filesystem.SourceFormatKey)
 		}
 	}
-	reconciler.Run(context.Background(), opts)
+	reconciler.Run(opts)
 }
 
 func pollingPeriod() time.Duration {

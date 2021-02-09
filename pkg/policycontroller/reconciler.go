@@ -20,7 +20,6 @@ import (
 // crdReconciler handles CRD reconcile events and also implements constraint
 // Watcher interface.
 type crdReconciler struct {
-	ctx    context.Context
 	client client.Client
 	// thr is a throttler which limits the frequency of restarts for a
 	// RestartableManager
@@ -44,11 +43,10 @@ func newReconciler(ctx context.Context, mgr manager.Manager) (*crdReconciler, er
 	go thr.start(ctx, rm)
 
 	return &crdReconciler{
-		ctx,
-		mgr.GetClient(),
-		thr,
-		map[string]schema.GroupVersionKind{},
-		map[schema.GroupVersionKind]bool{},
+		client:          mgr.GetClient(),
+		thr:             thr,
+		crdKinds:        map[string]schema.GroupVersionKind{},
+		constraintKinds: map[schema.GroupVersionKind]bool{},
 	}, nil
 }
 
@@ -56,9 +54,9 @@ func newReconciler(ctx context.Context, mgr manager.Manager) (*crdReconciler, er
 // update the reconciler's map of established kinds. If this results in a net
 // change to which constraint kinds are both watched and established, then the
 // RestartableManager will be restarted.
-func (c *crdReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (c *crdReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	crd := &v1beta1.CustomResourceDefinition{}
-	if err := c.client.Get(c.ctx, request.NamespacedName, crd); err != nil {
+	if err := c.client.Get(ctx, request.NamespacedName, crd); err != nil {
 		if !errors.IsNotFound(err) {
 			glog.Errorf("Error getting CustomResourceDefinition %q: %v", request.NamespacedName, err)
 			return reconcile.Result{}, err

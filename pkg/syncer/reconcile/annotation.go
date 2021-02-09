@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // This file is mostly a direct copy of vendor/k8s.io/kubectl/pkg/util/apply.go
@@ -91,7 +92,7 @@ func setOldAnnotation(obj runtime.Object, content []byte) error {
 
 // createApplyAnnotation gets the modified configuration of the object,
 // without embedding it again, and then sets it on the object as the annotation.
-func createApplyAnnotation(obj runtime.Object, codec runtime.Encoder) error {
+func createApplyAnnotation(obj client.Object, codec runtime.Encoder) error {
 	modified, err := getModifiedConfiguration(obj, false, codec)
 	if err != nil {
 		return err
@@ -101,7 +102,7 @@ func createApplyAnnotation(obj runtime.Object, codec runtime.Encoder) error {
 
 // setOriginalConfiguration sets the original configuration of the object
 // as the annotation on the object for later use in computing a three way patch.
-func setOriginalConfiguration(obj runtime.Object, original []byte) error {
+func setOriginalConfiguration(obj client.Object, original []byte) error {
 	if len(original) < 1 {
 		return nil
 	}
@@ -121,7 +122,7 @@ func setOriginalConfiguration(obj runtime.Object, original []byte) error {
 
 // getOriginalConfiguration retrieves the original configuration of the object
 // from the annotation, or nil if no annotation was found.
-func getOriginalConfiguration(obj runtime.Object) ([]byte, error) {
+func getOriginalConfiguration(obj client.Object) ([]byte, error) {
 	annots, err := metadataAccessor.Annotations(obj)
 	if err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func getOriginalConfiguration(obj runtime.Object) ([]byte, error) {
 // If annotate is true, it embeds the result as an annotation in the modified
 // configuration. If an object was read from the command input, it will use that
 // version of the object. Otherwise, it will use the version from the server.
-func getModifiedConfiguration(obj runtime.Object, annotate bool, codec runtime.Encoder) ([]byte, error) {
+func getModifiedConfiguration(obj client.Object, annotate bool, codec runtime.Encoder) ([]byte, error) {
 	// First serialize the object without the annotation to prevent recursion,
 	// then add that serialization to it as the annotation and serialize it again.
 	var modified []byte

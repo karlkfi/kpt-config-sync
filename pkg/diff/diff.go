@@ -3,6 +3,8 @@
 package diff
 
 import (
+	"context"
+
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
@@ -54,7 +56,7 @@ type Diff struct {
 }
 
 // Operation returns the type of the difference between the repository and the API Server.
-func (d Diff) Operation(manager declared.Scope) Operation {
+func (d Diff) Operation(ctx context.Context, manager declared.Scope) Operation {
 	switch {
 	case d.Declared != nil && d.Actual == nil:
 		// Create Branch.
@@ -76,7 +78,7 @@ func (d Diff) Operation(manager declared.Scope) Operation {
 		return d.deleteType(manager)
 	default:
 		glog.Warning("Calculated diff for object with no declaration and not on the cluster")
-		metrics.RecordInternalError("differ")
+		metrics.RecordInternalError(ctx, "differ")
 		// Nothing to do; no resource exists.
 		return NoOp
 	}

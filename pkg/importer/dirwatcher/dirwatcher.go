@@ -1,6 +1,7 @@
 package dirwatcher
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,13 +49,13 @@ func NewWatcher(dir string) *Watcher {
 }
 
 // Watch starts a watch on the directory with the given probe period and stop channel.
-func (w *Watcher) Watch(period time.Duration, stopCh <-chan struct{}) {
+func (w *Watcher) Watch(ctx context.Context, period time.Duration) {
 	w.probe(w.dir)
 	for {
 		select {
 		case <-time.After(period):
 			w.probe(w.dir)
-		case <-stopCh:
+		case <-ctx.Done():
 			glog.Infof("Stop requested, terminating watch")
 			return
 		}

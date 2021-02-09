@@ -18,11 +18,9 @@ import (
 
 const syncControllerName = "meta-sync-resources"
 
-var unaryHandler = &handler.EnqueueRequestsFromMapFunc{
-	ToRequests: handler.ToRequestsFunc(func(o handler.MapObject) []reconcile.Request {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "item"}}}
-	}),
-}
+var unaryHandler = handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "item"}}}
+})
 
 // AddController adds the Sync controller to the manager.
 func AddController(mgr manager.Manager, rc RestartChannel) error {

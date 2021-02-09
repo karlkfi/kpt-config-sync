@@ -35,13 +35,13 @@ type reconciler struct {
 }
 
 // Reconcile is the callback for Reconciler.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	if request.Name != v1.ClusterConfigName && request.Name != v1.CRDClusterConfigName {
 		glog.Errorf("ClusterConfig has invalid name %q", request.Name)
 		// Return nil since we don't want to queue a retry.
 		return reconcile.Result{}, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
 	defer cancel()
 
 	cp := &v1.ClusterConfig{}

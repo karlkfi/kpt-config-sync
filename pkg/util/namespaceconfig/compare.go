@@ -6,7 +6,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/decode"
 	"github.com/google/nomos/pkg/util/compare"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func resourceQuantityCmp(lhs, rhs resource.Quantity) bool {
@@ -20,7 +20,7 @@ var ncsIgnore = []cmp.Option{
 }
 
 // NamespaceConfigsEqual returns true if the NamespaceConfigs are equivalent.
-func NamespaceConfigsEqual(decoder decode.Decoder, lhs runtime.Object, rhs runtime.Object) (bool, error) {
+func NamespaceConfigsEqual(decoder decode.Decoder, lhs client.Object, rhs client.Object) (bool, error) {
 	l := lhs.(*v1.NamespaceConfig)
 	r := rhs.(*v1.NamespaceConfig)
 

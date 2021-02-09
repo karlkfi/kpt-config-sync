@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AddToSchemeAsUnstructured adds the GroupVersionKinds to the scheme as unstructured.Unstructured objects.
@@ -32,9 +33,9 @@ func AddToSchemeAsUnstructured(scheme *runtime.Scheme, gvks map[schema.GroupVers
 func resourceTypes(
 	gvks map[schema.GroupVersionKind]bool,
 	scheme *runtime.Scheme,
-) (map[schema.GroupVersionKind]runtime.Object, error) {
+) (map[schema.GroupVersionKind]client.Object, error) {
 	knownGVKs := scheme.AllKnownTypes()
-	m := make(map[schema.GroupVersionKind]runtime.Object)
+	m := make(map[schema.GroupVersionKind]client.Object)
 	for gvk := range gvks {
 		rt, ok := knownGVKs[gvk]
 		if !ok {
@@ -48,7 +49,7 @@ func resourceTypes(
 			u.SetGroupVersionKind(gvk)
 			m[gvk] = u
 		} else {
-			m[gvk] = reflect.New(rt).Interface().(runtime.Object)
+			m[gvk] = reflect.New(rt).Interface().(client.Object)
 		}
 	}
 	return m, nil
@@ -59,13 +60,13 @@ func ResourceScopes(
 	gvks map[schema.GroupVersionKind]bool,
 	scheme *runtime.Scheme,
 	scoper discovery.Scoper,
-) (map[schema.GroupVersionKind]runtime.Object, map[schema.GroupVersionKind]runtime.Object, error) {
+) (map[schema.GroupVersionKind]client.Object, map[schema.GroupVersionKind]client.Object, error) {
 	rts, err := resourceTypes(gvks, scheme)
 	if err != nil {
 		return nil, nil, err
 	}
-	namespace := make(map[schema.GroupVersionKind]runtime.Object)
-	cluster := make(map[schema.GroupVersionKind]runtime.Object)
+	namespace := make(map[schema.GroupVersionKind]client.Object)
+	cluster := make(map[schema.GroupVersionKind]client.Object)
 	for gvk, obj := range rts {
 		if gvk.GroupKind() == kinds.CustomResourceDefinition() {
 			// CRDs are handled in the CRD controller and shouldn't be handled in any of SubManager's controllers.

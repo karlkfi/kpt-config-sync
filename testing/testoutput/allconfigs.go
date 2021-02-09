@@ -22,7 +22,7 @@ func NewAllConfigs(fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
 }
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
-// cluster-scoped runtime.Objects.
+// cluster-scoped client.Objects.
 func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 	config := fake.ClusterConfigObject()
 	config.Spec.Token = visitortesting.ImportToken
@@ -43,7 +43,7 @@ func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 }
 
 // NamespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
-// hydrated runtime.Objects for that Namespace.
+// hydrated client.Objects for that Namespace.
 func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...core.Object) v1.NamespaceConfig {
 	config := fake.NamespaceConfigObject(Source(path.Join(dir, "namespace.yaml")))
 	config.Spec.Token = visitortesting.ImportToken

@@ -15,26 +15,26 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-func fakeRunnable() Runnable {
+func fakeRunnable(ctx context.Context) Runnable {
 	cfg := watcherConfig{
 		reconciler: "test",
 		startWatch: func(options metav1.ListOptions) (watch.Interface, error) {
 			return watch.NewFake(), nil
 		},
 	}
-	return NewFiltered(cfg)
+	return NewFiltered(ctx, cfg)
 }
 
 func fakeError(gvk schema.GroupVersionKind) status.Error {
 	return status.APIServerErrorf(errors.New("failed"), "watcher failed for %s", gvk.String())
 }
 
-func testRunnables(errOnType map[schema.GroupVersionKind]bool) func(context.Context, watcherConfig) (Runnable, status.Error) {
+func testRunnables(ctx context.Context, errOnType map[schema.GroupVersionKind]bool) func(context.Context, watcherConfig) (Runnable, status.Error) {
 	return func(ctx context.Context, cfg watcherConfig) (runnable Runnable, err status.Error) {
 		if errOnType[cfg.gvk] {
 			return nil, fakeError(cfg.gvk)
 		}
-		return fakeRunnable(), nil
+		return fakeRunnable(ctx), nil
 	}
 }
 
@@ -76,8 +76,8 @@ func TestManager_Update(t *testing.T) {
 		{
 			name: "keep watchers if still declared",
 			watcherMap: map[schema.GroupVersionKind]Runnable{
-				kinds.Namespace(): fakeRunnable(),
-				kinds.Role():      fakeRunnable(),
+				kinds.Namespace(): fakeRunnable(context.Background()),
+				kinds.Role():      fakeRunnable(context.Background()),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Namespace(): {},
@@ -88,16 +88,16 @@ func TestManager_Update(t *testing.T) {
 		{
 			name: "delete watchers if nothing declared",
 			watcherMap: map[schema.GroupVersionKind]Runnable{
-				kinds.Namespace(): fakeRunnable(),
-				kinds.Role():      fakeRunnable(),
+				kinds.Namespace(): fakeRunnable(context.Background()),
+				kinds.Role():      fakeRunnable(context.Background()),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{},
 		},
 		{
 			name: "add/keep/delete watchers",
 			watcherMap: map[schema.GroupVersionKind]Runnable{
-				kinds.Role():        fakeRunnable(),
-				kinds.RoleBinding(): fakeRunnable(),
+				kinds.Role():        fakeRunnable(context.Background()),
+				kinds.RoleBinding(): fakeRunnable(context.Background()),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Namespace(): {},
@@ -123,8 +123,9 @@ func TestManager_Update(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
 			options := &Options{
-				watcherFunc: testRunnables(tc.failedWatchers),
+				watcherFunc: testRunnables(ctx, tc.failedWatchers),
 			}
 			m, err := NewManager(":test", nil, nil, &declared.Resources{}, options)
 			if err != nil {

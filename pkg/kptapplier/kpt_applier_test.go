@@ -152,7 +152,7 @@ func TestSync(t *testing.T) {
 		}
 		applier := NewNamespaceApplier(nil, "test-namespace")
 		applier.clientSetFunc = applierFunc
-		gvks, errs := applier.sync(context.TODO(), resources, cache)
+		gvks, errs := applier.sync(context.Background(), resources, cache)
 		if diff := cmp.Diff(tc.gvks, gvks, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("%s: Diff of GVK map from Apply(): %s", tc.name, diff)
 		}

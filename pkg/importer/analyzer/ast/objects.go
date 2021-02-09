@@ -6,13 +6,13 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 )
 
-// NewFileObject returns an ast.FileObject with the specified underlying runtime.Object and the
+// NewFileObject returns an ast.FileObject with the specified underlying client.Object and the
 // designated source file.
 func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
 	return FileObject{Object: object, Relative: source}
 }
 
-// ParseFileObject returns a FileObject initialized from the given runtime.Object and a valid source
+// ParseFileObject returns a FileObject initialized from the given client.Object and a valid source
 // path parsed from its annotations.
 func ParseFileObject(o core.Object) *FileObject {
 	if fo, isFileObject := o.(*FileObject); isFileObject {

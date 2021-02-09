@@ -62,7 +62,6 @@ const (
 type BugReporter struct {
 	client    client.Reader
 	clientSet *kubernetes.Clientset
-	ctx       context.Context
 	cm        *unstructured.Unstructured
 	enabled   map[Product]bool
 	util.ConfigManagementClient
@@ -112,7 +111,6 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 	return &BugReporter{
 		client:        c,
 		clientSet:     cs,
-		ctx:           ctx,
 		cm:            cm,
 		k8sContext:    currentk8sContext,
 		ErrorList:     errorList,
@@ -157,7 +155,7 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 
 	// for each namespace, generate a list of logSources
 	listOps := client.ListOptions{LabelSelector: labels.NewSelector().Add(operatorLabelSelectorOrDie())}
-	sources, err := b.logSourcesForNamespace(metav1.NamespaceSystem, listOps, nil)
+	sources, err := b.logSourcesForNamespace(ctx, metav1.NamespaceSystem, listOps, nil)
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else {
@@ -166,21 +164,21 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 
 	listOps = client.ListOptions{}
 	nsLabels := map[string]string{"configmanagement.gke.io/configmanagement": "config-management"}
-	sources, err = b.logSourcesForProduct(PolicyController, listOps, nsLabels)
+	sources, err = b.logSourcesForProduct(ctx, PolicyController, listOps, nsLabels)
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
 
-	sources, err = b.logSourcesForProduct(KCC, listOps, nsLabels)
+	sources, err = b.logSourcesForProduct(ctx, KCC, listOps, nsLabels)
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else {
 		toBeLogged = append(toBeLogged, sources...)
 	}
 
-	sources, err = b.logSourcesForProduct(ConfigSync, listOps, nil)
+	sources, err = b.logSourcesForProduct(ctx, ConfigSync, listOps, nil)
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else {
@@ -199,10 +197,10 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 	return toBeRead
 }
 
-func (b *BugReporter) logSourcesForProduct(product Product, listOps client.ListOptions, nsLabels map[string]string) (logSources, error) {
+func (b *BugReporter) logSourcesForProduct(ctx context.Context, product Product, listOps client.ListOptions, nsLabels map[string]string) (logSources, error) {
 	enabled := b.EnabledServices()
 
-	ls, err := b.logSourcesForNamespace(productNamespaces[product], listOps, nsLabels)
+	ls, err := b.logSourcesForNamespace(ctx, productNamespaces[product], listOps, nsLabels)
 	if err != nil {
 		switch {
 		case errorIs(err, missingNamespace) && !enabled[product]:
@@ -224,14 +222,14 @@ func (b *BugReporter) logSourcesForProduct(product Product, listOps client.ListO
 	return ls, err
 }
 
-func (b *BugReporter) logSourcesForNamespace(name string, listOps client.ListOptions, nsLabels map[string]string) (logSources, error) {
+func (b *BugReporter) logSourcesForNamespace(ctx context.Context, name string, listOps client.ListOptions, nsLabels map[string]string) (logSources, error) {
 	fmt.Println("Retrieving " + name + " logs")
-	ns, err := b.fetchNamespace(name, nsLabels)
+	ns, err := b.fetchNamespace(ctx, name, nsLabels)
 	if err != nil {
 		return nil, wrap(err, "failed to retrieve namespace %v", name)
 	}
 
-	pods, err := b.listPods(*ns, listOps)
+	pods, err := b.listPods(ctx, *ns, listOps)
 	if err != nil {
 		return nil, wrap(err, "failed to list pods for namespace %v", name)
 	}
@@ -239,9 +237,9 @@ func (b *BugReporter) logSourcesForNamespace(name string, listOps client.ListOpt
 	return assembleLogSources(*ns, *pods), nil
 }
 
-func (b *BugReporter) fetchNamespace(name string, nsLabels map[string]string) (*corev1.Namespace, error) {
+func (b *BugReporter) fetchNamespace(ctx context.Context, name string, nsLabels map[string]string) (*corev1.Namespace, error) {
 	ns := &corev1.Namespace{}
-	err := b.client.Get(b.ctx, types.NamespacedName{Name: name}, ns)
+	err := b.client.Get(ctx, types.NamespacedName{Name: name}, ns)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, newMissingNamespaceError(name)
@@ -257,10 +255,10 @@ func (b *BugReporter) fetchNamespace(name string, nsLabels map[string]string) (*
 	return ns, nil
 }
 
-func (b *BugReporter) listPods(ns corev1.Namespace, lOps client.ListOptions) (*corev1.PodList, error) {
+func (b *BugReporter) listPods(ctx context.Context, ns corev1.Namespace, lOps client.ListOptions) (*corev1.PodList, error) {
 	pods := &corev1.PodList{}
 	lOps.Namespace = ns.Name
-	err := b.client.List(b.ctx, pods, &lOps)
+	err := b.client.List(ctx, pods, &lOps)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve pods for namespace %v", ns.Name)
 	}
@@ -284,7 +282,7 @@ func assembleLogSources(ns corev1.Namespace, pods corev1.PodList) logSources {
 }
 
 // FetchCMResources provides a set of Readables for configmanagement resources
-func (b *BugReporter) FetchCMResources() (rd []Readable) {
+func (b *BugReporter) FetchCMResources(ctx context.Context) (rd []Readable) {
 	rl, err := b.clientSet.ServerResourcesForGroupVersion(kinds.ConfigManagement().GroupVersion().String())
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -306,7 +304,7 @@ func (b *BugReporter) FetchCMResources() (rd []Readable) {
 				Kind:    apiResource.SingularName,
 				Version: "v1",
 			})
-			if err := b.client.List(b.ctx, u); err != nil {
+			if err := b.client.List(ctx, u); err != nil {
 				b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s resources: %v", apiResource.SingularName, err))
 			} else {
 				rd = b.appendPrettyJSON(rd, pathToClusterCmList(apiResource.Name), u)
@@ -356,8 +354,8 @@ func (b *BugReporter) AddNomosStatusToZip(ctx context.Context) {
 }
 
 // AddNomosVersionToZip writes `nomos version` to bugreport zip file
-func (b *BugReporter) AddNomosVersionToZip() {
-	if versionRc, err := version.GetVersionReadCloser([]string{b.k8sContext}); err != nil {
+func (b *BugReporter) AddNomosVersionToZip(ctx context.Context) {
+	if versionRc, err := version.GetVersionReadCloser(ctx, []string{b.k8sContext}); err != nil {
 		b.ErrorList = append(b.ErrorList, err)
 	} else if err = b.writeReadableToZip(Readable{
 		Name:       path.Join(Processed, b.k8sContext, "version"),

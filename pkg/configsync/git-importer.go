@@ -1,7 +1,6 @@
 package configsync
 
 import (
-	"context"
 	"flag"
 	"os"
 	"strings"
@@ -73,18 +72,17 @@ func RunImporter() {
 		glog.Fatalf("Error adding Importer controller: %+v", err)
 	}
 
-	mgrStopChannel := signals.SetupSignalHandler()
-	ctx := StoppableContext(context.Background(), mgrStopChannel)
-	if err := controller.AddRepoStatus(ctx, mgr); err != nil {
+	if err := controller.AddRepoStatus(mgr); err != nil {
 		glog.Fatalf("Error adding RepoStatus controller: %+v", err)
 	}
 
+	ctx := signals.SetupSignalHandler()
 	if err := policycontroller.AddControllers(ctx, mgr); err != nil {
 		glog.Fatalf("Error adding PolicyController controller: %+v", err)
 	}
 
 	// Start the Manager.
-	if err := mgr.Start(mgrStopChannel); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		glog.Fatalf("Error starting controller: %+v", err)
 	}
 
@@ -97,16 +95,5 @@ func DirWatcher(dir string, period time.Duration) {
 		return
 	}
 	watcher := dirwatcher.NewWatcher(dir)
-	watcher.Watch(period, signals.SetupSignalHandler())
-}
-
-// StoppableContext returns a Context that will be canceled when the given stop
-// channel is closed.
-func StoppableContext(ctx context.Context, stopChannel <-chan struct{}) context.Context {
-	stoppable, cancel := context.WithCancel(ctx)
-	go func() {
-		<-stopChannel
-		cancel()
-	}()
-	return stoppable
+	watcher.Watch(signals.SetupSignalHandler(), period)
 }

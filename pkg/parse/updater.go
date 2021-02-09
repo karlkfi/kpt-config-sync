@@ -61,7 +61,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 	// Update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.
 	if !cache.resourceDeclSetUpdated {
-		err := u.resources.Update(objs)
+		err := u.resources.Update(ctx, objs)
 		if err != nil {
 			errs = status.Append(errs, err)
 		} else {

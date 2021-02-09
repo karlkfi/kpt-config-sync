@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// AsUnstructured attempts to convert a runtime.Object to an
+// AsUnstructured attempts to convert a client.Object to an
 // *unstructured.Unstructured.
 // TODO(b/162260725): This adds .status and .metadata.creationTimestamp to
 //  everything. Evaluate every use, and convert to using AsUnstructuredSanitized

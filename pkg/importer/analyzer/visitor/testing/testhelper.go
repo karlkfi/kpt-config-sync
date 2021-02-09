@@ -28,7 +28,7 @@ const (
 	ClusterAdminBinding = "cluster-admin-binding"
 )
 
-// ObjectSets constructs a list of ObjectSet from a list of runtime.Object.
+// ObjectSets constructs a list of ObjectSet from a list of client.Object.
 func ObjectSets(runtimeObjs ...core.Object) []*ast.NamespaceObject {
 	astObjs := make([]*ast.NamespaceObject, len(runtimeObjs))
 	for idx := range runtimeObjs {

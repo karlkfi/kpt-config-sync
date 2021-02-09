@@ -48,7 +48,7 @@ returns a non-zero error code if any issues are found.
 		// Don't show usage on error, as argument validation passed.
 		cmd.SilenceUsage = true
 
-		return runVet(flags.Path, namespaceValue, filesystem.SourceFormat(sourceFormatValue),
+		return runVet(cmd.Context(), flags.Path, namespaceValue, filesystem.SourceFormat(sourceFormatValue),
 			flags.SkipAPIServer, flags.AllClusters(), flags.Clusters)
 	},
 }
