@@ -16,7 +16,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -173,9 +172,6 @@ const (
 )
 
 func TestNamespaceApplier(t *testing.T) {
-	if !*e2e.E2E || !*e2e.MultiRepo {
-		return
-	}
 	prepare(t)
 	t.Log("namespace applier: first apply, then prune, then clean up")
 	resources := []core.Object{
@@ -277,9 +273,6 @@ const (
 )
 
 func TestRootApplier(t *testing.T) {
-	if !*e2e.E2E || !*e2e.MultiRepo {
-		return
-	}
 	prepare(t)
 	t.Log("root applier: first apply, then prune, then clean up")
 	resources := []core.Object{
@@ -371,9 +364,6 @@ func TestRootApplier(t *testing.T) {
 const testRole = "fake-role"
 
 func TestConflictResource(t *testing.T) {
-	if !*e2e.E2E || !*e2e.MultiRepo {
-		return
-	}
 	prepare(t)
 	t.Log("root applier and namespaced applier has conflict")
 	resources := []core.Object{
@@ -453,9 +443,6 @@ func TestConflictResource(t *testing.T) {
 }
 
 func TestUnknownType(t *testing.T) {
-	if !*e2e.E2E || !*e2e.MultiRepo {
-		return
-	}
 	prepare(t)
 	t.Log("namespace applier: apply three resources; two have unknown type")
 	cr1 := &unstructured.Unstructured{
@@ -557,9 +544,6 @@ func TestUnknownType(t *testing.T) {
 }
 
 func TestDisabledResource(t *testing.T) {
-	if !*e2e.E2E || !*e2e.MultiRepo {
-		return
-	}
 	prepare(t)
 	t.Log("namespace applier: first resource apply, then disable the resource.")
 	resources := []core.Object{

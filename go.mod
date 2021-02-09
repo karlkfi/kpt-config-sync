@@ -9,6 +9,9 @@ replace k8s.io/code-generator => k8s.io/code-generator v0.20.2
 // Prevent Go from updating gnostic to a version incompatible with kube-openapi.
 replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 
+// Until cert-controller accepts my pull request to upgrade libraries.
+replace github.com/open-policy-agent/cert-controller => github.com/willbeason/cert-controller v0.1.1-0.20210211173508-3f6e7b64e078
+
 require (
 	cloud.google.com/go v0.72.0
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
@@ -22,6 +25,7 @@ require (
 	github.com/google/go-cmp v0.5.4
 	github.com/googleapis/gnostic v0.5.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/open-policy-agent/cert-controller v0.0.0-00010101000000-000000000000
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
 	github.com/spf13/cobra v1.1.1

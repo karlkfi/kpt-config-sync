@@ -13,8 +13,17 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+// AddValidator adds the admission webhook validator to the passed manager.
+func AddValidator(mgr manager.Manager) {
+	mgr.GetWebhookServer().Register(servingPath, &webhook.Admission{
+		Handler: &Validator{},
+	})
+}
 
 // Validator is the part of the validating webhook which handles admission
 // requests and admits or denies them.
@@ -24,7 +33,7 @@ type Validator struct {
 
 var _ admission.Handler = &Validator{}
 
-// Handler returns a validator which satisfies the admission.Handler interface.
+// Handler returns a Validator which satisfies the admission.Handler interface.
 func Handler(cfg *rest.Config) (*Validator, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
@@ -58,15 +67,15 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 		// Perform manager precedence check to verify this Config Sync reconciler
 		// can manage the object.
-		manager, err := objectManager(req)
+		mgr, err := objectManager(req)
 		if err != nil {
 			glog.Error(err.Error())
 			return allow()
 		}
-		if canManage(username, manager) {
+		if canManage(username, mgr) {
 			return allow()
 		}
-		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object which is already managed by %s", username, manager))
+		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object which is already managed by %s", username, mgr))
 	}
 
 	// Handle the requests for ResourceGroup CRs.
@@ -180,11 +189,11 @@ func objectManager(req admission.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	manager := getManager(oldObj)
-	if manager == "" {
-		manager = getManager(newObj)
+	mgr := getManager(oldObj)
+	if mgr == "" {
+		mgr = getManager(newObj)
 	}
-	return manager, nil
+	return mgr, nil
 }
 
 func getManager(obj client.Object) string {
