@@ -51,8 +51,6 @@ function check_metrics_pages() {
 }
 
 @test "${FILE_NAME}: All acme corp created" {
-  local ns
-
   resource::check_count -r namespace \
    -a "configmanagement.gke.io/managed=enabled" \
    -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io" \
