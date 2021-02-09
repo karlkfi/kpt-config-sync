@@ -52,8 +52,8 @@ func Run(ctx context.Context, p Parser) {
 				// The cached gitState will not be reset to avoid reading all the git files unnecessarily.
 				state.resetAllButGitState()
 				trigger = triggerManagementConflict
-			} else if state.cache.needToRetry {
-				glog.Infof("The last parse-apply-watch loop failed")
+			} else if state.cache.needToRetry && state.cache.readyToRetry() {
+				glog.Infof("The last reconciliation failed")
 				trigger = triggerRetry
 			} else if opts.needToUpdateWatch() {
 				glog.Infof("Some watches need to be updated")
@@ -67,9 +67,22 @@ func Run(ctx context.Context, p Parser) {
 }
 
 func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
+	oldPolicyDir := state.cache.git.policyDir
+	// `read` is called no matter what the trigger is.
 	errs := read(ctx, p, trigger, state)
 	if errs != nil {
 		state.invalidate(errs)
+		return
+	}
+
+	newPolicyDir := state.cache.git.policyDir
+	// The parse-apply-watch sequence will be skipped if the trigger type is `triggerReimport` and
+	// there is no new git changes. The reasons are:
+	//   * If a former parse-apply-watch sequence for policyDir succeeded, there is no need to run the sequence again;
+	//   * If all the former parse-apply-watch sequences for policyDir failed, the next retry will call the sequence;
+	//   * The retry logic tracks the number of reconciliation attempts failed with the same errors, and when
+	//     the next retry should happen. Calling the parse-apply-watch sequence here makes the retry logic meaningless.
+	if trigger == triggerReimport && oldPolicyDir == newPolicyDir {
 		return
 	}
 
