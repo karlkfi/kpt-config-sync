@@ -5,23 +5,32 @@ import (
 	"github.com/google/nomos/pkg/validate/prehydrate/common"
 	"github.com/google/nomos/pkg/validate/prehydrate/hierarchical"
 	"github.com/google/nomos/pkg/validate/prehydrate/hnc"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
+
+// Config contains parameters for prehydration validation.
+type Config struct {
+	PreviousCRDs []*v1beta1.CustomResourceDefinition
+	CurrentCRDs  []*v1beta1.CustomResourceDefinition
+}
 
 // FlatValidators returns the list of visitors to validate a flat repo
 // pre-hydration.
-func FlatValidators() []parsed.ValidatorFunc {
+func FlatValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
 		common.AnnotationValidator(),
 		common.LabelValidator(),
+		common.CRDRemovalValidator(config.PreviousCRDs, config.CurrentCRDs),
 	}
 }
 
 // HierarchicalValidators returns the list of visitors to validate a
 // hierarchical repo pre-hydration.
-func HierarchicalValidators() []parsed.ValidatorFunc {
+func HierarchicalValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
 		common.AnnotationValidator(),
 		common.LabelValidator(),
+		common.CRDRemovalValidator(config.PreviousCRDs, config.CurrentCRDs),
 		hierarchical.NamespaceDirectoryValidator(),
 		hierarchical.ObjectDirectoryValidator(),
 		hierarchical.DirectoryNameValidator(),
