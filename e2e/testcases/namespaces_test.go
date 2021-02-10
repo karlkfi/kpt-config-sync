@@ -12,7 +12,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -45,13 +44,6 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	const implicitNamespace = "shipping"
-	ns := fake.NamespaceObject(implicitNamespace)
-	t.Cleanup(func() {
-		if err := nt.Delete(ns); err != nil {
-			t.Fatal(err)
-		}
-		nomostest.WaitToTerminate(nt, kinds.Namespace(), implicitNamespace, "")
-	})
 
 	err := nt.ValidateNotFound(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {

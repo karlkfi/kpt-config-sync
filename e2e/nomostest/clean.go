@@ -7,12 +7,15 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -114,6 +117,33 @@ func Clean(nt *NT, failOnError FailOnError) {
 	}
 	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error waiting for test objects to be deleted")
+	}
+
+	deleteImplicitNamespaces(nt, failOnError)
+}
+
+func deleteImplicitNamespaces(nt *NT, failOnError FailOnError) {
+	errDeleting := false
+	nsList := &corev1.NamespaceList{}
+	if err := nt.Client.List(nt.Context, nsList); err != nil {
+		nt.T.Log(err)
+		errDeleting = true
+	}
+	for _, ns := range nsList.Items {
+		if annotation, ok := ns.Annotations[common.LifecycleDeleteAnnotation]; ok && annotation == common.PreventDeletion {
+			if err := nt.Client.Delete(nt.Context, &ns); err != nil {
+				nt.T.Log(err)
+				errDeleting = true
+			}
+			if failOnError {
+				WaitToTerminate(nt, kinds.Namespace(), ns.Name, "")
+			} else {
+				WaitToTerminate(nt, kinds.Namespace(), ns.Name, "", WaitNoFail())
+			}
+		}
+	}
+	if errDeleting && bool(failOnError) {
+		nt.T.Fatal("error deleting implicit namespaces")
 	}
 }
 

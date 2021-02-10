@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -119,7 +118,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	nt.Root.CommitAndPush("declare ClusterRole with prevent deletion lifecycle annotation")
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate("cluster-admin", "", &rbacv1.ClusterRole{})
+	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,13 +138,6 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMultiRepo)
 
 	const implicitNamespace = "delivery"
-	ns := fake.NamespaceObject(implicitNamespace)
-	t.Cleanup(func() {
-		if err := nt.Delete(ns); err != nil {
-			t.Fatal(err)
-		}
-		nomostest.WaitToTerminate(nt, kinds.Namespace(), implicitNamespace, "")
-	})
 
 	role := fake.RoleObject(core.Name("configmap-getter"), core.Namespace(implicitNamespace))
 	role.Rules = []rbacv1.PolicyRule{{
