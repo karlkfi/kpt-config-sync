@@ -171,14 +171,21 @@ __test-e2e-go-nobuild-prow:
 # The target to be run by Prow for e2e tests.
 # Called by the nomos-ci-raw-go target in the test-infra repository:
 # https://gke-internal.googlesource.com/test-infra/+/refs/heads/master/prow/gob/config/team-review.googlesource.com/gke-kubernetes-enterprise-control/prototype/team-gke-kubernetes-enterprise-control-prototype.yaml#601
+#
+# Delete all kind clusters before tests to prevent leaking resources after
+# failed tests where cleanup is unsuccessful. This only deletes clusters in the
+# current Kind network, so other Prow jobs running in the same
+# Cluster/NodePool/etc. are unaffected.
 test-e2e-go-ephemeral: __push-local-image
 	@docker build . -f build/test-e2e-go/Dockerfile -t prow-image
 	# The .sock volume allows you to connect to the Docker daemon of the host.
 	# Part of the docker-in-docker pattern.
 	@docker run -v /var/run/docker.sock:/var/run/docker.sock --network="host" prow-image make __test-e2e-go-nobuild-prow
 test-e2e-go-ephemeral-mono-repo: __push-local-image
+	kind delete clusters --all
 	./scripts/e2e-go-ephemeral.sh --timeout 40m --parallel 12
 test-e2e-go-ephemeral-multi-repo: __push-local-image
+	kind delete clusters --all
 	./scripts/e2e-go-ephemeral.sh --multirepo --timeout 40m --parallel 12
 
 # Runs the Go e2e tests against multi-repo Config Sync.
