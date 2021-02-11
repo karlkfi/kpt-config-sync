@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/testing/fake"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -63,7 +63,7 @@ func TestValidatorForResourceGroups(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			request := admission.Request{
-				AdmissionRequest: admissionv1beta1.AdmissionRequest{
+				AdmissionRequest: admissionv1.AdmissionRequest{
 					Kind: metav1.GroupVersionKind{
 						Group:   live.ResourceGroupGVK.Group,
 						Version: live.ResourceGroupGVK.Version,
