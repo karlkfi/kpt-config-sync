@@ -6,10 +6,6 @@ go 1.15
 // k8s.io library versions below.
 replace k8s.io/code-generator => k8s.io/code-generator v0.20.2
 
-// This is to fix the failure in `make build-cli` that is related to
-// github.com/moby/term (b/177232366).
-replace golang.org/x/sys => golang.org/x/sys v0.0.0-20200826173525-f9321e4c35a6
-
 // Prevent Go from updating gnostic to a version incompatible with kube-openapi.
 replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 
@@ -29,7 +25,7 @@ require (
 	go.opencensus.io v0.22.5
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
