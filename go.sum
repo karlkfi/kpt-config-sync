@@ -1119,8 +1119,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14/go.mod h1:LEScyz
 sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384 h1:JepLxW87TlpfpA2i7KiN86ei1cS6dbCLAebkSxz7FNw=
 sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384/go.mod h1:iWbsn/CCh80/SeoecTqkAso1a+ifiHQX0x5PlZ6zjD8=
 sigs.k8s.io/controller-runtime v0.6.0/go.mod h1:CpYf5pdNY/B352A1TFLAS2JVSlnGQ5O2cftPHndTroo=
-sigs.k8s.io/controller-runtime v0.8.1 h1:O0K2CJ2JavK8/Tf4LfcpAwRxOFBhv8DjyrbmE6Qw59s=
-sigs.k8s.io/controller-runtime v0.8.1/go.mod h1:U/l+DUopBc1ecfRZ5aviA9JDmGFQKvLf5YkZNx2e0sU=
+sigs.k8s.io/controller-runtime v0.8.2 h1:SBWmI0b3uzMIUD/BIXWNegrCeZmPJ503pOtwxY0LPHM=
+sigs.k8s.io/controller-runtime v0.8.2/go.mod h1:U/l+DUopBc1ecfRZ5aviA9JDmGFQKvLf5YkZNx2e0sU=
 sigs.k8s.io/kind v0.10.0 h1:Tm+QITIqdRd+efLOsxZHMAfLnr5K4e3/RH8MePspEXs=
 sigs.k8s.io/kind v0.10.0/go.mod h1:fb32zUw7ewC47bPwLnwhf47wd/vADtv3c38KP7sjIlo=
 sigs.k8s.io/kustomize v2.0.3+incompatible h1:JUufWFNlI44MdtnjUqVnvh29rR37PQFzPbLXqhyOyX0=
