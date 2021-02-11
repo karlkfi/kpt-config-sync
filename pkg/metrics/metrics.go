@@ -81,12 +81,6 @@ var (
 		"The number of watches on the declared resources",
 		stats.UnitDimensionless)
 
-	// WatchManagerUpdates metric measures the number of watch manager updates.
-	WatchManagerUpdates = stats.Int64(
-		"watch_manager_updates",
-		"The number of times the watch manager updates the watches on the declared resources",
-		stats.UnitDimensionless)
-
 	// WatchManagerUpdatesDuration metric measures the latency of watch manager updates.
 	WatchManagerUpdatesDuration = stats.Float64(
 		"watch_manager_updates_duration_seconds",

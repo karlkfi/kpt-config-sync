@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e"
+	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -17,10 +20,12 @@ import (
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
+	"go.opencensus.io/tag"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -82,6 +87,12 @@ type NT struct {
 
 	// scheme is the Scheme for the test suite that maps from structs to GVKs.
 	scheme *runtime.Scheme
+
+	// otelCollectorPort is the local port that forwards to the otel-collector.
+	otelCollectorPort int
+
+	// ReconcilerMetrics is a map of scraped multirepo metrics.
+	ReconcilerMetrics testmetrics.ConfigSyncMetrics
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -178,6 +189,81 @@ func (nt *NT) MustMergePatch(obj core.Object, patch string, opts ...client.Patch
 	}
 }
 
+// ParseMetrics parses the metric output from the otel-collector and diffs the
+// result against the previous set of parsed metrics. This diffed set of metrics
+// contains all the new or updated measurements and is saved to NT.
+func (nt *NT) ParseMetrics(prev testmetrics.ConfigSyncMetrics) {
+	if nt.MultiRepo {
+		csm, err := testmetrics.ParseMetrics(nt.otelCollectorPort)
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		nt.updateMetrics(prev, csm)
+	}
+}
+
+// updateMetrics performs a diff between the current metrics and the previously
+// recorded metrics to get all the metrics with new or changed measurements.
+// If unchanged, the `declared_resources` and `watches` metrics are also added
+// to the map because `ValidateMultiRepoMetrics` always validates those metrics.
+//
+// Diffing the metrics allows us to validate incremental changes to the metrics
+// instead of having to validate against the entire set of metrics every time.
+func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics testmetrics.ConfigSyncMetrics) {
+	newCsm := make(testmetrics.ConfigSyncMetrics)
+	contains := func(entries []testmetrics.Measurement, me testmetrics.Measurement) bool {
+		for _, e := range entries {
+			opt := cmp.Comparer(func(x, y tag.Tag) bool {
+				return reflect.DeepEqual(x, y)
+			})
+			if cmp.Equal(me, e, opt) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Diff the metrics if previous metrics exist
+	if prev != nil {
+		for metric, measurements := range parsedMetrics {
+			// These metrics are always validated so we need to add them to the map even
+			// if their measurements haven't changed.
+			if metric == ocmetrics.DeclaredResourcesView.Name || metric == ocmetrics.WatchesView.Name {
+				newCsm[metric] = measurements
+			}
+			// Check whether the previous metrics map has the metric.
+			if prevMeasurements, ok := prev[metric]; ok {
+				for _, measurement := range measurements {
+					// Check that the previous measurements for the metric does not have the
+					// new measurement.
+					if !contains(prevMeasurements, measurement) {
+						newCsm[metric] = append(newCsm[metric], measurement)
+					}
+				}
+			} else {
+				newCsm[metric] = measurements
+			}
+		}
+		newCsm[ocmetrics.DeclaredResourcesView.Name] = append(newCsm[ocmetrics.DeclaredResourcesView.Name], prev[ocmetrics.DeclaredResourcesView.Name]...)
+		newCsm[ocmetrics.WatchesView.Name] = append(newCsm[ocmetrics.WatchesView.Name], prev[ocmetrics.WatchesView.Name]...)
+	} else {
+		newCsm = parsedMetrics
+	}
+	// Save the result
+	nt.ReconcilerMetrics = newCsm
+}
+
+// RetryMetrics is a convenience wrapper for Retry and is specifically used for
+// retrying metrics validations. It saves the existing metrics as a local variable
+// and passes it to the parameter function.
+func (nt *NT) RetryMetrics(timeout time.Duration, fn func(csm testmetrics.ConfigSyncMetrics) error) error {
+	prev := nt.ReconcilerMetrics
+	_, err := Retry(timeout, func() error {
+		return fn(prev)
+	})
+	return err
+}
+
 // Validate returns an error if the indicated object does not exist.
 //
 // Validates the object against each of the passed Predicates, returning error
@@ -212,6 +298,79 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 	return err
 }
 
+// ValidateMultiRepoMetrics validates all the multi-repo metrics.
+// It checks all non-error metrics are recorded with the correct tags and values.
+func (nt *NT) ValidateMultiRepoMetrics(reconciler string, numResources int, gvkMetrics ...testmetrics.GVKMetric) error {
+	if nt.MultiRepo {
+		// Validate metrics emitted from the reconciler-manager.
+		if err := nt.ReconcilerMetrics.ValidateReconcilerManagerMetrics(); err != nil {
+			return err
+		}
+		// Validate non-typed and non-error metrics in the given reconciler.
+		if err := nt.ReconcilerMetrics.ValidateReconcilerMetrics(reconciler, numResources); err != nil {
+			return err
+		}
+		// Validate metrics that have a GVK "type" TagKey.
+		for _, tm := range gvkMetrics {
+			if err := nt.ReconcilerMetrics.ValidateGVKMetrics(reconciler, tm); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateErrorMetricsNotFound validates that no error metrics are emitted from
+// any of the reconcilers.
+func (nt *NT) ValidateErrorMetricsNotFound() error {
+	if nt.MultiRepo {
+		err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.RootSyncName)
+		if err != nil {
+			return err
+		}
+
+		for ns := range nt.NamespaceRepos {
+			err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.RepoSyncName(ns))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateParseErrors validates that the `parse_error_total` metric exists
+// for the correct reconciler and has the correct error code tag.
+func (nt *NT) ValidateParseErrors(reconciler, errorCode string) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateParseError(reconciler, errorCode)
+	}
+	return nil
+}
+
+// ValidateReconcilerErrors validates that the `reconciler_error` metric exists
+// for the correct reconciler and the tagged component has the correct value.
+func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
+	if nt.MultiRepo {
+		var sourceCount, syncCount int
+		switch component {
+		case "source":
+			sourceCount = 1
+			syncCount = 0
+		case "sync":
+			sourceCount = 0
+			syncCount = 1
+		case "":
+			sourceCount = 0
+			syncCount = 0
+		default:
+			return errors.Errorf("unexpected component tag value: %v", component)
+		}
+		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler, sourceCount, syncCount)
+	}
+	return nil
+}
+
 // WaitForRepoSyncs is a convenience method that waits for all repositories
 // to sync.
 //
@@ -220,6 +379,9 @@ func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
 //
 // If you want to check the internals of specific objects (e.g. the error field
 // of a RepoSync), use nt.Validate() - possibly in a Retry.
+//
+// It additionally validates that the `last_sync_timestamp` and `last_apply_timestamp`
+// metric values exist and have incremented.
 func (nt *NT) WaitForRepoSyncs() {
 	nt.T.Helper()
 
@@ -230,6 +392,17 @@ func (nt *NT) WaitForRepoSyncs() {
 		for ns, repo := range nt.NamespaceRepos {
 			nt.WaitForRepoSync(repo, kinds.RepoSync(),
 				v1alpha1.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
+		}
+
+		_, err := Retry(60*time.Second, func() error {
+			csm, err := testmetrics.ParseMetrics(nt.otelCollectorPort)
+			if err != nil {
+				return err
+			}
+			return csm.ValidateTimestampMetrics(nt.ReconcilerMetrics)
+		})
+		if err != nil {
+			nt.T.Fatalf("timestamp metric validation failed: %v", err)
 		}
 	} else {
 		nt.WaitForRootSync(kinds.Repo(),
@@ -451,6 +624,63 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 		nt.RenewClient()
 	}
 	return err
+}
+
+// PortForwardOtelCollector forwards a local port to the pod's metrics port.
+func (nt *NT) PortForwardOtelCollector() {
+	if nt.MultiRepo {
+		nt.otelCollectorPort = nt.ForwardToFreePort(ocmetrics.MonitoringNamespace, testmetrics.OtelDeployment, testmetrics.MetricsPort)
+	}
+}
+
+// ForwardToFreePort forwards a local port to a port on the pod and returns the
+// local port chosen by kubectl.
+func (nt *NT) ForwardToFreePort(ns, pod, port string) int {
+	nt.T.Helper()
+
+	cmd := exec.Command("kubectl", "--kubeconfig", nt.kubeconfigPath, "port-forward",
+		"-n", ns, pod, port)
+
+	stdout := &strings.Builder{}
+	cmd.Stdout = stdout
+
+	err := cmd.Start()
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Cleanup(func() {
+		err := cmd.Process.Kill()
+		if err != nil {
+			nt.T.Errorf("killing port forward process: %v", err)
+		}
+	})
+
+	localPort := 0
+	// In CI, 1% of the time this takes longer than 10 seconds, so 20 seconds seems
+	// like a reasonable amount of time to wait.
+	took, err := Retry(20*time.Second, func() error {
+		s := stdout.String()
+		if !strings.Contains(s, "\n") {
+			return errors.New("nothing written to stdout for kubectl port-forward")
+		}
+
+		line := strings.Split(s, "\n")[0]
+
+		// Sample output:
+		// Forwarding from 127.0.0.1:44043
+		_, err = fmt.Sscanf(line, "Forwarding from 127.0.0.1:%d", &localPort)
+		if err != nil {
+			nt.T.Fatalf("unable to parse port-forward output: %q", s)
+		}
+		return nil
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	nt.T.Logf("took %v to wait for port-forward", took)
+
+	return localPort
 }
 
 func validateError(errs []v1alpha1.ConfigSyncError, code string) error {

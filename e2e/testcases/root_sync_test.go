@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -46,14 +47,6 @@ func TestDeleteRootSync(t *testing.T) {
 		t.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
-	// Verify Root Reconciler service no longer present.
-	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.ServiceObject())
-	})
-	if err != nil {
-		t.Errorf("Reconciler service present after deletion: %v", err)
-	}
-
 	// validate Root Reconciler configmaps are no longer present.
 	err1 := nt.ValidateNotFound("root-reconciler-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject())
 	err2 := nt.ValidateNotFound("root-reconciler-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject())
@@ -90,8 +83,8 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	// Add namespace in policy directory 'foo'.
 	fooDir := "foo"
 	fooNS := "shipping"
-	nt.Root.Add(fmt.Sprintf("%s/namespaces/%s/ns.yaml", fooDir, fooNS),
-		fake.NamespaceObject(fooNS))
+	sourcePath := fmt.Sprintf("%s/namespaces/%s/ns.yaml", fooDir, fooNS)
+	nt.Root.Add(sourcePath, fake.NamespaceObject(fooNS))
 
 	// Add repo resource in policy directory 'foo'.
 	nt.Root.Add(fmt.Sprintf("%s/system/repo.yaml", fooDir),
@@ -110,6 +103,20 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	err = nt.ValidateNotFound(fooNS, "", fake.NamespaceObject(fooNS))
 	if err != nil {
 		t.Errorf("%s present after deletion: %v", fooNS, err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 
 	// Update RootSync.
@@ -133,11 +140,10 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		t.Fatalf("RootSync update failed: %v", err)
 	}
 
-	// TODO(b/169195578) Validate Source path annotation with policyDir.
-
-	// Validate namespace 'shipping' created.
+	// Validate namespace 'shipping' created with the correct sourcePath annotation.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(fooNS, "", fake.NamespaceObject(fooNS))
+		return nt.Validate(fooNS, "", fake.NamespaceObject(fooNS),
+			nomostest.HasAnnotation(v1.SourcePathAnnotationKey, sourcePath))
 	})
 	if err != nil {
 		t.Error(err)
@@ -149,6 +155,30 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	})
 	if err != nil {
 		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
+			metrics.GVKMetric{
+				GVK:   "Namespace",
+				APIOp: "delete",
+				ApplyOps: []metrics.Operation{
+					{Name: "delete", Count: 1},
+				},
+				Watches: "1",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -241,6 +271,16 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RootSync update failed: %v", err)
 	}
+
+	// Validate no error metrics are emitted.
+	// TODO(b/162601559): internal_errors_total metric from diff.go
+	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+	//	nt.ParseMetrics(prev)
+	//	return nt.ValidateErrorMetricsNotFound()
+	//})
+	//if err != nil {
+	//	t.Errorf("validating error metrics: %v", err)
+	//}
 }
 
 func TestForceRevert(t *testing.T) {
@@ -251,10 +291,32 @@ func TestForceRevert(t *testing.T) {
 
 	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
 
+	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		// Validate parse error metric is emitted.
+		err := nt.ValidateParseErrors(reconciler.RootSyncName, "1017")
+		if err != nil {
+			return err
+		}
+		// Validate reconciler error metric is emitted.
+		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	nt.Root.Git("reset", "--hard", "HEAD^")
 	nt.Root.Git("push", "-f", "origin", "main")
 
 	nt.WaitForRootSyncSourceErrorClear()
+
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "")
+	})
+	if err != nil {
+		t.Errorf("validating reconciler_errors metric: %v", err)
+	}
 }
 
 func TestRootSyncReconcilingStatus(t *testing.T) {
@@ -270,6 +332,15 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("RootSync did not finish reconciling: %v", err)
+	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
 	}
 }
 

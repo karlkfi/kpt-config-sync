@@ -60,7 +60,7 @@ var parsedDeployment = func(de *appsv1.Deployment) error {
 	de.Spec = appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				reconcilermanager.Reconciler: reconcilermanager.Reconciler,
+				v1alpha1.ReconcilerLabel: reconcilermanager.Reconciler,
 			},
 		},
 		Replicas: &reconcilerDeploymentReplicaCount,

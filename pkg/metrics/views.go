@@ -13,7 +13,7 @@ var (
 		Name:        APICallDuration.Name(),
 		Measure:     APICallDuration,
 		Description: "The latency distribution of API server calls",
-		TagKeys:     []tag.Key{KeyOperation, KeyType, KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyOperation, KeyType, KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -22,7 +22,7 @@ var (
 		Name:        ReconcilerErrors.Name(),
 		Measure:     ReconcilerErrors,
 		Description: "The current number of errors in the RootSync and RepoSync reconcilers",
-		TagKeys:     []tag.Key{KeyComponent},
+		TagKeys:     []tag.Key{KeyReconciler, KeyComponent},
 		Aggregation: view.LastValue(),
 	}
 
@@ -40,7 +40,7 @@ var (
 		Name:        ParserDuration.Name(),
 		Measure:     ParserDuration,
 		Description: "The latency distribution of the parse-apply-watch loop",
-		TagKeys:     []tag.Key{KeyStatus, KeyTrigger, KeyParserSource},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus, KeyTrigger, KeyParserSource},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -48,7 +48,8 @@ var (
 	LastSyncTimestampView = &view.View{
 		Name:        LastSync.Name(),
 		Measure:     LastSync,
-		Description: "The timestamp of the most recent sync from Git grouped by the scope",
+		Description: "The timestamp of the most recent sync from Git",
+		TagKeys:     []tag.Key{KeyReconciler},
 		Aggregation: view.LastValue(),
 	}
 
@@ -57,7 +58,7 @@ var (
 		Name:        ParseDuration.Name(),
 		Measure:     ParseDuration,
 		Description: "The latency distribution of parse events",
-		TagKeys:     []tag.Key{KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -66,7 +67,7 @@ var (
 		Name:        ParseErrors.Name() + "_total",
 		Measure:     ParseErrors,
 		Description: "The total number of errors that occurred during parsing",
-		TagKeys:     []tag.Key{KeyErrorCode},
+		TagKeys:     []tag.Key{KeyReconciler, KeyErrorCode},
 		Aggregation: view.Count(),
 	}
 
@@ -75,15 +76,16 @@ var (
 		Name:        DeclaredResources.Name(),
 		Measure:     DeclaredResources,
 		Description: "The current number of declared resources parsed from Git",
+		TagKeys:     []tag.Key{KeyReconciler},
 		Aggregation: view.LastValue(),
 	}
 
-	// ApplyOperationsView aggregates the ApplyOperations metric measurements.
+	// ApplyOperationsView aggregates the ApplyOps metric measurements.
 	ApplyOperationsView = &view.View{
 		Name:        ApplyOperations.Name() + "_total",
 		Measure:     ApplyOperations,
 		Description: "The total number of operations that have been performed to sync resources to source of truth",
-		TagKeys:     []tag.Key{KeyOperation, KeyType, KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyOperation, KeyType, KeyStatus},
 		Aggregation: view.Count(),
 	}
 
@@ -92,7 +94,7 @@ var (
 		Name:        ApplyDuration.Name(),
 		Measure:     ApplyDuration,
 		Description: "The latency distribution of applier resource sync events",
-		TagKeys:     []tag.Key{KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -101,7 +103,7 @@ var (
 		Name:        LastApply.Name(),
 		Measure:     LastApply,
 		Description: "The timestamp of the most recent applier resource sync event",
-		TagKeys:     []tag.Key{KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus},
 		Aggregation: view.LastValue(),
 	}
 
@@ -110,7 +112,7 @@ var (
 		Name:        ResourceFights.Name() + "_total",
 		Measure:     ResourceFights,
 		Description: "The total number of resources that are being synced too frequently",
-		TagKeys:     []tag.Key{KeyOperation, KeyType},
+		TagKeys:     []tag.Key{KeyReconciler, KeyOperation, KeyType},
 		Aggregation: view.Count(),
 	}
 
@@ -119,17 +121,8 @@ var (
 		Name:        Watches.Name(),
 		Measure:     Watches,
 		Description: "The current number of watches on the declared resources",
-		TagKeys:     []tag.Key{KeyType},
+		TagKeys:     []tag.Key{KeyReconciler, KeyType},
 		Aggregation: view.Sum(),
-	}
-
-	// WatchManagerUpdatesView aggregates the WatchManagerUpdates metric measurements.
-	WatchManagerUpdatesView = &view.View{
-		Name:        WatchManagerUpdates.Name() + "_total",
-		Measure:     WatchManagerUpdates,
-		Description: "The total number of times the watch manager updates the watches on the declared resources",
-		TagKeys:     []tag.Key{KeyStatus},
-		Aggregation: view.Count(),
 	}
 
 	// WatchManagerUpdatesDurationView aggregates the WatchManagerUpdatesDuration metric measurements.
@@ -137,7 +130,7 @@ var (
 		Name:        WatchManagerUpdatesDuration.Name(),
 		Measure:     WatchManagerUpdatesDuration,
 		Description: "The latency distribution of watch manager updates",
-		TagKeys:     []tag.Key{KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -146,7 +139,7 @@ var (
 		Name:        RemediateDuration.Name(),
 		Measure:     RemediateDuration,
 		Description: "The latency distribution of remediator reconciliation events",
-		TagKeys:     []tag.Key{KeyStatus, KeyType},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus, KeyType},
 		Aggregation: view.Distribution(distributionBounds...),
 	}
 
@@ -155,7 +148,7 @@ var (
 		Name:        ResourceConflicts.Name() + "_total",
 		Measure:     ResourceConflicts,
 		Description: "The total number of resource conflicts resulting from a mismatch between the cached resources and cluster resources",
-		TagKeys:     []tag.Key{KeyType},
+		TagKeys:     []tag.Key{KeyReconciler, KeyType},
 		Aggregation: view.Count(),
 	}
 
@@ -164,7 +157,7 @@ var (
 		Name:        InternalErrors.Name() + "_total",
 		Measure:     InternalErrors,
 		Description: "The total number of internal errors triggered by Config Sync",
-		TagKeys:     []tag.Key{KeyInternalErrorSource},
+		TagKeys:     []tag.Key{KeyReconciler, KeyInternalErrorSource},
 		Aggregation: view.Count(),
 	}
 )

@@ -1,8 +1,23 @@
 package metrics
 
-import "go.opencensus.io/tag"
+import (
+	"os"
+	"regexp"
+
+	"go.opencensus.io/tag"
+)
 
 var (
+	// KeyReconciler is a dynamic key where both the key and value are set to
+	// the name of the reconciler the metric is emitted from.
+	// Possible values: root-reconciler, ns-reconciler-<namespace>
+	//
+	// We need to use a dynamic label so that the OpenTelemetry Collector can
+	// differentiate between the metrics emitted by the different reconcilers.
+	// Otherwise, metrics will be randomly sampled:
+	// https://github.com/open-telemetry/opentelemetry-collector/issues/1076
+	KeyReconciler, _ = tag.NewKey(ReconcilerTagKey())
+
 	// KeyOperation groups metrics by their operation. Possible values: create, patch, update, delete.
 	KeyOperation, _ = tag.NewKey("operation")
 
@@ -34,4 +49,17 @@ func StatusTagKey(err error) string {
 		return "success"
 	}
 	return "error"
+}
+
+// ReconcilerTagKey filters the reconciler name from the pod name that is exposed via the Downward API
+// (https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#the-downward-api).
+// If the regex filter fails, the entire pod name is returned.
+func ReconcilerTagKey() string {
+	podName := os.Getenv("RECONCILER_NAME")
+	regex := regexp.MustCompile(`(?:([a-z0-9]+(?:-[a-z0-9]+)*))-[a-z0-9]+-(?:[a-z0-9]+)`)
+	ss := regex.FindStringSubmatch(podName)
+	if ss != nil {
+		return ss[1]
+	}
+	return podName
 }

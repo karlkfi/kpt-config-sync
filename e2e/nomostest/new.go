@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/docker"
+	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -135,6 +136,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		NonRootRepos:            make(map[string]*Repository),
 		NamespaceRepos:          make(map[string]string),
 		scheme:                  scheme,
+		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
 	}
 
 	if *e2e.ImagePrefix == e2e.DefaultImagePrefix {
@@ -221,6 +223,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
+	nt.PortForwardOtelCollector()
 
 	switch opts.Control {
 	case ntopts.DelegatedControl:

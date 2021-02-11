@@ -38,7 +38,6 @@ func RegisterReconcilerMetricsViews() error {
 		LastApplyTimestampView,
 		ResourceFightsView,
 		WatchesView,
-		WatchManagerUpdatesView,
 		WatchManagerUpdatesDurationView,
 		RemediateDurationView,
 		ResourceConflictsView,

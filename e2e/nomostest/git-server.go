@@ -3,12 +3,7 @@ package nomostest
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	"strings"
-	"testing"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -186,57 +181,5 @@ func portForwardGitServer(nt *NT, repos ...string) int {
 		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
 	}
-	return forwardToFreePort(nt.T, nt.kubeconfigPath, podName)
-}
-
-// forwardToPort forwards the given Pod in the git-server's Namespace to
-// a free port.
-//
-// Returns the localhost port which kubectl is forwarding to the git-server Pod.
-func forwardToFreePort(t *testing.T, kcfg, pod string) int {
-	t.Helper()
-
-	cmd := exec.Command("kubectl", "--kubeconfig", kcfg, "port-forward",
-		"-n", testGitNamespace, pod, ":22")
-
-	stdout := &strings.Builder{}
-	cmd.Stdout = stdout
-
-	err := cmd.Start()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Cleanup(func() {
-		err := cmd.Process.Kill()
-		if err != nil {
-			t.Errorf("killing port forward process: %v", err)
-		}
-	})
-
-	port := 0
-	// In CI, 1% of the time this takes longer than 10 seconds, so 20 seconds seems
-	// like a reasonable amount of time to wait.
-	took, err := Retry(20*time.Second, func() error {
-		s := stdout.String()
-		if !strings.Contains(s, "\n") {
-			return errors.New("nothing written to stdout for kubectl port-forward")
-		}
-
-		line := strings.Split(s, "\n")[0]
-
-		// Sample output:
-		// Forwarding from 127.0.0.1:44043 -> 22
-		_, err = fmt.Sscanf(line, "Forwarding from 127.0.0.1:%d -> 22", &port)
-		if err != nil {
-			t.Fatalf("unable to parse port-forward output: %q", s)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("took %v to wait for sync", took)
-
-	return port
+	return nt.ForwardToFreePort(testGitNamespace, podName, ":22")
 }

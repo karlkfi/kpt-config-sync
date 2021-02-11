@@ -11,7 +11,7 @@ data:
    apiVersion: apps/v1
    kind: Deployment
    metadata:
-     name: reconciler
+     name: # this field will be assigned dynamically by the reconciler-manager
      namespace: config-management-system
      labels:
        app: reconciler
@@ -25,12 +25,14 @@ data:
      selector:
        matchLabels:
          app: reconciler
+         configsync.gke.io/reconciler: # this field will be assigned dynamically by the reconciler-manager
      template:
        metadata:
          labels:
            app: reconciler
+           configsync.gke.io/reconciler: # this field will be assigned dynamically by the reconciler-manager
        spec:
-         serviceAccountName: reconciler
+         serviceAccountName: # this field will be assigned dynamically by the reconciler-manager
          containers:
          - name: reconciler
            image: IMAGE_NAME
@@ -43,6 +45,11 @@ data:
              - name: repo
                mountPath: /repo
                readOnly: true
+           env:
+             - name: RECONCILER_NAME
+               valueFrom:
+                 fieldRef:
+                   fieldPath: metadata.name
            envFrom:
              - configMapRef:
                  name: reconciler

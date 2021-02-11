@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e"
+	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -552,9 +553,32 @@ func setupDelegatedControl(nt *NT, opts ntopts.New) {
 		setupRepoSync(nt, ns)
 	}
 
+	// Validate multi-repo metrics in root reconciler.
+	err := nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0)
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		nt.T.Errorf("validating metrics: %v", err)
+	}
+
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		if err := waitForRepoReconciler(nt, ns); err != nil {
 			nt.T.Fatal(err)
+		}
+
+		// Validate multi-repo metrics in namespace reconciler.
+		err := nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
+			nt.ParseMetrics(prev)
+			return nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(ns), 0)
+		})
+		if err != nil {
+			nt.T.Errorf("validating metrics: %v", err)
 		}
 	}
 }
@@ -601,6 +625,22 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		err := nt.Validate(rs.Name, ns, &v1alpha1.RepoSync{})
 		if err != nil {
 			nt.T.Fatal(err)
+		}
+
+		// Validate multi-repo metrics.
+		err = nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
+			nt.ParseMetrics(prev)
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4,
+				testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
+				testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))
+			if err != nil {
+				return err
+			}
+			// Validate no error metrics are emitted.
+			return nt.ValidateErrorMetricsNotFound()
+		})
+		if err != nil {
+			nt.T.Errorf("validating metrics: %v", err)
 		}
 	}
 }

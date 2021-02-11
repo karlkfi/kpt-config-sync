@@ -2,9 +2,12 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -41,6 +44,30 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4,
+			metrics.ResourceCreated("CustomResourceDefinition"), metrics.ResourceCreated("Namespace"),
+			metrics.GVKMetric{
+				GVK:   "Anvil",
+				APIOp: "create",
+				ApplyOps: []metrics.Operation{
+					{Name: "create", Count: 2},
+					{Name: "update", Count: 2},
+				},
+				Watches: "2",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Modify the v1 and v1beta1 Anvils and verify they are updated.
 	nt.Root.Add("acme/namespaces/foo/anvilv1.yaml", anvilCR("v1", "first", 20))
 	nt.Root.Add("acme/namespaces/foo/anvilv2.yaml", anvilCR("v2", "second", 200))
@@ -54,6 +81,29 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4,
+			metrics.ResourcePatched("Namespace", 2),
+			metrics.GVKMetric{
+				GVK:   "Anvil",
+				APIOp: "patch",
+				ApplyOps: []metrics.Operation{
+					{Name: "update", Count: 4},
+				},
+				Watches: "2",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -136,6 +186,15 @@ func TestMultipleVersions_CustomResourceV1(t *testing.T) {
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
 	}
 }
 
@@ -311,6 +370,16 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	if err := nt.ValidateNotFound("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
 		t.Fatal(err)
 	}
+
+	// Validate no error metrics are emitted.
+	// TODO(b/162601559): internal_errors_total metric from diff.go
+	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+	//	nt.ParseMetrics(prev)
+	//	return nt.ValidateErrorMetricsNotFound()
+	//})
+	//if err != nil {
+	//	t.Errorf("validating error metrics: %v", err)
+	//}
 }
 
 func hasV1Subjects(subjects ...string) func(o core.Object) error {

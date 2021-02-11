@@ -8,12 +8,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/kptapplier"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +60,20 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	nt.Root.CommitAndPush("add pod viewer role")
 	nt.WaitForRepoSyncs()
 
+	// Validate multi-repo metrics from root reconciler.
+	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5, metrics.ResourceCreated("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Declare a conflicting Role in the shipping Namespace repo.
 	nt.NonRootRepos["shipping"].Add("acme/namespaces/shipping/pod-role.yaml", namespacePodRole())
 	nt.NonRootRepos["shipping"].CommitAndPush("add conflicting pod owner role")
@@ -68,12 +84,21 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
 
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
-	_, err := nomostest.Retry(60*time.Second, func() error {
+	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.Validate(v1alpha1.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
 			repoSyncHasErrors(kptapplier.ManagementConflictErrorCode))
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate reconciler error metric is emitted from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
+	})
+	if err != nil {
+		t.Errorf("validating reconciler_errors metric: %v", err)
 	}
 
 	// Ensure the Role matches the one in the Root repo.
@@ -93,6 +118,22 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Validate multi-repo metrics from root reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4, metrics.ResourceDeleted("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
 }
 
 func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
@@ -109,6 +150,20 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Validate multi-repo metrics from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 1, metrics.ResourceCreated("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
 	nt.Root.CommitAndPush("add conflicting pod role to Root")
 
@@ -121,6 +176,15 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate reconciler error metric is emitted from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
+	})
+	if err != nil {
+		t.Errorf("validating reconciler_errors metric: %v", err)
 	}
 
 	// Ensure the Role matches the one in the Root repo.
@@ -138,6 +202,20 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		roleHasRules(rootPodRole().Rules))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 0, metrics.ResourceDeleted("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 

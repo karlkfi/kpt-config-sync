@@ -8,10 +8,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -37,6 +39,15 @@ func TestDeclareNamespace(t *testing.T) {
 	err = nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
 		t.Error(err)
+	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
 	}
 }
 
@@ -68,6 +79,21 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Phase 2: Remove the Role, and ensure the implicit Namespace is NOT deleted.
 	nt.Root.Remove("acme/role.yaml")
 	nt.Root.CommitAndPush("remove Role")
@@ -80,6 +106,22 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	err = nt.ValidateNotFound("admin", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
 		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0, metrics.ResourceDeleted("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -100,6 +142,29 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	err = nt.Validate("bar", "", &corev1.Namespace{})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.GVKMetric{
+				GVK:   "Namespace",
+				APIOp: "create",
+				ApplyOps: []metrics.Operation{
+					{Name: "create", Count: 2},
+					{Name: "update", Count: 2},
+				},
+				Watches: "1",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove the only two declared Namespaces.
@@ -133,6 +198,20 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		// Validate parse error metric is emitted.
+		err := nt.ValidateParseErrors(reconciler.RootSyncName, "2006")
+		if err != nil {
+			t.Errorf("validating parse_errors_total metric: %v", err)
+		}
+		// Validate reconciler error metric is emitted.
+		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "sync")
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Add foo back so we resume syncing.
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.CommitAndPush("re-declare foo Namespace")
@@ -148,6 +227,35 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
+			metrics.ResourceCreated("Namespace"),
+			metrics.GVKMetric{
+				GVK:      "Namespace",
+				APIOp:    "",
+				ApplyOps: []metrics.Operation{{Name: "update", Count: 4}},
+				Watches:  "1",
+			},
+			metrics.GVKMetric{
+				GVK:      "Namespace",
+				APIOp:    "delete",
+				ApplyOps: []metrics.Operation{{Name: "delete", Count: 1}},
+				Watches:  "1",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 
 	// Undeclare foo. We expect this to succeed since the user unambiguously wants
@@ -166,6 +274,28 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	err = nt.ValidateNotFound("bar", "", &corev1.Namespace{})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0,
+			metrics.GVKMetric{
+				GVK:      "Namespace",
+				APIOp:    "delete",
+				ApplyOps: []metrics.Operation{{Name: "delete", Count: 2}},
+				Watches:  "0",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 

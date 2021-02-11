@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -63,6 +64,20 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("service account store not found: %v", err)
+	}
+
+	// Validate multi-repo metrics from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespace), 1, metrics.ResourceCreated("ServiceAccount"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -123,6 +138,20 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	// Validate multi-repo metrics from namespace reconciler.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespaceRepo), 1, metrics.ResourceCreated("ServiceAccount"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
 }
 
 func TestDeleteRepoSync_Delegated(t *testing.T) {
@@ -168,6 +197,22 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
+
+	// Validate multi-repo metrics from root reconciler.
+	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourceDeleted("RepoSync"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): unexpected internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
 }
 
 func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
@@ -249,5 +294,14 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("RepoSync did not finish reconciling: %v", err)
+	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
 	}
 }

@@ -88,7 +88,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 	// Update the Remediator's watches to start new ones and stop old ones.
 	remediatorStart := time.Now()
 	watchErrs := u.remediator.UpdateWatches(ctx, gvks)
-	metrics.RecordWatchManagerUpdateAndDuration(ctx, metrics.StatusTagKey(watchErrs), remediatorStart)
+	metrics.RecordWatchManagerUpdatesDuration(ctx, metrics.StatusTagKey(watchErrs), remediatorStart)
 	errs = status.Append(errs, watchErrs)
 
 	return errs

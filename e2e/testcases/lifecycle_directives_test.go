@@ -2,10 +2,13 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -42,6 +45,21 @@ func TestPreventDeletionNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Role"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Delete the declaration and ensure the Namespace isn't deleted.
 	nt.Root.Remove("acme/namespaces/shipping/ns.yaml")
 	nt.Root.Remove("acme/namespaces/shipping/role.yaml")
@@ -58,6 +76,29 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	err = nt.ValidateNotFound("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0,
+			metrics.ResourceDeleted("Role"),
+			metrics.GVKMetric{
+				GVK:      "Namespace",
+				APIOp:    "update",
+				ApplyOps: []metrics.Operation{{Name: "update", Count: 2}},
+				Watches:  "0",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -96,6 +137,15 @@ func TestPreventDeletionRole(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
 }
 
 func TestPreventDeletionClusterRole(t *testing.T) {
@@ -131,6 +181,15 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
 	}
 }
 

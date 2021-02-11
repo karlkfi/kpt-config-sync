@@ -8,9 +8,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -108,6 +110,15 @@ func TestRevertClusterRole(t *testing.T) {
 		// There is definitely some sort of bug in ACM.
 		t.Errorf("bug alert: did not revert ClusterRole conflict after %v: %v", d+d2, err)
 	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
 }
 
 // TestClusterRoleLifecycle ensures we can add/update/delete cluster-scoped
@@ -150,6 +161,20 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		t.Fatalf("validating ClusterRole precondition: %v", err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("ClusterRole"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Update the ClusterRole in the SOT.
 	updatedRules := []rbacv1.PolicyRule{
 		{
@@ -172,6 +197,20 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		t.Errorf("updating ClusterRole: %v", err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("ClusterRole", 2))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	// Delete the ClusterRole from the SOT.
 	nt.Root.Remove("acme/cluster/clusterrole.yaml")
 	nt.Root.CommitAndPush("deleting ClusterRole")
@@ -180,5 +219,21 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	err = nt.ValidateNotFound(crName, "", &rbacv1.ClusterRole{})
 	if err != nil {
 		t.Errorf("deleting ClusterRole: %v", err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0, metrics.ResourceDeleted("ClusterRole"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): unexpected internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }

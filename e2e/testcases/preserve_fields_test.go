@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kptapplier"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -100,6 +102,21 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 		t.Fatal("not using strategic merge patch")
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Service"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	updatedService := service.DeepCopy()
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
@@ -110,6 +127,21 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("Service", 2))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -187,6 +219,16 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 		// Failing on this check probably indicates a new bug was introduced.
 		t.Fatal(err)
 	}
+
+	// Validate no error metrics are emitted.
+	// TODO(b/162496882): intermittent resource_fights_total metric is emitted
+	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+	//	nt.ParseMetrics(prev)
+	//	return nt.ValidateErrorMetricsNotFound()
+	//})
+	//if err != nil {
+	//	t.Errorf("validating error metrics: %v", err)
+	//}
 }
 
 // TestPreserveLastApplied ensures we don't destroy the last-applied-configuration
@@ -243,6 +285,15 @@ func TestPreserveLastApplied(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
 }
 
 func TestAddUpdateDeleteLabels(t *testing.T) {
@@ -293,6 +344,15 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Validate no error metrics are emitted.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
 }
 
 func TestAddUpdateDeleteAnnotations(t *testing.T) {
@@ -328,6 +388,21 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	cm.Annotations["baz"] = "qux"
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Update annotation for ConfigMap in repo")
@@ -345,6 +420,21 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("ConfigMap", 2))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
 	delete(cm.Annotations, "baz")
 	nt.Root.Add(cmPath, cm)
 	nt.Root.CommitAndPush("Delete annotation for configmap in repo")
@@ -356,6 +446,21 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourcePatched("Namespace", 3), metrics.ResourcePatched("ConfigMap", 3))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 
