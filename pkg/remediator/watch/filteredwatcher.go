@@ -2,7 +2,9 @@ package watch
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -34,6 +37,16 @@ type Runnable interface {
 	SetManagementConflict(v bool)
 }
 
+const (
+	watchEventBookmarkType    = "Bookmark"
+	watchEventErrorType       = "Error"
+	watchEventUnsupportedType = "Unsupported"
+)
+
+// errorLoggingInterval specifies the minimal time interval two errors related to the same object
+// and having the same errorType should be logged.
+const errorLoggingInterval = time.Second
+
 // filteredWatcher is wrapper around a watch interface.
 // It only keeps the events for objects that are
 // - either present in the declared resources,
@@ -44,6 +57,8 @@ type filteredWatcher struct {
 	resources  *declared.Resources
 	queue      *queue.ObjectQueue
 	reconciler declared.Scope
+	// errorTracker maps an error to the time when the same error happened last time.
+	errorTracker map[string]time.Time
 
 	// The following fields are guarded by the mutex.
 	mux                sync.Mutex
@@ -58,13 +73,41 @@ var _ Runnable = &filteredWatcher{}
 // NewFiltered returns a new filtered watch initialized with the given options.
 func NewFiltered(ctx context.Context, cfg watcherConfig) Runnable {
 	return &filteredWatcher{
-		gvk:        cfg.gvk.String(),
-		startWatch: cfg.startWatch,
-		resources:  cfg.resources,
-		queue:      cfg.queue,
-		reconciler: cfg.reconciler,
-		base:       watch.NewEmptyWatch(),
+		gvk:          cfg.gvk.String(),
+		startWatch:   cfg.startWatch,
+		resources:    cfg.resources,
+		queue:        cfg.queue,
+		reconciler:   cfg.reconciler,
+		base:         watch.NewEmptyWatch(),
+		errorTracker: make(map[string]time.Time),
 	}
+}
+
+// pruneErrors removes the errors happened before errorLoggingInterval from w.errorTracker.
+// This is to save the memory usage for tracking errors.
+func (w *filteredWatcher) pruneErrors() {
+	for errName, lastErrorTime := range w.errorTracker {
+		if time.Since(lastErrorTime) >= errorLoggingInterval {
+			delete(w.errorTracker, errName)
+		}
+	}
+}
+
+// addError checks whether an error identified by the errorID has been tracked,
+// and handles it in one of the following ways:
+//   * tracks it if it has not yet been tracked;
+//   * updates the time for this error to time.Now() if `errorLoggingInterval` has passed
+//     since the same error happened last time;
+//   * ignore the error if `errorLoggingInterval` has NOT passed since it happened last time.
+//
+// addError returns false if the error is ignored, and true if it is not ignored.
+func (w *filteredWatcher) addError(errorID string) bool {
+	lastErrorTime, ok := w.errorTracker[errorID]
+	if !ok || time.Since(lastErrorTime) >= errorLoggingInterval {
+		w.errorTracker[errorID] = time.Now()
+		return true
+	}
+	return false
 }
 
 func (w *filteredWatcher) ManagementConflict() bool {
@@ -90,6 +133,15 @@ func (w *filteredWatcher) Stop() {
 	w.stopped = true
 }
 
+// This function is borrowed from https://github.com/kubernetes/client-go/blob/master/tools/cache/reflector.go.
+func isExpiredError(err error) bool {
+	// In Kubernetes 1.17 and earlier, the api server returns both apierrors.StatusReasonExpired and
+	// apierrors.StatusReasonGone for HTTP 410 (Gone) status code responses. In 1.18 the kube server is more consistent
+	// and always returns apierrors.StatusReasonExpired. For backward compatibility we can only remove the apierrors.IsGone
+	// check when we fully drop support for Kubernetes 1.17 servers from reflectors.
+	return apierrors.IsResourceExpired(err) || apierrors.IsGone(err)
+}
+
 // Run reads the event from the base watch interface,
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
@@ -112,7 +164,18 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 
 		glog.V(2).Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
 		for event := range w.base.ResultChan() {
-			if newVersion := w.handle(ctx, event); newVersion != "" {
+			w.pruneErrors()
+			newVersion, err := w.handle(ctx, event)
+			if err != nil {
+				if isExpiredError(err) {
+					glog.V(2).Infof("Watch for %s at resource version %q closed with: %v", w.gvk, resourceVersion, err)
+				} else if w.addError(watchEventErrorType + errorID(err)) {
+					glog.Errorf("Watch for %s at resource version %q ended with: %v", w.gvk, resourceVersion, err)
+				}
+				// Call `break` to restart the watch.
+				break
+			}
+			if newVersion != "" {
 				resourceVersion = newVersion
 			}
 		}
@@ -153,10 +216,32 @@ func (w *filteredWatcher) start(resourceVersion string) (bool, status.Error) {
 	return true, nil
 }
 
+func errorID(err error) string {
+	errTypeName := reflect.TypeOf(err).String()
+
+	var s string
+	switch t := err.(type) {
+	case *apierrors.StatusError:
+		if t == nil {
+			break
+		}
+		if t.ErrStatus.Details != nil {
+			s = t.ErrStatus.Details.Name
+		}
+		if s == "" {
+			s = fmt.Sprintf("%s-%s-%d", t.ErrStatus.Status, t.ErrStatus.Reason, t.ErrStatus.Code)
+		}
+	}
+	return errTypeName + s
+}
+
 // handle reads the event from the base watch interface,
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
-func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) string {
+//
+// handle returns the new resource version, and an error indicating that
+// an a watch.Error event type is encounted and the watch should be restarted.
+func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string, error) {
 	var deleted bool
 	switch event.Type {
 	case watch.Added, watch.Modified:
@@ -166,13 +251,22 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) string 
 	case watch.Bookmark:
 		m, err := meta.Accessor(event.Object)
 		if err != nil {
-			glog.Errorf("Unable to access metadata of Bookmark event: %v", event)
-			return ""
+			// For watch.Bookmark, only the ResourceVersion field of event.Object is set.
+			// Therefore, set the second argument of w.addError to watchEventBookmarkType.
+			if w.addError(watchEventBookmarkType) {
+				glog.Errorf("Unable to access metadata of Bookmark event: %v", event)
+			}
+			return "", nil
 		}
-		return m.GetResourceVersion()
+		return m.GetResourceVersion(), nil
+	case watch.Error:
+		return "", apierrors.FromObject(event.Object)
+	// Keep the default case to catch any new watch event types added in the future.
 	default:
-		glog.Errorf("Unsupported watch event: %#v", event)
-		return ""
+		if w.addError(watchEventUnsupportedType) {
+			glog.Errorf("Unsupported watch event: %#v", event)
+		}
+		return "", nil
 	}
 
 	// get core.Object from the runtime object.
@@ -180,12 +274,12 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) string 
 	if err != nil {
 		glog.Warningf("Received non core.Object in watch event: %v", err)
 		metrics.RecordInternalError(ctx, "remediator")
-		return ""
+		return "", nil
 	}
 	// filter objects.
 	if !w.shouldProcess(object) {
 		glog.V(4).Infof("Ignoring event for object: %v", object)
-		return object.GetResourceVersion()
+		return object.GetResourceVersion(), nil
 	}
 
 	if deleted {
@@ -197,7 +291,7 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) string 
 
 	glog.V(3).Infof("Received object: %v", object)
 	w.queue.Add(object)
-	return object.GetResourceVersion()
+	return object.GetResourceVersion(), nil
 }
 
 // shouldProcess returns true if the given object should be enqueued by the
