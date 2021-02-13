@@ -2,20 +2,16 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/kptapplier"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	admissionv1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/cli-utils/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -42,19 +38,21 @@ func Handler(cfg *rest.Config) (*Validator, error) {
 
 // Handle implements admission.Handler
 func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if reason := skipValidation(req); reason != "" {
-		// This admission controller is part of a defense-in-depth strategy. Config
-		// Sync is still running a reconciler which will revert any unwanted changes
-		// that get through. If the request does not meet all the preconditions for
-		// it to be validated, we will fail open and allow the reconciler to revert
-		// any changes as necessary.
-		return admission.Allowed(reason)
+	// An admission request for a sub-resource (such as a Scale) will not include
+	// the full parent for us to validate until the admission chain is fixed:
+	// https://github.com/kubernetes/enhancements/pull/1600
+	// Until then, we will not configure the webhook to intercept subresources so
+	// this block should never be reached.
+	if req.SubResource != "" {
+		glog.Errorf("Unable to review admission request for sub-resource: %v", req)
+		return allow()
 	}
 
 	// Check UserInfo for ConfigSync and perform manager precedence check.
 	if isConfigSyncSA(req.UserInfo) {
 		if isImporter(req.UserInfo.Username) {
-			return admission.Allowed("Config Sync importer can always update a resource")
+			// Config Sync importer can always update a resource.
+			return allow()
 		}
 		// TODO(b/160786209): Add manager precedence checks once service accounts are known for root and repo reconcilers.
 	}
@@ -64,104 +62,113 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 		return handleResourceGroupRequest(req)
 	}
 
-	// TODO(b/160786928): Build diff list between old and new objects
+	// Convert to client.Objects for convenience.
+	oldObj, newObj, err := convertObjects(req)
+	if err != nil {
+		glog.Error(err.Error())
+		return allow()
+	}
 
-	// TODO(b/160786679): If the diff list includes any ConfigSync labels or annotations, reject the request immediately.
+	switch req.Operation {
+	case admissionv1.Create:
+		return v.handleCreate(newObj)
+	case admissionv1.Delete:
+		return v.handleDelete(oldObj)
+	case admissionv1.Update:
+		return v.handleUpdate(oldObj, newObj)
+	default:
+		glog.Errorf("Unsupported operation: %v", req.Operation)
+		return allow()
+	}
+}
 
-	// TODO(b/160786679): Use the ConfigSync managed fields annotation to build an “immutable list” of which fields should not be modified.
-	// TODO(b/160786679): Handle the case where management is being enabled or disabled
+func (v *Validator) handleCreate(newObj client.Object) admission.Response {
+	if configSyncManaged(newObj) {
+		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to create managed resources")
+	}
+	return allow()
+}
 
-	// TODO(b/160786679): If the diff list and immutable list have any fields in common, reject the request. Otherwise allow it.
+func (v *Validator) handleDelete(oldObj client.Object) admission.Response {
+	if configSyncManaged(oldObj) {
+		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to delete managed resources")
+	}
+	return allow()
+}
 
+func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Response {
+	// Verify that old and/or new objects are managed by Config Sync.
+	if !configSyncManaged(oldObj, newObj) {
+		// The webhook should be configured to only intercept resources which are
+		// managed by Config Sync.
+		glog.Warningf("Received admission request for unmanaged object: %v", newObj)
+		return allow()
+	}
+
+	// Build a diff set between old and new objects.
+	diffSet, err := v.differ.FieldDiff(oldObj, newObj)
+	if err != nil {
+		glog.Errorf("Failed to generate field diff set: %v", err)
+		return allow()
+	}
+
+	// If the diff set includes any ConfigSync labels or annotations, reject the
+	// request immediately.
+	if csSet := ConfigSyncMetadata(diffSet); !csSet.Empty() {
+		return deny(metav1.StatusReasonForbidden, "Config Sync metadata can not be modified: "+csSet.String())
+	}
+
+	// Use the ConfigSync declared fields annotation to build the set of fields
+	// which should not be modified.
+	declaredSet, err := DeclaredFields(oldObj)
+	if err != nil {
+		glog.Errorf("Failed to decoded declared fields: %v", err)
+		return allow()
+	}
+
+	// If the diff set and declared set have any fields in common, reject the
+	// request. Otherwise allow it.
+	invalidSet := diffSet.Intersection(declaredSet)
+	if !invalidSet.Empty() {
+		return deny(metav1.StatusReasonForbidden, "fields managed by Config Sync can not be modified: "+invalidSet.String())
+	}
+	return allow()
+}
+
+func convertObjects(req admission.Request) (client.Object, client.Object, error) {
+	var oldObj, newObj client.Object
+	if req.OldObject.Object != nil {
+		var ok bool
+		oldObj, ok = req.OldObject.Object.(client.Object)
+		if !ok {
+			return nil, nil, fmt.Errorf("failed to convert to client.Object: %v", req.OldObject.Object)
+		}
+	}
+	if req.Object.Object != nil {
+		var ok bool
+		newObj, ok = req.Object.Object.(client.Object)
+		if !ok {
+			return nil, nil, fmt.Errorf("failed to convert to client.Object: %v", req.Object.Object)
+		}
+	}
+	return oldObj, newObj, nil
+}
+
+func configSyncManaged(objs ...client.Object) bool {
+	for _, obj := range objs {
+		if obj != nil && obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled {
+			return true
+		}
+	}
+	return false
+}
+
+func allow() admission.Response {
 	return admission.Allowed("")
 }
 
-// skipValidation checks to see if the given Request meets all preconditions for
-// validation. If the Request fails to meet any, this returns a string
-// describing why the Request should skip validation.
-func skipValidation(req admission.Request) string {
-	// An admission request for a sub-resource (such as a Scale) will not include
-	// the full parent for us to validate until the admission chain is fixed:
-	// https://github.com/kubernetes/enhancements/pull/1600
-	// Until then, we will not configure the webhook to intercept subresources so
-	// this block should never be reached.
-	if req.SubResource != "" {
-		glog.Errorf("Unable to review admission request for sub-resource: %v", req)
-		return "unable to review admission request for sub-resource"
-	}
-
-	// Verify that old and/or new objects are managed by Config Sync.
-	oldMng, err := isManaged(req.OldObject.Object)
-	if err != nil {
-		glog.Errorf("Unable to read annotations from old object: %v", req.OldObject.Object)
-		return "unable to read annotations from old object"
-	}
-	mng, err := isManaged(req.Object.Object)
-	if err != nil {
-		glog.Errorf("Unable to read annotations from new object: %v", req.Object.Object)
-		return "unable to read annotations from new object"
-	}
-	// The webhook should be configured to only intercept resources which are
-	// managed by Config Sync.
-	if !oldMng && !mng {
-		glog.Warningf("Received admission request for unmanaged object: %v", req.OldObject.Object)
-		return "object is not managed by Config Sync"
-	}
-
-	return ""
-}
-
-var metadataAccessor = meta.NewAccessor()
-
-func isManaged(obj runtime.Object) (bool, error) {
-	annots, err := metadataAccessor.Annotations(obj)
-	if err != nil {
-		return false, err
-	}
-	return annots[v1.ResourceManagementKey] == v1.ResourceManagementEnabled, nil
-}
-
-// isResourceGroupRequest returns true if the request is for a ResourceGroup CR.
-func isResourceGroupRequest(req admission.Request) bool {
-	gk := schema.GroupKind{
-		Group: req.Kind.Group,
-		Kind:  req.Kind.Kind,
-	}
-	return gk == live.ResourceGroupGVK.GroupKind()
-}
-
-// handleResourceGroupRequest handles the request with following rules:
-// If the ResourceGroup CR is generated by ConfigSync, users can't modify it.
-// If the ResourceGroup CR is not generated by ConfigSync, users can modify it.
-func handleResourceGroupRequest(req admission.Request) admission.Response {
-	fromConfigSync, err := fromConfigSync(req)
-	if err != nil {
-		glog.Errorf("Unable to read labels from new object: %v", req.Object.Object)
-		reason := "unable to read labels from the new object"
-		return admission.Allowed(reason)
-	}
-	if fromConfigSync {
-		reason := "resourcegroups.kpt.dev generated by ConfigSync cannot be modified by other means"
-		return admission.Denied(reason)
-	}
-	reason := "Allow resourcegroups.kpt.dev that are not generated by ConfigSync"
-	return admission.Allowed(reason)
-}
-
-// fromConfigSync returns true if the ResourceGroup is generated by ConfigSync.
-func fromConfigSync(req admission.Request) (bool, error) {
-	name := req.Name
-	namespace := req.Namespace
-
-	labels, err := metadataAccessor.Labels(req.Object.Object)
-	if err != nil {
-		return false, err
-	}
-
-	hasInventoryLabel := labels[common.InventoryLabel] == kptapplier.InventoryID(namespace)
-
-	if namespace == configsync.ControllerNamespace {
-		return name == v1alpha1.RootSyncName && hasInventoryLabel, nil
-	}
-	return name == v1alpha1.RepoSyncName && hasInventoryLabel, nil
+func deny(reason metav1.StatusReason, message string) admission.Response {
+	resp := admission.Denied(string(reason))
+	resp.Result.Message = message
+	return resp
 }

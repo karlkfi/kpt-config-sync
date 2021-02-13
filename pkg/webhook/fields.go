@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"sigs.k8s.io/cli-utils/pkg/object"
@@ -18,9 +20,18 @@ type ObjectDiffer struct {
 	converter *declared.ValueConverter
 }
 
-// DeclaredFieldDiff returns a Set of the Object fields which are being modified
+// FieldSet returns a Set of the fields in the given Object.
+func (d *ObjectDiffer) FieldSet(obj client.Object) (*fieldpath.Set, error) {
+	value, err := d.converter.TypedValue(obj)
+	if err != nil {
+		return nil, err
+	}
+	return value.ToFieldSet()
+}
+
+// FieldDiff returns a Set of the Object fields which are being modified
 // in the given Request that are also marked as fields declared in Git.
-func (d *ObjectDiffer) DeclaredFieldDiff(oldObj, newObj client.Object) (s *fieldpath.Set, err error) {
+func (d *ObjectDiffer) FieldDiff(oldObj, newObj client.Object) (*fieldpath.Set, error) {
 	oldValue, err := d.converter.TypedValue(oldObj)
 	if err != nil {
 		return nil, err
@@ -34,23 +45,45 @@ func (d *ObjectDiffer) DeclaredFieldDiff(oldObj, newObj client.Object) (s *field
 		return nil, err
 	}
 
-	declared, err := declaredFields(oldObj)
-	if err != nil {
-		return nil, err
-	}
-
 	// We only check fields that were modified or removed. We don't care about
 	// fields that are added since they will never overlap with declared fields.
-	return cmp.Modified.Union(cmp.Removed).Intersection(declared), nil
+	return cmp.Modified.Union(cmp.Removed).Union(cmp.Added), nil
 }
 
-// declaredFields returns the declared fields for the given Object.
-func declaredFields(obj client.Object) (s *fieldpath.Set, err error) {
+var (
+	metadata     = "metadata"
+	annotations  = ".annotations."
+	labels       = ".labels."
+	metadataPath = fieldpath.PathElement{FieldName: &metadata}
+)
+
+// ConfigSyncMetadata returns all of the metadata fields in the given fieldpath
+// Set which are ConfigSync labels or annotations.
+func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
+	metadataSet := set.WithPrefix(metadataPath)
+
+	csSet := fieldpath.NewSet()
+	metadataSet.Iterate(func(path fieldpath.Path) {
+		s := path.String()
+		if strings.HasPrefix(s, annotations) {
+			s = s[len(annotations):]
+			if strings.HasPrefix(s, configsync.GroupName) || strings.HasPrefix(s, configmanagement.GroupName) {
+				csSet.Insert(path)
+			}
+		} else if strings.HasPrefix(s, labels) {
+			s = s[len(labels):]
+			if s == v1.ManagedByKey {
+				csSet.Insert(path)
+			}
+		}
+	})
+	return csSet
+}
+
+// DeclaredFields returns the declared fields for the given Object.
+func DeclaredFields(obj client.Object) (*fieldpath.Set, error) {
 	declared, ok := obj.GetAnnotations()[v1alpha1.DeclaredFieldsKey]
 	if !ok {
-		if err != nil {
-			glog.Errorf("Failed to get object metadata: %v", err)
-		}
 		return nil, fmt.Errorf("%s annotation is missing from %s", v1alpha1.DeclaredFieldsKey, object.RuntimeToObjMeta(obj))
 	}
 

@@ -3,12 +3,14 @@ package webhook
 import (
 	"testing"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func setRules(rules []rbacv1.PolicyRule) core.MetaMutator {
@@ -37,7 +39,7 @@ func TestObjectDiffer_Structured(t *testing.T) {
 					"here": "there",
 				}),
 			},
-			want: "",
+			want: ".metadata.labels.here",
 		},
 		{
 			name: "Change a label",
@@ -53,7 +55,7 @@ func TestObjectDiffer_Structured(t *testing.T) {
 			muts: []core.MetaMutator{
 				core.Labels(map[string]string{}),
 			},
-			want: ".metadata.labels.this",
+			want: ".metadata.labels\n.metadata.labels.this",
 		},
 		{
 			name: "Add a rule",
@@ -105,7 +107,7 @@ func TestObjectDiffer_Structured(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			oldObj := roleForTest()
 			newObj := roleForTest(tc.muts...)
-			got, err := od.DeclaredFieldDiff(oldObj, newObj)
+			got, err := od.FieldDiff(oldObj, newObj)
 			if err != nil {
 				t.Errorf("Got unexpected error: %v", err)
 			} else if got.String() != tc.want {
@@ -119,8 +121,7 @@ func roleForTest(muts ...core.MetaMutator) *rbacv1.Role {
 	role := fake.RoleObject(
 		core.Name("hello"),
 		core.Namespace("world"),
-		core.Label("this", "that"),
-		core.Annotation(v1alpha1.DeclaredFieldsKey, "{\"f:metadata\":{\"f:labels\":{\"f:this\":{}}},\"f:rules\":{}}"))
+		core.Label("this", "that"))
 
 	role.Rules = []rbacv1.PolicyRule{
 		{
@@ -154,7 +155,7 @@ func TestObjectDiffer_Unstructured(t *testing.T) {
 					"here": "there",
 				}),
 			},
-			want: "",
+			want: ".metadata.labels.here",
 		},
 		{
 			name: "Change a label",
@@ -184,7 +185,7 @@ func TestObjectDiffer_Unstructured(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			oldObj := unstructuredForTest()
 			newObj := unstructuredForTest(tc.muts...)
-			got, err := od.DeclaredFieldDiff(oldObj, newObj)
+			got, err := od.FieldDiff(oldObj, newObj)
 			if err != nil {
 				t.Errorf("Got unexpected error: %v", err)
 			} else if got.String() != tc.want {
@@ -214,9 +215,6 @@ func unstructuredForTest(muts ...mutator) *unstructured.Unstructured {
 			"metadata": map[string]interface{}{
 				"name":      "hello",
 				"namespace": "world",
-				"annotations": map[string]interface{}{
-					v1alpha1.DeclaredFieldsKey: "{\"f:metadata\":{\"f:labels\":{\"f:this\":{}}},\"f:rules\":{}}",
-				},
 				"labels": map[string]interface{}{
 					"this": "that",
 				},
@@ -234,4 +232,101 @@ func unstructuredForTest(muts ...mutator) *unstructured.Unstructured {
 		mut(u)
 	}
 	return u
+}
+
+func TestDeclaredFields(t *testing.T) {
+	testCases := []struct {
+		name    string
+		obj     client.Object
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "With declared fields",
+			obj: roleForTest(
+				core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:this":{}}},"f:rules":{}}`)),
+			want: ".rules\n.metadata.labels.this",
+		},
+		{
+			name:    "Missing declared fields",
+			obj:     roleForTest(),
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := DeclaredFields(tc.obj)
+			if err != nil {
+				if !tc.wantErr {
+					t.Errorf("Got DeclaredFields() error %v; want nil", err)
+				}
+			} else {
+				if tc.wantErr {
+					t.Error("Got DeclaredFields() nil error; want error")
+				}
+				if got.String() != tc.want {
+					t.Errorf("got %s, want %s", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestConfigSyncMetadata(t *testing.T) {
+	testCases := []struct {
+		name string
+		obj  client.Object
+		want string
+	}{
+		{
+			name: "With metadata",
+			obj: roleForTest(
+				core.Annotations(map[string]string{
+					"hello":                     "goodbye",
+					v1alpha1.ResourceManagerKey: ":root",
+					v1.ResourceManagementKey:    "enabled",
+				}),
+				core.Labels(map[string]string{
+					"here":          "there",
+					v1.ManagedByKey: "config-sync",
+				}),
+			),
+			want: ".annotations.configmanagement.gke.io/managed\n.annotations.configsync.gke.io/manager\n.labels.app.kubernetes.io/managed-by",
+		},
+		{
+			name: "Without metadata",
+			obj: roleForTest(
+				core.Annotations(map[string]string{
+					"hello": "goodbye",
+				}),
+				core.Labels(map[string]string{
+					"here": "there",
+				}),
+			),
+			want: "",
+		},
+	}
+
+	vc, err := declared.ValueConverterForTest()
+	if err != nil {
+		t.Fatalf("Failed to create ValueConverter: %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tv, err := vc.TypedValue(tc.obj)
+			if err != nil {
+				t.Fatalf("Failed to get TypedValue: %v", err)
+			}
+			set, err := tv.ToFieldSet()
+			if err != nil {
+				t.Fatalf("Failed to get FieldSet: %v", err)
+			}
+			got := ConfigSyncMetadata(set)
+			if got.String() != tc.want {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
 }
