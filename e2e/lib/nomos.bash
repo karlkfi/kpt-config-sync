@@ -80,7 +80,8 @@ function nomos::__csmr_repo_synced() {
 # This is defined as
 #   token == status.source.token && len(status.source.errors) == 0 \
 #   && token == status.import.token && len(status.import.errors) == 0 \
-#   && token == status.sync.token && len(status.sync.errors) == 0
+#   && token == status.sync.token && len(status.sync.errors) == 0 \
+#   && status.sync.inProgress == null
 function nomos::__legacy_repo_synced() {
   if (( $# != 0 )); then
     echo "Invalid number of args for repo_synced"
@@ -117,8 +118,12 @@ function nomos::__legacy_repo_synced() {
   fi
 
   status_token="$(jq -r '.status.sync.latestToken' <<< "$output")"
-  error_count="$(jq '[.status.sync.inProgress[].errors] | flatten | length' <<< "$output")"
   if [[ "$token" != "$status_token" ]]; then
+    return 1
+  fi
+
+  in_progress="$(jq '.status.sync.inProgress' <<< "$output")"
+  if [[ "$in_progress" != "null" ]]; then
     return 1
   fi
 
@@ -138,10 +143,6 @@ function nomos::__legacy_repo_synced() {
     return 1
   fi
   #### END WORKAROUND ####
-
-  if (( 0 < error_count )); then
-    return 1
-  fi
 }
 
 # Restarts the git-importer and monitor pods.
