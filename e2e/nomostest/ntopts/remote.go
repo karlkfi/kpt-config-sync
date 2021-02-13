@@ -1,11 +1,11 @@
 package ntopts
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/pkg/client/restconfig"
 )
 
@@ -14,15 +14,7 @@ func RemoteCluster(t *testing.T) Opt {
 	return func(opt *New) {
 		t.Helper()
 
-		restConfig, err := restconfig.NewRestConfig()
-		if err != nil {
-			t.Fatal(err)
-		}
-		opt.RESTConfig = restConfig
-
-		kcfgPath := filepath.Join(opt.TmpDir, Kubeconfig)
-
-		kubeconfig := os.Getenv(Kubeconfig)
+		kubeconfig := *e2e.KubeConfig
 		if len(kubeconfig) == 0 {
 			home, err := os.UserHomeDir()
 			if err != nil {
@@ -30,14 +22,14 @@ func RemoteCluster(t *testing.T) Opt {
 			}
 			kubeconfig = filepath.Join(home, ".kube", "config")
 		}
+		if err := os.Setenv(Kubeconfig, kubeconfig); err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
 
-		data, err := ioutil.ReadFile(kubeconfig)
+		restConfig, err := restconfig.NewRestConfig()
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(kcfgPath, data, os.ModePerm)
-		if err != nil {
-			t.Fatal(err)
-		}
+		opt.RESTConfig = restConfig
 	}
 }

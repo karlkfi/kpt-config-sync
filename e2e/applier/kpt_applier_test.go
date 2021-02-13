@@ -49,8 +49,11 @@ func prepare(t *testing.T) {
 	}
 	nomostest.RestConfig(t, &optsStruct)
 	cfg = optsStruct.RESTConfig
-	if err = os.Setenv(ntopts.Kubeconfig, filepath.Join(optsStruct.TmpDir, ntopts.Kubeconfig)); err != nil {
-		t.Fatalf("unexpected error %v", err)
+
+	if len(os.Getenv(ntopts.Kubeconfig)) == 0 {
+		if err = os.Setenv(ntopts.Kubeconfig, filepath.Join(optsStruct.TmpDir, ntopts.Kubeconfig)); err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
 	}
 	s := scheme.Scheme
 	err = v1beta1.AddToScheme(s)

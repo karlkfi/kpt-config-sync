@@ -117,6 +117,11 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	c := connect(t, opts.RESTConfig, scheme)
 	ctx := context.Background()
 
+	kubeconfigPath := filepath.Join(opts.TmpDir, ntopts.Kubeconfig)
+	if *e2e.TestCluster == e2e.Kubeconfig {
+		kubeconfigPath = os.Getenv(ntopts.Kubeconfig)
+	}
+
 	nt := &NT{
 		Context:                 ctx,
 		T:                       t,
@@ -124,7 +129,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		TmpDir:                  opts.TmpDir,
 		Config:                  opts.RESTConfig,
 		Client:                  c,
-		kubeconfigPath:          filepath.Join(opts.TmpDir, ntopts.Kubeconfig),
+		kubeconfigPath:          kubeconfigPath,
 		MultiRepo:               opts.Nomos.MultiRepo,
 		FilesystemPollingPeriod: 50 * time.Millisecond,
 		NonRootRepos:            make(map[string]*Repository),

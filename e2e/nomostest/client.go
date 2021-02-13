@@ -1,7 +1,6 @@
 package nomostest
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -77,11 +76,6 @@ func RestConfig(t *testing.T, optsStruct *ntopts.New) {
 	case e2e.Kind:
 		ntopts.Kind(t, *e2e.KubernetesVersion)(optsStruct)
 	case e2e.Kubeconfig:
-		if len(*e2e.KubeConfig) > 0 {
-			if err := os.Setenv(ntopts.Kubeconfig, *e2e.KubeConfig); err != nil {
-				t.Fatalf("unexpected error %v", err)
-			}
-		}
 		ntopts.RemoteCluster(t)(optsStruct)
 	default:
 		t.Fatalf("unsupported test cluster config %s. Allowed values are kubeconfig and kind.", *e2e.TestCluster)
