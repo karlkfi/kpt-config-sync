@@ -6,8 +6,12 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/kptapplier"
+	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -119,9 +123,94 @@ func Clean(nt *NT, failOnError FailOnError) {
 		nt.T.Fatal("error waiting for test objects to be deleted")
 	}
 
+	resetSystemNamespaces(nt, failOnError)
 	deleteImplicitNamespaces(nt, failOnError)
 }
 
+func isConfigSyncAnnotation(annotation string) bool {
+	return annotation == common.LifecycleDeleteAnnotation ||
+		strings.Contains(annotation, v1.ConfigManagementPrefix) ||
+		strings.Contains(annotation, v1alpha1.ConfigSyncPrefix) ||
+		annotation == kptapplier.OwningInventoryKey ||
+		annotation == hnc.AnnotationKeyV1A1 ||
+		annotation == hnc.AnnotationKeyV1A2
+}
+
+func isConfigSyncLabel(key, value string) bool {
+	return (key == v1.ManagedByKey && value == v1.ManagedByValue) || strings.Contains(key, hnc.DepthSuffix)
+}
+
+// deleteConfigSyncAnnotationsAndLabels removes the config sync annotations and labels from the namespace and update it.
+func deleteConfigSyncAnnotationsAndLabels(nt *NT, ns *corev1.Namespace) error {
+	var annotations = make(map[string]string)
+	var labels = make(map[string]string)
+	for k, v := range ns.Annotations {
+		if !isConfigSyncAnnotation(k) {
+			annotations[k] = v
+		}
+	}
+	for k, v := range ns.Labels {
+		if !isConfigSyncLabel(k, v) {
+			labels[k] = v
+		}
+	}
+
+	ns.Annotations = annotations
+	ns.Labels = labels
+
+	return nt.Client.Update(nt.Context, ns)
+}
+
+func namespaceHasNoConfigSyncAnnotationsAndLabels() Predicate {
+	return func(o core.Object) error {
+		ns, ok := o.(*corev1.Namespace)
+		if !ok {
+			return WrongTypeErr(ns, &corev1.Namespace{})
+		}
+		for k := range ns.Annotations {
+			if isConfigSyncAnnotation(k) {
+				return fmt.Errorf("found config sync annotation %s in namespace %s", k, ns.Name)
+			}
+		}
+		for k, v := range ns.Labels {
+			if isConfigSyncLabel(k, v) {
+				return fmt.Errorf("found config sync label `%s: %s` in namespace %s", k, v, ns.Name)
+			}
+		}
+		return nil
+	}
+}
+
+// resetSystemNamespaces removes the config sync annotations and labels from the system namespaces.
+func resetSystemNamespaces(nt *NT, failOnError FailOnError) {
+	errDeleting := false
+	nsList := &corev1.NamespaceList{}
+	if err := nt.Client.List(nt.Context, nsList); err != nil {
+		nt.T.Log(err)
+		errDeleting = true
+	}
+	for _, ns := range nsList.Items {
+		ns.SetGroupVersionKind(kinds.Namespace())
+		if differ.IsManageableSystemNamespace(&ns) {
+			if err := deleteConfigSyncAnnotationsAndLabels(nt, &ns); err != nil {
+				nt.T.Log(err)
+				errDeleting = true
+			}
+			if err := nt.Validate(ns.Name, "", &corev1.Namespace{}, namespaceHasNoConfigSyncAnnotationsAndLabels()); err != nil {
+				if failOnError {
+					nt.T.Fatal(err)
+				} else {
+					nt.T.Log(err)
+				}
+			}
+		}
+	}
+	if errDeleting && bool(failOnError) {
+		nt.T.Fatal("error resetting the system namespaces")
+	}
+}
+
+// deleteImplicitNamespaces deletes the namespaces with the PreventDeletion Annotation.
 func deleteImplicitNamespaces(nt *NT, failOnError FailOnError) {
 	errDeleting := false
 	nsList := &corev1.NamespaceList{}
