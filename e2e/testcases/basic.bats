@@ -4,6 +4,7 @@ set -euo pipefail
 
 load "../lib/assert"
 load "../lib/git"
+load "../lib/namespace"
 load "../lib/nomos"
 load "../lib/setup"
 load "../lib/wait"
@@ -186,7 +187,7 @@ function manage_namespace() {
 }
 
 @test "${FILE_NAME}: Namespace gatekeeper-system can be managed" {
-  kubectl create ns gatekeeper-system
+  namespace::create gatekeeper-system
   manage_namespace "gatekeeper-system"
   kubectl delete ns gatekeeper-system
 }
