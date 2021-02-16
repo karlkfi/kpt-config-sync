@@ -10,6 +10,7 @@ replace k8s.io/code-generator => k8s.io/code-generator v0.20.2
 replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 
 require (
+	cloud.google.com/go v0.72.0
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
 	github.com/GoogleContainerTools/kpt v0.37.1-0.20210128185716-8a1032f5571e
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	go.opencensus.io v0.22.5
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
+	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/text v0.3.5 // indirect

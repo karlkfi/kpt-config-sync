@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 )
 
-func hash(allData map[string]map[string]string) ([]byte, error) {
+func hash(allData interface{}) ([]byte, error) {
 	data, err := json.Marshal(allData)
 	if err != nil {
 		return nil, errors.Errorf("failed to marshal ConfigMaps data, error: %v", err)
