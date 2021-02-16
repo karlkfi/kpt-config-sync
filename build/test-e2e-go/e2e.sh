@@ -5,6 +5,8 @@
 
 set -e
 
+DIR=$(dirname "${BASH_SOURCE[0]}")
+
 # Makes the service account from ${gcp_prober_cred} the active account that drives
 # cluster changes.
 gcloud --quiet auth activate-service-account --key-file="${GCP_PROBER_CREDS}"
@@ -20,8 +22,14 @@ start_time=$(date +%s)
 function test_time {
   end_time=$(date +%s)
   echo "Tests took $(( end_time - start_time )) seconds."
+  kill 0 # kill the current process, and all of the processes in the process group
 }
 
 trap test_time EXIT
 
+# A hacky way to keep the gcloud credentials up-to-date.
+# Run the refresh script in background.
+${DIR}/refresh-gcloud-creds.sh &
+
+# Start the e2e test
 go test ./e2e/... --e2e "$@"
