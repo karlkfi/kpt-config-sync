@@ -3,10 +3,13 @@ package reconcile
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -94,7 +97,14 @@ func newApplier(cfg *rest.Config, client *syncerclient.Client, multirepoEnabled 
 
 // Create implements Applier.
 func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.Unstructured) (bool, status.Error) {
-	err := c.create(ctx, intendedState)
+	var err status.Error
+	// APIService is handled specially by client-side apply due to
+	// https://github.com/kubernetes/kubernetes/issues/89264
+	if intendedState.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
+		err = c.create(ctx, intendedState)
+	} else {
+		err = c.client.Create(ctx, intendedState, client.FieldOwner(configsync.FieldManager))
+	}
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 	m.RecordApplyOperation(ctx, "create", m.StatusTagKey(err), intendedState.GroupVersionKind())
 
@@ -195,6 +205,32 @@ func (c *clientApplier) clientFor(obj *unstructured.Unstructured) (dynamic.Resou
 // apply updates a resource using the same approach as running `kubectl apply`.
 // The implementation here has been mostly extracted from the apply command: k8s.io/kubectl/cmd/apply.go
 func (c *clientApplier) update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
+	if intendedState.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
+		return c.updateAPIService(ctx, intendedState, currentState)
+	}
+	objCopy := intendedState.DeepCopy()
+	// Run the server-side apply dryrun first.
+	// If the returned object doesn't change, skip running server-side apply.
+	err := c.client.Patch(ctx, objCopy, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership, client.DryRunAll)
+	if err != nil {
+		return nil, err
+	}
+	if equal(objCopy, currentState) {
+		return nil, nil
+	}
+
+	start := time.Now()
+	err = c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)
+	duration := time.Since(start).Seconds()
+	metrics.APICallDuration.WithLabelValues("patch", intendedState.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
+	m.RecordAPICallDuration(ctx, "patch", m.StatusTagKey(err), intendedState.GroupVersionKind(), start)
+	return []byte("updated"), err
+}
+
+// updateAPIService updates APIService type resources.
+// APIService is handled specially by client-side apply due to
+// https://github.com/kubernetes/kubernetes/issues/89264
+func (c *clientApplier) updateAPIService(ctx context.Context, intendedState, currentState *unstructured.Unstructured) ([]byte, error) {
 	resourceDescription := description(intendedState)
 	// Serialize the current configuration of the object.
 	current, cErr := runtime.Encode(unstructured.UnstructuredJSONScheme, currentState)
@@ -371,4 +407,17 @@ func description(u *unstructured.Unstructured) string {
 // GetClient returns the underlying applier's client.Client.
 func (c *clientApplier) GetClient() client.Client {
 	return c.client.Client
+}
+
+func equal(dryrunState, currentState *unstructured.Unstructured) bool {
+	cleanFields := func(u *unstructured.Unstructured) {
+		u.SetGeneration(0)
+		u.SetResourceVersion("")
+		u.SetManagedFields(nil)
+	}
+	obj1 := dryrunState.DeepCopy()
+	obj2 := currentState.DeepCopy()
+	cleanFields(obj1)
+	cleanFields(obj2)
+	return reflect.DeepEqual(obj1.Object, obj2.Object)
 }

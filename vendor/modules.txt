@@ -731,7 +731,7 @@ k8s.io/utils/exec
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# sigs.k8s.io/cli-utils v0.22.4-0.20210108175429-beb6f88a4384
+# sigs.k8s.io/cli-utils v0.23.3
 ## explicit
 sigs.k8s.io/cli-utils/pkg/apply
 sigs.k8s.io/cli-utils/pkg/apply/error
@@ -857,7 +857,7 @@ sigs.k8s.io/kustomize/pkg/transformers
 sigs.k8s.io/kustomize/pkg/transformers/config
 sigs.k8s.io/kustomize/pkg/transformers/config/defaultconfig
 sigs.k8s.io/kustomize/pkg/types
-# sigs.k8s.io/kustomize/kyaml v0.10.5
+# sigs.k8s.io/kustomize/kyaml v0.10.9
 sigs.k8s.io/kustomize/kyaml/errors
 sigs.k8s.io/kustomize/kyaml/ext
 sigs.k8s.io/kustomize/kyaml/fieldmeta

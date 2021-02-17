@@ -6,6 +6,7 @@ package task
 import (
 	"context"
 	"io/ioutil"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,8 +16,9 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/klog"
 	"k8s.io/kubectl/pkg/cmd/apply"
-	"k8s.io/kubectl/pkg/cmd/delete"
+	cmddelete "k8s.io/kubectl/pkg/cmd/delete"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/slice"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
@@ -44,11 +46,13 @@ type applyOptions interface {
 // ApplyTask applies the given Objects to the cluster
 // by using the ApplyOptions.
 type ApplyTask struct {
-	Factory           util.Factory
-	InfoHelper        info.InfoHelper
-	Mapper            meta.RESTMapper
-	Objects           []*unstructured.Unstructured
-	CRDs              []*unstructured.Unstructured
+	Factory    util.Factory
+	InfoHelper info.InfoHelper
+	Mapper     meta.RESTMapper
+	Objects    []*unstructured.Unstructured
+	CRDs       []*unstructured.Unstructured
+	// Used for determining inventory during errors
+	PrevInventory     map[object.ObjMetadata]bool
 	DryRunStrategy    common.DryRunStrategy
 	ServerSideOptions common.ServerSideOptions
 	InventoryPolicy   inventory.InventoryPolicy
@@ -73,11 +77,13 @@ var getClusterObj = getClusterObject
 func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 	go func() {
 		objects := a.Objects
+		klog.V(4).Infof("apply task starting; attempting to apply %d objects", len(objects))
 
 		// If this is a dry run, we need to handle situations where
 		// we have a CRD and a CR in the same resource set, but the CRD
 		// will not actually have been applied when we reach the CR.
 		if a.DryRunStrategy.ClientOrServerDryRun() {
+			klog.V(4).Infof("dry-run filtering custom resources...")
 			// Find all resources in the set that doesn't exist in the
 			// RESTMapper, but where we do have the CRD for the type in
 			// the resource set.
@@ -95,6 +101,7 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 				taskContext.EventChannel() <- createApplyEvent(object.UnstructuredToObjMeta(obj), event.Created, nil)
 			}
 			// Update the resource set to no longer include the CRs.
+			klog.V(4).Infof("after dry-run filtering custom resources, %d objects left", len(objs))
 			objects = objs
 		}
 
@@ -102,6 +109,7 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 		// for that here. It could happen if this is dry-run and we removed
 		// all resources in the previous step.
 		if len(objects) == 0 {
+			klog.V(4).Infoln("no objects to apply after dry-run filtering--returning")
 			a.sendTaskResult(taskContext)
 			return
 		}
@@ -111,18 +119,27 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 		ao, dynamic, err := applyOptionsFactoryFunc(taskContext.EventChannel(),
 			a.ServerSideOptions, a.DryRunStrategy, a.Factory)
 		if err != nil {
+			if klog.V(4) {
+				klog.Errorf("error creating ApplyOptions (%s)--returning", err)
+			}
 			sendBatchApplyEvents(taskContext, objects, err)
 			a.sendTaskResult(taskContext)
 			return
 		}
 
-		var infos []*resource.Info
+		klog.V(4).Infof("attempting to apply %d remaining objects", len(objects))
+		// invInfos stores the objects which should be stored in the final inventory.
+		invInfos := make(map[object.ObjMetadata]*resource.Info, len(objects))
 		for _, obj := range objects {
 			// Set the client and mapping fields on the provided
 			// info so they can be applied to the cluster.
 			info, err := a.InfoHelper.BuildInfo(obj)
 			id := object.UnstructuredToObjMeta(obj)
 			if err != nil {
+				if klog.V(4) {
+					klog.Errorf("unable to convert obj to info for %s/%s (%s)--continue",
+						obj.GetNamespace(), obj.GetName(), err)
+				}
 				taskContext.EventChannel() <- createApplyEvent(
 					id, event.Failed, applyerror.NewUnknownTypeError(err))
 				taskContext.CaptureResourceFailure(id)
@@ -132,17 +149,30 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 			clusterObj, err := getClusterObj(dynamic, info)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
-					taskContext.EventChannel() <- createApplyEvent(
-						id,
-						event.Unchanged,
-						err)
+					if klog.V(4) {
+						klog.Errorf("error (%s) retrieving %s/%s from cluster--continue",
+							err, info.Namespace, info.Name)
+					}
+					op := event.Failed
+					if a.objInCluster(id) {
+						// Object in cluster stays in the inventory.
+						klog.V(4).Infof("%s/%s apply retrieval failure, but in cluster--keep in inventory",
+							info.Namespace, info.Name)
+						invInfos[id] = info
+						op = event.Unchanged
+					}
+					taskContext.EventChannel() <- createApplyEvent(id, op, err)
 					taskContext.CaptureResourceFailure(id)
 					continue
 				}
 			}
-			infos = append(infos, info)
+			// At this point the object was either 1) successfully retrieved from the cluster, or
+			// 2) returned "Not Found" error (meaning first-time creation). Add to final inventory.
+			invInfos[id] = info
 			canApply, err := inventory.CanApply(a.InvInfo, clusterObj, a.InventoryPolicy)
 			if !canApply {
+				klog.V(5).Infof("can not apply %s/%s--continue",
+					clusterObj.GetNamespace(), clusterObj.GetName())
 				taskContext.EventChannel() <- createApplyEvent(
 					id,
 					event.Unchanged,
@@ -153,23 +183,36 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 			// add the inventory annotation to the resource being applied.
 			inventory.AddInventoryIDAnnotation(obj, a.InvInfo)
 			ao.SetObjects([]*resource.Info{info})
+			klog.V(5).Infof("applying %s/%s...", info.Namespace, info.Name)
 			err = ao.Run()
+			if err != nil && a.ServerSideOptions.ServerSideApply && isAPIService(obj) && isStreamError(err) {
+				// Server-side Apply doesn't work with APIService before k8s 1.21
+				// https://github.com/kubernetes/kubernetes/issues/89264
+				// Thus APIService is handled specially using client-side apply.
+				err = clientSideApply(info, taskContext.EventChannel(), a.DryRunStrategy, a.Factory)
+			}
 			if err != nil {
+				if klog.V(4) {
+					klog.Errorf("error applying (%s/%s) %s", info.Namespace, info.Name, err)
+				}
+				// If apply failed and the object is not in the cluster, remove
+				// it from the final inventory.
+				if !a.objInCluster(id) {
+					klog.V(5).Infof("not in cluster; removing apply fail object %s/%s from inventory",
+						info.Namespace, info.Name)
+					delete(invInfos, id)
+				}
 				taskContext.EventChannel() <- createApplyEvent(
 					id, event.Failed, applyerror.NewApplyRunError(err))
 				taskContext.CaptureResourceFailure(id)
 			}
 		}
 
-		// Fetch the Generation from all Infos after they have been
-		// applied.
-		for _, inf := range infos {
-			id, err := object.InfoToObjMeta(inf)
-			if err != nil {
-				continue
-			}
-			if inf.Object != nil {
-				acc, err := meta.Accessor(inf.Object)
+		// Store objects (and some obj metadata) in the task context
+		// for the final inventory.
+		for id, info := range invInfos {
+			if info.Object != nil {
+				acc, err := meta.Accessor(info.Object)
 				if err != nil {
 					continue
 				}
@@ -208,7 +251,7 @@ func newApplyOptions(eventChannel chan event.Event, serverSideOptions common.Ser
 		},
 		// FilenameOptions are not needed since we don't use the ApplyOptions
 		// to read manifests.
-		DeleteOptions: &delete.DeleteOptions{},
+		DeleteOptions: &cmddelete.DeleteOptions{},
 		PrintFlags: &genericclioptions.PrintFlags{
 			OutputFormat: &emptyString,
 		},
@@ -266,6 +309,16 @@ func (a *ApplyTask) filterCRsWithCRDInSet(objects []*unstructured.Unstructured) 
 		objs = append(objs, obj)
 	}
 	return objs, objsWithCRD, nil
+}
+
+// objInCluster returns true if the passed object is in the slice of
+// previous inventory, because an object in the previous inventory
+// exists in the cluster.
+func (a *ApplyTask) objInCluster(obj object.ObjMetadata) bool {
+	if _, found := a.PrevInventory[obj]; found {
+		return true
+	}
+	return false
 }
 
 type crdsInfo struct {
@@ -341,4 +394,24 @@ func sendBatchApplyEvents(taskContext *taskrunner.TaskContext, objects []*unstru
 			id, event.Failed, applyerror.NewInitializeApplyOptionError(err))
 		taskContext.CaptureResourceFailure(id)
 	}
+}
+
+func isAPIService(obj *unstructured.Unstructured) bool {
+	gk := obj.GroupVersionKind().GroupKind()
+	return gk.Group == "apiregistration.k8s.io" && gk.Kind == "APIService"
+}
+
+// isStreamError checks if the error is a StreamError. Since kubectl wraps the actual StreamError,
+// we can't check the error type.
+func isStreamError(err error) bool {
+	return strings.Contains(err.Error(), "stream error: stream ID ")
+}
+
+func clientSideApply(info *resource.Info, eventChannel chan event.Event, strategy common.DryRunStrategy, factory util.Factory) error {
+	ao, _, err := applyOptionsFactoryFunc(eventChannel, common.ServerSideOptions{ServerSideApply: false}, strategy, factory)
+	if err != nil {
+		return err
+	}
+	ao.SetObjects([]*resource.Info{info})
+	return ao.Run()
 }

@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -275,12 +273,11 @@ func TestPreserveLastApplied(t *testing.T) {
 	if nt.MultiRepo {
 		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}
-	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation, v1.DeclaredConfigAnnotationKey}, annotationKeys...)
+	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
 	_, err = nomostest.Retry(20*time.Second, func() error {
 		return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
-			nomostest.HasExactlyAnnotationKeys(withDeclared...),
-			declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
+			nomostest.HasExactlyAnnotationKeys(withDeclared...))
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -313,8 +310,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	// Checking that the configmap with no labels appears on cluster, and
 	// that no user labels are specified
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey),
-		declaredConfig(nomostest.HasExactlyLabelKeys(v1.ManagedByKey)))
+		nomostest.HasExactlyLabelKeys(v1.ManagedByKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,8 +322,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Checking that label is updated after syncing an update.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, "baz"),
-		declaredConfig(nomostest.HasExactlyLabelKeys(v1.ManagedByKey, "baz")))
+		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, "baz"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,8 +334,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Check that the label is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey),
-		declaredConfig(nomostest.HasExactlyLabelKeys(v1.ManagedByKey)))
+		nomostest.HasExactlyLabelKeys(v1.ManagedByKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,13 +371,11 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	if nt.MultiRepo {
 		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}
-	withDeclared := append([]string{v1.DeclaredConfigAnnotationKey}, annotationKeys...)
 
 	// Checking that the configmap with no annotations appears on cluster, and
 	// that no user annotations are specified
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys(withDeclared...),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
+		nomostest.HasExactlyAnnotationKeys(annotationKeys...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,12 +401,10 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	updatedKeys := append([]string{"baz"}, annotationKeys...)
-	updatedWithDeclared := append([]string{"baz"}, withDeclared...)
+
 	// Checking that annotation is updated after syncing an update.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys(updatedWithDeclared...),
-		nomostest.HasAnnotation("baz", "qux"),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys(updatedKeys...)),
+		nomostest.HasExactlyAnnotationKeys(updatedKeys...),
 		nomostest.HasAnnotation("baz", "qux"))
 	if err != nil {
 		t.Fatal(err)
@@ -442,8 +432,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 
 	// Check that the annotation is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyAnnotationKeys(withDeclared...),
-		declaredConfig(nomostest.HasExactlyAnnotationKeys(annotationKeys...)))
+		nomostest.HasExactlyAnnotationKeys(annotationKeys...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,22 +450,6 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("validating metrics: %v", err)
-	}
-}
-
-// declaredConfig wraps a Predicate, applying it to the config specified in the
-// declared-config annotation key.
-func declaredConfig(p nomostest.Predicate) nomostest.Predicate {
-	return func(o core.Object) error {
-		declared := o.GetAnnotations()[v1.DeclaredConfigAnnotationKey]
-		// For now we don't have any tests that require type-specific structs, so
-		// Unstructured is fine.
-		u := &unstructured.Unstructured{}
-		err := json.Unmarshal([]byte(declared), u)
-		if err != nil {
-			return err
-		}
-		return errors.Wrap(p(u), "declared config")
 	}
 }
 

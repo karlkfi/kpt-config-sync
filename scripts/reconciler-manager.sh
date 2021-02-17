@@ -30,6 +30,7 @@ kubectl apply -f manifests/namespace-selector-crd.yaml
 kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
 kubectl apply -f manifests/reconciler-manager-service-account.yaml
+kubectl apply -f manifests/otel-agent-cm.yaml
 
 # Fill in configmap template
 sed -e "s|IMAGE_NAME|$REC_TAG|" \

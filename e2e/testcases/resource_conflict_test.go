@@ -207,7 +207,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	// Validate multi-repo metrics from namespace reconciler.
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 0, metrics.ResourceDeleted("Role"))
+		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 0)
 		if err != nil {
 			return err
 		}

@@ -23,6 +23,7 @@ var (
 	multiRepoCRDs = []string{
 		"reposyncs.configsync.gke.io",
 		"rootsyncs.configsync.gke.io",
+		"resourcegroups.kpt.dev",
 		// Shared CRDS
 		"clusters.clusterregistry.k8s.io",
 		"clusterselectors.configmanagement.gke.io",

@@ -7,12 +7,12 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
@@ -114,16 +114,16 @@ func Run(opts Options) {
 
 	// Configure the Applier.
 	genericClient := syncerclient.New(cl, metrics.APICallDuration)
-	baseApplier, err := reconcile.NewApplier(cfg, genericClient)
+	baseApplier, err := reconcile.NewApplierForMultiRepo(cfg, genericClient)
 	if err != nil {
 		glog.Fatalf("Instantiating Applier: %v", err)
 	}
 
-	var a *applier.Applier
+	var a *kptapplier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a = applier.NewRootApplier(cl, baseApplier)
+		a = kptapplier.NewRootApplier(cl)
 	} else {
-		a = applier.NewNamespaceApplier(cl, baseApplier, opts.ReconcilerScope)
+		a = kptapplier.NewNamespaceApplier(cl, opts.ReconcilerScope)
 	}
 
 	// Configure the Remediator.

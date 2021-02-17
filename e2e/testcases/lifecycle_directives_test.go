@@ -82,13 +82,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0,
-			metrics.ResourceDeleted("Role"),
-			metrics.GVKMetric{
-				GVK:      "Namespace",
-				APIOp:    "update",
-				ApplyOps: []metrics.Operation{{Name: "update", Count: 2}},
-				Watches:  "0",
-			})
+			metrics.ResourceDeleted("Role"))
 		if err != nil {
 			return err
 		}

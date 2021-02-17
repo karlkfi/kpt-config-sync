@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type fakeApplier struct {
@@ -145,7 +146,7 @@ func TestSync(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		applierFunc := func() (*clientSet, error) {
+		applierFunc := func(c client.Client) (*clientSet, error) {
 			return &clientSet{
 				kptApplier: newFakeApplier(tc.initErr, tc.events),
 			}, tc.initErr

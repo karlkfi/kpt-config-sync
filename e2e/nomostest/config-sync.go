@@ -97,6 +97,7 @@ var (
 		"rootsyncs.configsync.gke.io":          true,
 		metrics.OtelAgentName:                  true,
 		metrics.OtelCollectorName:              true,
+		"resourcegroups.kpt.dev":               true,
 	}
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.

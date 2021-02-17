@@ -3,20 +3,25 @@ package kptapplier
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/metrics"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
+	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,7 +35,7 @@ type Applier struct {
 	// clientSetFunc is the function to create kpt clientSet.
 	// Use this as a function so that the unit testing can mock
 	// the clientSet.
-	clientSetFunc func() (*clientSet, error)
+	clientSetFunc func(client.Client) (*clientSet, error)
 	// client get and updates RepoSync and its status.
 	client client.Client
 	// scope is the scope of the applier (eg root or a namespace).
@@ -80,10 +85,11 @@ func NewRootApplier(c client.Client) *Applier {
 	return a
 }
 
-func processApplyEvent(e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]core.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
+func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]core.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
 	// ApplyEvent.Type has two types: ApplyEventResourceUpdate and ApplyEventCompleted.
 	// ApplyEventResourceUpdate is for applying a single resource;
 	// ApplyEventCompleted indicates all resources have been applied.
+
 	if e.Type != event.ApplyEventResourceUpdate {
 		return nil
 	}
@@ -107,32 +113,49 @@ func processApplyEvent(e event.ApplyEvent, stats *applyEventStats, cache map[cor
 		glog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
 	} else {
 		glog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
+		handleMetrics(ctx, "patch", e.Error, id.WithVersion(""))
 		stats.eventByOp[e.Operation]++
 	}
 	return nil
 }
 
-func processPruneEvent(e event.PruneEvent, stats *pruneEventStats) status.Error {
+func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats) status.Error {
 	if e.Error != nil {
 		stats.errCount++
 		return ApplierError(e.Error)
 	}
 
+	if e.Type != event.PruneEventResourceUpdate {
+		return nil
+	}
 	id := idFrom(e.Identifier)
 	if e.Operation == event.PruneSkipped {
 		// A PruneSkipped event indicates no change on any cluster object.
 		glog.V(4).Infof("skipped pruning resource %v", id)
 	} else {
 		glog.V(4).Infof("pruned resource %v", id)
+		handleMetrics(ctx, "delete", e.Error, id.WithVersion(""))
 		stats.eventByOp[e.Operation]++
 	}
 	return nil
 }
 
+func handleMetrics(ctx context.Context, operation string, err error, gvk schema.GroupVersionKind) {
+	// TODO(b/180744881) capture the apply duration in the kpt apply library.
+	start := time.Now()
+
+	m.RecordAPICallDuration(ctx, operation, m.StatusTagKey(err), gvk, start)
+	if operation == "patch" {
+		operation = "update"
+	}
+	metrics.Operations.WithLabelValues(operation, gvk.Kind, metrics.StatusLabel(err)).Inc()
+	m.RecordApplyOperation(ctx, operation, m.StatusTagKey(err), gvk)
+}
+
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.ID]core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	var errs status.MultiError
-	cs, err := a.clientSetFunc()
+	cs, err := a.clientSetFunc(a.client)
 	if err != nil {
 		return nil, ApplierError(err)
 	}
@@ -158,17 +181,25 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 	}
 
 	unknownTypeResources := make(map[core.ID]struct{})
+	options := apply.Options{
+		ServerSideOptions: common.ServerSideOptions{
+			ServerSideApply: true,
+			ForceConflicts:  true,
+			FieldManager:    configsync.FieldManager,
+		},
+		InventoryPolicy: a.policy,
+	}
 
-	events := cs.apply(ctx, a.inventory, resources, apply.Options{InventoryPolicy: a.policy})
+	events := cs.apply(ctx, a.inventory, resources, options)
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
 			errs = status.Append(errs, ApplierError(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.ApplyType:
-			errs = status.Append(errs, processApplyEvent(e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
+			errs = status.Append(errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
-			errs = status.Append(errs, processPruneEvent(e.PruneEvent, &stats.pruneEvent))
+			errs = status.Append(errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent))
 		default:
 			glog.V(4).Infof("skipped %v event", e.Type)
 		}

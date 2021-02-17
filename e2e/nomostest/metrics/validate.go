@@ -51,9 +51,8 @@ const (
 func ResourceCreated(gvk string) GVKMetric {
 	return GVKMetric{
 		GVK:   gvk,
-		APIOp: "create",
+		APIOp: "patch",
 		ApplyOps: []Operation{
-			{Name: "create", Count: 1},
 			{Name: "update", Count: 1},
 		},
 		Watches: "1",

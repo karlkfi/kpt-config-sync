@@ -42,6 +42,10 @@ type InventoryClient interface {
 	SetDryRunStrategy(drs common.DryRunStrategy)
 	// ApplyInventoryNamespace applies the Namespace that the inventory object should be in.
 	ApplyInventoryNamespace(invNamespace *unstructured.Unstructured) error
+	// GetClusterInventoryInfo returns the cluster inventory object.
+	GetClusterInventoryInfo(inv InventoryInfo) (*unstructured.Unstructured, error)
+	// UpdateLabels updates the labels of the cluster inventory object if it exists.
+	UpdateLabels(InventoryInfo, map[string]string) error
 }
 
 // ClusterInventoryClient is a concrete implementation of the
@@ -54,7 +58,7 @@ type ClusterInventoryClient struct {
 	dryRunStrategy        common.DryRunStrategy
 	InventoryFactoryFunc  InventoryFactoryFunc
 	invToUnstructuredFunc InventoryToUnstructuredFunc
-	infoHelper            info.InfoHelper
+	InfoHelper            info.InfoHelper
 }
 
 var _ InventoryClient = &ClusterInventoryClient{}
@@ -82,7 +86,7 @@ func NewInventoryClient(factory cmdutil.Factory,
 		dryRunStrategy:        common.DryRunNone,
 		InventoryFactoryFunc:  invFunc,
 		invToUnstructuredFunc: invToUnstructuredFunc,
-		infoHelper:            info.NewInfoHelper(factory),
+		InfoHelper:            info.NewInfoHelper(factory),
 	}
 	return &clusterInventoryClient, nil
 }
@@ -97,7 +101,7 @@ func NewInventoryClient(factory cmdutil.Factory,
 func (cic *ClusterInventoryClient) Merge(localInv InventoryInfo, objs []object.ObjMetadata) ([]object.ObjMetadata, error) {
 	pruneIds := []object.ObjMetadata{}
 	invObj := cic.invToUnstructuredFunc(localInv)
-	clusterInv, err := cic.getClusterInventoryInfo(invObj)
+	clusterInv, err := cic.GetClusterInventoryInfo(localInv)
 	if err != nil {
 		return pruneIds, err
 	}
@@ -164,7 +168,7 @@ func (cic *ClusterInventoryClient) Replace(localInv InventoryInfo, objs []object
 		klog.V(4).Infof("applied objects same as cluster inventory: do nothing")
 		return nil
 	}
-	clusterInv, err := cic.getClusterInventoryInfo(cic.invToUnstructuredFunc(localInv))
+	clusterInv, err := cic.GetClusterInventoryInfo(localInv)
 	if err != nil {
 		return err
 	}
@@ -202,8 +206,7 @@ func (cic *ClusterInventoryClient) DeleteInventoryObj(localInv InventoryInfo) er
 // an error if one occurred.
 func (cic *ClusterInventoryClient) GetClusterObjs(localInv InventoryInfo) ([]object.ObjMetadata, error) {
 	var objs []object.ObjMetadata
-	invObj := cic.invToUnstructuredFunc(localInv)
-	clusterInv, err := cic.getClusterInventoryInfo(invObj)
+	clusterInv, err := cic.GetClusterInventoryInfo(localInv)
 	if err != nil {
 		return objs, err
 	}
@@ -224,7 +227,8 @@ func (cic *ClusterInventoryClient) GetClusterObjs(localInv InventoryInfo) ([]obj
 //
 // TODO(seans3): Remove the special case code to merge multiple cluster inventory
 // objects once we've determined that this case is no longer possible.
-func (cic *ClusterInventoryClient) getClusterInventoryInfo(localInv *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+func (cic *ClusterInventoryClient) GetClusterInventoryInfo(inv InventoryInfo) (*unstructured.Unstructured, error) {
+	localInv := cic.invToUnstructuredFunc(inv)
 	if localInv == nil {
 		return nil, fmt.Errorf("retrieving cluster inventory object with nil local inventory")
 	}
@@ -266,6 +270,18 @@ func (cic *ClusterInventoryClient) getClusterInventoryInfo(localInv *unstructure
 		}
 	}
 	return clusterInv, nil
+}
+
+func (cic *ClusterInventoryClient) UpdateLabels(inv InventoryInfo, labels map[string]string) error {
+	obj, err := cic.GetClusterInventoryInfo(inv)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	obj.SetLabels(labels)
+	return cic.applyInventoryObj(obj)
 }
 
 // mergeClusterInventory merges the inventory of multiple inventory objects
@@ -444,7 +460,7 @@ func (cic *ClusterInventoryClient) ApplyInventoryNamespace(obj *unstructured.Uns
 }
 
 func (cic *ClusterInventoryClient) toInfo(obj *unstructured.Unstructured) (*resource.Info, error) {
-	return cic.infoHelper.BuildInfo(obj)
+	return cic.InfoHelper.BuildInfo(obj)
 }
 
 // helperFromInfo returns the resource.Helper to talk to the APIServer based

@@ -10,4 +10,7 @@ const (
 
 	// RepoSyncKind is the string constant for the RepoSync GroupVersionKind
 	RepoSyncKind = "RepoSync"
+
+	// FieldManager is the field manager name for server-side apply.
+	FieldManager = GroupName
 )

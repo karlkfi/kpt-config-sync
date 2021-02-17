@@ -46,12 +46,12 @@ type clientUpdateFn func(ctx context.Context, obj client.Object, opts ...client.
 type update func(core.Object) (core.Object, error)
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj core.Object) status.Error {
+func (c *Client) Create(ctx context.Context, obj core.Object, opts ...client.CreateOption) status.Error {
 	description := getResourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 
 	start := time.Now()
-	err := c.Client.Create(ctx, obj)
+	err := c.Client.Create(ctx, obj, opts...)
 	c.recordLatency(start, "Create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
 	m.RecordAPICallDuration(ctx, "create", m.StatusTagKey(err), obj.GroupVersionKind(), start)
 

@@ -205,3 +205,8 @@ func ServiceAccount() schema.GroupVersionKind {
 func KptFile() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: kptfile.KptFileGroup, Version: kptfile.KptFileVersion, Kind: kptfile.KptFileName}
 }
+
+// APIService returns the APIService kind.
+func APIService() schema.GroupVersionKind {
+	return schema.GroupVersionKind{Group: "apiregistration.k8s.io", Version: "v1", Kind: "APIService"}
+}
