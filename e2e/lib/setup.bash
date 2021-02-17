@@ -271,6 +271,12 @@ setup::__skip_test() {
   return 1
 }
 
+# Clean up test resources.
+setup::cleanup() {
+  kubectl delete --ignore-not-found ns -l "testdata=true"
+  resource::delete -r ns -a configmanagement.gke.io/managed=enabled
+}
+
 # Record timing info, and implement the test filter. This is cheap, and all tests should do it.
 setup() {
   START_TIME=$(date +%s%3N)
@@ -278,6 +284,7 @@ setup() {
     skip
   fi
 
+  setup::cleanup
   # declare -f -F exits true if test_setup is defined as a function
   if declare -f -F test_setup > /dev/null; then
     test_setup
@@ -294,6 +301,7 @@ teardown() {
     fi
   fi
 
+  setup::cleanup
   local end
   end=$(date +%s%3N)
   ((runtime="$end - $START_TIME"))
