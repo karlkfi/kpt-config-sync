@@ -50,6 +50,64 @@ func TestValidator_Handle(t *testing.T) {
 			user: configSyncImporter(),
 		},
 		{
+			name: "Root reconciler deletes an object it manages",
+			oldObj: fake.RoleObject(
+				core.Name("hello"),
+				core.Namespace("world"),
+				core.Label(v1.ManagedByKey, v1.ManagedByValue),
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				core.Annotation(v1alpha1.ResourceManagerKey, ":root"),
+				setRules([]rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods"},
+						Verbs:     []string{"get", "list"},
+					},
+				}),
+				core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+			),
+			user: configSyncRootReconciler(),
+		},
+		{
+			name: "Namespace reconciler deletes an object it manages",
+			oldObj: fake.RoleObject(
+				core.Name("hello"),
+				core.Namespace("world"),
+				core.Label(v1.ManagedByKey, v1.ManagedByValue),
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				core.Annotation(v1alpha1.ResourceManagerKey, "bookstore"),
+				setRules([]rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods"},
+						Verbs:     []string{"get", "list"},
+					},
+				}),
+				core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+			),
+			user: configSyncNamespaceReconciler("bookstore"),
+		},
+		{
+			name: "Namespace reconciler deletes an object it does not manage",
+			oldObj: fake.RoleObject(
+				core.Name("hello"),
+				core.Namespace("world"),
+				core.Label(v1.ManagedByKey, v1.ManagedByValue),
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				core.Annotation(v1alpha1.ResourceManagerKey, "videostore"),
+				setRules([]rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"pods"},
+						Verbs:     []string{"get", "list"},
+					},
+				}),
+				core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+			),
+			user: configSyncNamespaceReconciler("bookstore"),
+			deny: metav1.StatusReasonUnauthorized,
+		},
+		{
 			name: "Bob creates an unmanaged object",
 			newObj: fake.RoleObject(
 				core.Name("hello"),
@@ -342,7 +400,21 @@ func validatorForTest(t *testing.T) *Validator {
 func configSyncImporter() authenticationv1.UserInfo {
 	return authenticationv1.UserInfo{
 		Groups:   []string{saGroup, saNamespaceGroup},
-		Username: saNamespaceGroup + ":importer",
+		Username: saImporter,
+	}
+}
+
+func configSyncRootReconciler() authenticationv1.UserInfo {
+	return authenticationv1.UserInfo{
+		Groups:   []string{saGroup, saNamespaceGroup},
+		Username: saRootReconciler,
+	}
+}
+
+func configSyncNamespaceReconciler(ns string) authenticationv1.UserInfo {
+	return authenticationv1.UserInfo{
+		Groups:   []string{saGroup, saNamespaceGroup},
+		Username: saNamespacePrefix + ns,
 	}
 }
 

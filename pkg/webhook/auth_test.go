@@ -13,39 +13,39 @@ func TestIsConfigSyncSA(t *testing.T) {
 		want     bool
 	}{
 		{
-			"Config Sync service account",
-			authenticationv1.UserInfo{
+			name: "Config Sync service account",
+			userInfo: authenticationv1.UserInfo{
 				Groups: []string{"foogroup", "system:serviceaccounts", "bargroup", "system:serviceaccounts:config-management-system", "bazgroup"},
 			},
-			true,
+			want: true,
 		},
 		{
-			"Gatekeeper service account",
-			authenticationv1.UserInfo{
+			name: "Gatekeeper service account",
+			userInfo: authenticationv1.UserInfo{
 				Groups: []string{"system:serviceaccounts", "system:serviceaccounts:gatekeeper-system"},
 			},
-			false,
+			want: false,
 		},
 		{
-			"Invalid Config Sync service account",
-			authenticationv1.UserInfo{
+			name: "Invalid Config Sync service account",
+			userInfo: authenticationv1.UserInfo{
 				Groups: []string{"foogroup", "system:serviceaccounts:config-management-system"},
 			},
-			false,
+			want: false,
 		},
 		{
-			"Invalid service account",
-			authenticationv1.UserInfo{
+			name: "Invalid service account",
+			userInfo: authenticationv1.UserInfo{
 				Groups: []string{"foogroup", "system:serviceaccounts"},
 			},
-			false,
+			want: false,
 		},
 		{
-			"Unauthenticated user",
-			authenticationv1.UserInfo{
+			name: "Unauthenticated user",
+			userInfo: authenticationv1.UserInfo{
 				Groups: []string{},
 			},
-			false,
+			want: false,
 		},
 	}
 
@@ -65,31 +65,116 @@ func TestIsImporter(t *testing.T) {
 		want     bool
 	}{
 		{
-			"Config Sync importer service account",
-			"system:serviceaccounts:config-management-system:importer",
-			true,
+			name:     "Config Sync importer service account",
+			username: "system:serviceaccounts:config-management-system:importer",
+			want:     true,
 		},
 		{
-			"Config Sync monitor service account",
-			"system:serviceaccounts:config-management-system:monitor",
-			false,
+			name:     "Config Sync monitor service account",
+			username: "system:serviceaccounts:config-management-system:monitor",
+			want:     false,
 		},
 		{
-			"Random other service account named importer",
-			"system:serviceaccounts:foo-namespace:importer",
-			false,
+			name:     "Random other service account named importer",
+			username: "system:serviceaccounts:foo-namespace:importer",
+			want:     false,
 		},
 		{
-			"Empty username",
-			"",
-			false,
+			name:     "Empty username",
+			username: "",
+			want:     false,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := isImporter(tc.username); got != tc.want {
-				t.Errorf("isImporter got %v; want %v", got, tc.want)
+				t.Errorf("isImporter() got %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsRootReconciler(t *testing.T) {
+	testCases := []struct {
+		name     string
+		username string
+		want     bool
+	}{
+		{
+			name:     "Config Sync root reconciler service account",
+			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			want:     true,
+		},
+		{
+			name:     "Config Sync monitor service account",
+			username: "system:serviceaccounts:config-management-system:monitor",
+			want:     false,
+		},
+		{
+			name:     "Random other service account named root-reconciler",
+			username: "system:serviceaccounts:foo-namespace:root-reconciler",
+			want:     false,
+		},
+		{
+			name:     "Empty username",
+			username: "",
+			want:     false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isRootReconciler(tc.username); got != tc.want {
+				t.Errorf("isRootReconciler() got %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCanManage(t *testing.T) {
+	testCases := []struct {
+		name     string
+		username string
+		manager  string
+		want     bool
+	}{
+		{
+			name:     "Root reconciler can manage its own object",
+			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			manager:  ":root",
+			want:     true,
+		},
+		{
+			name:     "Root reconciler can manage object with different manager",
+			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			manager:  "bookstore",
+			want:     true,
+		},
+		{
+			name:     "Namespace reconciler can manage its own object",
+			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			manager:  "bookstore",
+			want:     true,
+		},
+		{
+			name:     "Namespace reconciler can not manage object with different manager",
+			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			manager:  "videostore",
+			want:     false,
+		},
+		{
+			name:     "Namespace reconciler can manage object with no manager",
+			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			manager:  "",
+			want:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := canManage(tc.username, tc.manager); got != tc.want {
+				t.Errorf("canManage() got %v; want %v", got, tc.want)
 			}
 		})
 	}

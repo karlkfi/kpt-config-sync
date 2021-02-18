@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,13 +49,24 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 		return allow()
 	}
 
-	// Check UserInfo for ConfigSync and perform manager precedence check.
+	// Check UserInfo for Config Sync service account and handle if found.
 	if isConfigSyncSA(req.UserInfo) {
-		if isImporter(req.UserInfo.Username) {
+		username := req.UserInfo.Username
+		if isImporter(username) {
 			// Config Sync importer can always update a resource.
 			return allow()
 		}
-		// TODO(b/160786209): Add manager precedence checks once service accounts are known for root and repo reconcilers.
+		// Perform manager precedence check to verify this Config Sync reconciler
+		// can manage the object.
+		manager, err := objectManager(req)
+		if err != nil {
+			glog.Error(err.Error())
+			return allow()
+		}
+		if canManage(username, manager) {
+			return allow()
+		}
+		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object which is already managed by %s", username, manager))
 	}
 
 	// Handle the requests for ResourceGroup CRs.
@@ -161,6 +173,29 @@ func configSyncManaged(objs ...client.Object) bool {
 		}
 	}
 	return false
+}
+
+func objectManager(req admission.Request) (string, error) {
+	oldObj, newObj, err := convertObjects(req)
+	if err != nil {
+		return "", err
+	}
+	manager := getManager(oldObj)
+	if manager == "" {
+		manager = getManager(newObj)
+	}
+	return manager, nil
+}
+
+func getManager(obj client.Object) string {
+	if obj == nil {
+		return ""
+	}
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return ""
+	}
+	return annotations[v1alpha1.ResourceManagerKey]
 }
 
 func allow() admission.Response {
