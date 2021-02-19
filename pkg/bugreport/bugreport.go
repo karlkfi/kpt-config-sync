@@ -14,8 +14,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/kinds"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/nomos/cmd/nomos/status"
@@ -291,18 +293,23 @@ func assembleLogSources(ns corev1.Namespace, pods corev1.PodList) logSources {
 	return ls
 }
 
-// FetchCMResources provides a set of Readables for configmanagement resources
-func (b *BugReporter) FetchCMResources(ctx context.Context) (rd []Readable) {
-	rl, err := b.clientSet.ServerResourcesForGroupVersion(kinds.ConfigManagement().GroupVersion().String())
+// resourcesToReadables is a type of function that converts the resources to readables.
+type resourcesToReadables func(*unstructured.UnstructuredList, string) []Readable
+
+// fetchResources provides a set of Readables for resources with a given group and version
+// toReadables: the function that converts the resources to readables.
+func (b *BugReporter) fetchResources(ctx context.Context, gv schema.GroupVersion, toReadables resourcesToReadables) (rd []Readable) {
+	rl, err := b.clientSet.ServerResourcesForGroupVersion(gv.String())
 	if err != nil {
 		if errors.IsNotFound(err) {
-			fmt.Println("No configmanagement resources found on cluster")
-			return rd
-		} else if meta.IsNoMatchError(err) {
-			fmt.Println("No match for " + kinds.ConfigManagement().GroupVersion().String())
+			fmt.Printf("No %s resources found on cluster\n", gv.Group)
 			return rd
 		}
-		b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list server configmanagement resources: %v", err))
+		if meta.IsNoMatchError(err) {
+			fmt.Println("No match for " + gv.String())
+			return rd
+		}
+		b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list server %s resources: %v", gv.Group, err))
 		return rd
 	}
 	for _, apiResource := range rl.APIResources {
@@ -310,18 +317,52 @@ func (b *BugReporter) FetchCMResources(ctx context.Context) (rd []Readable) {
 		if apiResource.SingularName != "" {
 			u := &unstructured.UnstructuredList{}
 			u.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   kinds.ConfigManagement().GroupVersion().Group,
+				Group:   gv.Group,
 				Kind:    apiResource.SingularName,
-				Version: "v1",
+				Version: gv.Version,
 			})
 			if err := b.client.List(ctx, u); err != nil {
 				b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s resources: %v", apiResource.SingularName, err))
 			} else {
-				rd = b.appendPrettyJSON(rd, pathToClusterCmList(apiResource.Name), u)
+				rd = append(rd, toReadables(u, apiResource.Name)...)
 			}
 		}
 	}
 	return rd
+}
+
+// FetchResources provides a set of Readables for configsync, configmanagement and resourcegroup resources.
+func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
+	var rd []Readable
+	var clusterResourceToReadables = func(u *unstructured.UnstructuredList, resourceName string) (r []Readable) {
+		r = b.appendPrettyJSON(r, pathToClusterCmList(resourceName), u)
+		return r
+	}
+
+	var namespacedResourceToReadables = func(u *unstructured.UnstructuredList, _ string) (r []Readable) {
+		for _, o := range u.Items {
+			r = b.appendPrettyJSON(r, pathToNamespacedResource(o.GetNamespace(), o.GetName()), o)
+		}
+		return r
+	}
+
+	// fetch cluster-scoped configmanagement resources
+	cmReadables := b.fetchResources(ctx, v1.SchemeGroupVersion, clusterResourceToReadables)
+	rd = append(rd, cmReadables...)
+
+	namespaceGVs := []schema.GroupVersion{
+		v1alpha1.SchemeGroupVersion,          // namespace-scoped configsync resources
+		live.ResourceGroupGVK.GroupVersion(), // namespace-scoped resourcegroup resources
+	}
+	for _, gv := range namespaceGVs {
+		readables := b.fetchResources(ctx, gv, namespacedResourceToReadables)
+		rd = append(rd, readables...)
+	}
+	return rd
+}
+
+func pathToNamespacedResource(namespace, name string) string {
+	return path.Join(Namespace, namespace, name)
 }
 
 func pathToClusterCmList(name string) string {
