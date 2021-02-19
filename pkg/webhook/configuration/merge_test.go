@@ -1,4 +1,4 @@
-package webhook
+package configuration
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 )
 
-func TestMergeWebhookConfigurations(t *testing.T) {
+func TestMerge(t *testing.T) {
 	// Go doesn't allow taking the address of constants.
 	ignore := admissionv1.Ignore
 
@@ -222,12 +222,12 @@ func TestMergeWebhookConfigurations(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := MergeWebhookConfigurations(tc.left, tc.right)
+			got := Merge(tc.left, tc.right)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Fatal(diff)
 			}
 
-			got = MergeWebhookConfigurations(tc.right, tc.left)
+			got = Merge(tc.right, tc.left)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Fatalf("not symmetric: %s", diff)
 			}

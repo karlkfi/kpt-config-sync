@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer"
+	"github.com/google/nomos/pkg/reconciler"
 	authenticationv1 "k8s.io/api/authentication/v1"
 )
 
@@ -15,12 +16,9 @@ const (
 )
 
 var (
-	saImporter = fmt.Sprintf("%s:%s", saNamespaceGroup, importer.Name)
-	// TODO(ekitson): Use reconciler.RootSyncName and reconciler.RepoSyncPrefix
-	// once webhook configuration is moved to a subpackage and we can avoid an
-	// import cycle.
-	saRootReconciler  = fmt.Sprintf("%s:%s", saNamespaceGroup, "root-reconciler")
-	saNamespacePrefix = fmt.Sprintf("%s:%s-", saNamespaceGroup, "ns-reconciler")
+	saImporter        = fmt.Sprintf("%s:%s", saNamespaceGroup, importer.Name)
+	saRootReconciler  = fmt.Sprintf("%s:%s", saNamespaceGroup, reconciler.RootSyncName)
+	saNamespacePrefix = fmt.Sprintf("%s:%s-", saNamespaceGroup, reconciler.RepoSyncPrefix)
 )
 
 // isConfigSyncSA returns true if the given UserInfo represents a Config Sync

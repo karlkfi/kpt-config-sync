@@ -1,4 +1,4 @@
-package webhook
+package configuration
 
 import (
 	"github.com/google/nomos/pkg/status"

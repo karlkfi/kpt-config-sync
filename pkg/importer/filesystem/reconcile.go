@@ -23,7 +23,7 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
-	"github.com/google/nomos/pkg/webhook"
+	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -250,7 +250,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	err = webhook.UpdateAdmissionWebhookConfiguration(ctx, c.client.Client, c.discoveryClient, desiredFileObjects)
+	err = webhookconfiguration.Update(ctx, c.client.Client, c.discoveryClient, desiredFileObjects)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		glog.Errorf("Failed to update admission webhook: %v", err)

@@ -1,4 +1,4 @@
-package webhook
+package configuration
 
 import (
 	"context"
@@ -15,13 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// UpdateAdmissionWebhookConfiguration modifies the
-// ValidatingWebhookConfiguration on the cluster to match all types declared in
-// objs.
+// Update modifies the ValidatingWebhookConfiguration on the cluster to match
+// all types declared in objs.
 //
 // Returns an error if the API Server returns invalid API Resource lists or
 // there is a problem updating the Configuration.
-func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, dc discovery.ServerResourcer, objs []ast.FileObject) status.MultiError {
+func Update(ctx context.Context, c client.Client, dc discovery.ServerResourcer, objs []ast.FileObject) status.MultiError {
 	if len(objs) == 0 {
 		// Nothing to do.
 		return nil
@@ -85,7 +84,7 @@ func UpdateAdmissionWebhookConfiguration(ctx context.Context, c client.Client, d
 
 	// We aren't yet concerned with removing stale rules, so just merge the two
 	// together.
-	newCfg = MergeWebhookConfigurations(oldCfg, newCfg)
+	newCfg = Merge(oldCfg, newCfg)
 	if err = c.Update(ctx, newCfg); err != nil {
 		return status.APIServerError(err, "applying changes to admission webhook")
 	}
