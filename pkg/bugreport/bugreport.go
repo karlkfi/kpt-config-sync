@@ -128,19 +128,25 @@ func (b *BugReporter) EnabledServices() map[Product]bool {
 		enabled[PolicyController], _, _ = unstructured.NestedBool(b.cm.Object, "spec", "policyController", "enabled")
 		// Same for KCC
 		enabled[KCC], _, _ = unstructured.NestedBool(b.cm.Object, "spec", "configConnector", "enabled")
-		// Same for Config Sync, though here the "disabled" condition is if the git
+		// Same for Config Sync, though here the "disabled" condition is if enableMultiRepo is true or if the git
 		// config is "empty", which involves looking for an empty proxy config
-		syncGitCfg, _, _ := unstructured.NestedMap(b.cm.Object, "spec", "git")
 		configSyncEnabled := false
-		for k := range syncGitCfg {
-			if k != "proxy" {
+		enableMultiRepo, _, _ := unstructured.NestedBool(b.cm.Object, "spec", "enableMultiRepo")
+		if enableMultiRepo {
+			configSyncEnabled = true
+		} else {
+			syncGitCfg, _, _ := unstructured.NestedMap(b.cm.Object, "spec", "git")
+			for k := range syncGitCfg {
+				if k != "proxy" {
+					configSyncEnabled = true
+				}
+			}
+			proxy, _, _ := unstructured.NestedMap(syncGitCfg, "proxy")
+			if len(proxy) > 0 {
 				configSyncEnabled = true
 			}
 		}
-		proxy, _, _ := unstructured.NestedMap(syncGitCfg, "proxy")
-		if len(proxy) > 0 {
-			configSyncEnabled = true
-		}
+
 		enabled[ConfigSync] = configSyncEnabled
 		b.enabled = enabled
 	}
@@ -217,7 +223,11 @@ func (b *BugReporter) logSourcesForProduct(ctx context.Context, product Product,
 		}
 	}
 	if !enabled[product] {
-		glog.Infof("%s is not enabled but log sources found. It may be in the process of uninstalling. Adding logs to report.", string(product))
+		if len(ls) == 0 {
+			glog.Infof("%s is not enabled", string(product))
+		} else {
+			glog.Infof("%s is not enabled but log sources found. It may be in the process of uninstalling. Adding logs to report.", string(product))
+		}
 	}
 	return ls, err
 }
