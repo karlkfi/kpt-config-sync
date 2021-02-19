@@ -18,6 +18,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/metrics"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/nomos/cmd/nomos/status"
@@ -150,6 +151,8 @@ func (b *BugReporter) EnabledServices() map[Product]bool {
 		}
 
 		enabled[ConfigSync] = configSyncEnabled
+		enabled[ResourceGroup] = enableMultiRepo
+		enabled[ConfigSyncMonitoring] = true
 		b.enabled = enabled
 	}
 
@@ -172,25 +175,20 @@ func (b *BugReporter) FetchLogSources(ctx context.Context) []Readable {
 
 	listOps = client.ListOptions{}
 	nsLabels := map[string]string{"configmanagement.gke.io/configmanagement": "config-management"}
-	sources, err = b.logSourcesForProduct(ctx, PolicyController, listOps, nsLabels)
-	if err != nil {
-		b.ErrorList = append(b.ErrorList, err)
-	} else {
-		toBeLogged = append(toBeLogged, sources...)
+	productAndLabels := map[Product]map[string]string{
+		PolicyController:     nsLabels,
+		KCC:                  nsLabels,
+		ResourceGroup:        nsLabels,
+		ConfigSyncMonitoring: nil,
+		ConfigSync:           nil,
 	}
-
-	sources, err = b.logSourcesForProduct(ctx, KCC, listOps, nsLabels)
-	if err != nil {
-		b.ErrorList = append(b.ErrorList, err)
-	} else {
-		toBeLogged = append(toBeLogged, sources...)
-	}
-
-	sources, err = b.logSourcesForProduct(ctx, ConfigSync, listOps, nil)
-	if err != nil {
-		b.ErrorList = append(b.ErrorList, err)
-	} else {
-		toBeLogged = append(toBeLogged, sources...)
+	for product, ls := range productAndLabels {
+		sources, err = b.logSourcesForProduct(ctx, product, listOps, ls)
+		if err != nil {
+			b.ErrorList = append(b.ErrorList, err)
+		} else {
+			toBeLogged = append(toBeLogged, sources...)
+		}
 	}
 
 	// If we don't have any logs to pull down, report errors and exit
@@ -369,11 +367,14 @@ func pathToClusterCmList(name string) string {
 	return path.Join(ClusterScope, "configmanagement", name)
 }
 
-// FetchCMSystemPods provides a Readable for pods in the config management system and kube-system namespaces
+// FetchCMSystemPods provides a Readable for pods in the config-management-system,
+// kube-system, resource-group-system and config-management-monitoring namespaces.
 func (b *BugReporter) FetchCMSystemPods(ctx context.Context) (rd []Readable) {
 	var namespaces = []string{
 		configmanagement.ControllerNamespace,
 		metav1.NamespaceSystem,
+		RGControllerNamespace,
+		metrics.MonitoringNamespace,
 	}
 
 	for _, ns := range namespaces {
