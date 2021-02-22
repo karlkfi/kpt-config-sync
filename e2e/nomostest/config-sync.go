@@ -30,6 +30,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -127,9 +128,9 @@ func gitRepo(repoName string) string {
 	return fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", repoName)
 }
 
-// installConfigSync installs ConfigSync on the test cluster, and returns a
+// InstallConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
-func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
+func InstallConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
@@ -150,6 +151,9 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 
 		err := nt.Create(o)
 		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
 			nt.T.Fatal(err)
 		}
 	}
@@ -379,7 +383,9 @@ func validateMultiRepoDeployments(nt *NT) error {
 		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
 	}
 	if err := nt.Create(rs); err != nil {
-		nt.T.Fatal(err)
+		if !apierrors.IsAlreadyExists(err) {
+			nt.T.Fatal(err)
+		}
 	}
 
 	took, err := Retry(60*time.Second, func() error {

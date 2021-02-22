@@ -182,7 +182,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		}
 	})
 	waitForGit := installGitServer(nt)
-	waitForConfigSync := installConfigSync(nt, opts.Nomos)
+	waitForConfigSync := InstallConfigSync(nt, opts.Nomos)
 
 	err = waitForGit()
 	if err != nil {
