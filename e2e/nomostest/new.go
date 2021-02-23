@@ -119,7 +119,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	ctx := context.Background()
 
 	kubeconfigPath := filepath.Join(opts.TmpDir, ntopts.Kubeconfig)
-	if *e2e.TestCluster == e2e.Kubeconfig {
+	if *e2e.TestCluster == e2e.GKE {
 		kubeconfigPath = os.Getenv(ntopts.Kubeconfig)
 	}
 

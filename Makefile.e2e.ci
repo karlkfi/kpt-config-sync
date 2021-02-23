@@ -97,7 +97,7 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 			--timeout 300m \
 			--parallel 1 \
 			--p 1 \
-			--test-cluster=kubeconfig \
+			--test-cluster=gke \
 			--image-prefix=gcr.io/$(GCR_PREFIX)
 
 # The CI target that runs the golang e2e test for mono repo on a GKE cluster in prow.

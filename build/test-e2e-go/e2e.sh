@@ -22,14 +22,9 @@ start_time=$(date +%s)
 function test_time {
   end_time=$(date +%s)
   echo "Tests took $(( end_time - start_time )) seconds."
-  kill 0 # kill the current process, and all of the processes in the process group
 }
 
 trap test_time EXIT
-
-# A hacky way to keep the gcloud credentials up-to-date.
-# Run the refresh script in background.
-${DIR}/refresh-gcloud-creds.sh &
 
 # Start the e2e test
 go test ./e2e/... --e2e "$@"

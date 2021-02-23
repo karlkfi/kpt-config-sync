@@ -21,7 +21,7 @@ func Test_10000_Objects(t *testing.T) {
 	// Expect this test to take ~1 hour to complete (i.e. run with --timeout=1h).
 	// We only add about 5 objects per second. Lower n if you're just sanity testing.
 	n := 10000
-	nt := nomostest.New(t, ntopts.RequireManual(t), ntopts.RemoteCluster(t), ntopts.Unstructured)
+	nt := nomostest.New(t, ntopts.RequireManual(t), ntopts.GKECluster(t), ntopts.Unstructured)
 
 	nt.Root.Add("acme/ns.yaml", fake.NamespaceObject(namespace(1)))
 	for i := 0; i < n; i++ {
@@ -38,7 +38,7 @@ func Test_100_x_100_Objects(t *testing.T) {
 	nNamespaces := 100
 	nConfigMaps := 100
 
-	opts := []ntopts.Opt{ntopts.Unstructured, ntopts.RequireManual(t), ntopts.RemoteCluster(t), ntopts.WithDelegatedControl}
+	opts := []ntopts.Opt{ntopts.Unstructured, ntopts.RequireManual(t), ntopts.GKECluster(t), ntopts.WithDelegatedControl}
 	for i := 0; i < nNamespaces; i++ {
 		opts = append(opts, ntopts.NamespaceRepo(namespace(i)))
 	}

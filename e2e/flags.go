@@ -52,8 +52,8 @@ var Manual = flag.Bool("manual", false,
 // TestCluster specifies the cluster config used for testing.
 var TestCluster = flag.String("test-cluster", Kind,
 	fmt.Sprintf("The cluster config used for testing. Allowed values are: %s and %s. "+
-		"If --test-cluster=%s, create a Kind cluster. Otherwise use the context specified in %s.",
-		Kubeconfig, Kind, Kind, Kubeconfig))
+		"If --test-cluster=%s, create a Kind cluster. Otherwise use the GKE context specified in %s.",
+		GKE, Kind, Kind, Kubeconfig))
 
 // KubeConfig specifies the file path to the kubeconfig file.
 var KubeConfig = flag.String(Kubeconfig, "",
@@ -71,7 +71,9 @@ const (
 const (
 	// Kind indicates creating a Kind cluster for testing.
 	Kind = "kind"
-	// Kubeconfig indicates using a cluster via KUBECONFIG for testing.
+	// GKE indicates using an existing GKE cluster for testing.
+	GKE = "gke"
+	// Kubeconfig provides the context via KUBECONFIG for testing.
 	Kubeconfig = "kubeconfig"
 )
 

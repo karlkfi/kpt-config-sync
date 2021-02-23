@@ -75,8 +75,8 @@ func RestConfig(t *testing.T, optsStruct *ntopts.New) {
 	switch strings.ToLower(*e2e.TestCluster) {
 	case e2e.Kind:
 		ntopts.Kind(t, *e2e.KubernetesVersion)(optsStruct)
-	case e2e.Kubeconfig:
-		ntopts.RemoteCluster(t)(optsStruct)
+	case e2e.GKE:
+		ntopts.GKECluster(t)(optsStruct)
 	default:
 		t.Fatalf("unsupported test cluster config %s. Allowed values are kubeconfig and kind.", *e2e.TestCluster)
 	}
