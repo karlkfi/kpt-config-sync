@@ -51,7 +51,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 			metrics.ResourceCreated("CustomResourceDefinition"), metrics.ResourceCreated("Namespace"),
 			metrics.GVKMetric{
 				GVK:   "Anvil",
-				APIOp: "patch",
+				APIOp: "update",
 				ApplyOps: []metrics.Operation{
 					{Name: "update", Count: 2},
 				},
@@ -89,7 +89,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 			metrics.ResourcePatched("Namespace", 2),
 			metrics.GVKMetric{
 				GVK:   "Anvil",
-				APIOp: "patch",
+				APIOp: "update",
 				ApplyOps: []metrics.Operation{
 					{Name: "update", Count: 4},
 				},

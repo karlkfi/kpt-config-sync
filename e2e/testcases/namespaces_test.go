@@ -150,7 +150,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
 			metrics.GVKMetric{
 				GVK:   "Namespace",
-				APIOp: "patch",
+				APIOp: "update",
 				ApplyOps: []metrics.Operation{
 					{Name: "update", Count: 2},
 				},

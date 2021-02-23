@@ -308,7 +308,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		nt.ParseMetrics(prev)
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.GVKMetric{
 			GVK:      "Namespace",
-			APIOp:    "patch",
+			APIOp:    "update",
 			ApplyOps: []metrics.Operation{{Name: "update", Count: 1}},
 		},
 			metrics.ResourceCreated("RoleBinding"))

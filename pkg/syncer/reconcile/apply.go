@@ -222,8 +222,8 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	start := time.Now()
 	err = c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)
 	duration := time.Since(start).Seconds()
-	metrics.APICallDuration.WithLabelValues("patch", intendedState.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
-	m.RecordAPICallDuration(ctx, "patch", m.StatusTagKey(err), intendedState.GroupVersionKind(), start)
+	metrics.APICallDuration.WithLabelValues("update", intendedState.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
+	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), intendedState.GroupVersionKind(), start)
 	return []byte("updated"), err
 }
 
@@ -373,8 +373,8 @@ func attemptPatch(ctx context.Context, resClient dynamic.ResourceInterface, name
 	start := time.Now()
 	_, err := resClient.Patch(ctx, name, patchType, patch, metav1.PatchOptions{})
 	duration := time.Since(start).Seconds()
-	metrics.APICallDuration.WithLabelValues("patch", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
-	m.RecordAPICallDuration(ctx, "patch", m.StatusTagKey(err), gvk, start)
+	metrics.APICallDuration.WithLabelValues("update", gvk.String(), metrics.StatusLabel(err)).Observe(duration)
+	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), gvk, start)
 	return err
 }
 

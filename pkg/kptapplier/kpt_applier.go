@@ -113,7 +113,7 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 		glog.V(7).Infof("applied [op: %v] resource %v", e.Operation, id)
 	} else {
 		glog.V(4).Infof("applied [op: %v] resource %v", e.Operation, id)
-		handleMetrics(ctx, "patch", e.Error, id.WithVersion(""))
+		handleMetrics(ctx, "update", e.Error, id.WithVersion(""))
 		stats.eventByOp[e.Operation]++
 	}
 	return nil
@@ -145,9 +145,6 @@ func handleMetrics(ctx context.Context, operation string, err error, gvk schema.
 	start := time.Now()
 
 	m.RecordAPICallDuration(ctx, operation, m.StatusTagKey(err), gvk, start)
-	if operation == "patch" {
-		operation = "update"
-	}
 	metrics.Operations.WithLabelValues(operation, gvk.Kind, metrics.StatusLabel(err)).Inc()
 	m.RecordApplyOperation(ctx, operation, m.StatusTagKey(err), gvk)
 }
