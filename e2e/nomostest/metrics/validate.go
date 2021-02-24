@@ -125,12 +125,7 @@ func (csm ConfigSyncMetrics) ValidateGVKMetrics(reconciler string, gvkMetric GVK
 			return err
 		}
 	}
-	// the `remediate_duration_seconds` metric is not recorded when there are no
-	// more watches on a resource.
-	if gvkMetric.Watches != "0" {
-		return csm.validateRemediateDuration(reconciler, gvkMetric.GVK)
-	}
-	return nil
+	return csm.validateRemediateDuration(reconciler, gvkMetric.GVK)
 }
 
 // ValidateTimestampMetrics checks that the `last_sync_timestamp` and `last_apply_timestamp`

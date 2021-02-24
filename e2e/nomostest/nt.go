@@ -211,7 +211,15 @@ func (nt *NT) ParseMetrics(prev testmetrics.ConfigSyncMetrics) {
 // instead of having to validate against the entire set of metrics every time.
 func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics testmetrics.ConfigSyncMetrics) {
 	newCsm := make(testmetrics.ConfigSyncMetrics)
-	contains := func(entries []testmetrics.Measurement, me testmetrics.Measurement) bool {
+	containsMetric := func(metrics []string, metric string) bool {
+		for _, m := range metrics {
+			if m == metric {
+				return true
+			}
+		}
+		return false
+	}
+	containsMeasurement := func(entries []testmetrics.Measurement, me testmetrics.Measurement) bool {
 		for _, e := range entries {
 			opt := cmp.Comparer(func(x, y tag.Tag) bool {
 				return reflect.DeepEqual(x, y)
@@ -223,25 +231,35 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 		return false
 	}
 
+	// These metrics are always validated so we need to add them to the map even
+	// if their measurements haven't changed.
+	validatedMetrics := []string{
+		ocmetrics.ParseDurationView.Name,
+		ocmetrics.ApplyDurationView.Name,
+		ocmetrics.WatchManagerUpdatesDurationView.Name,
+		ocmetrics.RemediateDurationView.Name,
+		ocmetrics.DeclaredResourcesView.Name,
+		ocmetrics.WatchesView.Name,
+	}
+
 	// Diff the metrics if previous metrics exist
 	if prev != nil {
 		for metric, measurements := range parsedMetrics {
-			// These metrics are always validated so we need to add them to the map even
-			// if their measurements haven't changed.
-			if metric == ocmetrics.DeclaredResourcesView.Name || metric == ocmetrics.WatchesView.Name {
+			if containsMetric(validatedMetrics, metric) {
 				newCsm[metric] = measurements
-			}
-			// Check whether the previous metrics map has the metric.
-			if prevMeasurements, ok := prev[metric]; ok {
-				for _, measurement := range measurements {
-					// Check that the previous measurements for the metric does not have the
-					// new measurement.
-					if !contains(prevMeasurements, measurement) {
-						newCsm[metric] = append(newCsm[metric], measurement)
-					}
-				}
 			} else {
-				newCsm[metric] = measurements
+				// Check whether the previous metrics map has the metric.
+				if prevMeasurements, ok := prev[metric]; ok {
+					for _, measurement := range measurements {
+						// Check that the previous measurements for the metric does not have the
+						// new measurement.
+						if !containsMeasurement(prevMeasurements, measurement) {
+							newCsm[metric] = append(newCsm[metric], measurement)
+						}
+					}
+				} else {
+					newCsm[metric] = measurements
+				}
 			}
 		}
 		newCsm[ocmetrics.DeclaredResourcesView.Name] = append(newCsm[ocmetrics.DeclaredResourcesView.Name], prev[ocmetrics.DeclaredResourcesView.Name]...)
