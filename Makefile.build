@@ -42,13 +42,13 @@ image-nomos:
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@echo "+++ Building the nomos image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		--target nomos \
+		--target $(NOMOS_IMAGE) \
 		-t $(NOMOS_TAG) \
 		-f build/all/Dockerfile \
 		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		--target reconciler \
+		--target $(RECONCILER_IMAGE) \
 		-t $(RECONCILER_TAG) \
 		-f build/all/Dockerfile \
 		.
@@ -56,6 +56,12 @@ image-nomos:
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target manager \
 		-t $(RECONCILER_MANAGER_TAG) \
+		-f build/all/Dockerfile \
+		.
+	@echo "+++ Building the Admission Webhook image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		--target $(ADMISSION_WEBHOOK_IMAGE) \
+		-t $(ADMISSION_WEBHOOK_TAG) \
 		-f build/all/Dockerfile \
 		.
 
@@ -68,6 +74,7 @@ push-to-gcr-nomos: image-nomos
 	docker push $(NOMOS_TAG)
 	docker push $(RECONCILER_TAG)
 	docker push $(RECONCILER_MANAGER_TAG)
+	docker push $(ADMISSION_WEBHOOK_TAG)
 
 ###################################
 # Deployment generation

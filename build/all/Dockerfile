@@ -17,7 +17,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/reconciler-manager \
     ./cmd/monitor \
     ./cmd/git-importer \
-    ./cmd/nomos
+    ./cmd/nomos \
+    ./cmd/admission-webhook
 
 # Reconciler image
 FROM marketplace.gcr.io/google/debian9 as reconciler
@@ -55,6 +56,19 @@ COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 
 ENTRYPOINT ["/manager"]
 
+# Admission Webhook image
+FROM gcr.io/distroless/static:nonroot as admission-webhook
+WORKDIR /
+COPY --from=bins /go/bin/admission-webhook admission-webhook
+USER nonroot:nonroot
+
+# License file required for on-prem release.
+COPY LICENSE LICENSE
+
+# Copy in golang-lru source (MPL licensed dependency)
+COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
+
+ENTRYPOINT ["/admission-webhook"]
 
 # Nomos image
 FROM marketplace.gcr.io/google/debian9 as nomos

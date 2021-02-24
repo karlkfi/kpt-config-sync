@@ -79,6 +79,7 @@ ALL_K8S_DEPLOYMENTS := git-importer monitor
 NOMOS_IMAGE := nomos
 RECONCILER_IMAGE := reconciler
 RECONCILER_MANAGER_IMAGE := reconciler-manager
+ADMISSION_WEBHOOK_IMAGE := admission-webhook
 
 # nomos binary for local run.
 NOMOS_LOCAL := $(BIN_DIR)/linux_amd64/nomos
@@ -110,6 +111,7 @@ IMAGE_TAG ?= $(LATEST_IMAGE_TAG)
 NOMOS_TAG := gcr.io/$(GCR_PREFIX)/$(NOMOS_IMAGE):$(IMAGE_TAG)
 RECONCILER_TAG := gcr.io/$(GCR_PREFIX)/$(RECONCILER_IMAGE):$(IMAGE_TAG)
 RECONCILER_MANAGER_TAG := gcr.io/$(GCR_PREFIX)/$(RECONCILER_MANAGER_IMAGE):$(IMAGE_TAG)
+ADMISSION_WEBHOOK_TAG := gcr.io/$(GCR_PREFIX)/$(ADMISSION_WEBHOOK_IMAGE):$(IMAGE_TAG)
 
 DOCKER_RUN_ARGS = \
 	$(DOCKER_INTERACTIVE)                                              \
