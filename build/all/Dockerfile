@@ -43,9 +43,9 @@ USER 1000
 ENTRYPOINT ["/reconciler"]
 
 # Reconciler Manager image
-FROM gcr.io/distroless/static:nonroot as manager
+FROM gcr.io/distroless/static:nonroot as reconciler-manager
 WORKDIR /
-COPY --from=bins /go/bin/reconciler-manager manager
+COPY --from=bins /go/bin/reconciler-manager reconciler-manager
 USER nonroot:nonroot
 
 # License file required for on-prem release.
@@ -54,7 +54,7 @@ COPY LICENSE LICENSE
 # Copy in golang-lru source (MPL licensed dependency)
 COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/reconciler-manager"]
 
 # Admission Webhook image
 FROM gcr.io/distroless/static:nonroot as admission-webhook

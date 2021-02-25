@@ -54,7 +54,7 @@ image-nomos:
 		.
 	@echo "+++ Building the Reconciler Manager image"
 	@docker build $(DOCKER_BUILD_QUIET) \
-		--target manager \
+		--target $(RECONCILER_MANAGER_IMAGE) \
 		-t $(RECONCILER_MANAGER_TAG) \
 		-f build/all/Dockerfile \
 		.
