@@ -1,4 +1,4 @@
-package common
+package validate
 
 import (
 	"strings"
@@ -8,16 +8,11 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/parsed"
 )
 
-// AnnotationValidator returns a visitor that verifies that no object has
-// invalid annotations in the source repository.
-func AnnotationValidator() parsed.ValidatorFunc {
-	return parsed.ValidateAllObjects(parsed.PerObjectVisitor(validateAnnotations))
-}
-
-func validateAnnotations(obj ast.FileObject) status.Error {
+// Annotations verifies that the given object does not have any invalid
+// annotations.
+func Annotations(obj ast.FileObject) status.Error {
 	var invalid []string
 	for a := range obj.GetAnnotations() {
 		if hasConfigSyncPrefix(a) && !isSourceAnnotation(a) {

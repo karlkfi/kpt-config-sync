@@ -2,7 +2,6 @@ package prehydrate
 
 import (
 	"github.com/google/nomos/pkg/validate/parsed"
-	"github.com/google/nomos/pkg/validate/prehydrate/common"
 	"github.com/google/nomos/pkg/validate/prehydrate/hierarchical"
 	"github.com/google/nomos/pkg/validate/prehydrate/hnc"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -17,20 +16,13 @@ type Config struct {
 // FlatValidators returns the list of visitors to validate a flat repo
 // pre-hydration.
 func FlatValidators(config Config) []parsed.ValidatorFunc {
-	return []parsed.ValidatorFunc{
-		common.AnnotationValidator(),
-		common.LabelValidator(),
-		common.CRDRemovalValidator(config.PreviousCRDs, config.CurrentCRDs),
-	}
+	return []parsed.ValidatorFunc{}
 }
 
 // HierarchicalValidators returns the list of visitors to validate a
 // hierarchical repo pre-hydration.
 func HierarchicalValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
-		common.AnnotationValidator(),
-		common.LabelValidator(),
-		common.CRDRemovalValidator(config.PreviousCRDs, config.CurrentCRDs),
 		hierarchical.NamespaceDirectoryValidator(),
 		hierarchical.ObjectDirectoryValidator(),
 		hierarchical.DirectoryNameValidator(),

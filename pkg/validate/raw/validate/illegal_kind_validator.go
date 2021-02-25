@@ -8,6 +8,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// IllegalKindsForHierarchical verifies that the given FileObject is legal for
+// a structured hierarchical repo.
+func IllegalKindsForHierarchical(obj ast.FileObject) status.Error {
+	gk := obj.GroupVersionKind().GroupKind()
+	if isUnsupported(gk) {
+		return nonhierarchical.UnsupportedObjectError(obj)
+	}
+	return nil
+}
+
 // IllegalKindsForUnstructured verifies that the given FileObject is legal for
 // an unstructured repo.
 func IllegalKindsForUnstructured(obj ast.FileObject) status.Error {

@@ -11,6 +11,37 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
+func TestIllegalKindsForHierarchical(t *testing.T) {
+	testCases := []struct {
+		name    string
+		obj     ast.FileObject
+		wantErr status.Error
+	}{
+		{
+			name: "Non-hierarchical object passes",
+			obj:  fake.ClusterSelector(),
+		},
+		{
+			name: "Hiearchical object passes",
+			obj:  fake.HierarchyConfig(),
+		},
+		{
+			name:    "Sync object fails",
+			obj:     fake.FileObject(fake.SyncObject(kinds.Role().GroupKind()), "sync.yaml"),
+			wantErr: nonhierarchical.UnsupportedObjectError(fake.SyncObject(kinds.Role().GroupKind())),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := IllegalKindsForHierarchical(tc.obj)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got IllegalKindsForHierarchical() error %v, want %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestIllegalKindsForUnstructured(t *testing.T) {
 	testCases := []struct {
 		name    string
