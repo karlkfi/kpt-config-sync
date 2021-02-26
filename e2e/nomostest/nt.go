@@ -3,11 +3,11 @@ package nomostest
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
-	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -43,7 +44,7 @@ type NT struct {
 
 	// T is the test environment for the test.
 	// Used to exit tests early when setup fails, and for logging.
-	T *testing.T
+	T testing.NTB
 
 	// ClusterName is the unique name of the test run.
 	ClusterName string
@@ -99,6 +100,34 @@ type NT struct {
 
 	// ReconcilerMetrics is a map of scraped multirepo metrics.
 	ReconcilerMetrics testmetrics.ConfigSyncMetrics
+}
+
+const (
+	shared = "shared"
+)
+
+var sharedNT *NT
+
+// NewSharedNT sets up the shared config sync testing environment globally.
+func NewSharedNT() *NT {
+	tmpDir := filepath.Join(os.TempDir(), NomosE2E, shared)
+	if err := os.RemoveAll(tmpDir); err != nil {
+		fmt.Printf("failed to remove the shared test directory: %v\n", err)
+		os.Exit(1)
+	}
+	fakeNTB := &testing.FakeNTB{}
+	opts := NewOptStruct(shared, tmpDir, fakeNTB)
+	sharedNT = FreshTestEnv(fakeNTB, opts)
+	return sharedNT
+}
+
+// SharedNT returns the shared test environment.
+func SharedNT() *NT {
+	if !*e2e.ShareTestEnv {
+		fmt.Println("Error: the shared test environment is only available when running against GKE clusters")
+		os.Exit(1)
+	}
+	return sharedNT
 }
 
 // GitPrivateKeyPath returns the path to the git private key.
@@ -659,7 +688,7 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 	return err
 }
 
-// PortForwardOtelCollector forwards a local port to the pod's metrics port.
+// PortForwardOtelCollector forwards the otel-collector pod.
 func (nt *NT) PortForwardOtelCollector() {
 	if nt.MultiRepo {
 		ocPods := &corev1.PodList{}
@@ -764,17 +793,6 @@ func validateError(errs []v1alpha1.ConfigSyncError, code string) error {
 	return errors.Errorf("error %s not present, got %s", code, strings.Join(codes, ", "))
 }
 
-func validateErrorClear(errs []v1alpha1.ConfigSyncError) error {
-	if len(errs) == 0 {
-		return nil
-	}
-	var messages []string
-	for _, e := range errs {
-		messages = append(messages, e.ErrorMessage)
-	}
-	return errors.Errorf("got errors %s", strings.Join(messages, ", "))
-}
-
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code),
@@ -785,21 +803,6 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 				return err
 			}
 			return validateError(rs.Status.Source.Errors, code)
-		},
-		opts...,
-	)
-}
-
-// WaitForRootSyncSourceErrorClear waits until the given error code disappears from the RootSync resource
-func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
-	Wait(nt.T, "RootSync source errors cleared",
-		func() error {
-			rs := fake.RootSyncObject()
-			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
-			if err != nil {
-				return err
-			}
-			return validateErrorClear(rs.Status.Source.Errors)
 		},
 		opts...,
 	)
@@ -817,21 +820,6 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 				return err
 			}
 			return validateError(rs.Status.Source.Errors, code)
-		},
-		opts...,
-	)
-}
-
-// WaitForRepoSyncSourceErrorClear waits until the given error code disappears from the RepoSync resource
-func (nt *NT) WaitForRepoSyncSourceErrorClear(namespace string, opts ...WaitOption) {
-	Wait(nt.T, "RepoSync source errors cleared",
-		func() error {
-			rs := fake.RepoSyncObject(core.Namespace(namespace))
-			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
-			if err != nil {
-				return err
-			}
-			return validateErrorClear(rs.Status.Source.Errors)
 		},
 		opts...,
 	)
@@ -938,7 +926,7 @@ func WaitNoFail() WaitOption {
 
 // Wait provides a logged wait for condition to return nil with options for timeout.
 // It fails the test on errors.
-func Wait(t *testing.T, opName string, condition func() error, opts ...WaitOption) {
+func Wait(t testing.NTB, opName string, condition func() error, opts ...WaitOption) {
 	t.Helper()
 
 	wait := waitSpec{

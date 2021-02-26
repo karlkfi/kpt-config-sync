@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -26,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/monitor/state"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
 	webhookconfig "github.com/google/nomos/pkg/webhook/configuration"
 	appsv1 "k8s.io/api/apps/v1"
@@ -136,7 +137,7 @@ func gitRepo(repoName string) string {
 
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
-func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
+func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
@@ -163,11 +164,14 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 			nt.T.Fatal(err)
 		}
 	}
+}
 
+// waitForConfigSync validates if the config sync deployment is ready.
+func waitForConfigSync(nt *NT, nomos ntopts.Nomos) error {
 	if nomos.MultiRepo {
-		return validateMultiRepoDeployments
+		return validateMultiRepoDeployments(nt)
 	}
-	return validateMonoRepoDeployments
+	return validateMonoRepoDeployments(nt)
 }
 
 // convertObjects converts objects to their literal types. We can do this as
@@ -340,7 +344,7 @@ func monoRepoObjects(objects []client.Object) []client.Object {
 	return filtered
 }
 
-func multiRepoObjects(t *testing.T, objects []client.Object, opts ...func(t *testing.T, obj client.Object)) []client.Object {
+func multiRepoObjects(t testing.NTB, objects []client.Object, opts ...func(t testing.NTB, obj client.Object)) []client.Object {
 	var filtered []client.Object
 	found := false
 	for _, obj := range objects {
@@ -388,7 +392,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 		Branch:    MainBranch,
 		Dir:       acmeDir,
 		Auth:      "ssh",
-		SecretRef: v1alpha1.SecretReference{Name: "git-creds"},
+		SecretRef: v1alpha1.SecretReference{Name: controllers.GitCredentialVolume},
 	}
 	if err := nt.Create(rs); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -486,8 +490,56 @@ func setupRepoSyncRoleBinding(nt *NT, ns string) error {
 	return nt.Validate("syncs", ns, &rbacv1.RoleBinding{})
 }
 
+func revokeRepoSyncRoleBinding(nt *NT, ns string) {
+	if err := nt.Delete(repoSyncRoleBinding(ns)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		nt.T.Fatal(err)
+	}
+	WaitToTerminate(nt, kinds.RoleBinding(), "syncs", ns)
+}
+
+func revokeRepoSyncSecret(nt *NT, ns string) {
+	secret := &corev1.Secret{}
+	if err := nt.Get(namespaceSecret, ns, secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			nt.T.Fatal(err)
+		}
+	} else if err := nt.Delete(secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		nt.T.Fatal(err)
+	}
+	WaitToTerminate(nt, kinds.Secret(), namespaceSecret, ns)
+}
+
+func revokeRepoSyncNamespace(nt *NT, ns string) {
+	// TODO(b/184680603): Ideally we can delete the namespace directly and check if it is terminated.
+	// Due to b/184680603, we have to check if the namespace is in a terminating state to avoid the error:
+	//   Operation cannot be fulfilled on namespaces "bookstore": The system is ensuring all content is removed from this namespace.
+	//   Upon completion, this namespace will automatically be purged by the system.
+	namespace := &corev1.Namespace{}
+	if err := nt.Get(ns, "", namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		nt.T.Fatal(err)
+	}
+	if namespace.Status.Phase != corev1.NamespaceTerminating {
+		if err := nt.Delete(fake.NamespaceObject(ns)); err != nil {
+			if apierrors.IsNotFound(err) {
+				return
+			}
+			nt.T.Fatal(err)
+		}
+	}
+	WaitToTerminate(nt, kinds.Namespace(), ns, "")
+}
+
 // setReconcilerDebugMode ensures the Reconciler deployments are run in debug mode.
-func setReconcilerDebugMode(t *testing.T, obj client.Object) {
+func setReconcilerDebugMode(t testing.NTB, obj client.Object) {
 	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
@@ -534,7 +586,7 @@ func setReconcilerDebugMode(t *testing.T, obj client.Object) {
 
 // setReconcilerFilesystemPollingPeriod update Reconciler Manager configmap
 // reconciler-manager-cm with filesystem polling period to override the default.
-func setReconcilerFilesystemPollingPeriod(t *testing.T, obj client.Object) {
+func setReconcilerFilesystemPollingPeriod(t testing.NTB, obj client.Object) {
 	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
@@ -548,7 +600,7 @@ func setReconcilerFilesystemPollingPeriod(t *testing.T, obj client.Object) {
 	t.Log("Set filesystem polling period")
 }
 
-func setupDelegatedControl(nt *NT, opts ntopts.New) {
+func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 	// Just create one RepoSync ClusterRole, even if there are no Namespace repos.
 	if err := nt.Create(repoSyncClusterRole()); err != nil {
 		nt.T.Fatal(err)
@@ -576,12 +628,14 @@ func setupDelegatedControl(nt *NT, opts ntopts.New) {
 	// Validate multi-repo metrics in root reconciler.
 	err := nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
 		if err != nil {
 			return err
 		}
 		// Validate no error metrics are emitted.
-		return nt.ValidateErrorMetricsNotFound()
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -623,7 +677,7 @@ func RepoSyncObject(ns string) *v1alpha1.RepoSync {
 	return rs
 }
 
-func setupCentralizedControl(nt *NT, opts ntopts.New) {
+func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
@@ -650,7 +704,7 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 		// Validate multi-repo metrics.
 		err = nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
 			nt.ParseMetrics(prev)
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4,
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
 				testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
 				testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))
 			if err != nil {
@@ -665,4 +719,141 @@ func setupCentralizedControl(nt *NT, opts ntopts.New) {
 			nt.T.Errorf("validating metrics: %v", err)
 		}
 	}
+}
+
+// podHasReadyCondition checks if a pod status has a READY condition.
+func podHasReadyCondition(conditions []corev1.PodCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// NewPodReady checks if the new created pods are ready.
+// It also checks the reconcilers if the pod is a reconcielr-manager with multi-repo support.
+func NewPodReady(nt *NT, labelName, currentLabel, childLabel string, oldCurrentPods, oldChildPods []corev1.Pod) error {
+	if len(oldCurrentPods) == 0 {
+		return nil
+	}
+	newPods := &corev1.PodList{}
+	if err := nt.List(newPods, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{labelName: currentLabel}); err != nil {
+		nt.T.Fatal(err)
+	}
+	for _, newPod := range newPods.Items {
+		for _, oldPod := range oldCurrentPods {
+			if newPod.Name == oldPod.Name {
+				return fmt.Errorf("old pod %s is still alive", oldPod.Name)
+			}
+		}
+		if !podHasReadyCondition(newPod.Status.Conditions) {
+			return fmt.Errorf("new pod %s is not ready yet", currentLabel)
+		}
+	}
+	return NewPodReady(nt, labelName, childLabel, "", oldChildPods, nil)
+}
+
+// DeletePodByLabel deletes pods that have the label and waits until new pods come up.
+func DeletePodByLabel(nt *NT, label, value string) {
+	oldPods := &corev1.PodList{}
+	if err := nt.List(oldPods, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
+		nt.T.Fatal(err)
+	}
+	oldReconcilers := &corev1.PodList{}
+	if value == reconcilermanager.ManagerName {
+		if err := nt.List(oldReconcilers, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: reconcilermanager.Reconciler}); err != nil {
+			nt.T.Fatal(err)
+		}
+	}
+	if err := nt.DeleteAllOf(&corev1.Pod{}, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
+		nt.T.Fatalf("Pod delete failed: %v", err)
+	}
+	Wait(nt.T, "new pods come up", func() error {
+		if value == reconcilermanager.ManagerName {
+			return NewPodReady(nt, label, value, reconcilermanager.Reconciler, oldPods.Items, oldReconcilers.Items)
+		}
+		return NewPodReady(nt, label, value, "", oldPods.Items, nil)
+	}, WaitTimeout(2*time.Minute))
+}
+
+// resetMonoRepoSpec sets the mono repo's SOURCE_FORMAT and POLICY_DIR. It might cause the git-importer to restart.
+// It sets POLICY_DIR to always be `acme` because the initial mono-repo's sync directory is configured to be `acme`.
+func resetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
+	restartPod := false
+
+	importerCM := &corev1.ConfigMap{}
+	if err := nt.Get("importer", configmanagement.ControllerNamespace, importerCM); err != nil {
+		nt.T.Fatal(err)
+	}
+	if importerCM.Data["POLICY_DIR"] != acmeDir {
+		restartPod = true
+		nt.MustMergePatch(importerCM, fmt.Sprintf(`{"data":{"POLICY_DIR":"%s"}}`, acmeDir))
+	}
+
+	sourceFormatCM := &corev1.ConfigMap{}
+	if err := nt.Get("source-format", configmanagement.ControllerNamespace, sourceFormatCM); err != nil {
+		nt.T.Fatal(err)
+	}
+	if sourceFormatCM.Data["SOURCE_FORMAT"] != string(sourceFormat) {
+		restartPod = true
+		nt.MustMergePatch(sourceFormatCM, fmt.Sprintf(`{"data":{"SOURCE_FORMAT":"%s"}}`, sourceFormat))
+	}
+
+	if restartPod {
+		DeletePodByLabel(nt, "app", filesystem.GitImporterName)
+		DeletePodByLabel(nt, "app", "monitor")
+	}
+}
+
+// resetRootRepoSpec sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
+// It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
+func resetRootRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
+	rs := fake.RootSyncObject()
+	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil {
+		if !apierrors.IsNotFound(err) {
+			nt.T.Fatal(err)
+		}
+	} else {
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, acmeDir))
+		nt.WaitForRepoSyncs()
+	}
+}
+
+// resetNamespaceRepos sets the namespace repo to the initial state. That should delete all resources in the namespace.
+func resetNamespaceRepos(nt *NT) {
+	namespaceRepos := &v1alpha1.RepoSyncList{}
+	if err := nt.List(namespaceRepos); err != nil {
+		nt.T.Fatal(err)
+	}
+	for _, nr := range namespaceRepos.Items {
+		NewRepository(nt, nr.Namespace, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
+		nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
+			v1alpha1.RepoSyncName, nr.Namespace, RepoSyncHasStatusSyncCommit)
+	}
+}
+
+// deleteNamespaceRepos deletes the repo-sync and the namespace that is created in the delegated mode.
+func deleteNamespaceRepos(nt *NT) {
+	namespaceRepos := &v1alpha1.RepoSyncList{}
+	if err := nt.List(namespaceRepos); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	for _, nr := range namespaceRepos.Items {
+		if err := nt.Delete(&nr); err != nil {
+			nt.T.Fatal(err)
+		}
+		WaitToTerminate(nt, kinds.Deployment(), nr.Name, configmanagement.ControllerNamespace)
+		WaitToTerminate(nt, kinds.RepoSync(), nr.Name, nr.Namespace)
+		revokeRepoSyncRoleBinding(nt, nr.Namespace)
+		revokeRepoSyncSecret(nt, nr.Namespace)
+		revokeRepoSyncNamespace(nt, nr.Namespace)
+	}
+
+	rsClusterRole := repoSyncClusterRole()
+	if err := nt.Delete(rsClusterRole); err != nil && !apierrors.IsNotFound(err) {
+		nt.T.Fatal(err)
+	}
+	WaitToTerminate(nt, kinds.ClusterRole(), rsClusterRole.Name, "")
 }

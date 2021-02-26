@@ -7,13 +7,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const gitCredentialVolume = "git-creds"
+// GitCredentialVolume is the volume name of the git credentials.
+const GitCredentialVolume = "git-creds"
 
 func filterVolumes(existing []corev1.Volume, authType string, secretName string) []corev1.Volume {
 	var updatedVolumes []corev1.Volume
 
 	for _, volume := range existing {
-		if volume.Name == gitCredentialVolume {
+		if volume.Name == GitCredentialVolume {
 			// Don't mount git-creds volume if auth is 'none' or 'gcenode'
 			if secrets.SkipForAuth(authType) {
 				continue
@@ -31,7 +32,7 @@ func filterVolumes(existing []corev1.Volume, authType string, secretName string)
 func volumeMounts(auth string, vm []corev1.VolumeMount) []corev1.VolumeMount {
 	var volumeMount []corev1.VolumeMount
 	for _, volume := range vm {
-		if secrets.SkipForAuth(auth) && volume.Name == gitCredentialVolume {
+		if secrets.SkipForAuth(auth) && volume.Name == GitCredentialVolume {
 			continue
 		}
 		volumeMount = append(volumeMount, volume)

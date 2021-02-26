@@ -59,6 +59,11 @@ var TestCluster = flag.String("test-cluster", Kind,
 var KubeConfig = flag.String(Kubeconfig, "",
 	"The file path to the kubeconfig file. If not set, use the default context.")
 
+// ShareTestEnv indicates whether to share the test env for all test cases.
+// If it is true, we only install nomos once before all tests and tear it down until all tests complete.
+var ShareTestEnv = flag.Bool("share-test-env", false,
+	"Specify that the test is using a shared test environment instead of fresh installation per test case.")
+
 const (
 	// RunAll runs all tests whether skipped or not
 	RunAll = "runAll"
@@ -74,14 +79,19 @@ const (
 	// GKE indicates using an existing GKE cluster for testing.
 	GKE = "gke"
 	// Kubeconfig provides the context via KUBECONFIG for testing.
-	Kubeconfig = "kubeconfig"
+	Kubeconfig = "kube-config"
 )
+
+// RunInParallel indicates whether the test is running in parallel.
+func RunInParallel() bool {
+	parallel := flag.Lookup("test.parallel").Value.(flag.Getter).Get().(int)
+	return parallel > 1
+}
 
 // EnableParallel allows parallel execution of test functions that call t.Parallel
 // if test.parallel is greater than 1.
 func EnableParallel(t *testing.T) {
-	parallel := flag.Lookup("test.parallel").Value.(flag.Getter).Get().(int)
-	if parallel > 1 {
+	if RunInParallel() {
 		t.Parallel()
 	}
 }

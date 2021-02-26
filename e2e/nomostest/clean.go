@@ -3,8 +3,8 @@ package nomostest
 import (
 	"fmt"
 	"strings"
-	"testing"
 
+	"github.com/google/nomos/e2e/nomostest/testing"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
@@ -309,7 +309,7 @@ func isListable(kind string) bool {
 
 // FailIfUnknown fails the test if the passed type is not declared in the passed
 // scheme.
-func FailIfUnknown(t *testing.T, scheme *runtime.Scheme, o client.Object) {
+func FailIfUnknown(t testing.NTB, scheme *runtime.Scheme, o client.Object) {
 	t.Helper()
 
 	gvks, _, _ := scheme.ObjectKinds(o)

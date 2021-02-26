@@ -134,7 +134,7 @@ func gitDeployment() *appsv1.Deployment {
 			Spec: corev1.PodSpec{
 				Volumes: []corev1.Volume{
 					{Name: "keys", VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{SecretName: "ssh-pub"},
+						Secret: &corev1.SecretVolumeSource{SecretName: gitServerSecret},
 					}},
 					{Name: "repos", VolumeSource: corev1.VolumeSource{EmptyDir: nil}},
 				},
@@ -190,9 +190,13 @@ func portForwardGitServer(nt *NT, repos ...string) int {
 		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
 	}
-	port, err := nt.ForwardToFreePort(testGitNamespace, podName, ":22")
-	if err != nil {
-		nt.T.Fatal(err)
+
+	if nt.gitRepoPort == 0 {
+		port, err := nt.ForwardToFreePort(testGitNamespace, podName, ":22")
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		return port
 	}
-	return port
+	return nt.gitRepoPort
 }

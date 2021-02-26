@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
-	"testing"
 
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/reconcilermanager"
 )
 
@@ -24,7 +24,7 @@ const RegistryPort = 5000
 //
 // Assumes docker-registry.sh has already been run on the machine - otherwise
 // calls t.Fatal.
-func StartLocalRegistry(t *testing.T) {
+func StartLocalRegistry(t testing.NTB) {
 	t.Helper()
 
 	// Check if the registry is already running.
@@ -54,7 +54,7 @@ func StartLocalRegistry(t *testing.T) {
 
 // CheckImages ensures that all required images are installed on the local
 // docker registry.
-func CheckImages(t *testing.T) {
+func CheckImages(t testing.NTB) {
 	t.Helper()
 
 	var images = []string{
@@ -68,7 +68,7 @@ func CheckImages(t *testing.T) {
 	}
 }
 
-func checkImage(t *testing.T, image string) {
+func checkImage(t testing.NTB, image string) {
 	url := fmt.Sprintf("http://localhost:5000/%s:latest", image)
 	resp, err := http.Get(url)
 	if err != nil {

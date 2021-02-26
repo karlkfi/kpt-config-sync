@@ -23,12 +23,12 @@ test_setup() {
 }
 
 test_teardown() {
-  setup::git::remove_all acme
-
   if ! env::csmr; then
     kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
     nomos::restart_pods
   fi
+
+  setup::git::remove_all acme
 }
 
 set_importer_no_policy_dir() {

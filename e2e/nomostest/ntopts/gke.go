@@ -5,14 +5,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"testing"
 
 	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/client/restconfig"
 )
 
 // GKECluster tells the test to use the GKE cluster pointed to by the config flags.
-func GKECluster(t *testing.T) Opt {
+func GKECluster(t testing.NTB) Opt {
 	return func(opt *New) {
 		t.Helper()
 
@@ -38,7 +38,7 @@ func GKECluster(t *testing.T) Opt {
 }
 
 // forceAuthRefresh forces gcloud to refresh the access_token to avoid using an expired one in the middle of a test.
-func forceAuthRefresh(t *testing.T) {
+func forceAuthRefresh(t testing.NTB) {
 	out, err := exec.Command("kubectl", "config", "current-context").CombinedOutput()
 	if err != nil {
 		t.Fatalf("failed to get current config: %v", err)

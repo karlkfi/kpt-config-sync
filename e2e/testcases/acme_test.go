@@ -24,14 +24,15 @@ const (
 	port    = "metrics/proxy"
 )
 
-var nsToFolder = map[string]string{"analytics": "eng", "backend": "eng", "frontend": "eng", "new-prj": "rnd", "newer-prj": "rnd"}
+var nsToFolder = map[string]string{"analytics": "eng", "backend": "eng", "frontend": "eng", "new-prj": "rnd", "newer-prj": "rnd", "safety": ""}
 var configSyncManagementAnnotations = map[string]string{"configmanagement.gke.io/managed": "enabled", "hnc.x-k8s.io/managed-by": "configmanagement.gke.io"}
 
 func configSyncManagementLabels(namespace, folder string) map[string]string {
-	return map[string]string{
-		fmt.Sprintf("%s.tree.hnc.x-k8s.io/depth", namespace): "0",
-		fmt.Sprintf("%s.tree.hnc.x-k8s.io/depth", folder):    "1",
+	labels := map[string]string{fmt.Sprintf("%s.tree.hnc.x-k8s.io/depth", namespace): "0"}
+	if folder != "" {
+		labels[fmt.Sprintf("%s.tree.hnc.x-k8s.io/depth", folder)] = "1"
 	}
+	return labels
 }
 
 func TestAcmeCorpRepo(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"testing"
 	"time"
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/docker"
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -41,7 +41,7 @@ const (
 // with the information needed to establish a Client with it.
 //
 // version is one of the KindVersion constants above.
-func Kind(t *testing.T, version string) Opt {
+func Kind(t testing.NTB, version string) Opt {
 	v := asKindVersion(t, version)
 	return func(opt *New) {
 		opt.RESTConfig = newKind(t, opt.Name, opt.TmpDir, v)
@@ -50,7 +50,7 @@ func Kind(t *testing.T, version string) Opt {
 
 // asKindVersion returns the latest Kind version associated with a given
 // Kubernetes minor version.
-func asKindVersion(t *testing.T, version string) KindVersion {
+func asKindVersion(t testing.NTB, version string) KindVersion {
 	t.Helper()
 
 	switch version {
@@ -76,7 +76,7 @@ func asKindVersion(t *testing.T, version string) KindVersion {
 // newKind creates a new Kind cluster for use in testing with the specified name.
 //
 // Automatically registers the cluster to be deleted at the end of the test.
-func newKind(t *testing.T, name, tmpDir string, version KindVersion) *rest.Config {
+func newKind(t testing.NTB, name, tmpDir string, version KindVersion) *rest.Config {
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, Kubeconfig)
 

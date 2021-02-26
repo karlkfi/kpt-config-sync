@@ -9,8 +9,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"testing"
 
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -25,6 +25,12 @@ const (
 	// MainBranch is static as behavior when switching branches is never under
 	// test.
 	MainBranch = "main"
+
+	// SafetyNSPath is the path to the safety namespace yaml file.
+	SafetyNSPath = "acme/namespaces/safety/ns.yaml"
+
+	// SafetyNS is the name of the safety namespace.
+	SafetyNS = "safety"
 )
 
 // Repository is a local git repository with a connection to a repository
@@ -40,7 +46,10 @@ type Repository struct {
 	// unstructured).
 	Format filesystem.SourceFormat
 
-	T *testing.T
+	T testing.NTB
+
+	// Name is the repository name.
+	Name string
 }
 
 // NewRepository creates a repository named `name`, that connects to git-server
@@ -60,8 +69,9 @@ func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesyste
 		Root:   localDir,
 		Format: sourceFormat,
 		T:      nt.T,
+		Name:   name,
 	}
-	g.init(name, nt.gitPrivateKeyPath, port)
+	g.init(nt.gitPrivateKeyPath, port)
 	g.initialCommit(sourceFormat)
 
 	return g
@@ -97,6 +107,10 @@ func (g *Repository) initialCommit(sourceFormat filesystem.SourceFormat) {
 	// exist - ACM refuses to sync to non-existent directories, and git requires
 	// at least one file in order for a directory to exist.
 	g.AddFile("acme/README.md", []byte("Test repository."))
+	if g.Name == rootRepo {
+		// Keep a safety namespace to avoid failing the safety check.
+		g.Add(SafetyNSPath, fake.NamespaceObject(SafetyNS))
+	}
 	switch sourceFormat {
 	case filesystem.SourceFormatHierarchy:
 		// Hierarchy format requires a Repo object.
@@ -111,15 +125,19 @@ func (g *Repository) initialCommit(sourceFormat filesystem.SourceFormat) {
 
 // init initializes this git repository and configures it to talk to the cluster
 // under test.
-func (g *Repository) init(name, privateKey string, port int) {
+func (g *Repository) init(privateKey string, port int) {
 	g.T.Helper()
+
+	if err := os.RemoveAll(g.Root); err != nil {
+		g.T.Fatal(err)
+	}
 
 	err := os.MkdirAll(g.Root, fileMode)
 	if err != nil {
 		g.T.Fatal(err)
 	}
 	g.Git("init")
-	g.Git("checkout", "-b", "main")
+	g.Git("checkout", "-b", MainBranch)
 
 	// We have to configure username/email or else committing to the repository
 	// produces errors.
@@ -137,7 +155,7 @@ func (g *Repository) init(name, privateKey string, port int) {
 		fmt.Sprintf("ssh -q -o StrictHostKeyChecking=no -i %s", privateKey))
 	// Point the origin remote at the port we've forwarded to git-server.
 	g.Git("remote", "add", remoteName,
-		fmt.Sprintf("ssh://git@localhost:%d/git-server/repos/%s", port, name))
+		fmt.Sprintf("ssh://git@localhost:%d/git-server/repos/%s", port, g.Name))
 }
 
 // Add writes a YAML or JSON representation of obj to `path` in the git
@@ -260,7 +278,7 @@ func (g *Repository) CommitAndPushBranch(msg, branch string) {
 	g.Git("commit", "-m", msg)
 
 	g.T.Logf("[repo %s] committing %q (%s)", path.Base(g.Root), msg, g.Hash())
-	g.Git("push", "-u", remoteName, branch)
+	g.Git("push", "-f", "-u", remoteName, branch)
 }
 
 // CreateBranch creates and checkouts a new branch at once.

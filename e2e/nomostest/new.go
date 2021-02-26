@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/docker"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	testing2 "github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/metrics"
@@ -26,21 +27,16 @@ import (
 // 2) Cause ssh-keygen to fail.
 const fileMode = os.ModePerm
 
-// nomosE2E is the subdirectory inside the filesystem's temporary directory in
+// NomosE2E is the subdirectory inside the filesystem's temporary directory in
 // which we write test data.
-const nomosE2E = "nomos-e2e"
+const NomosE2E = "nomos-e2e"
 
-// New establishes a connection to a test cluster and prepares it for testing.
-//
-// Use newWithOptions for customization.
-func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
-	t.Helper()
-	e2e.EnableParallel(t)
-
+// NewOptStruct initializes the nomostest options.
+func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.Opt) *ntopts.New {
 	// TODO: we should probably put ntopts.New members inside of NT use the go-convention of mutating NT with option functions.
-	optsStruct := ntopts.New{
-		Name:   testClusterName(t),
-		TmpDir: TestDir(t),
+	optsStruct := &ntopts.New{
+		Name:   testName,
+		TmpDir: tmpDir,
 		Nomos: ntopts.Nomos{
 			SourceFormat: filesystem.SourceFormatHierarchy,
 			MultiRepo:    *e2e.MultiRepo,
@@ -49,15 +45,126 @@ func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 			NamespaceRepos: make(map[string]struct{}),
 		},
 	}
-
 	for _, opt := range ntOptions {
-		opt(&optsStruct)
+		opt(optsStruct)
 	}
 
-	return newWithOptions(t, optsStruct)
+	switch {
+	case optsStruct.Nomos.MultiRepo:
+		if optsStruct.MultiRepoIncompatible {
+			t.Skip("Test incompatible with MultiRepo mode")
+		}
+
+		switch *e2e.SkipMode {
+		case e2e.RunDefault:
+			if optsStruct.SkipMultiRepo {
+				t.Skip("Test skipped for MultiRepo mode")
+			}
+		case e2e.RunAll:
+		case e2e.RunSkipped:
+			if !optsStruct.SkipMultiRepo {
+				t.Skip("Test skipped for MultiRepo mode")
+			}
+		default:
+			t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
+		}
+	case optsStruct.SkipMonoRepo:
+		t.Skip("Test skipped for MonoRepo mode")
+	case len(optsStruct.NamespaceRepos) > 0:
+		// We're in MonoRepo mode and we aren't skipping this test, but there are
+		// Namespace repos specified.
+		t.Fatal("Namespace Repos specified, but running in MonoRepo mode. " +
+			"Did you forget ntopts.SkipMonoRepo?")
+	}
+
+	if optsStruct.RESTConfig == nil {
+		RestConfig(t, optsStruct)
+		optsStruct.RESTConfig.QPS = 50
+		optsStruct.RESTConfig.Burst = 75
+	}
+
+	return optsStruct
 }
 
-// newWithOptions establishes a connection to a test cluster based on the passed
+// New establishes a connection to a test cluster and prepares it for testing.
+func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
+	t.Helper()
+	e2e.EnableParallel(t)
+
+	optsStruct := NewOptStruct(testClusterName(t), TestDir(t), t, ntOptions...)
+	if *e2e.ShareTestEnv {
+		return SharedTestEnv(t, optsStruct)
+	}
+	return FreshTestEnv(t, optsStruct)
+}
+
+// SharedTestEnv connects to a shared test cluster.
+func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
+	t.Helper()
+
+	sharedNt := SharedNT()
+	nt := &NT{
+		Context:                 sharedNt.Context,
+		T:                       t,
+		ClusterName:             opts.Name,
+		TmpDir:                  opts.TmpDir,
+		Config:                  opts.RESTConfig,
+		Client:                  sharedNt.Client,
+		kubeconfigPath:          sharedNt.kubeconfigPath,
+		MultiRepo:               sharedNt.MultiRepo,
+		FilesystemPollingPeriod: 50 * time.Millisecond,
+		NonRootRepos:            make(map[string]*Repository),
+		NamespaceRepos:          make(map[string]string),
+		gitPrivateKeyPath:       sharedNt.gitPrivateKeyPath,
+		gitRepoPort:             sharedNt.gitRepoPort,
+		scheme:                  sharedNt.scheme,
+		otelCollectorPort:       sharedNt.otelCollectorPort,
+		otelCollectorPodName:    sharedNt.otelCollectorPodName,
+		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
+	}
+
+	t.Cleanup(func() {
+		// Reset the otel-collector pod name to get a new forwarding port because the current process is killed.
+		nt.otelCollectorPodName = ""
+		resetSyncedRepos(nt, opts)
+		if t.Failed() {
+			// Print the logs for the current container instances.
+			nt.testLogs(false)
+			// print the logs for the previous container instances if they exist.
+			nt.testLogs(true)
+			nt.testPods()
+		}
+	})
+
+	resetSyncedRepos(nt, opts)
+	setupTestCase(nt, opts)
+	return nt
+}
+
+func resetSyncedRepos(nt *NT, opts *ntopts.New) {
+	if nt.MultiRepo {
+		nsList := nt.NamespaceRepos
+		// clear the namespace resources in the namespace repo to avoid admission validation failure.
+		resetNamespaceRepos(nt)
+		// reset the root-repo to the initial state so that the namespace repos can be deleted.
+		nt.NamespaceRepos = map[string]string{}
+		nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+		resetRootRepoSpec(nt, opts.SourceFormat)
+		// delete the namespace repos in case they're set up in the delegated mode.
+		deleteNamespaceRepos(nt)
+		// delete the out-of-sync namespaces in case they're set up in the delegated mode.
+		for _, ns := range nsList {
+			revokeRepoSyncNamespace(nt, ns)
+		}
+	} else {
+		nt.NamespaceRepos = map[string]string{}
+		nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+		resetMonoRepoSpec(nt, opts.SourceFormat)
+		nt.WaitForRepoSyncs()
+	}
+}
+
+// FreshTestEnv establishes a connection to a test cluster based on the passed
 //
 // options.
 //
@@ -70,48 +177,14 @@ func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 // 1) A connection to the Kubernetes cluster.
 // 2) A functioning git server hosted on the cluster.
 // 3) A fresh ACM installation.
-func newWithOptions(t *testing.T, opts ntopts.New) *NT {
+func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 	t.Helper()
-
-	switch {
-	case opts.Nomos.MultiRepo:
-		if opts.MultiRepoIncompatible {
-			t.Skip("Test incompatible with MultiRepo mode")
-		}
-
-		switch *e2e.SkipMode {
-		case e2e.RunDefault:
-			if opts.SkipMultiRepo {
-				t.Skip("Test skipped for MultiRepo mode")
-			}
-		case e2e.RunAll:
-		case e2e.RunSkipped:
-			if !opts.SkipMultiRepo {
-				t.Skip("Test skipped for MultiRepo mode")
-			}
-		default:
-			t.Fatalf("Invalid flag value %s for skipMode", *e2e.SkipMode)
-		}
-	case opts.SkipMonoRepo:
-		t.Skip("Test skipped for MonoRepo mode")
-	case len(opts.NamespaceRepos) > 0:
-		// We're in MonoRepo mode and we aren't skipping this test, but there are
-		// Namespace repos specified.
-		t.Fatal("Namespace Repos specified, but running in MonoRepo mode. " +
-			"Did you forget ntopts.SkipMonoRepo?")
-	}
-
-	if opts.RESTConfig == nil {
-		RestConfig(t, &opts)
-		opts.RESTConfig.QPS = 50
-		opts.RESTConfig.Burst = 75
-	}
 
 	if !*e2e.E2E {
 		// This safeguard prevents test authors from accidentally forgetting to
 		// check for the e2e test flag, so `go test ./...` functions as expected
 		// without triggering e2e tests.
-		t.Fatal("Attempting to createKindCluster cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
+		t.Fatal("Attempting to create or mutate a test cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
 	}
 
 	scheme := newScheme(t)
@@ -145,7 +218,8 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		// a single test.
 		connectToLocalRegistry(nt)
 		docker.CheckImages(nt.T)
-	} else {
+	}
+	if *e2e.TestCluster != e2e.Kind {
 		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
 		// clean before and after running the test.
 		Clean(nt, true)
@@ -181,22 +255,25 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 			nt.testPods()
 		}
 	})
-	waitForGit := installGitServer(nt)
-	waitForConfigSync := installConfigSync(nt, opts.Nomos)
 
-	err = waitForGit()
-	if err != nil {
+	waitForGit := installGitServer(nt)
+	if err := waitForGit(); err != nil {
 		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
 	}
 
+	installConfigSync(nt, opts.Nomos)
+
+	setupTestCase(nt, opts)
+	return nt
+}
+
+func setupTestCase(nt *NT, opts *ntopts.New) {
 	// allRepos specifies the slice all repos for port forwarding.
 	allRepos := []string{rootRepo}
 	for repo := range opts.MultiRepo.NamespaceRepos {
 		allRepos = append(allRepos, repo)
 	}
 
-	// The git-server reports itself to be ready, so we don't have to wait on
-	// anything.
 	nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
 	nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
 
@@ -205,13 +282,14 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	}
 
 	// First wait for CRDs to be established.
+	var err error
 	if nt.MultiRepo {
 		err = waitForCRDs(nt, multiRepoCRDs)
 	} else {
 		err = waitForCRDs(nt, monoRepoCRDs)
 	}
 	if err != nil {
-		t.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
+		nt.T.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
 	}
 
 	// ConfigSync custom types weren't available when the cluster was initially
@@ -219,10 +297,10 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	// understand the Repo and RootSync types as ConfigSync is now installed.
 	nt.RenewClient()
 
-	err = waitForConfigSync(nt)
-	if err != nil {
-		t.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
+	if err := waitForConfigSync(nt, opts.Nomos); err != nil {
+		nt.T.Fatalf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
+
 	nt.PortForwardOtelCollector()
 
 	switch opts.Control {
@@ -237,7 +315,6 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	}
 
 	nt.WaitForRepoSyncs()
-	return nt
 }
 
 // SwitchMode switches either from mono-repo to multi-repo
@@ -246,7 +323,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 func SwitchMode(t *testing.T, nt *NT) {
 	nt.MultiRepo = !nt.MultiRepo
 	nm := ntopts.Nomos{MultiRepo: nt.MultiRepo}
-	fn := installConfigSync(nt, nm)
+	installConfigSync(nt, nm)
 	var err error
 	if nt.MultiRepo {
 		err = waitForCRDs(nt, multiRepoCRDs)
@@ -256,7 +333,7 @@ func SwitchMode(t *testing.T, nt *NT) {
 	if err != nil {
 		t.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
 	}
-	err = fn(nt)
+	err = waitForConfigSync(nt, nm)
 	if err != nil {
 		t.Errorf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
@@ -269,11 +346,11 @@ func TestDir(t *testing.T) string {
 	t.Helper()
 
 	name := testDirName(t)
-	err := os.MkdirAll(filepath.Join(os.TempDir(), nomosE2E), fileMode)
+	err := os.MkdirAll(filepath.Join(os.TempDir(), NomosE2E), fileMode)
 	if err != nil {
 		t.Fatalf("creating nomos-e2e tmp directory: %v", err)
 	}
-	tmpDir, err := ioutil.TempDir(filepath.Join(os.TempDir(), nomosE2E), name)
+	tmpDir, err := ioutil.TempDir(filepath.Join(os.TempDir(), NomosE2E), name)
 	if err != nil {
 		t.Fatalf("creating nomos-e2e tmp test subdirectory %s: %v", tmpDir, err)
 	}

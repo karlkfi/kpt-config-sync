@@ -139,7 +139,8 @@ function nomos::__legacy_repo_synced() {
     | jq '[.items[] | select(.metadata.annotations["configmanagement.gke.io/managed"] == "enabled") ] | length'
   )"
   nc_count="$(kubectl get nc -ojson | jq '.items | length')"
-  if (( ns_count != nc_count )); then
+  nc_count_disabled="$(kubectl get nc -ojson | jq '[.items[] | select(.metadata.annotations["configmanagement.gke.io/managed"] == "disabled") ] | length')"
+  if (( ns_count != nc_count - nc_count_disabled )); then
     return 1
   fi
   #### END WORKAROUND ####

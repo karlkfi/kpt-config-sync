@@ -276,7 +276,7 @@ function resource::delete() {
     # of the few recommended ways to do this in bash that I could understand.
     declare -a tmpnames
     for ns in "${names[@]}"; do
-      if [[ "${ns}" != "default" && "${ns}" != "kube-system" ]]; then
+      if [[ "${ns}" != "default" && "${ns}" != "kube-system" && "${ns}" != "safety" ]]; then
 
         if kubectl get ns "${ns}" | grep -q "Terminating"; then
           # Technically a race condition if a delete happens between here and

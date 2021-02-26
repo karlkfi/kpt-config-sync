@@ -2,10 +2,10 @@ package nomostest
 
 import (
 	"strings"
-	"testing"
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/e2e/nomostest/testing"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -22,7 +22,7 @@ import (
 )
 
 // connect creates a client.Client to the cluster
-func connect(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) client.Client {
+func connect(t testing.NTB, cfg *rest.Config, scheme *runtime.Scheme) client.Client {
 	t.Helper()
 
 	t.Log("creating Client")
@@ -39,7 +39,7 @@ func connect(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) client.Clie
 
 // newScheme creates a new scheme to use to map Go types to types on a
 // Kubernetes cluster.
-func newScheme(t *testing.T) *runtime.Scheme {
+func newScheme(t testing.NTB) *runtime.Scheme {
 	t.Helper()
 
 	s := runtime.NewScheme()
@@ -73,7 +73,7 @@ func newScheme(t *testing.T) *runtime.Scheme {
 // RestConfig sets up the config for creating a Client connection to a K8s cluster.
 // If --test-cluster=kind, it creates a Kind cluster.
 // If --test-cluster=kubeconfig, it uses the context specified in kubeconfig.
-func RestConfig(t *testing.T, optsStruct *ntopts.New) {
+func RestConfig(t testing.NTB, optsStruct *ntopts.New) {
 	switch strings.ToLower(*e2e.TestCluster) {
 	case e2e.Kind:
 		ntopts.Kind(t, *e2e.KubernetesVersion)(optsStruct)

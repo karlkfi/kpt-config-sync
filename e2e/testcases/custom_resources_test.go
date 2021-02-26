@@ -59,7 +59,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
 			return err
@@ -150,7 +150,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
 			return err

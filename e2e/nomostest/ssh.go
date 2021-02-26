@@ -7,7 +7,11 @@ import (
 	"path/filepath"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 )
+
+const gitServerSecret = "ssh-pub"
+const namespaceSecret = "ssh-key"
 
 func sshDir(nt *NT) string {
 	nt.T.Helper()
@@ -64,10 +68,10 @@ func generateSSHKeys(nt *NT) string {
 
 	createSSHKeyPair(nt)
 
-	createSecret(nt, configmanagement.ControllerNamespace, "git-creds",
+	createSecret(nt, configmanagement.ControllerNamespace, controllers.GitCredentialVolume,
 		fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
 
-	createSecret(nt, testGitNamespace, "ssh-pub",
+	createSecret(nt, testGitNamespace, gitServerSecret,
 		filepath.Join(publicKeyPath(nt)))
 
 	return privateKeyPath(nt)
@@ -76,5 +80,9 @@ func generateSSHKeys(nt *NT) string {
 // CreateNamespaceSecret creates secret in a given namespace using privateKeyPath.
 func CreateNamespaceSecret(nt *NT, ns string) {
 	nt.T.Helper()
-	createSecret(nt, ns, "ssh-key", fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
+	privateKeypath := nt.gitPrivateKeyPath
+	if len(privateKeypath) == 0 {
+		privateKeypath = privateKeyPath(nt)
+	}
+	createSecret(nt, ns, namespaceSecret, fmt.Sprintf("ssh=%s", privateKeypath))
 }

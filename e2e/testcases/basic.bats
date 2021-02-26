@@ -182,22 +182,38 @@ function manage_namespace() {
     --ignore-not-found --namespace="${ns}"
 }
 
+# System namespace deletion is forbidden.
+# We need to unmanage those namespaces in case we hit the forbidden error
+# when resetting the repos to the initial state.
+function unmanage_namespace() {
+  local ns="${1}"
+  debug::log "stop managing the system namespace"
+
+  git::add "${YAML_DIR}/reserved_namespaces/unmanaged-namespace.${ns}.yaml" \
+    "acme/namespaces/${ns}/namespace.yaml"
+  git::commit -m "Stop managing the namespace"
+  wait::for -t 60 -- nomos::repo_synced
+}
+
 @test "${FILE_NAME}: Namespace default can be managed" {
   manage_namespace "default"
+  unmanage_namespace "default"
 }
 
 @test "${FILE_NAME}: Namespace gatekeeper-system can be managed" {
   namespace::create gatekeeper-system
   manage_namespace "gatekeeper-system"
-  kubectl delete ns gatekeeper-system
+  kubectl delete ns gatekeeper-system --ignore-not-found
 }
 
 @test "${FILE_NAME}: Namespace kube-system can be managed" {
   manage_namespace "kube-system"
+  unmanage_namespace "kube-system"
 }
 
 @test "${FILE_NAME}: Namespace kube-public can be managed" {
   manage_namespace "kube-public"
+  unmanage_namespace "kube-public"
 }
 
 function clean_test_configmaps() {
