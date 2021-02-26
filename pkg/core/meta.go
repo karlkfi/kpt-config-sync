@@ -82,3 +82,39 @@ func Generation(gen int64) MetaMutator {
 		o.SetGeneration(gen)
 	}
 }
+
+// SelfLink sets the object's self link to the given value.
+func SelfLink(selfLink string) MetaMutator {
+	return func(o Object) {
+		o.SetSelfLink(selfLink)
+	}
+}
+
+// ResourceVersion sets the object's resource version to the given value.
+func ResourceVersion(version string) MetaMutator {
+	return func(o Object) {
+		o.SetResourceVersion(version)
+	}
+}
+
+// CreationTimeStamp sets the object's creation time stamp to the given value.
+func CreationTimeStamp(ts metav1.Time) MetaMutator {
+	return func(o Object) {
+		o.SetCreationTimestamp(ts)
+	}
+}
+
+// DeletionTimestamp sets the object's deletion timestamp to the given value.
+func DeletionTimestamp(ts metav1.Time) MetaMutator {
+	return func(o Object) {
+		o.SetDeletionTimestamp(&ts)
+	}
+}
+
+// DeletionGracePeriod sets the object's deletion grace period to the given
+// value.
+func DeletionGracePeriod(seconds int64) MetaMutator {
+	return func(o Object) {
+		o.SetDeletionGracePeriodSeconds(&seconds)
+	}
+}
