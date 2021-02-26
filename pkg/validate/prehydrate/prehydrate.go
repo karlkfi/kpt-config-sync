@@ -3,7 +3,6 @@ package prehydrate
 import (
 	"github.com/google/nomos/pkg/validate/parsed"
 	"github.com/google/nomos/pkg/validate/prehydrate/hierarchical"
-	"github.com/google/nomos/pkg/validate/prehydrate/hnc"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
@@ -25,6 +24,5 @@ func HierarchicalValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
 		hierarchical.NamespaceSelectorValidator(),
 		hierarchical.InheritanceValidator(),
-		hnc.DepthLabelValidator(),
 	}
 }
