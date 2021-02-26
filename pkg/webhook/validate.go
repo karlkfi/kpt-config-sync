@@ -18,6 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+var enabled = false
+
+func enable() {
+	// For now we only enable this functionality for unit tests. Will be deleted
+	// once we trust this to function as expected.
+	enabled = true
+}
+
 // AddValidator adds the admission webhook validator to the passed manager.
 func AddValidator(mgr manager.Manager) {
 	mgr.GetWebhookServer().Register(servingPath, &webhook.Admission{
@@ -48,6 +56,12 @@ func Handler(cfg *rest.Config) (*Validator, error) {
 
 // Handle implements admission.Handler
 func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	if !enabled {
+		// Disable the admission controller's Handle function as we experiment with
+		// deploying it.
+		return admission.Allowed("no-op Admission Controller")
+	}
+
 	// An admission request for a sub-resource (such as a Scale) will not include
 	// the full parent for us to validate until the admission chain is fixed:
 	// https://github.com/kubernetes/enhancements/pull/1600

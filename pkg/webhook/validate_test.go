@@ -22,6 +22,8 @@ import (
 )
 
 func TestValidator_Handle(t *testing.T) {
+	enable()
+
 	testCases := []struct {
 		name   string
 		oldObj client.Object

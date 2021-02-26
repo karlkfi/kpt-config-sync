@@ -107,6 +107,8 @@ var (
 		"clusterselectors.configmanagement.gke.io":   true,
 		"container-limits":                           true,
 		"namespaceselectors.configmanagement.gke.io": true,
+		"admission-webhook":                          true,
+		"configsync.gke.io:admission-webhook":        true,
 	}
 	// ignoredObjects:
 	// config-management-system, this namespace gets created elsewhere
