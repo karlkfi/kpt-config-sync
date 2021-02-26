@@ -23,9 +23,6 @@ func FlatValidators(config Config) []parsed.ValidatorFunc {
 // hierarchical repo pre-hydration.
 func HierarchicalValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
-		hierarchical.NamespaceDirectoryValidator(),
-		hierarchical.ObjectDirectoryValidator(),
-		hierarchical.DirectoryNameValidator(),
 		hierarchical.NamespaceSelectorValidator(),
 		hierarchical.InheritanceValidator(),
 		hnc.DepthLabelValidator(),

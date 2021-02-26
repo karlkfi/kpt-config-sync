@@ -15,10 +15,12 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 	validators := []objects.RawVisitor{
 		objects.VisitAllRaw(validate.Annotations),
 		objects.VisitAllRaw(validate.Labels),
+		objects.VisitAllRaw(validate.IllegalKindsForHierarchical),
+		objects.VisitAllRaw(validate.Namespace),
+		objects.VisitAllRaw(validate.Directory),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,
 		validate.ClusterSelectors,
-		objects.VisitAllRaw(validate.IllegalKindsForHierarchical),
 	}
 	for _, validate := range validators {
 		errs = status.Append(errs, validate(objs))
@@ -45,10 +47,11 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 	validators := []objects.RawVisitor{
 		objects.VisitAllRaw(validate.Annotations),
 		objects.VisitAllRaw(validate.Labels),
+		objects.VisitAllRaw(validate.IllegalKindsForUnstructured),
+		objects.VisitAllRaw(validate.Namespace),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,
 		validate.ClusterSelectors,
-		objects.VisitAllRaw(validate.IllegalKindsForUnstructured),
 	}
 	for _, validate := range validators {
 		errs = status.Append(errs, validate(objs))
