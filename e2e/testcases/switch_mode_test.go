@@ -76,13 +76,8 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 		t.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
-	// Deploy the mono repo config sync.
-	nt.MultiRepo = false
-	nm := ntopts.Nomos{MultiRepo: false}
-	err = nomostest.InstallConfigSync(nt, nm)(nt)
-	if err != nil {
-		t.Errorf("unable to install mono repo objects: %v", err)
-	}
+	// Switch to mono-repo mode.
+	nomostest.SwitchMode(t, nt)
 
 	nt.WaitForRepoSyncs()
 	// Ensure the Service exists and has the target port we set.
@@ -161,13 +156,9 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 		t.Errorf("Git importer deployment present after deletion: %v", err)
 	}
 
-	// Deploy the multi repo config sync.
-	nt.MultiRepo = true
-	nm := ntopts.Nomos{MultiRepo: true}
-	err = nomostest.InstallConfigSync(nt, nm)(nt)
-	if err != nil {
-		t.Errorf("unable to install mono repo objects: %v", err)
-	}
+	// Switch to multi-repo mode.
+	nomostest.SwitchMode(t, nt)
+
 	nt.WaitForRootSync(kinds.RootSync(),
 		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
 	// Ensure the Service exists and has the target port we set.

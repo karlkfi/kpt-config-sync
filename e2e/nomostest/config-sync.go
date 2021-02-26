@@ -128,9 +128,9 @@ func gitRepo(repoName string) string {
 	return fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", repoName)
 }
 
-// InstallConfigSync installs ConfigSync on the test cluster, and returns a
+// installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
-func InstallConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
+func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 

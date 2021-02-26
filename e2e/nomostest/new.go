@@ -182,7 +182,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		}
 	})
 	waitForGit := installGitServer(nt)
-	waitForConfigSync := InstallConfigSync(nt, opts.Nomos)
+	waitForConfigSync := installConfigSync(nt, opts.Nomos)
 
 	err = waitForGit()
 	if err != nil {
@@ -238,6 +238,28 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 
 	nt.WaitForRepoSyncs()
 	return nt
+}
+
+// SwitchMode switches either from mono-repo to multi-repo
+// or from multi-repo to mono-repo.
+// It then installs ConfigSync for the new mode.
+func SwitchMode(t *testing.T, nt *NT) {
+	nt.MultiRepo = !nt.MultiRepo
+	nm := ntopts.Nomos{MultiRepo: nt.MultiRepo}
+	fn := installConfigSync(nt, nm)
+	var err error
+	if nt.MultiRepo {
+		err = waitForCRDs(nt, multiRepoCRDs)
+	} else {
+		err = waitForCRDs(nt, monoRepoCRDs)
+	}
+	if err != nil {
+		t.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
+	}
+	err = fn(nt)
+	if err != nil {
+		t.Errorf("waiting for ConfigSync Deployments to become available: %v", err)
+	}
 }
 
 // TestDir creates a unique temporary directory for the E2E test.
