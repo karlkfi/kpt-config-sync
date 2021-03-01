@@ -18,6 +18,8 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		objects.VisitAllRaw(validate.IllegalKindsForHierarchical),
 		objects.VisitAllRaw(validate.Namespace),
 		objects.VisitAllRaw(validate.Directory),
+		objects.VisitAllRaw(validate.RepoVersion),
+		objects.VisitAllRaw(validate.HierarchyConfig),
 		objects.VisitAllRaw(validate.HNCLabels),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,

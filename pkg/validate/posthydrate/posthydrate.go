@@ -16,9 +16,7 @@ func FlatValidators() []parsed.ValidatorFunc {
 // hierarchical repo post-hydration.
 func HierarchicalValidators() []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
-		hierarchical.RepoVersionValidator(),
 		hierarchical.SingletonValidator(kinds.Repo()),
 		hierarchical.TreeNodeSingletonValidator(kinds.Namespace()),
-		hierarchical.HierarchyConfigValidator(),
 	}
 }

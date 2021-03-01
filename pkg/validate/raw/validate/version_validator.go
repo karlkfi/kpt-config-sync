@@ -1,4 +1,4 @@
-package hierarchical
+package validate
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/repo"
-	"github.com/google/nomos/pkg/validate/parsed"
 )
 
 // OldAllowedRepoVersion is the old (but still supported) Repo.Spec.Version.
@@ -18,23 +17,19 @@ var allowedRepoVersions = map[string]bool{
 	OldAllowedRepoVersion: true,
 }
 
-// RepoVersionValidator returns a visitor that ensures any Repo objects in
-// system/ have the correct version.
-func RepoVersionValidator() parsed.ValidatorFunc {
-	f := parsed.PerObjectVisitor(func(obj ast.FileObject) status.Error {
-		if obj.GroupVersionKind() != kinds.Repo() {
-			return nil
-		}
-		s, err := obj.Structured()
-		if err != nil {
-			return err
-		}
-		if version := s.(*v1.Repo).Spec.Version; !allowedRepoVersions[version] {
-			return system.UnsupportedRepoSpecVersion(obj, version)
-		}
+// RepoVersion verifies that the Repo object in system/ has the correct version.
+func RepoVersion(obj ast.FileObject) status.Error {
+	if obj.GroupVersionKind() != kinds.Repo() {
 		return nil
-	})
-	return parsed.ValidateSystemObjects(f)
+	}
+	s, err := obj.Structured()
+	if err != nil {
+		return err
+	}
+	if version := s.(*v1.Repo).Spec.Version; !allowedRepoVersions[version] {
+		return system.UnsupportedRepoSpecVersion(obj, version)
+	}
+	return nil
 }
 
 // TODO(b/178219594): Move UnsupportedRepoSpecVersion error here.
