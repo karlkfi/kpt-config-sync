@@ -1,4 +1,4 @@
-package hierarchical
+package validate
 
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -6,17 +6,13 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/parsed"
+	"github.com/google/nomos/pkg/validate/objects"
 )
 
-// InheritanceValidator returns a visitor that verifies that all syncable
+// Inheritance returns a visitor that verifies that all syncable
 // resources in an abstract namespace have a concrete Namespace as a descendant.
-func InheritanceValidator() parsed.ValidatorFunc {
-	return parsed.TreeValidator(validateInheritance)
-}
-
-func validateInheritance(root *parsed.TreeRoot) status.MultiError {
-	_, err := validateTreeNode(root.Tree)
+func Inheritance(tree *objects.Tree) status.MultiError {
+	_, err := validateTreeNode(tree.Tree)
 	return err
 }
 

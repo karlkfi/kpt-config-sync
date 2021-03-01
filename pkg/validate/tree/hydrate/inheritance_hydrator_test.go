@@ -1,4 +1,4 @@
-package hierarchical
+package hydrate
 
 import (
 	"errors"
@@ -14,46 +14,38 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/validate/parsed"
+	"github.com/google/nomos/pkg/validate/objects"
 )
 
-func TestInheritanceHydrator_Hydrate(t *testing.T) {
+func TestInheritance(t *testing.T) {
 	testCases := []struct {
-		name    string
-		root    *parsed.TreeRoot
-		want    *parsed.TreeRoot
-		wantErr status.MultiError
+		name     string
+		objs     *objects.Tree
+		want     *objects.Tree
+		wantErrs status.MultiError
 	}{
 		{
 			name: "Preserve non-namespace objects",
-			root: &parsed.TreeRoot{
-				ClusterRegistryObjects: []ast.FileObject{
-					fake.Cluster(core.Name("prod-cluster")),
-				},
-				ClusterObjects: []ast.FileObject{
+			objs: &objects.Tree{
+				Repo: fake.Repo(),
+				Cluster: []ast.FileObject{
 					fake.ClusterRole(core.Name("hello-reader")),
-				},
-				SystemObjects: []ast.FileObject{
-					fake.Repo(),
+					fake.ClusterRoleBinding(core.Name("hello-binding")),
 				},
 			},
-			want: &parsed.TreeRoot{
-				ClusterRegistryObjects: []ast.FileObject{
-					fake.Cluster(core.Name("prod-cluster")),
-				},
-				ClusterObjects: []ast.FileObject{
+			want: &objects.Tree{
+				Repo: fake.Repo(),
+				Cluster: []ast.FileObject{
 					fake.ClusterRole(core.Name("hello-reader")),
-				},
-				SystemObjects: []ast.FileObject{
-					fake.Repo(),
+					fake.ClusterRoleBinding(core.Name("hello-binding")),
 				},
 			},
 		},
 		{
 			name: "Propagate abstract namespace objects",
-			root: &parsed.TreeRoot{
-				SystemObjects: []ast.FileObject{
-					fake.Repo(),
+			objs: &objects.Tree{
+				Repo: fake.Repo(),
+				HierarchyConfigs: []ast.FileObject{
 					fake.HierarchyConfig(
 						fake.HierarchyConfigResource(v1.HierarchyModeDefault, kinds.Role().GroupVersion(), kinds.Role().Kind),
 					),
@@ -100,9 +92,9 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 					},
 				},
 			},
-			want: &parsed.TreeRoot{
-				SystemObjects: []ast.FileObject{
-					fake.Repo(),
+			want: &objects.Tree{
+				Repo: fake.Repo(),
+				HierarchyConfigs: []ast.FileObject{
 					fake.HierarchyConfig(
 						fake.HierarchyConfigResource(v1.HierarchyModeDefault, kinds.Role().GroupVersion(), kinds.Role().Kind),
 					),
@@ -157,7 +149,7 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 		},
 		{
 			name: "Validate Namespace can not have child Namespaces",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -188,7 +180,7 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: status.Append(
+			wantErrs: status.Append(
 				validation.IllegalNamespaceSubdirectoryError(
 					&ast.TreeNode{Relative: cmpath.RelativeSlash("namespaces/hello/world")},
 					&ast.TreeNode{Relative: cmpath.RelativeSlash("namespaces/hello")},
@@ -201,9 +193,9 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 		},
 		{
 			name: "Validate abstract namespace can not have invalid objects",
-			root: &parsed.TreeRoot{
-				SystemObjects: []ast.FileObject{
-					fake.Repo(),
+			objs: &objects.Tree{
+				Repo: fake.Repo(),
+				HierarchyConfigs: []ast.FileObject{
 					fake.HierarchyConfig(
 						fake.HierarchyConfigResource(v1.HierarchyModeNone, kinds.Role().GroupVersion(), kinds.Role().Kind),
 					),
@@ -231,19 +223,18 @@ func TestInheritanceHydrator_Hydrate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))),
+			wantErrs: validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := InheritanceHydrator()
-			err := h.Hydrate(tc.root)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("Got Hydrate() error %v, want %v", err, tc.wantErr)
+			errs := Inheritance(tc.objs)
+			if !errors.Is(errs, tc.wantErrs) {
+				t.Errorf("Got Inheritance() error %v, want %v", errs, tc.wantErrs)
 			}
 			if tc.want != nil {
-				if diff := cmp.Diff(tc.want, tc.root, ast.CompareFileObject); diff != "" {
+				if diff := cmp.Diff(tc.want, tc.objs, ast.CompareFileObject); diff != "" {
 					t.Error(diff)
 				}
 			}

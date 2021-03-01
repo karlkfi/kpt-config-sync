@@ -1,4 +1,4 @@
-package hierarchical
+package validate
 
 import (
 	"errors"
@@ -10,18 +10,18 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/validate/parsed"
+	"github.com/google/nomos/pkg/validate/objects"
 )
 
-func TestInheritanceValidator(t *testing.T) {
+func TestInheritance(t *testing.T) {
 	testCases := []struct {
-		name    string
-		root    parsed.Root
-		wantErr status.MultiError
+		name     string
+		objs     *objects.Tree
+		wantErrs status.MultiError
 	}{
 		{
 			name: "empty tree",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -30,7 +30,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "Namespace without resources",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -48,7 +48,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "Namespace with resource",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -67,7 +67,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "abstract namespace with ephemeral resource",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -85,7 +85,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "abstract namespace with resource and child namespace",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -112,7 +112,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "abstract namespace with resource and descendant namespace",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -145,7 +145,7 @@ func TestInheritanceValidator(t *testing.T) {
 		},
 		{
 			name: "abstract namespace with resource and no namespace child",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -160,11 +160,11 @@ func TestInheritanceValidator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: semantic.UnsyncableResourcesInLeaf(&ast.TreeNode{}),
+			wantErrs: semantic.UnsyncableResourcesInLeaf(&ast.TreeNode{}),
 		},
 		{
 			name: "abstract namespace with resource and abstract child",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -185,17 +185,15 @@ func TestInheritanceValidator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: semantic.UnsyncableResourcesInNonLeaf(&ast.TreeNode{}),
+			wantErrs: semantic.UnsyncableResourcesInNonLeaf(&ast.TreeNode{}),
 		},
 	}
 
 	for _, tc := range testCases {
-		iv := InheritanceValidator()
 		t.Run(tc.name, func(t *testing.T) {
-
-			err := iv(tc.root)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got InheritanceValidator() error %v, want %v", err, tc.wantErr)
+			errs := Inheritance(tc.objs)
+			if !errors.Is(errs, tc.wantErrs) {
+				t.Errorf("got Inheritance() error %v, want %v", errs, tc.wantErrs)
 			}
 		})
 	}

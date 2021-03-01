@@ -11,6 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// TreeVisitor is a function that validates or hydrates Raw objects.
+type TreeVisitor func(t *Tree) status.MultiError
+
 // Tree contains a collection of FileObjects that are organized based upon the
 // structure of a hierarchical repo. This includes system-level objects like
 // HierarchyConfigs as well as a hierarchical tree of namespaces and namespace-

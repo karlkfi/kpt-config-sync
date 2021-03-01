@@ -23,6 +23,5 @@ func FlatValidators(config Config) []parsed.ValidatorFunc {
 func HierarchicalValidators(config Config) []parsed.ValidatorFunc {
 	return []parsed.ValidatorFunc{
 		hierarchical.NamespaceSelectorValidator(),
-		hierarchical.InheritanceValidator(),
 	}
 }
