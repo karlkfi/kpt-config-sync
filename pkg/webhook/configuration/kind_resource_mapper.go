@@ -1,6 +1,8 @@
 package configuration
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/status"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -29,7 +31,10 @@ func newKindResourceMapper(lists []*metav1.APIResourceList) (kindResourceMapper,
 		}
 		for _, resource := range list.APIResources {
 			gvk := gv.WithKind(resource.Kind)
-			gvr := gv.WithResource(resource.Name)
+			name := resource.Name
+			// Ignore subresources.
+			name = strings.Split(name, "/")[0]
+			gvr := gv.WithResource(name)
 			mapper[gvk] = gvr
 		}
 	}

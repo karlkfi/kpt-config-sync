@@ -27,10 +27,15 @@ func enable() {
 }
 
 // AddValidator adds the admission webhook validator to the passed manager.
-func AddValidator(mgr manager.Manager) {
+func AddValidator(mgr manager.Manager) error {
+	handler, err := handler(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
 	mgr.GetWebhookServer().Register(servingPath, &webhook.Admission{
-		Handler: &Validator{},
+		Handler: handler,
 	})
+	return nil
 }
 
 // Validator is the part of the validating webhook which handles admission
@@ -42,7 +47,7 @@ type Validator struct {
 var _ admission.Handler = &Validator{}
 
 // Handler returns a Validator which satisfies the admission.Handler interface.
-func Handler(cfg *rest.Config) (*Validator, error) {
+func handler(cfg *rest.Config) (*Validator, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err

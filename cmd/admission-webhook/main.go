@@ -40,11 +40,14 @@ func main() {
 	<-certDone
 
 	setupLog.Info("registering validating webhook")
-	webhook.AddValidator(mgr)
+	if err = webhook.AddValidator(mgr); err != nil {
+		setupLog.Error(err, "registering validating webhook")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error(err, "running manager")
 		os.Exit(1)
 	}
 }

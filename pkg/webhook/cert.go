@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	secret         = "config-sync-admitter-secret"
+	secret         = configuration.ShortName + "-secret"
 	caName         = "config-sync-ca"
 	caOrganization = "config-sync"
 	certDir        = "/tmp/k8s-webhook-server/serving-certs"

@@ -64,11 +64,12 @@ var (
 	RepoSyncFileName = "repo-sync.yaml"
 
 	templates = []string{
+		"admission-webhook.yaml",
 		"git-importer.yaml",
 		"monitor.yaml",
+		"otel-collector.yaml",
 		"reconciler-manager.yaml",
 		"reconciler-manager-configmap.yaml",
-		"otel-collector.yaml",
 	}
 
 	// monoObjects contains the names of all objects that are necessary to install
@@ -103,11 +104,11 @@ var (
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.
 	sharedObjects = map[string]bool{
+		"admission-webhook":                          true,
 		"clusters.clusterregistry.k8s.io":            true,
 		"clusterselectors.configmanagement.gke.io":   true,
 		"container-limits":                           true,
 		"namespaceselectors.configmanagement.gke.io": true,
-		"admission-webhook":                          true,
 		"configsync.gke.io:admission-webhook":        true,
 	}
 	// ignoredObjects:
@@ -280,6 +281,8 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		case "reconciler-manager-configmap.yaml":
 			// For the reconciler deployment template, we want the latest image for the reconciler.
 			imgName = *e2e.ImagePrefix + "/reconciler:latest"
+		case "admission-webhook.yaml":
+			imgName = *e2e.ImagePrefix + "/admission-webhook:latest"
 		default:
 			// For any other template, we want the latest image for the nomos binary (mono-repo).
 			imgName = *e2e.ImagePrefix + "/nomos:latest"

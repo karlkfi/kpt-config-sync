@@ -10,6 +10,7 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 )
 
 // toWebhookConfiguration creates a ValidatingWebhookConfiguration for all
@@ -110,7 +111,8 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 		ClientConfig: admissionv1.WebhookClientConfig{
 			Service: &admissionv1.ServiceReference{
 				Namespace: configsync.ControllerNamespace,
-				Name:      Name,
+				Name:      ShortName,
+				Port:      pointer.Int32Ptr(8676),
 			},
 		},
 	}
