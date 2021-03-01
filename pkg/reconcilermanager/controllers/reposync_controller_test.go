@@ -45,12 +45,12 @@ const (
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "a4fe2c51bedbb0e502883b3847f4bec3"
+	nsAnnotation = "7c45f159e7c8005a792dcb402c078957"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "92cc88e614c4eba1ce6adc081b955edf"
+	nsUpdatedAnnotation = "ad9eec9d09067c7aa5c339b3cef083f3"
 
-	nsAnnotationGCENode        = "7cb81b5b4f4bee65c6f0f374d43afc7a"
-	nsUpdatedAnnotationGCENode = "e4da7a11889b93b5db572c02bea8f0b2"
+	nsAnnotationGCENode        = "1e0a718052edc00039f6acc3738a02ae"
+	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
 )
 
 // Set in init.

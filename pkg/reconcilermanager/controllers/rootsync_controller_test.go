@@ -34,12 +34,12 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "eddad408a2b3e94314f4d5b5a441d5fb"
+	rsAnnotation = "75a76c9c0de8e20c5e387df1a752f87f"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "f5f9d5d58163aabf40245d14623565cb"
+	rsUpdatedAnnotation = "afcc0fc36266b70500c33218f773bd7f"
 
-	rsAnnotationGCENode        = "d9ea402dc0d559470c7e98e28fc31380"
-	rsUpdatedAnnotationGCENode = "fee7b43ecaea1d436441db7433840d3c"
+	rsAnnotationGCENode        = "13c7343a532901cd51b815a9ff10db8c"
+	rsUpdatedAnnotationGCENode = "87db1abb4c04ba6e9b0a4e7ba9423588"
 
 	rootsyncSSHKey = "root-ssh-key"
 )
