@@ -175,11 +175,11 @@ func ClusterSelectorObject(opts ...core.MetaMutator) *v1.ClusterSelector {
 
 // ClusterSelector returns a Nomos ClusterSelector.
 func ClusterSelector(opts ...core.MetaMutator) ast.FileObject {
-	return clusterSelectorAtPath("cluster/cs.yaml", opts...)
+	return ClusterSelectorAtPath("clusterregistry/cs.yaml", opts...)
 }
 
 // ClusterSelectorAtPath returns a ClusterSelector at the specified path.
-func clusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
+func ClusterSelectorAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ClusterSelectorObject(opts...), path)
 }
 

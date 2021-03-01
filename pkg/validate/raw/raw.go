@@ -21,7 +21,7 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		objects.VisitAllRaw(validate.HNCLabels),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,
-		validate.ClusterSelectors,
+		validate.ClusterSelectorsForHierarchical,
 	}
 	for _, validate := range validators {
 		errs = status.Append(errs, validate(objs))
@@ -52,7 +52,7 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		objects.VisitAllRaw(validate.Namespace),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,
-		validate.ClusterSelectors,
+		validate.ClusterSelectorsForUnstructured,
 	}
 	for _, validate := range validators {
 		errs = status.Append(errs, validate(objs))

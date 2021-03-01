@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
@@ -20,7 +21,7 @@ var (
 	inlineClusterSelectorAnnotation = core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod-cluster")
 )
 
-func TestClusterSelectors(t *testing.T) {
+func TestClusterSelectorsForHierarchical(t *testing.T) {
 	testCases := []struct {
 		name     string
 		objs     *objects.Raw
@@ -131,13 +132,55 @@ func TestClusterSelectors(t *testing.T) {
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.CustomResourceDefinitionV1Beta1(), "inline"),
 			),
 		},
+		{
+			name: "Cluster and legacy cluster selector in wrong directory",
+			objs: &objects.Raw{
+				Objects: []ast.FileObject{
+					fake.ClusterAtPath("system/cluster.yaml"),
+					fake.ClusterSelectorAtPath("cluster/cs.yaml"),
+				},
+			},
+			wantErrs: status.Append(nil,
+				validation.ShouldBeInClusterRegistryError(fake.Cluster()),
+				validation.ShouldBeInClusterRegistryError(fake.ClusterSelector()),
+			),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			errs := ClusterSelectors(tc.objs)
+			errs := ClusterSelectorsForHierarchical(tc.objs)
 			if !errors.Is(errs, tc.wantErrs) {
-				t.Errorf("got ClusterSelectors() error %v, want %v", errs, tc.wantErrs)
+				t.Errorf("got ClusterSelectorsForHierarchical() error %v, want %v", errs, tc.wantErrs)
+			}
+		})
+	}
+}
+
+func TestClusterSelectorsForUnstructured(t *testing.T) {
+	testCases := []struct {
+		name     string
+		objs     *objects.Raw
+		wantErrs status.MultiError
+	}{
+		// We really just need to verify that unstructured does not care about the
+		// directory of the files.
+		{
+			name: "Cluster and legacy cluster selector in wrong directory",
+			objs: &objects.Raw{
+				Objects: []ast.FileObject{
+					fake.ClusterAtPath("system/cluster.yaml"),
+					fake.ClusterSelectorAtPath("cluster/cs.yaml"),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := ClusterSelectorsForUnstructured(tc.objs)
+			if !errors.Is(errs, tc.wantErrs) {
+				t.Errorf("got ClusterSelectorsForUnstructured() error %v, want %v", errs, tc.wantErrs)
 			}
 		})
 	}

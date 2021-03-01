@@ -2,34 +2,60 @@ package validate
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 )
 
-// ClusterSelectors validates that all ClusterSelectors have a unique name and
-// no invalid FileObjects are cluster-selected.
-func ClusterSelectors(objs *objects.Raw) status.MultiError {
+// ClusterSelectorsForHierarchical verifies that all ClusterSelectors have a
+// unique name and are under the correct top-level directory. It also verifies
+// that no invalid FileObjects are cluster-selected.
+func ClusterSelectorsForHierarchical(objs *objects.Raw) status.MultiError {
+	return clusterSelectors(objs, true)
+}
+
+// ClusterSelectorsForUnstructured verifies that all ClusterSelectors have a
+// unique name. It also verifies that no invalid FileObjects are cluster-selected.
+func ClusterSelectorsForUnstructured(objs *objects.Raw) status.MultiError {
+	return clusterSelectors(objs, false)
+}
+
+func clusterSelectors(objs *objects.Raw, checkDir bool) status.MultiError {
 	var errs status.MultiError
-	gk := kinds.ClusterSelector().GroupKind()
+	clusterGK := kinds.Cluster().GroupKind()
+	selectorGK := kinds.ClusterSelector().GroupKind()
 	matches := make(map[string][]id.Resource)
 
 	for _, obj := range objs.Objects {
 		if err := validateClusterSelectorAnnotation(obj); err != nil {
 			errs = status.Append(errs, err)
 		}
-		if obj.GroupVersionKind().GroupKind() == gk {
-			matches[obj.GetName()] = append(matches[obj.GetName()], obj)
+
+		objGK := obj.GroupVersionKind().GroupKind()
+		if objGK == clusterGK || objGK == selectorGK {
+			if checkDir {
+				sourcePath := obj.Relative.OSPath()
+				dir := cmpath.RelativeSlash(sourcePath).Split()[0]
+				if dir != repo.ClusterRegistryDir {
+					errs = status.Append(errs, validation.ShouldBeInClusterRegistryError(obj))
+				}
+			}
+			if objGK == selectorGK {
+				matches[obj.GetName()] = append(matches[obj.GetName()], obj)
+			}
 		}
 	}
 
 	for name, duplicates := range matches {
 		if len(duplicates) > 1 {
-			errs = status.Append(errs, nonhierarchical.SelectorMetadataNameCollisionError(gk.Kind, name, duplicates...))
+			errs = status.Append(errs, nonhierarchical.SelectorMetadataNameCollisionError(selectorGK.Kind, name, duplicates...))
 		}
 	}
 
