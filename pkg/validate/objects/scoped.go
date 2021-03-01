@@ -8,8 +8,8 @@ import (
 // ScopedVisitor is a function that validates or hydrates Scoped objects.
 type ScopedVisitor func(s *Scoped) status.MultiError
 
-// Scoped contains a collection of FileObjects that have are organized based
-// upon if they are cluster-scoped or namespace-scoped.
+// Scoped contains a collection of FileObjects that are organized based upon if
+// they are cluster-scoped or namespace-scoped.
 type Scoped struct {
 	Cluster               []ast.FileObject
 	Namespace             []ast.FileObject
