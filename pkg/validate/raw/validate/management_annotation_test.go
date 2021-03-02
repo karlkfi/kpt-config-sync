@@ -1,4 +1,4 @@
-package nonhierarchical_test
+package validate
 
 import (
 	"testing"

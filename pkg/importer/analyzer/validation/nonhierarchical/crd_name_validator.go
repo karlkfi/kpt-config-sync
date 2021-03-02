@@ -11,7 +11,7 @@ import (
 )
 
 // CRDNameValidator validates that CRDs have the expected metadata.name.
-var CRDNameValidator = PerObjectValidator(validateCRDName)
+var CRDNameValidator = PerObjectValidator(ValidateCRDName)
 
 // InvalidCRDNameErrorCode is the error code for InvalidCRDNameError.
 const InvalidCRDNameErrorCode = "1048"
@@ -27,8 +27,8 @@ func InvalidCRDNameError(resource id.Resource, expected string) status.Error {
 		BuildWithResources(resource)
 }
 
-// validateCRDName returns an error
-func validateCRDName(o ast.FileObject) status.Error {
+// ValidateCRDName returns an error
+func ValidateCRDName(o ast.FileObject) status.Error {
 	if o.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 		return nil
 	}

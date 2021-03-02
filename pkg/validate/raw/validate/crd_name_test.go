@@ -1,4 +1,4 @@
-package nonhierarchical_test
+package validate
 
 import (
 	"strings"
@@ -37,7 +37,7 @@ func crdv1(name string, gvk schema.GroupVersionKind) ast.FileObject {
 	return fake.FileObject(result, "crd.yaml")
 }
 
-func TestValidateCRDName(t *testing.T) {
+func TestValidCRDName(t *testing.T) {
 	testCases := []struct {
 		name string
 		obj  ast.FileObject

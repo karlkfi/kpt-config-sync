@@ -187,7 +187,7 @@ func (m *multiError) Is(target error) bool {
 // When multiline set to true, errors are formatted and joined using new lines.
 // Else, multiple errors are joined using comma separator.
 // Sample formatted errors: https://paste.googleplex.com/6533732804591616
-// TODO(b/158022901) Sctructure multiline error messages
+// TODO(b/158022901) Structure multiline error messages
 func FormatError(multiline bool, e error) string {
 	m := toMultiError(e)
 
