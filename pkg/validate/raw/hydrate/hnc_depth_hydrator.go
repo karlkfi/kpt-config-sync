@@ -1,4 +1,4 @@
-package hnc
+package hydrate
 
 import (
 	"strconv"
@@ -9,29 +9,18 @@ import (
 	oldhnc "github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/validate/parsed"
+	"github.com/google/nomos/pkg/validate/objects"
 )
 
-type depthHydrator struct{}
-
-var _ parsed.TreeHydrator = &depthHydrator{}
-
-// DepthHydrator returns a TreeHydrator that annotates each Namespace with its
+// HNCDepth hydrates the given Raw objects by annotating each Namespace with its
 // depth to be compatible with the Hierarchy Namespace Controller.
-func DepthHydrator() parsed.TreeHydrator {
-	return &depthHydrator{}
-}
-
-// Hydrate implements TreeHydrator.
-func (d *depthHydrator) Hydrate(root *parsed.TreeRoot) status.MultiError {
-	return root.VisitNamespaceObjects(parsed.PerObjectVisitor(addDepthMetadata))
-}
-
-func addDepthMetadata(obj ast.FileObject) status.Error {
-	if obj.GroupVersionKind() == kinds.Namespace() {
-		addDepthLabels(obj)
-		core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
-		core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A1, v1.ManagedByValue)
+func HNCDepth(objs *objects.Raw) status.MultiError {
+	for _, obj := range objs.Objects {
+		if obj.GroupVersionKind() == kinds.Namespace() {
+			addDepthLabels(obj)
+			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
+			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A1, v1.ManagedByValue)
+		}
 	}
 	return nil
 }

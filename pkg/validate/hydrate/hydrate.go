@@ -3,7 +3,6 @@ package hydrate
 import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/validate/hydrate/common"
-	"github.com/google/nomos/pkg/validate/hydrate/hnc"
 	"github.com/google/nomos/pkg/validate/parsed"
 )
 
@@ -19,6 +18,5 @@ func FlatHydrators(policyDir cmpath.Relative) []parsed.FlatHydrator {
 func HierarchicalHydrators(policyDir cmpath.Relative) []parsed.TreeHydrator {
 	return []parsed.TreeHydrator{
 		common.FilepathTreeHydrator(policyDir),
-		hnc.DepthHydrator(),
 	}
 }
