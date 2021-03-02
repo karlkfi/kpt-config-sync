@@ -18,15 +18,15 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		objects.VisitAllRaw(validate.IllegalKindsForHierarchical),
 		objects.VisitAllRaw(validate.Namespace),
 		objects.VisitAllRaw(validate.Directory),
-		objects.VisitAllRaw(validate.RepoVersion),
 		objects.VisitAllRaw(validate.HierarchyConfig),
 		objects.VisitAllRaw(validate.HNCLabels),
 		validate.DisallowedFields,
 		validate.RemovedCRDs,
 		validate.ClusterSelectorsForHierarchical,
+		validate.Repo,
 	}
-	for _, validate := range validators {
-		errs = status.Append(errs, validate(objs))
+	for _, validator := range validators {
+		errs = status.Append(errs, validator(objs))
 	}
 	if errs != nil {
 		return errs
@@ -36,8 +36,8 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 	}
-	for _, hydrate := range hydrators {
-		errs = status.Append(errs, hydrate(objs))
+	for _, hydrator := range hydrators {
+		errs = status.Append(errs, hydrator(objs))
 	}
 	return errs
 }
@@ -56,8 +56,8 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		validate.RemovedCRDs,
 		validate.ClusterSelectorsForUnstructured,
 	}
-	for _, validate := range validators {
-		errs = status.Append(errs, validate(objs))
+	for _, validator := range validators {
+		errs = status.Append(errs, validator(objs))
 	}
 	if errs != nil {
 		return errs
@@ -67,8 +67,8 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 	}
-	for _, hydrate := range hydrators {
-		errs = status.Append(errs, hydrate(objs))
+	for _, hydrator := range hydrators {
+		errs = status.Append(errs, hydrator(objs))
 	}
 	return errs
 }
