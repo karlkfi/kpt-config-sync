@@ -13,6 +13,7 @@ import (
 func Hierarchical(objs *objects.Tree) status.MultiError {
 	var errs status.MultiError
 	validators := []objects.TreeVisitor{
+		validate.HierarchyConfig,
 		validate.Inheritance,
 		validate.NamespaceSelector,
 	}
