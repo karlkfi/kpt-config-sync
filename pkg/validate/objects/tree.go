@@ -19,70 +19,45 @@ type TreeVisitor func(t *Tree) status.MultiError
 // HierarchyConfigs as well as a hierarchical tree of namespaces and namespace-
 // scoped objects.
 type Tree struct {
-	Cluster          []ast.FileObject
-	Tree             *ast.TreeNode
-	Repo             ast.FileObject
-	HierarchyConfigs []ast.FileObject
+	Repo               ast.FileObject
+	HierarchyConfigs   []ast.FileObject
+	NamespaceSelectors map[string]ast.FileObject
+	Cluster            []ast.FileObject
+	Tree               *ast.TreeNode
 }
 
-// BuildTree builds a Tree collection of objects from the given Scoped objects.
-func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
-	var errs status.MultiError
-	t := &Tree{}
-
-	// First process cluster-scoped resources.
-	for _, obj := range scoped.Cluster {
-		dir, err := topLevelDirectory(obj, repo.ClusterDir)
-		if err != nil {
-			errs = status.Append(errs, err)
-			continue
-		}
-
-		if dir == repo.ClusterDir {
-			t.Cluster = append(t.Cluster, obj)
-		} else if err = t.addSystemObj(obj); err != nil {
-			errs = status.Append(errs, err)
-		}
-	}
-
-	// Next, do our best to process unknown-scoped resources.
-	var namespaceObjs []ast.FileObject
-	for _, obj := range scoped.Unknown {
-		sourcePath := obj.Relative.OSPath()
-		dir := cmpath.RelativeSlash(sourcePath).Split()[0]
-		switch dir {
-		case repo.SystemDir:
-			if err := t.addSystemObj(obj); err != nil {
-				errs = status.Append(errs, err)
-			}
-		case repo.ClusterDir:
-			t.Cluster = append(t.Cluster, obj)
-		case repo.NamespacesDir:
-			namespaceObjs = append(namespaceObjs, obj)
-		default:
-			errs = status.Append(errs, status.InternalErrorf("unhandled top level directory: %q", dir))
-		}
-	}
-
-	// Finally, process namespace-scoped resources.
-	for _, obj := range scoped.Namespace {
-		_, err := topLevelDirectory(obj, repo.NamespacesDir)
-		if err != nil {
-			errs = status.Append(errs, err)
-		}
-	}
-	v := tree.NewBuilderVisitor(append(namespaceObjs, scoped.Namespace...))
-	astRoot := v.VisitRoot(&ast.Root{})
-	t.Tree = astRoot.Tree
-	errs = status.Append(errs, v.Error())
-
-	if errs != nil {
-		return nil, errs
-	}
-	return t, nil
+// treeBuilder is a helper type that specifically helps group Namespace objects
+// together from several sources in the Scoped object before they are used to
+// build the hierarchical Tree.
+type treeBuilder struct {
+	Repo               ast.FileObject
+	HierarchyConfigs   []ast.FileObject
+	NamespaceSelectors map[string]ast.FileObject
+	Cluster            []ast.FileObject
+	Namespace          []ast.FileObject
 }
 
-func (t *Tree) addSystemObj(obj ast.FileObject) status.Error {
+func (t *treeBuilder) addObject(obj ast.FileObject, dir string) status.Error {
+	switch dir {
+	case repo.SystemDir:
+		return t.addSystemObject(obj)
+	case repo.ClusterDir:
+		t.Cluster = append(t.Cluster, obj)
+	case repo.NamespacesDir:
+		if obj.GroupVersionKind() == kinds.NamespaceSelector() {
+			// We have already verified that all NamespaceSelectors have a unique name.
+			t.NamespaceSelectors[obj.GetName()] = obj
+		} else {
+			t.Namespace = append(t.Namespace, obj)
+		}
+	default:
+		return status.InternalErrorf("unhandled top level directory: %q", dir)
+	}
+
+	return nil
+}
+
+func (t *treeBuilder) addSystemObject(obj ast.FileObject) status.Error {
 	gk := obj.GroupVersionKind().GroupKind()
 	switch gk {
 	case kinds.HierarchyConfig().GroupKind():
@@ -94,6 +69,53 @@ func (t *Tree) addSystemObj(obj ast.FileObject) status.Error {
 		return status.InternalErrorf("unhandled system object: %v", obj)
 	}
 	return nil
+}
+
+// BuildTree builds a Tree collection of objects from the given Scoped objects.
+func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
+	var errs status.MultiError
+	b := &treeBuilder{
+		NamespaceSelectors: make(map[string]ast.FileObject),
+	}
+
+	// First process cluster-scoped resources.
+	for _, obj := range scoped.Cluster {
+		dir, err := topLevelDirectory(obj, repo.ClusterDir)
+		if err != nil {
+			errs = status.Append(errs, err)
+			continue
+		}
+		errs = status.Append(errs, b.addObject(obj, dir))
+	}
+
+	// Next, do our best to process unknown-scoped resources.
+	for _, obj := range scoped.Unknown {
+		sourcePath := obj.Relative.OSPath()
+		dir := cmpath.RelativeSlash(sourcePath).Split()[0]
+		errs = status.Append(errs, b.addObject(obj, dir))
+	}
+
+	// Finally, process namespace-scoped resources.
+	for _, obj := range scoped.Namespace {
+		_, err := topLevelDirectory(obj, repo.NamespacesDir)
+		if err != nil {
+			errs = status.Append(errs, err)
+		}
+	}
+	v := tree.NewBuilderVisitor(append(b.Namespace, scoped.Namespace...))
+	astRoot := v.VisitRoot(&ast.Root{})
+	errs = status.Append(errs, v.Error())
+
+	if errs != nil {
+		return nil, errs
+	}
+	return &Tree{
+		Repo:               b.Repo,
+		HierarchyConfigs:   b.HierarchyConfigs,
+		NamespaceSelectors: b.NamespaceSelectors,
+		Cluster:            b.Cluster,
+		Tree:               astRoot.Tree,
+	}, nil
 }
 
 var topLevelDirectoryOverrides = map[schema.GroupVersionKind]string{

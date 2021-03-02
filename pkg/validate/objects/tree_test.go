@@ -29,7 +29,8 @@ func TestBuildTree(t *testing.T) {
 				},
 			},
 			want: &Tree{
-				Repo: fake.Repo(),
+				Repo:               fake.Repo(),
+				NamespaceSelectors: map[string]ast.FileObject{},
 			},
 		},
 		{
@@ -39,10 +40,11 @@ func TestBuildTree(t *testing.T) {
 					fake.Repo(),
 					fake.HierarchyConfig(),
 					fake.ClusterRole(core.Name("hello-reader")),
-				},
-				Namespace: []ast.FileObject{
 					fake.Namespace("namespaces/hello/world"),
 					fake.Namespace("namespaces/hello/moon"),
+					fake.NamespaceSelectorAtPath("namespaces/selector.yaml"),
+				},
+				Namespace: []ast.FileObject{
 					fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 				},
 				Unknown: []ast.FileObject{
@@ -53,6 +55,9 @@ func TestBuildTree(t *testing.T) {
 				Repo: fake.Repo(),
 				HierarchyConfigs: []ast.FileObject{
 					fake.HierarchyConfig(),
+				},
+				NamespaceSelectors: map[string]ast.FileObject{
+					"default-name": fake.NamespaceSelectorAtPath("namespaces/selector.yaml"),
 				},
 				Cluster: []ast.FileObject{
 					fake.ClusterRole(core.Name("hello-reader")),
@@ -103,9 +108,10 @@ func TestBuildTree(t *testing.T) {
 				Cluster: []ast.FileObject{
 					fake.Repo(),
 					fake.ClusterRoleAtPath("namespaces/hello/cr.yaml", core.Name("hello-reader")),
+					fake.Namespace("namespaces/hello"),
 				},
 				Namespace: []ast.FileObject{
-					fake.Namespace("namespaces/hello"),
+					fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 				},
 			},
 			want:     nil,
@@ -116,9 +122,9 @@ func TestBuildTree(t *testing.T) {
 			from: &Scoped{
 				Cluster: []ast.FileObject{
 					fake.Repo(),
+					fake.Namespace("namespaces/hello"),
 				},
 				Namespace: []ast.FileObject{
-					fake.Namespace("namespaces/hello"),
 					fake.RoleAtPath("cluster/role.yaml", core.Name("writer")),
 				},
 			},
@@ -131,8 +137,6 @@ func TestBuildTree(t *testing.T) {
 				Cluster: []ast.FileObject{
 					fake.Repo(),
 					fake.HierarchyConfigAtPath("cluster/hc.yaml"),
-				},
-				Namespace: []ast.FileObject{
 					fake.Namespace("namespaces/hello"),
 				},
 			},

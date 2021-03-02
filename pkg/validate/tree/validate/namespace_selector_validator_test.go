@@ -4,8 +4,11 @@ import (
 	"errors"
 	"testing"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
+	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -22,12 +25,13 @@ func TestNamespaceSelector(t *testing.T) {
 		{
 			name: "NamespaceSelector in abstract namespace",
 			objs: &objects.Tree{
+				NamespaceSelectors: map[string]ast.FileObject{
+					"dev": fake.NamespaceSelectorAtPath("namespaces/sel.yaml",
+						core.Name("dev")),
+				},
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
-					Objects: []*ast.NamespaceObject{
-						{FileObject: fake.NamespaceSelector()},
-					},
 					Children: []*ast.TreeNode{
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
@@ -43,6 +47,10 @@ func TestNamespaceSelector(t *testing.T) {
 		{
 			name: "NamespaceSelector in Namespace",
 			objs: &objects.Tree{
+				NamespaceSelectors: map[string]ast.FileObject{
+					"dev": fake.NamespaceSelectorAtPath("namespaces/hello/sel.yaml",
+						core.Name("dev")),
+				},
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -52,32 +60,87 @@ func TestNamespaceSelector(t *testing.T) {
 							Type:     node.Namespace,
 							Objects: []*ast.NamespaceObject{
 								{FileObject: fake.Namespace("namespaces/hello")},
-								{FileObject: fake.NamespaceSelector()},
 							},
 						},
 					},
 				},
 			},
-			wantErrs: syntax.IllegalKindInNamespacesError(fake.NamespaceSelector()),
+			wantErrs: fake.Errors(syntax.IllegalKindInNamespacesErrorCode),
 		},
 		{
-			name: "Role in Namespace",
+			name: "Object references ancestor NamespaceSelector",
 			objs: &objects.Tree{
+				NamespaceSelectors: map[string]ast.FileObject{
+					"dev": fake.NamespaceSelectorAtPath("namespaces/hello/sel.yaml",
+						core.Name("dev")),
+				},
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
 					Children: []*ast.TreeNode{
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
-							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
-								{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml")},
+							Type:     node.AbstractNamespace,
+							Children: []*ast.TreeNode{
+								{
+									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
+									Type:     node.Namespace,
+									Objects: []*ast.NamespaceObject{
+										{FileObject: fake.Namespace("namespaces/hello/world")},
+										{FileObject: fake.RoleAtPath("namespaces/hello/world/role.yaml",
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev"))},
+									},
+								},
 							},
 						},
 					},
 				},
 			},
+		},
+		{
+			name: "Object references non-ancestor NamespaceSelector",
+			objs: &objects.Tree{
+				NamespaceSelectors: map[string]ast.FileObject{
+					"dev": fake.NamespaceSelectorAtPath("namespaces/goodbye/sel.yaml",
+						core.Name("dev")),
+				},
+				Tree: &ast.TreeNode{
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						{
+							Relative: cmpath.RelativeSlash("namespaces/hello"),
+							Type:     node.AbstractNamespace,
+							Children: []*ast.TreeNode{
+								{
+									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
+									Type:     node.Namespace,
+									Objects: []*ast.NamespaceObject{
+										{FileObject: fake.Namespace("namespaces/hello/world")},
+										{FileObject: fake.RoleAtPath("namespaces/hello/world/role.yaml",
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev"))},
+									},
+								},
+							},
+						},
+						{
+							Relative: cmpath.RelativeSlash("namespaces/goodbye"),
+							Type:     node.AbstractNamespace,
+							Children: []*ast.TreeNode{
+								{
+									Relative: cmpath.RelativeSlash("namespaces/goodbye/moon"),
+									Type:     node.Namespace,
+									Objects: []*ast.NamespaceObject{
+										{FileObject: fake.Namespace("namespaces/goodbye/moon")},
+										{FileObject: fake.RoleAtPath("namespaces/goodbye/moon/role.yaml")},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErrs: fake.Errors(selectors.ObjectHasUnknownSelectorCode),
 		},
 	}
 
