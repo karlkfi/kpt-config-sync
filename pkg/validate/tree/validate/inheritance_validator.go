@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/pkg/validate/objects"
 )
 
-// Inheritance returns a visitor that verifies that all syncable
-// resources in an abstract namespace have a concrete Namespace as a descendant.
+// Inheritance verifies that all syncable resources in an abstract namespace
+// have a concrete Namespace as a descendant.
 func Inheritance(tree *objects.Tree) status.MultiError {
 	_, err := validateTreeNode(tree.Tree)
 	return err

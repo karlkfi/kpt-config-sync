@@ -14,6 +14,7 @@ func Hierarchical(objs *objects.Tree) status.MultiError {
 	var errs status.MultiError
 	validators := []objects.TreeVisitor{
 		validate.Inheritance,
+		validate.NamespaceSelector,
 	}
 	for _, validator := range validators {
 		errs = status.Append(errs, validator(objs))

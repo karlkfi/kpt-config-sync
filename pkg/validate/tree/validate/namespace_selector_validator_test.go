@@ -1,4 +1,4 @@
-package hierarchical
+package validate
 
 import (
 	"errors"
@@ -10,18 +10,18 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/validate/parsed"
+	"github.com/google/nomos/pkg/validate/objects"
 )
 
-func TestNamespaceSelectorValidator(t *testing.T) {
+func TestNamespaceSelector(t *testing.T) {
 	testCases := []struct {
-		name    string
-		root    parsed.Root
-		wantErr status.MultiError
+		name     string
+		objs     *objects.Tree
+		wantErrs status.MultiError
 	}{
 		{
 			name: "NamespaceSelector in abstract namespace",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -42,7 +42,7 @@ func TestNamespaceSelectorValidator(t *testing.T) {
 		},
 		{
 			name: "NamespaceSelector in Namespace",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -58,11 +58,11 @@ func TestNamespaceSelectorValidator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: syntax.IllegalKindInNamespacesError(fake.NamespaceSelector()),
+			wantErrs: syntax.IllegalKindInNamespacesError(fake.NamespaceSelector()),
 		},
 		{
 			name: "Role in Namespace",
-			root: &parsed.TreeRoot{
+			objs: &objects.Tree{
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
@@ -82,12 +82,10 @@ func TestNamespaceSelectorValidator(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		nv := NamespaceSelectorValidator()
 		t.Run(tc.name, func(t *testing.T) {
-
-			err := nv(tc.root)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("got NamespaceSelectorValidator() error %v, want %v", err, tc.wantErr)
+			errs := NamespaceSelector(tc.objs)
+			if !errors.Is(errs, tc.wantErrs) {
+				t.Errorf("got NamespaceSelector() error %v, want %v", errs, tc.wantErrs)
 			}
 		})
 	}
