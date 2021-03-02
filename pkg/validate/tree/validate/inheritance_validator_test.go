@@ -160,7 +160,7 @@ func TestInheritance(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: semantic.UnsyncableResourcesInLeaf(&ast.TreeNode{}),
+			wantErrs: fake.Errors(semantic.UnsyncableResourcesErrorCode),
 		},
 		{
 			name: "abstract namespace with resource and abstract child",
@@ -185,7 +185,42 @@ func TestInheritance(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: semantic.UnsyncableResourcesInNonLeaf(&ast.TreeNode{}),
+			wantErrs: fake.Errors(semantic.UnsyncableResourcesErrorCode),
+		},
+		{
+			name: "abstract namespace with resource and duplicated descendant namespace",
+			objs: &objects.Tree{
+				Tree: &ast.TreeNode{
+					Relative: cmpath.RelativeSlash("namespaces"),
+					Type:     node.AbstractNamespace,
+					Children: []*ast.TreeNode{
+						{
+							Relative: cmpath.RelativeSlash("namespaces/hello"),
+							Type:     node.AbstractNamespace,
+							Objects: []*ast.NamespaceObject{
+								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							},
+							Children: []*ast.TreeNode{
+								{
+									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
+									Type:     node.AbstractNamespace,
+									Children: []*ast.TreeNode{
+										{
+											Relative: cmpath.RelativeSlash("namespaces/hello/world/end"),
+											Type:     node.Namespace,
+											Objects: []*ast.NamespaceObject{
+												{FileObject: fake.Namespace("namespaces/hello/world/end")},
+												{FileObject: fake.Namespace("namespaces/hello/world/end")},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErrs: fake.Errors(status.MultipleSingletonsErrorCode),
 		},
 	}
 

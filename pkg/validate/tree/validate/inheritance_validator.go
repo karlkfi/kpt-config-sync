@@ -4,6 +4,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
@@ -20,12 +21,20 @@ func Inheritance(tree *objects.Tree) status.MultiError {
 // its descendants are.
 func validateTreeNode(node *ast.TreeNode) (bool, status.MultiError) {
 	hasSyncableObjects := false
+	var namespaces []id.Resource
 	for _, obj := range node.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {
-			return true, nil
+			namespaces = append(namespaces, obj)
 		} else if !transform.IsEphemeral(obj.GroupVersionKind()) {
 			hasSyncableObjects = true
 		}
+	}
+
+	if len(namespaces) > 1 {
+		return true, status.MultipleSingletonsError(namespaces...)
+	}
+	if len(namespaces) == 1 {
+		return true, nil
 	}
 
 	var errs status.MultiError
