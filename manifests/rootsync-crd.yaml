@@ -23,6 +23,8 @@ spec:
     plural: rootsyncs
     singular: rootsync
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: RootSync is the Schema for the rootsyncs API
@@ -52,6 +54,9 @@ spec:
                     or none. Required. The validation of this is case-sensitive. Required.
                   pattern: ^(ssh|cookiefile|gcenode|token|none)$
                   type: string
+                branch:
+                  description: 'Branch is the git branch to checkout. Default: "master".'
+                  type: string
                 dir:
                   description: 'Dir is the absolute path of the directory that contains
                     the local policy.  Default: the root directory of the repo.'
@@ -73,11 +78,9 @@ spec:
                 repo:
                   description: Repo is the git repository URL to sync from. Required.
                   type: string
-                branch:
-                  description: 'Branch is the git branch to checkout. Default: "master".'
-                  type: string
                 revision:
-                  description: 'Revision is the git revision (tag, ref or commit) to fetch. Default: "HEAD".'
+                  description: 'Revision is the git revision (tag, ref or commit)
+                    to fetch. Default: "HEAD".'
                   type: string
                 secretRef:
                   description: SecretRef is the secret used to connect to the Git
@@ -91,15 +94,24 @@ spec:
               - auth
               - repo
               type: object
+            sourceFormat:
+              description: "SourceFormat specifies how the repository is formatted.
+                See documentation for specifics of what these options do. \n Must
+                be one of hierarchy, unstructured. Optional. Set to hierarchy if not
+                specified. \n The validation of this is case-sensitive."
+              pattern: ^(hierarchy|unstructured|)$
+              type: string
           type: object
         status:
           description: RootSyncStatus defines the observed state of RootSync
           type: object
       type: object
-  version: v1alpha1
+  version: v1beta1
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     served: true
     storage: true
-  subresources:
-    status: {}
+  - name: v1alpha1
+    served: true
+    storage: false
+

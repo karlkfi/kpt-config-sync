@@ -11,6 +11,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) \
 		object:headerFile="hack/boilerplate.txt" \
 		paths="./pkg/api/configsync/v1alpha1" \
+		paths="./pkg/api/configsync/v1beta1" \
 		paths="./pkg/api/configmanagement/v1"
 
 # Generate configsync CRDs
@@ -19,6 +20,7 @@ configsync-crds: controller-gen
 	crd \
 	crd:trivialVersions=true \
 	paths="./pkg/api/configsync/v1alpha1" \
+	paths="./pkg/api/configsync/v1beta1" \
 	output:artifacts:config=manifests \
 	&& mv manifests/configsync.gke.io_reposyncs.yaml manifests/reposync-crd.yaml \
 	&& mv manifests/configsync.gke.io_rootsyncs.yaml manifests/rootsync-crd.yaml
