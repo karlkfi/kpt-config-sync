@@ -175,7 +175,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 			got, err := toWebhookConfiguration(mapper, tc.gvks)
 
 			if diff := cmp.Diff(got, tc.want, cmpopts.EquateEmpty(),
-				cmpopts.IgnoreFields(admissionv1.ValidatingWebhook{}, "SideEffects", "AdmissionReviewVersions"),
+				cmpopts.IgnoreFields(admissionv1.ValidatingWebhook{}, "SideEffects", "AdmissionReviewVersions", "TimeoutSeconds"),
 				cmpopts.IgnoreFields(admissionv1.WebhookClientConfig{}, "Service")); diff != "" {
 				t.Errorf("TestToWebhookConfiguration() diff (-want +got):\n%s", diff)
 			}

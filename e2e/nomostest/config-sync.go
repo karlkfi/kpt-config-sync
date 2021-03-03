@@ -105,6 +105,7 @@ var (
 	// mono-repo and multi-repo Config Sync.
 	sharedObjects = map[string]bool{
 		"admission-webhook":                          true,
+		"admission-webhook-cert":                     true,
 		"clusters.clusterregistry.k8s.io":            true,
 		"clusterselectors.configmanagement.gke.io":   true,
 		"container-limits":                           true,

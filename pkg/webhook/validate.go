@@ -8,6 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -32,7 +33,7 @@ func AddValidator(mgr manager.Manager) error {
 	if err != nil {
 		return err
 	}
-	mgr.GetWebhookServer().Register(servingPath, &webhook.Admission{
+	mgr.GetWebhookServer().Register(configuration.ServingPath, &webhook.Admission{
 		Handler: handler,
 	})
 	return nil

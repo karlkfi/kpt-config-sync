@@ -109,12 +109,17 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 		// Prefer v1 AdmissionReviews if available, otherwise fall back to v1beta1.
 		AdmissionReviewVersions: []string{"v1", "v1beta1"},
 		ClientConfig: admissionv1.WebhookClientConfig{
+			CABundle: []byte{},
 			Service: &admissionv1.ServiceReference{
 				Namespace: configsync.ControllerNamespace,
 				Name:      ShortName,
-				Port:      pointer.Int32Ptr(8676),
+				Path:      pointer.StringPtr(ServingPath),
+				Port:      pointer.Int32Ptr(Port),
 			},
 		},
+		// Several essential k8s checks require creating sequences of objects and
+		// time out after 10 seconds, so 3 seconds is a reasonable upper bound.
+		TimeoutSeconds: pointer.Int32Ptr(3),
 	}
 }
 

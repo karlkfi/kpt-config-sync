@@ -25,8 +25,9 @@ spec:
         - /admission-webhook
         image: IMAGE_NAME
         ports:
-          - containerPort: 8676
-            name: admission
+          - name: admission
+            containerPort: 8676
+            protocol: TCP
         resources:
           requests:
             cpu: 100m
@@ -34,7 +35,16 @@ spec:
           limits:
             cpu: 200m
             memory: 100Mi
+        volumeMounts:
+          - mountPath: /certs
+            name: cert
+            readOnly: true
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: admission-webhook-cert
 ---
 apiVersion: v1
 kind: Service
@@ -49,7 +59,7 @@ spec:
   selector:
     app: admission-webhook
   ports:
-  - name: admission-webhook
+  - name: admission
     port: 8676
     targetPort: admission
 ---
@@ -79,3 +89,12 @@ subjects:
 - kind: ServiceAccount
   name: admission-webhook
   namespace: config-management-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admission-webhook-cert
+  namespace: config-management-system
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"

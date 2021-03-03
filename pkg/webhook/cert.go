@@ -9,12 +9,9 @@ import (
 )
 
 const (
-	secret         = configuration.ShortName + "-secret"
+	secret         = configuration.ShortName + "-cert"
 	caName         = "config-sync-ca"
 	caOrganization = "config-sync"
-	certDir        = "/tmp/k8s-webhook-server/serving-certs"
-
-	servingPath = "/validate-config-sync"
 
 	// dnsName is <service name>.<namespace>.svc
 	dnsName = configuration.ShortName + "." + configsync.ControllerNamespace + ".svc"
@@ -29,7 +26,7 @@ func CreateCertsIfNeeded(mgr manager.Manager, restartOnSecretRefresh bool) (chan
 			Namespace: configsync.ControllerNamespace,
 			Name:      secret,
 		},
-		CertDir:        certDir,
+		CertDir:        configuration.CertDir,
 		CAName:         caName,
 		CAOrganization: caOrganization,
 		DNSName:        dnsName,

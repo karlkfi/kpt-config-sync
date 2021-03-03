@@ -143,7 +143,7 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string, version KindV
 			// This isn't the first time we're executing this loop.
 			// We've tried creating the cluster before but got an error. Since we set
 			// retain=true, the cluster still exists in a problematic state. We must
-			// delete is before retrying.
+			// delete it before retrying.
 			err = p.Delete(name, kcfgPath)
 			if err != nil {
 				return err
@@ -162,6 +162,18 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string, version KindV
 					fmt.Sprintf(`[plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:%d"]
   endpoint = ["http://%s:%d"]`, docker.RegistryPort, docker.RegistryName, docker.RegistryPort),
 				},
+				// Enable ValidatingAdmissionWebhooks in the Kind cluster, as these
+				// are disabled by default.
+				KubeadmConfigPatches: []string{
+					`
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+metadata:
+  name: config
+apiServer:
+  extraArgs:
+    "enable-admission-plugins": "ValidatingAdmissionWebhook"`,
+				},
 			}),
 			// Retain nodes for debugging logs.
 			cluster.CreateWithRetain(true),
@@ -171,6 +183,6 @@ func createKindCluster(p *cluster.Provider, name, kcfgPath string, version KindV
 		}
 	}
 
-	// We failed to create the cluster maxKindTries times, to fail out.
+	// We failed to create the cluster maxKindTries times, so fail out.
 	return err
 }
