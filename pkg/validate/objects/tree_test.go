@@ -31,6 +31,10 @@ func TestBuildTree(t *testing.T) {
 			want: &Tree{
 				Repo:               fake.Repo(),
 				NamespaceSelectors: map[string]ast.FileObject{},
+				Tree: &ast.TreeNode{
+					Relative: cmpath.RelativeSlash(""),
+					Type:     node.AbstractNamespace,
+				},
 			},
 		},
 		{

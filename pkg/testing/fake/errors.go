@@ -15,8 +15,8 @@ import (
 // instead.
 func Errors(codes ...string) status.MultiError {
 	var result status.MultiError
-	for _, code := range codes {
-		result = status.Append(result, Error(code))
+	for i, code := range codes {
+		result = status.Append(result, fakeError{id: i + 1, code: code})
 	}
 	return result
 }
@@ -25,10 +25,11 @@ func Errors(codes ...string) status.MultiError {
 // specified KNV code. This is preferable to requiring test authors to specify
 // fields they don't really care about.
 func Error(code string) status.Error {
-	return fakeError{code: code}
+	return fakeError{id: 1, code: code}
 }
 
 type fakeError struct {
+	id   int
 	code string
 }
 
@@ -39,7 +40,7 @@ func (f fakeError) Cause() error {
 
 // Cause implements status.Error.
 func (f fakeError) Error() string {
-	return fmt.Sprintf("fake error %s", f.code)
+	return fmt.Sprintf("KNV%s fake error %d", f.code, f.id)
 }
 
 // Errors implements status.Error.
@@ -51,7 +52,7 @@ func (f fakeError) Errors() []status.Error {
 func (f fakeError) ToCME() v1.ConfigManagementError {
 	return v1.ConfigManagementError{
 		Code:         f.code,
-		ErrorMessage: "fake error",
+		ErrorMessage: fmt.Sprintf("fake error %d", f.id),
 	}
 }
 
@@ -59,7 +60,7 @@ func (f fakeError) ToCME() v1.ConfigManagementError {
 func (f fakeError) ToCSE() v1alpha1.ConfigSyncError {
 	return v1alpha1.ConfigSyncError{
 		Code:         f.code,
-		ErrorMessage: "fake error",
+		ErrorMessage: fmt.Sprintf("fake error %d", f.id),
 	}
 }
 

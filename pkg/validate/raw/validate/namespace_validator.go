@@ -22,6 +22,9 @@ func Namespace(obj ast.FileObject) status.Error {
 }
 
 func validateNamespace(obj ast.FileObject) status.Error {
+	if !isValidNamespace(obj.GetName()) {
+		return nonhierarchical.InvalidNamespaceError(obj)
+	}
 	if configmanagement.IsControllerNamespace(obj.GetName()) {
 		return nonhierarchical.IllegalNamespace(obj)
 	}

@@ -54,7 +54,7 @@ func (r *Root) Flatten() []FileObject {
 	}
 
 	if r.Tree != nil {
-		result = append(result, r.Tree.flatten()...)
+		result = append(result, r.Tree.Flatten()...)
 	}
 
 	return result

@@ -18,6 +18,12 @@ type Scoped struct {
 	IsNamespaceReconciler bool
 }
 
+// Objects returns all FileObjects in the Scoped collection.
+func (s *Scoped) Objects() []ast.FileObject {
+	objs := append(s.Cluster, s.Unknown...)
+	return append(objs, s.Namespace...)
+}
+
 // VisitAllScoped returns a ScopedVisitor which will call the given
 // ObjectVisitor on every FileObject in the Scoped objects.
 func VisitAllScoped(validate ObjectVisitor) ScopedVisitor {

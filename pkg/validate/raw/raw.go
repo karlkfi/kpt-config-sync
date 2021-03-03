@@ -12,11 +12,20 @@ import (
 // the Raw objects in-place.
 func Hierarchical(objs *objects.Raw) status.MultiError {
 	var errs status.MultiError
+	// Note that the ordering here and in all other collections of validators is
+	// somewhat arbitrary. We always run all validators in a collection before
+	// exiting with any errors. We do put more "fundamental" validation checks
+	// first so that their errors will appear first. For example, we check for
+	// illegal objects first before we check for an illegal namespace on that
+	// object. That way the first error in the list is more likely the real
+	// problem (eg they need to remove the object rather than fixing its
+	// namespace).
 	validators := []objects.RawVisitor{
 		objects.VisitAllRaw(validate.Annotations),
 		objects.VisitAllRaw(validate.Labels),
 		objects.VisitAllRaw(validate.IllegalKindsForHierarchical),
 		objects.VisitAllRaw(validate.DeprecatedKinds),
+		objects.VisitAllRaw(validate.Name),
 		objects.VisitAllRaw(validate.Namespace),
 		objects.VisitAllRaw(validate.Directory),
 		objects.VisitAllRaw(validate.HNCLabels),
@@ -36,6 +45,8 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		return errs
 	}
 
+	// We perform cluster selection first so that we can filter out irrelevant
+	// objects before trying to modify them.
 	hydrators := []objects.RawVisitor{
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
@@ -53,11 +64,13 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 // objects in-place.
 func Unstructured(objs *objects.Raw) status.MultiError {
 	var errs status.MultiError
+	// See the note about ordering above in Hierarchical().
 	validators := []objects.RawVisitor{
 		objects.VisitAllRaw(validate.Annotations),
 		objects.VisitAllRaw(validate.Labels),
 		objects.VisitAllRaw(validate.IllegalKindsForUnstructured),
 		objects.VisitAllRaw(validate.DeprecatedKinds),
+		objects.VisitAllRaw(validate.Name),
 		objects.VisitAllRaw(validate.Namespace),
 		objects.VisitAllRaw(validate.ManagementAnnotation),
 		objects.VisitAllRaw(validate.IllegalCRD),
@@ -74,6 +87,8 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		return errs
 	}
 
+	// We perform cluster selection first so that we can filter out irrelevant
+	// objects before trying to modify them.
 	hydrators := []objects.RawVisitor{
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,

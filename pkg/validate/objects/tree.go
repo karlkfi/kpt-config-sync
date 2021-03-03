@@ -3,6 +3,7 @@ package objects
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/tree"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -71,6 +72,11 @@ func (t *treeBuilder) addSystemObject(obj ast.FileObject) status.Error {
 	return nil
 }
 
+// Objects returns all FileObjects in the Tree collection.
+func (t *Tree) Objects() []ast.FileObject {
+	return append(t.Cluster, t.Tree.Flatten()...)
+}
+
 // BuildTree builds a Tree collection of objects from the given Scoped objects.
 func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
 	var errs status.MultiError
@@ -103,18 +109,24 @@ func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
 		}
 	}
 	v := tree.NewBuilderVisitor(append(b.Namespace, scoped.Namespace...))
-	astRoot := v.VisitRoot(&ast.Root{})
+	treeRoot := v.VisitRoot(&ast.Root{}).Tree
 	errs = status.Append(errs, v.Error())
-
 	if errs != nil {
 		return nil, errs
+	}
+
+	if treeRoot == nil {
+		treeRoot = &ast.TreeNode{
+			Relative: cmpath.RelativeSlash(""),
+			Type:     node.AbstractNamespace,
+		}
 	}
 	return &Tree{
 		Repo:               b.Repo,
 		HierarchyConfigs:   b.HierarchyConfigs,
 		NamespaceSelectors: b.NamespaceSelectors,
 		Cluster:            b.Cluster,
-		Tree:               astRoot.Tree,
+		Tree:               treeRoot,
 	}, nil
 }
 

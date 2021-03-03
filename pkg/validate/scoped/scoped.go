@@ -12,6 +12,7 @@ import (
 // will modify the Scoped objects in-place.
 func Hierarchical(objs *objects.Scoped) status.MultiError {
 	var errs status.MultiError
+	// See the note about ordering raw.Hierarchical().
 	validators := []objects.ScopedVisitor{
 		objects.VisitClusterScoped(validate.ClusterScoped),
 		objects.VisitNamespaceScoped(validate.NamespaceScoped),
@@ -43,6 +44,7 @@ func Unstructured(objs *objects.Scoped) status.MultiError {
 		validateClusterScoped = validate.ClusterScoped
 	}
 
+	// See the note about ordering raw.Hierarchical().
 	validators := []objects.ScopedVisitor{
 		objects.VisitClusterScoped(validateClusterScoped),
 		objects.VisitNamespaceScoped(validate.NamespaceScoped),

@@ -13,6 +13,7 @@ type finalValidator func(objs []ast.FileObject) status.MultiError
 // validate the final state of the repo.
 func Validation(objs []ast.FileObject) status.MultiError {
 	var errs status.MultiError
+	// See the note about ordering in raw.Hierarchical().
 	validators := []finalValidator{
 		validate.DuplicateNames,
 		validate.UnmanagedNamespaces,

@@ -48,12 +48,12 @@ func (n *TreeNode) Name() string {
 	return n.Base()
 }
 
-// flatten returns the list of materialized FileObjects contained in this
+// Flatten returns the list of materialized FileObjects contained in this
 // TreeNode. Specifically, it returns either
 // 1) the list of Objects if this is a Namespace node, or
-// 2) the concatenated list of all objects returned by calling flatten on all of
+// 2) the concatenated list of all objects returned by calling Flatten on all of
 // its children.
-func (n *TreeNode) flatten() []FileObject {
+func (n *TreeNode) Flatten() []FileObject {
 	switch n.Type {
 	case node.Namespace:
 		return n.flattenNamespace()
@@ -84,7 +84,7 @@ func (n *TreeNode) flattenAbstractNamespace() []FileObject {
 		}
 	}
 	for _, child := range n.Children {
-		result = append(result, child.flatten()...)
+		result = append(result, child.Flatten()...)
 	}
 
 	return result

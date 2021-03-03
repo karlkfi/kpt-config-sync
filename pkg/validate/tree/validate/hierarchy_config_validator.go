@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -73,5 +74,5 @@ func hc(gk schema.GroupKind, res id.Resource) id.HierarchyConfig {
 }
 
 func unsupportedGK(gk schema.GroupKind) bool {
-	return gk.Group == configmanagement.GroupName || gk.Kind == ""
+	return gk == kinds.Namespace().GroupKind() || gk.Group == configmanagement.GroupName || gk.Kind == ""
 }
