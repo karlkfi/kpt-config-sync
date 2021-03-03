@@ -26,7 +26,7 @@ func DuplicateNames(objs []ast.FileObject) status.MultiError {
 	var errs status.MultiError
 	for gknn, duplicates := range duplicateMap {
 		if len(duplicates) > 1 {
-			rs := resources(duplicates)
+			rs := idResources(duplicates)
 			if gknn.GroupKind() == kinds.Namespace().GroupKind() {
 				errs = status.Append(errs, nonhierarchical.NamespaceCollisionError(gknn.name, rs...))
 			} else if gknn.namespace == "" {
@@ -54,7 +54,7 @@ func (gknn groupKindNamespaceName) GroupKind() schema.GroupKind {
 	}
 }
 
-func resources(objs []ast.FileObject) []id.Resource {
+func idResources(objs []ast.FileObject) []id.Resource {
 	rs := make([]id.Resource, len(objs))
 	for i, obj := range objs {
 		rs[i] = obj
