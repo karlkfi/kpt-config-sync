@@ -3,6 +3,7 @@ package objects
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -18,6 +19,7 @@ type ObjectVisitor func(obj ast.FileObject) status.Error
 // Git repo for a cluster.
 type Raw struct {
 	ClusterName      string
+	PolicyDir        cmpath.Relative
 	Objects          []ast.FileObject
 	PreviousCRDs     []*v1beta1.CustomResourceDefinition
 	BuildScoper      utildiscovery.BuildScoperFunc
