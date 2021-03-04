@@ -15,3 +15,11 @@ rules:
 - apiGroups: ["kpt.dev"]
   resources: ["resourcegroups"]
   verbs: ["*"]
+- apiGroups:
+  - policy
+  resources:
+  - podsecuritypolicies
+  resourceNames:
+  - acm-psp
+  verbs:
+  - use
