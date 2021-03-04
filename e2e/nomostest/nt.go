@@ -675,9 +675,9 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) int {
 	})
 
 	localPort := 0
-	// In CI, 1% of the time this takes longer than 10 seconds, so 20 seconds seems
+	// In CI, 1% of the time this takes longer than 20 seconds, so 30 seconds seems
 	// like a reasonable amount of time to wait.
-	took, err := Retry(20*time.Second, func() error {
+	took, err := Retry(30*time.Second, func() error {
 		s := stdout.String()
 		if !strings.Contains(s, "\n") {
 			return errors.New("nothing written to stdout for kubectl port-forward")
