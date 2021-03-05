@@ -33,6 +33,7 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/vet"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -356,6 +357,9 @@ func Generate() AllExamples {
 	// 2013
 	result.add(status.InsufficientPermissionErrorBuilder.Sprint("could not create resources").Wrap(
 		errors.New("deployments.apps is forbidden: User 'Bob' cannot create resources")).Build())
+
+	// 2014
+	result.add(configuration.InvalidWebhookWarning("invalid webhook"))
 
 	// 9998
 	result.add(status.InternalError("we made a mistake"))

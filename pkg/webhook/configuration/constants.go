@@ -19,3 +19,7 @@ const Port = 8676
 
 // CertDir matches the mountPath specified in admission-webhook.yaml.
 const CertDir = "/certs"
+
+// VersionLabel declares the API Version in which a resource was initially
+// declared.
+const VersionLabel = configsync.GroupName + "/declared-version"

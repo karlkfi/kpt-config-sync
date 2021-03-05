@@ -42,7 +42,7 @@ func newReconciler(
 	}
 }
 
-// Remediate takes an client.Object representing the object to update, and then
+// Remediate takes a client.Object representing the object to update, and then
 // ensures that the version on the server matches it.
 func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
 	declU, found := r.declared.Get(id)

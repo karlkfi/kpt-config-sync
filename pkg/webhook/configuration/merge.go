@@ -3,6 +3,8 @@ package configuration
 import (
 	"sort"
 
+	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/status"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -16,10 +18,10 @@ import (
 // (The logic should be symmetric, so this shouldn't have to be the case.)
 //
 // The resulting merged Configuration meets the following criteria:
-// 1) All Webhooks contain exactly one rule, matching a single GroupVersion of
-//    declared configuration.
+// 1) All Webhooks contain exactly one rule, matching all resources of a given
+//      GroupVersion.
 // 2) Webhooks are sorted by the GroupVersion they match.
-// 3) Resources within Rules are sorted alphabetically.
+// 3) All invalid webhooks are removed.
 //
 // Cannot return error or panic as we never want this to get stuck.
 //
@@ -27,21 +29,40 @@ import (
 func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1.ValidatingWebhookConfiguration {
 	webhooksMap := make(map[schema.GroupVersion]admissionv1.ValidatingWebhook)
 	for _, webhook := range append(left.Webhooks, right.Webhooks...) {
+		// Rules match a single API Group.
 		if len(webhook.Rules) == 0 ||
-			len(webhook.Rules[0].APIGroups) == 0 ||
-			len(webhook.Rules[0].APIVersions) == 0 {
+			len(webhook.Rules[0].APIGroups) == 0 {
 			// Invalid ValidatingWebhook, discard.
 			// We do NOT want to fail here as the Configuration on the API Server
 			// may have been changed by a user. We don't want to put ourselves in an
 			// infinite error loop.
+			glog.Warning(InvalidWebhookWarning("removed admission webhook specifying no API Groups"))
+			continue
+		}
+		group := webhook.Rules[0].APIGroups[0]
+
+		// Rules are for objects declared in a specific API Version. We read this
+		// from the ObjectSelector.
+		if webhook.ObjectSelector == nil || webhook.ObjectSelector.MatchLabels == nil {
+			// The webhook is configured to match objects in a way we don't support, so
+			// ignore it.
+			glog.Warning(InvalidWebhookWarning("removed admission webhook missing objectSelector.matchLabels"))
+			continue
+		}
+		version := webhook.ObjectSelector.MatchLabels[VersionLabel]
+
+		if group == "*" || version == "*" {
+			// This was probably added by a user. It can cause the webhook to have
+			// unexpected effects, so we ignore these rules when merging.
+			glog.Warning(InvalidWebhookWarning("removed admission webhook matching wildcard group or version"))
 			continue
 		}
 
-		groupVersion := gv(webhook)
-		if oldWebhook, found := webhooksMap[groupVersion]; found {
-			webhooksMap[groupVersion] = mergeWebhooks(oldWebhook, webhook)
+		gv := schema.GroupVersion{Group: group, Version: version}
+		if oldWebhook, found := webhooksMap[gv]; found {
+			webhooksMap[gv] = mergeWebhooks(gv, oldWebhook, webhook)
 		} else {
-			webhooksMap[groupVersion] = webhook
+			webhooksMap[gv] = webhook
 		}
 	}
 
@@ -55,8 +76,8 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		if groupI != groupJ {
 			return groupI < groupJ
 		}
-		versionI := webhooks[i].Rules[0].APIVersions[0]
-		versionJ := webhooks[j].Rules[0].APIVersions[0]
+		versionI := webhooks[i].ObjectSelector.MatchLabels[VersionLabel]
+		versionJ := webhooks[j].ObjectSelector.MatchLabels[VersionLabel]
 		return versionI < versionJ
 	})
 
@@ -64,56 +85,37 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 	return left
 }
 
-func mergeWebhooks(left, right admissionv1.ValidatingWebhook) admissionv1.ValidatingWebhook {
+// mergeWebhooks merges left and right. The only thing we really care about
+// is preserving the failure policy, as that is the only user-editable field.
+// Any other deviations are removed.
+func mergeWebhooks(gv schema.GroupVersion, left, right admissionv1.ValidatingWebhook) admissionv1.ValidatingWebhook {
+	result := admissionv1.ValidatingWebhook{
+		Rules:          []admissionv1.RuleWithOperations{ruleFor(gv)},
+		ObjectSelector: selectorFor(gv.Version),
+	}
+
+	// FailurePolicy set to Ignore wins, if set. We don't want to overwrite the
+	// user's change.
 	switch {
-	case len(left.Rules) == 0:
-		left.Rules = right.Rules
-	case len(right.Rules) == 0:
-		// Nothing to merge.
+	case left.FailurePolicy == nil:
+		result.FailurePolicy = right.FailurePolicy
+	case right.FailurePolicy != nil && *right.FailurePolicy == admissionv1.Ignore:
+		result.FailurePolicy = right.FailurePolicy
 	default:
-		left.Rules[0] = mergeRule(left.Rules[0], right.Rules[0])
+		result.FailurePolicy = left.FailurePolicy
 	}
-	// Each Webhook should have exactly one Rule. Otherwise indicates a user
-	// has modified the Webhook in a way we don't support.
-	left.Rules = left.Rules[:1]
-
-	// FailurePolicy Ignore wins, if set. Not strictly necessary, but here to make
-	// the operation symmetric.
-	if right.FailurePolicy != nil && *right.FailurePolicy == admissionv1.Ignore {
-		ignore := admissionv1.Ignore
-		left.FailurePolicy = &ignore
-	}
-	return left
+	return result
 }
 
-// mergeRule merges the two RuleWithOperations together, modifying left.
-// Returns the modified left.
-func mergeRule(left, right admissionv1.RuleWithOperations) admissionv1.RuleWithOperations {
-	// It would be more efficient to use a list merge algorithm as we know these
-	// lists are sorted, but it is more difficult to read/maintain and the
-	// performance gain is negligible.
-	resourceSet := make(map[string]bool)
-	var resources []string
-	for _, resource := range append(left.Resources, right.Resources...) {
-		if resourceSet[resource] {
-			continue
-		}
-		resourceSet[resource] = true
-		resources = append(resources, resource)
-	}
-	// Sort resources within the Rule.
-	sort.Strings(resources)
+// InvalidWebhookWarningCode signals that the webhook was illegally modified.
+// We automatically resolve these issues. There's no point in breaking ourselves
+// when we encounter these issues so we immediately fix these.
+const InvalidWebhookWarningCode = "2014"
 
-	left.Resources = resources
-	return left
-}
+var invalidWebhookWarning = status.NewErrorBuilder(InvalidWebhookWarningCode)
 
-// gv gets the GroupVersion a Webhook is for.
-func gv(webhook admissionv1.ValidatingWebhook) schema.GroupVersion {
-	// To be valid, Rules must contain at least one element in APIGroups and
-	// APIVersions.
-	return schema.GroupVersion{
-		Group:   webhook.Rules[0].APIGroups[0],
-		Version: webhook.Rules[0].APIVersions[0],
-	}
+// InvalidWebhookWarning lets the user know we removed an invalid webhook when
+// merging.
+func InvalidWebhookWarning(msg string) status.Error {
+	return invalidWebhookWarning.Sprint(msg).Build()
 }
