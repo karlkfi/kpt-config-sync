@@ -13,6 +13,11 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
+// VisitorFunc is a function that validates and/or hydrates the given set of
+// FileObjects. It enables callers to inject extra validation and hydration
+// steps as needed.
+type VisitorFunc func(objs []ast.FileObject) ([]ast.FileObject, status.MultiError)
+
 // Options contains the various pieces of information needed by different steps
 // in the validation and hydration process.
 type Options struct {
@@ -42,6 +47,9 @@ type Options struct {
 	// IsNamespaceReconciler is a flag to indicate if the caller is a namespace
 	// reconciler which adds some additional validation logic.
 	IsNamespaceReconciler bool
+	// Visitors is a list of optional visitor functions which can be used to
+	// inject additional validation or hydration steps on the final objects.
+	Visitors []VisitorFunc
 }
 
 // Hierarchical validates and hydrates the given FileObjects from a structured,
@@ -103,6 +111,14 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	if errs = final.Validation(finalObjects); errs != nil {
 		return nil, errs
 	}
+
+	for _, visitor := range opts.Visitors {
+		finalObjects, errs = visitor(finalObjects)
+		if errs != nil {
+			return nil, errs
+		}
+	}
+
 	return finalObjects, nil
 }
 
@@ -154,5 +170,13 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	if errs = final.Validation(finalObjects); errs != nil {
 		return nil, errs
 	}
+
+	for _, visitor := range opts.Visitors {
+		finalObjects, errs = visitor(finalObjects)
+		if errs != nil {
+			return nil, errs
+		}
+	}
+
 	return finalObjects, nil
 }

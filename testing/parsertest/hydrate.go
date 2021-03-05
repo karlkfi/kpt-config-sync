@@ -14,12 +14,14 @@ import (
 	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/resourcequota"
+	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/discoverytest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
+	"github.com/google/nomos/pkg/validate"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/restmapper"
 )
 
 // TestCase represents a test case that runs AST hydration on a set of already-parsed files.
@@ -115,48 +117,6 @@ func Failures(name string, errs []string, objects ...ast.FileObject) TestCase {
 	}
 }
 
-// CRDsToAPIGroupResources converts a list of CRDs to the corresponding APIGroupResources the
-// server would return.
-//
-// As-is assumes each CRD is a different APIGroup. Don't bother fixing unless you need to test
-// a case where you need to sync multiple CRDs for the same APIGroup.
-func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restmapper.APIGroupResources {
-	var result []*restmapper.APIGroupResources
-	for _, syncedCRD := range crds {
-		extraResource := &restmapper.APIGroupResources{
-			Group: metav1.APIGroup{
-				Name: syncedCRD.Spec.Group,
-				PreferredVersion: metav1.GroupVersionForDiscovery{
-					GroupVersion: syncedCRD.Spec.Group + "/" + syncedCRD.Spec.Versions[0].Name,
-				},
-			},
-		}
-
-		extraResource.VersionedResources = make(map[string][]metav1.APIResource)
-		for _, version := range syncedCRD.Spec.Versions {
-			extraResource.Group.Versions = append(extraResource.Group.Versions,
-				metav1.GroupVersionForDiscovery{
-					GroupVersion: syncedCRD.Spec.Group + "/" + version.Name,
-					Version:      version.Name,
-				},
-			)
-			extraResource.VersionedResources[version.Name] = []metav1.APIResource{
-				{
-					Name:         syncedCRD.Spec.Names.Plural,
-					SingularName: syncedCRD.Spec.Names.Singular,
-					Namespaced:   !(syncedCRD.Spec.Scope == v1beta1.ClusterScoped),
-					Group:        syncedCRD.Spec.Group,
-					Version:      version.Name,
-					Kind:         syncedCRD.Spec.Names.Kind,
-				},
-			}
-		}
-
-		result = append(result, extraResource)
-	}
-	return result
-}
-
 // RunAll runs each unit test.
 func (pt Test) RunAll(t *testing.T) {
 	t.Helper()
@@ -180,11 +140,20 @@ func (pt Test) RunAll(t *testing.T) {
 				PolicyDir: policyDir,
 				Files:     fakeReader.ToFileList(),
 			}
-			parser := filesystem.NewParser(fakeReader, !tc.Serverless)
-			f := ft.NewTestDiscoveryClient(CRDsToAPIGroupResources(tc.SyncedCRDs))
-			builder := discovery.ScoperBuilder(f)
+			parser := filesystem.NewParser(fakeReader)
+			fileObjects, errs := parser.Parse(filePaths)
 
-			fileObjects, errs := parser.Parse(tc.ClusterName, tc.SyncedCRDs, builder, filePaths)
+			f := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.SyncedCRDs))
+			options := validate.Options{
+				ClusterName:       tc.ClusterName,
+				PolicyDir:         policyDir,
+				PreviousCRDs:      tc.SyncedCRDs,
+				BuildScoper:       discovery.ScoperBuilder(f),
+				AllowUnknownKinds: tc.Serverless,
+			}
+			fileObjects, vErrs := validate.Hierarchical(fileObjects, options)
+			errs = status.Append(errs, vErrs)
+
 			actual := namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
 
 			if tc.Errors != nil || errs != nil {

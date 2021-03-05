@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -108,19 +109,25 @@ clusters.`,
 		if err != nil {
 			return err
 		}
-		parser := filesystem.NewParser(&reader.File{}, !flags.SkipAPIServer)
-
-		var allObjects []ast.FileObject
+		parser := filesystem.NewParser(&reader.File{})
 
 		crds, err := parse.GetSyncedCRDs(cmd.Context())
 		if err != nil {
 			return err
 		}
 		addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
-		builder := discovery.ScoperBuilder(dc, addFunc)
+
+		options := validate.Options{
+			PolicyDir:         policyDir,
+			PreviousCRDs:      crds,
+			BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+			AllowUnknownKinds: flags.SkipAPIServer,
+		}
+
+		var allObjects []ast.FileObject
 		encounteredError := false
 		numClusters := 0
-		hydrate.ForEachCluster(parser, crds, builder, filePaths, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
+		hydrate.ForEachCluster(parser, options, filePaths, func(clusterName string, fileObjects []ast.FileObject, err status.MultiError) {
 			clusterEnabled := flags.AllClusters()
 			for _, cluster := range flags.Clusters {
 				if clusterName == cluster {

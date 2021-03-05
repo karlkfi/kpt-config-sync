@@ -6,8 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"github.com/google/nomos/pkg/validate"
 )
 
 const (
@@ -31,16 +30,37 @@ const (
 //    err, the MultiError which Parser.Parse returned, if there was one.
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
-func ForEachCluster(parser filesystem.ConfigParser, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
-	clusterRegistry := parser.ReadClusterRegistryResources(filePaths)
-	clusters, errs := selectors.FilterClusters(clusterRegistry)
+func ForEachCluster(parser filesystem.ConfigParser, options validate.Options, filePaths reader.FilePaths, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
+	isHierarchical := options.DefaultNamespace == "" && !options.IsNamespaceReconciler
+	clusterRegistry, errs := parser.ReadClusterRegistryResources(filePaths)
+	clusters, err2 := selectors.FilterClusters(clusterRegistry)
+	errs = status.Append(errs, err2)
 
 	// Hydrate for empty string cluster name. This is the default configuration.
-	defaultFileObjects, err2 := parser.Parse(defaultCluster, syncedCRDs, buildScoper, filePaths)
-	f(defaultCluster, defaultFileObjects, status.Append(errs, err2))
+	options.ClusterName = defaultCluster
+	defaultFileObjects, err2 := parser.Parse(filePaths)
+	errs = status.Append(errs, err2)
+
+	if isHierarchical {
+		defaultFileObjects, err2 = validate.Hierarchical(defaultFileObjects, options)
+	} else {
+		defaultFileObjects, err2 = validate.Unstructured(defaultFileObjects, options)
+	}
+	errs = status.Append(errs, err2)
+
+	f(defaultCluster, defaultFileObjects, errs)
 
 	for _, cluster := range clusters {
-		fileObjects, errs := parser.Parse(cluster.Name, syncedCRDs, buildScoper, filePaths)
+		options.ClusterName = cluster.Name
+		fileObjects, errs := parser.Parse(filePaths)
+
+		if isHierarchical {
+			fileObjects, err2 = validate.Hierarchical(fileObjects, options)
+		} else {
+			fileObjects, err2 = validate.Unstructured(fileObjects, options)
+		}
+
+		errs = status.Append(errs, err2)
 		f(cluster.Name, fileObjects, errs)
 	}
 }

@@ -1,19 +1,19 @@
-// Package filesystemtest contains fake implementation of the API discovery mechanisms,
-// seeded with the types used in Nomos.  Use NewTestDiscoveryClient first to create
-// a new instance and work from there.
-package filesystemtest
+// Package discoverytest contains a fake implementation of the API discovery
+// mechanism seeded with the types used in Config Sync.
+package discoverytest
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/kinds"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/restmapper"
 )
 
-// NewTestDiscoveryClient returns a new test DiscoveryClient that has mappings for test and provided resources.
-func NewTestDiscoveryClient(extraResources []*restmapper.APIGroupResources) utildiscovery.ServerResourcer {
+// Client returns a new test DiscoveryClient that has mappings for test and provided resources.
+func Client(extraResources []*restmapper.APIGroupResources) utildiscovery.ServerResourcer {
 	return newFakeDiscoveryClient(testAPIResourceList(testDynamicResources(extraResources...)))
 }
 
@@ -27,7 +27,8 @@ func newFakeDiscoveryClient(res []*metav1.APIResourceList) utildiscovery.ServerR
 	return &fakeDiscoveryClient{APIGroupResources: res}
 }
 
-// ServerResources returns the stubbed list of available resources.
+// ServerGroupsAndResources returns the stubbed list of available API groups
+// and resources.
 func (d *fakeDiscoveryClient) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
 	return nil, d.APIGroupResources, nil
 }
@@ -267,4 +268,46 @@ func testDynamicResources(extraResources ...*restmapper.APIGroupResources) []*re
 	)
 	r = append(r, extraResources...)
 	return r
+}
+
+// CRDsToAPIGroupResources converts a list of CRDs to the corresponding APIGroupResources the
+// server would return.
+//
+// As-is assumes each CRD is a different APIGroup. Don't bother fixing unless you need to test
+// a case where you need to sync multiple CRDs for the same APIGroup.
+func CRDsToAPIGroupResources(crds []*v1beta1.CustomResourceDefinition) []*restmapper.APIGroupResources {
+	var result []*restmapper.APIGroupResources
+	for _, syncedCRD := range crds {
+		extraResource := &restmapper.APIGroupResources{
+			Group: metav1.APIGroup{
+				Name: syncedCRD.Spec.Group,
+				PreferredVersion: metav1.GroupVersionForDiscovery{
+					GroupVersion: syncedCRD.Spec.Group + "/" + syncedCRD.Spec.Versions[0].Name,
+				},
+			},
+		}
+
+		extraResource.VersionedResources = make(map[string][]metav1.APIResource)
+		for _, version := range syncedCRD.Spec.Versions {
+			extraResource.Group.Versions = append(extraResource.Group.Versions,
+				metav1.GroupVersionForDiscovery{
+					GroupVersion: syncedCRD.Spec.Group + "/" + version.Name,
+					Version:      version.Name,
+				},
+			)
+			extraResource.VersionedResources[version.Name] = []metav1.APIResource{
+				{
+					Name:         syncedCRD.Spec.Names.Plural,
+					SingularName: syncedCRD.Spec.Names.Singular,
+					Namespaced:   !(syncedCRD.Spec.Scope == v1beta1.ClusterScoped),
+					Group:        syncedCRD.Spec.Group,
+					Version:      version.Name,
+					Kind:         syncedCRD.Spec.Names.Kind,
+				},
+			}
+		}
+
+		result = append(result, extraResource)
+	}
+	return result
 }

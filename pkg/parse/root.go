@@ -18,7 +18,7 @@ import (
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/pkg/errors"
+	"github.com/google/nomos/pkg/validate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -34,6 +34,7 @@ func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceF
 		pollingFrequency: pollingFrequency,
 		resyncPeriod:     resyncPeriod,
 		files:            files{FileSource: fs},
+		parser:           filesystem.NewParser(fileReader),
 		updater: updater{
 			scope:      declared.RootReconciler,
 			resources:  resources,
@@ -41,16 +42,6 @@ func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceF
 			remediator: rem,
 		},
 		discoveryInterface: dc,
-	}
-
-	switch format {
-	case filesystem.SourceFormatUnstructured:
-		opts.parser = filesystem.NewRawParser(fileReader, true, metav1.NamespaceDefault, declared.RootReconciler)
-	case filesystem.SourceFormatHierarchy:
-		opts.parser = filesystem.NewParser(fileReader, true)
-	default:
-		return nil, errors.Errorf("unknown SourceFormat %q, must be one of %s or %s",
-			format, filesystem.SourceFormatUnstructured, filesystem.SourceFormatHierarchy)
 	}
 	return &root{opts: opts, sourceFormat: format}, nil
 }
@@ -93,15 +84,28 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	objs, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
+	objs, err := p.parser.Parse(filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(b/167700852): Inject this function into the Parser.
+	options := validate.Options{
+		ClusterName:  p.clusterName,
+		PolicyDir:    p.PolicyDir,
+		PreviousCRDs: crds,
+		BuildScoper:  builder,
+	}
+	options = OptionsForScope(options, p.scope)
+
 	if p.sourceFormat == filesystem.SourceFormatUnstructured {
-		objs = addImplicitNamespaces(objs)
+		options.Visitors = append(options.Visitors, addImplicitNamespaces)
+		objs, err = validate.Unstructured(objs, options)
+	} else {
+		objs, err = validate.Hierarchical(objs, options)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// Duplicated with namespace.go.
@@ -162,7 +166,12 @@ func (p *root) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus
 	return nil
 }
 
-func addImplicitNamespaces(objs []ast.FileObject) []ast.FileObject {
+// addImplicitNamespaces hydrates the given FileObjects by injecting implicit
+// namespaces into the list before returning it. Implicit namespaces are those
+// that are declared by an object's metadata namespace field but are not present
+// in the list. Note that this function always returns a nil error to conform to
+// the validate.VisitorFunc interface.
+func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.MultiError) {
 	// namespaces will track the set of Namespaces we expect to exist, and those
 	// which actually do.
 	namespaces := make(map[string]bool)
@@ -191,5 +200,5 @@ func addImplicitNamespaces(objs []ast.FileObject) []ast.FileObject {
 		objs = append(objs, ast.NewFileObject(u, cmpath.RelativeOS("")))
 	}
 
-	return objs
+	return objs, nil
 }

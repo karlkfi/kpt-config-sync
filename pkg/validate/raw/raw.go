@@ -45,9 +45,12 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		return errs
 	}
 
-	// We perform cluster selection first so that we can filter out irrelevant
+	// First we set missing namespaces on objects in namespace directories since
+	// cluster selection relies on namespace if a namespace gets filtered out.
+	// Then we perform cluster selection so that we can filter out irrelevant
 	// objects before trying to modify them.
 	hydrators := []objects.RawVisitor{
+		hydrate.ObjectNamespaces,
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 		hydrate.Filepath,

@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/metrics"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/validate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,7 +31,7 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 			pollingFrequency: pollingFrequency,
 			resyncPeriod:     resyncPeriod,
 			files:            files{FileSource: fs},
-			parser:           NewNamespace(fileReader, true, scope),
+			parser:           filesystem.NewParser(fileReader),
 			updater: updater{
 				scope:      scope,
 				resources:  resources,
@@ -72,8 +74,21 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
-	objs, err := p.parser.Parse(p.clusterName, crds, builder, filePaths)
+	objs, err := p.parser.Parse(filePaths)
 	metrics.RecordParseErrorAndDuration(ctx, err, start)
+	if err != nil {
+		return nil, err
+	}
+
+	options := validate.Options{
+		ClusterName:  p.clusterName,
+		PolicyDir:    p.PolicyDir,
+		PreviousCRDs: crds,
+		BuildScoper:  builder,
+	}
+	options = OptionsForScope(options, p.scope)
+
+	objs, err = validate.Unstructured(objs, options)
 	if err != nil {
 		return nil, err
 	}

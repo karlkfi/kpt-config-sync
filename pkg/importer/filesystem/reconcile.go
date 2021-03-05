@@ -23,6 +23,7 @@ import (
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
+	"github.com/google/nomos/pkg/validate"
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,10 +240,8 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, errors.Wrap(err, "reading synced CRDs")
 	}
 
-	builder := utildiscovery.ScoperBuilder(c.discoveryClient)
-
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
-	desiredFileObjects, mErr := c.parser.Parse(c.clusterName, syncedCRDs, builder, filePaths)
+	fileObjects, mErr := c.parser.Parse(filePaths)
 	if mErr != nil {
 		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
@@ -250,13 +249,34 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	err = webhookconfiguration.Update(ctx, c.client.Client, c.discoveryClient, desiredFileObjects)
+	options := validate.Options{
+		ClusterName:           c.clusterName,
+		PolicyDir:             c.policyDir,
+		PreviousCRDs:          syncedCRDs,
+		BuildScoper:           utildiscovery.ScoperBuilder(c.discoveryClient),
+		DefaultNamespace:      metav1.NamespaceDefault,
+		IsNamespaceReconciler: false,
+	}
+
+	if c.format == SourceFormatUnstructured {
+		fileObjects, mErr = validate.Unstructured(fileObjects, options)
+	} else {
+		fileObjects, mErr = validate.Hierarchical(fileObjects, options)
+	}
+	if mErr != nil {
+		glog.Warningf("Failed to validate: %v", status.FormatError(false, mErr))
+		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
+		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
+		return reconcile.Result{}, nil
+	}
+
+	err = webhookconfiguration.Update(ctx, c.client.Client, c.discoveryClient, fileObjects)
 	if err != nil {
 		// Don't block if updating the admission webhook fails.
 		glog.Errorf("Failed to update admission webhook: %v", err)
 	}
 
-	gs := makeGitState(absGitDir.OSPath(), desiredFileObjects)
+	gs := makeGitState(absGitDir.OSPath(), fileObjects)
 	if c.parsedGit == nil {
 		glog.Infof("Importer state initialized at git revision %s. Unverified file list: %s", gs.rev, gs.filePaths)
 	} else if c.parsedGit.rev != gs.rev {
@@ -265,12 +285,12 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		glog.V(2).Infof("Importer state remains at git revision %s. Verified files hash: %s", gs.rev, gs.filePaths)
 	} else {
 		glog.Errorf("Importer read inconsistent files at git revision %s. Expected files hash: %s, Diff: %s", gs.rev, c.parsedGit.filePaths, cmp.Diff(c.parsedGit.filePathList, gs.filePathList))
-		glog.Errorf("Inconsistent files: %s", dumpForFiles(desiredFileObjects))
+		glog.Errorf("Inconsistent files: %s", dumpForFiles(fileObjects))
 		return c.filesystemError(ctx, absGitDir.OSPath())
 	}
 	c.parsedGit = gs
 
-	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), desiredFileObjects)
+	desiredConfigs := namespaceconfig.NewAllConfigs(token, metav1.NewTime(startTime), fileObjects)
 	if sErr := c.safetyCheck(desiredConfigs, currentConfigs); sErr != nil {
 		c.updateSourceStatus(ctx, &token, sErr.ToCME())
 		importer.Metrics.Violations.Inc()

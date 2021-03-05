@@ -49,13 +49,9 @@ func TestNamespaceScopeVisitor(t *testing.T) {
 
 			visitor := repositoryScopeVisitor(tc.scope)
 
-			err := visitor.Validate([]ast.FileObject{tc.obj})
-			var got status.Error
-			if err != nil {
-				got = err.Errors()[0]
-			}
-			if !errors.Is(got, tc.wantErr) {
-				t.Errorf("got error %v, want %v", got, tc.wantErr)
+			_, err := visitor([]ast.FileObject{tc.obj})
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("got error %v, want %v", err, tc.wantErr)
 			}
 
 			if diff := cmp.Diff(tc.want, tc.obj, ast.CompareFileObject); diff != "" {

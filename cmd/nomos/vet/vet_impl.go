@@ -18,10 +18,10 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // vet runs nomos vet with the specified options.
@@ -78,7 +78,17 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		}
 	}
 
-	var parser filesystem.ConfigParser
+	addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
+
+	options := validate.Options{
+		PolicyDir:         cmpath.RelativeOS(root),
+		PreviousCRDs:      syncedCRDs,
+		BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+		AllowUnknownKinds: skipAPIServer,
+	}
+
+	parser := filesystem.NewParser(&reader.File{})
+
 	switch sourceFormat {
 	case filesystem.SourceFormatHierarchy:
 		if namespace != "" {
@@ -88,13 +98,12 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 				namespaceFlag, reconcilermanager.SourceFormat)
 		}
 
-		parser = filesystem.NewParser(&reader.File{}, !skipAPIServer)
 		files = filesystem.FilterHierarchyFiles(rootDir, files)
 	case filesystem.SourceFormatUnstructured:
 		if namespace == "" {
-			parser = filesystem.NewRawParser(&reader.File{}, !skipAPIServer, metav1.NamespaceDefault, declared.RootReconciler)
+			options = parse.OptionsForScope(options, declared.RootReconciler)
 		} else {
-			parser = parse.NewNamespace(&reader.File{}, !skipAPIServer, declared.Scope(namespace))
+			options = parse.OptionsForScope(options, declared.Scope(namespace))
 		}
 	default:
 		return fmt.Errorf("unknown %s value %q", reconcilermanager.SourceFormat, sourceFormat)
@@ -106,14 +115,9 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		Files:     files,
 	}
 
-	addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
-	builder := discovery.ScoperBuilder(dc, addFunc)
-
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, syncedCRDs, builder, filePaths,
-		vetCluster(&vetErrs, allClusters, clusters),
-	)
+	hydrate.ForEachCluster(parser, options, filePaths, vetCluster(&vetErrs, allClusters, clusters))
 	if len(vetErrs) > 0 {
 		return errors.New(strings.Join(vetErrs, "\n\n"))
 	}

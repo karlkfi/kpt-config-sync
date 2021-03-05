@@ -5,7 +5,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -62,16 +60,9 @@ func AddController(clusterName string, mgr manager.Manager, gitDir, policyDirRel
 
 	// If SOURCE_FORMAT is invalid, assume hierarchy.
 	format := SourceFormat(os.Getenv(SourceFormatKey))
-	var cfgParser ConfigParser
-	switch format {
-	case SourceFormatUnstructured:
-		// SourceFormat is unstructured, so use the RawParser.
-		cfgParser = NewRawParser(&reader.File{}, true, metav1.NamespaceDefault, declared.RootReconciler)
-	case SourceFormatHierarchy, "":
-		cfgParser = NewParser(&reader.File{}, true)
+	cfgParser := NewParser(&reader.File{})
+	if format == "" {
 		format = SourceFormatHierarchy
-	default:
-		return errors.Errorf("unknown SOURCE_FORMAT type %q", string(format))
 	}
 
 	decoder := decode.NewGenericResourceDecoder(runtime.NewScheme())

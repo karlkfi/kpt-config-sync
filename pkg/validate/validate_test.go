@@ -20,12 +20,11 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	ft "github.com/google/nomos/pkg/importer/filesystem/filesystemtest"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/testing/discoverytest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
-	"github.com/google/nomos/testing/parsertest"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -254,6 +253,8 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleAtPath("namespaces/prod-shipping/prod-sre.yaml",
 					core.Name("prod-sre"),
 					core.Namespace("prod-shipping")),
+				fake.RoleAtPath("namespaces/prod-shipping/prod-swe.yaml",
+					core.Name("prod-swe")),
 				// Should not be selected
 				fake.ClusterRoleAtPath("cluster/dev-admin_cr.yaml",
 					core.Name("dev-admin"),
@@ -269,6 +270,8 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleAtPath("namespaces/dev-shipping/dev-sre.yaml",
 					core.Name("dev-sre"),
 					core.Namespace("dev-shipping")),
+				fake.RoleAtPath("namespaces/dev-shipping/dev-swe.yaml",
+					core.Name("dev-swe")),
 			},
 			want: []ast.FileObject{
 				fake.ClusterRoleAtPath("cluster/prod-admin_cr.yaml",
@@ -293,6 +296,11 @@ func TestHierarchical(t *testing.T) {
 					core.Namespace("prod-shipping"),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-shipping/prod-sre.yaml")),
+				fake.RoleAtPath("namespaces/prod-shipping/prod-swe.yaml",
+					core.Name("prod-swe"),
+					core.Namespace("prod-shipping"),
+					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
+					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-shipping/prod-swe.yaml")),
 				fake.RoleAtPath("namespaces/prod-abstract.yaml",
 					core.Name("abstract"),
 					core.Namespace("prod-shipping"),
@@ -709,8 +717,8 @@ func TestHierarchical(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := ft.NewTestDiscoveryClient(parsertest.CRDsToAPIGroupResources(tc.discoveryCRDs))
-			tc.options.BuildScoper = discovery.ScoperBuilder(f)
+			dc := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.discoveryCRDs))
+			tc.options.BuildScoper = discovery.ScoperBuilder(dc)
 			tc.options.PolicyDir = cmpath.RelativeSlash(dir)
 
 			got, errs := Hierarchical(tc.objs, tc.options)
@@ -930,8 +938,8 @@ func TestUnstructured(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := ft.NewTestDiscoveryClient(parsertest.CRDsToAPIGroupResources(tc.discoveryCRDs))
-			tc.options.BuildScoper = discovery.ScoperBuilder(f)
+			dc := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.discoveryCRDs))
+			tc.options.BuildScoper = discovery.ScoperBuilder(dc)
 			tc.options.PolicyDir = cmpath.RelativeSlash(dir)
 
 			got, errs := Unstructured(tc.objs, tc.options)

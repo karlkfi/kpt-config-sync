@@ -23,11 +23,9 @@ import (
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/testing/testmetrics"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -83,26 +81,7 @@ func TestRoot_Parse(t *testing.T) {
 				),
 				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
-					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
-					core.Annotation(v1.SyncTokenAnnotationKey, ""),
-					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
-					difftest.ManagedByRoot,
-				),
-			},
-		},
-		// This state technically can't happen as we'd throw an error earlier,
-		// but this ensures that if there's a bug in the Parser implementation
-		// that we won't erroneously create an implicit Namespace.
-		{
-			name:   "no implicit namespace if hierarchy",
-			format: filesystem.SourceFormatHierarchy,
-			parsed: []ast.FileObject{
-				fake.Role(core.Namespace("foo")),
-			},
-			want: []ast.FileObject{
-				fake.Role(core.Namespace("foo"),
-					core.Label(v1.ManagedByKey, v1.ManagedByValue),
+					core.Annotation(v1.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
@@ -314,7 +293,7 @@ type fakeParser struct {
 	errors []status.Error
 }
 
-func (p *fakeParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+func (p *fakeParser) Parse(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	if p.errors == nil {
 		return p.parse, nil
 	}
@@ -325,8 +304,8 @@ func (p *fakeParser) Parse(clusterName string, syncedCRDs []*v1beta1.CustomResou
 	return nil, errs
 }
 
-func (p *fakeParser) ReadClusterRegistryResources(filePaths reader.FilePaths) []ast.FileObject {
-	return nil
+func (p *fakeParser) ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+	return nil, nil
 }
 
 type fakeApplier struct {

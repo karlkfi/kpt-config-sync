@@ -5,17 +5,15 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
 // configs from a filesystem.
 type ConfigParser interface {
-	Parse(clusterName string, syncedCRDs []*v1beta1.CustomResourceDefinition, buildScoper discovery.BuildScoperFunc, filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
+	Parse(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
-	ReadClusterRegistryResources(filePaths reader.FilePaths) []ast.FileObject
+	ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
 }
 
 // AsCoreObjects converts a slice of FileObjects to a slice of core.Objects.
