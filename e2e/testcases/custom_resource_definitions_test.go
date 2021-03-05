@@ -1,6 +1,9 @@
 package e2e
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -77,5 +80,61 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("validating reconciler_errors metric: %v", err)
+	}
+}
+
+func TestLargeCRD(t *testing.T) {
+	nt := nomostest.New(t)
+
+	for _, file := range []string{"challenges-acme-cert-manager-io.yaml", "solrclouds-solr-apache-org.yaml"} {
+		crdFile := filepath.Join(".", "..", "testdata", "customresources", file)
+		crdContent, err := ioutil.ReadFile(crdFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nt.Root.AddFile(fmt.Sprintf("acme/cluster/%s", file), crdContent)
+	}
+	nt.Root.CommitAndPush("Adding two large CRDs")
+	nt.WaitForRepoSyncs()
+	nt.RenewClient()
+
+	err := nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = nt.Validate("solrclouds.solr.apache.org", "", fake.CustomResourceDefinitionV1Object())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.ResourceCreated("CustomResourceDefinition"),
+			metrics.ResourceCreated("CustomResourceDefinition"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
+	// update one CRD
+	crdFile := filepath.Join(".", "..", "testdata", "customresources", "challenges-acme-cert-manager-io_with_new_label.yaml")
+	crdContent, err := ioutil.ReadFile(crdFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nt.Root.AddFile("acme/cluster/challenges-acme-cert-manager-io.yaml", crdContent)
+	nt.Root.CommitAndPush("Update label for one CRD")
+	nt.WaitForRepoSyncs()
+
+	err = nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.HasLabel("random-key", "random-value"))
+	if err != nil {
+		t.Fatal(err)
 	}
 }
