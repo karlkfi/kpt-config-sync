@@ -103,7 +103,9 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if intendedState.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
 		err = c.create(ctx, intendedState)
 	} else {
-		err = c.client.Create(ctx, intendedState, client.FieldOwner(configsync.FieldManager))
+		if err1 := c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(configsync.FieldManager)); err1 != nil {
+			err = status.ResourceWrap(err1, "unable to apply resource", intendedState)
+		}
 	}
 	metrics.Operations.WithLabelValues("create", intendedState.GetKind(), metrics.StatusLabel(err)).Inc()
 	m.RecordApplyOperation(ctx, "create", m.StatusTagKey(err), intendedState.GroupVersionKind())

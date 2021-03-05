@@ -40,6 +40,16 @@ func clusterRoleHasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 	}
 }
 
+func managerFieldsNonEmpty() nomostest.Predicate {
+	return func(o core.Object) error {
+		fields := o.GetManagedFields()
+		if len(fields) == 0 {
+			return errors.New("expect non empty manager fields")
+		}
+		return nil
+	}
+}
+
 // TestRevertClusterRole ensures that we revert conflicting manually-applied
 // changes to cluster-scoped objects.
 func TestRevertClusterRole(t *testing.T) {
@@ -156,7 +166,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
-		clusterRoleHasRules(declaredRules))
+		clusterRoleHasRules(declaredRules), managerFieldsNonEmpty())
 	if err != nil {
 		t.Fatalf("validating ClusterRole precondition: %v", err)
 	}
@@ -191,7 +201,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	// Ensure the resource is updated.
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate(crName, "", &rbacv1.ClusterRole{},
-			clusterRoleHasRules(updatedRules))
+			clusterRoleHasRules(updatedRules), managerFieldsNonEmpty())
 	})
 	if err != nil {
 		t.Errorf("updating ClusterRole: %v", err)
