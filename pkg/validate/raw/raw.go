@@ -45,11 +45,15 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		return errs
 	}
 
-	// First we set missing namespaces on objects in namespace directories since
-	// cluster selection relies on namespace if a namespace gets filtered out.
-	// Then we perform cluster selection so that we can filter out irrelevant
-	// objects before trying to modify them.
+	// First we annotate all objects with their declared fields. It is crucial
+	// that we do this step before any other hydration so that we capture the
+	// object exactly as it is declared in Git. Next we set missing namespaces on
+	// objects in namespace directories since cluster selection relies on
+	// namespace if a namespace gets filtered out. Then we perform cluster
+	// selection so that we can filter out irrelevant objects before trying to
+	// modify them.
 	hydrators := []objects.RawVisitor{
+		hydrate.DeclaredFields,
 		hydrate.ObjectNamespaces,
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
@@ -90,9 +94,12 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		return errs
 	}
 
-	// We perform cluster selection first so that we can filter out irrelevant
-	// objects before trying to modify them.
+	// First we annotate all objects with their declared fields. It is crucial
+	// that we do this step before any other hydration so that we capture the
+	// object exactly as it is declared in Git. Then we perform cluster selection
+	// so that we can filter out irrelevant objects before trying to modify them.
 	hydrators := []objects.RawVisitor{
+		hydrate.DeclaredFields,
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 		hydrate.Filepath,

@@ -20,8 +20,8 @@ import (
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	"github.com/google/nomos/pkg/util/discovery"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -64,9 +64,8 @@ type Options struct {
 	GitRepo string
 	// PolicyDir is the relative path to the policies within the Git repository.
 	PolicyDir cmpath.Relative
-	// DiscoveryClient is the minimal subinterface of DiscoveryClient we actually
-	// need.
-	DiscoveryClient discovery.ServerResourcer
+	// DiscoveryClient is used to read types and schemas from the API server.
+	DiscoveryClient discovery.DiscoveryInterface
 	// RootOptions is the set of options to fill in if this is configuring the
 	// Root reconciler.
 	// Unset for Namespace repositories.
@@ -150,8 +149,11 @@ func Run(opts Options) {
 			glog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
+		parser, err = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
+		if err != nil {
+			glog.Fatalf("Instantiating Namespace Repository Parser: %v", err)
+		}
 	}
 
 	ctx := signals.SetupSignalHandler()

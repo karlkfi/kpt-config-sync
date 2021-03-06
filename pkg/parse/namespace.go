@@ -15,14 +15,20 @@ import (
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/util/discovery"
+	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.ServerResourcer, resources *declared.Resources, app kptapplier.Interface, rem remediator.Interface) Parser {
+func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.DiscoveryInterface, resources *declared.Resources, app kptapplier.Interface, rem remediator.Interface) (Parser, error) {
+	converter, err := declared.NewValueConverter(dc)
+	if err != nil {
+		return nil, err
+	}
+
 	return &namespace{
 		opts: opts{
 			clusterName:      clusterName,
@@ -39,9 +45,10 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 				remediator: rem,
 			},
 			discoveryInterface: dc,
+			converter:          converter,
 		},
 		scope: scope,
-	}
+	}, nil
 }
 
 type namespace struct {
@@ -70,7 +77,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	if err != nil {
 		return nil, err
 	}
-	builder := discovery.ScoperBuilder(p.discoveryInterface)
+	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
 	start := time.Now()
@@ -85,6 +92,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 		PolicyDir:    p.PolicyDir,
 		PreviousCRDs: crds,
 		BuildScoper:  builder,
+		Converter:    p.converter,
 	}
 	options = OptionsForScope(options, p.scope)
 

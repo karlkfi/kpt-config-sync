@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -117,10 +118,19 @@ clusters.`,
 		}
 		addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
 
+		var converter *declared.ValueConverter
+		if !flags.SkipAPIServer {
+			converter, err = declared.NewValueConverter(dc)
+			if err != nil {
+				return err
+			}
+		}
+
 		options := validate.Options{
 			PolicyDir:         policyDir,
 			PreviousCRDs:      crds,
 			BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+			Converter:         converter,
 			AllowUnknownKinds: flags.SkipAPIServer,
 		}
 

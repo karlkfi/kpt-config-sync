@@ -10,6 +10,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
@@ -120,12 +121,14 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("foo.tree.hnc.x-k8s.io/depth", "0")),
 				fake.RoleAtPath("namespaces/foo/role.yaml",
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/role.yaml")),
 			},
 		},
@@ -142,6 +145,7 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/bar/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/foo/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -150,8 +154,10 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleAtPath("namespaces/bar/role.yaml",
 					core.Name("first"),
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/role.yaml")),
 				fake.Namespace("namespaces/bar/qux/lym",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/qux/lym/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -161,10 +167,12 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleAtPath("namespaces/bar/role.yaml",
 					core.Name("first"),
 					core.Namespace("lym"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/role.yaml")),
 				fake.RoleAtPath("namespaces/bar/qux/role.yaml",
 					core.Name("second"),
 					core.Namespace("lym"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/qux/role.yaml")),
 			},
 		},
@@ -179,14 +187,17 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.FileObject(crdUnstructured(t, kinds.Anvil(),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{"f:group":{},"f:names":{"f:kind":{},"f:plural":{}},"f:scope":{},"f:versions":{}},"f:status":{"f:acceptedNames":{"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/crd.yaml")), "cluster/crd.yaml"),
 				fake.Namespace("namespaces/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("foo.tree.hnc.x-k8s.io/depth", "0")),
 				fake.AnvilAtPath("namespaces/foo/anvil.yaml",
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{".":{},"f:group":{},"f:names":{".":{},"f:kind":{},"f:plural":{}},"f:scope":{}},"f:status":{".":{},"f:acceptedNames":{".":{},"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/anvil.yaml")),
 			},
 		},
@@ -201,6 +212,7 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.AnvilAtPath("cluster/anvil.yaml",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{".":{},"f:group":{},"f:names":{".":{},"f:kind":{},"f:plural":{}},"f:scope":{}},"f:status":{".":{},"f:acceptedNames":{".":{},"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/anvil.yaml")),
 			},
 		},
@@ -217,12 +229,14 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("foo.tree.hnc.x-k8s.io/depth", "0")),
 				fake.AnvilAtPath("namespaces/foo/anvil.yaml",
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{".":{},"f:group":{},"f:names":{".":{},"f:kind":{},"f:plural":{}},"f:scope":{}},"f:status":{".":{},"f:acceptedNames":{".":{},"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/anvil.yaml")),
 			},
 		},
@@ -276,15 +290,18 @@ func TestHierarchical(t *testing.T) {
 			want: []ast.FileObject{
 				fake.ClusterRoleAtPath("cluster/prod-admin_cr.yaml",
 					core.Name("prod-admin"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configmanagement.gke.io/cluster-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-only"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/prod-admin_cr.yaml")),
 				fake.ClusterRoleAtPath("cluster/prod-owner_cr.yaml",
 					core.Name("prod-owner"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configsync.gke.io/cluster-name-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/prod-owner_cr.yaml")),
 				fake.Namespace("namespaces/prod-shipping",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configsync.gke.io/cluster-name-selector":{}}}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-shipping/namespace.yaml"),
@@ -294,16 +311,19 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleAtPath("namespaces/prod-shipping/prod-sre.yaml",
 					core.Name("prod-sre"),
 					core.Namespace("prod-shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-shipping/prod-sre.yaml")),
 				fake.RoleAtPath("namespaces/prod-shipping/prod-swe.yaml",
 					core.Name("prod-swe"),
 					core.Namespace("prod-shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-shipping/prod-swe.yaml")),
 				fake.RoleAtPath("namespaces/prod-abstract.yaml",
 					core.Name("abstract"),
 					core.Namespace("prod-shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configsync.gke.io/cluster-name-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/prod-abstract.yaml")),
@@ -326,6 +346,7 @@ func TestHierarchical(t *testing.T) {
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/bar/prod-ns",
 					core.Label("env", "prod"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:env":{}}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/prod-ns/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -334,10 +355,12 @@ func TestHierarchical(t *testing.T) {
 				fake.RoleBindingAtPath("namespaces/bar/rb.yaml",
 					core.Name("sre"),
 					core.Namespace("prod-ns"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configmanagement.gke.io/namespace-selector":{}}},"f:roleRef":{"f:apiGroup":{},"f:kind":{},"f:name":{}}}`),
 					core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre-supported"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/rb.yaml")),
 				fake.Namespace("namespaces/bar/test-ns",
 					core.Label("env", "test"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:env":{}}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/test-ns/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -355,18 +378,21 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/bar/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/bar/foo/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("bar.tree.hnc.x-k8s.io/depth", "1"),
 					core.Label("foo.tree.hnc.x-k8s.io/depth", "0")),
 				fake.Namespace("namespaces/foo/bar",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/bar/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("foo.tree.hnc.x-k8s.io/depth", "1"),
 					core.Label("bar.tree.hnc.x-k8s.io/depth", "0")),
 				fake.Namespace("namespaces/foo/foo/qux",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/foo/qux/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -383,11 +409,13 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/default",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/default/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
 					core.Label("default.tree.hnc.x-k8s.io/depth", "0")),
 				fake.Namespace("namespaces/kube-system",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/kube-system/namespace.yaml"),
 					core.Annotation(hnc.AnnotationKeyV1A1, v1.ManagedByValue),
 					core.Annotation(hnc.AnnotationKeyV1A2, v1.ManagedByValue),
@@ -404,6 +432,7 @@ func TestHierarchical(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.ClusterRoleBindingAtPath("cluster/foo/crb.yaml",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:roleRef":{"f:apiGroup":{},"f:kind":{},"f:name":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/foo/crb.yaml")),
 			},
 		},
@@ -715,11 +744,17 @@ func TestHierarchical(t *testing.T) {
 		},
 	}
 
+	converter, err := declared.ValueConverterForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.discoveryCRDs))
 			tc.options.BuildScoper = discovery.ScoperBuilder(dc)
 			tc.options.PolicyDir = cmpath.RelativeSlash(dir)
+			tc.options.Converter = converter
 
 			got, errs := Hierarchical(tc.objs, tc.options)
 			if !errors.Is(errs, tc.wantErrs) {
@@ -751,6 +786,7 @@ func TestUnstructured(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.ClusterRoleAtPath("cluster/cr.yaml",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/cr.yaml")),
 			},
 		},
@@ -765,9 +801,11 @@ func TestUnstructured(t *testing.T) {
 			want: []ast.FileObject{
 				fake.RoleAtPath("role.yaml",
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/role.yaml")),
 				fake.RoleBindingAtPath("rb.yaml",
 					core.Namespace("bar"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:roleRef":{"f:apiGroup":{},"f:kind":{},"f:name":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/rb.yaml")),
 			},
 		},
@@ -779,8 +817,10 @@ func TestUnstructured(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.FileObject(crdUnstructured(t, kinds.Anvil(),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{"f:group":{},"f:names":{"f:kind":{},"f:plural":{}},"f:scope":{},"f:versions":{}},"f:status":{"f:acceptedNames":{"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/crd.yaml")), "crd.yaml"),
 				fake.AnvilAtPath("anvil.yaml",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:spec":{".":{},"f:group":{},"f:names":{".":{},"f:kind":{},"f:plural":{}},"f:scope":{}},"f:status":{".":{},"f:acceptedNames":{".":{},"f:kind":{},"f:plural":{}},"f:conditions":{},"f:storedVersions":{}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/anvil.yaml")),
 			},
 		},
@@ -820,22 +860,26 @@ func TestUnstructured(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("prod-shipping",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configsync.gke.io/cluster-name-selector":{}}}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/prod-shipping/namespace.yaml")),
 				fake.ClusterRoleAtPath("cluster/prod-admin_cr.yaml",
 					core.Name("prod-admin"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configmanagement.gke.io/cluster-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-only"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/prod-admin_cr.yaml")),
 				fake.ClusterRoleAtPath("cluster/prod-owner_cr.yaml",
 					core.Name("prod-owner"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configsync.gke.io/cluster-name-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/cluster/prod-owner_cr.yaml")),
 				fake.RoleAtPath("prod-sre.yaml",
 					core.Name("prod-sre"),
 					core.Namespace("prod-shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.ClusterNameAnnotationKey, "prod"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/prod-sre.yaml")),
 			},
@@ -854,12 +898,15 @@ func TestUnstructured(t *testing.T) {
 			want: []ast.FileObject{
 				fake.Namespace("prod-shipping",
 					core.Label("sre-supported", "true"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:sre-supported":{}}}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/prod-shipping/namespace.yaml")),
 				fake.Namespace("dev-shipping",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/dev-shipping/namespace.yaml")),
 				fake.RoleAtPath("sre-role.yaml",
 					core.Name("sre-role"),
 					core.Namespace("prod-shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{"f:configmanagement.gke.io/namespace-selector":{}}},"f:rules":{}}`),
 					core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre"),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/sre-role.yaml")),
 			},
@@ -878,6 +925,7 @@ func TestUnstructured(t *testing.T) {
 				fake.RoleAtPath("sre-role.yaml",
 					core.Name("sre-role"),
 					core.Namespace("shipping"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/sre-role.yaml")),
 			},
 		},
@@ -897,6 +945,7 @@ func TestUnstructured(t *testing.T) {
 			},
 			want: []ast.FileObject{
 				fake.Namespace("namespaces/foo",
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{}`),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/namespaces/foo/namespace.yaml")),
 				fake.UnstructuredAtPath(
 					schema.GroupVersionKind{
@@ -906,6 +955,7 @@ func TestUnstructured(t *testing.T) {
 					},
 					"foo/validator.yaml",
 					core.Namespace("foo"),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{".":{},"f:configmanagement.gke.io/managed":{}},"f:labels":{}}}`),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled),
 					core.Annotation(v1.SourcePathAnnotationKey, dir+"/foo/validator.yaml")),
 			},
@@ -936,11 +986,17 @@ func TestUnstructured(t *testing.T) {
 		},
 	}
 
+	converter, err := declared.ValueConverterForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.discoveryCRDs))
 			tc.options.BuildScoper = discovery.ScoperBuilder(dc)
 			tc.options.PolicyDir = cmpath.RelativeSlash(dir)
+			tc.options.Converter = converter
 
 			got, errs := Unstructured(tc.objs, tc.options)
 			if !errors.Is(errs, tc.wantErrs) {

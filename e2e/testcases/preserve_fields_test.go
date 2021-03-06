@@ -269,7 +269,9 @@ func TestPreserveLastApplied(t *testing.T) {
 		v1.ClusterNameAnnotationKey,
 		v1.ResourceManagementKey,
 		v1.SourcePathAnnotationKey,
-		v1.SyncTokenAnnotationKey}
+		v1.SyncTokenAnnotationKey,
+		v1alpha1.DeclaredFieldsKey,
+	}
 	if nt.MultiRepo {
 		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}
@@ -367,7 +369,9 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		v1.ClusterNameAnnotationKey,
 		v1.ResourceManagementKey,
 		v1.SourcePathAnnotationKey,
-		v1.SyncTokenAnnotationKey}
+		v1.SyncTokenAnnotationKey,
+		v1alpha1.DeclaredFieldsKey,
+	}
 	if nt.MultiRepo {
 		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, kptapplier.OwningInventoryKey)
 	}

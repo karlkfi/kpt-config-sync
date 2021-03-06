@@ -81,6 +81,7 @@ func TestRoot_Parse(t *testing.T) {
 				),
 				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
+					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
@@ -92,6 +93,11 @@ func TestRoot_Parse(t *testing.T) {
 		},
 	}
 
+	converter, err := declared.ValueConverterForTest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			parser := &root{
@@ -100,6 +106,7 @@ func TestRoot_Parse(t *testing.T) {
 					parser:             &fakeParser{parse: tc.parsed},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+					converter:          converter,
 					updater: updater{
 						scope:     declared.RootReconciler,
 						resources: &declared.Resources{},

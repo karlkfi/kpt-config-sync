@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/vet/vettesting"
 	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
@@ -143,12 +144,18 @@ func (pt Test) RunAll(t *testing.T) {
 			parser := filesystem.NewParser(fakeReader)
 			fileObjects, errs := parser.Parse(filePaths)
 
+			converter, err := declared.ValueConverterForTest()
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			f := discoverytest.Client(discoverytest.CRDsToAPIGroupResources(tc.SyncedCRDs))
 			options := validate.Options{
 				ClusterName:       tc.ClusterName,
 				PolicyDir:         policyDir,
 				PreviousCRDs:      tc.SyncedCRDs,
 				BuildScoper:       discovery.ScoperBuilder(f),
+				Converter:         converter,
 				AllowUnknownKinds: tc.Serverless,
 			}
 			fileObjects, vErrs := validate.Hierarchical(fileObjects, options)

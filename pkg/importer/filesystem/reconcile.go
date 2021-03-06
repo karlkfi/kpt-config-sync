@@ -10,6 +10,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/differ"
@@ -48,6 +49,7 @@ type reconciler struct {
 	parser          ConfigParser
 	client          *syncerclient.Client
 	discoveryClient discovery.DiscoveryInterface
+	converter       *declared.ValueConverter
 	decoder         decode.Decoder
 	format          SourceFormat
 	repoClient      *repo.Client
@@ -114,6 +116,11 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 		return nil, err
 	}
 
+	converter, err := declared.NewValueConverter(discoveryClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &reconciler{
 		clusterName:     clusterName,
 		absGitDir:       absGitDir,
@@ -121,6 +128,7 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 		parser:          parser,
 		client:          client,
 		discoveryClient: discoveryClient,
+		converter:       converter,
 		repoClient:      repoClient,
 		cache:           cache,
 		decoder:         decoder,
@@ -254,6 +262,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		PolicyDir:             c.policyDir,
 		PreviousCRDs:          syncedCRDs,
 		BuildScoper:           utildiscovery.ScoperBuilder(c.discoveryClient),
+		Converter:             c.converter,
 		DefaultNamespace:      metav1.NamespaceDefault,
 		IsNamespaceReconciler: false,
 	}

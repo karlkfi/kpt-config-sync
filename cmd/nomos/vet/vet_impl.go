@@ -78,12 +78,21 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		}
 	}
 
+	var converter *declared.ValueConverter
+	if !skipAPIServer {
+		converter, err = declared.NewValueConverter(dc)
+		if err != nil {
+			return err
+		}
+	}
+
 	addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
 
 	options := validate.Options{
 		PolicyDir:         cmpath.RelativeOS(root),
 		PreviousCRDs:      syncedCRDs,
 		BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+		Converter:         converter,
 		AllowUnknownKinds: skipAPIServer,
 	}
 

@@ -2,6 +2,7 @@ package declared
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/google/nomos/pkg/testing/openapitest"
@@ -100,8 +101,7 @@ func typedParser(doc *openapi_v2.Document) (*typed.Parser, error) {
 
 // ValueConverterForTest returns a ValueConverter initialized for unit tests.
 func ValueConverterForTest() (*ValueConverter, error) {
-	path := filepath.Join("..", "testing", "openapitest", "openapi_v2.txt")
-	doc, err := openapitest.Doc(path)
+	doc, err := openapitest.Doc(pathToTestFile())
 	if err != nil {
 		return nil, err
 	}
@@ -116,4 +116,22 @@ func ValueConverterForTest() (*ValueConverter, error) {
 	}
 
 	return &ValueConverter{nil, oa, parser}, nil
+}
+
+func pathToTestFile() string {
+	path, err := os.Getwd()
+	if err != nil {
+		return err.Error()
+	}
+
+	// All of our code sits in subdirectories (pkg, cmd, etc) under this path:
+	// github.com/google/nomos/...
+	// Some unit tests run from pkg and some from cmd, so we climb up from the
+	// working directory to "google", and then specify back down to the file. We
+	// can't use "nomos" because that directory name is repeated in:
+	// github.com/google/nomos/cmd/nomos
+	for filepath.Base(path) != "google" {
+		path = filepath.Dir(path)
+	}
+	return filepath.Join(path, "nomos", "pkg", "testing", "openapitest", "openapi_v2.txt")
 }

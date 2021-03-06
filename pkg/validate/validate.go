@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
@@ -34,6 +35,10 @@ type Options struct {
 	// BuildScoper is a function that builds a Scoper to identify which objects
 	// are cluster-scoped or namespace-scoped.
 	BuildScoper discovery.BuildScoperFunc
+	// Converter is used to encode the declared fields of each object into an
+	// annotation on that object so that the validating admission webhook can
+	// prevent those fields from being changed.
+	Converter *declared.ValueConverter
 	// AllowUnknownKinds is a flag to determine if we should throw an error or
 	// proceed when the Scoper is unable to determine the scope of an object
 	// kind. We only set this to true if a tool is running in offline mode (eg we
@@ -68,6 +73,7 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 		Objects:           objs,
 		PreviousCRDs:      opts.PreviousCRDs,
 		BuildScoper:       opts.BuildScoper,
+		Converter:         opts.Converter,
 		AllowUnknownKinds: opts.AllowUnknownKinds,
 	}
 	if errs := raw.Hierarchical(rawObjects); errs != nil {
@@ -138,6 +144,7 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 		Objects:           objs,
 		PreviousCRDs:      opts.PreviousCRDs,
 		BuildScoper:       opts.BuildScoper,
+		Converter:         opts.Converter,
 		AllowUnknownKinds: opts.AllowUnknownKinds,
 	}
 	if errs := raw.Unstructured(rawObjects); errs != nil {

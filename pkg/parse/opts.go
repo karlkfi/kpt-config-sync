@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
@@ -36,6 +37,10 @@ type opts struct {
 	// discoveryInterface is how the parser learns what types are currently
 	// available on the cluster.
 	discoveryInterface discovery.ServerResourcer
+
+	// converter uses the discoveryInterface to encode the declared fields of
+	// objects in Git.
+	converter *declared.ValueConverter
 
 	files
 	updater

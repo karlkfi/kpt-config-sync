@@ -2,6 +2,7 @@ package objects
 
 import (
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/customresources"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -24,6 +25,7 @@ type Raw struct {
 	Objects           []ast.FileObject
 	PreviousCRDs      []*v1beta1.CustomResourceDefinition
 	BuildScoper       utildiscovery.BuildScoperFunc
+	Converter         *declared.ValueConverter
 	AllowUnknownKinds bool
 }
 
