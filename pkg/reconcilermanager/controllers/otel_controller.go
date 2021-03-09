@@ -92,10 +92,7 @@ func (r *OtelReconciler) patchStandardConfigMap(ctx context.Context, cm *corev1.
 	existing := cm.DeepCopy()
 	patch := client.MergeFrom(existing)
 	if _, ok := cm.Data["otel-collector-config.yaml"]; ok {
-		creds, err := getDefaultCredentials(ctx)
-		if err != nil {
-			return nil, err
-		}
+		creds, _ := getDefaultCredentials(ctx)
 		if creds != nil && creds.ProjectID != "" {
 			cm.Data["otel-collector-config.yaml"] = metrics.CollectorConfigStackdriver
 		}

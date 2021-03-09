@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -53,7 +54,7 @@ func TestOtelReconciler(t *testing.T) {
 	fakeClient, testReconciler := setupOtelReconciler(t, cm, fake.DeploymentObject(core.Name(metrics.OtelCollectorName), core.Namespace(metrics.MonitoringNamespace)))
 
 	getDefaultCredentials = func(ctx context.Context) (*google.Credentials, error) {
-		return nil, nil
+		return nil, errors.New("could not find default credentials")
 	}
 
 	// Test updating Configmap and Deployment resources.
