@@ -50,9 +50,9 @@ func ReservedDirectoryNameError(dir cmpath.Relative) status.Error {
 // InvalidDirectoryNameError represents an illegal usage of a reserved name.
 func InvalidDirectoryNameError(dir cmpath.Relative) status.Error {
 	return invalidDirectoryNameError.
-		Sprintf(`Directory names MUST be valid Kubernetes Namespace names. Rename %q so that it:
+		Sprintf(`Directory names MUST be valid Kubernetes Namespace names and must not be "config-management-system". Rename %q so that it:
 1. has a length of 63 characters or fewer;
-2. consists only of lowercase letters (a-z), digits (0-9), and hyphen '-'; and
-3. begins and ends with a lowercase letter or digit.`, dir.Base()).
+2. consists only of lowercase letters (a-z), digits (0-9), and hyphen '-';
+3. begins and ends with a lowercase letter or digit`, dir.Base()).
 		BuildWithPaths(dir)
 }
