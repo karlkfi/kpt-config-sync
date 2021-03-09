@@ -424,6 +424,22 @@ func TestHierarchical(t *testing.T) {
 			},
 		},
 		{
+			name: "same namespace resource with different cluster selector",
+			objs: []ast.FileObject{
+				fake.Repo(),
+				fake.FileObject(clusterSelector("prod-only", "environment", "prod"), "clusterregistry/prod-only_cs.yaml"),
+				fake.FileObject(clusterSelector("dev-only", "environment", "dev"), "clusterregistry/dev-only_cs.yaml"),
+				fake.NamespaceAtPath("namespaces/foo/foo-prod.yaml",
+					core.Name("foo"), core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-only")),
+				fake.NamespaceAtPath("namespaces/foo/foo-dev.yaml",
+					core.Name("foo"), core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "dev-only")),
+				fake.NamespaceAtPath("namespaces/foo/foo-stg.yaml",
+					core.Name("foo"), core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "stg-only")),
+				fake.NamespaceAtPath("namespaces/foo/foo-test.yaml",
+					core.Name("foo"), core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "test-only")),
+			},
+		},
+		{
 			name:     "no objects fails",
 			wantErrs: fake.Errors(system.MissingRepoErrorCode),
 		},
