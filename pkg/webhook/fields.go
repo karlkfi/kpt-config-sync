@@ -8,6 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/declared"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,7 +68,9 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 		s := path.String()
 		if strings.HasPrefix(s, annotations) {
 			s = s[len(annotations):]
-			if strings.HasPrefix(s, configsync.GroupName) || strings.HasPrefix(s, configmanagement.GroupName) {
+			if strings.HasPrefix(s, configsync.GroupName) ||
+				strings.HasPrefix(s, configmanagement.GroupName) ||
+				strings.HasPrefix(s, v1beta1.LifecyclePrefix) {
 				csSet.Insert(path)
 			}
 		} else if strings.HasPrefix(s, labels) {

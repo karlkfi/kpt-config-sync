@@ -6,6 +6,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kptapplier"
@@ -366,6 +367,23 @@ func TestValidator_Handle(t *testing.T) {
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 				core.Label("acme.com/foo", "bar")),
 			user: bob(),
+		},
+		{
+			name: "Bob manually modifies lifecycle annotation",
+			oldObj: fake.RoleObject(
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation)),
+			newObj: fake.RoleObject(
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, "other")),
+			deny: metav1.StatusReasonForbidden,
+		},
+		{
+			name: "Bob manually adds lifecycle annotation",
+			oldObj: fake.RoleObject(
+				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)),
+			newObj: fake.RoleObject(
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation)),
+			deny: metav1.StatusReasonForbidden,
 		},
 	}
 

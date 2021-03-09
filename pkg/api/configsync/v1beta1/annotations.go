@@ -24,4 +24,20 @@ const (
 	// ClusterNameSelectorAnnotationKey is the annotation key set on ConfigSync-managed resources that refers
 	// to the name of the ClusterSelector resource.
 	ClusterNameSelectorAnnotationKey = ConfigSyncPrefix + "cluster-name-selector"
+
+	// LifecyclePrefix is the prefix for all lifecycle annotations.
+	LifecyclePrefix = "client.lifecycle.config.k8s.io"
+
+	// LifecycleMutationAnnotation is the lifecycle annotation key for the mutation
+	// operation. The annotation must be declared in the repository in order to
+	// function properly. This annotation only has effect when the object
+	// updated in the cluster or the declaration changes. It has no impact on
+	// behavior related to object creation/deletion, or if the object does not
+	// already exist.
+	LifecycleMutationAnnotation = LifecyclePrefix + "/mutation"
+
+	// PreventMutation is the value used with LifecycleMutationAnnotation to
+	// prevent mutating a resource. That is, if the resource exists on the cluster
+	// then ACM will make no attempt to modify it.
+	PreventMutation = "ignore"
 )

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -176,6 +177,54 @@ func TestDiffType(t *testing.T) {
 		{
 			name: "no declared or actual, no op (log error)",
 			want: NoOp,
+		},
+		// PreventMutation path.
+		{
+			name: "prevent mutations",
+			declared: fake.RoleObject(
+				syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation("foo", "bar"),
+			),
+			actual: fake.RoleObject(
+				syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation("foo", "qux"),
+			),
+			want: NoOp,
+		},
+		{
+			name: "update if actual missing annotation",
+			// The use case where the user has added the annotation to an object. We
+			// need to update the object so the actual one has the annotation now.
+			declared: fake.RoleObject(
+				syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation("foo", "bar"),
+			),
+			actual: fake.RoleObject(
+				syncertest.ManagementEnabled,
+				core.Annotation("foo", "qux"),
+			),
+			want: Update,
+		},
+		{
+			name: "update if declared missing annotation",
+			// This corresponds to the use case where the user has removed the
+			// annotation, indicating they want us to begin updating the object again.
+			//
+			// There is an edge case where users manually annotate in-cluster objects,
+			// which has no effect on our behavior; we only honor declared lifecycle
+			// annotations.
+			declared: fake.RoleObject(
+				syncertest.ManagementEnabled,
+				core.Annotation("foo", "bar"),
+			),
+			actual: fake.RoleObject(
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation("foo", "qux"),
+			),
+			want: Update,
 		},
 	}
 

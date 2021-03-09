@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
@@ -104,9 +105,22 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 	// nomos vet error. Note that as-is, it is valid to declare something owned by
 	// another object, possible causing (and being surfaced as) a resource fight.
 	canManage := CanManage(manager, d.Actual)
-
 	switch {
 	case differ.ManagementEnabled(d.Declared) && canManage:
+		if d.Actual.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.PreventMutation &&
+			d.Declared.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.PreventMutation {
+			// The declared and actual object both have the lifecycle mutation
+			// annotation set to ignore, so we should take no action as the user does
+			// not want us to make changes to the object.
+			//
+			// If the annotation is on the actual object but not the one declared in
+			// the repository, the update should remove the annotation from the one
+			// in the cluster.
+			//
+			// If the annotation is on the declared object but not the actual one
+			// on the cluster, we need to add it to the one in the cluster.
+			return NoOp
+		}
 		return Update
 	case differ.ManagementEnabled(d.Declared) && !canManage:
 		// This reconciler can't manage this object but is erroneously being told to.
