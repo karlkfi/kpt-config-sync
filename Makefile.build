@@ -92,7 +92,8 @@ generate-deployments: \
 		$(GEN_DEPLOYMENT_DIR)/monitor.yaml \
 		$(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml \
 		$(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml \
-		$(GEN_DEPLOYMENT_DIR)/otel-collector.yaml
+		$(GEN_DEPLOYMENT_DIR)/otel-collector.yaml \
+		$(GEN_DEPLOYMENT_DIR)/admission-webhook.yaml
 	@echo "+++ Finished generating all yaml"
 
 # Generates the podspec yaml for the component specified.
@@ -128,6 +129,13 @@ $(GEN_DEPLOYMENT_DIR)/otel-collector.yaml: \
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
 	@sed -e 's|IMAGE_NAME|$(OTEL_COLLECTOR_TAG)|' < $< > $@
+
+.PHONY: $(GEN_DEPLOYMENT_DIR)/admission-webhook.yaml
+$(GEN_DEPLOYMENT_DIR)/admission-webhook.yaml: \
+		manifests/templates/admission-webhook.yaml
+	@echo "+++ Generating yaml $@"
+	@mkdir -p $(dir $@)
+	@sed -e 's|IMAGE_NAME|$(ADMISSION_WEBHOOK_TAG)|' < $< > $@
 
 ###################################
 # nomos-manifest
