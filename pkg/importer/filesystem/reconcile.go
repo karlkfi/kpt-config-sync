@@ -25,7 +25,6 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/google/nomos/pkg/validate"
-	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -277,12 +276,6 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 		return reconcile.Result{}, nil
-	}
-
-	err = webhookconfiguration.Update(ctx, c.client.Client, c.discoveryClient, fileObjects)
-	if err != nil {
-		// Don't block if updating the admission webhook fails.
-		glog.Errorf("Failed to update admission webhook: %v", err)
 	}
 
 	gs := makeGitState(absGitDir.OSPath(), fileObjects)

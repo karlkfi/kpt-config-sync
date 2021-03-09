@@ -9,8 +9,10 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/webhook/configuration"
+	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,14 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-var enabled = false
-
-func enable() {
-	// For now we only enable this functionality for unit tests. Will be deleted
-	// once we trust this to function as expected.
-	enabled = true
-}
 
 // AddValidator adds the admission webhook validator to the passed manager.
 func AddValidator(mgr manager.Manager) error {
@@ -61,13 +55,7 @@ func handler(cfg *rest.Config) (*Validator, error) {
 }
 
 // Handle implements admission.Handler
-func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if !enabled {
-		// Disable the admission controller's Handle function as we experiment with
-		// deploying it.
-		return admission.Allowed("no-op Admission Controller")
-	}
-
+func (v *Validator) Handle(_ context.Context, req admission.Request) admission.Response {
 	// An admission request for a sub-resource (such as a Scale) will not include
 	// the full parent for us to validate until the admission chain is fixed:
 	// https://github.com/kubernetes/enhancements/pull/1600
@@ -177,20 +165,40 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Respons
 }
 
 func convertObjects(req admission.Request) (client.Object, client.Object, error) {
-	var oldObj, newObj client.Object
-	if req.OldObject.Object != nil {
+	var oldObj client.Object
+	switch {
+	case req.OldObject.Object != nil:
+		// We got an already-parsed object.
 		var ok bool
 		oldObj, ok = req.OldObject.Object.(client.Object)
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to convert to client.Object: %v", req.OldObject.Object)
 		}
+	case req.OldObject.Raw != nil:
+		// We got raw JSON bytes instead of an object.
+		oldU := &unstructured.Unstructured{}
+		if err := oldU.UnmarshalJSON(req.OldObject.Raw); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to convert to client.Object: %v", req.OldObject.Raw)
+		}
+		oldObj = oldU
 	}
-	if req.Object.Object != nil {
+
+	var newObj client.Object
+	switch {
+	case req.Object.Object != nil:
+		// We got an already-parsed object.
 		var ok bool
 		newObj, ok = req.Object.Object.(client.Object)
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to convert to client.Object: %v", req.Object.Object)
 		}
+	case req.Object.Raw != nil:
+		// We got raw JSON bytes instead of an object.
+		newU := &unstructured.Unstructured{}
+		if err := newU.UnmarshalJSON(req.Object.Raw); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to convert to client.Object: %v", req.Object.Raw)
+		}
+		newObj = newU
 	}
 	return oldObj, newObj, nil
 }

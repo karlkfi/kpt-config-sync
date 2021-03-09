@@ -540,6 +540,8 @@ func (nt *NT) Kubectl(args ...string) ([]byte, error) {
 // MustKubectl fails the test immediately if the kubectl command fails. On
 // success, returns STDOUT.
 func (nt *NT) MustKubectl(args ...string) []byte {
+	nt.T.Helper()
+
 	out, err := nt.Kubectl(args...)
 	if err != nil {
 		nt.T.Log(append([]string{"kubectl"}, args...))

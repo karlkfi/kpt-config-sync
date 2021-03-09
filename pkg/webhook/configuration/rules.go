@@ -108,7 +108,7 @@ func ruleFor(gv schema.GroupVersion) admissionv1.RuleWithOperations {
 func selectorFor(version string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			VersionLabel: version,
+			DeclaredVersionLabel: version,
 		},
 	}
 }

@@ -70,9 +70,9 @@ func TestRevertClusterRole(t *testing.T) {
 			Verbs:     []string{"get", "list", "create"},
 		},
 	}
-	declaredcr := fake.ClusterRoleObject(core.Name(crName))
-	declaredcr.Rules = declaredRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
+	declaredCr := fake.ClusterRoleObject(core.Name(crName))
+	declaredCr.Rules = declaredRules
+	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredCr)
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSyncs()
 
@@ -90,11 +90,19 @@ func TestRevertClusterRole(t *testing.T) {
 			Verbs:     []string{"get", "list"}, // missing "create"
 		},
 	}
-	appliedcr := fake.ClusterRoleObject(core.Name(crName))
-	appliedcr.Rules = appliedRules
-	err = nt.Update(appliedcr)
-	if err != nil {
-		t.Fatalf("applying conflicting ClusterRole: %v", err)
+	appliedCr := fake.ClusterRoleObject(core.Name(crName))
+	appliedCr.Rules = appliedRules
+	err = nt.Update(appliedCr)
+	if nt.MultiRepo {
+		// The admission webhook should deny the conflicting change.
+		if err == nil {
+			t.Fatal("got Update error = nil, want admission webhook to deny conflicting update")
+		}
+	} else {
+		// The admission webhook isn't enabled in mono repo.
+		if err != nil {
+			t.Fatalf("applying conflicting ClusterRole: %v", err)
+		}
 	}
 
 	// Ensure the conflict is reverted.
@@ -151,9 +159,9 @@ func TestClusterRoleLifecycle(t *testing.T) {
 			Verbs:     []string{"get", "list", "create"},
 		},
 	}
-	declaredcr := fake.ClusterRoleObject(core.Name(crName))
-	declaredcr.Rules = declaredRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredcr)
+	declaredCr := fake.ClusterRoleObject(core.Name(crName))
+	declaredCr.Rules = declaredRules
+	nt.Root.Add("acme/cluster/clusterrole.yaml", declaredCr)
 	nt.Root.CommitAndPush("add get/list/create ClusterRole")
 	nt.WaitForRepoSyncs()
 
@@ -193,9 +201,9 @@ func TestClusterRoleLifecycle(t *testing.T) {
 			Verbs:     []string{"get", "list"}, // missing "create"
 		},
 	}
-	updatedcr := fake.ClusterRoleObject(core.Name(crName))
-	updatedcr.Rules = updatedRules
-	nt.Root.Add("acme/cluster/clusterrole.yaml", updatedcr)
+	updatedCr := fake.ClusterRoleObject(core.Name(crName))
+	updatedCr.Rules = updatedRules
+	nt.Root.Add("acme/cluster/clusterrole.yaml", updatedCr)
 	nt.Root.CommitAndPush("update ClusterRole to get/list")
 
 	// Ensure the resource is updated.

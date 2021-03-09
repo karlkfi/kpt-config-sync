@@ -25,7 +25,7 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
 		fields, err := encodeDeclaredFields(objs.Converter, obj.Object)
 		if err != nil {
-			errs = status.Append(errs, status.InternalErrorf("failed to encode declared fields: %v", err))
+			errs = status.Append(errs, status.InternalErrorBuilder.Sprint("failed to encode declared fields").Wrap(err).Build())
 		}
 		core.SetAnnotation(obj, v1alpha1.DeclaredFieldsKey, string(fields))
 	}

@@ -23,6 +23,7 @@ import (
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/testing/testmetrics"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -81,6 +82,7 @@ func TestRoot_Parse(t *testing.T) {
 				),
 				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
+					core.Label(configuration.DeclaredVersionLabel, "v1"),
 					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),

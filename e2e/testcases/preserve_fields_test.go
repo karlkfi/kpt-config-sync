@@ -14,10 +14,10 @@ import (
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -167,19 +167,23 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 	nt.Root.Add("acme/cluster/rbac-viewer-cr.yaml", rbacViewer)
 
 	aggregateRoleName := "aggregate"
-	aggregateRole := fake.ClusterRoleObject(core.Name(aggregateRoleName))
-	aggregateRole.AggregationRule = &rbacv1.AggregationRule{
-		ClusterRoleSelectors: []metav1.LabelSelector{{
-			MatchLabels: map[string]string{"permissions": "viewer"},
-		}},
-	}
-	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
+	// We have to declare the YAML explicitly because otherwise the declaration
+	// explicitly declares "rules: []" due to how Go handles empty/unset fields.
+	nt.Root.AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      permissions: viewer`))
 
 	nt.Root.CommitAndPush("declare ClusterRoles")
 	nt.WaitForRepoSyncs()
 
 	// Ensure the aggregate rule is actually aggregated.
-	duration, err := nomostest.Retry(60*time.Second, func() error {
+	duration, err := nomostest.Retry(20*time.Second, func() error {
 		return nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{}, clusterRoleHasRules([]rbacv1.PolicyRule{
 			nsViewer.Rules[0], rbacViewer.Rules[0],
 		}))
@@ -190,43 +194,37 @@ func TestPreserveGeneratedClusterRoleFields(t *testing.T) {
 	}
 
 	// Update aggregateRole with a new label.
-	aggregateRole.Labels["meaningless-label"] = "exists"
-	nt.Root.Add("acme/cluster/aggregate-viewer-cr.yaml", aggregateRole)
+	nt.Root.AddFile("acme/cluster/aggregate-viewer-cr.yaml", []byte(`
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: aggregate
+  labels:
+    meaningless-label: exists
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      permissions: viewer`))
 	nt.Root.CommitAndPush("add label to aggregate ClusterRole")
 	nt.WaitForRepoSyncs()
 
-	// TODO(b/162496882): We don't usually preserve the aggregate field, so
-	//  we Retry when in reality we would just check once.
-	//  We don't have a robust check for this bug right now as it isn't triggered
-	//  100% of the time.
-
-	// First, ensure that RBAC is actually continuing to update the aggregate
-	// role with the correct permissions.
-	d, err := nomostest.Retry(20*time.Second, func() error {
-		// If b/162496882 were not present, we wouldn't need to retry this. We'd
-		// just check it once and fail if we got an error the first time.
-		// As-is, it is still possible to flake but this should be enough tries that
-		// those will be rare.
-		return nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{},
-			clusterRoleHasRules([]rbacv1.PolicyRule{
-				nsViewer.Rules[0], rbacViewer.Rules[0],
-			}))
-	})
-	t.Logf("waited %v for RBAC to correct aggregate rules", d)
+	// Ensure we don't overwrite the aggregate rules.
+	err = nt.Validate(aggregateRoleName, "", &rbacv1.ClusterRole{},
+		clusterRoleHasRules([]rbacv1.PolicyRule{
+			nsViewer.Rules[0], rbacViewer.Rules[0],
+		}))
 	if err != nil {
-		// Failing on this check probably indicates a new bug was introduced.
 		t.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
-	// TODO(b/162496882): intermittent resource_fights_total metric is emitted
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
-	//	return nt.ValidateErrorMetricsNotFound()
-	//})
-	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
-	//}
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		return nt.ValidateErrorMetricsNotFound()
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
 }
 
 // TestPreserveLastApplied ensures we don't destroy the last-applied-configuration
@@ -253,18 +251,6 @@ func TestPreserveLastApplied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// At this point the fake resource does not have `last-applied-configuration`
-	// annotation, so we are setting it rather than overwriting it. The version on
-	// cluster has the `last-declared-config` annotation and no
-	// `last-applied-annotation`. Since kubectl replace does a delete-then-create,
-	// we are effectively recreating the resource with the "last-applied"
-	// annotation (which we no longer set starting in 1.4.1). We are then
-	// verifying that ConfigSync copies the contents of "last-applied" to
-	// "last-declared" and deletes "last-applied".
-	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
-	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
-	nt.MustKubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
-
 	annotationKeys := []string{
 		v1.ClusterNameAnnotationKey,
 		v1.ResourceManagementKey,
@@ -277,12 +263,43 @@ func TestPreserveLastApplied(t *testing.T) {
 	}
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
-	_, err = nomostest.Retry(20*time.Second, func() error {
-		return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
-			nomostest.HasExactlyAnnotationKeys(withDeclared...))
-	})
-	if err != nil {
-		t.Fatal(err)
+	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
+	nt.Root.Add("ns-viewer-cr-replace.yaml", nsViewer)
+	if nt.MultiRepo {
+		// Admission webhook denies change. We don't get a "LastApplied" annotation
+		// as we prevented the change outright.
+		_, err = nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
+		if err == nil {
+			t.Fatal("got kubectl replace err = nil, want admission webhook to deny")
+		}
+
+		_, err = nomostest.Retry(20*time.Second, func() error {
+			return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
+				nomostest.HasExactlyAnnotationKeys(annotationKeys...))
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		// No admission webhook in mono repo.
+
+		// At this point the fake resource does not have `last-applied-configuration`
+		// annotation, so we are setting it rather than overwriting it. The version on
+		// cluster has the `last-declared-config` annotation and no
+		// `last-applied-annotation`. Since kubectl replace does a delete-then-create,
+		// we are effectively recreating the resource with the "last-applied"
+		// annotation (which we no longer set starting in 1.4.1). We are then
+		// verifying that ConfigSync copies the contents of "last-applied" to
+		// "last-declared" and deletes "last-applied".
+		nt.MustKubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
+
+		_, err = nomostest.Retry(20*time.Second, func() error {
+			return nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{},
+				nomostest.HasExactlyAnnotationKeys(withDeclared...))
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Validate no error metrics are emitted.
@@ -309,10 +326,12 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no labels to repo")
 	nt.WaitForRepoSyncs()
 
+	var defaultLabels = []string{v1.ManagedByKey, configuration.DeclaredVersionLabel}
+
 	// Checking that the configmap with no labels appears on cluster, and
 	// that no user labels are specified
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey))
+		nomostest.HasExactlyLabelKeys(defaultLabels...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,7 +343,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Checking that label is updated after syncing an update.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, "baz"))
+		nomostest.HasExactlyLabelKeys(append(defaultLabels, "baz")...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,7 +355,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Check that the label is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey))
+		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, configuration.DeclaredVersionLabel))
 	if err != nil {
 		t.Fatal(err)
 	}

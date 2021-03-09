@@ -60,7 +60,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							VersionLabel: "v1",
+							DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{
@@ -114,7 +114,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							VersionLabel: "v1",
+							DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{
@@ -125,7 +125,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							VersionLabel: "v1",
+							DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{

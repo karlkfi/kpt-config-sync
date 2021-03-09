@@ -49,7 +49,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 			glog.Warning(InvalidWebhookWarning("removed admission webhook missing objectSelector.matchLabels"))
 			continue
 		}
-		version := webhook.ObjectSelector.MatchLabels[VersionLabel]
+		version := webhook.ObjectSelector.MatchLabels[DeclaredVersionLabel]
 
 		if group == "*" || version == "*" {
 			// This was probably added by a user. It can cause the webhook to have
@@ -76,8 +76,8 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		if groupI != groupJ {
 			return groupI < groupJ
 		}
-		versionI := webhooks[i].ObjectSelector.MatchLabels[VersionLabel]
-		versionJ := webhooks[j].ObjectSelector.MatchLabels[VersionLabel]
+		versionI := webhooks[i].ObjectSelector.MatchLabels[DeclaredVersionLabel]
+		versionJ := webhooks[j].ObjectSelector.MatchLabels[DeclaredVersionLabel]
 		return versionI < versionJ
 	})
 

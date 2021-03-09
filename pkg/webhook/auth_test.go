@@ -66,17 +66,17 @@ func TestIsImporter(t *testing.T) {
 	}{
 		{
 			name:     "Config Sync importer service account",
-			username: "system:serviceaccounts:config-management-system:importer",
+			username: "system:serviceaccount:config-management-system:importer",
 			want:     true,
 		},
 		{
 			name:     "Config Sync monitor service account",
-			username: "system:serviceaccounts:config-management-system:monitor",
+			username: "system:serviceaccount:config-management-system:monitor",
 			want:     false,
 		},
 		{
 			name:     "Random other service account named importer",
-			username: "system:serviceaccounts:foo-namespace:importer",
+			username: "system:serviceaccount:foo-namespace:importer",
 			want:     false,
 		},
 		{
@@ -103,17 +103,17 @@ func TestIsRootReconciler(t *testing.T) {
 	}{
 		{
 			name:     "Config Sync root reconciler service account",
-			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			username: "system:serviceaccount:config-management-system:root-reconciler",
 			want:     true,
 		},
 		{
 			name:     "Config Sync monitor service account",
-			username: "system:serviceaccounts:config-management-system:monitor",
+			username: "system:serviceaccount:config-management-system:monitor",
 			want:     false,
 		},
 		{
 			name:     "Random other service account named root-reconciler",
-			username: "system:serviceaccounts:foo-namespace:root-reconciler",
+			username: "system:serviceaccount:foo-namespace:root-reconciler",
 			want:     false,
 		},
 		{
@@ -141,31 +141,31 @@ func TestCanManage(t *testing.T) {
 	}{
 		{
 			name:     "Root reconciler can manage its own object",
-			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			username: "system:serviceaccount:config-management-system:root-reconciler",
 			manager:  ":root",
 			want:     true,
 		},
 		{
 			name:     "Root reconciler can manage object with different manager",
-			username: "system:serviceaccounts:config-management-system:root-reconciler",
+			username: "system:serviceaccount:config-management-system:root-reconciler",
 			manager:  "bookstore",
 			want:     true,
 		},
 		{
 			name:     "Namespace reconciler can manage its own object",
-			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
 			manager:  "bookstore",
 			want:     true,
 		},
 		{
 			name:     "Namespace reconciler can not manage object with different manager",
-			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
 			manager:  "videostore",
 			want:     false,
 		},
 		{
 			name:     "Namespace reconciler can manage object with no manager",
-			username: "system:serviceaccounts:config-management-system:ns-reconciler-bookstore",
+			username: "system:serviceaccount:config-management-system:ns-reconciler-bookstore",
 			manager:  "",
 			want:     true,
 		},

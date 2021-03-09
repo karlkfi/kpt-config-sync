@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
@@ -11,14 +10,17 @@ import (
 )
 
 const (
+	// groups use the plural "serviceaccounts"
 	saGroup          = "system:serviceaccounts"
-	saNamespaceGroup = "system:serviceaccounts:" + configmanagement.ControllerNamespace
-)
+	saNamespaceGroup = saGroup + ":" + configmanagement.ControllerNamespace
 
-var (
-	saImporter        = fmt.Sprintf("%s:%s", saNamespaceGroup, importer.Name)
-	saRootReconciler  = fmt.Sprintf("%s:%s", saNamespaceGroup, reconciler.RootSyncName)
-	saNamespacePrefix = fmt.Sprintf("%s:%s-", saNamespaceGroup, reconciler.RepoSyncPrefix)
+	// usernames use the singular "serviceaccount"
+	saGroupPrefix          = "system:serviceaccount"
+	saNamespaceGroupPrefix = saGroupPrefix + ":" + configmanagement.ControllerNamespace
+
+	saImporter        = saNamespaceGroupPrefix + ":" + importer.Name
+	saRootReconciler  = saNamespaceGroupPrefix + ":" + reconciler.RootSyncName
+	saNamespacePrefix = saNamespaceGroupPrefix + ":" + reconciler.RepoSyncPrefix + "-"
 )
 
 // isConfigSyncSA returns true if the given UserInfo represents a Config Sync

@@ -54,6 +54,7 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 	// modify them.
 	hydrators := []objects.RawVisitor{
 		hydrate.DeclaredFields,
+		hydrate.DeclaredVersion,
 		hydrate.ObjectNamespaces,
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
@@ -100,6 +101,7 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 	// so that we can filter out irrelevant objects before trying to modify them.
 	hydrators := []objects.RawVisitor{
 		hydrate.DeclaredFields,
+		hydrate.DeclaredVersion,
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 		hydrate.Filepath,

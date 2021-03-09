@@ -92,6 +92,8 @@ var (
 	// multiObjects contains the names of all objects that are necessary to
 	// install and run multi-repo Config Sync.
 	multiObjects = map[string]bool{
+		"admission-webhook":                    true,
+		"admission-webhook-cert":               true,
 		"configsync.gke.io:reconciler-manager": true,
 		reconcilermanager.ManagerName:          true,
 		"reconciler-manager-cm":                true,
@@ -104,8 +106,6 @@ var (
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.
 	sharedObjects = map[string]bool{
-		"admission-webhook":                          true,
-		"admission-webhook-cert":                     true,
 		"clusters.clusterregistry.k8s.io":            true,
 		"clusterselectors.configmanagement.gke.io":   true,
 		"container-limits":                           true,
