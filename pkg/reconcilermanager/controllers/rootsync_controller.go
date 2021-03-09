@@ -169,7 +169,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			rootsync.ClearCondition(&rs, v1alpha1.RootSyncStalled)
 		}
 	} else {
-		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+		r.log.Info("Deployment successfully reconciled", operationSubjectName, reconciler.RootSyncName, executedOperation, op)
 		rs.Status.Reconciler = reconciler.RootSyncName
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		rootsync.SetReconciling(&rs, "Deployment", msg)
@@ -265,7 +265,7 @@ func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.log.Info("ClusterRoleBinding successfully reconciled", executedOperation, op)
+		r.log.Info("ClusterRoleBinding successfully reconciled", operationSubjectName, childCRB.Name, executedOperation, op)
 	}
 	return nil
 }

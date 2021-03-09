@@ -100,7 +100,7 @@ func Run(opts Options) {
 	// new types become available.
 	mapper, err := apiutil.NewDynamicRESTMapper(cfg)
 	if err != nil {
-		glog.Fatalf("Creating DynamicRESTMapper")
+		glog.Fatalf("Error creating DynamicRESTMapper: %v", err)
 	}
 
 	cl, err := client.New(cfg, client.Options{

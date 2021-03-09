@@ -90,7 +90,7 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, 
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.log.Info("ServiceAccount successfully reconciled", executedOperation, op)
+		r.log.Info("ServiceAccount successfully reconciled", operationSubjectName, name, executedOperation, op)
 	}
 	return nil
 }

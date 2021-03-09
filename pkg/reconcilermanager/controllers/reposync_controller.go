@@ -135,7 +135,8 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	mut := r.mutationsFor(rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.
-	op, err := r.upsertDeployment(ctx, reconciler.RepoSyncName(rs.Namespace), v1.NSConfigManagementSystem, mut)
+	deploymentName := reconciler.RepoSyncName(rs.Namespace)
+	op, err := r.upsertDeployment(ctx, deploymentName, v1.NSConfigManagementSystem, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
@@ -147,7 +148,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		// check the reconciler deployment conditions.
 		result, err := r.deploymentStatus(ctx, client.ObjectKey{
 			Namespace: v1.NSConfigManagementSystem,
-			Name:      reconciler.RepoSyncName(rs.Namespace),
+			Name:      deploymentName,
 		})
 		if err != nil {
 			log.Error(err, "Failed to check reconciler deployment conditions")
@@ -179,7 +180,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
 		}
 	} else {
-		r.log.Info("Deployment successfully reconciled", executedOperation, op)
+		r.log.Info("Deployment successfully reconciled", operationSubjectName, deploymentName, executedOperation, op)
 		rs.Status.Reconciler = reconciler.RepoSyncName(rs.Namespace)
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(&rs, "Deployment", msg)
@@ -251,7 +252,7 @@ func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1
 		return err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.log.Info("RoleBinding successfully reconciled", executedOperation, op)
+		r.log.Info("RoleBinding successfully reconciled", operationSubjectName, childRB.Name, executedOperation, op)
 	}
 	return nil
 }
