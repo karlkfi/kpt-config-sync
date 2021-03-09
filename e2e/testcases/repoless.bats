@@ -31,7 +31,6 @@ test_teardown() {
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
-  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 }
@@ -52,7 +51,6 @@ test_teardown() {
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
-  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 }
@@ -73,7 +71,6 @@ test_teardown() {
   resource::check role pod-reader-backend -n backend
   resource::check namespace default
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
-  resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managedBy=configmanagement.gke.io"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
 }

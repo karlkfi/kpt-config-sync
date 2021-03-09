@@ -19,7 +19,6 @@ func HNCDepth(objs *objects.Raw) status.MultiError {
 		if obj.GroupVersionKind() == kinds.Namespace() {
 			addDepthLabels(obj)
 			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
-			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A1, v1.ManagedByValue)
 		}
 	}
 	return nil

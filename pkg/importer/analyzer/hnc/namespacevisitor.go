@@ -19,12 +19,6 @@ const (
 	// someone else, "configmanagement.gke.io" in this case.
 	AnnotationKeyV1A2 = "hnc.x-k8s.io/managed-by"
 
-	// AnnotationKeyV1A1 is the annotation that was used in HNC v0.5 (as part of its v1alpha1
-	// interface). It should be removed after the first release of HNC v0.6, likely ACM 1.5.2.
-	//
-	// TODO(b/171305869): remove
-	AnnotationKeyV1A1 = "hnc.x-k8s.io/managedBy"
-
 	// DepthSuffix is a label suffix for hierarchical namespace depth.
 	// See definition at http://bit.ly/k8s-hnc-design#heading=h.1wg2oqxxn6ka.
 	DepthSuffix = ".tree.hnc.x-k8s.io/depth"
@@ -52,7 +46,6 @@ func (v *namespaceVisitor) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObj
 	if newObject.GroupVersionKind() == kinds.Namespace() {
 		addDepthLabels(newObject, newObject.Relative)
 		core.SetAnnotation(newObject, AnnotationKeyV1A2, v1.ManagedByValue)
-		core.SetAnnotation(newObject, AnnotationKeyV1A1, v1.ManagedByValue)
 	}
 	return newObject
 }

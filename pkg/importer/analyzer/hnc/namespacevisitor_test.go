@@ -62,7 +62,6 @@ func TestBuilderVisitor(t *testing.T) {
 									Type:     node.Namespace,
 									Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace(
 										"namespaces/foo/bar",
-										core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
 										core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
 										core.Label("foo.tree.hnc.x-k8s.io/depth", "1"),
 										core.Label("bar.tree.hnc.x-k8s.io/depth", "0"))}},
@@ -73,7 +72,6 @@ func TestBuilderVisitor(t *testing.T) {
 							Relative: cmpath.RelativeSlash("namespaces/qux"),
 							Type:     node.Namespace,
 							Objects: []*ast.NamespaceObject{{FileObject: fake.Namespace("namespaces/qux",
-								core.Annotation(AnnotationKeyV1A1, v1.ManagedByValue),
 								core.Annotation(AnnotationKeyV1A2, v1.ManagedByValue),
 								core.Label("qux.tree.hnc.x-k8s.io/depth", "0"))}},
 						},

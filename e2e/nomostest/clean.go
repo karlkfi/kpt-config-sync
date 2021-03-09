@@ -132,7 +132,6 @@ func isConfigSyncAnnotation(annotation string) bool {
 		strings.Contains(annotation, v1.ConfigManagementPrefix) ||
 		strings.Contains(annotation, v1alpha1.ConfigSyncPrefix) ||
 		annotation == kptapplier.OwningInventoryKey ||
-		annotation == hnc.AnnotationKeyV1A1 ||
 		annotation == hnc.AnnotationKeyV1A2
 }
 

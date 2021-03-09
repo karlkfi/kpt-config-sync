@@ -30,12 +30,10 @@ func TestBuilderVisitor(t *testing.T) {
 			want: &objects.Raw{
 				Objects: []ast.FileObject{
 					fake.Namespace("namespaces/foo/bar",
-						core.Annotation(oldhnc.AnnotationKeyV1A1, v1.ManagedByValue),
 						core.Annotation(oldhnc.AnnotationKeyV1A2, v1.ManagedByValue),
 						core.Label("foo.tree.hnc.x-k8s.io/depth", "1"),
 						core.Label("bar.tree.hnc.x-k8s.io/depth", "0")),
 					fake.Namespace("namespaces/qux",
-						core.Annotation(oldhnc.AnnotationKeyV1A1, v1.ManagedByValue),
 						core.Annotation(oldhnc.AnnotationKeyV1A2, v1.ManagedByValue),
 						core.Label("qux.tree.hnc.x-k8s.io/depth", "0")),
 					fake.Role(),
