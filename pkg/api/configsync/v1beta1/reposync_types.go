@@ -24,7 +24,20 @@ type RepoSync struct {
 
 // RepoSyncSpec defines the desired state of a RepoSync.
 type RepoSyncSpec struct {
-	SyncSpec `json:",inline"`
+	// sourceFormat specifies how the repository is formatted.
+	// See documentation for specifics of what these options do.
+	//
+	// Must be unstructured. Optional. Set to
+	// unstructured if not specified.
+	//
+	// The validation of this is case-sensitive.
+	// +kubebuilder:validation:Pattern=^(unstructured|)$
+	// +optional
+	SourceFormat string `json:"sourceFormat,omitempty"`
+
+	// git contains configuration specific to importing policies from a Git repo.
+	// +optional
+	Git `json:"git,omitempty"`
 }
 
 // RepoSyncStatus defines the observed state of a RepoSync.

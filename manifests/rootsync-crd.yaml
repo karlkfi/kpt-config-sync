@@ -45,7 +45,7 @@ spec:
           description: RootSyncSpec defines the desired state of RootSync
           properties:
             git:
-              description: Git contains configuration specific to importing policies
+              description: git contains configuration specific to importing policies
                 from a Git repo.
               properties:
                 auth:
@@ -95,7 +95,7 @@ spec:
               - repo
               type: object
             sourceFormat:
-              description: "SourceFormat specifies how the repository is formatted.
+              description: "sourceFormat specifies how the repository is formatted.
                 See documentation for specifics of what these options do. \n Must
                 be one of hierarchy, unstructured. Optional. Set to hierarchy if not
                 specified. \n The validation of this is case-sensitive."
@@ -106,12 +106,10 @@ spec:
           description: RootSyncStatus defines the observed state of RootSync
           type: object
       type: object
-  version: v1beta1
   versions:
-  - name: v1beta1
-    served: true
-    storage: true
   - name: v1alpha1
     served: true
     storage: false
-
+  - name: v1beta1
+    served: true
+    storage: true

@@ -4,24 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// SyncSpec provides a common type that is embedded in RepoSyncSpec and RootSyncSpec.
-type SyncSpec struct {
-	// SourceFormat specifies how the repository is formatted.
-	// See documentation for specifics of what these options do.
-	//
-	// Must be one of hierarchy, unstructured. Optional. Set to
-	// hierarchy if not specified.
-	//
-	// The validation of this is case-sensitive.
-	// +kubebuilder:validation:Pattern=^(hierarchy|unstructured|)$
-	// +optional
-	SourceFormat string `json:"sourceFormat,omitempty"`
-
-	// Git contains configuration specific to importing policies from a Git repo.
-	// +optional
-	Git `json:"git,omitempty"`
-}
-
 // SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
 type SyncStatus struct {
 	// ObservedGeneration is the most recent generation observed for the sync resource.

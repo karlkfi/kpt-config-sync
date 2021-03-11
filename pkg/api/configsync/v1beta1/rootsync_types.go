@@ -24,7 +24,20 @@ type RootSync struct {
 
 // RootSyncSpec defines the desired state of RootSync
 type RootSyncSpec struct {
-	SyncSpec `json:",inline"`
+	// sourceFormat specifies how the repository is formatted.
+	// See documentation for specifics of what these options do.
+	//
+	// Must be one of hierarchy, unstructured. Optional. Set to
+	// hierarchy if not specified.
+	//
+	// The validation of this is case-sensitive.
+	// +kubebuilder:validation:Pattern=^(hierarchy|unstructured|)$
+	// +optional
+	SourceFormat string `json:"sourceFormat,omitempty"`
+
+	// git contains configuration specific to importing policies from a Git repo.
+	// +optional
+	Git `json:"git,omitempty"`
 }
 
 // RootSyncStatus defines the observed state of RootSync
