@@ -8,12 +8,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestMerge(t *testing.T) {
-	// Go doesn't allow taking the address of constants.
-	ignore := admissionv1.Ignore
-
 	testCases := []struct {
 		name        string
 		left, right *admissionv1.ValidatingWebhookConfiguration
@@ -28,124 +26,79 @@ func TestMerge(t *testing.T) {
 		{
 			name: "one vs zero webhooks",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "duplicate webhooks",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "different versions",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1beta1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1beta1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1beta1.SchemeGroupVersion),
+				},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}, {
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1beta1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1beta1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+					toWebhook(rbacv1beta1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "different groups",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(corev1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(corev1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(corev1.SchemeGroupVersion),
+				},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(corev1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(corev1.SchemeGroupVersion.Version),
-				}, {
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(corev1.SchemeGroupVersion),
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "honor FailurePolicy set to Ignore",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-					FailurePolicy:  &ignore,
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toIgnoreWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
@@ -156,13 +109,9 @@ func TestMerge(t *testing.T) {
 				}},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-					FailurePolicy:  &ignore,
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toIgnoreWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		// Invalid Webhooks
@@ -191,12 +140,9 @@ func TestMerge(t *testing.T) {
 		{
 			name: "drop webhook missing APIGroup",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
@@ -209,23 +155,17 @@ func TestMerge(t *testing.T) {
 				}},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "drop webhook missing APIVersion",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{{
@@ -235,12 +175,9 @@ func TestMerge(t *testing.T) {
 				}},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
@@ -264,40 +201,28 @@ func TestMerge(t *testing.T) {
 				}},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(corev1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(corev1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(corev1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
 			name: "drop duplicate rules",
 			left: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 	}
@@ -315,4 +240,12 @@ func TestMerge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func toIgnoreWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
+	result := toWebhook(gv)
+	// Go doesn't allow taking the address of constants.
+	ignore := admissionv1.Ignore
+	result.FailurePolicy = &ignore
+	return result
 }

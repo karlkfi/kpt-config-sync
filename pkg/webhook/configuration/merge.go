@@ -89,10 +89,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 // is preserving the failure policy, as that is the only user-editable field.
 // Any other deviations are removed.
 func mergeWebhooks(gv schema.GroupVersion, left, right admissionv1.ValidatingWebhook) admissionv1.ValidatingWebhook {
-	result := admissionv1.ValidatingWebhook{
-		Rules:          []admissionv1.RuleWithOperations{ruleFor(gv)},
-		ObjectSelector: selectorFor(gv.Version),
-	}
+	result := toWebhook(gv)
 
 	// FailurePolicy set to Ignore wins, if set. We don't want to overwrite the
 	// user's change.
