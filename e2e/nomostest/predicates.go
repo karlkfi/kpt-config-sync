@@ -26,15 +26,28 @@ func WrongTypeErr(got, want interface{}) error {
 // the Predicate.
 var ErrFailedPredicate = errors.New("failed predicate")
 
-// HasAnnotation returns a predicate that tests if an Object has the specified label key/value pair.
+// HasAnnotation returns a predicate that tests if an Object has the specified
+// annotation key/value pair.
 func HasAnnotation(key, value string) Predicate {
 	return func(o core.Object) error {
 		got, ok := o.GetAnnotations()[key]
 		if !ok {
-			return fmt.Errorf("object %q does not have label %q; wanted %q", o.GetName(), key, value)
+			return fmt.Errorf("object %q does not have annotation %q; want %q", o.GetName(), key, value)
 		}
 		if got != value {
-			return fmt.Errorf("got %q for label %q on object %q; wanted %q", got, key, o.GetName(), value)
+			return fmt.Errorf("got %q for annotation %q on object %q; want %q", got, key, o.GetName(), value)
+		}
+		return nil
+	}
+}
+
+// MissingAnnotation returns a predicate that tests that an object does not have
+// a specified annotation.
+func MissingAnnotation(key string) Predicate {
+	return func(o core.Object) error {
+		_, ok := o.GetAnnotations()[key]
+		if ok {
+			return fmt.Errorf("object %v has annotation %s, want missing", o.GetName(), key)
 		}
 		return nil
 	}

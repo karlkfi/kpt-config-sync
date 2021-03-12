@@ -178,17 +178,17 @@ func TestDiffType(t *testing.T) {
 			name: "no declared or actual, no op (log error)",
 			want: NoOp,
 		},
-		// PreventMutation path.
+		// IgnoreMutation path.
 		{
 			name: "prevent mutations",
 			declared: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation),
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation),
 				core.Annotation("foo", "qux"),
 			),
 			want: NoOp,
@@ -199,7 +199,7 @@ func TestDiffType(t *testing.T) {
 			// need to update the object so the actual one has the annotation now.
 			declared: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation),
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
@@ -221,7 +221,7 @@ func TestDiffType(t *testing.T) {
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation),
 				core.Annotation("foo", "qux"),
 			),
 			want: Update,

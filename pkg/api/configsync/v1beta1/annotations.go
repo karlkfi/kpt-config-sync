@@ -36,8 +36,8 @@ const (
 	// already exist.
 	LifecycleMutationAnnotation = LifecyclePrefix + "/mutation"
 
-	// PreventMutation is the value used with LifecycleMutationAnnotation to
+	// IgnoreMutation is the value used with LifecycleMutationAnnotation to
 	// prevent mutating a resource. That is, if the resource exists on the cluster
 	// then ACM will make no attempt to modify it.
-	PreventMutation = "ignore"
+	IgnoreMutation = "ignore"
 )

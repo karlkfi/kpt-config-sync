@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
@@ -145,6 +146,12 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Respons
 	// request immediately.
 	if csSet := ConfigSyncMetadata(diffSet); !csSet.Empty() {
 		return deny(metav1.StatusReasonForbidden, "Config Sync metadata can not be modified: "+csSet.String())
+	}
+
+	if oldObj.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation {
+		// We ignore user modifications to this resource. Per the above check, we
+		// know that this annotation has not been altered.
+		return allow()
 	}
 
 	// Use the ConfigSync declared fields annotation to build the set of fields

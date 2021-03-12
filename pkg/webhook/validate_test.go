@@ -370,7 +370,7 @@ func TestValidator_Handle(t *testing.T) {
 			name: "Bob manually modifies lifecycle annotation",
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation)),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
 			newObj: fake.RoleObject(
 				core.Annotation(v1beta1.LifecycleMutationAnnotation, "other")),
 			deny: metav1.StatusReasonForbidden,
@@ -380,7 +380,7 @@ func TestValidator_Handle(t *testing.T) {
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)),
 			newObj: fake.RoleObject(
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.PreventMutation)),
+				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
 			deny: metav1.StatusReasonForbidden,
 		},
 	}

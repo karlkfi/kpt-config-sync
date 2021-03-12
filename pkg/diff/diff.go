@@ -107,8 +107,8 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 	canManage := CanManage(manager, d.Actual)
 	switch {
 	case differ.ManagementEnabled(d.Declared) && canManage:
-		if d.Actual.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.PreventMutation &&
-			d.Declared.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.PreventMutation {
+		if d.Actual.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation &&
+			d.Declared.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation {
 			// The declared and actual object both have the lifecycle mutation
 			// annotation set to ignore, so we should take no action as the user does
 			// not want us to make changes to the object.
