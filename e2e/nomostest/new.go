@@ -54,12 +54,6 @@ func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 		opt(&optsStruct)
 	}
 
-	if optsStruct.RESTConfig == nil {
-		RestConfig(t, &optsStruct)
-	}
-	optsStruct.RESTConfig.QPS = 50
-	optsStruct.RESTConfig.Burst = 75
-
 	return newWithOptions(t, optsStruct)
 }
 
@@ -107,6 +101,12 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 			"Did you forget ntopts.SkipMonoRepo?")
 	}
 
+	if opts.RESTConfig == nil {
+		RestConfig(t, &opts)
+		opts.RESTConfig.QPS = 50
+		opts.RESTConfig.Burst = 75
+	}
+
 	if !*e2e.E2E {
 		// This safeguard prevents test authors from accidentally forgetting to
 		// check for the e2e test flag, so `go test ./...` functions as expected
@@ -148,10 +148,10 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 	} else {
 		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
 		// clean before and after running the test.
-		Clean(nt, FailOnError(true))
+		Clean(nt, true)
 		t.Cleanup(func() {
 			// Clean the cluster now that the test is over.
-			Clean(nt, FailOnError(false))
+			Clean(nt, false)
 		})
 	}
 
@@ -189,7 +189,7 @@ func newWithOptions(t *testing.T, opts ntopts.New) *NT {
 		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
 	}
 
-	// allRepos specifies the slice all repos for portforwarding.
+	// allRepos specifies the slice all repos for port forwarding.
 	allRepos := []string{rootRepo}
 	for repo := range opts.MultiRepo.NamespaceRepos {
 		allRepos = append(allRepos, repo)
