@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	depAnnotation       = "6542d3f02b02979cd5322ae60b20d0d9"
+	depAnnotation       = "06e6695b8dacdf25276745b95a0cc240"
 	depAnnotationCustom = "a5b98e40aa7ae6bd2326dca598900f83"
 )
 

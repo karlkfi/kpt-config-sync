@@ -306,11 +306,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	// Validate multi-repo metrics.
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.GVKMetric{
-			GVK:      "Namespace",
-			APIOp:    "update",
-			ApplyOps: []metrics.Operation{{Name: "update", Count: 1}},
-		},
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
 			metrics.ResourceCreated("RoleBinding"))
 		if err != nil {
 			return err
@@ -337,8 +333,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	// Validate multi-repo metrics.
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0,
-			metrics.ResourceDeleted("Namespace"), metrics.ResourceDeleted("RoleBinding"))
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0)
 		if err != nil {
 			return err
 		}

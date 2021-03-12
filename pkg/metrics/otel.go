@@ -24,6 +24,10 @@ exporters:
   stackdriver:
     metric:
       prefix: config_sync
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
 processors:
   batch:
 extensions:
