@@ -27,6 +27,7 @@ import (
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
+	webhookconfig "github.com/google/nomos/pkg/webhook/configuration"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -92,7 +93,7 @@ var (
 	// multiObjects contains the names of all objects that are necessary to
 	// install and run multi-repo Config Sync.
 	multiObjects = map[string]bool{
-		"admission-webhook":                    true,
+		webhookconfig.ShortName:                true,
 		"admission-webhook-cert":               true,
 		"configsync.gke.io:reconciler-manager": true,
 		reconcilermanager.ManagerName:          true,
@@ -401,6 +402,11 @@ func validateMultiRepoDeployments(nt *NT) error {
 			return err
 		}
 		err = nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace,
+			&appsv1.Deployment{}, isAvailableDeployment)
+		if err != nil {
+			return err
+		}
+		err = nt.Validate(webhookconfig.ShortName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
 			return err
