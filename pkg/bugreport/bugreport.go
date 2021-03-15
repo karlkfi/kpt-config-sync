@@ -360,7 +360,7 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 }
 
 func pathToNamespacedResource(namespace, kind, name string) string {
-	return path.Join(Namespace, namespace, kind + "-" + name)
+	return path.Join(Namespace, namespace, kind+"-"+name)
 }
 
 func pathToClusterCmList(name string) string {
