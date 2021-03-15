@@ -143,7 +143,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			log.Error(err, "Failed to check reconciler deployment conditions")
 			rootsync.SetStalled(&rs, "Deployment", err)
 			_ = r.updateStatus(ctx, &rs, log)
-			return controllerruntime.Result{}, errors.Wrap(err, result.message)
+			return controllerruntime.Result{}, err
 		}
 
 		// Update RepoSync status based on reconciler deployment condition result.
