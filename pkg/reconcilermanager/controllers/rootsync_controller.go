@@ -317,7 +317,6 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 
 		// Add unique reconciler label
 		core.SetLabel(&d.Spec.Template, v1alpha1.ReconcilerLabel, reconciler.RootSyncName)
-		d.Spec.Selector.MatchLabels[v1alpha1.ReconcilerLabel] = reconciler.RootSyncName
 
 		templateSpec := &d.Spec.Template.Spec
 
