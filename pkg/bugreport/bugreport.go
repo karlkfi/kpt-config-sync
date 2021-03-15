@@ -339,7 +339,7 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 
 	var namespacedResourceToReadables = func(u *unstructured.UnstructuredList, _ string) (r []Readable) {
 		for _, o := range u.Items {
-			r = b.appendPrettyJSON(r, pathToNamespacedResource(o.GetNamespace(), o.GetName()), o)
+			r = b.appendPrettyJSON(r, pathToNamespacedResource(o.GetNamespace(), o.GetKind(), o.GetName()), o)
 		}
 		return r
 	}
@@ -359,8 +359,8 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 	return rd
 }
 
-func pathToNamespacedResource(namespace, name string) string {
-	return path.Join(Namespace, namespace, name)
+func pathToNamespacedResource(namespace, kind, name string) string {
+	return path.Join(Namespace, namespace, kind + "-" + name)
 }
 
 func pathToClusterCmList(name string) string {
