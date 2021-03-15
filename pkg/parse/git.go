@@ -2,6 +2,7 @@ package parse
 
 import (
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/status"
@@ -48,7 +49,7 @@ func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, stat
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
 		return result, status.SourceError.Wrap(err).Sprintf("unable to sync repo\n"+
-			"Check git-sync logs for more info: kubectl logs -n config-management-system -l reconciler=%s -c git-sync", reconcilerName).Build()
+			"Check git-sync logs for more info: kubectl logs -n config-management-system -l %s=%s -c git-sync", v1alpha1.ReconcilerLabel, reconcilerName).Build()
 	}
 
 	commit, e := git.CommitHash(gitDir.OSPath())
