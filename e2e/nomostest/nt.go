@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	"go.opencensus.io/tag"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -602,6 +603,7 @@ func (nt *NT) testLogs(previousPodLog bool) {
 	// temporarily to see how presubmit responds.
 	if nt.MultiRepo {
 		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, reconcilermanager.ManagerName, previousPodLog)
+		nt.PodLogs(configmanagement.ControllerNamespace, configuration.ShortName, configuration.ShortName, previousPodLog)
 		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler, previousPodLog)
 		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync, previousPodLog)
 		for ns := range nt.NamespaceRepos {

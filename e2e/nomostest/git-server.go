@@ -79,8 +79,8 @@ func isAvailableDeployment(o core.Object) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("%w: got %d available replicas, want %d\n\n%s",
-			ErrFailedPredicate, available, want, string(jsn))
+		return fmt.Errorf("%w for deployment/%s in namespace %s: got %d available replicas, want %d\n\n%s",
+			ErrFailedPredicate, d.GetName(), d.GetNamespace(), available, want, string(jsn))
 	}
 	return nil
 }

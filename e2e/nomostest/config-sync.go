@@ -395,7 +395,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 		}
 	}
 
-	took, err := Retry(60*time.Second, func() error {
+	took, err := Retry(120*time.Second, func() error {
 		err := nt.Validate(reconcilermanager.ManagerName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
