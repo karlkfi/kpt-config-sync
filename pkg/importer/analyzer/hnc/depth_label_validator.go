@@ -7,34 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
-
-// hasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".
-func hasDepthSuffix(s string) bool {
-	return strings.HasSuffix(s, DepthSuffix)
-}
-
-// NewDepthLabelValidator ensures there's no depth label declared in metadata, which
-// means there's no label ended with ".tree.hnc.x-k8s.io/depth".
-func NewDepthLabelValidator() ast.Visitor {
-	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) status.MultiError {
-			var errors []string
-			for l := range o.GetLabels() {
-				if hasDepthSuffix(l) {
-					errors = append(errors, l)
-				}
-			}
-			if errors != nil {
-				return IllegalDepthLabelError(&o, errors)
-			}
-			return nil
-		})
-}
 
 // IllegalDepthLabelErrorCode is the error code for IllegalDepthLabelError.
 const IllegalDepthLabelErrorCode = "1057"

@@ -66,11 +66,6 @@ func ResourceQuotaObjectUnstructured(opts ...core.MetaMutator) *unstructured.Uns
 	return u
 }
 
-// ResourceQuota initializes a FileObject with a ResourceQuota.
-func ResourceQuota(opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(ResourceQuotaObject(opts...), "namespaces/foo/rq.yaml")
-}
-
 // RoleBindingObject initializes a RoleBinding.
 func RoleBindingObject(opts ...core.MetaMutator) *rbacv1.RoleBinding {
 	obj := &rbacv1.RoleBinding{TypeMeta: ToTypeMeta(kinds.RoleBinding())}
@@ -351,11 +346,6 @@ func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 	return obj
 }
 
-// ConfigMapAtPath returns a ConfigMap at the specified filepath.
-func ConfigMapAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(ConfigMapObject(opts...), path)
-}
-
 // ToTypeMeta creates the TypeMeta that corresponds to the passed GroupVersionKind.
 func ToTypeMeta(gvk schema.GroupVersionKind) metav1.TypeMeta {
 	return metav1.TypeMeta{
@@ -372,12 +362,6 @@ func ServiceObject(opts ...core.MetaMutator) *corev1.Service {
 	mutate(result, opts...)
 
 	return result
-}
-
-// KptFile returns a default-initialized Kptfile with the passed opts
-// applied and path.
-func KptFile(path string, opts ...core.MetaMutator) ast.FileObject {
-	return FileObject(KptFileObject(opts...), path)
 }
 
 // KptFileObject returns a default-initialized Kptfile with the passed opts

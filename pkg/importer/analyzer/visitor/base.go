@@ -149,13 +149,3 @@ func (vb *Base) VisitObject(o *ast.NamespaceObject) *ast.NamespaceObject {
 func (vb *Base) Error() status.MultiError {
 	return nil
 }
-
-// Fatal implements Visitor.
-func (vb *Base) Fatal() bool {
-	return false
-}
-
-// RequiresValidState implements Visitor.
-func (vb *Base) RequiresValidState() bool {
-	return false
-}

@@ -10,27 +10,3 @@ type Validator interface {
 	// Validate returns a MultiError if the passed FileObjects fail validation.
 	Validate([]ast.FileObject) status.MultiError
 }
-
-type validator struct {
-	validate func([]ast.FileObject) status.MultiError
-}
-
-// Validate implements Validator.
-func (v validator) Validate(objects []ast.FileObject) status.MultiError {
-	return v.validate(objects)
-}
-
-var _ Validator = validator{}
-
-// PerObjectValidator returns a Validator that validates each objects independently.
-func PerObjectValidator(fn func(o ast.FileObject) status.Error) Validator {
-	return validator{
-		validate: func(objects []ast.FileObject) status.MultiError {
-			var err status.MultiError
-			for _, o := range objects {
-				err = status.Append(err, fn(o))
-			}
-			return err
-		},
-	}
-}

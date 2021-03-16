@@ -4,52 +4,9 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
-
-// NewInheritanceValidator returns a visitor that validates the inheritance setting
-// of all GroupKinds defined across HierarchyConfigs.
-func NewInheritanceValidator() ast.Visitor {
-	return visitor.NewSystemObjectValidator(func(o *ast.SystemObject) status.MultiError {
-		if o.GroupVersionKind() != kinds.HierarchyConfig() {
-			return nil
-		}
-		s, err := o.Structured()
-		if err != nil {
-			return err
-		}
-		h := s.(*v1.HierarchyConfig)
-		for _, gkc := range newFileHierarchyConfig(h, o).flatten() {
-			if err := validateInheritance(gkc); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// ValidateInheritance returns an error if the HierarchyModeType is invalid for the GroupKind in the
-// FileGroupKindHierarchyConfig
-func validateInheritance(config FileGroupKindHierarchyConfig) status.MultiError {
-	return errIfNotAllowed(config)
-}
-
-// errIfNotAllowed returns an error if the kindHierarchyConfig has an inheritance mode which is not allowed for that Kind.
-func errIfNotAllowed(config FileGroupKindHierarchyConfig) status.MultiError {
-	switch config.HierarchyMode {
-	case v1.HierarchyModeNone:
-	case v1.HierarchyModeInherit:
-	case v1.HierarchyModeDefault:
-	default:
-		return IllegalHierarchyModeError(config, config.HierarchyMode)
-	}
-
-	return nil
-}
 
 // IllegalHierarchyModeErrorCode is the error code for IllegalHierarchyModeError
 const IllegalHierarchyModeErrorCode = "1042"

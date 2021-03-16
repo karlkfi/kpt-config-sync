@@ -22,19 +22,6 @@ func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
 	}
 }
 
-// ParseFileObject returns a FileObject initialized from the given client.Object and a valid source
-// path parsed from its annotations.
-func ParseFileObject(object core.Object) *FileObject {
-	if fo, isFileObject := object.(*FileObject); isFileObject {
-		// Prevent unintentional nesting of FileObjects inside FileObjects.
-		return fo
-	}
-	return &FileObject{
-		Object:   object,
-		Relative: cmpath.RelativeSlash(id.GetSourceAnnotation(object)),
-	}
-}
-
 // FileObject extends core.Object to include the path to the file in the repo.
 type FileObject struct {
 	// Object is the unstructured representation of the object.

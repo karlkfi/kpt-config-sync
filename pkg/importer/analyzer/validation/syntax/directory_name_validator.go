@@ -2,34 +2,9 @@ package syntax
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
-	"k8s.io/apimachinery/pkg/util/validation"
 )
-
-// NewDirectoryNameValidator validates that directory names are valid and not reserved.
-func NewDirectoryNameValidator() ast.Visitor {
-	return visitor.NewTreeNodeValidator(
-		func(n *ast.TreeNode) status.MultiError {
-			name := n.Base()
-			if !isValid(name) {
-				return InvalidDirectoryNameError(n.Relative)
-			}
-			if configmanagement.IsControllerNamespace(name) {
-				return ReservedDirectoryNameError(n.Relative)
-			}
-			return nil
-		})
-}
-
-// isValid returns true if Kubernetes allows Namespaces with the name "name".
-func isValid(name string) bool {
-	// IsDNS1123Label is misleading as the Kubernetes requirements are more stringent than the specification.
-	errs := validation.IsDNS1123Label(name)
-	return len(errs) == 0
-}
 
 // InvalidDirectoryNameErrorCode is the error code for InvalidDirectoryNameError
 const InvalidDirectoryNameErrorCode = "1028"

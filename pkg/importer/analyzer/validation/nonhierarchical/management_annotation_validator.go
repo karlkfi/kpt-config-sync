@@ -7,10 +7,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-// ManagementAnnotationValidator ensures the passed object either has no management annotation, or
-//  declares a valid one.
-var ManagementAnnotationValidator = PerObjectValidator(ValidManagementAnnotation)
-
 // ValidManagementAnnotation returns an Error if the user-specified management annotation is invalid.
 func ValidManagementAnnotation(o ast.FileObject) status.Error {
 	value, found := o.GetAnnotations()[v1.ResourceManagementKey]

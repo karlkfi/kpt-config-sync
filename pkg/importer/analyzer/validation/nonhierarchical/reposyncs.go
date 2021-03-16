@@ -5,22 +5,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
-
-// ValidateRepoSyncs validates all RepoSyncs in a passed list of FileObjects.
-var ValidateRepoSyncs = PerObjectValidator(func(o ast.FileObject) status.Error {
-	if o.GroupVersionKind().GroupKind() != kinds.RepoSync().GroupKind() {
-		return nil
-	}
-	s, err := o.Structured()
-	if err != nil {
-		return err
-	}
-	return ValidateRepoSync(s.(*v1alpha1.RepoSync))
-})
 
 var (
 	authSSH        = v1alpha1.GitSecretSSH

@@ -2,31 +2,10 @@ package metadata
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
-
-// NewNamespaceDirectoryNameValidator validates the value of metadata.name is correct for Namespaces.
-func NewNamespaceDirectoryNameValidator() *visitor.ValidatorVisitor {
-	return visitor.NewAllObjectValidator(func(o ast.FileObject) status.MultiError {
-		if o.GroupVersionKind() != kinds.Namespace() {
-			return nil
-		}
-
-		expectedName := o.Dir().Base()
-		if expectedName == repo.NamespacesDir {
-			return IllegalTopLevelNamespaceError(&o)
-		}
-		if o.GetName() != expectedName {
-			return InvalidNamespaceNameError(&o, expectedName)
-		}
-		return nil
-	})
-}
 
 // IllegalTopLevelNamespaceErrorCode is the error code for IllegalTopLevelNamespaceError
 const IllegalTopLevelNamespaceErrorCode = "1019"

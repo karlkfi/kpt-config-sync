@@ -24,24 +24,6 @@ func (s *Scoped) Objects() []ast.FileObject {
 	return append(objs, s.Namespace...)
 }
 
-// VisitAllScoped returns a ScopedVisitor which will call the given
-// ObjectVisitor on every FileObject in the Scoped objects.
-func VisitAllScoped(validate ObjectVisitor) ScopedVisitor {
-	return func(s *Scoped) status.MultiError {
-		var errs status.MultiError
-		for _, obj := range s.Cluster {
-			errs = status.Append(errs, validate(obj))
-		}
-		for _, obj := range s.Namespace {
-			errs = status.Append(errs, validate(obj))
-		}
-		for _, obj := range s.Unknown {
-			errs = status.Append(errs, validate(obj))
-		}
-		return errs
-	}
-}
-
 // VisitClusterScoped returns a ScopedVisitor which will call the given
 // ObjectVisitor on all cluster-scoped FileObjects in the Scoped objects.
 func VisitClusterScoped(validate ObjectVisitor) ScopedVisitor {

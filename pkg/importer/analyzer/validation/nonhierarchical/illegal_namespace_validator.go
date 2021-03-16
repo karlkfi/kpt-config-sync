@@ -2,9 +2,7 @@ package nonhierarchical
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -26,14 +24,3 @@ func IllegalNamespace(resource id.Resource) status.Error {
 		Sprintf("The %q Namespace must not be declared", configmanagement.ControllerNamespace).
 		BuildWithResources(resource)
 }
-
-// IllegalNamespaceValidator forbids declaring resources in the ControllerNamespace.
-var IllegalNamespaceValidator = PerObjectValidator(func(object ast.FileObject) status.Error {
-	if object.GetNamespace() == configmanagement.ControllerNamespace {
-		return ObjectInIllegalNamespace(&object)
-	}
-	if object.GroupVersionKind() == kinds.Namespace() && object.GetName() == configmanagement.ControllerNamespace {
-		return IllegalNamespace(&object)
-	}
-	return nil
-})

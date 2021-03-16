@@ -1,8 +1,6 @@
 package nonhierarchical
 
 import (
-	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
@@ -20,13 +18,3 @@ func IllegalHierarchicalKind(resource id.Resource) status.Error {
 			"to use `sourceFormat: hierarchy`.", resource.GroupVersionKind().GroupKind().String()).
 		BuildWithResources(resource)
 }
-
-// IllegalHierarchicalKindValidator forbids declaring configmanagement kinds.
-//
-// The Nomos Hierarchy has been disabled, using any Nomos type is illegal.
-var IllegalHierarchicalKindValidator = PerObjectValidator(func(object ast.FileObject) status.Error {
-	if object.GroupVersionKind().Group == configmanagement.GroupName {
-		return IllegalHierarchicalKind(&object)
-	}
-	return nil
-})

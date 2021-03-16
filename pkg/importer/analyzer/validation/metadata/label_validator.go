@@ -6,28 +6,9 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 )
-
-// NewLabelValidator validates the labels declared in metadata
-func NewLabelValidator() ast.Visitor {
-	return visitor.NewAllObjectValidator(
-		func(o ast.FileObject) status.MultiError {
-			var errors []string
-			for l := range o.GetLabels() {
-				if hasConfigManagementPrefix(l) {
-					errors = append(errors, l)
-				}
-			}
-			if errors != nil {
-				return IllegalLabelDefinitionError(&o, errors)
-			}
-			return nil
-		})
-}
 
 // IllegalLabelDefinitionErrorCode is the error code for IllegalLabelDefinitionError
 const IllegalLabelDefinitionErrorCode = "1011"

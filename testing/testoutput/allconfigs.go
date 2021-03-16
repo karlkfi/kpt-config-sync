@@ -6,26 +6,18 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	visitortesting "github.com/google/nomos/pkg/importer/analyzer/visitor/testing"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/namespaceconfig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// NewAllConfigs is a convenience method for tests to convert FileObjects to an AllConfigs.
-// Assumes only standard Kubernetes and Nomos types.
-func NewAllConfigs(fileObjects ...ast.FileObject) *namespaceconfig.AllConfigs {
-	return namespaceconfig.NewAllConfigs(visitortesting.ImportToken, metav1.Time{}, fileObjects)
-}
+const importToken = "abcde"
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
 // cluster-scoped client.Objects.
 func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 	config := fake.ClusterConfigObject()
-	config.Spec.Token = visitortesting.ImportToken
+	config.Spec.Token = importToken
 	for _, o := range objects {
 		config.AddResource(o)
 	}
@@ -35,7 +27,7 @@ func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 // CRDClusterConfig generates a valid ClusterConfig which holds the list of CRDs in the repo.
 func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 	config := fake.CRDClusterConfigObject()
-	config.Spec.Token = visitortesting.ImportToken
+	config.Spec.Token = importToken
 	for _, o := range objects {
 		config.AddResource(o)
 	}
@@ -46,7 +38,7 @@ func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 // hydrated client.Objects for that Namespace.
 func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...core.Object) v1.NamespaceConfig {
 	config := fake.NamespaceConfigObject(Source(path.Join(dir, "namespace.yaml")))
-	config.Spec.Token = visitortesting.ImportToken
+	config.Spec.Token = importToken
 	if clusterName != "" {
 		InCluster(clusterName)(config)
 	}

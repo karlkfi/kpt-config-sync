@@ -6,42 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// FileHierarchyConfig extends v1alpha1.HierarchyConfig to include the path to the file in the repo.
-type fileHierarchyConfig struct {
-	*v1.HierarchyConfig
-	// Resource is the source file defining the HierarchyConfig.
-	id.Resource
-}
-
-// NewFileHierarchyConfig creates a new FileHierarchyConfig from a HierarchyConfig Resource and the source file declaring
-// the HierarchyConfig.
-func newFileHierarchyConfig(config *v1.HierarchyConfig, resource id.Resource) fileHierarchyConfig {
-	return fileHierarchyConfig{HierarchyConfig: config, Resource: resource}
-}
-
-// flatten returns a list of all GroupKinds defined in the HierarchyConfig and their hierarchy modes.
-func (c fileHierarchyConfig) flatten() []FileGroupKindHierarchyConfig {
-	var result []FileGroupKindHierarchyConfig
-	for _, resource := range c.Spec.Resources {
-		if len(resource.Kinds) == 0 {
-			result = append(result, FileGroupKindHierarchyConfig{
-				GK:            schema.GroupKind{Group: resource.Group},
-				HierarchyMode: resource.HierarchyMode,
-				Resource:      c.Resource,
-			})
-		} else {
-			for _, kind := range resource.Kinds {
-				result = append(result, FileGroupKindHierarchyConfig{
-					GK:            schema.GroupKind{Group: resource.Group, Kind: kind},
-					HierarchyMode: resource.HierarchyMode,
-					Resource:      c.Resource,
-				})
-			}
-		}
-	}
-	return result
-}
-
 // FileGroupKindHierarchyConfig Identifies a Group/Kind definition in a HierarchyConfig.
 type FileGroupKindHierarchyConfig struct {
 	// GK is the Group/Kind which the HierarchyConfig defined.

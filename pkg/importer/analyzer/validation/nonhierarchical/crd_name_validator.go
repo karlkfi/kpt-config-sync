@@ -10,9 +10,6 @@ import (
 	"github.com/google/nomos/pkg/util/clusterconfig"
 )
 
-// CRDNameValidator validates that CRDs have the expected metadata.name.
-var CRDNameValidator = PerObjectValidator(ValidateCRDName)
-
 // InvalidCRDNameErrorCode is the error code for InvalidCRDNameError.
 const InvalidCRDNameErrorCode = "1048"
 
