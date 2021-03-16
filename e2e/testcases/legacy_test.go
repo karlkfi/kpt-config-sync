@@ -190,10 +190,14 @@ func TestBats(t *testing.T) {
 		},
 		// Converted to cluster_resources_test.go.
 		// {fileName: "cluster_resources.bats"},
-		{fileName: "custom_resource_definitions_v1.bats"},
-		{fileName: "custom_resource_definitions_v1beta1.bats"},
-		{fileName: "custom_resources_v1.bats"},
-		{fileName: "custom_resources_v1beta1.bats"},
+		// TODO(b/182908343): convert test into go
+		// {fileName: "custom_resource_definitions_v1.bats"},
+		// TODO(b/182908343): convert test into go
+		// {fileName: "custom_resource_definitions_v1beta1.bats"},
+		// TODO(b/182908343): convert test into go
+		// {fileName: "custom_resources_v1.bats"},
+		// TODO(b/182908343): convert test into go
+		// {fileName: "custom_resources_v1beta1.bats"},
 		{fileName: "foo_corp.bats"},
 		{fileName: "gatekeeper.bats"},
 		// Converted to multiversion_test.go.
