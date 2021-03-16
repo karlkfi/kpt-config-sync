@@ -26,7 +26,7 @@ func NewDecoder(us []*unstructured.Unstructured) decode.Decoder {
 }
 
 // UpdateScheme does nothing.
-func (d *decoder) UpdateScheme(gvks map[schema.GroupVersionKind]bool) {
+func (d *decoder) UpdateScheme(_ map[schema.GroupVersionKind]bool) {
 }
 
 // DecodeResources returns fake data.

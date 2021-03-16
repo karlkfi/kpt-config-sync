@@ -46,7 +46,7 @@ func (r *noOpRemediator) ManagementConflict() bool {
 	return false
 }
 
-func (r *noOpRemediator) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVersionKind]struct{}) status.MultiError {
+func (r *noOpRemediator) UpdateWatches(_ context.Context, _ map[schema.GroupVersionKind]struct{}) status.MultiError {
 	r.needsUpdate = false
 	return nil
 }
@@ -302,7 +302,7 @@ type fakeParser struct {
 	errors []status.Error
 }
 
-func (p *fakeParser) Parse(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+func (p *fakeParser) Parse(_ reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	if p.errors == nil {
 		return p.parse, nil
 	}
@@ -313,7 +313,7 @@ func (p *fakeParser) Parse(filePaths reader.FilePaths) ([]ast.FileObject, status
 	return nil, errs
 }
 
-func (p *fakeParser) ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+func (p *fakeParser) ReadClusterRegistryResources(_ reader.FilePaths) ([]ast.FileObject, status.MultiError) {
 	return nil, nil
 }
 
@@ -322,7 +322,7 @@ type fakeApplier struct {
 	errors []status.Error
 }
 
-func (a *fakeApplier) Apply(ctx context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *fakeApplier) Apply(_ context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	if a.errors == nil {
 		a.got = objs
 		gvks := make(map[schema.GroupVersionKind]struct{})

@@ -85,13 +85,13 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 
 // DeclaredFields returns the declared fields for the given Object.
 func DeclaredFields(obj client.Object) (*fieldpath.Set, error) {
-	declared, ok := obj.GetAnnotations()[v1alpha1.DeclaredFieldsKey]
+	decls, ok := obj.GetAnnotations()[v1alpha1.DeclaredFieldsKey]
 	if !ok {
 		return nil, fmt.Errorf("%s annotation is missing from %s", v1alpha1.DeclaredFieldsKey, object.RuntimeToObjMeta(obj))
 	}
 
 	set := &fieldpath.Set{}
-	if err := set.FromJSON(strings.NewReader(declared)); err != nil {
+	if err := set.FromJSON(strings.NewReader(decls)); err != nil {
 		return nil, err
 	}
 	return set, nil

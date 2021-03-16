@@ -22,11 +22,7 @@ func NamespaceSelector(tree *objects.Tree) status.MultiError {
 }
 
 func validateSelectorsInNode(node *ast.TreeNode, nsSelectors map[string]ast.FileObject) status.MultiError {
-	var objs []ast.FileObject
-	for _, o := range node.Objects {
-		objs = append(objs, o.FileObject)
-	}
-	err := validateNamespaceSelectors(objs, nsSelectors)
+	err := validateNamespaceSelectors(node.Objects, nsSelectors)
 
 	for _, c := range node.Children {
 		err = status.Append(err, validateSelectorsInNode(c, nsSelectors))

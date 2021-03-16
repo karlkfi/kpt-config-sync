@@ -93,7 +93,7 @@ type mockLogSource struct {
 var _ convertibleLogSourceIdentifiers = &mockLogSource{}
 
 // fetchRcForLogSource implements convertibleLogSourceIdentifiers.
-func (m *mockLogSource) fetchRcForLogSource(ctx context.Context, cs coreClient) (io.ReadCloser, error) {
+func (m *mockLogSource) fetchRcForLogSource(_ context.Context, _ coreClient) (io.ReadCloser, error) {
 	if m.returnError {
 		return nil, fmt.Errorf("failed to get RC")
 	}
@@ -110,7 +110,7 @@ type mockReadCloser struct{}
 var _ io.ReadCloser = &mockReadCloser{}
 
 // Read implements io.ReadCloser.
-func (m *mockReadCloser) Read(p []byte) (n int, err error) {
+func (m *mockReadCloser) Read(_ []byte) (n int, err error) {
 	return 0, nil
 }
 

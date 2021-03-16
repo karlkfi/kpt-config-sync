@@ -53,30 +53,30 @@ func TestInheritance(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
-					Objects: []*ast.NamespaceObject{
-						{FileObject: fake.RoleAtPath("namespaces/role.yaml", core.Name("reader"))},
+					Objects: []ast.FileObject{
+						fake.RoleAtPath("namespaces/role.yaml", core.Name("reader")),
 					},
 					Children: []*ast.TreeNode{
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
 									},
 								},
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/moon"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/moon")},
-										{FileObject: fake.Deployment("namespaces/hello/moon")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/moon"),
+										fake.Deployment("namespaces/hello/moon"),
 									},
 								},
 							},
@@ -84,9 +84,9 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/goodbye"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/goodbye")},
-								{FileObject: fake.Deployment("namespaces/goodbye")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/goodbye"),
+								fake.Deployment("namespaces/goodbye"),
 							},
 						},
 					},
@@ -102,34 +102,34 @@ func TestInheritance(t *testing.T) {
 				Tree: &ast.TreeNode{
 					Relative: cmpath.RelativeSlash("namespaces"),
 					Type:     node.AbstractNamespace,
-					Objects: []*ast.NamespaceObject{
-						{FileObject: fake.RoleAtPath("namespaces/role.yaml", core.Name("reader"))},
+					Objects: []ast.FileObject{
+						fake.RoleAtPath("namespaces/role.yaml", core.Name("reader")),
 					},
 					Children: []*ast.TreeNode{
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
-										{FileObject: fake.RoleAtPath("namespaces/role.yaml", core.Name("reader"))},
-										{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
+										fake.RoleAtPath("namespaces/role.yaml", core.Name("reader")),
+										fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 									},
 								},
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/moon"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/moon")},
-										{FileObject: fake.Deployment("namespaces/hello/moon")},
-										{FileObject: fake.RoleAtPath("namespaces/role.yaml", core.Name("reader"))},
-										{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/moon"),
+										fake.Deployment("namespaces/hello/moon"),
+										fake.RoleAtPath("namespaces/role.yaml", core.Name("reader")),
+										fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 									},
 								},
 							},
@@ -137,10 +137,10 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/goodbye"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/goodbye")},
-								{FileObject: fake.Deployment("namespaces/goodbye")},
-								{FileObject: fake.RoleAtPath("namespaces/role.yaml", core.Name("reader"))},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/goodbye"),
+								fake.Deployment("namespaces/goodbye"),
+								fake.RoleAtPath("namespaces/role.yaml", core.Name("reader")),
 							},
 						},
 					},
@@ -157,22 +157,22 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/hello"),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
 									},
 								},
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/moon"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/moon")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/moon"),
 									},
 								},
 							},
@@ -207,15 +207,15 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer"))},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
 									},
 								},
 							},

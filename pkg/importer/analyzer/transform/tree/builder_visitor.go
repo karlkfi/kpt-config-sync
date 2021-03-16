@@ -5,22 +5,19 @@ import (
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
-	"github.com/google/nomos/pkg/importer/analyzer/visitor"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 )
 
-// builderVisitor populates the nodes in the hierarchy tree with their corresponding objects.
-type builderVisitor struct {
-	*visitor.Base
+// Builder populates the nodes in the hierarchy tree with their corresponding objects.
+type Builder struct {
 	objects map[cmpath.Relative][]ast.FileObject
 }
 
-// NewBuilderVisitor initializes an builderVisitor with the set of objects to use to
+// NewBuilder initializes an Builder with the set of objects to use to
 // populate the config hierarchy tree.
-func NewBuilderVisitor(objects []ast.FileObject) ast.Visitor {
-	v := &builderVisitor{Base: visitor.NewBase(), objects: make(map[cmpath.Relative][]ast.FileObject)}
-	v.SetImpl(v)
+func NewBuilder(objects []ast.FileObject) *Builder {
+	v := &Builder{objects: make(map[cmpath.Relative][]ast.FileObject)}
 
 	for _, object := range objects {
 		dir := object.Dir()
@@ -36,30 +33,31 @@ func NewBuilderVisitor(objects []ast.FileObject) ast.Visitor {
 }
 
 // VisitRoot creates nodes for the config hierarchy.
-func (v *builderVisitor) VisitRoot(r *ast.Root) *ast.Root {
+func (v *Builder) VisitRoot(r *ast.Root) *ast.Root {
 	treeBuilder := newDirectoryTree()
 	for dir := range v.objects {
 		treeBuilder.addDir(dir)
 	}
 	r.Tree = treeBuilder.build()
-	return v.Base.VisitRoot(r)
+
+	if r.Tree != nil {
+		v.VisitTreeNode(r.Tree)
+	}
+	return r
 }
 
 // VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
-func (v *builderVisitor) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
+func (v *Builder) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	for _, object := range v.objects[n.Relative] {
 		if object.GroupVersionKind() == kinds.Namespace() {
 			n.Type = node.Namespace
 		}
-		n.Objects = append(n.Objects, &ast.NamespaceObject{FileObject: object})
+		n.Objects = append(n.Objects, object)
 	}
-	return v.Base.VisitTreeNode(n)
-}
-
-// RequiresValidState marks that the repository should otherwise be in a valid state before
-// attempting to construct the config hierarchy tree.
-func (v *builderVisitor) RequiresValidState() bool {
-	return true
+	for _, child := range n.Children {
+		v.VisitTreeNode(child)
+	}
+	return n
 }
 
 func lessFileObject(i, j ast.FileObject) bool {

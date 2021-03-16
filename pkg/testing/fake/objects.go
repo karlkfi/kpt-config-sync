@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -197,13 +196,6 @@ func ClusterAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(ClusterObject(opts...), path)
 }
 
-// ConfigManagement returns a fake ConfigManagement.
-func ConfigManagement(path string) ast.FileObject {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(kinds.ConfigManagement())
-	return ast.NewFileObject(u, cmpath.RelativeSlash(path))
-}
-
 // CustomResourceDefinitionV1Beta1Object returns an initialized CustomResourceDefinition.
 func CustomResourceDefinitionV1Beta1Object(opts ...core.MetaMutator) *v1beta1.CustomResourceDefinition {
 	result := &v1beta1.CustomResourceDefinition{
@@ -361,24 +353,6 @@ func ServiceObject(opts ...core.MetaMutator) *corev1.Service {
 	defaultMutate(result)
 	mutate(result, opts...)
 
-	return result
-}
-
-// KptFileObject returns a default-initialized Kptfile with the passed opts
-// applied.
-func KptFileObject(opts ...core.MetaMutator) *unstructured.Unstructured {
-	result := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": kptfile.KptFileAPIVersion,
-			"kind":       kptfile.KptFileName,
-			"metadata": map[string]interface{}{
-				"name":      "kptfile",
-				"namespace": "namespace",
-			},
-		},
-	}
-	defaultMutate(result)
-	mutate(result, opts...)
 	return result
 }
 

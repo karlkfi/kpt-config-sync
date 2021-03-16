@@ -62,7 +62,7 @@ func (i inheritanceSpecs) visitTreeNode(node *ast.TreeNode, inherited []ast.File
 			isNamespace = true
 		} else if o.GroupVersionKind() != kinds.NamespaceSelector() {
 			// Don't copy down NamespaceSelectors.
-			nodeObjs = append(nodeObjs, o.FileObject)
+			nodeObjs = append(nodeObjs, o)
 		}
 	}
 
@@ -98,7 +98,7 @@ func hydrateNamespace(node *ast.TreeNode, inherited []ast.FileObject) status.Mul
 		err = status.Append(err, validation.IllegalNamespaceSubdirectoryError(child, node))
 	}
 	for _, obj := range inherited {
-		node.Objects = append(node.Objects, &ast.NamespaceObject{FileObject: obj.DeepCopy()})
+		node.Objects = append(node.Objects, obj.DeepCopy())
 	}
 	return err
 }

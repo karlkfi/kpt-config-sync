@@ -29,7 +29,7 @@ func fakeError(gvk schema.GroupVersionKind) status.Error {
 	return status.APIServerErrorf(errors.New("failed"), "watcher failed for %s", gvk.String())
 }
 
-func testRunnables(ctx context.Context, errOnType map[schema.GroupVersionKind]bool) func(context.Context, watcherConfig) (Runnable, status.Error) {
+func testRunnables(_ context.Context, errOnType map[schema.GroupVersionKind]bool) func(context.Context, watcherConfig) (Runnable, status.Error) {
 	return func(ctx context.Context, cfg watcherConfig) (runnable Runnable, err status.Error) {
 		if errOnType[cfg.gvk] {
 			return nil, fakeError(cfg.gvk)

@@ -73,31 +73,23 @@ func TestBuildTree(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{
-									FileObject: fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
-								},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello/role.yaml", core.Name("writer")),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/moon"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{
-											FileObject: fake.Namespace("namespaces/hello/moon"),
-										},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/moon"),
 									},
 								},
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{
-											FileObject: fake.Namespace("namespaces/hello/world"),
-										},
-										{
-											FileObject: fake.AnvilAtPath("namespaces/hello/world/anvil.yaml"),
-										},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
+										fake.AnvilAtPath("namespaces/hello/world/anvil.yaml"),
 									},
 								},
 							},

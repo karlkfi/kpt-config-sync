@@ -39,22 +39,22 @@ func (e *EventRecorder) event(object runtime.Object, eventtype, reason string) {
 }
 
 // Event implements record.EventRecorder.
-func (e *EventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
+func (e *EventRecorder) Event(object runtime.Object, eventtype, reason, _ string) {
 	e.event(object, eventtype, reason)
 }
 
 // Eventf implements record.EventRecorder.
-func (e *EventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *EventRecorder) Eventf(object runtime.Object, eventtype, reason, _ string, _ ...interface{}) {
 	e.event(object, eventtype, reason)
 }
 
 // PastEventf implements record.EventRecorder.
-func (e *EventRecorder) PastEventf(object runtime.Object, timestamp v1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *EventRecorder) PastEventf(object runtime.Object, _ v1.Time, eventtype, reason, _ string, _ ...interface{}) {
 	e.event(object, eventtype, reason)
 }
 
 // AnnotatedEventf implements record.EventRecorder.
-func (e *EventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+func (e *EventRecorder) AnnotatedEventf(object runtime.Object, _ map[string]string, eventtype, reason, _ string, _ ...interface{}) {
 	e.event(object, eventtype, reason)
 }
 

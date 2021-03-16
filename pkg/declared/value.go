@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/nomos/pkg/testing/openapitest"
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
+	openapiv2 "github.com/googleapis/gnostic/openapiv2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -85,7 +85,7 @@ func typedValueDeduced(obj runtime.Object) (*typed.TypedValue, error) {
 
 // typedParser returns a typed.Parser instantiated with schemas from the given
 // openapi Document.
-func typedParser(doc *openapi_v2.Document) (*typed.Parser, error) {
+func typedParser(doc *openapiv2.Document) (*typed.Parser, error) {
 	models, err := proto.NewOpenAPIData(doc)
 	if err != nil {
 		return nil, fmt.Errorf("interpreting models: %w", err)

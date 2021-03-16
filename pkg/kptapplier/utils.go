@@ -31,7 +31,7 @@ func partitionObjs(objs []core.Object) ([]core.Object, []core.Object) {
 
 func toUnstructured(objs []core.Object) ([]*unstructured.Unstructured, status.MultiError) {
 	var errs status.MultiError
-	unstructureds := []*unstructured.Unstructured{}
+	var unstructureds []*unstructured.Unstructured
 	for _, obj := range objs {
 		u, err := syncerreconcile.AsUnstructuredSanitized(obj)
 		if err != nil {

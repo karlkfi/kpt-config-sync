@@ -21,14 +21,6 @@ func Hierarchical(objs *objects.Scoped) status.MultiError {
 	for _, validator := range validators {
 		errs = status.Append(errs, validator(objs))
 	}
-	if errs != nil {
-		return errs
-	}
-
-	hydrators := []objects.ScopedVisitor{}
-	for _, hydrator := range hydrators {
-		errs = status.Append(errs, hydrator(objs))
-	}
 	return errs
 }
 
@@ -50,8 +42,8 @@ func Unstructured(objs *objects.Scoped) status.MultiError {
 		objects.VisitNamespaceScoped(validate.NamespaceScoped),
 		validate.NamespaceSelectors,
 	}
-	for _, validate := range validators {
-		errs = status.Append(errs, validate(objs))
+	for _, validator := range validators {
+		errs = status.Append(errs, validator(objs))
 	}
 	if errs != nil {
 		return errs
@@ -60,8 +52,8 @@ func Unstructured(objs *objects.Scoped) status.MultiError {
 	hydrators := []objects.ScopedVisitor{
 		hydrate.NamespaceSelectors,
 	}
-	for _, hydrate := range hydrators {
-		errs = status.Append(errs, hydrate(objs))
+	for _, hydrator := range hydrators {
+		errs = status.Append(errs, hydrator(objs))
 	}
 	return errs
 }

@@ -71,7 +71,7 @@ type filteredWatcher struct {
 var _ Runnable = &filteredWatcher{}
 
 // NewFiltered returns a new filtered watch initialized with the given options.
-func NewFiltered(ctx context.Context, cfg watcherConfig) Runnable {
+func NewFiltered(_ context.Context, cfg watcherConfig) Runnable {
 	return &filteredWatcher{
 		gvk:          cfg.gvk.String(),
 		startWatch:   cfg.startWatch,

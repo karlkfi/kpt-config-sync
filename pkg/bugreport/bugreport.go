@@ -95,7 +95,7 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 		Version: "v1",
 		Kind:    configmanagement.OperatorKind,
 	})
-	errorList := []error{}
+	var errorList []error
 	currentk8sContext, err := restconfig.CurrentContextName()
 	if err != nil {
 		errorList = append(errorList, err)

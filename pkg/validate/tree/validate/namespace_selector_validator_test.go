@@ -36,8 +36,8 @@ func TestNamespaceSelector(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/hello"),
 							},
 						},
 					},
@@ -58,8 +58,8 @@ func TestNamespaceSelector(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/hello"),
 							},
 						},
 					},
@@ -85,10 +85,10 @@ func TestNamespaceSelector(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
-										{FileObject: fake.RoleAtPath("namespaces/hello/world/role.yaml",
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
+										fake.RoleAtPath("namespaces/hello/world/role.yaml",
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev")),
 									},
 								},
 							},
@@ -115,10 +115,10 @@ func TestNamespaceSelector(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
-										{FileObject: fake.RoleAtPath("namespaces/hello/world/role.yaml",
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
+										fake.RoleAtPath("namespaces/hello/world/role.yaml",
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev")),
 									},
 								},
 							},
@@ -130,9 +130,9 @@ func TestNamespaceSelector(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/goodbye/moon"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/goodbye/moon")},
-										{FileObject: fake.RoleAtPath("namespaces/goodbye/moon/role.yaml")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/goodbye/moon"),
+										fake.RoleAtPath("namespaces/goodbye/moon/role.yaml"),
 									},
 								},
 							},

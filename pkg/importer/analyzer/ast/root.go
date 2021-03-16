@@ -4,13 +4,13 @@ package ast
 // interpreted, and information regarding where those configs came from.
 type Root struct {
 	// ClusterObjects represents resources that are cluster scoped.
-	ClusterObjects []*ClusterObject
+	ClusterObjects []FileObject
 
 	// ClusterRegistryObjects represents resources that are related to multi-cluster.
-	ClusterRegistryObjects []*ClusterRegistryObject
+	ClusterRegistryObjects []FileObject
 
 	// SystemObjects represents resources regarding nomos configuration.
-	SystemObjects []*SystemObject
+	SystemObjects []FileObject
 
 	// Tree represents the directory hierarchy containing namespace scoped resources.
 	Tree *TreeNode

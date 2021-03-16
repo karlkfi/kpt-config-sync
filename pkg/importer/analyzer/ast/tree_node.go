@@ -17,21 +17,13 @@ type TreeNode struct {
 	Type node.Type
 
 	// Objects from the directory
-	Objects []*NamespaceObject
+	Objects []FileObject
 
 	// children of the directory
 	Children []*TreeNode
 }
 
 var _ id.TreeNode = &TreeNode{}
-
-// Accept invokes VisitTreeNode on the visitor.
-func (n *TreeNode) Accept(visitor Visitor) *TreeNode {
-	if n == nil {
-		return nil
-	}
-	return visitor.VisitTreeNode(n)
-}
 
 // PartialCopy makes an almost shallow copy of n.  An "almost shallow" copy of
 // TreeNode make shallow copies of Children and members that are likely
@@ -70,7 +62,7 @@ func (n *TreeNode) flattenNamespace() []FileObject {
 		if o.GroupVersionKind() != kinds.Namespace() {
 			o.SetNamespace(n.Name())
 		}
-		result = append(result, o.FileObject)
+		result = append(result, o)
 	}
 	return result
 }
@@ -80,7 +72,7 @@ func (n *TreeNode) flattenAbstractNamespace() []FileObject {
 
 	for _, o := range n.Objects {
 		if o.GroupVersionKind() == kinds.NamespaceSelector() {
-			result = append(result, o.FileObject)
+			result = append(result, o)
 		}
 	}
 	for _, child := range n.Children {

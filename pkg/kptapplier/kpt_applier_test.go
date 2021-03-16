@@ -34,7 +34,7 @@ func newFakeApplier(err error, events []event.Event) *fakeApplier {
 	}
 }
 
-func (a *fakeApplier) Run(ctx context.Context, invInfo inventory.InventoryInfo, objects []*unstructured.Unstructured, options apply.Options) <-chan event.Event {
+func (a *fakeApplier) Run(_ context.Context, _ inventory.InventoryInfo, _ []*unstructured.Unstructured, _ apply.Options) <-chan event.Event {
 	events := make(chan event.Event, len(a.events))
 	go func() {
 		for _, e := range a.events {

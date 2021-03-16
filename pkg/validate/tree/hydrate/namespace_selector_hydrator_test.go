@@ -41,11 +41,11 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "false"))},
-										{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml",
-											core.Namespace("frontend"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "false")),
+										fake.RoleAtPath("namespaces/foo/role.yaml",
+											core.Namespace("frontend")),
 									},
 								},
 							},
@@ -68,11 +68,11 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "false"))},
-										{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml",
-											core.Namespace("frontend"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "false")),
+										fake.RoleAtPath("namespaces/foo/role.yaml",
+											core.Namespace("frontend")),
 									},
 								},
 							},
@@ -98,9 +98,9 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "false"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "false")),
 									},
 								},
 							},
@@ -112,10 +112,10 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/bar/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/bar/frontend")},
-										{FileObject: fake.RoleAtPath("namespaces/bar/role.yaml",
-											core.Namespace("bar"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/bar/frontend"),
+										fake.RoleAtPath("namespaces/bar/role.yaml",
+											core.Namespace("bar")),
 									},
 								},
 							},
@@ -138,9 +138,9 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "false"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "false")),
 									},
 								},
 							},
@@ -152,10 +152,10 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/bar/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/bar/frontend")},
-										{FileObject: fake.RoleAtPath("namespaces/bar/role.yaml",
-											core.Namespace("bar"))},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/bar/frontend"),
+										fake.RoleAtPath("namespaces/bar/role.yaml",
+											core.Namespace("bar")),
 									},
 								},
 							},
@@ -181,12 +181,12 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "true"))},
-										{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml",
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "true")),
+										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre"))},
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},
@@ -209,12 +209,12 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend",
-											core.Label("sre-support", "true"))},
-										{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml",
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend",
+											core.Label("sre-support", "true")),
+										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre"))},
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},
@@ -240,11 +240,11 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend")},
-										{FileObject: fake.RoleAtPath("namespaces/foo/role.yaml",
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend"),
+										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre"))},
+											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},
@@ -267,8 +267,8 @@ func TestNamespaceSelectors(t *testing.T) {
 								{
 									Relative: cmpath.RelativeSlash("namespaces/foo/frontend"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/foo/frontend")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/foo/frontend"),
 									},
 								},
 							},

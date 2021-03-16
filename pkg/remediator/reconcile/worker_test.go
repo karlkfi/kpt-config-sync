@@ -247,7 +247,7 @@ type fakeReconciler struct {
 
 var _ reconcilerInterface = fakeReconciler{}
 
-func (f fakeReconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
+func (f fakeReconciler) Remediate(_ context.Context, _ core.ID, _ core.Object) status.Error {
 	return f.remediateErr
 }
 
@@ -268,6 +268,6 @@ func (q *fakeQueue) Retry(o core.Object) {
 	q.element = o
 }
 
-func (q *fakeQueue) Forget(o core.Object) {
+func (q *fakeQueue) Forget(_ core.Object) {
 	q.element = nil
 }

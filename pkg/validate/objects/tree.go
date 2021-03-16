@@ -108,9 +108,8 @@ func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
 			errs = status.Append(errs, err)
 		}
 	}
-	v := tree.NewBuilderVisitor(append(b.Namespace, scoped.Namespace...))
+	v := tree.NewBuilder(append(b.Namespace, scoped.Namespace...))
 	treeRoot := v.VisitRoot(&ast.Root{}).Tree
-	errs = status.Append(errs, v.Error())
 	if errs != nil {
 		return nil, errs
 	}

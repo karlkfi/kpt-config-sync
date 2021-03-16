@@ -38,8 +38,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/hello"),
 							},
 						},
 					},
@@ -56,9 +56,9 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.Namespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.Namespace("namespaces/hello")},
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.Namespace("namespaces/hello"),
+								fake.RoleAtPath("namespaces/hello"),
 							},
 						},
 					},
@@ -75,8 +75,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.NamespaceSelector()},
+							Objects: []ast.FileObject{
+								fake.NamespaceSelector(),
 							},
 						},
 					},
@@ -93,15 +93,15 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello"),
 							},
 							Children: []*ast.TreeNode{
 								{
 									Relative: cmpath.RelativeSlash("namespaces/hello/world"),
 									Type:     node.Namespace,
-									Objects: []*ast.NamespaceObject{
-										{FileObject: fake.Namespace("namespaces/hello/world")},
+									Objects: []ast.FileObject{
+										fake.Namespace("namespaces/hello/world"),
 									},
 								},
 							},
@@ -120,8 +120,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello"),
 							},
 							Children: []*ast.TreeNode{
 								{
@@ -131,8 +131,8 @@ func TestInheritance(t *testing.T) {
 										{
 											Relative: cmpath.RelativeSlash("namespaces/hello/world/end"),
 											Type:     node.Namespace,
-											Objects: []*ast.NamespaceObject{
-												{FileObject: fake.Namespace("namespaces/hello/world/end")},
+											Objects: []ast.FileObject{
+												fake.Namespace("namespaces/hello/world/end"),
 											},
 										},
 									},
@@ -153,8 +153,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello"),
 							},
 						},
 					},
@@ -172,8 +172,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello"),
 							},
 							Children: []*ast.TreeNode{
 								{
@@ -197,8 +197,8 @@ func TestInheritance(t *testing.T) {
 						{
 							Relative: cmpath.RelativeSlash("namespaces/hello"),
 							Type:     node.AbstractNamespace,
-							Objects: []*ast.NamespaceObject{
-								{FileObject: fake.RoleAtPath("namespaces/hello")},
+							Objects: []ast.FileObject{
+								fake.RoleAtPath("namespaces/hello"),
 							},
 							Children: []*ast.TreeNode{
 								{
@@ -208,9 +208,9 @@ func TestInheritance(t *testing.T) {
 										{
 											Relative: cmpath.RelativeSlash("namespaces/hello/world/end"),
 											Type:     node.Namespace,
-											Objects: []*ast.NamespaceObject{
-												{FileObject: fake.Namespace("namespaces/hello/world/end")},
-												{FileObject: fake.Namespace("namespaces/hello/world/end")},
+											Objects: []ast.FileObject{
+												fake.Namespace("namespaces/hello/world/end"),
+												fake.Namespace("namespaces/hello/world/end"),
 											},
 										},
 									},

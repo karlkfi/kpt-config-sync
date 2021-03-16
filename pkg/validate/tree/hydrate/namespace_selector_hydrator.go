@@ -58,7 +58,7 @@ func visitTreeNode(node *ast.TreeNode, nsSelectors map[string]labels.Selector) s
 	var errs status.MultiError
 	for _, obj := range node.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {
-			return applySelectors(node, obj.FileObject, nsSelectors)
+			return applySelectors(node, obj, nsSelectors)
 		}
 	}
 
@@ -76,7 +76,7 @@ func applySelectors(node *ast.TreeNode, namespace ast.FileObject, nsSelectors ma
 	}
 
 	var errs status.MultiError
-	var filtered []*ast.NamespaceObject
+	var filtered []ast.FileObject
 	for _, obj := range node.Objects {
 		if obj.GroupVersionKind() == kinds.Namespace() {
 			filtered = append(filtered, obj)

@@ -28,7 +28,7 @@ func (a *applier) Create(ctx context.Context, obj *unstructured.Unstructured) (b
 }
 
 // Update implements reconcile.Applier.
-func (a *applier) Update(ctx context.Context, intendedState, currentState *unstructured.Unstructured) (bool, status.Error) {
+func (a *applier) Update(ctx context.Context, intendedState, _ *unstructured.Unstructured) (bool, status.Error) {
 	err := a.Client.Update(ctx, intendedState)
 	if err != nil {
 		return false, status.APIServerError(err, "updating")
