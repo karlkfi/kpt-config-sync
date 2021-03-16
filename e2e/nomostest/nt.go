@@ -571,6 +571,8 @@ func (nt *NT) DebugLogf(format string, args ...interface{}) {
 // If there is an error getting the logs for the specified deployment, prints
 // the error.
 func (nt *NT) PodLogs(namespace, deployment, container string, previousPodLog bool) {
+	nt.T.Helper()
+
 	args := []string{"logs", fmt.Sprintf("deployment/%s", deployment), "-n", namespace}
 	if previousPodLog {
 		args = append(args, "-p")
@@ -762,6 +764,8 @@ func (nt *NT) WaitForRootSyncSourceErrorClear(opts ...WaitOption) {
 func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code),
 		func() error {
+			nt.T.Helper()
+
 			rs := fake.RepoSyncObject(core.Namespace(namespace))
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {

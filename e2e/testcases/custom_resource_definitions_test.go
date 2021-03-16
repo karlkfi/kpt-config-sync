@@ -9,9 +9,13 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/webhook/configuration"
+	"github.com/pkg/errors"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 )
 
 func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
@@ -23,6 +27,14 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 	nt.Root.CommitAndPush("Adding Anvil CRD and one Anvil CR")
 	nt.WaitForRepoSyncs()
 	nt.RenewClient()
+
+	if nt.MultiRepo {
+		err := nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
+			hasRule("acme.com.v1.admission-webhook.configsync.gke.io"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	err := nt.Validate("heavy", "foo", anvilCR("v1", "", 0))
 	if err != nil {
@@ -136,5 +148,20 @@ func TestLargeCRD(t *testing.T) {
 	err = nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.HasLabel("random-key", "random-value"))
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func hasRule(name string) nomostest.Predicate {
+	return func(o core.Object) error {
+		vwc, ok := o.(*admissionv1.ValidatingWebhookConfiguration)
+		if !ok {
+			return nomostest.WrongTypeErr(o, &admissionv1.ValidatingWebhookConfiguration{})
+		}
+		for _, w := range vwc.Webhooks {
+			if w.Name == name {
+				return nil
+			}
+		}
+		return errors.Errorf("missing ValidatingWebhook %q", name)
 	}
 }
