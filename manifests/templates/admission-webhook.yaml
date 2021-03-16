@@ -98,3 +98,11 @@ metadata:
   labels:
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: admission-webhook.configsync.gke.io
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"

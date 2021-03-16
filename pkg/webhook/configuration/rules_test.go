@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/kinds"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,8 +30,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 			gvks: []schema.GroupVersionKind{kinds.Role()},
 			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      Name,
-					Namespace: configsync.ControllerNamespace,
+					Name: Name,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Name:           webhookName(rbacv1.SchemeGroupVersion),
@@ -52,8 +50,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      Name,
-					Namespace: configsync.ControllerNamespace,
+					Name: Name,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Name:        webhookName(rbacv1.SchemeGroupVersion),
@@ -77,8 +74,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      Name,
-					Namespace: configsync.ControllerNamespace,
+					Name: Name,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Name:           webhookName(rbacv1.SchemeGroupVersion),
@@ -106,8 +102,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      Name,
-					Namespace: configsync.ControllerNamespace,
+					Name: Name,
 				},
 				Webhooks: []admissionv1.ValidatingWebhook{{
 					Name:        webhookName(rbacv1.SchemeGroupVersion),

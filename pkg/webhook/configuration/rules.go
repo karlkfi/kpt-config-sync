@@ -24,7 +24,6 @@ func toWebhookConfiguration(gvks []schema.GroupVersionKind) *admissionv1.Validat
 	}
 
 	webhookCfg := &admissionv1.ValidatingWebhookConfiguration{}
-	webhookCfg.SetNamespace(configsync.ControllerNamespace)
 	webhookCfg.SetName(Name)
 	webhookCfg.Webhooks = newWebhooks(gvks)
 

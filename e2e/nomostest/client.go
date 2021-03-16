@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -49,6 +50,7 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	// We have no tests which require configuring this in incompatible ways, so if
 	// you need new types then add them here.
 	builders := []runtime.SchemeBuilder{
+		admissionv1.SchemeBuilder,
 		apiextensionsv1beta1.SchemeBuilder,
 		apiextensionsv1.SchemeBuilder,
 		appsv1.SchemeBuilder,
