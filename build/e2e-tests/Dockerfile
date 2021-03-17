@@ -22,7 +22,7 @@
 # than a tag or a branch, so that rebuilds are reproducible. See examples below
 # on how.
 FROM golang:1.14.2-alpine AS build-base
-RUN apk add bash ca-certificates coreutils git gcc g++ libc-dev unzip
+RUN apk add bash coreutils git gcc g++ libc-dev unzip
 
 ENV GO111MODULE=on
 # Build static binaries only.
@@ -67,7 +67,6 @@ RUN apt-get update \
   && apt-get install -y \
   apt-transport-https \
   apt-utils \
-  ca-certificates \
   curl \
   git \
   jq \
@@ -105,7 +104,7 @@ RUN bash -c '[ $UID == 0 ] || useradd -u $UID -G $GID $UNAME'
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
   && echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list \
   && apt-get update \
-  && apt-get install -y kubectl=1.15.1-00
+  && apt-get install -y kubectl=1.20.4-00
 
 # Copy installed gcloud into image
 COPY --from=gcloud-install /opt/gcloud/google-cloud-sdk /opt/gcloud/google-cloud-sdk
