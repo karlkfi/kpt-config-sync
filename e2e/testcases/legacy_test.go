@@ -194,9 +194,9 @@ func TestBats(t *testing.T) {
 		// {fileName: "custom_resource_definitions_v1.bats"},
 		// Converted to custom_resource_definitions_test.go
 		// {fileName: "custom_resource_definitions_v1beta1.bats"},
-		// TODO(b/182908343): convert test into go
+		// Converted to custom_resource_test.go
 		// {fileName: "custom_resources_v1.bats"},
-		// TODO(b/182908343): convert test into go
+		// Converted to custom_resource_test.go
 		// {fileName: "custom_resources_v1beta1.bats"},
 		{fileName: "foo_corp.bats"},
 		{fileName: "gatekeeper.bats"},
