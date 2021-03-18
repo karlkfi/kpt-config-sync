@@ -93,7 +93,7 @@ func (r *namespaceConfigReconciler) Reconcile(ctx context.Context, request recon
 
 	// Filter out errors caused by a context cancellation. These errors are expected and uninformative.
 	if filtered := filterContextCancelled(err); filtered != nil {
-		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, status.FormatError(false, filtered))
+		glog.Errorf("Could not reconcile namespaceconfig %q: %v", name, status.FormatSingleLine(filtered))
 	}
 	return reconcile.Result{}, err
 }

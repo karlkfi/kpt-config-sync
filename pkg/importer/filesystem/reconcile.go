@@ -138,7 +138,7 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 
 // dirError updates repo source status with an error due to failure to read mounted git repo.
 func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
-	glog.Errorf("Failed to resolve config directory: %v", status.FormatError(false, err))
+	glog.Errorf("Failed to resolve config directory: %v", status.FormatSingleLine(err))
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 	sErr := status.SourceError.Wrap(err).Sprint("unable to sync repo\n" +
 		"Check git-sync logs for more info: kubectl logs -n config-management-system -l app=git-importer -c git-sync").Build()
@@ -250,7 +250,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// Parse filesystem tree into in-memory NamespaceConfig and ClusterConfig objects.
 	fileObjects, mErr := c.parser.Parse(filePaths)
 	if mErr != nil {
-		glog.Warningf("Failed to parse: %v", status.FormatError(false, mErr))
+		glog.Warningf("Failed to parse: %v", status.FormatSingleLine(mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 		return reconcile.Result{}, nil
@@ -272,7 +272,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		fileObjects, mErr = validate.Hierarchical(fileObjects, options)
 	}
 	if mErr != nil {
-		glog.Warningf("Failed to validate: %v", status.FormatError(false, mErr))
+		glog.Warningf("Failed to validate: %v", status.FormatSingleLine(mErr))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
 		return reconcile.Result{}, nil
@@ -313,7 +313,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs, c.initTime); errs != nil {
-		glog.Warningf("Failed to apply actions: %v", status.FormatError(false, errs))
+		glog.Warningf("Failed to apply actions: %v", status.FormatSingleLine(errs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
 		return reconcile.Result{}, nil

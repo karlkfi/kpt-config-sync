@@ -118,7 +118,12 @@ func TestFormatError(t *testing.T) {
 			for _, err := range tc.errors {
 				errs = Append(errs, err)
 			}
-			got := FormatError(tc.multiline, errs)
+			var got string
+			if tc.multiline {
+				got = FormatMultiLine(errs)
+			} else {
+				got = FormatSingleLine(errs)
+			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Error(diff)
 			}

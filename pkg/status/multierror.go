@@ -144,7 +144,7 @@ func (m *multiError) add(err error) {
 
 // Error implements error
 func (m *multiError) Error() string {
-	return FormatError(true, m)
+	return FormatMultiLine(m)
 }
 
 // Errors returns a list of the contained errors
@@ -183,19 +183,51 @@ func (m *multiError) Is(target error) bool {
 	return true
 }
 
-// FormatError formats the multiple errors using multiline argument.
-// When multiline set to true, errors are formatted and joined using new lines.
-// Else, multiple errors are joined using comma separator.
+// FormatSingleLine format multi-errors into single-style
+// Each error is reformatted as single line and joined with new line
 // Sample formatted errors: https://paste.googleplex.com/6533732804591616
-// TODO(b/158022901) Structure multiline error messages
-func FormatError(multiline bool, e error) string {
+func FormatSingleLine(e error) string {
+	if uniqueErrors := PurifyError(e); uniqueErrors != nil {
+		allErrors := []string{
+			fmt.Sprintf("%d error(s) ", len(uniqueErrors)),
+		}
+		// adding all errors into allErrors
+		for idx, err := range uniqueErrors {
+			// format message and remove new lines from each error
+			formattedErr := fmt.Sprintf("[%d] %v\n", idx+1, err)
+			allErrors = append(allErrors, rmNewlines(formattedErr))
+		}
+		return strings.Join(allErrors, "\n")
+	}
+	return ""
+}
+
+// FormatMultiLine formats multi-errors into multi-line style
+// Errors are joined with two new lines
+// Sample formatted errors: https://paste.googleplex.com/6533732804591616
+func FormatMultiLine(e error) string {
+	if uniqueErrors := PurifyError(e); uniqueErrors != nil {
+		allErrors := []string{
+			fmt.Sprintf("%d error(s)\n", len(uniqueErrors)),
+		}
+		for idx, err := range uniqueErrors {
+			allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
+		}
+		// return error messages joined with two new line.
+		return strings.Join(allErrors, "\n\n")
+	}
+	return ""
+}
+
+// PurifyError extracts unique errors, sort and return them as array of string
+func PurifyError(e error) []string {
 	m := toMultiError(e)
 
 	// mErrs is a slice of Error.
 	mErrs := m.Errors()
 
 	if len(mErrs) == 0 {
-		return ""
+		return nil
 	}
 
 	var msgs []string
@@ -212,23 +244,7 @@ func FormatError(multiline bool, e error) string {
 			uniqueErrors = append(uniqueErrors, err)
 		}
 	}
-
-	allErrors := []string{
-		fmt.Sprintf("%d error(s)\n", len(uniqueErrors)),
-	}
-	for idx, err := range uniqueErrors {
-		allErrors = append(allErrors, fmt.Sprintf("[%d] %v\n", idx+1, err))
-	}
-	// if in single-line mode, remove new lines from each error message,
-	// return error messages joined with a new line.
-	if !multiline {
-		for idx, err := range allErrors {
-			// removes all the new lines from the errors.
-			allErrors[idx] = rmNewlines(err)
-		}
-		return strings.Join(allErrors, "\n")
-	}
-	return strings.Join(allErrors, "\n\n")
+	return uniqueErrors
 }
 
 func rmNewlines(err string) string {

@@ -53,7 +53,7 @@ func (s *reconcilerState) checkpoint() {
 // invalidate logs the errors, clears the state tracking information.
 // invalidate does not clean up the `s.cache`.
 func (s *reconcilerState) invalidate(errs status.MultiError) {
-	glog.Errorf("Reconciler checkpoint invalidated with errors: %v", errs)
+	glog.Errorf("Reconciler checkpoint invalidated with errors: %v", status.FormatSingleLine(errs))
 	oldErrs := s.cache.errs
 	s.cache.errs = errs
 	// Invalidate state on error since this could be the result of switching

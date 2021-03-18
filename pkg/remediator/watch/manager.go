@@ -201,7 +201,7 @@ func (m *Manager) startWatcher(ctx context.Context, gvk schema.GroupVersionKind)
 // threadsafe.
 func (m *Manager) runWatcher(ctx context.Context, r Runnable, gvk schema.GroupVersionKind) {
 	if err := r.Run(ctx); err != nil {
-		glog.Warningf("Error running watcher for %s: %v", gvk.String(), err)
+		glog.Warningf("Error running watcher for %s: %v", gvk.String(), status.FormatSingleLine(err))
 		m.mux.Lock()
 		delete(m.watcherMap, gvk)
 		m.needsUpdate = true
