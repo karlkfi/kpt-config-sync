@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/reconciler"
-
 	"github.com/google/nomos/e2e/nomostest"
+	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -96,12 +95,12 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		t.Errorf("validating metrics: %v", err)
 	}
 
-	// TODO(b/183133727): kptapplier not able to prune CRs that CRD is deleted
 	// from the cluster.
 	// This should fix the error.
-	//nt.Root.Remove("acme/namespaces/prod/anvil-v1.yaml")
-	//nt.Root.CommitAndPush("Removing the Anvil CR as well")
-	//nt.WaitForRepoSyncs()
+	nt.Root.Remove("acme/namespaces/prod/anvil-v1.yaml")
+	nt.Root.CommitAndPush("Removing the Anvil CR as well")
+	// TODO(b/183150103): The previous error wasn't removed from the status.
+	// nt.WaitForRepoSyncs()
 }
 
 func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
@@ -182,12 +181,12 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		t.Errorf("validating metrics: %v", err)
 	}
 
-	// TODO(b/183133727): kptapplier not able to prune CRs that CRD is deleted
 	// from the cluster.
 	// This should fix the error.
-	//nt.Root.Remove("acme/namespaces/foo/anvil-v1.yaml")
-	//nt.Root.CommitAndPush("Removing the Anvil CR as well")
-	//nt.WaitForRepoSyncs()
+	nt.Root.Remove("acme/namespaces/foo/anvil-v1.yaml")
+	nt.Root.CommitAndPush("Removing the Anvil CR as well")
+	// TODO(b/183150103): The previous error wasn't removed from the status.
+	// nt.WaitForRepoSyncs()
 }
 
 func TestSyncUpdateCustomResource(t *testing.T) {

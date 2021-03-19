@@ -35,17 +35,17 @@ require (
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
 	google.golang.org/grpc v1.35.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.20.2
+	gopkg.in/yaml.v2 v2.4.0
+	k8s.io/api v0.20.4
 	k8s.io/apiextensions-apiserver v0.20.2
-	k8s.io/apimachinery v0.20.2
-	k8s.io/cli-runtime v0.20.2
-	k8s.io/client-go v0.20.2
+	k8s.io/apimachinery v0.20.4
+	k8s.io/cli-runtime v0.20.4
+	k8s.io/client-go v0.20.4
 	k8s.io/cluster-registry v0.0.6
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
-	k8s.io/kubectl v0.20.2
+	k8s.io/kubectl v0.20.4
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
-	sigs.k8s.io/cli-utils v0.23.3
+	sigs.k8s.io/cli-utils v0.23.6
 	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/kind v0.10.0
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
