@@ -39,7 +39,7 @@ type configMapMutation struct {
 	data   map[string]string
 }
 
-func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []configMapMutation, refs []metav1.OwnerReference) ([]byte, error) {
+func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []configMapMutation, refs ...metav1.OwnerReference) ([]byte, error) {
 	configMapData := make(map[string]map[string]string)
 
 	for _, mutation := range mutations {
@@ -57,7 +57,9 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 		childCM.Name = mutation.cmName
 		childCM.Namespace = v1.NSConfigManagementSystem
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCM, func() error {
-			childCM.OwnerReferences = refs
+			if len(refs) > 0 {
+				childCM.OwnerReferences = refs
+			}
 			childCM.Data = mutation.data
 			return nil
 		})
@@ -77,13 +79,15 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 	return hash(configMapData)
 }
 
-func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, refs []metav1.OwnerReference) error {
+func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, refs ...metav1.OwnerReference) error {
 	var childSA corev1.ServiceAccount
 	childSA.Name = name
 	childSA.Namespace = v1.NSConfigManagementSystem
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
-		childSA.OwnerReferences = refs
+		if len(refs) > 0 {
+			childSA.OwnerReferences = refs
+		}
 		return nil
 	})
 	if err != nil {
@@ -119,7 +123,7 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, dep *appsv
 		if !apierrors.IsNotFound(err) {
 			return controllerutil.OperationResultNone, err
 		}
-
+		r.log.Info("Deployment not found, creating one", "namespace/name", key.String())
 		if err := mutateDeployment(dep); err != nil {
 			return controllerutil.OperationResultNone, err
 		}

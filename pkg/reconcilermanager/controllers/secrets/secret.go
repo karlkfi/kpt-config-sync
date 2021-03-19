@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,7 +43,7 @@ func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
 		}
 		// Secret not present in config-management-system namespace. Create one using
 		// secret in reposync.namespace.
-		if err := create(ctx, rs, namespaceSecret, c); err != nil {
+		if err := create(ctx, namespaceSecret, c); err != nil {
 			return errors.Wrapf(err,
 				"failed to create %s secret in %s namespace",
 				rs.Spec.SecretRef.Name, v1.NSConfigManagementSystem)
@@ -70,24 +69,11 @@ func get(ctx context.Context, name, namespace string, secret *corev1.Secret, c c
 
 // create secret get the existing secret in reposync.namespace and use secret.data and
 // secret.type to create a new secret in config-management-system namespace.
-func create(ctx context.Context, reposync *v1alpha1.RepoSync, namespaceSecret *corev1.Secret, c client.Client) error {
+func create(ctx context.Context, namespaceSecret *corev1.Secret, c client.Client) error {
 	newSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       kinds.Secret().Kind,
 			APIVersion: kinds.Secret().Version,
-		},
-	}
-
-	// Set OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the Secret is also deleted.
-	newSecret.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
-			Kind:               reposync.Kind,
-			Name:               reposync.Name,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-			UID:                reposync.UID,
 		},
 	}
 

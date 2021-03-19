@@ -9,14 +9,12 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -40,15 +38,6 @@ func secret(t *testing.T, name, data, auth string, opts ...core.MetaMutator) *co
 	t.Helper()
 	result := fake.SecretObject(name, opts...)
 	result.Data = secretData(t, data, auth)
-	result.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
-			Kind:               "RepoSync",
-			Name:               v1alpha1.RepoSyncName,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-		},
-	}
 	return result
 }
 

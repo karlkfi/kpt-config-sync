@@ -16,9 +16,9 @@ func repoSyncResourceName(namespace, resourceName string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), resourceName)
 }
 
-// parseRepoSyncReconciler parses namespacreconciler deployment name ns-reconciler-<namespace>
-// and returns namespace.
-func parseRepoSyncReconciler(name string, obj client.Object) string {
+// nsOfReconciler return namespace by parsing namespace controller resource name.
+func nsOfReconciler(obj client.Object) string {
+	name := obj.GetName()
 	prefix := reconciler.RepoSyncPrefix + "-"
 	var ns string
 	if !strings.HasPrefix(name, prefix) {

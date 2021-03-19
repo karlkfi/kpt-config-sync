@@ -68,12 +68,6 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RepoSync")
 	}
 
-	owRefs := ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
 	var err error
 	if err = nonhierarchical.ValidateRepoSync(&rs); err != nil {
 		log.Error(err, "RepoSync failed validation")
@@ -94,7 +88,6 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, nil
 	}
-	log.V(2).Info("secret found, proceeding with installation")
 
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
@@ -105,7 +98,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(&rs), owRefs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(&rs))
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -115,7 +108,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace), owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace)); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -258,14 +251,6 @@ func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1
 }
 
 func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
-	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the corresponding RoleBinding is also deleted.
-	rb.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
-
 	// Update rolereference.
 	rb.RoleRef = rolereference(repoSyncPermissionsName(), "ClusterRole")
 
@@ -290,13 +275,6 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Repo
 
 func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHash []byte) mutateFn {
 	return func(d *appsv1.Deployment) error {
-		// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-		// the corresponding Deployment is also deleted.
-		d.OwnerReferences = ownerReference(
-			rs.GroupVersionKind().Kind,
-			rs.Name,
-			rs.UID,
-		)
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))

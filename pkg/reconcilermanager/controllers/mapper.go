@@ -9,10 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// mapSecretToRepoSync return a mapping from the Secret object to the RepoSync
-// object to reconcile.
-// Return reconcile request with namespace parsed from the object name if the
-// object is in `config-management-system namespace`.
+// mapSecretToRepoSync returns a mapping from a Secret in either 'config-management-system'
+// namespace or a user namespace to a RepoSync to be reconciled.
 func mapSecretToRepoSync() handler.MapFunc {
 	return func(a client.Object) []reconcile.Request {
 		if a.GetNamespace() == configsync.ControllerNamespace {
@@ -29,36 +27,32 @@ func mapSecretToRepoSync() handler.MapFunc {
 	}
 }
 
-// mapObjectToRepoSync return reconcile request if the Object has owner RepoSync.
+// mapObjectToRepoSync returns a mapping from an Object in 'config-management-system'
+// namespace to a RepoSync to be reconciled.
 func mapObjectToRepoSync() handler.MapFunc {
 	return func(a client.Object) []reconcile.Request {
-		return reconcileRequest(a)
+		if a.GetNamespace() == configsync.ControllerNamespace {
+			return reconcileRequest(a)
+		}
+		return nil
 	}
 }
 
 // reconcileRequest return reconcile request with namespace parsed from the
-// Object name if the Object has owner RepoSync.
+// Object name.
 func reconcileRequest(a client.Object) []reconcile.Request {
-	for _, owner := range a.GetOwnerReferences() {
-		if !(owner.Kind == configsync.RepoSyncKind && owner.APIVersion == v1alpha1.SchemeGroupVersion.String()) {
-			continue
-		}
-
-		ns := parseRepoSyncReconciler(a.GetName(), a)
-		if ns == "" {
-			continue
-		}
-
-		// Return request since we never have more than one ownerReference with
-		// Kind RepoSync.
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Name:      v1alpha1.RepoSyncName,
-					Namespace: ns,
-				},
-			},
-		}
+	ns := nsOfReconciler(a)
+	if ns == "" {
+		return nil
 	}
-	return nil
+
+	// Return request with the namespace parsed from resource name.
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      v1alpha1.RepoSyncName,
+				Namespace: ns,
+			},
+		},
+	}
 }

@@ -35,7 +35,6 @@ const (
 	gitUpdatedRevision = "1.1.0.rc.1"
 
 	reposyncReqNamespace = "bookinfo"
-	reposyncKind         = "RepoSync"
 	reposyncCRName       = "repo-sync"
 	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
 	reposyncDir          = "foo-corp"
@@ -173,27 +172,23 @@ func TestRepoSyncReconciler(t *testing.T) {
 				period:     v1alpha1.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 
 	wantServiceAccount := fake.ServiceAccountObject(
 		reconciler.RepoSyncName(reposyncReqNamespace),
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
 
 	wantRoleBinding := rolebinding(
 		repoSyncPermissionsName(),
 		reposyncReqNamespace,
 		core.Namespace(reposyncReqNamespace),
-		core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 	)
 
 	wantDeployments := []*appsv1.Deployment{
@@ -248,13 +243,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 				period:     v1alpha1.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
-			core.OwnerReference(ownerReference(reposyncKind, reposyncCRName, "")),
 		),
 	}
 

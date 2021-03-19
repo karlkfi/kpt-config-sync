@@ -45,16 +45,14 @@ func sourceFormatData(format string) map[string]string {
 	return result
 }
 
-func ownerReference(kind, name string, uid types.UID) []metav1.OwnerReference {
-	return []metav1.OwnerReference{
-		{
-			APIVersion:         v1alpha1.SchemeGroupVersion.String(),
-			Kind:               kind,
-			Name:               name,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
-			UID:                uid,
-		},
+func ownerReference(kind, name string, uid types.UID) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
+		Kind:               kind,
+		Name:               name,
+		Controller:         pointer.BoolPtr(true),
+		BlockOwnerDeletion: pointer.BoolPtr(true),
+		UID:                uid,
 	}
 }
 

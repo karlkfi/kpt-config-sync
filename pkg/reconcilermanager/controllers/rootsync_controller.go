@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -273,11 +274,13 @@ func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v
 func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.ClusterRoleBinding) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ClusterRoleBinding is also deleted.
-	crb.OwnerReferences = ownerReference(
-		rs.GroupVersionKind().Kind,
-		rs.Name,
-		rs.UID,
-	)
+	crb.OwnerReferences = []metav1.OwnerReference{
+		ownerReference(
+			rs.GroupVersionKind().Kind,
+			rs.Name,
+			rs.UID,
+		),
+	}
 
 	// Update rolereference.
 	crb.RoleRef = rolereference("cluster-admin", "ClusterRole")
@@ -305,11 +308,13 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 	return func(d *appsv1.Deployment) error {
 		// OwnerReferences, so that when the RootSync CustomResource is deleted,
 		// the corresponding Deployment is also deleted.
-		d.OwnerReferences = ownerReference(
-			rs.GroupVersionKind().Kind,
-			rs.Name,
-			rs.UID,
-		)
+		d.OwnerReferences = []metav1.OwnerReference{
+			ownerReference(
+				rs.GroupVersionKind().Kind,
+				rs.Name,
+				rs.UID,
+			),
+		}
 
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
