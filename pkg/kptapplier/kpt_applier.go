@@ -16,6 +16,7 @@ import (
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply"
@@ -121,6 +122,9 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 
 func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats) status.Error {
 	if e.Error != nil {
+		if isUnknownTypeError(e.Error) {
+			return nil
+		}
 		stats.errCount++
 		return ApplierError(e.Error)
 	}
@@ -267,4 +271,11 @@ func InventoryID(namespace string) string {
 		name = v1alpha1.RepoSyncName
 	}
 	return namespace + "_" + name
+}
+
+// TODO(b/183150103): The kpt apply library shouldn't emit prune failed event
+// when the type is not known. This function should be removed after
+// this issue in kpt apply library is fixed.
+func isUnknownTypeError(err error) bool {
+	return meta.IsNoMatchError(err)
 }

@@ -77,7 +77,11 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !nt.MultiRepo {
+	if nt.MultiRepo {
+		nt.Root.Add("acme/namespaces/prod/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
+		nt.Root.CommitAndPush("Adding Anvil CR")
+		nt.WaitForRootSyncSourceError(discovery.UnknownKindErrorCode)
+	} else {
 		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
 	}
 
@@ -95,12 +99,11 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		t.Errorf("validating metrics: %v", err)
 	}
 
-	// from the cluster.
+	// Remove the CR.
 	// This should fix the error.
 	nt.Root.Remove("acme/namespaces/prod/anvil-v1.yaml")
 	nt.Root.CommitAndPush("Removing the Anvil CR as well")
-	// TODO(b/183150103): The previous error wasn't removed from the status.
-	// nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs()
 }
 
 func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
@@ -163,7 +166,11 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !nt.MultiRepo {
+	if nt.MultiRepo {
+		nt.Root.Add("acme/namespaces/foo/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
+		nt.Root.CommitAndPush("Adding Anvil CR")
+		nt.WaitForRootSyncSourceError(discovery.UnknownKindErrorCode)
+	} else {
 		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
 	}
 
@@ -181,12 +188,11 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		t.Errorf("validating metrics: %v", err)
 	}
 
-	// from the cluster.
+	// Remove the CR.
 	// This should fix the error.
 	nt.Root.Remove("acme/namespaces/foo/anvil-v1.yaml")
 	nt.Root.CommitAndPush("Removing the Anvil CR as well")
-	// TODO(b/183150103): The previous error wasn't removed from the status.
-	// nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs()
 }
 
 func TestSyncUpdateCustomResource(t *testing.T) {
