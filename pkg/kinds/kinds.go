@@ -6,6 +6,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -135,6 +136,11 @@ func Deployment() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("Deployment")
 }
 
+// Pod returns the canonical Pod GroupVersionKind.
+func Pod() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("Pod")
+}
+
 // DaemonSet returns the canonical DaemonSet GroupVersionKind.
 func DaemonSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("DaemonSet")
@@ -160,9 +166,24 @@ func NetworkPolicy() schema.GroupVersionKind {
 	return networkingv1.SchemeGroupVersion.WithKind("NetworkPolicy")
 }
 
-// ConfigMap returns the canconical ConfigMap GroupVersionKind.
+// ConfigMap returns the canonical ConfigMap GroupVersionKind.
 func ConfigMap() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("ConfigMap")
+}
+
+// Job returns the canonical Job GroupVersionKind.
+func Job() schema.GroupVersionKind {
+	return batchv1.SchemeGroupVersion.WithKind("Job")
+}
+
+// CronJob returns the canonical CronJob GroupVersionKind.
+func CronJob() schema.GroupVersionKind {
+	return batchv1.SchemeGroupVersion.WithKind("CronJob")
+}
+
+// ReplicationController returns the canonical ReplicationController GroupVersionKind.
+func ReplicationController() schema.GroupVersionKind {
+	return corev1.SchemeGroupVersion.WithKind("ReplicationController")
 }
 
 // StatefulSet returns the canonical StatefulSet GroupVersionKind.
