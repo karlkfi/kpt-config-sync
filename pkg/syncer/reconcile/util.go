@@ -83,7 +83,7 @@ func clusterConfigNeedsUpdate(config *v1.ClusterConfig, initTime metav1.Time, er
 // repostatus-reconciler can force-update the stalled configs on startup.
 func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, initTime metav1.Time, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
 	if !clusterConfigNeedsUpdate(config, initTime, errs, rcs) {
-		glog.Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
+		glog.V(3).Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
 
