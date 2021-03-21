@@ -416,6 +416,9 @@ func (nt *NT) WaitForRepoSyncs() {
 		_, err := Retry(60*time.Second, func() error {
 			csm, err := testmetrics.ParseMetrics(nt.otelCollectorPort)
 			if err != nil {
+				// Port forward again to fix intermittent "exit status 56" errors when
+				// parsing from the port.
+				nt.PortForwardOtelCollector()
 				return err
 			}
 			return csm.ValidateTimestampMetrics(nt.ReconcilerMetrics)

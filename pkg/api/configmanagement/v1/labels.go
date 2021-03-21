@@ -8,6 +8,10 @@ const (
 	ManagedByKey = "app.kubernetes.io/managed-by"
 	// ManagedByValue marks the resource as managed by Nomos.
 	ManagedByValue = configmanagement.GroupName
+	// SystemLabel is the system Nomos label.
+	SystemLabel = ConfigManagementPrefix + "system"
+	// ArchLabel is the arch Nomos label.
+	ArchLabel = ConfigManagementPrefix + "arch"
 )
 
 // SyncerLabels returns the set of Nomos labels that the syncer should manage.

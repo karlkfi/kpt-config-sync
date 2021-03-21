@@ -1,11 +1,17 @@
 package metrics
 
 const (
+	// OpenTelemetry is the app label for all otel resources.
+	OpenTelemetry = "opentelemetry"
+
 	// OtelAgentName is the name of the OpenTelemetry Agent.
 	OtelAgentName = "otel-agent"
 
 	// OtelCollectorName is the name of the OpenTelemetry Collector.
 	OtelCollectorName = "otel-collector"
+
+	// OtelCollectorStackdriver is the name of the Stackdriver OpenTelemetry Collector ConfigMap.
+	OtelCollectorStackdriver = "otel-collector-stackdriver"
 
 	// OtelCollectorCustomCM is the name of the custom OpenTelemetry Collector ConfigMap.
 	OtelCollectorCustomCM = "otel-collector-custom"

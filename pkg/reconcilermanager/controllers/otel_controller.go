@@ -7,6 +7,7 @@ import (
 
 	traceapi "cloud.google.com/go/trace/apiv2"
 	"github.com/go-logr/logr"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
@@ -17,8 +18,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	controllerruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -63,8 +64,8 @@ func (r *OtelReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 // namespace and returns its hash.
 //
 // If the reconciled ConfigMap is the standard `otel-collector` map, we check
-// whether Application Default Credentials exist. If so, we patch the map with a
-// collector config that includes both a Prometheus and a Stackdriver exporter.
+// whether Application Default Credentials exist. If so, we create a new map with
+// a collector config that includes both a Prometheus and a Stackdriver exporter.
 func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.Request) ([]byte, error) {
 	// The otel-collector Deployment only reads from the `otel-collector` and
 	// `otel-collector-custom` ConfigMaps, so we only reconcile these two maps.
@@ -80,32 +81,41 @@ func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.R
 		return nil, status.APIServerErrorf(err, "failed to get otel ConfigMap %s", req.NamespacedName.String())
 	}
 	if cm.Name == metrics.OtelCollectorName {
-		return r.patchStandardConfigMap(ctx, &cm)
+		return r.configureStackdriverConfigMap(ctx)
 	}
 	return hash(cm)
 }
 
-// patchStandardConfigMap patches the standard `otel-collector` ConfigMap to
-// ensure the Prometheus exporter is enabled. It automatically enables Stackdriver
-// as well if Application Default Credentials are present.
-func (r *OtelReconciler) patchStandardConfigMap(ctx context.Context, cm *corev1.ConfigMap) ([]byte, error) {
-	existing := cm.DeepCopy()
-	patch := client.MergeFrom(existing)
-	if _, ok := cm.Data["otel-collector-config.yaml"]; ok {
-		creds, _ := getDefaultCredentials(ctx)
-		if creds != nil && creds.ProjectID != "" {
-			cm.Data["otel-collector-config.yaml"] = metrics.CollectorConfigStackdriver
-		}
-	}
-	if reflect.DeepEqual(existing, cm) {
-		return nil, nil
-	}
+// configureStackdriverConfigMap creates or updates a map with a config that
+// enables Stackdriver if Application Default Credentials are present.
+func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]byte, error) {
+	creds, _ := getDefaultCredentials(ctx)
+	if creds != nil && creds.ProjectID != "" {
+		var cm corev1.ConfigMap
+		cm.Name = metrics.OtelCollectorStackdriver
+		cm.Namespace = metrics.MonitoringNamespace
 
-	if err := r.client.Patch(ctx, cm, patch); err != nil {
-		return nil, err
+		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &cm, func() error {
+			cm.Labels = map[string]string{
+				"app":          metrics.OpenTelemetry,
+				"component":    metrics.OtelCollectorName,
+				v1.SystemLabel: "true",
+				v1.ArchLabel:   "csmr",
+			}
+			cm.Data = map[string]string{
+				"otel-collector-config.yaml": metrics.CollectorConfigStackdriver,
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if op != controllerutil.OperationResultNone {
+			r.log.Info("ConfigMap successfully reconciled", operationSubjectName, cm.Name, executedOperation, op)
+		}
+		return hash(cm)
 	}
-	r.log.Info("ConfigMap successfully reconciled", operationSubjectName, metrics.OtelCollectorName)
-	return hash(cm)
+	return nil, nil
 }
 
 // updateDeploymentAnnotation updates the otel deployment's spec.template.annotation
@@ -139,6 +149,7 @@ func (r *OtelReconciler) updateDeploymentAnnotation(ctx context.Context, hash []
 	if err := r.client.Patch(ctx, &dep, patch); err != nil {
 		return err
 	}
+	r.log.Info("Deployment successfully updated", operationSubjectName, dep.Name)
 	return nil
 }
 
@@ -154,7 +165,8 @@ func (r *OtelReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
 		},
 	}
 	return controllerruntime.NewControllerManagedBy(mgr).
-		For(&corev1.ConfigMap{}, builder.WithPredicates(p)).
+		For(&corev1.ConfigMap{}).
+		WithEventFilter(p).
 		Complete(r)
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
@@ -21,8 +22,8 @@ import (
 )
 
 const (
-	depAnnotation       = "06e6695b8dacdf25276745b95a0cc240"
-	depAnnotationCustom = "a5b98e40aa7ae6bd2326dca598900f83"
+	depAnnotationStackdriver = "fcc36ecaa85e342c14b2c744b90360c5"
+	depAnnotationCustom      = "a5b98e40aa7ae6bd2326dca598900f83"
 )
 
 func setupOtelReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Client, *OtelReconciler) {
@@ -106,15 +107,21 @@ func TestOtelReconcilerStackdriver(t *testing.T) {
 
 	wantConfigMap := configMapWithData(
 		metrics.MonitoringNamespace,
-		metrics.OtelCollectorName,
+		metrics.OtelCollectorStackdriver,
 		map[string]string{"otel-collector-config.yaml": metrics.CollectorConfigStackdriver},
+		core.Labels(map[string]string{
+			"app":          metrics.OpenTelemetry,
+			"component":    metrics.OtelCollectorName,
+			v1.SystemLabel: "true",
+			v1.ArchLabel:   "csmr",
+		}),
 	)
 
 	wantDeployment := fake.DeploymentObject(
 		core.Namespace(metrics.MonitoringNamespace),
 		core.Name(metrics.OtelCollectorName),
 	)
-	core.SetAnnotation(&wantDeployment.Spec.Template, v1alpha1.ConfigMapAnnotationKey, depAnnotation)
+	core.SetAnnotation(&wantDeployment.Spec.Template, v1alpha1.ConfigMapAnnotationKey, depAnnotationStackdriver)
 
 	// compare ConfigMap
 	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantConfigMap)], wantConfigMap, cmpopts.EquateEmpty()); diff != "" {

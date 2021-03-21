@@ -111,5 +111,8 @@ spec:
           - configMap:
               name: otel-collector
           - configMap:
+              name: otel-collector-stackdriver
+              optional: true
+          - configMap:
               name: otel-collector-custom
               optional: true
