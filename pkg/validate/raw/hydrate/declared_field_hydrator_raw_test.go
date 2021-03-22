@@ -35,6 +35,23 @@ spec:
 `,
 		},
 		{
+			name: "Pod with protocol",
+			yaml: `
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  namespace: bookstore
+spec:
+  containers:
+  - image: nginx:1.7.9
+    name: nginx
+    ports:
+    - containerPort: 80
+      protocol: TCP
+`,
+		},
+		{
 			name: "Pod initContainers",
 			yaml: `
 apiVersion: v1
