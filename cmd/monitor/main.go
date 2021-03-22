@@ -4,11 +4,13 @@ package main
 import (
 	"flag"
 
+	"github.com/go-logr/glogr"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/monitor"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -16,6 +18,7 @@ import (
 func main() {
 	flag.Parse()
 	log.Setup()
+	ctrl.SetLogger(glogr.New())
 
 	cfg, err := restconfig.NewRestConfig()
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/glogr"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/declared"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
 	"github.com/pkg/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
@@ -72,6 +74,7 @@ var flags = struct {
 func main() {
 	flag.Parse()
 	log.Setup()
+	ctrl.SetLogger(glogr.New())
 
 	if *debug {
 		status.EnablePanicOnMisuse()
