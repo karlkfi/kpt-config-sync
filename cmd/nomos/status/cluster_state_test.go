@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestRepoState_PrintRows(t *testing.T) {
@@ -236,14 +237,14 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 }
 
 func withGitRepoSync(git v1alpha1.Git) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
 		rs.Spec.Git = git
 	}
 }
 
 func withCommitsRepoSync(source, sync string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
 		rs.Status.Source.Commit = source
 		rs.Status.Sync.Commit = sync
@@ -251,7 +252,7 @@ func withCommitsRepoSync(source, sync string) core.MetaMutator {
 }
 
 func withErrorsRepoSync(errs ...string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
 		for _, err := range errs {
 			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{
@@ -316,14 +317,14 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 }
 
 func withGitRootSync(git v1alpha1.Git) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RootSync)
 		rs.Spec.Git = git
 	}
 }
 
 func withCommitsRootSync(source, sync string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RootSync)
 		rs.Status.Source.Commit = source
 		rs.Status.Sync.Commit = sync
@@ -331,7 +332,7 @@ func withCommitsRootSync(source, sync string) core.MetaMutator {
 }
 
 func withErrorsRootSync(errs ...string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RootSync)
 		for _, err := range errs {
 			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{

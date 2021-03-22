@@ -3,14 +3,14 @@ package diff
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestIsUnknown(t *testing.T) {
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  client.Object
 		want bool
 	}{
 		{

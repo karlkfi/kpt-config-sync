@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // HierarchyConfigKind adds a single GVK to a HierarchyConfig.
@@ -15,7 +16,7 @@ func HierarchyConfigKind(mode v1.HierarchyModeType, gvk schema.GroupVersionKind)
 
 // HierarchyConfigResource adds a HierarchyConfigResource to a HierarchyConfig.
 func HierarchyConfigResource(mode v1.HierarchyModeType, gv schema.GroupVersion, kinds ...string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		hc := o.(*v1.HierarchyConfig)
 		hc.Spec.Resources = append(hc.Spec.Resources,
 			v1.HierarchyConfigResource{

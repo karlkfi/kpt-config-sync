@@ -64,7 +64,7 @@ func toGVKs(objs []ast.FileObject) []schema.GroupVersionKind {
 	seen := make(map[schema.GroupVersionKind]bool)
 	var gvks []schema.GroupVersionKind
 	for _, o := range objs {
-		gvk := o.GroupVersionKind()
+		gvk := o.GetObjectKind().GroupVersionKind()
 		if !seen[gvk] {
 			seen[gvk] = true
 			gvks = append(gvks, gvk)

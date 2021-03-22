@@ -4,40 +4,40 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewFileObject returns an ast.FileObject with the specified underlying
 // client.Object and the designated source file.
 // TODO(b/179532046): This function should accept an unstructured.Unstructured
 // if possible. Also we should see if we can make FileObject *not* implement
-// core.Object and instead make callers explicitly interact with one format or
+// client.Object and instead make callers explicitly interact with one format or
 // the other.
-func NewFileObject(object core.Object, source cmpath.Relative) FileObject {
+func NewFileObject(object client.Object, source cmpath.Relative) FileObject {
 	return FileObject{
 		Object:   object,
 		Relative: source,
 	}
 }
 
-// FileObject extends core.Object to include the path to the file in the repo.
+// FileObject extends client.Object to include the path to the file in the repo.
 type FileObject struct {
 	// Object is the unstructured representation of the object.
-	core.Object
+	client.Object
 	// Relative is the path of this object in the repo prefixed by the Nomos Root.
 	cmpath.Relative
 }
 
-var _ id.Resource = &FileObject{}
+var _ client.Object = &FileObject{}
 
 // CompareFileObject is a cmp.Option which allows tests to compare FileObjects.
 var CompareFileObject = cmp.AllowUnexported(FileObject{})
 
 // DeepCopy returns a deep copy of the FileObject.
 func (o *FileObject) DeepCopy() FileObject {
-	obj := core.DeepCopy(o.Object)
+	obj := o.DeepCopyObject().(client.Object)
 	return FileObject{
 		Object:   obj,
 		Relative: o.Relative,

@@ -733,7 +733,7 @@ func clusterNameConfigMapName(nt *nomostest.NT) string {
 
 // configMapHasClusterName validates if the config map has the expected cluster name in `.data.CLUSTER_NAME`.
 func configMapHasClusterName(clusterName string) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		cm, ok := o.(*corev1.ConfigMap)
 		if !ok {
 			return nomostest.WrongTypeErr(cm, &corev1.ConfigMap{})
@@ -748,7 +748,7 @@ func configMapHasClusterName(clusterName string) nomostest.Predicate {
 
 // resourceQuotaHasHardPods validates if the resource quota has the expected hard pods in `.spec.hard.pods`.
 func resourceQuotaHasHardPods(pods string) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rq, ok := o.(*corev1.ResourceQuota)
 		if !ok {
 			return nomostest.WrongTypeErr(rq, &corev1.ResourceQuota{})

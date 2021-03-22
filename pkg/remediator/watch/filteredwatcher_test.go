@@ -39,13 +39,13 @@ func TestFilteredWatcher(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		declared []core.Object
+		declared []client.Object
 		actions  []action
 		want     []core.ID
 	}{
 		{
 			"Enqueue events for declared resources",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 				deployment2,
 				deployment3,
@@ -72,7 +72,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Enqueue events for undeclared-but-managed-by-other-reconciler resource",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{
@@ -85,7 +85,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Enqueue events for undeclared-but-managed-by-this-reconciler resource",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{
@@ -100,7 +100,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Filter events for undeclared-and-unmanaged resources",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{
@@ -117,7 +117,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Filter events for declared resource with different manager",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{
@@ -130,7 +130,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Filter events for declared resource with different GVK",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{
@@ -143,7 +143,7 @@ func TestFilteredWatcher(t *testing.T) {
 		},
 		{
 			"Handle bookmark events",
-			[]core.Object{
+			[]client.Object{
 				deployment1,
 			},
 			[]action{

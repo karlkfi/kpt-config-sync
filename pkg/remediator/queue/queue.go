@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GVKNN adds Version to core.ID to make it suitable for getting an object from
@@ -21,21 +22,21 @@ func (gvknn GVKNN) GroupVersionKind() schema.GroupVersionKind {
 	return gvknn.GroupKind.WithVersion(gvknn.Version)
 }
 
-func gvknnOfObject(obj core.Object) GVKNN {
+func gvknnOfObject(obj client.Object) GVKNN {
 	return GVKNN{
 		ID:      core.IDOf(obj),
-		Version: obj.GroupVersionKind().Version,
+		Version: obj.GetObjectKind().GroupVersionKind().Version,
 	}
 }
 
 // Interface is the methods ObjectQueue satisfies.
 // See ObjectQueue for method definitions.
 type Interface interface {
-	Add(obj core.Object)
-	Get() (core.Object, bool)
-	Done(obj core.Object)
-	Forget(obj core.Object)
-	Retry(obj core.Object)
+	Add(obj client.Object)
+	Get() (client.Object, bool)
+	Done(obj client.Object)
+	Forget(obj client.Object)
+	Retry(obj client.Object)
 	ShutDown()
 }
 
@@ -57,7 +58,7 @@ type ObjectQueue struct {
 	// maintain the order in which those items should be worked on.
 	underlying workqueue.Interface
 	// objects is a map of actual work items which need to be processed.
-	objects map[GVKNN]core.Object
+	objects map[GVKNN]client.Object
 	// dirty is a map of object keys which will need to be reprocessed even if
 	// they are currently being processed. This is explained further in Add().
 	dirty map[GVKNN]bool
@@ -70,7 +71,7 @@ func New(name string) *ObjectQueue {
 		cond:        sync.NewCond(&sync.Mutex{}),
 		rateLimiter: workqueue.DefaultControllerRateLimiter(),
 		underlying:  workqueue.NewNamed(name),
-		objects:     map[GVKNN]core.Object{},
+		objects:     map[GVKNN]client.Object{},
 		dirty:       map[GVKNN]bool{},
 	}
 	oq.delayer = delayingWrap(oq, name)
@@ -79,7 +80,7 @@ func New(name string) *ObjectQueue {
 
 // Add marks the object as needing processing unless the object is already in
 // the queue AND the existing object is more current than the new one.
-func (q *ObjectQueue) Add(obj core.Object) {
+func (q *ObjectQueue) Add(obj client.Object) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
@@ -119,7 +120,7 @@ func (q *ObjectQueue) Add(obj core.Object) {
 }
 
 // Retry schedules the object to be requeued using the rate limiter.
-func (q *ObjectQueue) Retry(obj core.Object) {
+func (q *ObjectQueue) Retry(obj client.Object) {
 	gvknn := gvknnOfObject(obj)
 	q.delayer.AddAfter(obj, q.rateLimiter.When(gvknn))
 }
@@ -133,7 +134,7 @@ func (q *ObjectQueue) Retry(obj core.Object) {
 //
 // You must call Done with item when you have finished processing it or else the
 // item will never be processed again.
-func (q *ObjectQueue) Get() (core.Object, bool) {
+func (q *ObjectQueue) Get() (client.Object, bool) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
@@ -159,13 +160,13 @@ func (q *ObjectQueue) Get() (core.Object, bool) {
 	obj := q.objects[gvknn]
 	delete(q.dirty, gvknn)
 	glog.V(4).Infof("Fetched object for processing: %v", obj)
-	return obj.DeepCopyObject().(core.Object), false
+	return obj.DeepCopyObject().(client.Object), false
 }
 
 // Done marks item as done processing, and if it has been marked as dirty again
 // while it was being processed, it will be re-added to the queue for
 // re-processing.
-func (q *ObjectQueue) Done(obj core.Object) {
+func (q *ObjectQueue) Done(obj client.Object) {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
@@ -182,8 +183,8 @@ func (q *ObjectQueue) Done(obj core.Object) {
 }
 
 // Forget is a convenience method that allows callers to directly tell the
-// RateLimitingInterface to forget a specific core.Object.
-func (q *ObjectQueue) Forget(obj core.Object) {
+// RateLimitingInterface to forget a specific client.Object.
+func (q *ObjectQueue) Forget(obj client.Object) {
 	gvknn := gvknnOfObject(obj)
 	q.rateLimiter.Forget(gvknn)
 }
@@ -213,7 +214,7 @@ func delayingWrap(oq *ObjectQueue, name string) workqueue.DelayingInterface {
 // genericWrapper is an internal wrapper that allows us to pass an ObjectQueue
 // to a DelayingInterface to enable rate-limited retries. It uses unsafe type
 // conversion because it should only ever be used in this file and so we know
-// that all of the item interfaces are actually core.Objects.
+// that all of the item interfaces are actually client.Objects.
 type genericWrapper struct {
 	oq *ObjectQueue
 }
@@ -222,7 +223,7 @@ var _ workqueue.Interface = &genericWrapper{}
 
 // Add implements workqueue.Interface.
 func (g *genericWrapper) Add(item interface{}) {
-	g.oq.Add(item.(core.Object))
+	g.oq.Add(item.(client.Object))
 }
 
 // Get implements workqueue.Interface.
@@ -232,7 +233,7 @@ func (g *genericWrapper) Get() (item interface{}, shutdown bool) {
 
 // Done implements workqueue.Interface.
 func (g *genericWrapper) Done(item interface{}) {
-	g.oq.Done(item.(core.Object))
+	g.oq.Done(item.(client.Object))
 }
 
 // Len implements workqueue.Interface.

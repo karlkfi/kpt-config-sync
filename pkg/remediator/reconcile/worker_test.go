@@ -28,19 +28,19 @@ import (
 func TestWorker_ProcessNextObject(t *testing.T) {
 	testCases := []struct {
 		name      string
-		declared  []core.Object
-		toProcess []core.Object
+		declared  []client.Object
+		toProcess []client.Object
 		want      []client.Object
 	}{
 		{
 			name: "update actual objects",
-			declared: []core.Object{
+			declared: []client.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
 					core.Label("first", "one")),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled,
 					core.Label("second", "two")),
 			},
-			toProcess: []core.Object{
+			toProcess: []client.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
@@ -54,8 +54,8 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 		},
 		{
 			name:     "delete undeclared objects",
-			declared: []core.Object{},
-			toProcess: []core.Object{
+			declared: []client.Object{},
+			toProcess: []client.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
@@ -63,11 +63,11 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 		},
 		{
 			name: "create missing objects",
-			declared: []core.Object{
+			declared: []client.Object{
 				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
 				fake.ClusterRoleObject(syncertest.ManagementEnabled),
 			},
-			toProcess: []core.Object{
+			toProcess: []client.Object{
 				queue.MarkDeleted(context.Background(), fake.ClusterRoleBindingObject()),
 				queue.MarkDeleted(context.Background(), fake.ClusterRoleObject()),
 			},
@@ -185,7 +185,7 @@ func TestWorker_Refresh(t *testing.T) {
 				unstructured.RemoveNestedField(tc.want.Object, "metadata", "labels")
 			}
 
-			var want core.Object = tc.want
+			var want client.Object = tc.want
 			if tc.wantDeleted {
 				want = queue.MarkDeleted(context.Background(), want)
 			}
@@ -200,19 +200,19 @@ func TestWorker_Refresh(t *testing.T) {
 func TestWorker_ResourceConflictMetricValidation(t *testing.T) {
 	testCases := []struct {
 		name        string
-		objects     []core.Object
+		objects     []client.Object
 		wantMetrics []*view.Row
 	}{
 		{
 			name:    "single resource conflict for Role object",
-			objects: []core.Object{fake.UnstructuredObject(kinds.Role())},
+			objects: []client.Object{fake.UnstructuredObject(kinds.Role())},
 			wantMetrics: []*view.Row{
 				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyType, Value: fake.UnstructuredObject(kinds.Role()).GetKind()}}},
 			},
 		},
 		{
 			name:    "multiple resource conflicts for Role object",
-			objects: []core.Object{fake.UnstructuredObject(kinds.Role()), fake.UnstructuredObject(kinds.Role())},
+			objects: []client.Object{fake.UnstructuredObject(kinds.Role()), fake.UnstructuredObject(kinds.Role())},
 			wantMetrics: []*view.Row{
 				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyType, Value: fake.UnstructuredObject(kinds.Role()).GetKind()}}},
 			},
@@ -247,7 +247,7 @@ type fakeReconciler struct {
 
 var _ reconcilerInterface = fakeReconciler{}
 
-func (f fakeReconciler) Remediate(_ context.Context, _ core.ID, _ core.Object) status.Error {
+func (f fakeReconciler) Remediate(_ context.Context, _ core.ID, _ client.Object) status.Error {
 	return f.remediateErr
 }
 
@@ -257,17 +257,17 @@ func (f fakeReconciler) GetClient() client.Client {
 
 type fakeQueue struct {
 	queue.Interface
-	element core.Object
+	element client.Object
 }
 
-func (q *fakeQueue) Add(o core.Object) {
+func (q *fakeQueue) Add(o client.Object) {
 	q.element = o
 }
 
-func (q *fakeQueue) Retry(o core.Object) {
+func (q *fakeQueue) Retry(o client.Object) {
 	q.element = o
 }
 
-func (q *fakeQueue) Forget(_ core.Object) {
+func (q *fakeQueue) Forget(_ client.Object) {
 	q.element = nil
 }

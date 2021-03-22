@@ -180,15 +180,15 @@ func TestSync(t *testing.T) {
 	}
 }
 
-func prepareResources() ([]core.Object, map[core.ID]core.Object) {
+func prepareResources() ([]client.Object, map[core.ID]client.Object) {
 	u1 := fake.UnstructuredObject(kinds.Deployment(), core.Namespace("test-namespace"), core.Name("random-name"))
 	u2 := fake.UnstructuredObject(schema.GroupVersionKind{
 		Group:   "configsync.test",
 		Version: "v1",
 		Kind:    "Test",
 	}, core.Namespace("test-namespace"), core.Name("random-name"))
-	objs := []core.Object{u1, u2}
-	cache := map[core.ID]core.Object{}
+	objs := []client.Object{u1, u2}
+	cache := map[core.ID]client.Object{}
 	for _, u := range objs {
 		cache[core.IDOf(u)] = u
 	}

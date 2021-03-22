@@ -5,14 +5,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -110,12 +112,12 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 		return nil, err
 	}
 
-	obj, ok := u.(core.Object)
+	obj, ok := u.(client.Object)
 	if !ok {
 		// The type doesn't declare required fields, but is registered.
 		// User-specified types are implicitly Unstructured, which defines Labels/Annotations/etc. even
 		// if the underlying type definition does _NOT_. It isn't clear how this code would ever be reached.
-		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %T %s", obj, obj.GroupVersionKind().String())
+		return nil, status.InternalErrorf("not a valid persistent Kubernetes type: %T %s", obj, obj.GetObjectKind().GroupVersionKind().String())
 	}
 
 	rel, err := filepath.Rel(rootDir.OSPath(), path.OSPath())
@@ -177,7 +179,7 @@ func isList(uList runtime.Unstructured) bool {
 
 // validateMetadata returns a status.MultiError if metadata.annotations/labels
 // has a value that wasn't parsed as a string.
-func validateMetadata(u runtime.Unstructured, oid core.IDPath) status.ResourceError {
+func validateMetadata(u runtime.Unstructured, oid *unstructured.Unstructured) status.ResourceError {
 	content := u.UnstructuredContent()
 
 	metadata, hasMetadata := content["metadata"].(map[string]interface{})
@@ -248,39 +250,46 @@ func getInvalidKeys(o interface{}) ([]string, error) {
 // don't know ahead of time what errors there are. Thus, we try to collect
 // as much valid information as possible before exiting.
 //
-// Returns the best guess of the object's core.ID, and an array of encountered
-// errors.
-func parseID(content map[string]interface{}, path id.Path) (core.IDPath, []string) {
-	oid := core.IDPath{
-		Path: path,
-	}
+// Returns an Unstructured with our best guesses of the actual object's type,
+// namespace, and name.
+func parseID(content map[string]interface{}, path cmpath.Absolute) (*unstructured.Unstructured, []string) {
+	u := &unstructured.Unstructured{}
+	core.Annotation(v1.SourcePathAnnotationKey, path.OSPath())(u)
 	var errs []string
 
 	apiVersion, err := parseString(content, "apiVersion")
+	var group, version, kind string
 	if err == nil {
 		gv, err := schema.ParseGroupVersion(apiVersion)
 		if err == nil {
-			oid.Group = gv.Group
+			group = gv.Group
+			version = gv.Version
 		} else {
 			errs = append(errs, err.Error())
 		}
 	} else {
 		errs = append(errs, err.Error())
 	}
-	kind, err := parseString(content, "kind")
-	if err == nil {
-		oid.Kind = kind
-	} else {
+	kind, err = parseString(content, "kind")
+	if err != nil {
 		errs = append(errs, err.Error())
 	}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: group, Version: version, Kind: kind})
+
 	name, err := parseString(content, "metadata", "name")
-	if err == nil {
-		oid.Name = name
-	} else {
+	if err != nil {
 		errs = append(errs, err.Error())
+	}
+	u.SetName(name)
+
+	namespace, err := parseString(content, "metadata", "namespace")
+	if err == nil {
+		u.SetNamespace(namespace)
+		// err is non-nil for cluster-scoped objects since they won't define namespace,
+		// so don't bother with that case.
 	}
 
-	return oid, errs
+	return u, errs
 }
 
 func parseString(content map[string]interface{}, fields ...string) (string, error) {

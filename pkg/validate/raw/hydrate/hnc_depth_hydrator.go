@@ -16,7 +16,7 @@ import (
 // depth to be compatible with the Hierarchy Namespace Controller.
 func HNCDepth(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
-		if obj.GroupVersionKind() == kinds.Namespace() {
+		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			addDepthLabels(obj)
 			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
 		}

@@ -117,7 +117,7 @@ func (nt *NT) KubeconfigPath() string {
 	return nt.kubeconfigPath
 }
 
-func fmtObj(obj core.Object) string {
+func fmtObj(obj client.Object) string {
 	return fmt.Sprintf("%s/%s %T", obj.GetNamespace(), obj.GetName(), obj)
 }
 
@@ -127,7 +127,7 @@ func fmtObj(obj core.Object) string {
 // 2) name and namespace are strings instead of requiring client.ObjectKey.
 //
 // Leave namespace as empty string for cluster-scoped resources.
-func (nt *NT) Get(name, namespace string, obj core.Object) error {
+func (nt *NT) Get(name, namespace string, obj client.Object) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	if obj.GetResourceVersion() != "" {
 		// If obj is already populated, this can cause the final obj to be a
@@ -135,7 +135,7 @@ func (nt *NT) Get(name, namespace string, obj core.Object) error {
 		//
 		// If this is due to a retry loop, remember to create a new instance to
 		// populate for each loop.
-		return errors.Errorf("called .Get on already-populated object %v: %v", obj.GroupVersionKind(), obj)
+		return errors.Errorf("called .Get on already-populated object %v: %v", obj.GetObjectKind().GroupVersionKind(), obj)
 	}
 	return nt.Client.Get(nt.Context, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 }
@@ -146,7 +146,7 @@ func (nt *NT) List(obj client.ObjectList, opts ...client.ListOption) error {
 }
 
 // Create is identical to Create defined for client.Client, but without requiring Context.
-func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
+func (nt *NT) Create(obj client.Object, opts ...client.CreateOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("creating %s", fmtObj(obj))
 	AddTestLabel(obj)
@@ -154,28 +154,28 @@ func (nt *NT) Create(obj core.Object, opts ...client.CreateOption) error {
 }
 
 // Update is identical to Update defined for client.Client, but without requiring Context.
-func (nt *NT) Update(obj core.Object, opts ...client.UpdateOption) error {
+func (nt *NT) Update(obj client.Object, opts ...client.UpdateOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("updating %s", fmtObj(obj))
 	return nt.Client.Update(nt.Context, obj, opts...)
 }
 
 // Delete is identical to Delete defined for client.Client, but without requiring Context.
-func (nt *NT) Delete(obj core.Object, opts ...client.DeleteOption) error {
+func (nt *NT) Delete(obj client.Object, opts ...client.DeleteOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("deleting %s", fmtObj(obj))
 	return nt.Client.Delete(nt.Context, obj, opts...)
 }
 
 // DeleteAllOf is identical to DeleteAllOf defined for client.Client, but without requiring Context.
-func (nt *NT) DeleteAllOf(obj core.Object, opts ...client.DeleteAllOfOption) error {
+func (nt *NT) DeleteAllOf(obj client.Object, opts ...client.DeleteAllOfOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("deleting all of %T", obj)
 	return nt.Client.DeleteAllOf(nt.Context, obj, opts...)
 }
 
 // MergePatch uses the object to construct a merge patch for the fields provided.
-func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOption) error {
+func (nt *NT) MergePatch(obj client.Object, patch string, opts ...client.PatchOption) error {
 	FailIfUnknown(nt.T, nt.scheme, obj)
 	nt.DebugLogf("Applying patch %s", patch)
 	AddTestLabel(obj)
@@ -183,7 +183,7 @@ func (nt *NT) MergePatch(obj core.Object, patch string, opts ...client.PatchOpti
 }
 
 // MustMergePatch is like MergePatch but will call t.Fatal if the patch fails.
-func (nt *NT) MustMergePatch(obj core.Object, patch string, opts ...client.PatchOption) {
+func (nt *NT) MustMergePatch(obj client.Object, patch string, opts ...client.PatchOption) {
 	nt.T.Helper()
 	if err := nt.MergePatch(obj, patch, opts...); err != nil {
 		nt.T.Fatal(err)
@@ -287,7 +287,7 @@ func (nt *NT) RetryMetrics(timeout time.Duration, fn func(csm testmetrics.Config
 //
 // Validates the object against each of the passed Predicates, returning error
 // if any Predicate fails.
-func (nt *NT) Validate(name, namespace string, o core.Object, predicates ...Predicate) error {
+func (nt *NT) Validate(name, namespace string, o client.Object, predicates ...Predicate) error {
 	err := nt.Get(name, namespace, o)
 	if err != nil {
 		return err
@@ -306,10 +306,10 @@ func (nt *NT) Validate(name, namespace string, o core.Object, predicates ...Pred
 // `o` must either be:
 // 1) a struct pointer to the type of the object to search for, or
 // 2) an unstructured.Unstructured with the type information filled in.
-func (nt *NT) ValidateNotFound(name, namespace string, o core.Object) error {
+func (nt *NT) ValidateNotFound(name, namespace string, o client.Object) error {
 	err := nt.Get(name, namespace, o)
 	if err == nil {
-		return errors.Errorf("%T %v %s/%s found", o, o.GroupVersionKind(), namespace, name)
+		return errors.Errorf("%T %v %s/%s found", o, o.GetObjectKind().GroupVersionKind(), namespace, name)
 	}
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -464,7 +464,7 @@ func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, p
 		if err != nil {
 			return fmt.Errorf("%w: got unrecognized GVK %v", ErrWrongType, gvk)
 		}
-		o, ok := obj.(core.Object)
+		o, ok := obj.(client.Object)
 		if !ok {
 			// This means the GVK corresponded to a type registered in the Scheme
 			// which is not a valid Kubernetes object. We expect the only way this

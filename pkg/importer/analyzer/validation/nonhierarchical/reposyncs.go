@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -67,7 +67,7 @@ var InvalidRepoSyncCode = "1061"
 var invalidRepoSyncBuilder = status.NewErrorBuilder(InvalidRepoSyncCode)
 
 // InvalidRepoSyncName reports that a RepoSync has the wrong name.
-func InvalidRepoSyncName(o core.Object) status.Error {
+func InvalidRepoSyncName(o client.Object) status.Error {
 	name := o.GetName()
 	namespace := o.GetNamespace()
 	return invalidRepoSyncBuilder.
@@ -78,7 +78,7 @@ func InvalidRepoSyncName(o core.Object) status.Error {
 
 // MissingGitRepo reports that a RepoSync doesn't declare the git repo it is
 // supposed to connect to.
-func MissingGitRepo(o core.Object) status.Error {
+func MissingGitRepo(o client.Object) status.Error {
 	return invalidRepoSyncBuilder.
 		Sprint("RepoSyncs must define spec.git.repo").
 		BuildWithResources(o)
@@ -86,7 +86,7 @@ func MissingGitRepo(o core.Object) status.Error {
 
 // InvalidAuthType reports that a RepoSync doesn't use one of the known auth
 // methods.
-func InvalidAuthType(o core.Object) status.Error {
+func InvalidAuthType(o client.Object) status.Error {
 	types := []string{authSSH, authCookiefile, authGCENode, authToken, authNone}
 
 	return invalidRepoSyncBuilder.
@@ -97,7 +97,7 @@ func InvalidAuthType(o core.Object) status.Error {
 
 // NoOpProxy reports that a RepoSync declares a proxy, but the declaration would
 // do nothing.
-func NoOpProxy(o core.Object) status.Error {
+func NoOpProxy(o client.Object) status.Error {
 	return invalidRepoSyncBuilder.
 		Sprintf("RepoSyncs which declare spec.git.proxy must declare spec.git.auth=%q or %q",
 			authNone, authCookiefile).
@@ -106,7 +106,7 @@ func NoOpProxy(o core.Object) status.Error {
 
 // IllegalSecretRef reports that a RepoSync declares an auth mode that doesn't
 // allow SecretRefs does declare a SecretRef.
-func IllegalSecretRef(o core.Object) status.Error {
+func IllegalSecretRef(o client.Object) status.Error {
 	return invalidRepoSyncBuilder.
 		Sprintf("RepoSyncs declaring spec.git.auth = %q or %q must not declare spec.git.secretRef",
 			authNone, authGCENode).
@@ -115,7 +115,7 @@ func IllegalSecretRef(o core.Object) status.Error {
 
 // MissingSecretRef reports that a RepoSync declares an auth mode that requires
 // a SecretRef, but does not do so.
-func MissingSecretRef(o core.Object) status.Error {
+func MissingSecretRef(o client.Object) status.Error {
 	return invalidRepoSyncBuilder.
 		Sprintf("RepoSyncs declaring spec.git.auth = %q or %q or %q must declare spec.git.secretRef",
 			authSSH, authCookiefile, authToken).

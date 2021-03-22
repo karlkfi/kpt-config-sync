@@ -18,7 +18,7 @@ func RemovedCRDs(objs *objects.Raw) status.MultiError {
 	}
 	removed := removedGroupKinds(objs.PreviousCRDs, current)
 	for _, obj := range objs.Objects {
-		if removed[obj.GroupVersionKind().GroupKind()] {
+		if removed[obj.GetObjectKind().GroupVersionKind().GroupKind()] {
 			errs = status.Append(errs, nonhierarchical.UnsupportedCRDRemovalError(obj))
 		}
 	}

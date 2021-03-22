@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/nomos/pkg/core"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -52,7 +52,7 @@ func waitForCRDs(nt *NT, crds []string) error {
 // IsEstablished returns true if the given CRD is established on the cluster,
 // which indicates if discovery knows about it yet. For more info see
 // https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition
-func IsEstablished(o core.Object) error {
+func IsEstablished(o client.Object) error {
 	crd, ok := o.(*v1beta1.CustomResourceDefinition)
 	if !ok {
 		return WrongTypeErr(o, crd)

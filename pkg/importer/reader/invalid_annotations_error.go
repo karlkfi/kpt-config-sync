@@ -3,8 +3,8 @@ package reader
 import (
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // InvalidAnnotationValueErrorCode is the error code for when a value in
@@ -15,7 +15,7 @@ var invalidAnnotationValueErrorBase = status.NewErrorBuilder(InvalidAnnotationVa
 
 // InvalidAnnotationValueError reports that an annotation value is coerced to
 // a non-string type.
-func InvalidAnnotationValueError(resource id.Resource, keys []string) status.ResourceError {
+func InvalidAnnotationValueError(resource client.Object, keys []string) status.ResourceError {
 	return invalidAnnotationValueErrorBase.
 		Sprintf("Values in metadata.annotations MUST be strings. "+
 			`To fix, add quotes around the values. Non-string values for:

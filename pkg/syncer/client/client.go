@@ -9,7 +9,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -43,17 +42,17 @@ type clientUpdateFn func(ctx context.Context, obj client.Object, opts ...client.
 
 // update is a function that updates the state of an API object. The argument is expected to be a copy of the object,
 // so no there is no need to worry about mutating the argument when implementing an Update function.
-type update func(core.Object) (core.Object, error)
+type update func(client.Object) (client.Object, error)
 
 // Create saves the object obj in the Kubernetes cluster and records prometheus metrics.
-func (c *Client) Create(ctx context.Context, obj core.Object, opts ...client.CreateOption) status.Error {
+func (c *Client) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) status.Error {
 	description := getResourceInfo(obj)
 	glog.V(1).Infof("Creating %s", description)
 
 	start := time.Now()
 	err := c.Client.Create(ctx, obj, opts...)
-	c.recordLatency(start, "Create", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
-	m.RecordAPICallDuration(ctx, "create", m.StatusTagKey(err), obj.GroupVersionKind(), start)
+	c.recordLatency(start, "Create", obj.GetObjectKind().GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "create", m.StatusTagKey(err), obj.GetObjectKind().GroupVersionKind(), start)
 
 	switch {
 	case apierrors.IsAlreadyExists(err):
@@ -68,7 +67,7 @@ func (c *Client) Create(ctx context.Context, obj core.Object, opts ...client.Cre
 
 // Delete deletes the given obj from Kubernetes cluster and records prometheus metrics.
 // This automatically sets the propagation policy to always be "Background".
-func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.DeleteOption) status.Error {
+func (c *Client) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) status.Error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
 
@@ -100,8 +99,8 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 		err = errors.Wrapf(err, "delete failed for %s", description)
 	}
 
-	c.recordLatency(start, "delete", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
-	m.RecordAPICallDuration(ctx, "delete", m.StatusTagKey(err), obj.GroupVersionKind(), start)
+	c.recordLatency(start, "delete", obj.GetObjectKind().GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "delete", m.StatusTagKey(err), obj.GetObjectKind().GroupVersionKind(), start)
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to delete", obj)
@@ -110,22 +109,22 @@ func (c *Client) Delete(ctx context.Context, obj core.Object, opts ...client.Del
 }
 
 // Update updates the given obj in the Kubernetes cluster.
-func (c *Client) Update(ctx context.Context, obj core.Object, updateFn update) (client.Object, status.Error) {
+func (c *Client) Update(ctx context.Context, obj client.Object, updateFn update) (client.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Update)
 }
 
 // UpdateStatus updates the given obj's status in the Kubernetes cluster.
-func (c *Client) UpdateStatus(ctx context.Context, obj core.Object, updateFn update) (client.Object, status.Error) {
+func (c *Client) UpdateStatus(ctx context.Context, obj client.Object, updateFn update) (client.Object, status.Error) {
 	return c.update(ctx, obj, updateFn, c.Client.Status().Update)
 }
 
 // update updates the given obj in the Kubernetes cluster using clientUpdateFn and records prometheus
 // metrics. In the event of a conflicting update, it will retry.
 // This operation always involves retrieving the resource from API Server before actually updating it.
-func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
+func (c *Client) update(ctx context.Context, obj client.Object, updateFn update,
 	clientUpdateFn clientUpdateFn) (client.Object, status.Error) {
 	// We only want to modify the argument after successfully making an update to API Server.
-	workingObj := core.DeepCopy(obj)
+	workingObj := obj.DeepCopyObject().(client.Object)
 	description := getResourceInfo(workingObj)
 	namespacedName := getNamespacedName(workingObj)
 
@@ -141,7 +140,7 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 		}
 
 		oldV := resourceVersion(workingObj)
-		newObj, err := updateFn(core.DeepCopy(workingObj))
+		newObj, err := updateFn(workingObj.DeepCopyObject().(client.Object))
 		if err != nil {
 			if isNoUpdateNeeded(err) {
 				glog.V(2).Infof("Update function for %s returned no update needed", description)
@@ -158,8 +157,8 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 
 		start := time.Now()
 		err = clientUpdateFn(ctx, newObj)
-		c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
-		m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GroupVersionKind(), start)
+		c.recordLatency(start, "update", obj.GetObjectKind().GroupVersionKind().Kind, metrics.StatusLabel(err))
+		m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GetObjectKind().GroupVersionKind(), start)
 
 		if err == nil {
 			newV := resourceVersion(newObj)
@@ -186,14 +185,14 @@ func (c *Client) update(ctx context.Context, obj core.Object, updateFn update,
 
 // Upsert creates or updates the given obj in the Kubernetes cluster and records prometheus metrics.
 // This operation always involves retrieving the resource from API Server before actually creating or updating it.
-func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
+func (c *Client) Upsert(ctx context.Context, obj client.Object) status.Error {
 	description := getResourceInfo(obj)
 	namespacedName := getNamespacedName(obj)
 
 	// We don't actually care about the object on the cluster, we just want to
 	// check if it exists before deciding whether to create or update it.
 	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(obj.GroupVersionKind())
+	u.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 	if err := c.Client.Get(ctx, namespacedName, u); err != nil {
 		if apierrors.IsNotFound(err) {
 			return c.Create(ctx, obj)
@@ -204,8 +203,8 @@ func (c *Client) Upsert(ctx context.Context, obj core.Object) status.Error {
 	glog.V(1).Infof("Will update %s to %s", description, spew.Sdump(obj))
 	start := time.Now()
 	err := c.Client.Update(ctx, obj)
-	c.recordLatency(start, "update", obj.GroupVersionKind().Kind, metrics.StatusLabel(err))
-	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GroupVersionKind(), start)
+	c.recordLatency(start, "update", obj.GetObjectKind().GroupVersionKind().Kind, metrics.StatusLabel(err))
+	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), obj.GetObjectKind().GroupVersionKind(), start)
 
 	if err != nil {
 		return status.ResourceWrap(err, "failed to update", obj)
@@ -222,21 +221,21 @@ func (c *Client) recordLatency(start time.Time, lvs ...string) {
 }
 
 // getResourceInfo returns a description of the object (its GroupVersionKind and NamespacedName), as well as its Kind.
-func getResourceInfo(obj core.Object) string {
-	gvk := obj.GroupVersionKind()
+func getResourceInfo(obj client.Object) string {
+	gvk := obj.GetObjectKind().GroupVersionKind()
 	namespacedName := getNamespacedName(obj)
 	return fmt.Sprintf("%q, %q", gvk, namespacedName)
 }
 
-func getNamespacedName(obj core.Object) types.NamespacedName {
+func getNamespacedName(obj client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
 }
 
-func resourceVersion(obj core.Object) string {
+func resourceVersion(obj client.Object) string {
 	return obj.GetResourceVersion()
 }
 
 // isFinalizing returns true if the object is finalizing.
-func isFinalizing(o core.Object) bool {
+func isFinalizing(o client.Object) bool {
 	return o.GetDeletionTimestamp() != nil
 }

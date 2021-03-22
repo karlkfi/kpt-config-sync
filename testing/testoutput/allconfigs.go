@@ -9,13 +9,14 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const importToken = "abcde"
 
 // ClusterConfig generates a valid ClusterConfig to be put in AllConfigs given the set of hydrated
 // cluster-scoped client.Objects.
-func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
+func ClusterConfig(objects ...client.Object) *v1.ClusterConfig {
 	config := fake.ClusterConfigObject()
 	config.Spec.Token = importToken
 	for _, o := range objects {
@@ -25,7 +26,7 @@ func ClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 }
 
 // CRDClusterConfig generates a valid ClusterConfig which holds the list of CRDs in the repo.
-func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
+func CRDClusterConfig(objects ...client.Object) *v1.ClusterConfig {
 	config := fake.CRDClusterConfigObject()
 	config.Spec.Token = importToken
 	for _, o := range objects {
@@ -36,7 +37,7 @@ func CRDClusterConfig(objects ...core.Object) *v1.ClusterConfig {
 
 // NamespaceConfig generates a valid NamespaceConfig to be put in AllConfigs given the set of
 // hydrated client.Objects for that Namespace.
-func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...core.Object) v1.NamespaceConfig {
+func NamespaceConfig(clusterName, dir string, opt core.MetaMutator, objects ...client.Object) v1.NamespaceConfig {
 	config := fake.NamespaceConfigObject(Source(path.Join(dir, "namespace.yaml")))
 	config.Spec.Token = importToken
 	if clusterName != "" {

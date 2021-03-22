@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
@@ -146,7 +145,7 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 // RemoveNomosMeta implements Applier.
 func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Unstructured) (bool, status.Error) {
 	var changed bool
-	_, err := c.client.Update(ctx, u, func(obj core.Object) (core.Object, error) {
+	_, err := c.client.Update(ctx, u, func(obj client.Object) (client.Object, error) {
 		changed = RemoveNomosLabelsAndAnnotations(obj)
 		if !changed {
 			return obj, syncerclient.NoUpdateNeeded()

@@ -56,8 +56,8 @@ func (w *Worker) processNextObject(ctx context.Context) bool {
 	return w.process(ctx, obj)
 }
 
-func (w *Worker) process(ctx context.Context, obj core.Object) bool {
-	var toRemediate core.Object
+func (w *Worker) process(ctx context.Context, obj client.Object) bool {
+	var toRemediate client.Object
 	if queue.WasDeleted(ctx, obj) {
 		// Passing a nil Object to the reconciler signals that the accompanying ID
 		// is for an Object that was deleted.
@@ -68,7 +68,7 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 
 	now := time.Now()
 	err := w.reconciler.Remediate(ctx, core.IDOf(obj), toRemediate)
-	metrics.RecordRemediateDuration(ctx, metrics.StatusTagKey(err), obj.GroupVersionKind(), now)
+	metrics.RecordRemediateDuration(ctx, metrics.StatusTagKey(err), obj.GetObjectKind().GroupVersionKind(), now)
 	if err != nil {
 		// To debug the set of events we've missed, you may need to comment out this
 		// block. Specifically, this makes things smooth for production, but can
@@ -76,7 +76,7 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 		if err.Code() == syncerclient.ResourceConflictCode {
 			// This means our cached version of the object isn't the same as the one
 			// on the cluster. We need to refresh the cached version.
-			metrics.RecordResourceConflict(ctx, obj.GroupVersionKind())
+			metrics.RecordResourceConflict(ctx, obj.GetObjectKind().GroupVersionKind())
 			err := w.refresh(ctx, obj)
 			if err != nil {
 				glog.Errorf("Worker unable to update cached version of %q: %v", core.IDOf(obj), err)
@@ -95,12 +95,12 @@ func (w *Worker) process(ctx context.Context, obj core.Object) bool {
 }
 
 // refresh updates the cached version of the object.
-func (w *Worker) refresh(ctx context.Context, o core.Object) status.Error {
+func (w *Worker) refresh(ctx context.Context, o client.Object) status.Error {
 	c := w.reconciler.GetClient()
 
 	// Try to get an updated version of the object from the cluster.
 	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(o.GroupVersionKind())
+	u.SetGroupVersionKind(o.GetObjectKind().GroupVersionKind())
 	err := c.Get(ctx, client.ObjectKey{Name: o.GetName(), Namespace: o.GetNamespace()}, u)
 
 	switch {

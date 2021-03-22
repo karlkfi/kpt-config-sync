@@ -12,10 +12,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func groupKind(t *testing.T, gk schema.GroupKind) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		switch crd := o.(type) {
 		case *apiextensionsv1beta1.CustomResourceDefinition:
 			crd.Spec.Group = gk.Group
@@ -30,7 +31,7 @@ func groupKind(t *testing.T, gk schema.GroupKind) core.MetaMutator {
 }
 
 func servedStorage(t *testing.T, served, storage bool) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		switch crd := o.(type) {
 		case *apiextensionsv1beta1.CustomResourceDefinition:
 			crd.Spec.Versions = []apiextensionsv1beta1.CustomResourceDefinitionVersion{
@@ -53,7 +54,7 @@ func servedStorage(t *testing.T, served, storage bool) core.MetaMutator {
 }
 
 func preserveUnknownFields(t *testing.T, preserved bool) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		switch crd := o.(type) {
 		case *apiextensionsv1beta1.CustomResourceDefinition:
 			crd.Spec.PreserveUnknownFields = &preserved

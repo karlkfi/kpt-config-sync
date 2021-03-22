@@ -15,10 +15,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func preserveUnknownFields(t *testing.T, preserved bool) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		switch crd := o.(type) {
 		case *apiextensionsv1beta1.CustomResourceDefinition:
 			crd.Spec.PreserveUnknownFields = &preserved
@@ -33,7 +34,7 @@ func preserveUnknownFields(t *testing.T, preserved bool) core.MetaMutator {
 func TestGetCRDs(t *testing.T) {
 	testCases := []struct {
 		name string
-		objs []core.Object
+		objs []client.Object
 		want []*apiextensionsv1beta1.CustomResourceDefinition
 	}{
 		{
@@ -42,7 +43,7 @@ func TestGetCRDs(t *testing.T) {
 		},
 		{
 			name: "v1Beta1 CRD",
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.CustomResourceDefinitionV1Beta1Unstructured(),
 			},
 			want: []*apiextensionsv1beta1.CustomResourceDefinition{
@@ -51,7 +52,7 @@ func TestGetCRDs(t *testing.T) {
 		},
 		{
 			name: "v1 CRD",
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.CustomResourceDefinitionV1Object(),
 			},
 			want: []*apiextensionsv1beta1.CustomResourceDefinition{
@@ -78,7 +79,7 @@ func TestGetCRDs(t *testing.T) {
 	}
 }
 
-func generateMalformedCRD(t *testing.T) core.Object {
+func generateMalformedCRD(t *testing.T) client.Object {
 	u := fake.CustomResourceDefinitionV1Beta1Unstructured()
 
 	// the `spec.group` field should be a string
@@ -92,7 +93,7 @@ func generateMalformedCRD(t *testing.T) core.Object {
 func TestAsCRD(t *testing.T) {
 	testCases := []struct {
 		name    string
-		obj     core.Object
+		obj     client.Object
 		wantErr status.Error
 	}{
 		{

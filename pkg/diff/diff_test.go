@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -26,8 +27,8 @@ func TestDiffType(t *testing.T) {
 	testCases := []struct {
 		name     string
 		scope    declared.Scope
-		declared core.Object
-		actual   core.Object
+		declared client.Object
+		actual   client.Object
 		want     Operation
 	}{
 		// Declared + no actual paths.
@@ -252,21 +253,21 @@ func TestThreeWay(t *testing.T) {
 	tcs := []struct {
 		name string
 		// the git resource to which the applier syncs the state to.
-		newDeclared []core.Object
+		newDeclared []client.Object
 		// the previously declared resources.
-		previousDeclared []core.Object
+		previousDeclared []client.Object
 		// The actual state of the resources.
-		actual []core.Object
+		actual []client.Object
 		// expected diff.
 		want []Diff
 	}{
 		{
 			name: "Update and Create - no previously declared",
-			newDeclared: []core.Object{
+			newDeclared: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			actual: []core.Object{
+			actual: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
@@ -282,11 +283,11 @@ func TestThreeWay(t *testing.T) {
 		},
 		{
 			name: "Update and Create - no actual",
-			newDeclared: []core.Object{
+			newDeclared: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			previousDeclared: []core.Object{
+			previousDeclared: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
@@ -302,14 +303,14 @@ func TestThreeWay(t *testing.T) {
 		},
 		{
 			name: "Update and Create - with previousDeclared and actual",
-			newDeclared: []core.Object{
+			newDeclared: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 				fake.NamespaceObject("namespace/" + testNs2),
 			},
-			previousDeclared: []core.Object{
+			previousDeclared: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
-			actual: []core.Object{
+			actual: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
 			want: []Diff{
@@ -325,18 +326,18 @@ func TestThreeWay(t *testing.T) {
 		},
 		{
 			name:        "Noop - with actual and no declared",
-			newDeclared: []core.Object{},
-			actual: []core.Object{
+			newDeclared: []client.Object{},
+			actual: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 			},
 			want: nil,
 		},
 		{
 			name: "Delete - no actual",
-			newDeclared: []core.Object{
+			newDeclared: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 			},
-			previousDeclared: []core.Object{
+			previousDeclared: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
@@ -353,14 +354,14 @@ func TestThreeWay(t *testing.T) {
 		},
 		{
 			name: "Delete - with previous declared and actual",
-			newDeclared: []core.Object{
+			newDeclared: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 			},
-			previousDeclared: []core.Object{
+			previousDeclared: []client.Object{
 				fake.NamespaceObject("namespace/"+testNs1, syncertest.ManagementEnabled),
 				fake.NamespaceObject("namespace/"+testNs2, syncertest.ManagementEnabled),
 			},
-			actual: []core.Object{
+			actual: []client.Object{
 				fake.NamespaceObject("namespace/" + testNs1),
 				fake.NamespaceObject("namespace/" + testNs2),
 			},
@@ -379,9 +380,9 @@ func TestThreeWay(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			newDeclared := make(map[core.ID]core.Object)
-			previousDeclared := make(map[core.ID]core.Object)
-			actual := make(map[core.ID]core.Object)
+			newDeclared := make(map[core.ID]client.Object)
+			previousDeclared := make(map[core.ID]client.Object)
+			actual := make(map[core.ID]client.Object)
 
 			for _, d := range tc.newDeclared {
 				newDeclared[core.IDOf(d)] = d
@@ -404,10 +405,10 @@ func TestThreeWay(t *testing.T) {
 
 func TestUnknown(t *testing.T) {
 	obj := fake.NamespaceObject("hello")
-	decl := map[core.ID]core.Object{
+	decl := map[core.ID]client.Object{
 		core.IDOf(obj): obj,
 	}
-	actual := map[core.ID]core.Object{
+	actual := map[core.ID]client.Object{
 		core.IDOf(obj): Unknown(),
 	}
 	diffs := ThreeWay(decl, nil, actual)

@@ -2,15 +2,15 @@ package hydrate
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Flatten converts an AllConfigs into a list of FileObjects.
-func Flatten(c *namespaceconfig.AllConfigs) []core.Object {
-	var result []core.Object
+func Flatten(c *namespaceconfig.AllConfigs) []client.Object {
+	var result []client.Object
 	if c == nil {
 		return result
 	}
@@ -45,13 +45,13 @@ func Flatten(c *namespaceconfig.AllConfigs) []core.Object {
 }
 
 // resourcesToFileObjects flattens a GenericResources into a list of FileObjects.
-func resourcesToFileObjects(r v1.GenericResources) []core.Object {
-	var result []core.Object
+func resourcesToFileObjects(r v1.GenericResources) []client.Object {
+	var result []client.Object
 
 	for _, version := range r.Versions {
 		for _, raw := range version.Objects {
 			// We assume a GenericResources will only hold KubernetesObjects, and never Lists.
-			result = append(result, raw.Object.(core.Object))
+			result = append(result, raw.Object.(client.Object))
 		}
 	}
 

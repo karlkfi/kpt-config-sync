@@ -19,7 +19,7 @@ import (
 func TestClient_Create(t *testing.T) {
 	testCases := []struct {
 		name     string
-		declared core.Object
+		declared client.Object
 		client   client.Client
 		wantErr  status.Error
 	}{
@@ -61,7 +61,7 @@ func TestClient_Create(t *testing.T) {
 func TestClient_Update(t *testing.T) {
 	testCases := []struct {
 		name     string
-		declared core.Object
+		declared client.Object
 		client   client.Client
 		wantErr  status.Error
 	}{
@@ -100,4 +100,4 @@ func TestClient_Update(t *testing.T) {
 	}
 }
 
-func noOpUpdate(o core.Object) (object core.Object, err error) { return o, nil }
+func noOpUpdate(o client.Object) (object client.Object, err error) { return o, nil }

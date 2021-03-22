@@ -2,8 +2,8 @@ package nonhierarchical
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IllegalNamespaceOnClusterScopedResourceErrorCode represents a cluster-scoped resource illegally
@@ -13,7 +13,7 @@ const IllegalNamespaceOnClusterScopedResourceErrorCode = "1052"
 var illegalNamespaceOnClusterScopedResourceErrorBuilder = status.NewErrorBuilder(IllegalNamespaceOnClusterScopedResourceErrorCode)
 
 // IllegalNamespaceOnClusterScopedResourceError reports that a cluster-scoped resource MUST NOT declare metadata.namespace.
-func IllegalNamespaceOnClusterScopedResourceError(resource id.Resource) status.Error {
+func IllegalNamespaceOnClusterScopedResourceError(resource client.Object) status.Error {
 	return illegalNamespaceOnClusterScopedResourceErrorBuilder.
 		Sprint("cluster-scoped resources MUST NOT declare metadata.namespace").
 		BuildWithResources(resource)
@@ -27,7 +27,7 @@ var missingNamespaceOnNamespacedResourceErrorBuilder = status.NewErrorBuilder(Mi
 
 // NamespaceAndSelectorResourceError reports that a namespace-scoped resource illegally declares both metadata.namespace
 // and has the namespace-selector annotation.
-func NamespaceAndSelectorResourceError(resource id.Resource) status.Error {
+func NamespaceAndSelectorResourceError(resource client.Object) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.
 		Sprintf("namespace-scoped resources MUST NOT declare both metadata.namespace and "+
 			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).
@@ -36,7 +36,7 @@ func NamespaceAndSelectorResourceError(resource id.Resource) status.Error {
 
 // MissingNamespaceOnNamespacedResourceError reports a namespace-scoped resource MUST declare metadata.namespace.
 // when parsing in non-hierarchical mode.
-func MissingNamespaceOnNamespacedResourceError(resource id.Resource) status.Error {
+func MissingNamespaceOnNamespacedResourceError(resource client.Object) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.
 		Sprintf("namespace-scoped resources MUST either declare either metadata.namespace or "+
 			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).

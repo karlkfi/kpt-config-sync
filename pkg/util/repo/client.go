@@ -5,10 +5,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	syncclient "github.com/google/nomos/pkg/syncer/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Client wraps the syncer Client with functions specific to Repo objects.
@@ -28,7 +27,7 @@ func (c *Client) GetOrCreateRepo(ctx context.Context) (*v1.Repo, status.Error) {
 		return nil, status.APIServerError(err, "failed to list Repos")
 	}
 	if len(repoList.Items) > 1 {
-		resList := make([]id.Resource, len(repoList.Items))
+		resList := make([]client.Object, len(repoList.Items))
 		for i, r := range repoList.Items {
 			resList[i] = &r
 		}
@@ -57,7 +56,7 @@ func (c *Client) createRepo(ctx context.Context) (*v1.Repo, status.Error) {
 
 // UpdateImportStatus updates the portion of the RepoStatus related to the importer.
 func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj core.Object) (core.Object, error) {
+	updateFn := func(obj client.Object) (client.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		newRepo.Status.Import = repo.Status.Import
 		return newRepo, nil
@@ -71,7 +70,7 @@ func (c *Client) UpdateImportStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 
 // UpdateSourceStatus updates the portion of the RepoStatus related to the source of truth.
 func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj core.Object) (core.Object, error) {
+	updateFn := func(obj client.Object) (client.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		newRepo.Status.Source = repo.Status.Source
 		return newRepo, nil
@@ -85,7 +84,7 @@ func (c *Client) UpdateSourceStatus(ctx context.Context, repo *v1.Repo) (*v1.Rep
 
 // UpdateSyncStatus updates the portion of the RepoStatus related to the syncer.
 func (c *Client) UpdateSyncStatus(ctx context.Context, repo *v1.Repo) (*v1.Repo, status.Error) {
-	updateFn := func(obj core.Object) (core.Object, error) {
+	updateFn := func(obj client.Object) (client.Object, error) {
 		newRepo := obj.(*v1.Repo)
 		if cmp.Equal(repo.Status.Sync, newRepo.Status.Sync) {
 			return newRepo, syncclient.NoUpdateNeeded()

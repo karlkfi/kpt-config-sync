@@ -20,7 +20,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 	var errs status.MultiError
 	crdMap := map[schema.GroupKind]*v1beta1.CustomResourceDefinition{}
 	for _, obj := range fileObjects {
-		if obj.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
+		if obj.GetObjectKind().GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 			continue
 		}
 
@@ -34,11 +34,11 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 	}
 
 	for _, f := range fileObjects {
-		if f.GroupVersionKind().GroupKind() != gatekeeper.ConstraintTemplateGroupKind {
+		if f.GetObjectKind().GroupVersionKind().GroupKind() != gatekeeper.ConstraintTemplateGroupKind {
 			continue
 		}
 
-		version := f.GroupVersionKind().Version
+		version := f.GetObjectKind().GroupVersionKind().Version
 		if version != "v1alpha1" && version != "v1beta1" {
 			errs = status.Append(errs, errors.Errorf("unhandled ConstraintTemplate version %s", version))
 			continue

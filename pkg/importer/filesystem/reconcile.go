@@ -93,7 +93,7 @@ func dumpForFiles(objs []ast.FileObject) string {
 	b := strings.Builder{}
 	for _, obj := range objs {
 		b.WriteString(fmt.Sprintf("path=%s ", obj.SlashPath()))
-		b.WriteString(fmt.Sprintf("groupversionkind=%s namespace=%s name=%s ", obj.GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
+		b.WriteString(fmt.Sprintf("groupversionkind=%s namespace=%s name=%s ", obj.GetObjectKind().GroupVersionKind(), obj.GetNamespace(), obj.GetName()))
 		b.WriteString(fmt.Sprintf("object=%v; ", obj.Object))
 	}
 	return b.String()

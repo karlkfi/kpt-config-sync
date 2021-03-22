@@ -15,14 +15,15 @@ import (
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	obj1 = fake.CustomResourceDefinitionV1Beta1Object()
 	obj2 = fake.ResourceQuotaObject()
 
-	testSet = []core.Object{obj1, obj2}
-	nilSet  = []core.Object{nil}
+	testSet = []client.Object{obj1, obj2}
+	nilSet  = []client.Object{nil}
 )
 
 func TestUpdate(t *testing.T) {
@@ -50,7 +51,7 @@ func TestMutateImpossible(t *testing.T) {
 	o1.SetResourceVersion(wantResourceVersion)
 	o2 := asUnstructured(t, fake.RoleObject(core.Name("baz"), core.Namespace("bar")))
 	o2.SetResourceVersion(wantResourceVersion)
-	err := dr.Update(context.Background(), []core.Object{o1, o2})
+	err := dr.Update(context.Background(), []client.Object{o1, o2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +95,7 @@ func TestMutateImpossible(t *testing.T) {
 	}
 }
 
-func asUnstructured(t *testing.T, o core.Object) *unstructured.Unstructured {
+func asUnstructured(t *testing.T, o client.Object) *unstructured.Unstructured {
 	t.Helper()
 	u, err := reconcile.AsUnstructuredSanitized(o)
 	if err != nil {
@@ -172,7 +173,7 @@ func TestResources_InternalErrorMetricValidation(t *testing.T) {
 	}
 }
 
-func getIDs(objects []core.Object) []core.ID {
+func getIDs(objects []client.Object) []core.ID {
 	var IDs []core.ID
 	for _, obj := range objects {
 		IDs = append(IDs, core.IDOf(obj))

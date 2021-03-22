@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/google/nomos/pkg/core"
 )
@@ -27,7 +28,7 @@ type Resources struct {
 }
 
 // Update performs an atomic update on the resource declaration set.
-func (r *Resources) Update(ctx context.Context, objects []core.Object) status.Error {
+func (r *Resources) Update(ctx context.Context, objects []client.Object) status.Error {
 	// First build up the new map using a local pointer/reference.
 	newSet := make(map[core.ID]*unstructured.Unstructured)
 	for _, obj := range objects {

@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -15,6 +14,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
@@ -61,8 +61,8 @@ var objectParseError = status.NewErrorBuilder(ObjectParseErrorCode)
 
 // ObjectParseError reports that an object of known type did not match its
 // definition, and so it was read in as an *unstructured.Unstructured.
-func ObjectParseError(resource id.Resource, err error) status.Error {
+func ObjectParseError(resource client.Object, err error) status.Error {
 	return objectParseError.Wrap(err).
-		Sprintf("The following config could not be parsed as a %v", resource.GroupVersionKind()).
+		Sprintf("The following config could not be parsed as a %v", resource.GetObjectKind().GroupVersionKind()).
 		BuildWithResources(resource)
 }

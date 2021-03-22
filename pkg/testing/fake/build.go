@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // defaultMutations are the standard Meta set on all fake objects. All can be overwritten with mutators.
@@ -20,20 +21,20 @@ var defaultMutations = []core.MetaMutator{
 	core.Labels(map[string]string{}),
 }
 
-func defaultMutate(object core.Object) {
+func defaultMutate(object client.Object) {
 	for _, m := range defaultMutations {
 		m(object)
 	}
 }
 
-func mutate(object core.Object, opts ...core.MetaMutator) {
+func mutate(object client.Object, opts ...core.MetaMutator) {
 	for _, m := range opts {
 		m(object)
 	}
 }
 
 // FileObject is a shorthand for converting to an ast.FileObject.
-func FileObject(object core.Object, path string) ast.FileObject {
+func FileObject(object client.Object, path string) ast.FileObject {
 	return ast.NewFileObject(object, cmpath.RelativeSlash(path))
 }
 

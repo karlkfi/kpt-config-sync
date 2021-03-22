@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenerateUniqueFileNames sets a default file path for each object, guaranteed to be unique for a collection
@@ -30,8 +30,8 @@ func GenerateUniqueFileNames(extension string, multiCluster bool, objects ...ast
 	return objects
 }
 
-func filename(extension string, o core.Object, includeCluster bool, includeGroup bool) string {
-	gvk := o.GroupVersionKind()
+func filename(extension string, o client.Object, includeCluster bool, includeGroup bool) string {
+	gvk := o.GetObjectKind().GroupVersionKind()
 	var path string
 	if includeGroup {
 		path = fmt.Sprintf("%s.%s_%s.%s", gvk.Kind, gvk.Group, o.GetName(), extension)

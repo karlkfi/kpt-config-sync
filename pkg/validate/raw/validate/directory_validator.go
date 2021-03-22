@@ -13,7 +13,7 @@ import (
 // - if the object is a Namespace, the directory must match its name
 // - if the object has a metadata namespace, the directory must match it
 func Directory(obj ast.FileObject) status.Error {
-	if obj.GroupVersionKind() == kinds.Namespace() {
+	if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 		return validateNamespaceDirectory(obj)
 	}
 	return validateObjectDirectory(obj)

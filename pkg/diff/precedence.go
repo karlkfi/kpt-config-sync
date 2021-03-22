@@ -3,13 +3,13 @@ package diff
 import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/syncer/differ"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IsManager returns true if the given reconciler is the manager for the resource.
-func IsManager(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
+func IsManager(reconciler declared.Scope, obj client.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false
@@ -23,7 +23,7 @@ func IsManager(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
 
 // CanManage returns true if the given reconciler is allowed to manage the given
 // resource.
-func CanManage(reconciler declared.Scope, obj core.LabeledAndAnnotated) bool {
+func CanManage(reconciler declared.Scope, obj client.Object) bool {
 	if reconciler == declared.RootReconciler {
 		// The root reconciler can always manage any resource.
 		return true

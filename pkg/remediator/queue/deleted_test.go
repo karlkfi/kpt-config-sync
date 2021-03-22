@@ -10,12 +10,13 @@ import (
 	"github.com/google/nomos/pkg/testing/testmetrics"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestWasDeleted(t *testing.T) {
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  client.Object
 	}{
 		{
 			"object with no annotations",

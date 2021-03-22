@@ -3,8 +3,8 @@ package selectors
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ObjectHasUnknownSelectorCode is the error code for ObjectHasUnknownClusterSelector
@@ -20,14 +20,14 @@ var invalidSelectorError = status.NewErrorBuilder(InvalidSelectorErrorCode)
 // InvalidSelectorError reports that a ClusterSelector or NamespaceSelector is
 // invalid.
 // To be renamed in refactoring that removes above error.
-func InvalidSelectorError(selector id.Resource, cause error) status.Error {
-	return invalidSelectorError.Sprintf("%s has validation errors that must be corrected", selector.GroupVersionKind().Kind).Wrap(cause).BuildWithResources(selector)
+func InvalidSelectorError(selector client.Object, cause error) status.Error {
+	return invalidSelectorError.Sprintf("%s has validation errors that must be corrected", selector.GetObjectKind().GroupVersionKind().Kind).Wrap(cause).BuildWithResources(selector)
 }
 
 // EmptySelectorError reports that a ClusterSelector or NamespaceSelector is
 // invalid because it is empty.
-func EmptySelectorError(selector id.Resource) status.Error {
-	return invalidSelectorError.Sprintf("%ss MUST define `spec.selector`", selector.GroupVersionKind().Kind).BuildWithResources(selector)
+func EmptySelectorError(selector client.Object) status.Error {
+	return invalidSelectorError.Sprintf("%ss MUST define `spec.selector`", selector.GetObjectKind().GroupVersionKind().Kind).BuildWithResources(selector)
 }
 
 // ClusterSelectorAnnotationConflictErrorCode is the error code for ClusterSelectorAnnotationConflictError
@@ -36,7 +36,7 @@ const ClusterSelectorAnnotationConflictErrorCode = "1066"
 var clusterSelectorAnnotationConflict = status.NewErrorBuilder(ClusterSelectorAnnotationConflictErrorCode)
 
 // ClusterSelectorAnnotationConflictError reports that an object has both the legacy cluster-selector annotation and the inline annotation.
-func ClusterSelectorAnnotationConflictError(resource id.Resource) status.Error {
+func ClusterSelectorAnnotationConflictError(resource client.Object) status.Error {
 	return clusterSelectorAnnotationConflict.Sprintf(
 		"Config %q MUST declare ONLY ONE cluster-selector annotation, but has both inline annotation %q and legacy annotation %q. "+
 			"To fix, remove one of the annotations from:", resource.GetName(),

@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -13,6 +12,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetCRDs returns the names and CustomResourceDefinitions of the CRDs in ClusterConfig.
@@ -54,22 +54,22 @@ const MalformedCRDErrorCode = "1065"
 var malformedCRDErrorBuilder = status.NewErrorBuilder(MalformedCRDErrorCode)
 
 // MalformedCRDError reports a malformed CRD.
-func MalformedCRDError(err error, obj id.Resource) status.Error {
+func MalformedCRDError(err error, obj client.Object) status.Error {
 	return malformedCRDErrorBuilder.Wrap(err).
 		Sprint("malformed CustomResourceDefinition").
 		BuildWithResources(obj)
 }
 
 // AsCRD returns the typed version of the CustomResourceDefinition passed in.
-func AsCRD(o core.Object) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
-	if o.GroupVersionKind() == kinds.CustomResourceDefinitionV1Beta1() {
+func AsCRD(o client.Object) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
+	if o.GetObjectKind().GroupVersionKind() == kinds.CustomResourceDefinitionV1Beta1() {
 		s, err := core.RemarshalToStructured(o)
 		if err != nil {
 			return nil, MalformedCRDError(err, o)
 		}
 		return s.(*apiextensionsv1beta1.CustomResourceDefinition), nil
 	}
-	if o.GroupVersionKind() == kinds.CustomResourceDefinitionV1() {
+	if o.GetObjectKind().GroupVersionKind() == kinds.CustomResourceDefinitionV1() {
 		s, err := core.RemarshalToStructured(o)
 		if err != nil {
 			return nil, MalformedCRDError(err, o)

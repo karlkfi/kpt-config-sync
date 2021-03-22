@@ -6,6 +6,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IllegalNamespaceSubdirectoryErrorCode is the error code for IllegalNamespaceSubdirectoryError
@@ -29,7 +30,7 @@ var illegalAbstractNamespaceObjectKindError = status.NewErrorBuilder(IllegalAbst
 
 // IllegalAbstractNamespaceObjectKindError represents an illegal usage of a kind not allowed in abstract namespaces.
 // TODO(willbeason): Consolidate Illegal{X}ObjectKindErrors
-func IllegalAbstractNamespaceObjectKindError(resource id.Resource) status.Error {
+func IllegalAbstractNamespaceObjectKindError(resource client.Object) status.Error {
 	return illegalAbstractNamespaceObjectKindError.Sprintf(
 		"Config %[3]q illegally declared in an %[1]s directory. "+
 			"Move this config to a %[2]s directory:",

@@ -11,7 +11,7 @@ import (
 // IllegalKindsForHierarchical verifies that the given FileObject is legal for
 // a structured hierarchical repo.
 func IllegalKindsForHierarchical(obj ast.FileObject) status.Error {
-	gk := obj.GroupVersionKind().GroupKind()
+	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	if isUnsupported(gk) {
 		return nonhierarchical.UnsupportedObjectError(obj)
 	}
@@ -21,7 +21,7 @@ func IllegalKindsForHierarchical(obj ast.FileObject) status.Error {
 // IllegalKindsForUnstructured verifies that the given FileObject is legal for
 // an unstructured repo.
 func IllegalKindsForUnstructured(obj ast.FileObject) status.Error {
-	gk := obj.GroupVersionKind().GroupKind()
+	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	if isUnsupported(gk) {
 		return nonhierarchical.UnsupportedObjectError(obj)
 	}

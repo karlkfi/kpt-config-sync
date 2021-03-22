@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestPreserveGeneratedServiceFields(t *testing.T) {
@@ -479,7 +480,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 func hasDifferentNodePortOrClusterIP(nodePort int32, clusterIP string) nomostest.Predicate {
 	// We have to check both in the same Predicate as predicates are AND-ed together.
 	// We want to return nil if EITHER nodePort or clusterIP changes.
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		service, ok := o.(*corev1.Service)
 		if !ok {
 			return nomostest.WrongTypeErr(o, &corev1.Service{})
@@ -493,7 +494,7 @@ func hasDifferentNodePortOrClusterIP(nodePort int32, clusterIP string) nomostest
 	}
 }
 
-func specifiesClusterIP(o core.Object) error {
+func specifiesClusterIP(o client.Object) error {
 	service, ok := o.(*corev1.Service)
 	if !ok {
 		return nomostest.WrongTypeErr(o, &corev1.Service{})
@@ -504,7 +505,7 @@ func specifiesClusterIP(o core.Object) error {
 	return nil
 }
 
-func specifiesNodePort(o core.Object) error {
+func specifiesNodePort(o client.Object) error {
 	service, ok := o.(*corev1.Service)
 	if !ok {
 		return nomostest.WrongTypeErr(o, &corev1.Service{})
@@ -516,7 +517,7 @@ func specifiesNodePort(o core.Object) error {
 }
 
 func hasTargetPort(want int) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		service, ok := o.(*corev1.Service)
 		if !ok {
 			return nomostest.WrongTypeErr(o, &corev1.Service{})

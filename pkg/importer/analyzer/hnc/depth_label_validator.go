@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IllegalDepthLabelErrorCode is the error code for IllegalDepthLabelError.
@@ -17,7 +17,7 @@ const IllegalDepthLabelErrorCode = "1057"
 var illegalDepthLabelError = status.NewErrorBuilder(IllegalDepthLabelErrorCode)
 
 // IllegalDepthLabelError represent a set of illegal label definitions.
-func IllegalDepthLabelError(resource id.Resource, labels []string) status.Error {
+func IllegalDepthLabelError(resource client.Object, labels []string) status.Error {
 	sort.Strings(labels) // ensure deterministic label order
 	labels2 := make([]string, len(labels))
 	for i, label := range labels {

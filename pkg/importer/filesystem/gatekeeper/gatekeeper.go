@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/pkg/errors"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -33,7 +33,7 @@ var (
 // Note that this should eventually attempt to use the gatekeeper libraries, however
 // that's going to be a lot of work given golang vendoring and the common k8s
 // dependencies.
-func ConstraintTemplateCRD(o core.Object) (*v1beta1.CustomResourceDefinition, error) {
+func ConstraintTemplateCRD(o client.Object) (*v1beta1.CustomResourceDefinition, error) {
 	obj, ok := o.(*unstructured.Unstructured)
 	if !ok {
 		return nil, errors.Errorf("expected unstructured.Unstructured, got %v", o)

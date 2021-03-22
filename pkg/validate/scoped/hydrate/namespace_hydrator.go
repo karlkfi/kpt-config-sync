@@ -51,7 +51,7 @@ func NamespaceSelectors(objs *objects.Scoped) status.MultiError {
 func buildSelectorMap(objs *objects.Scoped) (map[string][]string, status.MultiError) {
 	var namespaces, nsSelectors, others []ast.FileObject
 	for _, obj := range objs.Cluster {
-		switch obj.GroupVersionKind() {
+		switch obj.GetObjectKind().GroupVersionKind() {
 		case kinds.Namespace():
 			namespaces = append(namespaces, obj)
 		case kinds.NamespaceSelector():

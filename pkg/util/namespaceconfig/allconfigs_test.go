@@ -14,9 +14,10 @@ import (
 	"github.com/google/nomos/testing/testoutput"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func withClusterResources(os ...core.Object) fake.ClusterConfigMutator {
+func withClusterResources(os ...client.Object) fake.ClusterConfigMutator {
 	return func(cc *v1.ClusterConfig) {
 		for _, o := range os {
 			cc.AddResource(o)
@@ -24,8 +25,8 @@ func withClusterResources(os ...core.Object) fake.ClusterConfigMutator {
 	}
 }
 
-func withNamespaceResources(os ...core.Object) core.MetaMutator {
-	return func(co core.Object) {
+func withNamespaceResources(os ...client.Object) core.MetaMutator {
+	return func(co client.Object) {
 		nsc := co.(*v1.NamespaceConfig)
 		for _, o := range os {
 			nsc.AddResource(o)

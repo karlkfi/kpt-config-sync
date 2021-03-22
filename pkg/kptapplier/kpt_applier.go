@@ -52,7 +52,7 @@ type Interface interface {
 	// Apply updates the resource API server with the latest parsed git resource.
 	// This is called when a new change in the git resource is detected. It also
 	// returns a map of the GVKs which were successfully applied by the Applier.
-	Apply(ctx context.Context, desiredResources []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
+	Apply(ctx context.Context, desiredResources []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
 }
 
 var _ Interface = &Applier{}
@@ -86,7 +86,7 @@ func NewRootApplier(c client.Client) *Applier {
 	return a
 }
 
-func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]core.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
+func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]client.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
 	// ApplyEvent.Type has two types: ApplyEventResourceUpdate and ApplyEventCompleted.
 	// ApplyEventResourceUpdate is for applying a single resource;
 	// ApplyEventCompleted indicates all resources have been applied.
@@ -154,7 +154,7 @@ func handleMetrics(ctx context.Context, operation string, err error, gvk schema.
 }
 
 // sync triggers a kpt live apply library call to apply a set of resources.
-func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.ID]core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core.ID]client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	var errs status.MultiError
 	cs, err := a.clientSetFunc(a.client)
 	if err != nil {
@@ -212,7 +212,7 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 		if _, found := unknownTypeResources[id]; found {
 			continue
 		}
-		gvks[resource.GroupVersionKind()] = struct{}{}
+		gvks[resource.GetObjectKind().GroupVersionKind()] = struct{}{}
 	}
 	if errs == nil {
 		glog.V(4).Infof("all resources are up to date.")
@@ -227,9 +227,9 @@ func (a *Applier) sync(ctx context.Context, objs []core.Object, cache map[core.I
 }
 
 // Apply implements Interface.
-func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	// Create the new cache showing the new declared resource.
-	newCache := make(map[core.ID]core.Object)
+	newCache := make(map[core.ID]client.Object)
 	for _, desired := range desiredResource {
 		newCache[core.IDOf(desired)] = desired
 	}

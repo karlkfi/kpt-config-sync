@@ -3,9 +3,9 @@ package reconcile
 import (
 	"encoding/json"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AsUnstructured attempts to convert a client.Object to an
@@ -13,7 +13,7 @@ import (
 // TODO(b/162260725): This adds .status and .metadata.creationTimestamp to
 //  everything. Evaluate every use, and convert to using AsUnstructuredSanitized
 //  if possible.
-func AsUnstructured(o core.Object) (*unstructured.Unstructured, status.Error) {
+func AsUnstructured(o client.Object) (*unstructured.Unstructured, status.Error) {
 	if u, isUnstructured := o.(*unstructured.Unstructured); isUnstructured {
 		// The path below returns a deep copy, so we want to make sure we return a
 		// deep copy here as well (for symmetry and to avoid subtle bugs).
@@ -41,7 +41,7 @@ func AsUnstructured(o core.Object) (*unstructured.Unstructured, status.Error) {
 // There is no other way to do this without defining our own versions of the
 // Kubernetes type definitions.
 // Explanation of why: https://www.sohamkamani.com/golang/2018-07-19-golang-omitempty/
-func AsUnstructuredSanitized(o core.Object) (*unstructured.Unstructured, status.Error) {
+func AsUnstructuredSanitized(o client.Object) (*unstructured.Unstructured, status.Error) {
 	u, err := AsUnstructured(o)
 	if err != nil {
 		return nil, err

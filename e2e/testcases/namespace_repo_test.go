@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestNamespaceRepo_Centralized(t *testing.T) {
@@ -82,7 +83,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 }
 
 func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs := o.(*v1alpha1.RepoSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
@@ -95,7 +96,7 @@ func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
 }
 
 func hasStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs := o.(*v1alpha1.RepoSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {

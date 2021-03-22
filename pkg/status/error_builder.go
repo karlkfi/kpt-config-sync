@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/id"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ErrorBuilders handle the oft-duplicated logic we use for generating error messages.
@@ -44,7 +45,7 @@ import (
 // automatically take care of the boilerplate of setting this up, so other parts of our
 // infrastructure can easily report errors to users (and machines) in structured manners.
 //
-// func MyResourceError(color string, left id.Resource, right id.Resource) ResourceError {
+// func MyResourceError(color string, left client.Object, right client.Object) ResourceError {
 //   return myErrorBuilder.Sprintf("expected both resources to be colored %q", color).
 //     BuildWithResources(left, right)
 // }
@@ -89,7 +90,7 @@ func (eb ErrorBuilder) BuildWithPaths(paths ...id.Path) PathError {
 }
 
 // BuildWithResources adds resources declared in the repository to the Error.
-func (eb ErrorBuilder) BuildWithResources(resources ...id.Resource) ResourceError {
+func (eb ErrorBuilder) BuildWithResources(resources ...client.Object) ResourceError {
 	if len(resources) == 0 {
 		return nil
 	}

@@ -3,18 +3,18 @@ package diff
 import (
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestCanManage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler declared.Scope
-		object     core.Object
+		object     client.Object
 		want       bool
 	}{
 		{

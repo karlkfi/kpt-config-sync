@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const nilGitContext = `{"repo":"","branch":"","rev":""}`
@@ -291,7 +292,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 	}
 }
 
-func sortObjects(left, right core.Object) bool {
+func sortObjects(left, right client.Object) bool {
 	leftID := core.IDOf(left)
 	rightID := core.IDOf(right)
 	return leftID.String() < rightID.String()
@@ -318,16 +319,16 @@ func (p *fakeParser) ReadClusterRegistryResources(_ reader.FilePaths) ([]ast.Fil
 }
 
 type fakeApplier struct {
-	got    []core.Object
+	got    []client.Object
 	errors []status.Error
 }
 
-func (a *fakeApplier) Apply(_ context.Context, objs []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *fakeApplier) Apply(_ context.Context, objs []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	if a.errors == nil {
 		a.got = objs
 		gvks := make(map[schema.GroupVersionKind]struct{})
 		for _, obj := range objs {
-			gvks[obj.GroupVersionKind()] = struct{}{}
+			gvks[obj.GetObjectKind().GroupVersionKind()] = struct{}{}
 		}
 		return gvks, nil
 	}

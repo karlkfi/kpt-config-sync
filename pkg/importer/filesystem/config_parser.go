@@ -1,10 +1,10 @@
 package filesystem
 
 import (
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ConfigParser defines the minimum interface required for Reconciler to use a Parser to read
@@ -16,9 +16,9 @@ type ConfigParser interface {
 	ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
 }
 
-// AsCoreObjects converts a slice of FileObjects to a slice of core.Objects.
-func AsCoreObjects(fos []ast.FileObject) []core.Object {
-	result := make([]core.Object, len(fos))
+// AsCoreObjects converts a slice of FileObjects to a slice of client.Objects.
+func AsCoreObjects(fos []ast.FileObject) []client.Object {
+	result := make([]client.Object, len(fos))
 	for i, fo := range fos {
 		result[i] = fo.Object
 	}

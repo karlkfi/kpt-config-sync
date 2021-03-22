@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +18,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/client"
+	syncerclient "github.com/google/nomos/pkg/syncer/client"
 )
 
 // AllVersionNames returns the set of names of all resources with the specified GroupKind.
@@ -81,13 +81,13 @@ func clusterConfigNeedsUpdate(config *v1.ClusterConfig, initTime metav1.Time, er
 // initTime is the syncer-controller's instantiation time. It is used to avoid updating
 // the sync state and the sync time for the imported stale configs, so that the
 // repostatus-reconciler can force-update the stalled configs on startup.
-func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *v1.ClusterConfig, initTime metav1.Time, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
+func SetClusterConfigStatus(ctx context.Context, c *syncerclient.Client, config *v1.ClusterConfig, initTime metav1.Time, now func() metav1.Time, errs []v1.ConfigManagementError, rcs []v1.ResourceCondition) status.Error {
 	if !clusterConfigNeedsUpdate(config, initTime, errs, rcs) {
 		glog.V(3).Infof("Status for ClusterConfig %q is already up-to-date.", config.Name)
 		return nil
 	}
 
-	updateFn := func(obj core.Object) (core.Object, error) {
+	updateFn := func(obj client.Object) (client.Object, error) {
 		newConfig := obj.(*v1.ClusterConfig)
 		newConfig.Status.Token = config.Spec.Token
 		newConfig.Status.SyncTime = now()
@@ -101,7 +101,7 @@ func SetClusterConfigStatus(ctx context.Context, client *client.Client, config *
 
 		return newConfig, nil
 	}
-	_, err := client.UpdateStatus(ctx, config, updateFn)
+	_, err := c.UpdateStatus(ctx, config, updateFn)
 	return err
 }
 

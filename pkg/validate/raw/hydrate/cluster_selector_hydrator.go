@@ -80,7 +80,7 @@ func buildHydratorSet(objs *objects.Raw) (*hydratorSet, status.MultiError) {
 	set := &hydratorSet{}
 	var errs status.MultiError
 	for _, object := range objs.Objects {
-		switch object.GroupVersionKind() {
+		switch object.GetObjectKind().GroupVersionKind() {
 		case kinds.Cluster():
 			if object.GetName() == objs.ClusterName {
 				if err := set.clusterObject(object); err != nil {

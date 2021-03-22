@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const fakeConditionMessage = "Testing"
@@ -17,7 +18,7 @@ const fakeConditionMessage = "Testing"
 var testNow = metav1.Date(1, time.February, 3, 4, 5, 6, 7, time.Local)
 
 func withConditions(conds ...v1alpha1.RepoSyncCondition) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
 		rs.Status.Conditions = append(rs.Status.Conditions, conds...)
 	}

@@ -6,11 +6,12 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/util/repo"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // RepoVersion sets the Spec.Version of a Repo.
 func RepoVersion(version string) core.MetaMutator {
-	return func(f core.Object) {
+	return func(f client.Object) {
 		f.(*v1.Repo).Spec.Version = version
 	}
 }

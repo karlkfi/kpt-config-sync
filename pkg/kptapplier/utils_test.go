@@ -12,18 +12,19 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestPartitionObjs(t *testing.T) {
 	testcases := []struct {
 		name          string
-		objs          []core.Object
+		objs          []client.Object
 		enabledCount  int
 		disabledCount int
 	}{
 		{
 			name: "all managed objs",
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"), syncertest.ManagementEnabled),
 				fake.ServiceObject(core.Name("service"), core.Namespace("default"), syncertest.ManagementEnabled),
 			},
@@ -32,7 +33,7 @@ func TestPartitionObjs(t *testing.T) {
 		},
 		{
 			name: "all disabled objs",
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"), syncertest.ManagementDisabled),
 				fake.ServiceObject(core.Name("service"), core.Namespace("default"), syncertest.ManagementDisabled),
 			},
@@ -41,7 +42,7 @@ func TestPartitionObjs(t *testing.T) {
 		},
 		{
 			name: "mixed objs",
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"), syncertest.ManagementEnabled),
 				fake.ServiceObject(core.Name("service"), core.Namespace("default"), syncertest.ManagementDisabled),
 			},
@@ -91,7 +92,7 @@ func TestRemoveFrom(t *testing.T) {
 	testcases := []struct {
 		name       string
 		allObjMeta []object.ObjMetadata
-		objs       []core.Object
+		objs       []client.Object
 		expected   []object.ObjMetadata
 	}{
 		{
@@ -112,7 +113,7 @@ func TestRemoveFrom(t *testing.T) {
 				objMetaFrom(fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"))),
 				objMetaFrom(fake.ServiceObject(core.Name("service"), core.Namespace("default"))),
 			},
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.ServiceObject(core.Name("service"), core.Namespace("default")),
 			},
 			expected: []object.ObjMetadata{
@@ -125,7 +126,7 @@ func TestRemoveFrom(t *testing.T) {
 				objMetaFrom(fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"))),
 				objMetaFrom(fake.ServiceObject(core.Name("service"), core.Namespace("default"))),
 			},
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.ServiceObject(core.Name("service"), core.Namespace("default")),
 				fake.ConfigMapObject(core.Name("cm"), core.Namespace("default")),
 			},
@@ -139,7 +140,7 @@ func TestRemoveFrom(t *testing.T) {
 				objMetaFrom(fake.DeploymentObject(core.Name("deploy"), core.Namespace("default"))),
 				objMetaFrom(fake.ServiceObject(core.Name("service"), core.Namespace("default"))),
 			},
-			objs: []core.Object{
+			objs: []client.Object{
 				fake.DeploymentObject(core.Name("deploy"), core.Namespace("default")),
 				fake.ServiceObject(core.Name("service"), core.Namespace("default")),
 			},

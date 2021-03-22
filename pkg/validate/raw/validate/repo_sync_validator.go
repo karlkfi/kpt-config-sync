@@ -11,7 +11,7 @@ import (
 // RepoSync checks if the given FileObject is a RepoSync and if so, verifies
 // that its fields are valid.
 func RepoSync(obj ast.FileObject) status.Error {
-	if obj.GroupVersionKind().GroupKind() != kinds.RepoSync().GroupKind() {
+	if obj.GetObjectKind().GroupVersionKind().GroupKind() != kinds.RepoSync().GroupKind() {
 		return nil
 	}
 	s, err := obj.Structured()

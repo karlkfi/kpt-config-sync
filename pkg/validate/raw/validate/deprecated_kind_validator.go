@@ -24,7 +24,7 @@ var invalidToValidGroupKinds = map[schema.GroupKind]schema.GroupVersionKind{
 
 // DeprecatedKinds verifies that the given FileObject is not deprecated.
 func DeprecatedKinds(obj ast.FileObject) status.Error {
-	gk := obj.GroupVersionKind().GroupKind()
+	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	if expected, invalid := invalidToValidGroupKinds[gk]; invalid {
 		return nonhierarchical.DeprecatedGroupKindError(obj, expected)
 	}

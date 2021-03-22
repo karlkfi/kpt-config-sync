@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // sortPolicyRules sorts PolicyRules lexicographically by JSON representation.
@@ -26,7 +27,7 @@ func sortPolicyRules(l, r rbacv1.PolicyRule) bool {
 }
 
 func clusterRoleHasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		cr, ok := o.(*rbacv1.ClusterRole)
 		if !ok {
 			return nomostest.WrongTypeErr(cr, &rbacv1.ClusterRole{})
@@ -41,7 +42,7 @@ func clusterRoleHasRules(rules []rbacv1.PolicyRule) nomostest.Predicate {
 }
 
 func managerFieldsNonEmpty() nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		fields := o.GetManagedFields()
 		if len(fields) == 0 {
 			return errors.New("expect non empty manager fields")

@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TestDeclareNamespace runs a test that ensures ACM syncs Namespaces to clusters.
@@ -306,7 +307,7 @@ func rootSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 		wantErrs = append(wantErrs, v1alpha1.ConfigSyncError{Code: code})
 	}
 
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs, isRootSync := o.(*v1alpha1.RootSync)
 		if !isRootSync {
 			return nomostest.WrongTypeErr(o, &v1alpha1.RootSync{})
@@ -333,7 +334,7 @@ func repoHasErrors(wantCodes ...string) nomostest.Predicate {
 		wantErrs = append(wantErrs, v1.ConfigManagementError{Code: code})
 	}
 
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		repo, isRepo := o.(*v1.Repo)
 		if !isRepo {
 			return nomostest.WrongTypeErr(o, &v1.Repo{})

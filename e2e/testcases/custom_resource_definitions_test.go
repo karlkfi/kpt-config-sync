@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -19,21 +18,22 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 	nt := nomostest.New(t)
 	testcases := []struct {
 		name string
-		fn   func() core.Object
+		fn   func() client.Object
 	}{
 		{
 			name: "v1 crd",
-			fn:   func() core.Object { return anvilV1CRD() },
+			fn:   func() client.Object { return anvilV1CRD() },
 		},
 		{
 			name: "v1beta1 crd",
-			fn:   func() core.Object { return anvilV1Beta1CRD() },
+			fn:   func() client.Object { return anvilV1Beta1CRD() },
 		},
 	}
 	for _, tc := range testcases {
@@ -442,7 +442,7 @@ func TestLargeCRD(t *testing.T) {
 }
 
 func hasRule(name string) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		vwc, ok := o.(*admissionv1.ValidatingWebhookConfiguration)
 		if !ok {
 			return nomostest.WrongTypeErr(o, &admissionv1.ValidatingWebhookConfiguration{})
@@ -456,7 +456,7 @@ func hasRule(name string) nomostest.Predicate {
 	}
 }
 
-func hasTwoVersions(obj core.Object) error {
+func hasTwoVersions(obj client.Object) error {
 	crd := obj.(*apiextensionsv1beta1.CustomResourceDefinition)
 	if len(crd.Spec.Versions) != 2 {
 		return errors.New("the CRD should contain 2 versions")

@@ -3,10 +3,10 @@ package validate
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DuplicateNames verifies that no objects share the same identifying tuple of:
@@ -15,8 +15,8 @@ func DuplicateNames(objs []ast.FileObject) status.MultiError {
 	duplicateMap := make(map[groupKindNamespaceName][]ast.FileObject)
 	for _, o := range objs {
 		gknn := groupKindNamespaceName{
-			group:     o.GroupVersionKind().Group,
-			kind:      o.GroupVersionKind().Kind,
+			group:     o.GetObjectKind().GroupVersionKind().Group,
+			kind:      o.GetObjectKind().GroupVersionKind().Kind,
 			namespace: o.GetNamespace(),
 			name:      o.GetName(),
 		}
@@ -54,8 +54,8 @@ func (gknn groupKindNamespaceName) GroupKind() schema.GroupKind {
 	}
 }
 
-func idResources(objs []ast.FileObject) []id.Resource {
-	rs := make([]id.Resource, len(objs))
+func idResources(objs []ast.FileObject) []client.Object {
+	rs := make([]client.Object, len(objs))
 	for i, obj := range objs {
 		rs[i] = obj
 	}

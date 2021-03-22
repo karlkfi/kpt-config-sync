@@ -5,11 +5,11 @@ import (
 	"math"
 	"time"
 
-	"github.com/google/nomos/pkg/importer/id"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // fightThreshold is the threshold of updates per minute at which we log to Info
@@ -30,7 +30,7 @@ var fightWarningBuilder = status.NewErrorBuilder("2005")
 
 // FightWarning represents when the Syncer is fighting over a resource with
 // some other process on a Kubernetes cluster.
-func FightWarning(frequency float64, resource id.Resource) status.ResourceError {
+func FightWarning(frequency float64, resource client.Object) status.ResourceError {
 	return fightWarningBuilder.Sprintf("syncer excessively updating resource, approximately %d times per minute. "+
 		"This may indicate ACM is fighting with another controller over the resource.", int(frequency)).
 		BuildWithResources(resource)
@@ -75,9 +75,9 @@ func (d *fightDetector) detectFight(ctx ctx.Context, time time.Time, obj *unstru
 // markUpdated marks that API resource `resource` was updated at time `now`.
 // Returns a ResourceError if the estimated frequency of updates is greater than
 // `fightThreshold`.
-func (d *fightDetector) markUpdated(now time.Time, resource id.Resource) status.ResourceError {
+func (d *fightDetector) markUpdated(now time.Time, resource client.Object) status.ResourceError {
 	i := gknn{
-		gk:        resource.GroupVersionKind().GroupKind(),
+		gk:        resource.GetObjectKind().GroupVersionKind().GroupKind(),
 		namespace: resource.GetNamespace(),
 		name:      resource.GetName(),
 	}

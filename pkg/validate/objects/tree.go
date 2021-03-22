@@ -45,7 +45,7 @@ func (t *treeBuilder) addObject(obj ast.FileObject, dir string) status.Error {
 	case repo.ClusterDir:
 		t.Cluster = append(t.Cluster, obj)
 	case repo.NamespacesDir:
-		if obj.GroupVersionKind() == kinds.NamespaceSelector() {
+		if obj.GetObjectKind().GroupVersionKind() == kinds.NamespaceSelector() {
 			// We have already verified that all NamespaceSelectors have a unique name.
 			t.NamespaceSelectors[obj.GetName()] = obj
 		} else {
@@ -59,7 +59,7 @@ func (t *treeBuilder) addObject(obj ast.FileObject, dir string) status.Error {
 }
 
 func (t *treeBuilder) addSystemObject(obj ast.FileObject) status.Error {
-	gk := obj.GroupVersionKind().GroupKind()
+	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	switch gk {
 	case kinds.HierarchyConfig().GroupKind():
 		t.HierarchyConfigs = append(t.HierarchyConfigs, obj)
@@ -138,7 +138,7 @@ var topLevelDirectoryOverrides = map[schema.GroupVersionKind]string{
 }
 
 func topLevelDirectory(obj ast.FileObject, expectedDir string) (string, status.Error) {
-	gvk := obj.GroupVersionKind()
+	gvk := obj.GetObjectKind().GroupVersionKind()
 	if override, hasOverride := topLevelDirectoryOverrides[gvk]; hasOverride {
 		expectedDir = override
 	}

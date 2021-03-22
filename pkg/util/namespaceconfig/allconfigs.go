@@ -4,12 +4,12 @@ import (
 	"sort"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/kinds"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AllConfigs holds things that Importer wants to sync. It is only used in-process, not written
@@ -47,12 +47,12 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 	})
 
 	for _, f := range fileObjects {
-		if transform.IsEphemeral(f.GroupVersionKind()) {
+		if transform.IsEphemeral(f.GetObjectKind().GroupVersionKind()) {
 			// Do not materialize NamespaceSelectors.
 			continue
 		}
 
-		if f.GroupVersionKind() == kinds.Namespace() {
+		if f.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			// Namespace is a snowflake.
 			// This preserves the ordering behavior of kubectl apply -f. This means what is in the
 			// alphabetically-last file wins.
@@ -60,7 +60,7 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 			continue
 		}
 
-		result.addSync(*v1.NewSync(f.GroupVersionKind().GroupKind()))
+		result.addSync(*v1.NewSync(f.GetObjectKind().GroupVersionKind().GroupKind()))
 
 		isNamespaced := f.GetNamespace() != ""
 		if !isNamespaced {
@@ -93,8 +93,8 @@ func (c *AllConfigs) ClusterScopedCount() int {
 }
 
 // addClusterResource adds a cluster-scoped resource to the AllConfigs.
-func (c *AllConfigs) addClusterResource(o core.Object) {
-	if o.GroupVersionKind().GroupKind() == kinds.CustomResourceDefinition() {
+func (c *AllConfigs) addClusterResource(o client.Object) {
+	if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.CustomResourceDefinition() {
 		// CRDs end up in their own ClusterConfig.
 		c.CRDClusterConfig.AddResource(o)
 	} else {
@@ -117,7 +117,7 @@ func (c *AllConfigs) addNamespaceConfig(name string, importToken string, loadTim
 
 // addNamespaceResource adds an object to a Namespace node, instantiating a default Namespace if
 // none exists.
-func (c *AllConfigs) addNamespaceResource(namespace string, importToken string, loadTime metav1.Time, o core.Object) {
+func (c *AllConfigs) addNamespaceResource(namespace string, importToken string, loadTime metav1.Time, o client.Object) {
 	ns, found := c.NamespaceConfigs[namespace]
 	if !found {
 		// Add an implicit Namespace, and mark it "deletion: prevent", which means

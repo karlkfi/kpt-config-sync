@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
@@ -381,8 +382,8 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	//}
 }
 
-func hasV1Subjects(subjects ...string) func(o core.Object) error {
-	return func(o core.Object) error {
+func hasV1Subjects(subjects ...string) func(o client.Object) error {
+	return func(o client.Object) error {
 		r, ok := o.(*rbacv1.RoleBinding)
 		if !ok {
 			return nomostest.WrongTypeErr(o, r)
@@ -405,8 +406,8 @@ func hasV1Subjects(subjects ...string) func(o core.Object) error {
 	}
 }
 
-func hasV1Beta1Subjects(subjects ...string) func(o core.Object) error {
-	return func(o core.Object) error {
+func hasV1Beta1Subjects(subjects ...string) func(o client.Object) error {
+	return func(o client.Object) error {
 		r, ok := o.(*rbacv1beta1.RoleBinding)
 		if !ok {
 			return nomostest.WrongTypeErr(o, r)

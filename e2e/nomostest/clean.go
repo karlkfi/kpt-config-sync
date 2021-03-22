@@ -161,7 +161,7 @@ func deleteConfigSyncAnnotationsAndLabels(nt *NT, ns *corev1.Namespace) error {
 }
 
 func namespaceHasNoConfigSyncAnnotationsAndLabels() Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		ns, ok := o.(*corev1.Namespace)
 		if !ok {
 			return WrongTypeErr(ns, &corev1.Namespace{})

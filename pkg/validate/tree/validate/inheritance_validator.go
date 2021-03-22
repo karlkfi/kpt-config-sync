@@ -4,10 +4,10 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/semantic"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Inheritance verifies that all syncable resources in an abstract namespace
@@ -21,11 +21,11 @@ func Inheritance(tree *objects.Tree) status.MultiError {
 // its descendants are.
 func validateTreeNode(node *ast.TreeNode) (bool, status.MultiError) {
 	hasSyncableObjects := false
-	var namespaces []id.Resource
+	var namespaces []client.Object
 	for _, obj := range node.Objects {
-		if obj.GroupVersionKind() == kinds.Namespace() {
+		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			namespaces = append(namespaces, obj)
-		} else if !transform.IsEphemeral(obj.GroupVersionKind()) {
+		} else if !transform.IsEphemeral(obj.GetObjectKind().GroupVersionKind()) {
 			hasSyncableObjects = true
 		}
 	}

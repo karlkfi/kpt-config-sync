@@ -6,11 +6,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type action func(t *testing.T, q *ObjectQueue)
 
-func add(toAdd core.Object, wantLen int) action {
+func add(toAdd client.Object, wantLen int) action {
 	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		q.Add(toAdd)
@@ -20,7 +21,7 @@ func add(toAdd core.Object, wantLen int) action {
 	}
 }
 
-func get(wantObj core.Object, wantLen int) action {
+func get(wantObj client.Object, wantLen int) action {
 	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		got, shutdown := q.Get()
@@ -36,7 +37,7 @@ func get(wantObj core.Object, wantLen int) action {
 	}
 }
 
-func done(toDone core.Object, wantLen int) action {
+func done(toDone client.Object, wantLen int) action {
 	return func(t *testing.T, q *ObjectQueue) {
 		t.Helper()
 		q.Done(toDone)

@@ -7,11 +7,12 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/id"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type resourceErrorImpl struct {
 	underlying Error
-	resources  []id.Resource
+	resources  []client.Object
 }
 
 var _ ResourceError = resourceErrorImpl{}
@@ -42,7 +43,7 @@ func (r resourceErrorImpl) Errors() []Error {
 }
 
 // Resources implements ResourceError.
-func (r resourceErrorImpl) Resources() []id.Resource {
+func (r resourceErrorImpl) Resources() []client.Object {
 	return r.resources
 }
 
@@ -62,7 +63,7 @@ func (r resourceErrorImpl) Cause() error {
 }
 
 // formatResources returns a formatted string containing all Resources in the ResourceError.
-func formatResources(resources []id.Resource) string {
+func formatResources(resources []client.Object) string {
 	resStrs := make([]string, len(resources))
 	for i, res := range resources {
 		resStrs[i] = id.PrintResource(res)

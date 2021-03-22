@@ -5,7 +5,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/hierarchyconfig"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
@@ -17,7 +16,7 @@ import (
 func HierarchyConfig(tree *objects.Tree) status.MultiError {
 	clusterGKs := make(map[schema.GroupKind]bool)
 	for _, obj := range tree.Cluster {
-		clusterGKs[obj.GroupVersionKind().GroupKind()] = true
+		clusterGKs[obj.GetObjectKind().GroupVersionKind().GroupKind()] = true
 	}
 
 	var errs status.MultiError
@@ -39,15 +38,15 @@ func validateHC(obj ast.FileObject, clusterGKs map[schema.GroupKind]bool) status
 		switch res.HierarchyMode {
 		case v1.HierarchyModeNone, v1.HierarchyModeInherit, v1.HierarchyModeDefault:
 		default:
-			errs = status.Append(errs, hierarchyconfig.IllegalHierarchyModeError(hc(groupKinds(res)[0], obj), res.HierarchyMode))
+			errs = status.Append(errs, hierarchyconfig.IllegalHierarchyModeError(obj, groupKinds(res)[0], res.HierarchyMode))
 		}
 
 		// Then validate resource GroupKinds.
 		for _, gk := range groupKinds(res) {
 			if unsupportedGK(gk) {
-				errs = status.Append(errs, hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hc(gk, obj)))
+				errs = status.Append(errs, hierarchyconfig.UnsupportedResourceInHierarchyConfigError(obj, gk))
 			} else if clusterGKs[gk] {
-				errs = status.Append(errs, hierarchyconfig.ClusterScopedResourceInHierarchyConfigError(hc(gk, obj)))
+				errs = status.Append(errs, hierarchyconfig.ClusterScopedResourceInHierarchyConfigError(obj, gk))
 			}
 		}
 	}
@@ -64,13 +63,6 @@ func groupKinds(res v1.HierarchyConfigResource) []schema.GroupKind {
 		gks[i] = schema.GroupKind{Group: res.Group, Kind: kind}
 	}
 	return gks
-}
-
-func hc(gk schema.GroupKind, res id.Resource) id.HierarchyConfig {
-	return hierarchyconfig.FileGroupKindHierarchyConfig{
-		GK:       gk,
-		Resource: res,
-	}
 }
 
 func unsupportedGK(gk schema.GroupKind) bool {

@@ -31,7 +31,7 @@ func newFightLogger() fightLogger {
 func (d *fightLogger) logFight(now time.Time, err status.ResourceError) bool {
 	resource := err.Resources()[0] // There is only ever one resource per fight error.
 	i := gknn{
-		gk:        resource.GroupVersionKind().GroupKind(),
+		gk:        resource.GetObjectKind().GroupVersionKind().GroupKind(),
 		namespace: resource.GetNamespace(),
 		name:      resource.GetName(),
 	}

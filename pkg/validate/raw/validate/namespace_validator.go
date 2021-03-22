@@ -15,7 +15,7 @@ import (
 // - if the object has a metadata namespace, it must be a valid k8s namespace
 //   and it must not be in `config-management-system`
 func Namespace(obj ast.FileObject) status.Error {
-	if obj.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
+	if obj.GetObjectKind().GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
 		return validateNamespace(obj)
 	}
 	return validateObjectNamespace(obj)

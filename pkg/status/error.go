@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/importer/id"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const urlBase = "For more information, see https://g.co/cloud/acm-errors#knv"
@@ -143,12 +144,12 @@ func CodeRegistry() []string {
 }
 
 // toErrorResource converts a Resource into a v1.ErrorResource.
-func toErrorResource(r id.Resource) v1.ErrorResource {
+func toErrorResource(r client.Object) v1.ErrorResource {
 	return v1.ErrorResource{
 		SourcePath:        id.GetSourceAnnotation(r),
 		ResourceName:      r.GetName(),
 		ResourceNamespace: r.GetNamespace(),
-		ResourceGVK:       r.GroupVersionKind(),
+		ResourceGVK:       r.GetObjectKind().GroupVersionKind(),
 	}
 }
 
@@ -180,8 +181,8 @@ func fromResourceError(err ResourceError) v1.ConfigManagementError {
 	return cme
 }
 
-func toResourceRef(r id.Resource) v1alpha1.ResourceRef {
-	gvk := r.GroupVersionKind()
+func toResourceRef(r client.Object) v1alpha1.ResourceRef {
+	gvk := r.GetObjectKind().GroupVersionKind()
 	return v1alpha1.ResourceRef{
 		SourcePath: id.GetSourceAnnotation(r),
 		Name:       r.GetName(),

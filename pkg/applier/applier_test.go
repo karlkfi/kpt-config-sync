@@ -187,7 +187,7 @@ func TestApply(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			previousCache := make(map[core.ID]core.Object)
+			previousCache := make(map[core.ID]client.Object)
 			for _, cached := range tc.cached {
 				previousCache[core.IDOf(cached)] = cached.Object
 			}

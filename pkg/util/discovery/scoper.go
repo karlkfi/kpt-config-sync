@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ScopeType is the namespace/cluster scope of a particular GroupKind.
@@ -29,8 +29,8 @@ type Scoper struct {
 }
 
 // GetObjectScope implements Scoper
-func (s *Scoper) GetObjectScope(o id.Resource) (ScopeType, status.Error) {
-	scope, err := s.GetGroupKindScope(o.GroupVersionKind().GroupKind())
+func (s *Scoper) GetObjectScope(o client.Object) (ScopeType, status.Error) {
+	scope, err := s.GetGroupKindScope(o.GetObjectKind().GroupVersionKind().GroupKind())
 	if err != nil {
 		// Make the error specific to the object.
 		return scope, UnknownObjectKindError(o)
@@ -58,7 +58,7 @@ func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (ScopeType, status.Error
 // as this is a convenience method.
 func (s *Scoper) HasScopesFor(objects []ast.FileObject) bool {
 	for _, o := range objects {
-		if _, exists := s.scope[o.GroupVersionKind().GroupKind()]; !exists {
+		if _, exists := s.scope[o.GetObjectKind().GroupVersionKind().GroupKind()]; !exists {
 			return false
 		}
 	}
@@ -212,11 +212,11 @@ const UnknownKindErrorCode = "1021" // Impossible to create consistent example.
 var unknownKindError = status.NewErrorBuilder(UnknownKindErrorCode)
 
 // UnknownObjectKindError reports that an object declared in the repo does not have a definition in the cluster.
-func UnknownObjectKindError(resource id.Resource) status.Error {
+func UnknownObjectKindError(resource client.Object) status.Error {
 	return unknownKindError.
 		Sprintf("No CustomResourceDefinition is defined for the type %q in the cluster. "+
 			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.",
-			resource.GroupVersionKind().GroupKind()).
+			resource.GetObjectKind().GroupVersionKind().GroupKind()).
 		BuildWithResources(resource)
 }
 

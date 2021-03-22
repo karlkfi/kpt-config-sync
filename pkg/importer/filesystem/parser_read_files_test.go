@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func aNamespace(name string) string {
@@ -35,7 +36,7 @@ func pointer(o ast.FileObject) *ast.FileObject {
 	return &o
 }
 
-var specHardPods core.MetaMutator = func(o core.Object) {
+var specHardPods core.MetaMutator = func(o client.Object) {
 	u, ok := o.(*unstructured.Unstructured)
 	if ok {
 		_ = unstructured.SetNestedStringMap(u.Object, map[string]string{

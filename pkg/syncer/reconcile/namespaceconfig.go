@@ -327,7 +327,7 @@ func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context
 		return nil
 	}
 
-	updateFn := func(obj core.Object) (core.Object, error) {
+	updateFn := func(obj client.Object) (client.Object, error) {
 		newPN := obj.(*v1.NamespaceConfig)
 		newPN.Status.Token = config.Spec.Token
 		newPN.Status.SyncTime = r.now()

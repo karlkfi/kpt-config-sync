@@ -36,7 +36,7 @@ var _ client.StatusWriter = &statusWriter{}
 // Client is a fake implementation of client.Client.
 type Client struct {
 	scheme  *runtime.Scheme
-	Objects map[core.ID]core.Object
+	Objects map[core.ID]client.Object
 }
 
 var _ client.Client = &Client{}
@@ -50,7 +50,7 @@ func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...client.Object) *Cli
 
 	result := Client{
 		scheme:  scheme,
-		Objects: make(map[core.ID]core.Object),
+		Objects: make(map[core.ID]client.Object),
 	}
 
 	err := v1.AddToScheme(result.scheme)
@@ -82,30 +82,26 @@ func toGR(gk schema.GroupKind) schema.GroupResource {
 
 // Get implements client.Client.
 func (c *Client) Get(_ context.Context, key client.ObjectKey, obj client.Object) error {
-	co, err := core.ObjectOf(obj)
-	if err != nil {
-		return err
-	}
-	co.SetName(key.Name)
-	co.SetNamespace(key.Namespace)
+	obj.SetName(key.Name)
+	obj.SetNamespace(key.Namespace)
 
-	if co.GroupVersionKind().Empty() {
+	if obj.GetObjectKind().GroupVersionKind().Empty() {
 		// Since many times we call with just an empty struct with no type metadata.
-		gvks, _, err := c.Scheme().ObjectKinds(co)
+		gvks, _, err := c.Scheme().ObjectKinds(obj)
 		if err != nil {
 			return err
 		}
 		switch len(gvks) {
 		case 0:
-			return errors.Errorf("unregistered Type; register it in fake.Client.Schema: %T", co)
+			return errors.Errorf("unregistered Type; register it in fake.Client.Schema: %T", obj)
 		case 1:
-			co.GetObjectKind().SetGroupVersionKind(gvks[0])
+			obj.GetObjectKind().SetGroupVersionKind(gvks[0])
 		default:
-			return errors.Errorf("fake.Client does not support multiple Versions for the same GroupKind: %v", co)
+			return errors.Errorf("fake.Client does not support multiple Versions for the same GroupKind: %v", obj)
 		}
 	}
 
-	id := core.IDOf(co)
+	id := core.IDOf(obj)
 	o, ok := c.Objects[id]
 	if !ok {
 		return newNotFound(id)
@@ -206,18 +202,13 @@ func (c *Client) Create(_ context.Context, obj client.Object, opts ...client.Cre
 		return err
 	}
 
-	co, err := core.ObjectOf(obj)
-	if err != nil {
-		return err
-	}
-
-	id := core.IDOf(co)
-	_, found := c.Objects[core.IDOf(co)]
+	id := core.IDOf(obj)
+	_, found := c.Objects[core.IDOf(obj)]
 	if found {
 		return newAlreadyExists(id)
 	}
 
-	c.Objects[id] = co
+	c.Objects[id] = obj
 	return nil
 }
 
@@ -245,11 +236,7 @@ func (c *Client) Delete(_ context.Context, obj client.Object, opts ...client.Del
 		return err
 	}
 
-	co, err := core.ObjectOf(obj.DeepCopyObject().(client.Object))
-	if err != nil {
-		return err
-	}
-	id := core.IDOf(co)
+	id := core.IDOf(obj)
 
 	_, found := c.Objects[id]
 	if !found {
@@ -303,11 +290,7 @@ func (c *Client) Update(_ context.Context, obj client.Object, opts ...client.Upd
 		return err
 	}
 
-	co, err := core.ObjectOf(obj)
-	if err != nil {
-		return err
-	}
-	id := core.IDOf(co)
+	id := core.IDOf(obj)
 
 	_, found := c.Objects[id]
 	if !found {
@@ -319,18 +302,14 @@ func (c *Client) Update(_ context.Context, obj client.Object, opts ...client.Upd
 		return err
 	}
 	if hasStatus {
-		updated, err := c.updateObjectStatus(co, oldStatus)
+		u, err := c.updateObjectStatus(obj, oldStatus)
 		if err != nil {
 			return err
 		}
 
-		u, err := core.ObjectOf(updated)
-		if err != nil {
-			return err
-		}
 		c.Objects[id] = u
 	} else {
-		c.Objects[id] = co
+		c.Objects[id] = obj
 	}
 	return nil
 }
@@ -359,35 +338,26 @@ func (s *statusWriter) Update(_ context.Context, obj client.Object, opts ...clie
 		return err
 	}
 
-	co, err := core.ObjectOf(obj)
-	if err != nil {
-		return err
-	}
-	id := core.IDOf(co)
+	id := core.IDOf(obj)
 
 	_, found := s.Client.Objects[id]
 	if !found {
 		return newNotFound(id)
 	}
 
-	newStatus, hasStatus, err := getStatusFromObject(co)
+	newStatus, hasStatus, err := getStatusFromObject(obj)
 	if err != nil {
 		return err
 	}
 	if hasStatus {
-		updated, err := s.Client.updateObjectStatus(s.Client.Objects[id], newStatus)
-		if err != nil {
-			return err
-		}
-
-		u, err := core.ObjectOf(updated)
+		u, err := s.Client.updateObjectStatus(s.Client.Objects[id], newStatus)
 		if err != nil {
 			return err
 		}
 
 		s.Client.Objects[id] = u
 	} else {
-		return errors.Errorf("the object %q/%q does not have a status field", co.GroupVersionKind(), co.GetName())
+		return errors.Errorf("the object %q/%q does not have a status field", obj.GetObjectKind().GroupVersionKind(), obj.GetName())
 	}
 	return nil
 }
@@ -410,7 +380,7 @@ func (c *Client) Status() client.StatusWriter {
 func (c *Client) Check(t *testing.T, wants ...client.Object) {
 	t.Helper()
 
-	wantMap := make(map[core.ID]core.Object)
+	wantMap := make(map[core.ID]client.Object)
 
 	for _, obj := range wants {
 		obj, err := c.fromUnstructured(obj)
@@ -420,7 +390,7 @@ func (c *Client) Check(t *testing.T, wants ...client.Object) {
 			t.Fatal(err)
 		}
 
-		cobj, ok := obj.(core.Object)
+		cobj, ok := obj.(client.Object)
 		if !ok {
 			t.Errorf("obj is not a Kubernetes object %v", obj)
 		}
@@ -441,7 +411,8 @@ func (c *Client) Check(t *testing.T, wants ...client.Object) {
 		if wantUnstructured != actualUnstructured {
 			// If you see this error, you should register the type so the code can
 			// compare them properly.
-			t.Errorf("got want.(type)=%T and actual.(type)=%T for two objects of type %s, want equal", want, actual, want.GroupVersionKind().String())
+			t.Errorf("got want.(type)=%T and actual.(type)=%T for two objects of type %s, want equal",
+				want, actual, want.GetObjectKind().GroupVersionKind().String())
 			continue
 		}
 
@@ -467,10 +438,10 @@ func newAlreadyExists(id core.ID) error {
 	return apierrors.NewAlreadyExists(toGR(id.GroupKind), id.ObjectKey.String())
 }
 
-func (c *Client) list(gk schema.GroupKind) []core.Object {
-	var result []core.Object
+func (c *Client) list(gk schema.GroupKind) []client.Object {
+	var result []client.Object
 	for _, o := range c.Objects {
-		if o.GroupVersionKind().GroupKind() != gk {
+		if o.GetObjectKind().GroupVersionKind().GroupKind() != gk {
 			continue
 		}
 		result = append(result, o)

@@ -1,7 +1,16 @@
 package core
 
+import "sigs.k8s.io/controller-runtime/pkg/client"
+
+// Annotated is the interface defined by types with annotations. Note that
+// some non-objects (such as PodTemplates) define annotations but are not objects.
+type Annotated interface {
+	GetAnnotations() map[string]string
+	SetAnnotations(annotations map[string]string)
+}
+
 // SetAnnotation sets the annotation on the passed annotated object to value.
-func SetAnnotation(obj LabeledAndAnnotated, annotation, value string) {
+func SetAnnotation(obj Annotated, annotation, value string) {
 	as := obj.GetAnnotations()
 	if as == nil {
 		as = make(map[string]string)
@@ -11,7 +20,7 @@ func SetAnnotation(obj LabeledAndAnnotated, annotation, value string) {
 }
 
 // GetAnnotation gets the annotation value on the passed annotated object for a given key.
-func GetAnnotation(obj LabeledAndAnnotated, annotation string) string {
+func GetAnnotation(obj client.Object, annotation string) string {
 	as := obj.GetAnnotations()
 	if as == nil {
 		return ""
@@ -24,7 +33,7 @@ func GetAnnotation(obj LabeledAndAnnotated, annotation string) string {
 }
 
 // RemoveAnnotations removes the passed set of annotations from obj.
-func RemoveAnnotations(obj LabeledAndAnnotated, annotations ...string) {
+func RemoveAnnotations(obj client.Object, annotations ...string) {
 	as := obj.GetAnnotations()
 	for _, a := range annotations {
 		delete(as, a)
@@ -32,8 +41,15 @@ func RemoveAnnotations(obj LabeledAndAnnotated, annotations ...string) {
 	obj.SetAnnotations(as)
 }
 
+// Labeled is the interface defined by types with labeled. Note that
+// some non-objects (such as PodTemplates) define labels but are not objects.
+type Labeled interface {
+	GetLabels() map[string]string
+	SetLabels(annotations map[string]string)
+}
+
 // SetLabel sets label on obj to value.
-func SetLabel(obj LabeledAndAnnotated, label, value string) {
+func SetLabel(obj Labeled, label, value string) {
 	ls := obj.GetLabels()
 	if ls == nil {
 		ls = make(map[string]string)
@@ -43,7 +59,7 @@ func SetLabel(obj LabeledAndAnnotated, label, value string) {
 }
 
 // RemoveLabels removes labels from the obj that key/value match the passed in map
-func RemoveLabels(obj LabeledAndAnnotated, labels map[string]string) {
+func RemoveLabels(obj client.Object, labels map[string]string) {
 	ls := obj.GetLabels()
 	for key, val := range labels {
 		if _, ok := ls[key]; !ok {

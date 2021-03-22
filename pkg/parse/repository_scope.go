@@ -4,10 +4,10 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OptionsForScope returns new Options that have been updated for the given
@@ -53,7 +53,7 @@ func repositoryScopeVisitor(scope declared.Scope) validate.VisitorFunc {
 
 // BadScopeErr reports that the passed resource declares a Namespace for a
 // different Namespace repository.
-func BadScopeErr(resource id.Resource, want declared.Scope) status.ResourceError {
+func BadScopeErr(resource client.Object, want declared.Scope) status.ResourceError {
 	return nonhierarchical.BadScopeErrBuilder.
 		Sprintf("Resources in the %q repo must either omit metadata.namespace or declare metadata.namespace=%q", want, want).
 		BuildWithResources(resource)

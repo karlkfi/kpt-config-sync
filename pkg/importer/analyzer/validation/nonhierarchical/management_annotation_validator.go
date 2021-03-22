@@ -3,8 +3,8 @@ package nonhierarchical
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ValidManagementAnnotation returns an Error if the user-specified management annotation is invalid.
@@ -23,7 +23,7 @@ var illegalManagementAnnotationError = status.NewErrorBuilder(IllegalManagementA
 
 // IllegalManagementAnnotationError represents an illegal management annotation value.
 // Error implements error.
-func IllegalManagementAnnotationError(resource id.Resource, value string) status.Error {
+func IllegalManagementAnnotationError(resource client.Object, value string) status.Error {
 	return illegalManagementAnnotationError.
 		Sprintf("Config has invalid management annotation %s=%s. If set, the value must be %q.",
 			v1.ResourceManagementKey, value, v1.ResourceManagementDisabled).

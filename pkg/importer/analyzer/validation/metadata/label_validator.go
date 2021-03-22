@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IllegalLabelDefinitionErrorCode is the error code for IllegalLabelDefinitionError
@@ -16,7 +16,7 @@ const IllegalLabelDefinitionErrorCode = "1011"
 var illegalLabelDefinitionError = status.NewErrorBuilder(IllegalLabelDefinitionErrorCode)
 
 // IllegalLabelDefinitionError represent a set of illegal label definitions.
-func IllegalLabelDefinitionError(resource id.Resource, labels []string) status.Error {
+func IllegalLabelDefinitionError(resource client.Object, labels []string) status.Error {
 	sort.Strings(labels) // ensure deterministic label order
 	labels2 := make([]string, len(labels))
 	for i, label := range labels {

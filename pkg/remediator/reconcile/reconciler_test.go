@@ -17,6 +17,7 @@ import (
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestRemediator_Reconcile(t *testing.T) {
@@ -25,12 +26,12 @@ func TestRemediator_Reconcile(t *testing.T) {
 		// version is Version (from GVK) of the object to try to remediate.
 		version string
 		// declared is the state of the object as returned by the Parser.
-		declared core.Object
+		declared client.Object
 		// actual is the current state of the object on the cluster.
-		actual core.Object
+		actual client.Object
 		// want is the desired final state of the object on the cluster after
 		// reconciliation.
-		want core.Object
+		want client.Object
 		// wantError is the desired error resulting from calling Reconcile, if there
 		// is one.
 		wantError error
@@ -177,7 +178,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			r := newReconciler(declared.RootReconciler, c.Applier(), d)
 
 			// Get the triggering object for the reconcile event.
-			var obj core.Object
+			var obj client.Object
 			switch {
 			case tc.declared != nil:
 				obj = tc.declared
@@ -202,7 +203,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 	}
 }
 
-func fakeClient(t *testing.T, actual ...core.Object) *testingfake.Client {
+func fakeClient(t *testing.T, actual ...client.Object) *testingfake.Client {
 	t.Helper()
 	s := runtime.NewScheme()
 	err := corev1.AddToScheme(s)
@@ -232,7 +233,7 @@ func fakeClient(t *testing.T, actual ...core.Object) *testingfake.Client {
 	return c
 }
 
-func makeDeclared(t *testing.T, objs ...core.Object) *declared.Resources {
+func makeDeclared(t *testing.T, objs ...client.Object) *declared.Resources {
 	t.Helper()
 	d := &declared.Resources{}
 	if err := d.Update(context.Background(), objs); err != nil {

@@ -59,7 +59,7 @@ func (n *TreeNode) Flatten() []FileObject {
 func (n *TreeNode) flattenNamespace() []FileObject {
 	var result []FileObject
 	for _, o := range n.Objects {
-		if o.GroupVersionKind() != kinds.Namespace() {
+		if o.GetObjectKind().GroupVersionKind() != kinds.Namespace() {
 			o.SetNamespace(n.Name())
 		}
 		result = append(result, o)
@@ -71,7 +71,7 @@ func (n *TreeNode) flattenAbstractNamespace() []FileObject {
 	var result []FileObject
 
 	for _, o := range n.Objects {
-		if o.GroupVersionKind() == kinds.NamespaceSelector() {
+		if o.GetObjectKind().GroupVersionKind() == kinds.NamespaceSelector() {
 			result = append(result, o)
 		}
 	}

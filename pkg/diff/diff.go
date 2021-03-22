@@ -16,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Operation indicates what action should be taken if we detect a difference
@@ -48,12 +49,12 @@ const (
 )
 
 // Diff is resource where Declared and Actual do not match.
-// Both Declared and Actual are core.Object.
+// Both Declared and Actual are client.Object.
 type Diff struct {
 	// Declared is the resource as it exists in the repository.
-	Declared core.Object
+	Declared client.Object
 	// Actual is the resource as it exists in the cluster.
-	Actual core.Object
+	Actual client.Object
 }
 
 // Operation returns the type of the difference between the repository and the API Server.
@@ -199,7 +200,7 @@ func (d Diff) UnstructuredDeclared() (*unstructured.Unstructured, status.Error) 
 // ThreeWay does a three way diff and returns the FileObjectDiff list.
 // Compare between previous declared and new declared to decide the delete list.
 // Compare between the new declared and the actual states to decide the create and update.
-func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]core.Object) []Diff {
+func ThreeWay(newDeclared, previousDeclared, actual map[core.ID]client.Object) []Diff {
 	var diffs []Diff
 	// Delete.
 	for coreID, previousDecl := range previousDeclared {

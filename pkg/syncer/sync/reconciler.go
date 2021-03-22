@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -157,7 +156,7 @@ func (r *metaReconciler) reconcileSyncs(ctx context.Context, request reconcile.R
 
 		// Check if status changed before updating.
 		if !reflect.DeepEqual(sync.Status, ss) {
-			updateFn := func(obj core.Object) (core.Object, error) {
+			updateFn := func(obj client.Object) (client.Object, error) {
 				s := obj.(*v1.Sync)
 				s.Status = ss
 				return s, nil

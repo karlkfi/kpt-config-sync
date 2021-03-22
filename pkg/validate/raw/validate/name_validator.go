@@ -20,7 +20,7 @@ func Name(obj ast.FileObject) status.Error {
 	}
 
 	var errs []string
-	if obj.GroupVersionKind().Group == rbacv1.SchemeGroupVersion.Group {
+	if obj.GetObjectKind().GroupVersionKind().Group == rbacv1.SchemeGroupVersion.Group {
 		// The APIServer has different metadata.name requirements for RBAC types.
 		errs = rest.IsValidPathSegmentName(obj.GetName())
 	} else {

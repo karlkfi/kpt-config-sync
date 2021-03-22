@@ -6,14 +6,14 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // RepoHasStatusSyncLatestToken ensures ACM has reported all objects were
 // successfully synced to the repository.
 func RepoHasStatusSyncLatestToken(sha1 string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		repo, ok := o.(*v1.Repo)
 		if !ok {
 			return WrongTypeErr(o, &v1.Repo{})
@@ -56,7 +56,7 @@ func RepoHasStatusSyncLatestToken(sha1 string) Predicate {
 // This means ACM is trying (or has tried) syncing cluster-scoped objects from
 // the latest repo commit to the cluster.
 func ClusterConfigHasSpecToken(sha1 string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		cc, ok := o.(*v1.ClusterConfig)
 		if !ok {
 			return WrongTypeErr(o, &v1.ClusterConfig{})
@@ -76,7 +76,7 @@ func ClusterConfigHasSpecToken(sha1 string) Predicate {
 // This means ACM has successfully synced all cluster-scoped objects from the
 // latest repo commit to the cluster.
 func ClusterConfigHasStatusToken(sha1 string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		cc, ok := o.(*v1.ClusterConfig)
 		if !ok {
 			return WrongTypeErr(o, &v1.ClusterConfig{})
@@ -93,7 +93,7 @@ func ClusterConfigHasStatusToken(sha1 string) Predicate {
 // RootSyncHasStatusSyncCommit creates a Predicate that ensures that the
 // .status.sync.commit field on the passed RootSync matches sha1.
 func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs, ok := o.(*v1alpha1.RootSync)
 		if !ok {
 			return WrongTypeErr(o, &v1alpha1.RootSync{})
@@ -129,7 +129,7 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 // RepoSyncHasStatusSyncCommit creates a Predicate that ensures that the
 // .status.sync.commit field on the passed RepoSync matches sha1.
 func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs, ok := o.(*v1alpha1.RepoSync)
 		if !ok {
 			return WrongTypeErr(o, &v1alpha1.RepoSync{})

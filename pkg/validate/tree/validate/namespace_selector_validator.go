@@ -7,10 +7,10 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NamespaceSelector performs a second round of verification on namespace
@@ -36,7 +36,7 @@ func validateNamespaceSelectors(objs []ast.FileObject, nsSelectors map[string]as
 	var errs status.MultiError
 	var namespaceDir string
 	for _, obj := range objs {
-		switch obj.GroupVersionKind() {
+		switch obj.GetObjectKind().GroupVersionKind() {
 		case kinds.Namespace():
 			namespaceDir = obj.Dir().SlashPath()
 		default:
@@ -61,8 +61,8 @@ func validateNamespaceSelectors(objs []ast.FileObject, nsSelectors map[string]as
 	return errs
 }
 
-func selectorsInNamespaceDir(dir string, nsSelectors map[string]ast.FileObject) []id.Resource {
-	var result []id.Resource
+func selectorsInNamespaceDir(dir string, nsSelectors map[string]ast.FileObject) []client.Object {
+	var result []client.Object
 	for _, obj := range nsSelectors {
 		if obj.Dir().SlashPath() == dir {
 			result = append(result, obj)

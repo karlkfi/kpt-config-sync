@@ -1,16 +1,16 @@
 package differ
 
 import (
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/policycontroller"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IsManageableSystemNamespace returns if the input namespace is a manageable system namespace.
-func IsManageableSystemNamespace(o core.Object) bool {
-	if o.GroupVersionKind().GroupKind() != kinds.Namespace().GroupKind() {
+func IsManageableSystemNamespace(o client.Object) bool {
+	if o.GetObjectKind().GroupVersionKind().GroupKind() != kinds.Namespace().GroupKind() {
 		return false
 	}
 	m := map[string]bool{

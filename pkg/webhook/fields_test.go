@@ -14,7 +14,7 @@ import (
 )
 
 func setRules(rules []rbacv1.PolicyRule) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		role := o.(*rbacv1.Role)
 		role.Rules = rules
 	}

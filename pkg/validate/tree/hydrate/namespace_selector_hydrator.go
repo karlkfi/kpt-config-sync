@@ -57,7 +57,7 @@ func labelSelector(obj ast.FileObject) (labels.Selector, status.Error) {
 func visitTreeNode(node *ast.TreeNode, nsSelectors map[string]labels.Selector) status.MultiError {
 	var errs status.MultiError
 	for _, obj := range node.Objects {
-		if obj.GroupVersionKind() == kinds.Namespace() {
+		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			return applySelectors(node, obj, nsSelectors)
 		}
 	}
@@ -78,7 +78,7 @@ func applySelectors(node *ast.TreeNode, namespace ast.FileObject, nsSelectors ma
 	var errs status.MultiError
 	var filtered []ast.FileObject
 	for _, obj := range node.Objects {
-		if obj.GroupVersionKind() == kinds.Namespace() {
+		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			filtered = append(filtered, obj)
 			continue
 		}

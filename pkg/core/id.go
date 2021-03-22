@@ -14,9 +14,9 @@ type ID struct {
 }
 
 // IDOf converts an Object to its ID.
-func IDOf(o Object) ID {
+func IDOf(o client.Object) ID {
 	return ID{
-		GroupKind: o.GroupVersionKind().GroupKind(),
+		GroupKind: o.GetObjectKind().GroupVersionKind().GroupKind(),
 		ObjectKey: client.ObjectKey{Namespace: o.GetNamespace(), Name: o.GetName()},
 	}
 }

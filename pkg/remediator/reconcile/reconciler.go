@@ -15,7 +15,7 @@ import (
 )
 
 type reconcilerInterface interface {
-	Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error
+	Remediate(ctx context.Context, id core.ID, obj client.Object) status.Error
 	GetClient() client.Client
 }
 
@@ -44,12 +44,12 @@ func newReconciler(
 
 // Remediate takes a client.Object representing the object to update, and then
 // ensures that the version on the server matches it.
-func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj core.Object) status.Error {
+func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Object) status.Error {
 	declU, found := r.declared.Get(id)
 	// Yes, this if block is necessary because Go is pedantic about nil interfaces.
-	// 1) var decl core.Object = declU results in a panic.
-	// 2) Using declU as a core.Object results in a panic.
-	var decl core.Object
+	// 1) var decl client.Object = declU results in a panic.
+	// 2) Using declU as a client.Object results in a panic.
+	var decl client.Object
 	if found {
 		decl = declU
 	}

@@ -11,7 +11,7 @@ import (
 // object was declared in the repository.
 func DeclaredVersion(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
-		core.Label(configuration.DeclaredVersionLabel, obj.GroupVersionKind().Version)(obj)
+		core.Label(configuration.DeclaredVersionLabel, obj.GetObjectKind().GroupVersionKind().Version)(obj)
 	}
 	return nil
 }

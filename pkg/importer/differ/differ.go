@@ -7,7 +7,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -15,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Alias metav1.Now to enable test mocking.
@@ -85,7 +85,7 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 // deleteNamespaceConfig marks the given NamespaceConfig for deletion by the syncer. This tombstone is more explicit
 // than having the importer just delete the NamespaceConfig directly.
 func (d *differ) deleteNamespaceConfig(ctx context.Context, nc *v1.NamespaceConfig) status.Error {
-	_, err := d.client.Update(ctx, nc, func(obj core.Object) (core.Object, error) {
+	_, err := d.client.Update(ctx, nc, func(obj client.Object) (client.Object, error) {
 		newObj := obj.(*v1.NamespaceConfig).DeepCopy()
 		newObj.Spec.DeleteSyncedTime = now()
 		return newObj, nil
@@ -95,7 +95,7 @@ func (d *differ) deleteNamespaceConfig(ctx context.Context, nc *v1.NamespaceConf
 
 // updateNamespaceConfig writes the given NamespaceConfig to storage as it is specified.
 func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.NamespaceConfig) status.Error {
-	_, err := d.client.Update(ctx, intent, func(obj core.Object) (core.Object, error) {
+	_, err := d.client.Update(ctx, intent, func(obj client.Object) (client.Object, error) {
 		oldObj := obj.(*v1.NamespaceConfig)
 		newObj := intent.DeepCopy()
 		if !oldObj.Spec.DeleteSyncedTime.IsZero() {
@@ -111,7 +111,7 @@ func (d *differ) updateNamespaceConfig(ctx context.Context, intent *v1.Namespace
 		return err
 	}
 
-	_, err = d.client.UpdateStatus(ctx, intent, func(obj core.Object) (core.Object, error) {
+	_, err = d.client.UpdateStatus(ctx, intent, func(obj client.Object) (client.Object, error) {
 		oldObj := obj.(*v1.NamespaceConfig)
 		newObj := intent.DeepCopy()
 		newObj.ResourceVersion = oldObj.ResourceVersion
@@ -161,7 +161,7 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 	}
 
 	if d.clusterConfigNeedsUpdate(decoder, current, desired, initTime) {
-		_, err := d.client.Update(ctx, desired, func(obj core.Object) (core.Object, error) {
+		_, err := d.client.Update(ctx, desired, func(obj client.Object) (client.Object, error) {
 			oldObj := obj.(*v1.ClusterConfig)
 			newObj := desired.DeepCopy()
 			newObj.ResourceVersion = oldObj.ResourceVersion
@@ -169,7 +169,7 @@ func (d *differ) updateClusterConfig(ctx context.Context, decoder decode.Decoder
 		})
 		d.errs = status.Append(d.errs, err)
 
-		_, err = d.client.UpdateStatus(ctx, desired, func(obj core.Object) (core.Object, error) {
+		_, err = d.client.UpdateStatus(ctx, desired, func(obj client.Object) (client.Object, error) {
 			oldObj := obj.(*v1.ClusterConfig)
 			newObj := desired.DeepCopy()
 			newObj.ResourceVersion = oldObj.ResourceVersion
@@ -189,7 +189,7 @@ func (d *differ) updateSyncs(ctx context.Context, current, desired namespaceconf
 	for name, newSync := range desired.Syncs {
 		if oldSync, exists := current.Syncs[name]; exists {
 			if !syncsEqual(&newSync, &oldSync) {
-				_, err := d.client.Update(ctx, &newSync, func(obj core.Object) (core.Object, error) {
+				_, err := d.client.Update(ctx, &newSync, func(obj client.Object) (client.Object, error) {
 					oldObj := obj.(*v1.Sync)
 					newObj := newSync.DeepCopy()
 					newObj.ResourceVersion = oldObj.ResourceVersion

@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
 	"github.com/google/nomos/cmd/nomos/util"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer"
@@ -28,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -212,7 +212,7 @@ func printDirectoryOutput(fileObjects []ast.FileObject) error {
 	return nil
 }
 
-func toUnstructured(o core.Object) (*unstructured.Unstructured, error) {
+func toUnstructured(o client.Object) (*unstructured.Unstructured, error) {
 	// Must convert or else fields like status automatically get written.
 	unstructuredObject, err2 := converter.ToUnstructured(o)
 	if err2 != nil {

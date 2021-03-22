@@ -185,7 +185,7 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 	namespaces := make(map[string]bool)
 
 	for _, o := range objs {
-		if o.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
+		if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
 			namespaces[o.GetName()] = true
 		} else if o.GetNamespace() != "" && !namespaces[o.GetNamespace()] {
 			// If unset, this ensures the key exists and is false.

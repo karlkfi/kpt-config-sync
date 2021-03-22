@@ -16,9 +16,9 @@ const (
 	OwningInventoryKey = "config.k8s.io/owning-inventory"
 )
 
-func partitionObjs(objs []core.Object) ([]core.Object, []core.Object) {
-	var enabled []core.Object
-	var disabled []core.Object
+func partitionObjs(objs []client.Object) ([]client.Object, []client.Object) {
+	var enabled []client.Object
+	var disabled []client.Object
 	for _, obj := range objs {
 		if obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled {
 			disabled = append(disabled, obj)
@@ -29,7 +29,7 @@ func partitionObjs(objs []core.Object) ([]core.Object, []core.Object) {
 	return enabled, disabled
 }
 
-func toUnstructured(objs []core.Object) ([]*unstructured.Unstructured, status.MultiError) {
+func toUnstructured(objs []client.Object) ([]*unstructured.Unstructured, status.MultiError) {
 	var errs status.MultiError
 	var unstructureds []*unstructured.Unstructured
 	for _, obj := range objs {
@@ -44,11 +44,11 @@ func toUnstructured(objs []core.Object) ([]*unstructured.Unstructured, status.Mu
 	return unstructureds, errs
 }
 
-func objMetaFrom(obj core.Object) object.ObjMetadata {
+func objMetaFrom(obj client.Object) object.ObjMetadata {
 	return object.ObjMetadata{
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
-		GroupKind: obj.GroupVersionKind().GroupKind(),
+		GroupKind: obj.GetObjectKind().GroupVersionKind().GroupKind(),
 	}
 }
 
@@ -62,7 +62,7 @@ func idFrom(identifier object.ObjMetadata) core.ID {
 	}
 }
 
-func removeFrom(all []object.ObjMetadata, toRemove []core.Object) []object.ObjMetadata {
+func removeFrom(all []object.ObjMetadata, toRemove []client.Object) []object.ObjMetadata {
 	m := map[object.ObjMetadata]bool{}
 	for _, a := range all {
 		m[a] = true
@@ -72,7 +72,7 @@ func removeFrom(all []object.ObjMetadata, toRemove []core.Object) []object.ObjMe
 		meta := object.ObjMetadata{
 			Namespace: r.GetNamespace(),
 			Name:      r.GetName(),
-			GroupKind: r.GroupVersionKind().GroupKind(),
+			GroupKind: r.GetObjectKind().GroupVersionKind().GroupKind(),
 		}
 		delete(m, meta)
 	}

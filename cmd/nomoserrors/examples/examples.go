@@ -213,18 +213,10 @@ func Generate() AllExamples {
 	result.markDeprecated("1040")
 
 	// 1041
-	result.add(hierarchyconfig.UnsupportedResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
-		GK:            kinds.Namespace().GroupKind(),
-		HierarchyMode: v1.HierarchyModeDefault,
-		Resource:      fake.HierarchyConfig(),
-	}))
+	result.add(hierarchyconfig.UnsupportedResourceInHierarchyConfigError(fake.HierarchyConfig(), kinds.Namespace().GroupKind()))
 
 	// 1042
-	result.add(hierarchyconfig.IllegalHierarchyModeError(hierarchyconfig.FileGroupKindHierarchyConfig{
-		GK:            kinds.Role().GroupKind(),
-		HierarchyMode: "invalid",
-		Resource:      fake.HierarchyConfig(),
-	}, "invalid"))
+	result.add(hierarchyconfig.IllegalHierarchyModeError(fake.HierarchyConfig(), kinds.Role().GroupKind(), "invalid"))
 
 	// 1043
 	result.add(nonhierarchical.UnsupportedObjectError(fake.CustomResourceDefinitionV1Beta1()))
@@ -238,11 +230,7 @@ func Generate() AllExamples {
 	result.add(syntax.IllegalFieldsInConfigError(fake.Role(), id.Status))
 
 	// 1046
-	result.add(hierarchyconfig.ClusterScopedResourceInHierarchyConfigError(hierarchyconfig.FileGroupKindHierarchyConfig{
-		GK:            kinds.ClusterRole().GroupKind(),
-		HierarchyMode: v1.HierarchyModeDefault,
-		Resource:      fake.HierarchyConfig(),
-	}))
+	result.add(hierarchyconfig.ClusterScopedResourceInHierarchyConfigError(fake.HierarchyConfig(), kinds.ClusterRole().GroupKind()))
 
 	// 1047
 	result.add(nonhierarchical.UnsupportedCRDRemovalError(fake.CustomResourceDefinitionV1Beta1()))

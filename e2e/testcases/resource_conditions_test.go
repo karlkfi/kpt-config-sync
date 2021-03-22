@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestResourceConditionAnnotations(t *testing.T) {
@@ -301,7 +302,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 
 func hasConditions(want ...string) nomostest.Predicate {
 	sort.Strings(want)
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		var got []string
 		switch obj := o.(type) {
 		case *v1.NamespaceConfig:

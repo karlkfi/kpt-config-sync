@@ -29,7 +29,7 @@ type Applier struct {
 	// determine which previously declared resources should be deleted.
 	// In cases when the applier fails to apply all the declared resources, the
 	// successfully-applied resources will still be added into `cacheObjects`.
-	cachedObjects map[core.ID]core.Object
+	cachedObjects map[core.ID]client.Object
 	// client reads and lists the resources from API server and updates RepoSync status.
 	client client.Client
 	// listOptions defines the resource filtering condition for different appliers initialized
@@ -50,7 +50,7 @@ type Interface interface {
 	// It returns:
 	//   1) a map of the GVKs which were successfully applied by the Applier;
 	//   2) the errors encountered.
-	Apply(ctx context.Context, desiredResources []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
+	Apply(ctx context.Context, desiredResources []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
 }
 
 var _ Interface = &Applier{}
@@ -64,7 +64,7 @@ func NewNamespaceApplier(c client.Client, applier syncerreconcile.Applier, names
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
 	a := &Applier{
 		applier:       applier,
-		cachedObjects: make(map[core.ID]core.Object),
+		cachedObjects: make(map[core.ID]client.Object),
 		client:        c,
 		listOptions:   opts,
 		scope:         namespace,
@@ -80,7 +80,7 @@ func NewRootApplier(c client.Client, applier syncerreconcile.Applier) *Applier {
 		client.MatchingLabels{v1.ManagedByKey: v1.ManagedByValue}}
 	a := &Applier{
 		applier:       applier,
-		cachedObjects: make(map[core.ID]core.Object),
+		cachedObjects: make(map[core.ID]client.Object),
 		client:        c,
 		listOptions:   opts,
 		scope:         declared.RootReconciler,
@@ -119,11 +119,11 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 	for _, d := range diffs {
 		// Take CRUD actions based on the diff between actual resource (what's stored in
 		// the api server) and the declared resource (the cached git resource).
-		var decl core.Object
+		var decl client.Object
 		if d.Declared != nil {
-			decl = d.Declared.DeepCopyObject().(core.Object)
+			decl = d.Declared.DeepCopyObject().(client.Object)
 		} else {
-			decl = d.Actual.DeepCopyObject().(core.Object)
+			decl = d.Actual.DeepCopyObject().(client.Object)
 		}
 		coreID := core.IDOf(decl)
 
@@ -212,9 +212,9 @@ func (a *Applier) sync(ctx context.Context, diffs []diff.Diff) status.MultiError
 }
 
 // Apply implements Interface.
-func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	// create the new cache showing the new declared resource.
-	newCache := make(map[core.ID]core.Object)
+	newCache := make(map[core.ID]client.Object)
 	for _, desired := range desiredResource {
 		newCache[core.IDOf(desired)] = desired
 	}
@@ -244,14 +244,14 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []core.Object) (map
 // getActualObjects fetches and returns the current resources from the API
 // server to match the given declared resources. It also returns a map of GVKs
 // which were successfully listed by the Applier (eg not in an unknown state).
-func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]core.Object) (map[core.ID]core.Object, map[schema.GroupVersionKind]struct{}, status.MultiError) {
+func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]client.Object) (map[core.ID]client.Object, map[schema.GroupVersionKind]struct{}, status.MultiError) {
 	gvks := make(map[schema.GroupVersionKind]struct{})
 	for _, resource := range declared {
-		gvks[resource.GroupVersionKind()] = struct{}{}
+		gvks[resource.GetObjectKind().GroupVersionKind()] = struct{}{}
 	}
 
 	var errs status.MultiError
-	actual := make(map[core.ID]core.Object)
+	actual := make(map[core.ID]client.Object)
 	for gvk := range gvks {
 		resources := &unstructured.UnstructuredList{}
 		resources.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
@@ -275,7 +275,7 @@ func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]cor
 			// but with differing versions. In that case, those resources will show up
 			// in both GVK lists. We only want to keep the resource whose GVK matches
 			// the GVK of its declaration.
-			if decl.GroupVersionKind() == obj.GroupVersionKind() {
+			if decl.GetObjectKind().GroupVersionKind() == obj.GroupVersionKind() {
 				actual[coreID] = obj
 			} else {
 				glog.V(4).Infof("Ignoring version %q of actual resource %s.",
@@ -287,7 +287,7 @@ func (a *Applier) getActualObjects(ctx context.Context, declared map[core.ID]cor
 	// For all declared objects, mark their actual state as unknown if we were
 	// unable to list it by GVK.
 	for id, obj := range declared {
-		if _, listed := gvks[obj.GroupVersionKind()]; !listed {
+		if _, listed := gvks[obj.GetObjectKind().GroupVersionKind()]; !listed {
 			actual[id] = diff.Unknown()
 		}
 	}

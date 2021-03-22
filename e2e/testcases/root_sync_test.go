@@ -10,11 +10,11 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestDeleteRootSync(t *testing.T) {
@@ -345,7 +345,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 }
 
 func hasRootSyncReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs := o.(*v1alpha1.RootSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
@@ -358,7 +358,7 @@ func hasRootSyncReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate 
 }
 
 func hasRootSyncStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs := o.(*v1alpha1.RootSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {

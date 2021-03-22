@@ -1,9 +1,9 @@
 package semantic
 
 import (
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // TODO(ekitson): Replace usage of this error with id.MultipleSingletonsError instead
@@ -14,10 +14,10 @@ const MultipleSingletonsErrorCode = "1030"
 var multipleSingletonsError = status.NewErrorBuilder(MultipleSingletonsErrorCode)
 
 // MultipleSingletonsError reports that multiple singletons are defined in the same directory.
-func MultipleSingletonsError(duplicates ...id.Resource) status.Error {
+func MultipleSingletonsError(duplicates ...client.Object) status.Error {
 	var gvk schema.GroupVersionKind
 	if len(duplicates) > 0 {
-		gvk = duplicates[0].GroupVersionKind()
+		gvk = duplicates[0].GetObjectKind().GroupVersionKind()
 	}
 
 	return multipleSingletonsError.

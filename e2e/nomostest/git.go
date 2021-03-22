@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -148,7 +148,7 @@ func (g *Repository) init(name, privateKey string, port int) {
 //
 // Don't put multiple manifests in the same file unless parsing multi-manifest
 // files is the behavior under test. In that case, use AddFile.
-func (g *Repository) Add(path string, obj core.Object) {
+func (g *Repository) Add(path string, obj client.Object) {
 	g.T.Helper()
 	AddTestLabel(obj)
 	// TODO(willbeason): Figure out how to cleanly inject runtime.Scheme here.

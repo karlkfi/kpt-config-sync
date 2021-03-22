@@ -58,9 +58,9 @@ func (i inheritanceSpecs) visitTreeNode(node *ast.TreeNode, inherited []ast.File
 	var nodeObjs []ast.FileObject
 	isNamespace := false
 	for _, o := range node.Objects {
-		if o.GroupVersionKind() == kinds.Namespace() {
+		if o.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			isNamespace = true
-		} else if o.GroupVersionKind() != kinds.NamespaceSelector() {
+		} else if o.GetObjectKind().GroupVersionKind() != kinds.NamespaceSelector() {
 			// Don't copy down NamespaceSelectors.
 			nodeObjs = append(nodeObjs, o)
 		}
@@ -83,7 +83,7 @@ func (i inheritanceSpecs) visitTreeNode(node *ast.TreeNode, inherited []ast.File
 func (i inheritanceSpecs) validateAbstractObjects(objs []ast.FileObject) status.MultiError {
 	var err status.MultiError
 	for _, o := range objs {
-		gvk := o.GroupVersionKind()
+		gvk := o.GetObjectKind().GroupVersionKind()
 		spec, found := i[gvk.GroupKind()]
 		if (found && spec.Mode == v1.HierarchyModeNone) && !transform.IsEphemeral(gvk) && !syntax.IsSystemOnly(gvk) {
 			err = status.Append(err, validation.IllegalAbstractNamespaceObjectKindError(o))

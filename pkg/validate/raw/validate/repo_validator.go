@@ -4,11 +4,11 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/repo"
 	"github.com/google/nomos/pkg/validate/objects"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OldAllowedRepoVersion is the old (but still supported) Repo.Spec.Version.
@@ -22,9 +22,9 @@ var allowedRepoVersions = map[string]bool{
 // Repo verifies that there is exactly one Repo object and that it has the
 // correct version.
 func Repo(objs *objects.Raw) status.MultiError {
-	var found []id.Resource
+	var found []client.Object
 	for _, obj := range objs.Objects {
-		if obj.GroupVersionKind().GroupKind() == kinds.Repo().GroupKind() {
+		if obj.GetObjectKind().GroupVersionKind().GroupKind() == kinds.Repo().GroupKind() {
 			found = append(found, obj)
 		}
 	}

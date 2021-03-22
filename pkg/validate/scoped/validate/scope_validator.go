@@ -4,8 +4,8 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClusterScoped validates the given FileObject as a cluster-scoped resource to
@@ -41,9 +41,9 @@ func hasNamespaceSelector(obj ast.FileObject) bool {
 	return ok
 }
 
-func shouldBeInRootErr(resource id.Resource) status.ResourceError {
+func shouldBeInRootErr(resource client.Object) status.ResourceError {
 	return nonhierarchical.BadScopeErrBuilder.
 		Sprintf("Resources in namespace Repos must be Namespace-scoped type, but objects of type %v are Cluster-scoped. Move %s to the Root repo.",
-			resource.GroupVersionKind(), resource.GetName()).
+			resource.GetObjectKind().GroupVersionKind(), resource.GetName()).
 		BuildWithResources(resource)
 }

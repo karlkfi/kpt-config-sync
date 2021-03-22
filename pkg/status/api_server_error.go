@@ -1,8 +1,8 @@
 package status
 
 import (
-	"github.com/google/nomos/pkg/importer/id"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // APIServerErrorCode is the error code for a status Error originating from the kubernetes API server.
@@ -20,7 +20,7 @@ var InsufficientPermissionErrorBuilder = NewErrorBuilder(InsufficientPermissionE
 	Sprint("Insufficient permission. To fix, make sure the reconciler has sufficient permissions.")
 
 // APIServerError wraps an error returned by the APIServer.
-func APIServerError(err error, message string, resources ...id.Resource) Error {
+func APIServerError(err error, message string, resources ...client.Object) Error {
 	var errorBuilder ErrorBuilder
 	if apierrors.IsForbidden(err) {
 		errorBuilder = InsufficientPermissionErrorBuilder.Sprint(message).Wrap(err)

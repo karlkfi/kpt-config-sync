@@ -38,7 +38,7 @@ func installGitServer(nt *NT) func() error {
 	for _, o := range objs {
 		err := nt.Create(o)
 		if err != nil {
-			nt.T.Fatalf("installing %v %s", o.GroupVersionKind(),
+			nt.T.Fatalf("installing %v %s", o.GetObjectKind().GroupVersionKind(),
 				client.ObjectKey{Name: o.GetName(), Namespace: o.GetNamespace()})
 		}
 	}
@@ -60,7 +60,7 @@ func installGitServer(nt *NT) func() error {
 
 // isAvailableDeployment ensures all of the passed Deployment's replicas are
 // available.
-func isAvailableDeployment(o core.Object) error {
+func isAvailableDeployment(o client.Object) error {
 	d, ok := o.(*appsv1.Deployment)
 	if !ok {
 		return WrongTypeErr(o, d)
@@ -85,10 +85,10 @@ func isAvailableDeployment(o core.Object) error {
 	return nil
 }
 
-func gitServer() []core.Object {
+func gitServer() []client.Object {
 	// Remember that we've already created the git-server's Namespace since the
 	// SSH key must exist before we apply the Deployment.
-	return []core.Object{
+	return []client.Object{
 		gitService(),
 		gitDeployment(),
 	}

@@ -22,7 +22,7 @@ var (
 	Converter = runtime.NewTestUnstructuredConverter(conversion.EqualitiesOrDie())
 
 	// ManagementEnabled sets management labels and annotations on the object.
-	ManagementEnabled core.MetaMutator = func(obj core.Object) {
+	ManagementEnabled core.MetaMutator = func(obj client.Object) {
 		core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 	}
@@ -88,7 +88,7 @@ func ClusterConfigSyncToken() fake.ClusterConfigMutator {
 
 // NamespaceConfigImportToken adds an import token to a Namespace Config.
 func NamespaceConfigImportToken(t string) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.Token = t
 	}
@@ -96,7 +96,7 @@ func NamespaceConfigImportToken(t string) core.MetaMutator {
 
 // NamespaceConfigImportTime adds an ImportTime to a Namespace Config.
 func NamespaceConfigImportTime(time metav1.Time) core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.ImportTime = time
 	}
@@ -104,7 +104,7 @@ func NamespaceConfigImportTime(time metav1.Time) core.MetaMutator {
 
 // NamespaceConfigSyncTime adds a sync time to a Namespace Config.
 func NamespaceConfigSyncTime() core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Status.SyncTime = Now()
 	}
@@ -112,7 +112,7 @@ func NamespaceConfigSyncTime() core.MetaMutator {
 
 // NamespaceConfigSyncToken adds a sync token to a Namespace Config.
 func NamespaceConfigSyncToken() core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Status.Token = Token
 	}
@@ -120,7 +120,7 @@ func NamespaceConfigSyncToken() core.MetaMutator {
 
 // MarkForDeletion marks a NamespaceConfig with an intent to be delete
 func MarkForDeletion() core.MetaMutator {
-	return func(o core.Object) {
+	return func(o client.Object) {
 		nc := o.(*v1.NamespaceConfig)
 		nc.Spec.DeleteSyncedTime = metav1.Now()
 	}

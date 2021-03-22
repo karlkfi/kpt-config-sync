@@ -14,7 +14,7 @@ import (
 // specification:
 // https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
 func CRDName(obj ast.FileObject) status.Error {
-	if obj.GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
+	if obj.GetObjectKind().GroupVersionKind().GroupKind() != kinds.CustomResourceDefinition() {
 		return nil
 	}
 

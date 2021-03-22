@@ -8,10 +8,10 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClusterSelectorsForHierarchical verifies that all ClusterSelectors have a
@@ -31,14 +31,14 @@ func clusterSelectors(objs *objects.Raw, checkDir bool) status.MultiError {
 	var errs status.MultiError
 	clusterGK := kinds.Cluster().GroupKind()
 	selectorGK := kinds.ClusterSelector().GroupKind()
-	matches := make(map[string][]id.Resource)
+	matches := make(map[string][]client.Object)
 
 	for _, obj := range objs.Objects {
 		if err := validateClusterSelectorAnnotation(obj); err != nil {
 			errs = status.Append(errs, err)
 		}
 
-		objGK := obj.GroupVersionKind().GroupKind()
+		objGK := obj.GetObjectKind().GroupVersionKind().GroupKind()
 		if objGK == clusterGK || objGK == selectorGK {
 			if checkDir {
 				sourcePath := obj.Relative.OSPath()
@@ -77,7 +77,7 @@ func validateClusterSelectorAnnotation(obj ast.FileObject) status.Error {
 }
 
 func forbidsSelector(obj ast.FileObject) bool {
-	gk := obj.GroupVersionKind().GroupKind()
+	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	return gk == kinds.Cluster().GroupKind() ||
 		gk == kinds.ClusterSelector().GroupKind() ||
 		gk == kinds.NamespaceSelector().GroupKind() ||

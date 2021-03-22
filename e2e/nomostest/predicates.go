@@ -5,12 +5,12 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Predicate evaluates a core.Object, returning an error if it fails validation.
-type Predicate func(o core.Object) error
+// Predicate evaluates a client.Object, returning an error if it fails validation.
+type Predicate func(o client.Object) error
 
 // ErrWrongType indicates that the caller passed an object of the incorrect type
 // to the Predicate.
@@ -29,7 +29,7 @@ var ErrFailedPredicate = errors.New("failed predicate")
 // HasAnnotation returns a predicate that tests if an Object has the specified
 // annotation key/value pair.
 func HasAnnotation(key, value string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		got, ok := o.GetAnnotations()[key]
 		if !ok {
 			return fmt.Errorf("object %q does not have annotation %q; want %q", o.GetName(), key, value)
@@ -44,7 +44,7 @@ func HasAnnotation(key, value string) Predicate {
 // MissingAnnotation returns a predicate that tests that an object does not have
 // a specified annotation.
 func MissingAnnotation(key string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		_, ok := o.GetAnnotations()[key]
 		if ok {
 			return fmt.Errorf("object %v has annotation %s, want missing", o.GetName(), key)
@@ -55,7 +55,7 @@ func MissingAnnotation(key string) Predicate {
 
 // HasLabel returns a predicate that tests if an Object has the specified label key/value pair.
 func HasLabel(key, value string) Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		got, ok := o.GetLabels()[key]
 		if !ok {
 			return fmt.Errorf("object %q does not have label %q; wanted %q", o.GetName(), key, value)
@@ -71,7 +71,7 @@ func HasLabel(key, value string) Predicate {
 // annotations, ignoring values.
 func HasExactlyAnnotationKeys(wantKeys ...string) Predicate {
 	sort.Strings(wantKeys)
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		annotations := o.GetAnnotations()
 		var gotKeys []string
 		for k := range annotations {
@@ -90,7 +90,7 @@ func HasExactlyAnnotationKeys(wantKeys ...string) Predicate {
 func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 	wantKeys = append(wantKeys, TestLabel)
 	sort.Strings(wantKeys)
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		labels := o.GetLabels()
 		var gotKeys []string
 		for k := range labels {
@@ -108,7 +108,7 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 //
 // Check this when the object could be scheduled for deletion, to avoid flaky
 // behavior when we're ensuring we don't want something to be deleted.
-func NotPendingDeletion(o core.Object) error {
+func NotPendingDeletion(o client.Object) error {
 	if o.GetDeletionTimestamp() == nil {
 		return nil
 	}

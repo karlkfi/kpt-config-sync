@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -269,10 +270,10 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 		return "", nil
 	}
 
-	// get core.Object from the runtime object.
-	object, err := core.ObjectOf(event.Object)
-	if err != nil {
-		glog.Warningf("Received non core.Object in watch event: %v", err)
+	// get client.Object from the runtime object.
+	object, ok := event.Object.(client.Object)
+	if !ok {
+		glog.Warningf("Received non client.Object in watch event: %T", object)
 		metrics.RecordInternalError(ctx, "remediator")
 		return "", nil
 	}
@@ -296,7 +297,7 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 
 // shouldProcess returns true if the given object should be enqueued by the
 // watcher for processing.
-func (w *filteredWatcher) shouldProcess(object core.Object) bool {
+func (w *filteredWatcher) shouldProcess(object client.Object) bool {
 	if !diff.CanManage(w.reconciler, object) {
 		glog.Infof("Found management conflict for object: %v", object)
 		w.SetManagementConflict(true)
@@ -309,7 +310,7 @@ func (w *filteredWatcher) shouldProcess(object core.Object) bool {
 		// its declaration. Otherwise we expect to get another event for the same
 		// object but with a matching GVK so we can actually compare it to its
 		// declaration.
-		return object.GroupVersionKind() == decl.GroupVersionKind()
+		return object.GetObjectKind().GroupVersionKind() == decl.GroupVersionKind()
 	}
 
 	// Even if the object is undeclared, we still want to process it if it is

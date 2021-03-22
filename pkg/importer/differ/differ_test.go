@@ -61,7 +61,7 @@ func stalledCRDClusterConfig(syncState v1.ConfigSyncState, opts ...fake.ClusterC
 	return ccc
 }
 
-func markedForDeletion(o core.Object) {
+func markedForDeletion(o client.Object) {
 	nc := o.(*v1.NamespaceConfig)
 	nc.Spec.DeleteSyncedTime = testTime
 }

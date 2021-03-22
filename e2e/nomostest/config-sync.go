@@ -33,6 +33,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -122,10 +123,10 @@ var filesystemPollingPeriod time.Duration
 
 // IsReconcilerManagerConfigMap returns true if passed obj is the
 // reconciler-manager ConfigMap reconciler-manager-cm in config-management namespace.
-var IsReconcilerManagerConfigMap = func(obj core.Object) bool {
+var IsReconcilerManagerConfigMap = func(obj client.Object) bool {
 	return obj.GetName() == "reconciler-manager-cm" &&
 		obj.GetNamespace() == "config-management-system" &&
-		obj.GroupVersionKind() == kinds.ConfigMap()
+		obj.GetObjectKind().GroupVersionKind() == kinds.ConfigMap()
 }
 
 // gitRepo returns fully qualified git repo name hosted in test git server.
@@ -149,7 +150,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 	}
 
 	for _, o := range objs {
-		if o.GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
+		if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
 			cm := o.(*corev1.ConfigMap)
 			cm.Data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
 		}
@@ -172,8 +173,8 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) func(*NT) error {
 // convertObjects converts objects to their literal types. We can do this as
 // we should have all required types in the scheme anyway. This keeps us from
 // having to do ugly Unstructured operations.
-func convertObjects(nt *NT, objs []core.Object) []core.Object {
-	result := make([]core.Object, len(objs))
+func convertObjects(nt *NT, objs []client.Object) []client.Object {
+	result := make([]client.Object, len(objs))
 	for i, obj := range objs {
 		u, ok := obj.(*unstructured.Unstructured)
 		if !ok {
@@ -197,7 +198,7 @@ func convertObjects(nt *NT, objs []core.Object) []core.Object {
 		if err != nil {
 			nt.T.Fatalf("unmarshalling JSON into object: %v", err)
 		}
-		newObj, ok := o.(core.Object)
+		newObj, ok := o.(client.Object)
 		if !ok {
 			nt.T.Fatalf("trying to install non-object type %v", u.GroupVersionKind())
 		}
@@ -238,7 +239,7 @@ func copyDirContents(src, dest string) error {
 
 // installationManifests generates the ConfigSync installation YAML and copies
 // it to the test's temporary directory.
-func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
+func installationManifests(nt *NT, tmpManifestsDir string) []client.Object {
 	nt.T.Helper()
 	err := os.MkdirAll(tmpManifestsDir, fileMode)
 	if err != nil {
@@ -322,15 +323,15 @@ func installationManifests(nt *NT, tmpManifestsDir string) []core.Object {
 		nt.T.Fatal(err)
 	}
 
-	var objs []core.Object
+	var objs []client.Object
 	for _, o := range fos {
 		objs = append(objs, o.Object)
 	}
 	return objs
 }
 
-func monoRepoObjects(objects []core.Object) []core.Object {
-	var filtered []core.Object
+func monoRepoObjects(objects []client.Object) []client.Object {
+	var filtered []client.Object
 	for _, obj := range objects {
 		if monoObjects[obj.GetName()] || sharedObjects[obj.GetName()] {
 			filtered = append(filtered, obj)
@@ -339,8 +340,8 @@ func monoRepoObjects(objects []core.Object) []core.Object {
 	return filtered
 }
 
-func multiRepoObjects(t *testing.T, objects []core.Object, opts ...func(t *testing.T, obj core.Object)) []core.Object {
-	var filtered []core.Object
+func multiRepoObjects(t *testing.T, objects []client.Object, opts ...func(t *testing.T, obj client.Object)) []client.Object {
+	var filtered []client.Object
 	found := false
 	for _, obj := range objects {
 		if IsReconcilerManagerConfigMap(obj) {
@@ -486,7 +487,7 @@ func setupRepoSyncRoleBinding(nt *NT, ns string) error {
 }
 
 // setReconcilerDebugMode ensures the Reconciler deployments are run in debug mode.
-func setReconcilerDebugMode(t *testing.T, obj core.Object) {
+func setReconcilerDebugMode(t *testing.T, obj client.Object) {
 	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
@@ -533,7 +534,7 @@ func setReconcilerDebugMode(t *testing.T, obj core.Object) {
 
 // setReconcilerFilesystemPollingPeriod update Reconciler Manager configmap
 // reconciler-manager-cm with filesystem polling period to override the default.
-func setReconcilerFilesystemPollingPeriod(t *testing.T, obj core.Object) {
+func setReconcilerFilesystemPollingPeriod(t *testing.T, obj client.Object) {
 	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}

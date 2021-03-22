@@ -11,13 +11,14 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestFlatten(t *testing.T) {
 	testCases := []struct {
 		name     string
 		configs  *namespaceconfig.AllConfigs
-		expected []core.Object
+		expected []client.Object
 	}{
 		{
 			name: "nil AllConfigs",
@@ -33,7 +34,7 @@ func TestFlatten(t *testing.T) {
 					fake.CustomResourceDefinitionV1Beta1Object(),
 				),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.CustomResourceDefinitionV1Beta1Object(),
 			},
 		},
@@ -44,7 +45,7 @@ func TestFlatten(t *testing.T) {
 					fake.CustomResourceDefinitionV1Object(),
 				),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.CustomResourceDefinitionV1Object(),
 			},
 		},
@@ -55,7 +56,7 @@ func TestFlatten(t *testing.T) {
 					fake.ClusterRoleBindingObject(),
 				),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.ClusterRoleBindingObject(),
 			},
 		},
@@ -67,7 +68,7 @@ func TestFlatten(t *testing.T) {
 					fake.RoleBindingObject(),
 				)),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.NamespaceObject("bar"),
 				fake.RoleBindingObject(core.Namespace("bar")),
 			},
@@ -83,7 +84,7 @@ func TestFlatten(t *testing.T) {
 					fake.RoleObject(),
 				)),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.NamespaceObject("bar"),
 				fake.RoleBindingObject(core.Namespace("bar")),
 				fake.NamespaceObject("foo"),
@@ -104,7 +105,7 @@ func TestFlatten(t *testing.T) {
 					fake.RoleBindingObject(),
 				)),
 			},
-			expected: []core.Object{
+			expected: []client.Object{
 				fake.CustomResourceDefinitionV1Beta1Object(),
 				fake.ClusterRoleBindingObject(),
 				fake.NamespaceObject("bar"),
@@ -124,9 +125,9 @@ func TestFlatten(t *testing.T) {
 	}
 }
 
-func sortObjects(x, y core.Object) bool {
-	gvkX := x.GroupVersionKind()
-	gvkY := y.GroupVersionKind()
+func sortObjects(x, y client.Object) bool {
+	gvkX := x.GetObjectKind().GroupVersionKind()
+	gvkY := y.GetObjectKind().GroupVersionKind()
 	if gvkX.Group != gvkY.Group {
 		return gvkX.Group < gvkY.Group
 	}

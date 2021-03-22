@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,13 +24,13 @@ func NewEventRecorder(t *testing.T) *EventRecorder {
 }
 
 func (e *EventRecorder) event(object runtime.Object, eventtype, reason string) {
-	o, ok := object.(core.Object)
+	o, ok := object.(client.Object)
 	if !ok {
 		e.t.Errorf("object is not a valid Kubernetes type %+v", object)
 		return
 	}
 	e.events = append(e.events, Event{
-		GroupVersionKind: o.GroupVersionKind(),
+		GroupVersionKind: o.GetObjectKind().GroupVersionKind(),
 		ObjectKey:        client.ObjectKey{Namespace: o.GetNamespace(), Name: o.GetName()},
 		EventType:        eventtype,
 		Reason:           reason,
@@ -68,9 +67,9 @@ type Event struct {
 }
 
 // NewEvent instantiates a new Event.
-func NewEvent(o core.Object, eventtype, reason string) *Event {
+func NewEvent(o client.Object, eventtype, reason string) *Event {
 	return &Event{
-		GroupVersionKind: o.GroupVersionKind(),
+		GroupVersionKind: o.GetObjectKind().GroupVersionKind(),
 		ObjectKey:        client.ObjectKey{Namespace: o.GetNamespace(), Name: o.GetName()},
 		EventType:        eventtype,
 		Reason:           reason,

@@ -26,7 +26,7 @@ func ObjectNamespaces(objs *objects.Raw) status.MultiError {
 		// Namespaces and NamespaceSelectors are the only cluster-scoped objects
 		// expected under the namespace/ directory, so we want to make sure we
 		// don't accidentally assign them a namespace.
-		gk := obj.GroupVersionKind().GroupKind()
+		gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 		if gk == kinds.Namespace().GroupKind() || gk == kinds.NamespaceSelector().GroupKind() {
 			continue
 		}
@@ -41,7 +41,7 @@ func ObjectNamespaces(objs *objects.Raw) status.MultiError {
 }
 
 func isValidHierarchicalNamespace(obj ast.FileObject) bool {
-	if obj.GroupVersionKind().GroupKind() != kinds.Namespace().GroupKind() {
+	if obj.GetObjectKind().GroupVersionKind().GroupKind() != kinds.Namespace().GroupKind() {
 		return false
 	}
 	if topLevelDir(obj) != repo.NamespacesDir {

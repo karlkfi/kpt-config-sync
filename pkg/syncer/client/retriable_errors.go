@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ResourceConflictCode is the code for API Server errors resulting from a
@@ -13,7 +13,7 @@ var retriableConflictBuilder = status.NewErrorBuilder(ResourceConflictCode)
 
 // ConflictCreateAlreadyExists means we tried to create an object which already
 // exists.
-func ConflictCreateAlreadyExists(err error, resource id.Resource) status.Error {
+func ConflictCreateAlreadyExists(err error, resource client.Object) status.Error {
 	return retriableConflictBuilder.
 		Wrap(err).
 		Sprint("tried to create resource that already exists").
@@ -22,7 +22,7 @@ func ConflictCreateAlreadyExists(err error, resource id.Resource) status.Error {
 
 // ConflictUpdateDoesNotExist means we tried to update an object which does not
 // exist.
-func ConflictUpdateDoesNotExist(err error, resource id.Resource) status.Error {
+func ConflictUpdateDoesNotExist(err error, resource client.Object) status.Error {
 	return retriableConflictBuilder.
 		Wrap(err).
 		Sprint("tried to update resource which does not exist").
@@ -31,7 +31,7 @@ func ConflictUpdateDoesNotExist(err error, resource id.Resource) status.Error {
 
 // ConflictUpdateOldVersion means we tried to update an object using an old
 // version of the object.
-func ConflictUpdateOldVersion(err error, resource id.Resource) status.Error {
+func ConflictUpdateOldVersion(err error, resource client.Object) status.Error {
 	return retriableConflictBuilder.
 		Wrap(err).
 		Sprintf("tried to update with stale version of resource").

@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func rootPodRole() *rbacv1.Role {
@@ -220,7 +221,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 }
 
 func roleHasRules(wantRules []rbacv1.PolicyRule) nomostest.Predicate {
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		r, isRole := o.(*rbacv1.Role)
 		if !isRole {
 			return nomostest.WrongTypeErr(o, &rbacv1.Role{})
@@ -241,7 +242,7 @@ func repoSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 		wantErrs = append(wantErrs, v1alpha1.ConfigSyncError{Code: code})
 	}
 
-	return func(o core.Object) error {
+	return func(o client.Object) error {
 		rs, isRepoSync := o.(*v1alpha1.RepoSync)
 		if !isRepoSync {
 			return nomostest.WrongTypeErr(o, &v1alpha1.RepoSync{})

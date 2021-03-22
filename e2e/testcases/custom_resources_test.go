@@ -8,13 +8,13 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
@@ -241,7 +241,7 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 	}
 }
 
-func weightEqual100(obj core.Object) error {
+func weightEqual100(obj client.Object) error {
 	u := obj.(*unstructured.Unstructured)
 	val, _, err := unstructured.NestedInt64(u.Object, "spec", "lbs")
 	if err != nil {
@@ -253,7 +253,7 @@ func weightEqual100(obj core.Object) error {
 	return nil
 }
 
-func weightEqual10(obj core.Object) error {
+func weightEqual10(obj client.Object) error {
 	u := obj.(*unstructured.Unstructured)
 	val, _, err := unstructured.NestedInt64(u.Object, "spec", "lbs")
 	if err != nil {

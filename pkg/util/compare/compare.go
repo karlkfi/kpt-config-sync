@@ -5,13 +5,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ObjectMetaEqual returns true if the Meta field of left and right objects are equal.
-func ObjectMetaEqual(left core.LabeledAndAnnotated, right core.LabeledAndAnnotated) bool {
+func ObjectMetaEqual(left client.Object, right client.Object) bool {
 	return reflect.DeepEqual(left.GetLabels(), right.GetLabels()) && reflect.DeepEqual(left.GetAnnotations(), right.GetAnnotations())
 }
 

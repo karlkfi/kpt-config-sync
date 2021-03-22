@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestAsUnstructured_AddsStatus(t *testing.T) {
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  client.Object
 	}{
 		{
 			name: "Namespace",
@@ -56,7 +56,7 @@ func TestAsUnstructured_AddsStatus(t *testing.T) {
 func TestAsUnstructuredSanitized_DoesNotAddStatus(t *testing.T) {
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  client.Object
 	}{
 		{
 			name: "Namespace",
@@ -97,7 +97,7 @@ func TestAsUnstructuredSanitized_DeepCopy(t *testing.T) {
 
 	testCases := []struct {
 		name string
-		obj  core.Object
+		obj  client.Object
 	}{
 		{
 			name: "Namespace as object",

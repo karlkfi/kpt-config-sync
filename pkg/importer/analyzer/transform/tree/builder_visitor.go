@@ -49,7 +49,7 @@ func (v *Builder) VisitRoot(r *ast.Root) *ast.Root {
 // VisitTreeNode adds all objects which correspond to the TreeNode in the config hierarchy.
 func (v *Builder) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 	for _, object := range v.objects[n.Relative] {
-		if object.GroupVersionKind() == kinds.Namespace() {
+		if object.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			n.Type = node.Namespace
 		}
 		n.Objects = append(n.Objects, object)
@@ -62,8 +62,8 @@ func (v *Builder) VisitTreeNode(n *ast.TreeNode) *ast.TreeNode {
 
 func lessFileObject(i, j ast.FileObject) bool {
 	// Behavior when objects have the same directory, GVK, and name is undefined.
-	igvk := i.GroupVersionKind().String()
-	jgvk := j.GroupVersionKind().String()
+	igvk := i.GetObjectKind().GroupVersionKind().String()
+	jgvk := j.GetObjectKind().GroupVersionKind().String()
 	if igvk != jgvk {
 		return igvk < jgvk
 	}
