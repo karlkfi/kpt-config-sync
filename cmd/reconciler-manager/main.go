@@ -6,16 +6,15 @@ import (
 	"time"
 
 	"github.com/go-logr/glogr"
+	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	// +kubebuilder:scaffold:imports
 )

@@ -1,0 +1,114 @@
+package controllers
+
+import (
+	"context"
+	"strings"
+
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/reconcilermanager"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// Cleanup namespace controller resources when reposync is not found since,
+// we dont leverage ownerRef because namespace controller resources are
+// created in config-management-system namespace instead of resposync namespace.
+//
+// NOTE: Update this method when resources created by namespace controller changes.
+func (r *RepoSyncReconciler) cleanupNSControllerResources(ctx context.Context, ns string) error {
+	r.log.Info("Cleaning up namespace controller resources", "namespace", ns)
+
+	// Delete namespace controller resources and return to reconcile loop in case
+	// of errors to try cleaning up resources again.
+
+	// Deployment
+	if err := r.deleteDeployment(ctx, ns); err != nil {
+		return err
+	}
+	// configmaps
+	if err := r.deleteConfigmap(ctx, ns); err != nil {
+		return err
+	}
+	// serviceaccount
+	if err := r.deleteServiceAccount(ctx, ns); err != nil {
+		return err
+	}
+	// rolebinding
+	if err := r.deleteRolebinding(ctx, ns); err != nil {
+		return err
+	}
+	// secret
+	if err := r.deleteSecret(ctx, ns); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *RepoSyncReconciler) cleanup(ctx context.Context, name, namespace string, gvk schema.GroupVersionKind) error {
+	u := &unstructured.Unstructured{}
+	u.SetName(name)
+	u.SetNamespace(namespace)
+	u.SetGroupVersionKind(gvk)
+	err := r.client.Delete(ctx, u)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.V(4).Info("resource not present", "namespace", namespace, "resource", name)
+			return nil
+		}
+	}
+	return err
+}
+
+func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, namespace string) error {
+	secretList := &corev1.SecretList{}
+	lOps := client.ListOptions{Namespace: v1.NSConfigManagementSystem}
+	if err := r.client.List(ctx, secretList, &lOps); err != nil {
+		return err
+	}
+
+	// nsPrefix specifies reposync secret prefix 'ns-reconciler-<namespace>'
+	nsPrefix := reconciler.RepoSyncName(namespace)
+
+	var sc corev1.Secret
+	for _, s := range secretList.Items {
+		if strings.HasPrefix(s.Name, nsPrefix) {
+			if err := r.client.Delete(ctx, &sc); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RepoSyncReconciler) deleteConfigmap(ctx context.Context, namespace string) error {
+	cms := []string{
+		repoSyncResourceName(namespace, reconcilermanager.Reconciler),
+		repoSyncResourceName(namespace, reconcilermanager.GitSync),
+	}
+	for _, c := range cms {
+		if err := r.cleanup(ctx, c, v1.NSConfigManagementSystem, kinds.ConfigMap()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *RepoSyncReconciler) deleteServiceAccount(ctx context.Context, namespace string) error {
+	saName := reconciler.RepoSyncName(namespace)
+	return r.cleanup(ctx, saName, v1.NSConfigManagementSystem, kinds.ServiceAccount())
+}
+
+func (r *RepoSyncReconciler) deleteRolebinding(ctx context.Context, namespace string) error {
+	rbName := repoSyncPermissionsName()
+	return r.cleanup(ctx, rbName, namespace, kinds.RoleBinding())
+}
+
+func (r *RepoSyncReconciler) deleteDeployment(ctx context.Context, namespace string) error {
+	dpName := reconciler.RepoSyncName(namespace)
+	return r.cleanup(ctx, dpName, v1.NSConfigManagementSystem, kinds.Deployment())
+}

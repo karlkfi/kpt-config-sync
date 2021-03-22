@@ -63,7 +63,11 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 
 		if apierrors.IsNotFound(err) {
-			return controllerruntime.Result{}, nil
+			// Namespace controller resources are cleaned up when reposync no longer present.
+			//
+			// Note: Update cleanup resources in cleanupNSControllerResources(...) when
+			// resources created by namespace controller changes.
+			return controllerruntime.Result{}, r.cleanupNSControllerResources(ctx, req.Namespace)
 		}
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RepoSync")
 	}

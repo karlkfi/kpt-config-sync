@@ -240,17 +240,19 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
-	// validate Namespace Reconciler configmaps are no longer present.
-	err1 := nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", configsync.ControllerNamespace, fake.ConfigMapObject())
-	err2 := nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", configsync.ControllerNamespace, fake.ConfigMapObject())
-	if err1 != nil || err2 != nil {
-		if err1 != nil {
-			nt.T.Error(err1)
-		}
-		if err2 != nil {
-			nt.T.Error(err2)
-		}
-		nt.T.FailNow()
+	// Verify Namespace Reconciler configmaps no longer present.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", configsync.ControllerNamespace, fake.ConfigMapObject())
+	})
+	if err != nil {
+		nt.T.Errorf("Configmap ns-reconciler-bookstore-git-sync present after deletion: %v", err)
+	}
+
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", configsync.ControllerNamespace, fake.ConfigMapObject())
+	})
+	if err != nil {
+		nt.T.Errorf("Configmap reconciler-bookstore-reconciler present after deletion: %v", err)
 	}
 }
 
