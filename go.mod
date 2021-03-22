@@ -45,7 +45,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
 	k8s.io/kubectl v0.20.4
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
-	sigs.k8s.io/cli-utils v0.23.6
+	sigs.k8s.io/cli-utils v0.24.0
 	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/kind v0.10.0
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
