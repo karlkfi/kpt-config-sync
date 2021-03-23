@@ -127,8 +127,10 @@ func TestDeclaredFields(t *testing.T) {
 							"apiVersion": "acme.com/v1",
 							"kind":       "Anvil",
 							"metadata": map[string]interface{}{
-								"name":      "heavy",
-								"namespace": "foo",
+								"name":        "heavy",
+								"namespace":   "foo",
+								"annotations": map[string]interface{}{},
+								"labels":      map[string]interface{}{},
 							},
 							"spec": map[string]interface{}{
 								"lbs": 123,
@@ -148,7 +150,7 @@ func TestDeclaredFields(t *testing.T) {
 								"name":      "heavy",
 								"namespace": "foo",
 								"annotations": map[string]interface{}{
-									v1alpha1.DeclaredFieldsKey: `{"f:spec":{".":{},"f:lbs":{}}}`,
+									v1alpha1.DeclaredFieldsKey: `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:lbs":{}}}`,
 								},
 							},
 							"spec": map[string]interface{}{

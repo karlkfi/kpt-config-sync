@@ -79,7 +79,7 @@ func TestGetCRDs(t *testing.T) {
 	}
 }
 
-func generateMalformedCRD(t *testing.T) client.Object {
+func generateMalformedCRD(t *testing.T) *unstructured.Unstructured {
 	u := fake.CustomResourceDefinitionV1Beta1Unstructured()
 
 	// the `spec.group` field should be a string
@@ -93,17 +93,17 @@ func generateMalformedCRD(t *testing.T) client.Object {
 func TestAsCRD(t *testing.T) {
 	testCases := []struct {
 		name    string
-		obj     client.Object
+		obj     *unstructured.Unstructured
 		wantErr status.Error
 	}{
 		{
 			name:    "well-formed v1beta1 CRD",
-			obj:     fake.CustomResourceDefinitionV1Beta1Object(),
+			obj:     fake.CustomResourceDefinitionV1Beta1Unstructured(),
 			wantErr: nil,
 		},
 		{
 			name:    "well-formed v1 CRD",
-			obj:     fake.CustomResourceDefinitionV1Object(),
+			obj:     fake.CustomResourceDefinitionV1Unstructured(),
 			wantErr: nil,
 		},
 		{

@@ -12,6 +12,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -61,7 +62,7 @@ func MalformedCRDError(err error, obj client.Object) status.Error {
 }
 
 // AsCRD returns the typed version of the CustomResourceDefinition passed in.
-func AsCRD(o client.Object) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
+func AsCRD(o *unstructured.Unstructured) (*apiextensionsv1beta1.CustomResourceDefinition, status.Error) {
 	if o.GetObjectKind().GroupVersionKind() == kinds.CustomResourceDefinitionV1Beta1() {
 		s, err := core.RemarshalToStructured(o)
 		if err != nil {

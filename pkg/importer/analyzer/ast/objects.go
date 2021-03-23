@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -15,17 +16,17 @@ import (
 // if possible. Also we should see if we can make FileObject *not* implement
 // client.Object and instead make callers explicitly interact with one format or
 // the other.
-func NewFileObject(object client.Object, source cmpath.Relative) FileObject {
+func NewFileObject(object *unstructured.Unstructured, source cmpath.Relative) FileObject {
 	return FileObject{
-		Object:   object,
-		Relative: source,
+		Unstructured: object,
+		Relative:     source,
 	}
 }
 
 // FileObject extends client.Object to include the path to the file in the repo.
 type FileObject struct {
-	// Object is the unstructured representation of the object.
-	client.Object
+	// The unstructured representation of the object.
+	*unstructured.Unstructured
 	// Relative is the path of this object in the repo prefixed by the Nomos Root.
 	cmpath.Relative
 }
@@ -37,10 +38,9 @@ var CompareFileObject = cmp.AllowUnexported(FileObject{})
 
 // DeepCopy returns a deep copy of the FileObject.
 func (o *FileObject) DeepCopy() FileObject {
-	obj := o.DeepCopyObject().(client.Object)
 	return FileObject{
-		Object:   obj,
-		Relative: o.Relative,
+		Unstructured: o.Unstructured.DeepCopy(),
+		Relative:     o.Relative,
 	}
 }
 
@@ -54,9 +54,9 @@ func (o *FileObject) DeepCopy() FileObject {
 // validation code requires the structured format, we can convert it here
 // separate from the raw unstructured representation.
 func (o *FileObject) Structured() (runtime.Object, status.Error) {
-	obj, err := core.RemarshalToStructured(o.Object)
+	obj, err := core.RemarshalToStructured(o.Unstructured)
 	if err != nil {
-		return nil, core.ObjectParseError(o.Object, err)
+		return nil, core.ObjectParseError(o.Unstructured, err)
 	}
 	return obj, nil
 }

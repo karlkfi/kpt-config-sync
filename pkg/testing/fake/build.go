@@ -1,6 +1,8 @@
 package fake
 
 import (
+	"encoding/json"
+
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -34,8 +36,39 @@ func mutate(object client.Object, opts ...core.MetaMutator) {
 }
 
 // FileObject is a shorthand for converting to an ast.FileObject.
+// path is the slash-delimited path from the POLICY_DIR root.
 func FileObject(object client.Object, path string) ast.FileObject {
-	return ast.NewFileObject(object, cmpath.RelativeSlash(path))
+	if fo, isFileObject := object.(ast.FileObject); isFileObject {
+		return fo
+	}
+
+	jsn, err := json.Marshal(object)
+	if err != nil {
+		// Something has gone horribly wrong in our test code; this should never fail.
+		panic(err)
+	}
+
+	u := &unstructured.Unstructured{}
+	err = u.UnmarshalJSON(jsn)
+	if err != nil {
+		// Something has gone horribly wrong in our test code; this should never fail.
+		panic(err)
+	}
+
+	normalizeUnstructured(u)
+	return ast.NewFileObject(u, cmpath.RelativeSlash(path))
+}
+
+func normalizeUnstructured(u *unstructured.Unstructured) {
+	if ct := u.GetCreationTimestamp(); ct.IsZero() {
+		delete(u.Object["metadata"].(map[string]interface{}), "creationTimestamp")
+	}
+	if u.GetAnnotations() == nil {
+		u.SetAnnotations(map[string]string{})
+	}
+	if u.GetLabels() == nil {
+		u.SetLabels(map[string]string{})
+	}
 }
 
 // UnstructuredObject initializes an unstructured.Unstructured.

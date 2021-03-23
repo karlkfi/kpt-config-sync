@@ -23,7 +23,7 @@ func GenerateUniqueFileNames(extension string, multiCluster bool, objects ...ast
 
 	for i, obj := range objects {
 		if duplicates[obj.SlashPath()] > 1 {
-			objects[i] = ast.NewFileObject(obj.Object, cmpath.RelativeSlash(filename(extension, obj.Object, multiCluster, true)))
+			objects[i] = ast.NewFileObject(obj.Unstructured, cmpath.RelativeSlash(filename(extension, obj.Unstructured, multiCluster, true)))
 		}
 	}
 

@@ -265,7 +265,7 @@ spec:
 			objs := &objects.Raw{
 				Converter: converter,
 				Objects: []ast.FileObject{{
-					Object: u,
+					Unstructured: u,
 				}},
 			}
 

@@ -20,5 +20,5 @@ func WriteObject(printer printers.ResourcePrinter, dir string, object ast.FileOb
 		return err
 	}
 
-	return printer.PrintObj(object.Object, file)
+	return printer.PrintObj(object.Unstructured, file)
 }

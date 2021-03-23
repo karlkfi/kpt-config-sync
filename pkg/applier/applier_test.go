@@ -183,13 +183,13 @@ func TestApply(t *testing.T) {
 			clientApplier := &FakeApplier{WantActions: tc.wantEvents}
 			// Propagate the actual resources.
 			for _, actual := range tc.actual {
-				if err := fakeClient.Create(context.Background(), actual.Object); err != nil {
+				if err := fakeClient.Create(context.Background(), actual.Unstructured); err != nil {
 					t.Fatal(err)
 				}
 			}
 			previousCache := make(map[core.ID]client.Object)
 			for _, cached := range tc.cached {
-				previousCache[core.IDOf(cached)] = cached.Object
+				previousCache[core.IDOf(cached)] = cached.Unstructured
 			}
 			var a *Applier
 			if tc.scope == declared.RootReconciler {

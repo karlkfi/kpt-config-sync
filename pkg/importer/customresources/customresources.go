@@ -24,7 +24,7 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 			continue
 		}
 
-		crd, err := clusterconfig.AsCRD(obj.Object)
+		crd, err := clusterconfig.AsCRD(obj.Unstructured)
 		if err != nil {
 			errs = status.Append(errs, err)
 			continue
@@ -44,9 +44,9 @@ func GetCRDs(fileObjects []ast.FileObject) ([]*v1beta1.CustomResourceDefinition,
 			continue
 		}
 
-		crd, err := gatekeeper.ConstraintTemplateCRD(f.Object)
+		crd, err := gatekeeper.ConstraintTemplateCRD(f.Unstructured)
 		if err != nil {
-			errs = status.Append(errs, clusterconfig.MalformedCRDError(err, f.Object))
+			errs = status.Append(errs, clusterconfig.MalformedCRDError(err, f.Unstructured))
 			continue
 		}
 

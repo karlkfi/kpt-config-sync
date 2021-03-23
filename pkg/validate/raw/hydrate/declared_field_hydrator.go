@@ -28,7 +28,7 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 
 	var errs status.MultiError
 	for _, obj := range objs.Objects {
-		fields, err := encodeDeclaredFields(objs.Converter, obj.Object)
+		fields, err := encodeDeclaredFields(objs.Converter, obj.Unstructured)
 		if err != nil {
 			switch err.(type) {
 			case status.MultiError:

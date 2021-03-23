@@ -7,7 +7,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -55,14 +54,6 @@ func ResourceQuotaObject(opts ...core.MetaMutator) *corev1.ResourceQuota {
 	mutate(obj, opts...)
 
 	return obj
-}
-
-// ResourceQuotaObjectUnstructured initializes a ResouceQuota as an unstructured object.
-func ResourceQuotaObjectUnstructured(opts ...core.MetaMutator) *unstructured.Unstructured {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(kinds.ResourceQuota())
-	mutate(u, opts...)
-	return u
 }
 
 // RoleBindingObject initializes a RoleBinding.
@@ -228,6 +219,7 @@ func CustomResourceDefinitionV1Beta1Unstructured(opts ...core.MetaMutator) *unst
 		// Should be impossible, and this is test-only code so it's fine.
 		panic(err)
 	}
+	normalizeUnstructured(u)
 	return u
 }
 
@@ -246,6 +238,25 @@ func CustomResourceDefinitionV1Object(opts ...core.MetaMutator) *apiextensionsv1
 // CustomResourceDefinition at a default path.
 func CustomResourceDefinitionV1(opts ...core.MetaMutator) ast.FileObject {
 	return FileObject(CustomResourceDefinitionV1Object(opts...), "cluster/crd.yaml")
+}
+
+// CustomResourceDefinitionV1Unstructured returns a v1 CRD as an unstructured
+func CustomResourceDefinitionV1Unstructured(opts ...core.MetaMutator) *unstructured.Unstructured {
+	o := CustomResourceDefinitionV1Object(opts...)
+	jsn, err := json.Marshal(o)
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	u := &unstructured.Unstructured{}
+	err = json.Unmarshal(jsn, u)
+	u.SetGroupVersionKind(kinds.CustomResourceDefinitionV1())
+	if err != nil {
+		// Should be impossible, and this is test-only code so it's fine.
+		panic(err)
+	}
+	normalizeUnstructured(u)
+	return u
 }
 
 // ToCustomResourceDefinitionV1Object converts a v1beta1.CustomResourceDefinition
@@ -313,20 +324,12 @@ func RoleObject(opts ...core.MetaMutator) *rbacv1.Role {
 
 // RoleAtPath returns an initialized Role in a FileObject.
 func RoleAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	return ast.NewFileObject(RoleObject(opts...), cmpath.RelativeSlash(path))
+	return FileObject(RoleObject(opts...), path)
 }
 
 // Role returns a Role with a default file path.
 func Role(opts ...core.MetaMutator) ast.FileObject {
 	return RoleAtPath("namespaces/foo/role.yaml", opts...)
-}
-
-// RoleUnstructuredAtPath returns an unstructured initialized Role in a FileObject.
-func RoleUnstructuredAtPath(path string, opts ...core.MetaMutator) ast.FileObject {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(kinds.Role())
-	mutate(u, opts...)
-	return ast.NewFileObject(u, cmpath.RelativeSlash(path))
 }
 
 // ConfigMapObject returns an initialized ConfigMap.
@@ -336,6 +339,11 @@ func ConfigMapObject(opts ...core.MetaMutator) *corev1.ConfigMap {
 	mutate(obj, opts...)
 
 	return obj
+}
+
+// ConfigMap returns a ConfigMap with a default file path.
+func ConfigMap(opts ...core.MetaMutator) ast.FileObject {
+	return FileObject(ConfigMapObject(opts...), "namespaces/foo/configmap.yaml")
 }
 
 // ToTypeMeta creates the TypeMeta that corresponds to the passed GroupVersionKind.

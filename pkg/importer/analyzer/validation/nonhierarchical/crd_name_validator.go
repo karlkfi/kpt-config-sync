@@ -30,7 +30,7 @@ func ValidateCRDName(o ast.FileObject) status.Error {
 		return nil
 	}
 
-	crd, err := clusterconfig.AsCRD(o.Object)
+	crd, err := clusterconfig.AsCRD(o.Unstructured)
 	if err != nil {
 		return err
 	}

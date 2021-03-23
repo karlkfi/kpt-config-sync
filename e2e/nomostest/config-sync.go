@@ -325,7 +325,7 @@ func installationManifests(nt *NT, tmpManifestsDir string) []client.Object {
 
 	var objs []client.Object
 	for _, o := range fos {
-		objs = append(objs, o.Object)
+		objs = append(objs, o.Unstructured)
 	}
 	return objs
 }

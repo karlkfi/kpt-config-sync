@@ -65,13 +65,13 @@ func NewAllConfigs(importToken string, loadTime metav1.Time, fileObjects []ast.F
 		isNamespaced := f.GetNamespace() != ""
 		if !isNamespaced {
 			// The object is cluster-scoped.
-			result.addClusterResource(f.Object)
+			result.addClusterResource(f.Unstructured)
 			continue
 		}
 
 		// The object is namespace-scoped.
 		namespace := f.GetNamespace()
-		result.addNamespaceResource(namespace, importToken, loadTime, f.Object)
+		result.addNamespaceResource(namespace, importToken, loadTime, f.Unstructured)
 	}
 
 	return result

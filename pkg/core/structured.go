@@ -30,13 +30,8 @@ func init() {
 
 // RemarshalToStructured converts a runtime.Object to the literal Go struct, if
 // one is available. Returns an error if this process fails.
-func RemarshalToStructured(obj runtime.Object) (runtime.Object, error) {
-	u, ok := obj.(*unstructured.Unstructured)
-	if !ok {
-		return obj, nil
-	}
-
-	result, err := scheme.Scheme.New(obj.GetObjectKind().GroupVersionKind())
+func RemarshalToStructured(u *unstructured.Unstructured) (runtime.Object, error) {
+	result, err := scheme.Scheme.New(u.GetObjectKind().GroupVersionKind())
 	if err != nil {
 		return nil, err
 	}

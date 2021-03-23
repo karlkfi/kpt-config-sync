@@ -41,7 +41,7 @@ func clusterSelectors(objs *objects.Raw, checkDir bool) status.MultiError {
 		objGK := obj.GetObjectKind().GroupVersionKind().GroupKind()
 		if objGK == clusterGK || objGK == selectorGK {
 			if checkDir {
-				sourcePath := obj.Relative.OSPath()
+				sourcePath := obj.OSPath()
 				dir := cmpath.RelativeSlash(sourcePath).Split()[0]
 				if dir != repo.ClusterRegistryDir {
 					errs = status.Append(errs, validation.ShouldBeInClusterRegistryError(obj))

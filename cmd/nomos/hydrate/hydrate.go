@@ -181,13 +181,9 @@ clusters.`,
 }
 
 func printFlatOutput(fileObjects []ast.FileObject) error {
-	var objects []*unstructured.Unstructured
-	for _, o := range fileObjects {
-		u, err := toUnstructured(o.Object)
-		if err != nil {
-			return err
-		}
-		objects = append(objects, u)
+	objects := make([]*unstructured.Unstructured, len(fileObjects))
+	for i, o := range fileObjects {
+		objects[i] = o.Unstructured
 	}
 
 	return printFile(outPath, objects)
@@ -196,7 +192,7 @@ func printFlatOutput(fileObjects []ast.FileObject) error {
 func printDirectoryOutput(fileObjects []ast.FileObject) error {
 	files := make(map[string][]*unstructured.Unstructured)
 	for _, obj := range fileObjects {
-		u, err := toUnstructured(obj.Object)
+		u, err := toUnstructured(obj.Unstructured)
 		if err != nil {
 			return err
 		}

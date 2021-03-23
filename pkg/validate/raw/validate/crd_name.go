@@ -18,7 +18,7 @@ func CRDName(obj ast.FileObject) status.Error {
 		return nil
 	}
 
-	crd, err := clusterconfig.AsCRD(obj.Object)
+	crd, err := clusterconfig.AsCRD(obj.Unstructured)
 	if err != nil {
 		return err
 	}

@@ -96,7 +96,7 @@ func BuildTree(scoped *Scoped) (*Tree, status.MultiError) {
 
 	// Next, do our best to process unknown-scoped resources.
 	for _, obj := range scoped.Unknown {
-		sourcePath := obj.Relative.OSPath()
+		sourcePath := obj.OSPath()
 		dir := cmpath.RelativeSlash(sourcePath).Split()[0]
 		errs = status.Append(errs, b.addObject(obj, dir))
 	}
@@ -143,8 +143,7 @@ func topLevelDirectory(obj ast.FileObject, expectedDir string) (string, status.E
 		expectedDir = override
 	}
 
-	sourcePath := obj.Relative.OSPath()
-	if cmpath.RelativeSlash(sourcePath).Split()[0] == expectedDir {
+	if obj.Split()[0] == expectedDir {
 		return expectedDir, nil
 	}
 

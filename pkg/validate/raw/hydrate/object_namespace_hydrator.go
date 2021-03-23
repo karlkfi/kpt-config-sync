@@ -51,6 +51,6 @@ func isValidHierarchicalNamespace(obj ast.FileObject) bool {
 }
 
 func topLevelDir(obj ast.FileObject) string {
-	sourcePath := obj.Relative.OSPath()
+	sourcePath := obj.OSPath()
 	return cmpath.RelativeSlash(sourcePath).Split()[0]
 }

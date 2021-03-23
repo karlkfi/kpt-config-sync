@@ -12,24 +12,26 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	namespaceSelectorObject = fake.NamespaceSelectorObject(core.Name("dev-only"))
-	namespaceSelector       = fake.FileObject(namespaceSelectorObject, "prod-only-nss.yaml")
-	emptyNss                = fake.NamespaceSelector(core.Name("empty"))
-	invalidNSSObject        = fake.NamespaceSelectorObject(core.Name("invalid"))
-	invalidNSS              = fake.FileObject(invalidNSSObject, "invalid-nss.yaml")
+	namespaceSelectorObject = fake.NamespaceSelectorObject(core.Name("dev-only"),
+		func(o client.Object) {
+			o.(*v1.NamespaceSelector).Spec.Selector.MatchLabels = map[string]string{
+				"environment": "dev",
+			}
+		})
+	namespaceSelector = fake.FileObject(namespaceSelectorObject, "prod-only-nss.yaml")
+	emptyNss          = fake.NamespaceSelector(core.Name("empty"))
+	invalidNSSObject  = fake.NamespaceSelectorObject(core.Name("invalid"),
+		func(o client.Object) {
+			o.(*v1.NamespaceSelector).Spec.Selector.MatchLabels = map[string]string{
+				"environment": "xin prod",
+			}
+		})
+	invalidNSS = fake.FileObject(invalidNSSObject, "invalid-nss.yaml")
 )
-
-func init() {
-	namespaceSelectorObject.Spec.Selector.MatchLabels = map[string]string{
-		"environment": "dev",
-	}
-	invalidNSSObject.Spec.Selector.MatchLabels = map[string]string{
-		"environment": "xin prod",
-	}
-}
 
 func TestNamespaceSelectors(t *testing.T) {
 	testCases := []struct {

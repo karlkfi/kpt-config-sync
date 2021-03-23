@@ -5,18 +5,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/importer/id"
-	"github.com/pkg/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/google/nomos/pkg/api/configmanagement"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/status"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -112,7 +109,7 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 		return nil, err
 	}
 
-	obj, ok := u.(client.Object)
+	obj, ok := u.(*unstructured.Unstructured)
 	if !ok {
 		// The type doesn't declare required fields, but is registered.
 		// User-specified types are implicitly Unstructured, which defines Labels/Annotations/etc. even
@@ -126,6 +123,12 @@ func toFileObjects(u runtime.Unstructured, rootDir cmpath.Absolute, policyDir cm
 			BuildWithPaths(path)
 	}
 
+	if obj.GetAnnotations() == nil {
+		obj.SetAnnotations(map[string]string{})
+	}
+	if obj.GetLabels() == nil {
+		obj.SetLabels(map[string]string{})
+	}
 	return []ast.FileObject{ast.NewFileObject(obj, cmpath.RelativeOS(rel))}, nil
 }
 
@@ -168,13 +171,10 @@ func isList(uList runtime.Unstructured) bool {
 		return false
 	}
 
-	// Parse the object into memory. If it is a List type, it MUST match the ListInterface.
-	obj, err := core.RemarshalToStructured(uList)
-	if err != nil {
-		obj = uList
-	}
-	_, isList := obj.(metav1.ListInterface)
-	return isList
+	// We don't support List types which are not called "List" and are not
+	// registered. This would theoretically only be possible by modifying the base
+	// Kubernetes install.
+	return false
 }
 
 // validateMetadata returns a status.MultiError if metadata.annotations/labels

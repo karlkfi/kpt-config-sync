@@ -42,7 +42,7 @@ func TestNamespaceScopeVisitor(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.want.Object == nil {
+			if tc.want.Unstructured == nil {
 				// We don't expect repositoryScopeVisitor to mutate the object.
 				tc.want = tc.obj.DeepCopy()
 			}

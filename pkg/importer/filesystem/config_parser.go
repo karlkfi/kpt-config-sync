@@ -20,7 +20,7 @@ type ConfigParser interface {
 func AsCoreObjects(fos []ast.FileObject) []client.Object {
 	result := make([]client.Object, len(fos))
 	for i, fo := range fos {
-		result[i] = fo.Object
+		result[i] = fo.Unstructured
 	}
 	return result
 }

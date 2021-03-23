@@ -50,7 +50,7 @@ func TestNewAllConfigs(t *testing.T) {
 			},
 			want: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: fake.CRDClusterConfigObject(withClusterResources(
-					fake.CustomResourceDefinitionV1Beta1Object(),
+					fake.CustomResourceDefinitionV1Beta1Unstructured(),
 				)),
 				Syncs: testoutput.Syncs(kinds.CustomResourceDefinitionV1Beta1()),
 			},
@@ -62,7 +62,7 @@ func TestNewAllConfigs(t *testing.T) {
 			},
 			want: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: fake.CRDClusterConfigObject(withClusterResources(
-					fake.CustomResourceDefinitionV1Object(),
+					fake.CustomResourceDefinitionV1Unstructured(),
 				)),
 				Syncs: testoutput.Syncs(kinds.CustomResourceDefinitionV1()),
 			},
@@ -75,8 +75,8 @@ func TestNewAllConfigs(t *testing.T) {
 			},
 			want: &namespaceconfig.AllConfigs{
 				CRDClusterConfig: fake.CRDClusterConfigObject(withClusterResources(
-					fake.CustomResourceDefinitionV1Object(),
-					fake.CustomResourceDefinitionV1Beta1Object(),
+					fake.CustomResourceDefinitionV1Unstructured(),
+					fake.CustomResourceDefinitionV1Beta1Unstructured(),
 				)),
 				Syncs: testoutput.Syncs(
 					kinds.CustomResourceDefinitionV1Beta1(),
@@ -88,7 +88,7 @@ func TestNewAllConfigs(t *testing.T) {
 			name: "explicit Namespace does not have Deletion lifecycle annotation",
 			fileObjects: []ast.FileObject{
 				fake.Namespace("namespaces/shipping"),
-				fake.Role(core.Name("my-role"), core.Namespace("shipping")),
+				fake.ConfigMap(core.Name("my-configMap"), core.Namespace("shipping")),
 			},
 			want: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: map[string]v1.NamespaceConfig{
@@ -96,16 +96,16 @@ func TestNewAllConfigs(t *testing.T) {
 						core.Name("shipping"),
 						// No Deletion annotation
 						withNamespaceResources(
-							fake.RoleObject(core.Name("my-role"), core.Namespace("shipping")),
+							fake.UnstructuredObject(kinds.ConfigMap(), core.Name("my-configMap"), core.Namespace("shipping")),
 						)),
 				},
-				Syncs: testoutput.Syncs(kinds.Role()),
+				Syncs: testoutput.Syncs(kinds.ConfigMap()),
 			},
 		},
 		{
 			name: "explicit Namespace second does not have Deletion lifecycle annotation",
 			fileObjects: []ast.FileObject{
-				fake.Role(core.Name("my-role"), core.Namespace("shipping")),
+				fake.ConfigMap(core.Name("my-configMap"), core.Namespace("shipping")),
 				fake.Namespace("namespaces/shipping"),
 			},
 			want: &namespaceconfig.AllConfigs{
@@ -114,16 +114,16 @@ func TestNewAllConfigs(t *testing.T) {
 						core.Name("shipping"),
 						// No Deletion annotation
 						withNamespaceResources(
-							fake.RoleObject(core.Name("my-role"), core.Namespace("shipping")),
+							fake.UnstructuredObject(kinds.ConfigMap(), core.Name("my-configMap"), core.Namespace("shipping")),
 						)),
 				},
-				Syncs: testoutput.Syncs(kinds.Role()),
+				Syncs: testoutput.Syncs(kinds.ConfigMap()),
 			},
 		},
 		{
 			name: "implicit Namespace has Deletion lifecycle annotation",
 			fileObjects: []ast.FileObject{
-				fake.Role(core.Name("my-role"), core.Namespace("shipping")),
+				fake.ConfigMap(core.Name("my-configMap"), core.Namespace("shipping")),
 			},
 			want: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: map[string]v1.NamespaceConfig{
@@ -131,10 +131,10 @@ func TestNewAllConfigs(t *testing.T) {
 						core.Name("shipping"),
 						core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 						withNamespaceResources(
-							fake.RoleObject(core.Name("my-role"), core.Namespace("shipping")),
+							fake.UnstructuredObject(kinds.ConfigMap(), core.Name("my-configMap"), core.Namespace("shipping")),
 						)),
 				},
-				Syncs: testoutput.Syncs(kinds.Role()),
+				Syncs: testoutput.Syncs(kinds.ConfigMap()),
 			},
 		},
 	}
