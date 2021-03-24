@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/syncer/differ"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,6 +51,9 @@ type FailOnError bool
 // duration of a single test.
 func Clean(nt *NT, failOnError FailOnError) {
 	nt.T.Helper()
+
+	// The admission-webhook prevents deleting test resources. Hence we delete it before cleaning other resources.
+	removeAdmissionWebhook(nt, failOnError)
 
 	// errDeleting ensures we delete everything possible to delete before failing.
 	errDeleting := false
@@ -232,6 +236,18 @@ func deleteImplicitNamespaces(nt *NT, failOnError FailOnError) {
 	}
 	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error deleting implicit namespaces")
+	}
+}
+
+// removeAdmissionWebhook deletes the `admission-webhook.configsync.gke.io` ValidatingWebhookConfiguration.
+func removeAdmissionWebhook(nt *NT, failOnError FailOnError) {
+	_, err := nt.Kubectl("delete", "validatingwebhookconfigurations", configuration.Name, "--ignore-not-found")
+	if err != nil {
+		if failOnError {
+			nt.T.Fatal("error deleting admission-webhook")
+		} else {
+			nt.T.Log("error deleting admission-webhook")
+		}
 	}
 }
 

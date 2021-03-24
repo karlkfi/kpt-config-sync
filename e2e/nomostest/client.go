@@ -80,6 +80,6 @@ func RestConfig(t *testing.T, optsStruct *ntopts.New) {
 	case e2e.GKE:
 		ntopts.GKECluster(t)(optsStruct)
 	default:
-		t.Fatalf("unsupported test cluster config %s. Allowed values are kubeconfig and kind.", *e2e.TestCluster)
+		t.Fatalf("unsupported test cluster config %s. Allowed values are %s and %s.", *e2e.TestCluster, e2e.GKE, e2e.Kind)
 	}
 }
