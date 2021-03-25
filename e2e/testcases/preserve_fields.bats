@@ -133,18 +133,11 @@ function validate_annotation_migrated() {
   local selector='.metadata.annotations | keys | map(select(. != "configmanagement.gke.io/cluster-name")) | sort'
   local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
   local default_keys
-  default_keys="\"configmanagement.gke.io/declared-config\",${nested_default_keys}"
+  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\",\"kubectl.kubernetes.io/last-applied-configuration\""
   # This first check verifies that all of the annotation keys that we expect to be present are in fact present. See validate_configmap_annotations for full details.
   local annotations
   annotations=$(kubectl get clusterrole "${resname}" -ojson | jq -c "${selector}")
   [[ "${annotations}" == "[${default_keys}]" ]] || debug::error "${selector} for keys '${default_keys}' was not updated, got: ${annotations}"
-
-  # This second check verifies that the content of the "declared-config" annotation contains all of the annotation keys that we expect to be present.
-  local config
-  config=$(kubectl get clusterrole "${resname}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
-  config=$(unquote_and_unescape "${config}")
-  annotations=$(echo "${config}" | jq -c "${selector}")
-  [[ "${annotations}" == "[${nested_default_keys}]" ]] || debug::error "declared-config ${selector} was not updated, got ${annotations}"
 }
 
 @test "${FILE_NAME}: Add/Update/Delete labels" {
@@ -163,7 +156,7 @@ function validate_annotation_migrated() {
   resource::check -n ${ns} configmap ${resname} -a "configmanagement.gke.io/managed=enabled"
 
   debug::log "Checking that no user labels specified"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
+  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","configsync.gke.io/declared-version":"v1"}'
 
   debug::log "Add labels to configmap in repo"
   git::update "${YAML_DIR}/preservefields/configmap-add-label.yaml" "acme/namespaces/${ns}/configmap.yaml"
@@ -171,7 +164,7 @@ function validate_annotation_migrated() {
   wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Checking that label is added after syncing an update"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","foo":"bar"}'
+  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","configsync.gke.io/declared-version":"v1","foo":"bar"}'
 
   debug::log "Update label for configmap in repo"
   git::update "${YAML_DIR}/preservefields/configmap-update-label.yaml" "acme/namespaces/${ns}/configmap.yaml"
@@ -179,7 +172,7 @@ function validate_annotation_migrated() {
   wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Checking that label is updated after syncing an update"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","baz":"qux"}'
+  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","baz":"qux","configsync.gke.io/declared-version":"v1"}'
 
   debug::log "Delete label for configmap in repo"
   git::update "${YAML_DIR}/preservefields/configmap-no-labels-annotations.yaml" "acme/namespaces/${ns}/configmap.yaml"
@@ -187,7 +180,7 @@ function validate_annotation_migrated() {
   wait::for -t 60 -- nomos::repo_synced
 
   debug::log "Checking that label is updated after syncing an update"
-  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io"}'
+  validate_configmap_labels ${resname} ${ns} '{"app.kubernetes.io/managed-by":"configmanagement.gke.io","configsync.gke.io/declared-version":"v1"}'
 }
 
 function validate_configmap_labels() {
@@ -199,14 +192,6 @@ function validate_configmap_labels() {
   local labels
   labels=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
   [[ "${labels}" == "${expected}" ]] || debug::error "${selector} was not synced, got: ${labels}"
-
-  # This second check verifies that the content of the "declared-config" annotation contains all of the label keys that we expect to be present.
-  local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
-  config=$(unquote_and_unescape "${config}")
-  labels=$(echo "${config}" | jq -c "${selector}")
-  [[ "${labels}" == "${expected}" ]] || debug::error "declared-config ${selector} was not synced, got: ${labels}
-  want: ${expected}"
 }
 
 @test "${FILE_NAME}: Add/Update/Delete annotations" {
@@ -280,19 +265,10 @@ function validate_configmap_annotations() {
   local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
   # These are annotation keys that we expect to be present in the annotations map of the resource.
   local default_keys
-  default_keys="\"configmanagement.gke.io/declared-config\",${nested_default_keys}"
+  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\""
   # We initialize annotations by applying the selector above to the json of the resource.
   local annotations
   annotations=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
   # We verify that all annotation keys are present in the resource's annotations map.
   [[ "${annotations}" == "[${default_keys}${additional_keys}]" ]] || debug::error "${selector} for keys '${default_keys}${additional_keys}' was not synced, got: ${annotations}"
-
-  # We initialize config by reading the content of the "declared-config" annotation and formatting it nicely for jq.
-  local config
-  config=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c '.metadata.annotations."configmanagement.gke.io/declared-config"')
-  config=$(unquote_and_unescape "${config}")
-  # We reinitialize annotations by applying the same selector above to the nested content we pulled from the "declared-config" annotation.
-  annotations=$(echo "${config}" | jq -c "${selector}")
-  # We verify that all nested annotation keys are present in the resource's annotations map as defined in "declared-config".
-  [[ "${annotations}" == "[${nested_default_keys}${additional_keys}]" ]] || debug::error "declared-config ${selector}  was not synced, got ${annotations}"
 }
