@@ -3,6 +3,7 @@ package watch
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"reflect"
 	"sync"
@@ -29,6 +30,10 @@ var (
 	// watch requests - it is random in [minWatchTimeout, 2*minWatchTimeout].
 	minWatchTimeout = 5 * time.Minute
 )
+
+// maxWatchRetryFactor is used to determine when the next retry should happen.
+// 2^^18 * time.Millisecond = 262,144 ms, which is about 4.36 minutes.
+const maxWatchRetryFactor = 18
 
 // Runnable defines the custom watch interface.
 type Runnable interface {
@@ -143,12 +148,23 @@ func isExpiredError(err error) bool {
 	return apierrors.IsResourceExpired(err) || apierrors.IsGone(err)
 }
 
+// TODO(b/184078084): Use wait.ExponentialBackoff in the watch retry logic
+func waitUntilNextRetry(retries int) {
+	if retries > maxWatchRetryFactor {
+		retries = maxWatchRetryFactor
+	}
+	milliseconds := int64(math.Pow(2, float64(retries)))
+	duration := time.Duration(milliseconds) * time.Millisecond
+	time.Sleep(duration)
+}
+
 // Run reads the event from the base watch interface,
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
 func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 	glog.Infof("Watch started for %s", w.gvk)
 	var resourceVersion string
+	var retriesForWatchError int
 
 	for {
 		// There are three ways this function can return:
@@ -178,10 +194,12 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 				} else if w.addError(watchEventErrorType + errorID(err)) {
 					glog.Errorf("Watch for %s at resource version %q ended with: %v", w.gvk, resourceVersion, err)
 				}
-
+				retriesForWatchError++
+				waitUntilNextRetry(retriesForWatchError)
 				// Call `break` to restart the watch.
 				break
 			}
+			retriesForWatchError = 0
 			if newVersion != "" {
 				resourceVersion = newVersion
 			}
