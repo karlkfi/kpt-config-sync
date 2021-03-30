@@ -78,7 +78,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 		//  retry without updating the respective status field as this is an expected
 		//  path.
 		gvks, applyErrs = u.applier.Apply(ctx, objs)
-		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), applyStart)
+		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), cache.git.commit, applyStart)
 		if applyErrs == nil {
 			cache.setApplierResult(gvks)
 		}

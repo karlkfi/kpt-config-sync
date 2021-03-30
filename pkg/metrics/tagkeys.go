@@ -42,6 +42,12 @@ var (
 
 	// KeyTrigger groups metrics by their trigger. Possible values: retry, watchUpdate, managementConflict, resync, reimport.
 	KeyTrigger, _ = tag.NewKey("trigger")
+
+	// KeyCommit groups metrics by their git commit. Even though this tag has a high cardinality,
+	// it is only used by the `last_sync_timestamp` and `last_apply_timestamp` metrics.
+	// These are both aggregated as LastValue metrics so the number of recorded values will always be
+	// at most 1 per git commit.
+	KeyCommit, _ = tag.NewKey("commit")
 )
 
 // StatusTagKey returns a string representation of the error, if it exists, otherwise success.

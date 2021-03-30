@@ -49,7 +49,7 @@ var (
 		Name:        LastSync.Name(),
 		Measure:     LastSync,
 		Description: "The timestamp of the most recent sync from Git",
-		TagKeys:     []tag.Key{KeyReconciler},
+		TagKeys:     []tag.Key{KeyReconciler, KeyCommit},
 		Aggregation: view.LastValue(),
 	}
 
@@ -103,7 +103,7 @@ var (
 		Name:        LastApply.Name(),
 		Measure:     LastApply,
 		Description: "The timestamp of the most recent applier resource sync event",
-		TagKeys:     []tag.Key{KeyReconciler, KeyStatus},
+		TagKeys:     []tag.Key{KeyReconciler, KeyStatus, KeyCommit},
 		Aggregation: view.LastValue(),
 	}
 

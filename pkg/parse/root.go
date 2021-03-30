@@ -166,7 +166,7 @@ func (p *root) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus
 	rs.Status.Sync.LastUpdate = now
 
 	metrics.RecordReconcilerErrors(ctx, "sync", len(cse))
-	metrics.RecordLastSync(ctx, now.Time)
+	metrics.RecordLastSync(ctx, newStatus.commit, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync sync status from parser")

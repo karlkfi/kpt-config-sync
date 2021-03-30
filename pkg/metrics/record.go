@@ -39,8 +39,8 @@ func RecordParserDuration(ctx context.Context, trigger, source, status string, s
 }
 
 // RecordLastSync produces a measurement for the LastSync view.
-func RecordLastSync(ctx context.Context, timestamp time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()))
+func RecordLastSync(ctx context.Context, commit string, timestamp time.Time) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyCommit, commit))
 	measurement := LastSync.M(timestamp.Unix())
 	stats.Record(tagCtx, measurement)
 }
@@ -73,9 +73,9 @@ func RecordApplyOperation(ctx context.Context, operation, status string, gvk sch
 }
 
 // RecordLastApplyAndDuration produces measurements for the ApplyDuration and LastApplyTimestamp views.
-func RecordLastApplyAndDuration(ctx context.Context, status string, startTime time.Time) {
+func RecordLastApplyAndDuration(ctx context.Context, status, commit string, startTime time.Time) {
 	now := time.Now()
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyStatus, status))
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyStatus, status), tag.Upsert(KeyCommit, commit))
 
 	durationMeasurement := ApplyDuration.M(now.Sub(startTime).Seconds())
 	lastApplyMeasurement := LastApply.M(now.Unix())
