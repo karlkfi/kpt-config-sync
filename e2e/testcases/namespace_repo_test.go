@@ -274,7 +274,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// conditions.
 	// Here we are checking for false condition which requires atleast 2 reconcile
 	// request to be processed by the controller.
-	_, err := nomostest.Retry(30*time.Second, func() error {
+	_, err := nomostest.Retry(60*time.Second, func() error {
 		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
@@ -291,7 +291,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 
 	// Verify that the deployment is re-created after deletion by checking the
 	// Reconciling and Stalled condition in RepoSync resource.
-	_, err = nomostest.Retry(30*time.Second, func() error {
+	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})

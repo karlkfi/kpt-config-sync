@@ -40,7 +40,7 @@ func TestDeleteRootSync(t *testing.T) {
 	}
 
 	// Verify Root Reconciler deployment no longer present.
-	_, err = nomostest.Retry(5*time.Second, func() error {
+	_, err = nomostest.Retry(20*time.Second, func() error {
 		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
