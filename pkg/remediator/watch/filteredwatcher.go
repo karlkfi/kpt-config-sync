@@ -170,9 +170,15 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 			if err != nil {
 				if isExpiredError(err) {
 					glog.V(2).Infof("Watch for %s at resource version %q closed with: %v", w.gvk, resourceVersion, err)
+					// `w.handle` may fail because we try to watch an old resource version, setting
+					// a watch on an old resource version will always fail.
+					// Reset `resourceVersion` to an empty string here so that we can start a new
+					// watch at the most recent resource version.
+					resourceVersion = ""
 				} else if w.addError(watchEventErrorType + errorID(err)) {
 					glog.Errorf("Watch for %s at resource version %q ended with: %v", w.gvk, resourceVersion, err)
 				}
+
 				// Call `break` to restart the watch.
 				break
 			}
