@@ -29,7 +29,7 @@ func GKECluster(t *testing.T) Opt {
 		}
 
 		forceAuthRefresh(t)
-		restConfig, err := restconfig.NewRestConfig()
+		restConfig, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 		if err != nil {
 			t.Fatal(err)
 		}

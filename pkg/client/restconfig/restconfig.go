@@ -11,6 +11,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// DefaultTimeout is the default REST config timeout.
+const DefaultTimeout = 5 * time.Second
+
 // A source for creating a rest config
 type configSource struct {
 	name   string                       // The name for the config
@@ -32,7 +35,7 @@ var configSources = []configSource{
 // NewRestConfig will attempt to create a new rest config from all configured options and return
 // the first successfully created configuration.  The flag restConfigSource, if specified, will
 // change the behavior to attempt to create from only the configured source.
-func NewRestConfig() (*rest.Config, error) {
+func NewRestConfig(timeout time.Duration) (*rest.Config, error) {
 	var errorStrs []string
 
 	for _, source := range configSources {
@@ -46,8 +49,7 @@ func NewRestConfig() (*rest.Config, error) {
 			// of resources.
 			config.QPS = 20
 			config.Burst = 40
-			// Limit individual API Server calls to time out at 5 seconds.
-			config.Timeout = 5 * time.Second
+			config.Timeout = timeout
 			return config, nil
 		}
 

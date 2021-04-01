@@ -27,7 +27,7 @@ var Cmd = &cobra.Command{
 			glog.Errorf("could not increase logging verbosity: %v", err)
 		}
 
-		cfg, err := restconfig.NewRestConfig()
+		cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create rest config")
 		}

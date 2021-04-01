@@ -24,11 +24,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
+const (
 	// Copying strategy from k8s.io/client-go/tools/cache/reflector.go
 	// We try to spread the load on apiserver by setting timeouts for
 	// watch requests - it is random in [minWatchTimeout, 2*minWatchTimeout].
 	minWatchTimeout = 5 * time.Minute
+
+	// RESTConfigTimeout sets the REST config timeout for the remediator to 1 hour.
+	//
+	// RESTConfigTimeout should be longer than 2*minWatchTimeout to respect
+	// the watch timeout set by `ListOptions.TimeoutSeconds` in the watch
+	// create requests.
+	RESTConfigTimeout = time.Hour
 )
 
 // maxWatchRetryFactor is used to determine when the next retry should happen.

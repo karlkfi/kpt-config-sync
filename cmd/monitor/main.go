@@ -20,7 +20,7 @@ func main() {
 	log.Setup()
 	ctrl.SetLogger(glogr.New())
 
-	cfg, err := restconfig.NewRestConfig()
+	cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
 		glog.Fatalf("Failed to create rest config: %v", err)
 	}

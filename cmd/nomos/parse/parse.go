@@ -27,7 +27,7 @@ func GetSyncedCRDs(ctx context.Context) ([]*v1beta1.CustomResourceDefinition, st
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	config, err := restconfig.NewRestConfig()
+	config, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
 		return nil, getSyncedCRDsError(err, "failed to create rest config")
 	}

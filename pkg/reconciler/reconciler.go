@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
+	"github.com/google/nomos/pkg/remediator/watch"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -83,7 +84,7 @@ func Run(opts Options) {
 	reconcile.SetFightThreshold(opts.FightDetectionThreshold)
 
 	// Get a config to talk to the apiserver.
-	cfg, err := restconfig.NewRestConfig()
+	cfg, err := restconfig.NewRestConfig(restconfig.DefaultTimeout)
 	if err != nil {
 		glog.Fatalf("failed to create rest config: %v", err)
 	}
@@ -128,7 +129,15 @@ func Run(opts Options) {
 	// Configure the Remediator.
 	decls := &declared.Resources{}
 
-	rem, err := remediator.New(opts.ReconcilerScope, cfg, baseApplier, decls, opts.NumWorkers)
+	// Get a separate config for the remediator to talk to the apiserver since
+	// we want a longer REST config timeout for the remediator to avoid restarting
+	// idle watches too frequently.
+	cfgForRemediator, err := restconfig.NewRestConfig(watch.RESTConfigTimeout)
+	if err != nil {
+		glog.Fatalf("failed to create rest config for the remediator: %v", err)
+	}
+
+	rem, err := remediator.New(opts.ReconcilerScope, cfgForRemediator, baseApplier, decls, opts.NumWorkers)
 	if err != nil {
 		glog.Fatalf("Instantiating Remediator: %v", err)
 	}
