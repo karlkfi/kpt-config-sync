@@ -418,7 +418,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for %s, %s, and %s", took, reconcilermanager.ManagerName, reconciler.RootSyncName, metrics.OtelCollectorName)
+	nt.T.Logf("took %v to wait for %s, %s, %s, and %s", took, reconcilermanager.ManagerName, reconciler.RootSyncName, webhookconfig.ShortName, metrics.OtelCollectorName)
 	return nil
 }
 

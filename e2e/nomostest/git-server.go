@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/pkg/metrics"
+
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -81,6 +84,12 @@ func isAvailableDeployment(o client.Object) error {
 		}
 		return fmt.Errorf("%w for deployment/%s in namespace %s: got %d available replicas, want %d\n\n%s",
 			ErrFailedPredicate, d.GetName(), d.GetNamespace(), available, want, string(jsn))
+	}
+
+	// otel_controller.go:configureStackdriverConfigMap creates or updates `otel-collector-stackdriver` configmap
+	// which causes the deployment to be updated. We need to make sure the updated deployment is available.
+	if *e2e.TestCluster == e2e.GKE && d.Name == metrics.OtelCollectorName && d.ObjectMeta.Generation < 2 {
+		return fmt.Errorf("deployment/%s in namespace %s should be updated after creation", d.Name, d.Namespace)
 	}
 	return nil
 }
@@ -181,5 +190,9 @@ func portForwardGitServer(nt *NT, repos ...string) int {
 		nt.MustKubectl("exec", "-n", testGitNamespace, podName, "--",
 			"git", "-C", fmt.Sprintf("/git-server/repos/%s", repo), "config", "receive.denyNonFastforwards", "false")
 	}
-	return nt.ForwardToFreePort(testGitNamespace, podName, ":22")
+	port, err := nt.ForwardToFreePort(testGitNamespace, podName, ":22")
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	return port
 }

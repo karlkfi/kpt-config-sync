@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
@@ -91,6 +93,9 @@ type NT struct {
 
 	// otelCollectorPort is the local port that forwards to the otel-collector.
 	otelCollectorPort int
+
+	// otelCollectorPodName is the pod name of the otel-collector.
+	otelCollectorPodName string
 
 	// ReconcilerMetrics is a map of scraped multirepo metrics.
 	ReconcilerMetrics testmetrics.ConfigSyncMetrics
@@ -237,6 +242,7 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 	validatedMetrics := []string{
 		ocmetrics.ParseDurationView.Name,
 		ocmetrics.ApplyDurationView.Name,
+		ocmetrics.ApplyOperationsView.Name,
 		ocmetrics.WatchManagerUpdatesDurationView.Name,
 		ocmetrics.RemediateDurationView.Name,
 		ocmetrics.DeclaredResourcesView.Name,
@@ -656,24 +662,58 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 // PortForwardOtelCollector forwards a local port to the pod's metrics port.
 func (nt *NT) PortForwardOtelCollector() {
 	if nt.MultiRepo {
-		nt.otelCollectorPort = nt.ForwardToFreePort(ocmetrics.MonitoringNamespace, testmetrics.OtelDeployment, testmetrics.MetricsPort)
+		ocPods := &corev1.PodList{}
+		// Retry otel-collector port-forwarding in case it is in the process of upgrade.
+		took, err := Retry(60*time.Second, func() error {
+			if err := nt.List(ocPods, client.InNamespace(ocmetrics.MonitoringNamespace)); err != nil {
+				return err
+			}
+			if nPods := len(ocPods.Items); nPods != 1 {
+				return fmt.Errorf("otel-collector: got len(podList.Items) = %d, want 1", nPods)
+			}
+
+			pod := ocPods.Items[0]
+			if pod.Status.Phase != corev1.PodRunning {
+				return fmt.Errorf("pod %q status is %q, want %q", pod.Name, pod.Status.Phase, corev1.PodRunning)
+			}
+			// The otel-collector forwarding port needs to be updated after otel-collector restarts or starts for the first time.
+			// It sets otelCollectorPodName and otelCollectorPort to point to the current running pod that forwards the port.
+			if pod.Name != nt.otelCollectorPodName {
+				port, err := nt.ForwardToFreePort(ocmetrics.MonitoringNamespace, pod.Name, testmetrics.MetricsPort)
+				if err != nil {
+					return err
+				}
+				nt.otelCollectorPort = port
+				nt.otelCollectorPodName = pod.Name
+			}
+			return nil
+		})
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		nt.T.Logf("took %v to wait for otel-collector port-forward", took)
 	}
 }
 
 // ForwardToFreePort forwards a local port to a port on the pod and returns the
 // local port chosen by kubectl.
-func (nt *NT) ForwardToFreePort(ns, pod, port string) int {
+func (nt *NT) ForwardToFreePort(ns, pod, port string) (int, error) {
 	nt.T.Helper()
 
 	cmd := exec.Command("kubectl", "--kubeconfig", nt.kubeconfigPath, "port-forward",
 		"-n", ns, pod, port)
 
 	stdout := &strings.Builder{}
+	stderr := &strings.Builder{}
 	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Start()
 	if err != nil {
-		nt.T.Fatal(err)
+		return 0, err
+	}
+	if stderr.Len() != 0 {
+		return 0, fmt.Errorf(stderr.String())
 	}
 
 	nt.T.Cleanup(func() {
@@ -689,7 +729,7 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) int {
 	took, err := Retry(30*time.Second, func() error {
 		s := stdout.String()
 		if !strings.Contains(s, "\n") {
-			return errors.New("nothing written to stdout for kubectl port-forward")
+			return fmt.Errorf("nothing written to stdout for kubectl port-forward, stdout=%s", s)
 		}
 
 		line := strings.Split(s, "\n")[0]
@@ -703,11 +743,11 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) int {
 		return nil
 	})
 	if err != nil {
-		nt.T.Fatal(err)
+		return 0, err
 	}
 	nt.T.Logf("took %v to wait for port-forward", took)
 
-	return localPort
+	return localPort, nil
 }
 
 func validateError(errs []v1alpha1.ConfigSyncError, code string) error {

@@ -112,8 +112,8 @@ func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]b
 		}
 		if op != controllerutil.OperationResultNone {
 			r.log.Info("ConfigMap successfully reconciled", operationSubjectName, cm.Name, executedOperation, op)
+			return hash(cm)
 		}
-		return hash(cm)
 	}
 	return nil, nil
 }
