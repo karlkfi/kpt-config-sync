@@ -772,7 +772,7 @@ func TestHierarchical(t *testing.T) {
 				fake.Repo(),
 				fake.FileObject(fake.RepoSyncObject(core.Name("invalid")), "namespaces/foo/rs.yamo"),
 			},
-			wantErrs: fake.Errors(nonhierarchical.InvalidRepoSyncCode),
+			wantErrs: fake.Errors(nonhierarchical.InvalidSyncCode),
 		},
 	}
 

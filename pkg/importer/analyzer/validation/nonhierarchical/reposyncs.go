@@ -9,22 +9,29 @@ import (
 )
 
 var (
-	authSSH        = v1alpha1.GitSecretSSH
-	authCookiefile = v1alpha1.GitSecretCookieFile
-	authGCENode    = v1alpha1.GitSecretGCENode
-	authToken      = v1alpha1.GitSecretToken
-	authNone       = v1alpha1.GitSecretNone
+	authSSH               = v1alpha1.GitSecretSSH
+	authCookiefile        = v1alpha1.GitSecretCookieFile
+	authGCENode           = v1alpha1.GitSecretGCENode
+	authToken             = v1alpha1.GitSecretToken
+	authNone              = v1alpha1.GitSecretNone
+	authGCPServiceAccount = v1alpha1.GitSecretGCPServiceAccount
 )
+
+// gcpSASuffix specifies the default suffix used with gcp ServiceAccount email.
+// https://cloud.google.com/iam/docs/service-accounts#user-managed
+const gcpSASuffix = ".iam.gserviceaccount.com"
 
 // ValidateRepoSync validates the content and structure of a RepoSync for any
 // obvious problems.
 func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
 	if rs.GetName() != v1alpha1.RepoSyncName {
-		return InvalidRepoSyncName(rs)
+		return InvalidSyncName(rs.Name, rs)
 	}
+	return validateGitSpec(rs.Spec.Git, rs)
+}
 
+func validateGitSpec(git v1alpha1.Git, rs client.Object) status.Error {
 	// We can't connect to the git repo if we don't have the URL.
-	git := rs.Spec.Git
 	if git.Repo == "" {
 		return MissingGitRepo(rs)
 	}
@@ -34,6 +41,13 @@ func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
 	// will fail to apply.
 	switch git.Auth {
 	case authSSH, authCookiefile, authGCENode, authToken, authNone:
+	case authGCPServiceAccount:
+		if git.GCPServiceAccountEmail == "" {
+			return MissingGCPSAEmail(rs)
+		}
+		if !ValidateGCPServiceAccountEmail(git.GCPServiceAccountEmail) {
+			return InvalidGCPSAEmail(rs)
+		}
 	default:
 		return InvalidAuthType(rs)
 	}
@@ -48,7 +62,7 @@ func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
 
 	// Check the secret ref is specified if and only if it is required.
 	switch git.Auth {
-	case authNone, authGCENode:
+	case authNone, authGCENode, authGCPServiceAccount:
 		if git.SecretRef.Name != "" {
 			return IllegalSecretRef(rs)
 		}
@@ -61,63 +75,105 @@ func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
 	return nil
 }
 
-// InvalidRepoSyncCode is the code for an invalid declared RepoSync.
-var InvalidRepoSyncCode = "1061"
+// InvalidSyncCode is the code for an invalid declared RootSync/RepoSync.
+var InvalidSyncCode = "1061"
 
-var invalidRepoSyncBuilder = status.NewErrorBuilder(InvalidRepoSyncCode)
+var invalidSyncBuilder = status.NewErrorBuilder(InvalidSyncCode)
 
-// InvalidRepoSyncName reports that a RepoSync has the wrong name.
-func InvalidRepoSyncName(o client.Object) status.Error {
+// InvalidSyncName reports that a RootSync/RepoSync has the wrong name.
+func InvalidSyncName(resourceName string, o client.Object) status.Error {
 	name := o.GetName()
+	kind := o.GetObjectKind().GroupVersionKind().Kind
 	namespace := o.GetNamespace()
-	return invalidRepoSyncBuilder.
-		Sprintf("RepoSyncs must be named %q, but the RepoSync for Namespace %q is named %q",
-			v1alpha1.RepoSyncName, namespace, name).
+	return invalidSyncBuilder.
+		Sprintf("%ss must be named %q, but the %s for Namespace %q is named %q",
+			kind, resourceName, kind, namespace, name).
 		BuildWithResources(o)
 }
 
-// MissingGitRepo reports that a RepoSync doesn't declare the git repo it is
+// MissingGitRepo reports that a RootSync/RepoSync doesn't declare the git repo it is
 // supposed to connect to.
 func MissingGitRepo(o client.Object) status.Error {
-	return invalidRepoSyncBuilder.
-		Sprint("RepoSyncs must define spec.git.repo").
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss must define spec.git.repo", kind).
 		BuildWithResources(o)
 }
 
-// InvalidAuthType reports that a RepoSync doesn't use one of the known auth
+// InvalidAuthType reports that a RootSync/RepoSync doesn't use one of the known auth
 // methods.
 func InvalidAuthType(o client.Object) status.Error {
 	types := []string{authSSH, authCookiefile, authGCENode, authToken, authNone}
-
-	return invalidRepoSyncBuilder.
-		Sprintf("RepoSyncs must declare spec.git.auth to be one of [%s]",
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss must declare spec.git.auth to be one of [%s]", kind,
 			strings.Join(types, ",")).
 		BuildWithResources(o)
 }
 
-// NoOpProxy reports that a RepoSync declares a proxy, but the declaration would
+// NoOpProxy reports that a RootSync/RepoSync declares a proxy, but the declaration would
 // do nothing.
 func NoOpProxy(o client.Object) status.Error {
-	return invalidRepoSyncBuilder.
-		Sprintf("RepoSyncs which declare spec.git.proxy must declare spec.git.auth=%q or %q",
-			authNone, authCookiefile).
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss which declare spec.git.proxy must declare spec.git.auth=%q or %q",
+			kind, authNone, authCookiefile).
 		BuildWithResources(o)
 }
 
-// IllegalSecretRef reports that a RepoSync declares an auth mode that doesn't
+// IllegalSecretRef reports that a RootSync/RepoSync declares an auth mode that doesn't
 // allow SecretRefs does declare a SecretRef.
 func IllegalSecretRef(o client.Object) status.Error {
-	return invalidRepoSyncBuilder.
-		Sprintf("RepoSyncs declaring spec.git.auth = %q or %q must not declare spec.git.secretRef",
-			authNone, authGCENode).
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss declaring spec.git.auth = %q or %q must not declare spec.git.secretRef",
+			kind, authNone, authGCENode).
 		BuildWithResources(o)
 }
 
-// MissingSecretRef reports that a RepoSync declares an auth mode that requires
+// MissingSecretRef reports that a RootSync/RepoSync declares an auth mode that requires
 // a SecretRef, but does not do so.
 func MissingSecretRef(o client.Object) status.Error {
-	return invalidRepoSyncBuilder.
-		Sprintf("RepoSyncs declaring spec.git.auth = %q or %q or %q must declare spec.git.secretRef",
-			authSSH, authCookiefile, authToken).
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss declaring spec.git.auth = %q or %q or %q must declare spec.git.secretRef",
+			kind, authSSH, authCookiefile, authToken).
 		BuildWithResources(o)
+}
+
+// InvalidGCPSAEmail reports that a RepoSync/RootSync Resource doesn't have the
+//  correct gcp service account suffix.
+func InvalidGCPSAEmail(o client.Object) status.Error {
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss declaring spec.git.auth = %q must have suffix <gcp_serviceaccount_name>.[%s]",
+			kind, authGCPServiceAccount, gcpSASuffix).
+		BuildWithResources(o)
+}
+
+// MissingGCPSAEmail reports that a RepoSync/RootSync resource declares an auth
+// mode that requires a GCPServiceAccountEmail, but does not do so.
+func MissingGCPSAEmail(o client.Object) status.Error {
+	kind := o.GetObjectKind().GroupVersionKind().Kind
+	return invalidSyncBuilder.
+		Sprintf("%ss declaring  spec.git.auth = %q must declare spec.git.gcpServiceAccountEmail",
+			kind, authGCPServiceAccount).
+		BuildWithResources(o)
+}
+
+// ValidateGCPServiceAccountEmail verifies whether GCP SA email has correct
+// prefix and suffix format.
+func ValidateGCPServiceAccountEmail(email string) bool {
+	if strings.Contains(email, "@") {
+		s := strings.Split(email, "@")
+		if len(s) == 2 {
+			prefix := s[0]
+			// Service account name must be between 6 and 30 characters (inclusive),
+			if len(prefix) < 6 || len(prefix) > 30 {
+				return false
+			}
+			return strings.HasSuffix(s[1], gcpSASuffix)
+		}
+	}
+	return false
 }

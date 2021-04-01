@@ -41,6 +41,8 @@ const (
 	reposyncSSHKey       = "ssh-key"
 	reposyncCluster      = "abc-123"
 
+	gcpSAEmail = "config-sync@cs-project.iam.gserviceaccount.com"
+
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
@@ -83,20 +85,44 @@ func init() {
 	}
 }
 
-func repoSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
-	result := fake.RepoSyncObject(opts...)
-	result.Spec.Git = v1alpha1.Git{
-		Repo:     reposyncRepo,
-		Revision: ref,
-		Branch:   branch,
-		Dir:      reposyncDir,
-		Auth:     secretType,
+func reposyncRef(rev string) func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.Revision = rev
 	}
-	if secretRef != "" {
-		result.Spec.Git.SecretRef = v1alpha1.SecretReference{Name: secretRef}
-	}
+}
 
-	return result
+func reposyncBranch(branch string) func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.Branch = branch
+	}
+}
+
+func reposyncSecretType(auth string) func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.Auth = auth
+	}
+}
+
+func reposyncSecretRef(ref string) func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.Git.SecretRef = v1alpha1.SecretReference{Name: ref}
+	}
+}
+
+func reposyncGCPSAEmail(email string) func(sync *v1alpha1.RepoSync) {
+	return func(sync *v1alpha1.RepoSync) {
+		sync.Spec.GCPServiceAccountEmail = email
+	}
+}
+
+func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
+	rs := fake.RepoSyncObject(core.Namespace(reposyncReqNamespace))
+	rs.Spec.Repo = reposyncRepo
+	rs.Spec.Dir = reposyncDir
+	for _, opt := range opts {
+		opt(rs)
+	}
+	return rs
 }
 
 func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleBinding {
@@ -150,7 +176,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace))
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 
@@ -275,7 +301,7 @@ func TestRepoSyncAuthGCENode(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := repoSync(gitRevision, branch, v1alpha1.GitSecretGCENode, "", core.Namespace(reposyncReqNamespace))
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(v1alpha1.GitSecretGCENode))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs)
 
@@ -320,6 +346,134 @@ func TestRepoSyncAuthGCENode(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("Deployement successfully updated")
+}
+
+func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(v1alpha1.GitSecretGCPServiceAccount), reposyncGCPSAEmail(gcpSAEmail))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: v1alpha1.GitSecretGCPServiceAccount,
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantServiceAccount := fake.ServiceAccountObject(
+		reconciler.RepoSyncName(reposyncReqNamespace),
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.Annotation(v1alpha1.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+	)
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotationGCENode)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("Service Account diff %s", diff)
+	}
+
+	// Compare Deployment
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Resources successfully created")
+
+	// Test updating Configmaps and Deployment resources.
+	rs.Spec.Git.Revision = gitUpdatedRevision
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap = []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitUpdatedRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: v1alpha1.GitSecretGCPServiceAccount,
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantServiceAccount = fake.ServiceAccountObject(
+		reconciler.RepoSyncName(reposyncReqNamespace),
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.Annotation(v1alpha1.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+	)
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationGCENode)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("Service Account diff %s", diff)
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Resources successfully updated")
 }
 
 // validateDeployments validates that important fields in the `wants` deployments match those same fields in the deployments found in the fakeClient

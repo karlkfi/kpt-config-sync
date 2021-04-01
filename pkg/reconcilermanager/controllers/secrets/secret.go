@@ -104,7 +104,13 @@ func NamespaceReconcilerSecretName(namespace, name string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), name)
 }
 
-// SkipForAuth returns true if the passed auth is either 'none' or 'gcenode'.
+// SkipForAuth returns true if the passed auth is either 'none' or 'gcenode' or
+// 'gcpserviceaccount'.
 func SkipForAuth(auth string) bool {
-	return auth == v1alpha1.GitSecretNone || auth == v1alpha1.GitSecretGCENode
+	switch auth {
+	case v1alpha1.GitSecretNone, v1alpha1.GitSecretGCENode, v1alpha1.GitSecretGCPServiceAccount:
+		return true
+	default:
+		return false
+	}
 }

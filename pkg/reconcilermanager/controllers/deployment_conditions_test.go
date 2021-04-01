@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/core"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -43,8 +42,7 @@ func setStateConditions(progressCondition string, availableStatus corev1.Conditi
 }
 
 func TestDeploymentConditions(t *testing.T) {
-	rs := repoSync(gitRevision, branch, auth, reposyncSSHKey, core.Namespace(reposyncReqNamespace))
-
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
 	testCases := []struct {
 		name                 string
 		reconcilerDeployment *appsv1.Deployment

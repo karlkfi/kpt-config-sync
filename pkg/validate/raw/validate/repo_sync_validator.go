@@ -22,18 +22,19 @@ func RepoSync(obj ast.FileObject) status.Error {
 }
 
 var (
-	authSSH        = v1alpha1.GitSecretSSH
-	authCookiefile = v1alpha1.GitSecretCookieFile
-	authGCENode    = v1alpha1.GitSecretGCENode
-	authToken      = v1alpha1.GitSecretToken
-	authNone       = v1alpha1.GitSecretNone
+	authSSH               = v1alpha1.GitSecretSSH
+	authCookiefile        = v1alpha1.GitSecretCookieFile
+	authGCENode           = v1alpha1.GitSecretGCENode
+	authToken             = v1alpha1.GitSecretToken
+	authNone              = v1alpha1.GitSecretNone
+	authGCPServiceAccount = v1alpha1.GitSecretGCPServiceAccount
 )
 
 // RepoSyncObject validates the content and structure of a RepoSync for any
 // obvious problems.
 func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
 	if rs.GetName() != v1alpha1.RepoSyncName {
-		return nonhierarchical.InvalidRepoSyncName(rs)
+		return nonhierarchical.InvalidSyncName(rs.Name, rs)
 	}
 
 	// We can't connect to the git repo if we don't have the URL.
@@ -47,6 +48,13 @@ func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
 	// will fail to apply.
 	switch git.Auth {
 	case authSSH, authCookiefile, authGCENode, authToken, authNone:
+	case authGCPServiceAccount:
+		if git.GCPServiceAccountEmail == "" {
+			return nonhierarchical.MissingGCPSAEmail(rs)
+		}
+		if !nonhierarchical.ValidateGCPServiceAccountEmail(git.GCPServiceAccountEmail) {
+			return nonhierarchical.InvalidGCPSAEmail(rs)
+		}
 	default:
 		return nonhierarchical.InvalidAuthType(rs)
 	}
@@ -61,7 +69,7 @@ func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
 
 	// Check the secret ref is specified if and only if it is required.
 	switch git.Auth {
-	case authNone, authGCENode:
+	case authNone, authGCENode, authGCPServiceAccount:
 		if git.SecretRef.Name != "" {
 			return nonhierarchical.IllegalSecretRef(rs)
 		}
@@ -70,6 +78,5 @@ func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
 			return nonhierarchical.MissingSecretRef(rs)
 		}
 	}
-
 	return nil
 }

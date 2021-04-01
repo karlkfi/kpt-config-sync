@@ -11,9 +11,11 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -74,7 +76,8 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		rs.UID,
 	)
 
-	if err := r.validate(&rs); err != nil {
+	var err error
+	if err = nonhierarchical.ValidateRootSync(&rs); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
 		// We intentionally overwrite the previous error here since we do not want
@@ -106,7 +109,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconciler.RootSyncName, owRefs); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconciler.RootSyncName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail, owRefs); err != nil {
 		log.Error(err, "Failed to create/update Service Account")
 		rootsync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -227,21 +230,9 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 	}
 }
 
-// validate guarantees the RootSync CR is correct. See go/config-sync-multi-repo-user-guide for
-// details.
-func (r *RootSyncReconciler) validate(rs *v1alpha1.RootSync) error {
-	if rs.Name != v1alpha1.RootSyncName {
-		// Please don't change the error message.
-		return fmt.Errorf(
-			"there must be exactly one RootSync resource declared. 'meta.name' must be "+
-				"'root-sync'. Instead found %q", rs.Name)
-	}
-	return nil
-}
-
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
 func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1alpha1.RootSync) error {
-	if rootSync.Spec.Auth == v1alpha1.GitSecretNone || rootSync.Spec.Auth == v1alpha1.GitSecretGCENode {
+	if secrets.SkipForAuth(rootSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
 	}
@@ -305,7 +296,11 @@ func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Root
 }
 
 func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHash []byte) mutateFn {
-	return func(d *appsv1.Deployment) error {
+	return func(obj client.Object) error {
+		d, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			return errors.Errorf("expected appsv1 Deployment, got: %T", obj)
+		}
 		// OwnerReferences, so that when the RootSync CustomResource is deleted,
 		// the corresponding Deployment is also deleted.
 		d.OwnerReferences = []metav1.OwnerReference{
@@ -362,7 +357,7 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 				// first-ever reconcile.
 			case gceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
-				// deployment when auth: gcenode.
+				// deployment when auth: gcenode or auth: gcpserveraccount.
 				configureGceNodeAskPass(&container)
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
@@ -373,9 +368,12 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// Add container spec for the "gcenode-askpass-sidecar" (defined as
 		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
 		// The container is added first time when the reconciler deployment is created.
-		if authTypeGCENode(rs.Spec.Auth) && !containsGCENodeAskPassSidecar(updatedContainers) {
-			sidecar := gceNodeAskPassSidecar()
-			updatedContainers = append(updatedContainers, sidecar)
+		switch rs.Spec.Auth {
+		case v1alpha1.GitSecretGCPServiceAccount, v1alpha1.GitSecretGCENode:
+			if !containsGCENodeAskPassSidecar(updatedContainers) {
+				sidecar := gceNodeAskPassSidecar()
+				updatedContainers = append(updatedContainers, sidecar)
+			}
 		}
 		templateSpec.Containers = updatedContainers
 		return nil

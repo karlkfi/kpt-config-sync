@@ -1,11 +1,10 @@
-package validate
+package nonhierarchical
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -53,7 +52,7 @@ func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
 	return rs
 }
 
-func TestRepoSyncObject(t *testing.T) {
+func TestValidateRepoSync(t *testing.T) {
 	testCases := []struct {
 		name    string
 		obj     *v1alpha1.RepoSync
@@ -66,22 +65,22 @@ func TestRepoSyncObject(t *testing.T) {
 		{
 			name:    "wrong name",
 			obj:     repoSync(auth(authNone), named("wrong name")),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "missing repo",
 			obj:     repoSync(auth(authNone), missingRepo),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "invalid auth type",
 			obj:     repoSync(auth("invalid auth")),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "no op proxy",
 			obj:     repoSync(auth(authNone), proxy("no-op proxy")),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name: "valid proxy",
@@ -90,28 +89,38 @@ func TestRepoSyncObject(t *testing.T) {
 		{
 			name:    "illegal secret",
 			obj:     repoSync(auth(authNone), secret("illegal secret")),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "missing secret",
 			obj:     repoSync(auth(authSSH)),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "invalid GCP serviceaccount email",
 			obj:     repoSync(auth(authGCPServiceAccount), gcpSAEmail("invalid_gcp_sa@gserviceaccount.com")),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
+		},
+		{
+			name:    "invalid GCP serviceaccount email with correct suffix",
+			obj:     repoSync(auth(authGCPServiceAccount), gcpSAEmail("foo@my-project.iam.gserviceaccount.com")),
+			wantErr: fake.Error(InvalidSyncCode),
+		},
+		{
+			name:    "invalid GCP serviceaccount email without domain",
+			obj:     repoSync(auth(authGCPServiceAccount), gcpSAEmail("my-project")),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
 			name:    "missing GCP serviceaccount email",
 			obj:     repoSync(auth(authGCPServiceAccount)),
-			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
+			wantErr: fake.Error(InvalidSyncCode),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := RepoSyncObject(tc.obj)
+			err := ValidateRepoSync(tc.obj)
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("Got RepoSyncObject() error %v, want %v", err, tc.wantErr)
 			}

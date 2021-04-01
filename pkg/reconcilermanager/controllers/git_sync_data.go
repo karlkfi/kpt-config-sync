@@ -60,7 +60,7 @@ func gitSyncData(opts options) map[string]string {
 		result["GIT_SYNC_REV"] = opts.ref
 	}
 	switch opts.secretType {
-	case v1alpha1.GitSecretGCENode:
+	case v1alpha1.GitSecretGCENode, v1alpha1.GitSecretGCPServiceAccount:
 		result["GIT_ASKPASS_URL"] = gceNodeAskpassURL
 	case v1alpha1.GitSecretSSH:
 		result["GIT_SYNC_SSH"] = "true"

@@ -279,7 +279,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(nonhierarchical.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
+	result.add(nonhierarchical.InvalidSyncName(v1alpha1.RepoSyncName, fake.RepoSyncObject(core.Name("invalid"))))
 
 	// 1062 is Deprecated.
 	result.markDeprecated("1062")

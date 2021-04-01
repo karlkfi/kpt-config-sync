@@ -37,8 +37,13 @@ type Git struct {
 	// Must be one of ssh, cookiefile, gcenode, token, or none. Required.
 	// The validation of this is case-sensitive. Required.
 	//
-	// +kubebuilder:validation:Pattern=^(ssh|cookiefile|gcenode|token|none)$
+	// +kubebuilder:validation:Pattern=^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
 	Auth string `json:"auth"`
+
+	// GCPServiceAccountEmail specifies the GCP service account used to annotate
+	// the RootSync/RepoSync controller Kubernetes Service Account.
+	// Note: The field is used when secretType: gcpServiceAccount.
+	GCPServiceAccountEmail string `json:"gcpServiceAccountEmail,omitempty"`
 
 	// Proxy is a struct that contains options for configuring access to the Git repo via a proxy.
 	// Only has an effect when secretType is one of ("cookiefile", "none"). Optional.

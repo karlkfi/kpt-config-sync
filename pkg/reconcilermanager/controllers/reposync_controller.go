@@ -112,7 +112,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace)); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace), rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -278,7 +278,11 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Repo
 }
 
 func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHash []byte) mutateFn {
-	return func(d *appsv1.Deployment) error {
+	return func(obj client.Object) error {
+		d, ok := obj.(*appsv1.Deployment)
+		if !ok {
+			return errors.Errorf("expected appsv1 Deployment, got: %T", obj)
+		}
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
@@ -318,7 +322,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 				// first-ever reconcile.
 			case gceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
-				// deployment when auth: gcenode.
+				// deployment when auth: gcenode or auth: gcpserveraccount.
 				configureGceNodeAskPass(&container)
 			default:
 				return errors.Errorf("unknown container in reconciler deployment template: %q", container.Name)
@@ -327,11 +331,14 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		}
 
 		// Add container spec for the "gcenode-askpass-sidecar" (defined as
-		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
+		// a constant) to the reconciler Deployment if auth: gcenode or auth: gcpserveraccount.
 		// The container is added first time when the reconciler deployment is created.
-		if authTypeGCENode(rs.Spec.Auth) && !containsGCENodeAskPassSidecar(updatedContainers) {
-			sidecar := gceNodeAskPassSidecar()
-			updatedContainers = append(updatedContainers, sidecar)
+		switch rs.Spec.Auth {
+		case v1alpha1.GitSecretGCPServiceAccount, v1alpha1.GitSecretGCENode:
+			if !containsGCENodeAskPassSidecar(updatedContainers) {
+				sidecar := gceNodeAskPassSidecar()
+				updatedContainers = append(updatedContainers, sidecar)
+			}
 		}
 		templateSpec.Containers = updatedContainers
 		return nil

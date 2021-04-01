@@ -49,20 +49,25 @@ spec:
                 from a Git repo.
               properties:
                 auth:
-                  description: Auth is the type of secret configured for access to
+                  description: auth is the type of secret configured for access to
                     the Git repo. Must be one of ssh, cookiefile, gcenode, token,
                     or none. Required. The validation of this is case-sensitive. Required.
-                  pattern: ^(ssh|cookiefile|gcenode|token|none)$
+                  pattern: ^(ssh|cookiefile|gcenode|gcpserviceaccount|token|none)$
                   type: string
                 branch:
-                  description: 'Branch is the git branch to checkout. Default: "master".'
+                  description: 'branch is the git branch to checkout. Default: "master".'
                   type: string
                 dir:
-                  description: 'Dir is the absolute path of the directory that contains
+                  description: 'dir is the absolute path of the directory that contains
                     the local policy.  Default: the root directory of the repo.'
                   type: string
+                gcpServiceAccountEmail:
+                  description: 'gcpServiceAccountEmail specifies the GCP service account
+                    used to annotate the RootSync controller Kubernetes Service
+                    Account. Note: The field is used when spec.git.auth: gcpserviceaccount.'
+                  type: string
                 period:
-                  description: 'Period is the time duration in seconds between consecutive
+                  description: 'period is the time duration in seconds between consecutive
                     syncs.  Default: 15 seconds. Note to developers that customers
                     specify this value using string (https://golang.org/pkg/time/#Duration.String)
                     like "3s" in their Custom Resource YAML. However, time.Duration
@@ -71,23 +76,23 @@ spec:
                     actually nanoseconds (or vice versa).'
                   type: string
                 proxy:
-                  description: Proxy is a struct that contains options for configuring
+                  description: proxy is a struct that contains options for configuring
                     access to the Git repo via a proxy. Only has an effect when secretType
                     is one of ("cookiefile", "none"). Optional.
                   type: string
                 repo:
-                  description: Repo is the git repository URL to sync from. Required.
+                  description: repo is the git repository URL to sync from. Required.
                   type: string
                 revision:
-                  description: 'Revision is the git revision (tag, ref or commit)
+                  description: 'revision is the git revision (tag, ref or commit)
                     to fetch. Default: "HEAD".'
                   type: string
                 secretRef:
-                  description: SecretRef is the secret used to connect to the Git
+                  description: secretRef is the secret used to connect to the Git
                     source of truth.
                   properties:
                     name:
-                      description: Name represents the secret name.
+                      description: name represents the secret name.
                       type: string
                   type: object
               required:

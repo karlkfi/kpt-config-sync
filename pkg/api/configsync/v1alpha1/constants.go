@@ -22,6 +22,9 @@ const (
 	GitSecretNone = "none"
 	// GitSecretToken indicates the secret is a username/password
 	GitSecretToken = "token"
+	// GitSecretGCPServiceAccount indicates the secret is a gcp service account
+	// when Workload Identity is enabled on a GKE cluster.
+	GitSecretGCPServiceAccount = "gcpserviceaccount"
 )
 
 // Git secret configmap key names
@@ -46,4 +49,12 @@ const (
 	// DefaultFilesystemPollingPeriod specifies time between checking the filesystem
 	// for udpates to the local Git repository.
 	DefaultFilesystemPollingPeriod = 5 * time.Second
+)
+
+const (
+	// GCPSAAnnotationKey is used to annotate RepoSync/RootSync controller SA when
+	// spec.git.auth: gcpserviceaccount is used with Workload Identity enabled on a
+	// GKE cluster.
+	// https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+	GCPSAAnnotationKey = "iam.gke.io/gcp-service-account"
 )

@@ -112,24 +112,51 @@ func setupRootReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Clien
 	return fakeClient, testReconciler
 }
 
-func rootSync(ref, branch, secretType, secretRef string, opts ...core.MetaMutator) *v1alpha1.RootSync {
-	result := fake.RootSyncObject(opts...)
-	result.Spec.Git = v1alpha1.Git{
-		Repo:      rootsyncRepo,
-		Revision:  ref,
-		Branch:    branch,
-		Dir:       rootsyncDir,
-		Auth:      secretType,
-		SecretRef: v1alpha1.SecretReference{Name: secretRef},
+func rootsyncRef(rev string) func(*v1alpha1.RootSync) {
+	return func(rs *v1alpha1.RootSync) {
+		rs.Spec.Revision = rev
 	}
-	return result
+}
+
+func rootsyncBranch(branch string) func(*v1alpha1.RootSync) {
+	return func(rs *v1alpha1.RootSync) {
+		rs.Spec.Branch = branch
+	}
+}
+
+func rootsyncSecretType(auth string) func(*v1alpha1.RootSync) {
+	return func(rs *v1alpha1.RootSync) {
+		rs.Spec.Auth = auth
+	}
+}
+
+func rootsyncSecretRef(ref string) func(*v1alpha1.RootSync) {
+	return func(rs *v1alpha1.RootSync) {
+		rs.Spec.Git.SecretRef = v1alpha1.SecretReference{Name: ref}
+	}
+}
+
+func rootsyncGCPSAEmail(email string) func(sync *v1alpha1.RootSync) {
+	return func(sync *v1alpha1.RootSync) {
+		sync.Spec.GCPServiceAccountEmail = email
+	}
+}
+
+func rootSync(opts ...func(*v1alpha1.RootSync)) *v1alpha1.RootSync {
+	rs := fake.RootSyncObject()
+	rs.Spec.Repo = rootsyncRepo
+	rs.Spec.Dir = rootsyncDir
+	for _, opt := range opts {
+		opt(rs)
+	}
+	return rs
 }
 
 func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(gitRevision, branch, v1alpha1.GitSecretConfigKeySSH, rootsyncSSHKey, core.Name(rootsyncName), core.Namespace(rootsyncReqNamespace))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(v1alpha1.GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -284,7 +311,7 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(gitRevision, branch, v1alpha1.GitSecretGCENode, "", core.Namespace(rootsyncReqNamespace))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(v1alpha1.GitSecretGCENode))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs)
 
@@ -307,6 +334,111 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 	t.Log("Deployment successfully created")
 
 	// Test updating Deployment resources.
+	rs.Spec.Git.Revision = gitUpdatedRevision
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the root sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationGCENode)),
+			setServiceAccountName(reconciler.RootSyncName),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployement successfully updated")
+}
+
+func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(v1alpha1.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: v1alpha1.GitSecretGCPServiceAccount,
+				period:     v1alpha1.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.Reconciler),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+	}
+
+	wantServiceAccount := fake.ServiceAccountObject(
+		reconciler.RootSyncName,
+		core.Namespace(v1.NSConfigManagementSystem),
+		core.OwnerReference([]metav1.OwnerReference{
+			ownerReference(rootsyncKind, rootsyncName, ""),
+		}),
+		core.Annotation(v1alpha1.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+	)
+
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsAnnotationGCENode)),
+			setServiceAccountName(reconciler.RootSyncName),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("ServiceAccount diff %s", diff)
+	}
+
+	// compare Deployment.
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Resources successfully created")
+
+	// Test updating RootSync resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the root sync request, got error: %v", err)

@@ -7,6 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,14 +81,23 @@ func (r *reconcilerBase) upsertConfigMaps(ctx context.Context, mutations []confi
 	return hash(configMapData)
 }
 
-func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, refs ...metav1.OwnerReference) error {
+func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, email string, refs ...metav1.OwnerReference) error {
 	var childSA corev1.ServiceAccount
 	childSA.Name = name
 	childSA.Namespace = v1.NSConfigManagementSystem
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childSA, func() error {
+		// Update ownerRefs for RootSync ServiceAccount.
+		// Do not set ownerRefs for RepoSync ServiceAccount, since Reconciler Manager,
+		// performs garbage collection for Reposync controller resources.
 		if len(refs) > 0 {
 			childSA.OwnerReferences = refs
+		}
+		// Update annotation when Workload Identity is enabled on a GKE cluster.
+		// In case, Workload Identity is not enabled on a cluster and spec.git.auth: gcpserviceaccount,
+		// the added annotation will be a no-op.
+		if auth == v1alpha1.GitSecretGCPServiceAccount {
+			core.SetAnnotation(&childSA, v1alpha1.GCPSAAnnotationKey, email)
 		}
 		return nil
 	})
@@ -99,7 +110,7 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name string, 
 	return nil
 }
 
-type mutateFn func(*appsv1.Deployment) error
+type mutateFn func(client.Object) error
 
 func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, f mutateFn) (controllerutil.OperationResult, error) {
 	var childDep appsv1.Deployment
@@ -110,42 +121,42 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 	childDep.Name = name
 	childDep.Namespace = namespace
 
-	return r.createOrPatchDeployment(ctx, &childDep, f)
+	return r.createOrPatchResource(ctx, &childDep, f)
 }
 
-// createOrPatchDeployment() first call Get() on the deployment. If the
+// createOrPatchResource() first call Get() on the object. If the
 // object does not exist, Create() will be called. If it does exist, Patch()
 // will be called.
-func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, dep *appsv1.Deployment, mutateDeployment mutateFn) (controllerutil.OperationResult, error) {
-	key := client.ObjectKeyFromObject(dep)
+func (r *reconcilerBase) createOrPatchResource(ctx context.Context, obj client.Object, mutateObject mutateFn) (controllerutil.OperationResult, error) {
+	key := client.ObjectKeyFromObject(obj)
 
-	if err := r.client.Get(ctx, key, dep); err != nil {
+	if err := r.client.Get(ctx, key, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return controllerutil.OperationResultNone, err
 		}
-		r.log.Info("Deployment not found, creating one", "namespace/name", key.String())
-		if err := mutateDeployment(dep); err != nil {
+		r.log.Info("Resource not found, creating one", "Resource", obj.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		if err := mutateObject(obj); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
 
-		if err := r.client.Create(ctx, dep); err != nil {
+		if err := r.client.Create(ctx, obj); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
 		return controllerutil.OperationResultCreated, nil
 	}
 
-	existing := dep.DeepCopy()
+	existing := obj.DeepCopyObject()
 	patch := client.MergeFrom(existing)
 
-	if err := mutateDeployment(dep); err != nil {
+	if err := mutateObject(obj); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
 
-	if reflect.DeepEqual(existing, dep) {
+	if reflect.DeepEqual(existing, obj) {
 		return controllerutil.OperationResultNone, nil
 	}
 
-	if err := r.client.Patch(ctx, dep, patch); err != nil {
+	if err := r.client.Patch(ctx, obj, patch); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
 
