@@ -204,6 +204,7 @@ func (m *Manager) runWatcher(ctx context.Context, r Runnable, gvk schema.GroupVe
 		glog.Warningf("Error running watcher for %s: %v", gvk.String(), status.FormatSingleLine(err))
 		m.mux.Lock()
 		delete(m.watcherMap, gvk)
+		metrics.RecordWatches(ctx, gvk, -1)
 		m.needsUpdate = true
 		m.mux.Unlock()
 	}
