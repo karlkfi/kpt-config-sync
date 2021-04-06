@@ -47,6 +47,9 @@ func NewRestConfig(timeout time.Duration) (*rest.Config, error) {
 			// The defaults are too low. It is probably safe to increase these if
 			// we see problems in the future or need to accommodate VERY large numbers
 			// of resources.
+			//
+			// config.QPS does not apply to WATCH requests. Currently, there is no client-side
+			// or server-side rate-limiting for WATCH requests.
 			config.QPS = 20
 			config.Burst = 40
 			config.Timeout = timeout
