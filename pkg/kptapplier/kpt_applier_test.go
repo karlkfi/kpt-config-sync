@@ -66,7 +66,7 @@ func TestSync(t *testing.T) {
 				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
 				formApplyEvent(event.ApplyEventCompleted, nil, nil),
 			},
-			multiErr: ApplierError(errors.New("unknown type")),
+			multiErr: ApplierErrorForResource(errors.New("unknown type"), idFrom(*fakeID())),
 			gvks:     map[schema.GroupVersionKind]struct{}{kinds.Deployment(): {}},
 		},
 		{
@@ -87,7 +87,7 @@ func TestSync(t *testing.T) {
 				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
 				formApplyEvent(event.ApplyEventCompleted, nil, nil),
 			},
-			multiErr: ApplierError(errors.New("failed apply")),
+			multiErr: ApplierErrorForResource(errors.New("failed apply"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},
@@ -99,7 +99,7 @@ func TestSync(t *testing.T) {
 				formPruneEvent(event.PruneEventFailed, event.Pruned, fakeID(), errors.New("failed pruning")),
 				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
 			},
-			multiErr: ApplierError(errors.New("failed pruning")),
+			multiErr: ApplierErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},
@@ -141,7 +141,7 @@ func TestSync(t *testing.T) {
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 			},
-			multiErr: status.Append(ApplierError(errors.New("failed pruning")), ApplierError(errors.New("failed apply"))),
+			multiErr: status.Append(ApplierErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())), ApplierErrorForResource(errors.New("failed apply"), idFrom(*fakeID()))),
 		},
 	}
 

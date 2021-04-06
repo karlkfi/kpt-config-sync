@@ -100,12 +100,12 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 		switch e.Error.(type) {
 		case *applyerror.UnknownTypeError:
 			unknownTypeResources[id] = struct{}{}
-			return ApplierError(e.Error)
+			return ApplierErrorForResource(e.Error, id)
 		case *inventory.InventoryOverlapError:
 			return ManagementConflictError(cache[id])
 		default:
 			// The default case covers other reason for failed applying a resource.
-			return ApplierError(e.Error)
+			return ApplierErrorForResource(e.Error, id)
 		}
 	}
 
@@ -121,8 +121,9 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 
 func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats) status.Error {
 	if e.Error != nil {
+		id := idFrom(e.Identifier)
 		stats.errCount++
-		return ApplierError(e.Error)
+		return ApplierErrorForResource(e.Error, id)
 	}
 
 	if e.Type != event.PruneEventResourceUpdate {
