@@ -186,13 +186,19 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 			break
 		}
 
-		glog.V(2).Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
+		eventCount := 0
+		ignoredEventCount := 0
+		glog.Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
 		for event := range w.base.ResultChan() {
 			w.pruneErrors()
-			newVersion, err := w.handle(ctx, event)
+			newVersion, ignoreEvent, err := w.handle(ctx, event)
+			eventCount++
+			if ignoreEvent {
+				ignoredEventCount++
+			}
 			if err != nil {
 				if isExpiredError(err) {
-					glog.V(2).Infof("Watch for %s at resource version %q closed with: %v", w.gvk, resourceVersion, err)
+					glog.Infof("Watch for %s at resource version %q closed with: %v", w.gvk, resourceVersion, err)
 					// `w.handle` may fail because we try to watch an old resource version, setting
 					// a watch on an old resource version will always fail.
 					// Reset `resourceVersion` to an empty string here so that we can start a new
@@ -211,7 +217,8 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 				resourceVersion = newVersion
 			}
 		}
-		glog.V(2).Infof("Ending watch for %s at resource version %q", w.gvk, resourceVersion)
+		glog.Infof("Ending watch for %s at resource version %q (total events: %d, ignored events: %d)",
+			w.gvk, resourceVersion, eventCount, ignoredEventCount)
 	}
 	glog.Infof("Watch stopped for %s", w.gvk)
 	return nil
@@ -271,9 +278,10 @@ func errorID(err error) string {
 // filters the event and pushes the object contained
 // in the event to the controller work queue.
 //
-// handle returns the new resource version, and an error indicating that
-// an a watch.Error event type is encounted and the watch should be restarted.
-func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string, error) {
+// handle returns the new resource version, whether the event should be ignored,
+// and an error indicating that an a watch.Error event type is encounted and the
+// watch should be restarted.
+func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string, bool, error) {
 	var deleted bool
 	switch event.Type {
 	case watch.Added, watch.Modified:
@@ -288,17 +296,17 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 			if w.addError(watchEventBookmarkType) {
 				glog.Errorf("Unable to access metadata of Bookmark event: %v", event)
 			}
-			return "", nil
+			return "", false, nil
 		}
-		return m.GetResourceVersion(), nil
+		return m.GetResourceVersion(), false, nil
 	case watch.Error:
-		return "", apierrors.FromObject(event.Object)
+		return "", false, apierrors.FromObject(event.Object)
 	// Keep the default case to catch any new watch event types added in the future.
 	default:
 		if w.addError(watchEventUnsupportedType) {
 			glog.Errorf("Unsupported watch event: %#v", event)
 		}
-		return "", nil
+		return "", false, nil
 	}
 
 	// get client.Object from the runtime object.
@@ -306,12 +314,12 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 	if !ok {
 		glog.Warningf("Received non client.Object in watch event: %T", object)
 		metrics.RecordInternalError(ctx, "remediator")
-		return "", nil
+		return "", false, nil
 	}
 	// filter objects.
 	if !w.shouldProcess(object) {
 		glog.V(4).Infof("Ignoring event for object: %v", object)
-		return object.GetResourceVersion(), nil
+		return object.GetResourceVersion(), true, nil
 	}
 
 	if deleted {
@@ -323,7 +331,7 @@ func (w *filteredWatcher) handle(ctx context.Context, event watch.Event) (string
 
 	glog.V(3).Infof("Received object: %v", object)
 	w.queue.Add(object)
-	return object.GetResourceVersion(), nil
+	return object.GetResourceVersion(), false, nil
 }
 
 // shouldProcess returns true if the given object should be enqueued by the
