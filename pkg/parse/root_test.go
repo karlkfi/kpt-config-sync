@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -246,7 +245,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 		{
 			name: "single reconciler error in sync component",
 			applyErrors: []status.Error{
-				applier.FailedToListResources(errors.New("sync error")),
+				kptapplier.ApplierError(errors.New("sync error")),
 			},
 			wantMetrics: []*view.Row{
 				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
@@ -255,7 +254,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 		{
 			name: "multiple reconciler errors in sync component",
 			applyErrors: []status.Error{
-				applier.FailedToListResources(errors.New("sync error")),
+				kptapplier.ApplierError(errors.New("sync error")),
 				status.InternalError("internal error"),
 			},
 			wantMetrics: []*view.Row{
