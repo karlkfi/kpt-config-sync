@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	"context"
@@ -83,14 +83,14 @@ func (cs *clientSet) handleDisabledObjects(ctx context.Context, rg *live.Invento
 	var disabledCount uint64
 	err := cs.removeFromInventory(rg, objs)
 	if err != nil {
-		return disabledCount, ApplierError(err)
+		return disabledCount, Error(err)
 	}
 	var errs status.MultiError
 	for _, obj := range objs {
 		err := cs.disableObject(ctx, obj)
 		if err != nil {
 			glog.Warningf("failed to disable object %v", core.IDOf(obj))
-			errs = status.Append(errs, ApplierError(err))
+			errs = status.Append(errs, Error(err))
 		} else {
 			glog.V(4).Infof("disabled object %v", core.IDOf(obj))
 			disabledCount++

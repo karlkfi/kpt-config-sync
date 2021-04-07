@@ -7,7 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/kptapplier"
+	"github.com/google/nomos/pkg/applier"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -59,7 +59,7 @@ func fromConfigSync(req admission.Request) (bool, error) {
 		return false, err
 	}
 
-	hasInventoryLabel := labels[common.InventoryLabel] == kptapplier.InventoryID(namespace)
+	hasInventoryLabel := labels[common.InventoryLabel] == applier.InventoryID(namespace)
 
 	if namespace == configsync.ControllerNamespace {
 		return name == v1alpha1.RootSyncName && hasInventoryLabel, nil

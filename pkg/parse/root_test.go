@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -16,7 +17,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -77,7 +77,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
-					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(applier.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
 				fake.Role(core.Namespace("foo"),
@@ -88,7 +88,7 @@ func TestRoot_Parse(t *testing.T) {
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
 					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
-					core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(applier.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
 					difftest.ManagedByRoot,
 				),
 			},
@@ -245,7 +245,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 		{
 			name: "single reconciler error in sync component",
 			applyErrors: []status.Error{
-				kptapplier.ApplierError(errors.New("sync error")),
+				applier.Error(errors.New("sync error")),
 			},
 			wantMetrics: []*view.Row{
 				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
@@ -254,7 +254,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 		{
 			name: "multiple reconciler errors in sync component",
 			applyErrors: []status.Error{
-				kptapplier.ApplierError(errors.New("sync error")),
+				applier.Error(errors.New("sync error")),
 				status.InternalError("internal error"),
 			},
 			wantMetrics: []*view.Row{

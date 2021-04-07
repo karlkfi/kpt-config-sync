@@ -7,10 +7,10 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
@@ -135,7 +135,7 @@ func isConfigSyncAnnotation(annotation string) bool {
 	return annotation == common.LifecycleDeleteAnnotation ||
 		strings.Contains(annotation, v1.ConfigManagementPrefix) ||
 		strings.Contains(annotation, v1alpha1.ConfigSyncPrefix) ||
-		annotation == kptapplier.OwningInventoryKey ||
+		annotation == applier.OwningInventoryKey ||
 		annotation == hnc.AnnotationKeyV1A2
 }
 

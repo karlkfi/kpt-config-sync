@@ -7,12 +7,12 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/remediator/watch"
@@ -119,11 +119,11 @@ func Run(opts Options) {
 		glog.Fatalf("Instantiating Applier: %v", err)
 	}
 
-	var a *kptapplier.Applier
+	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a = kptapplier.NewRootApplier(cl)
+		a = applier.NewRootApplier(cl)
 	} else {
-		a = kptapplier.NewNamespaceApplier(cl, opts.ReconcilerScope)
+		a = applier.NewNamespaceApplier(cl, opts.ReconcilerScope)
 	}
 
 	// Configure the Remediator.

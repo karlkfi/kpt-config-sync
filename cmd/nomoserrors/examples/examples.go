@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
@@ -23,7 +24,6 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -276,7 +276,7 @@ func Generate() AllExamples {
 	result.markDeprecated("1059")
 
 	// 1060
-	result.add(kptapplier.ManagementConflictError(fake.Role()))
+	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
 	result.add(nonhierarchical.InvalidRepoSyncName(fake.RepoSyncObject(core.Name("invalid"))))
@@ -329,7 +329,7 @@ func Generate() AllExamples {
 	result.add(client.ConflictUpdateDoesNotExist(errors.New("does not exist"), fake.RoleObject()))
 
 	// 2009
-	result.add(kptapplier.ApplierError(errors.New("failed to initialize an error")))
+	result.add(applier.Error(errors.New("failed to initialize an error")))
 
 	// 2010
 	result.add(status.ResourceWrap(errors.New("specific problem with resource"), "general message", fake.Role()))

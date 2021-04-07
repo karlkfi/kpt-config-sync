@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	"testing"

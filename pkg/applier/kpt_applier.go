@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	"context"
@@ -100,12 +100,12 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 		switch e.Error.(type) {
 		case *applyerror.UnknownTypeError:
 			unknownTypeResources[id] = struct{}{}
-			return ApplierErrorForResource(e.Error, id)
+			return ErrorForResource(e.Error, id)
 		case *inventory.InventoryOverlapError:
 			return ManagementConflictError(cache[id])
 		default:
 			// The default case covers other reason for failed applying a resource.
-			return ApplierErrorForResource(e.Error, id)
+			return ErrorForResource(e.Error, id)
 		}
 	}
 
@@ -123,7 +123,7 @@ func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEven
 	if e.Error != nil {
 		id := idFrom(e.Identifier)
 		stats.errCount++
-		return ApplierErrorForResource(e.Error, id)
+		return ErrorForResource(e.Error, id)
 	}
 
 	if e.Type != event.PruneEventResourceUpdate {
@@ -155,7 +155,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	var errs status.MultiError
 	cs, err := a.clientSetFunc(a.client)
 	if err != nil {
-		return nil, ApplierError(err)
+		return nil, Error(err)
 	}
 
 	stats := newApplyStats()
@@ -192,7 +192,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
-			errs = status.Append(errs, ApplierError(e.ErrorEvent.Err))
+			errs = status.Append(errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.ApplyType:
 			errs = status.Append(errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))

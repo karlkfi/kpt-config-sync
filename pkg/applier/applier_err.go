@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	"fmt"
@@ -12,13 +12,13 @@ const ApplierErrorCode = "2009"
 
 var applierErrorBuilder = status.NewErrorBuilder(ApplierErrorCode)
 
-// ApplierError indicates that the applier failed to apply some resources.
-func ApplierError(err error) status.Error {
+// Error indicates that the applier failed to apply some resources.
+func Error(err error) status.Error {
 	return applierErrorBuilder.Wrap(err).Build()
 }
 
-// ApplierErrorForResource indicates that the applier filed to apply
+// ErrorForResource indicates that the applier filed to apply
 // the given resource.
-func ApplierErrorForResource(err error, id core.ID) status.Error {
+func ErrorForResource(err error, id core.ID) status.Error {
 	return applierErrorBuilder.Wrap(fmt.Errorf("failed to apply %v: %w", id, err)).Build()
 }

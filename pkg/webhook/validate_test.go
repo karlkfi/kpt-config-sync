@@ -7,9 +7,9 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/testing/fake"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -307,7 +307,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Name("repo-sync"),
 				core.Namespace("bookstore"),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Label(common.InventoryLabel, kptapplier.InventoryID("bookstore"))),
+				core.Label(common.InventoryLabel, applier.InventoryID("bookstore"))),
 			user: bob(),
 			deny: metav1.StatusReasonUnauthorized,
 		},
@@ -317,7 +317,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Name("repo-sync"),
 				core.Namespace("bookstore"),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Label(common.InventoryLabel, kptapplier.InventoryID("bookstore"))),
+				core.Label(common.InventoryLabel, applier.InventoryID("bookstore"))),
 			user: bob(),
 			deny: metav1.StatusReasonUnauthorized,
 		},
@@ -327,12 +327,12 @@ func TestValidator_Handle(t *testing.T) {
 				core.Name("repo-sync"),
 				core.Namespace("bookstore"),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Label(common.InventoryLabel, kptapplier.InventoryID("bookstore"))),
+				core.Label(common.InventoryLabel, applier.InventoryID("bookstore"))),
 			newObj: fake.ResourceGroupObject(
 				core.Name("repo-sync"),
 				core.Namespace("bookstore"),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Label(common.InventoryLabel, kptapplier.InventoryID("bookstore")),
+				core.Label(common.InventoryLabel, applier.InventoryID("bookstore")),
 				core.Label("acme.com/foo", "bar")),
 			user: bob(),
 			deny: metav1.StatusReasonUnauthorized,

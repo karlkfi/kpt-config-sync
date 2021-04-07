@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/status"
@@ -21,7 +21,7 @@ type updater struct {
 	scope      declared.Scope
 	resources  *declared.Resources
 	remediator remediator.Interface
-	applier    kptapplier.Interface
+	applier    applier.Interface
 }
 
 func (u *updater) needToUpdateWatch() bool {

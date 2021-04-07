@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func TestSync(t *testing.T) {
 		{
 			name:     "applier init error",
 			initErr:  errors.New("init error"),
-			multiErr: ApplierError(errors.New("init error")),
+			multiErr: Error(errors.New("init error")),
 		},
 		{
 			name: "unknown type for some resource",
@@ -66,7 +66,7 @@ func TestSync(t *testing.T) {
 				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
 				formApplyEvent(event.ApplyEventCompleted, nil, nil),
 			},
-			multiErr: ApplierErrorForResource(errors.New("unknown type"), idFrom(*fakeID())),
+			multiErr: ErrorForResource(errors.New("unknown type"), idFrom(*fakeID())),
 			gvks:     map[schema.GroupVersionKind]struct{}{kinds.Deployment(): {}},
 		},
 		{
@@ -87,7 +87,7 @@ func TestSync(t *testing.T) {
 				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
 				formApplyEvent(event.ApplyEventCompleted, nil, nil),
 			},
-			multiErr: ApplierErrorForResource(errors.New("failed apply"), idFrom(*fakeID())),
+			multiErr: ErrorForResource(errors.New("failed apply"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},
@@ -99,7 +99,7 @@ func TestSync(t *testing.T) {
 				formPruneEvent(event.PruneEventFailed, event.Pruned, fakeID(), errors.New("failed pruning")),
 				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
 			},
-			multiErr: ApplierErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())),
+			multiErr: ErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 				fakeKind():         {},
@@ -141,7 +141,7 @@ func TestSync(t *testing.T) {
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
 			},
-			multiErr: status.Append(ApplierErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())), ApplierErrorForResource(errors.New("failed apply"), idFrom(*fakeID()))),
+			multiErr: status.Append(ErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())), ErrorForResource(errors.New("failed apply"), idFrom(*fakeID()))),
 		},
 	}
 

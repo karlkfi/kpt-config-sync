@@ -6,9 +6,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/kptapplier"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -40,7 +40,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				core.Annotation(v1alpha1.ResourceManagerKey, "some-namespace"),
 				core.Annotation(v1.SyncTokenAnnotationKey, "1234567"),
 				core.Annotation(v1alpha1.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
-				core.Annotation(kptapplier.OwningInventoryKey, kptapplier.InventoryID("some-namespace")),
+				core.Annotation(applier.OwningInventoryKey, applier.InventoryID("some-namespace")),
 			)},
 		},
 	}

@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"

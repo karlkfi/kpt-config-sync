@@ -1,4 +1,4 @@
-package kptapplier
+package applier
 
 /*
 Package applier is a component of a reconcile process (RP),
