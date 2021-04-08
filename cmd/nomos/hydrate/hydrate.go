@@ -112,7 +112,7 @@ clusters.`,
 		}
 		parser := filesystem.NewParser(&reader.File{})
 
-		crds, err := parse.GetSyncedCRDs(cmd.Context())
+		crds, err := parse.GetSyncedCRDs(cmd.Context(), flags.SkipAPIServer)
 		if err != nil {
 			return err
 		}

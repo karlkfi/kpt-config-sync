@@ -13,7 +13,7 @@ func TestNomosInitVet(t *testing.T) {
 	//
 	// 1) git init
 	// 2) nomos init
-	// 3) nomos vet
+	// 3) nomos vet --no-api-server-check
 	tmpDir := nomostest.TestDir(t)
 
 	out, err := exec.Command("git", "init", tmpDir).CombinedOutput()
@@ -29,6 +29,33 @@ func TestNomosInitVet(t *testing.T) {
 	}
 
 	out, err = exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
+	if err != nil {
+		t.Log(string(out))
+		t.Error(err)
+	}
+}
+
+func TestNomosInitHydrate(t *testing.T) {
+	// Ensure that the following sequence of commands succeeds:
+	//
+	// 1) git init
+	// 2) nomos init
+	// 3) nomos hydrate --no-api-server-check
+	tmpDir := nomostest.TestDir(t)
+
+	out, err := exec.Command("git", "init", tmpDir).CombinedOutput()
+	if err != nil {
+		t.Log(string(out))
+		t.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "init", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
+	if err != nil {
+		t.Log(string(out))
+		t.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "hydrate", "--no-api-server-check", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
 	if err != nil {
 		t.Log(string(out))
 		t.Error(err)

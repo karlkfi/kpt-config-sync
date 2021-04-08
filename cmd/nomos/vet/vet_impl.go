@@ -21,7 +21,6 @@ import (
 	"github.com/google/nomos/pkg/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // vet runs nomos vet with the specified options.
@@ -70,12 +69,9 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		}
 	}
 
-	var syncedCRDs []*v1beta1.CustomResourceDefinition
-	if !skipAPIServer {
-		syncedCRDs, err = nomosparse.GetSyncedCRDs(ctx)
-		if err != nil {
-			return err
-		}
+	syncedCRDs, err := nomosparse.GetSyncedCRDs(ctx, skipAPIServer)
+	if err != nil {
+		return err
 	}
 
 	var converter *declared.ValueConverter
