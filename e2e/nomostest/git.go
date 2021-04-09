@@ -212,6 +212,20 @@ func (g *Repository) AddFile(path string, bytes []byte) {
 	g.Git("add", absPath)
 }
 
+// CopyDirectory copies the directory from source to destination.
+// Overwrites the directory if it already exists.
+// Does not commit/push.
+func (g *Repository) CopyDirectory(sourceDir, destDir string) {
+	g.T.Helper()
+
+	absDestPath := filepath.Join(g.Root, destDir)
+	if _, err := exec.Command("cp", "-r", sourceDir, absDestPath).CombinedOutput(); err != nil {
+		g.T.Fatal(err)
+	}
+	// Add the directory to Git.
+	g.Git("add", absDestPath)
+}
+
 // Remove deletes `file` from the git repository.
 // If `file` is a directory, deletes the directory.
 // Returns error if the file does not exist.
@@ -221,7 +235,7 @@ func (g *Repository) Remove(path string) {
 
 	absPath := filepath.Join(g.Root, path)
 
-	err := os.Remove(absPath)
+	err := os.RemoveAll(absPath)
 	if err != nil {
 		g.T.Fatal(err)
 	}

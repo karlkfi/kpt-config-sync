@@ -174,7 +174,8 @@ func TestBats(t *testing.T) {
 	// Once CSMR is the only implementation we ship, the skipped tests that are specific to legacy can be removed, and
 	// all the skips can be removed.
 	testCases := []*BatsTest{
-		{fileName: "acme.bats"},
+		// Converted to acme_test.go.
+		//{fileName: "acme.bats"},
 		{fileName: "apiservice.bats"},
 		{
 			fileName: "basic.bats",

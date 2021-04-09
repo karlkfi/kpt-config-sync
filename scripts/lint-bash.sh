@@ -4,7 +4,6 @@ set -euo pipefail
 
 # bats tests aren't really bash, so exclude them.
 readonly exclude_bats=(
-  e2e/testcases/acme.bats
   e2e/testcases/basic.bats
   e2e/testcases/cluster_resources.bats
   e2e/testcases/namespaces.bats
