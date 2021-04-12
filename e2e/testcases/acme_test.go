@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/pkg/testing/fake"
 
@@ -39,24 +40,6 @@ func TestAcmeCorpRepo(t *testing.T) {
 	nt.Root.CopyDirectory("../../examples/acme", ".")
 	nt.Root.CommitAndPush("Initialize the acme directory")
 	nt.WaitForRepoSyncs()
-
-	// creates a proxy server or application-level gateway between localhost and the Kubernetes API Server
-	cmd := exec.Command("kubectl", "proxy", "--kubeconfig", nt.KubeconfigPath()) //nolint:staticcheck
-	stdout := &strings.Builder{}
-	stderr := &strings.Builder{}
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	err := cmd.Start()
-	if err != nil || stderr.Len() != 0 {
-		nt.T.Fatal(err)
-	}
-	nt.T.Cleanup(func() {
-		err := cmd.Process.Kill()
-		if err != nil {
-			nt.T.Errorf("killing port forward process: %v", err)
-		}
-	})
 
 	checkResourceCount(nt, kinds.Namespace(), "", len(nsToFolder), nil, configSyncManagementAnnotations)
 	for namespace, folder := range nsToFolder {
@@ -176,7 +159,7 @@ func TestAcmeCorpRepo(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	checkMetricsPages(nt, "git-importer")
+	checkLegacyMetricsPages(nt)
 
 	// gracefully delete cluster-scoped resources to pass the safety check (KNV2006).
 	nt.Root.Remove("acme/cluster")
@@ -240,13 +223,41 @@ func containsSubMap(m1, m2 map[string]string) bool {
 	return true
 }
 
-func checkMetricsPages(nt *nomostest.NT, service string) {
-	out, err := exec.Command("curl", "-s", fmt.Sprintf("%s/%s:%s/threads", baseURL, service, port)).CombinedOutput()
-	if err != nil {
-		nt.T.Fatalf("Failed to scrape %s /threads: %s", service, string(out))
+func checkLegacyMetricsPages(nt *nomostest.NT) {
+	if nt.MultiRepo {
+		return
 	}
-	out, err = exec.Command("curl", "-s", fmt.Sprintf("%s/%s:%s/metrics", baseURL, service, port)).CombinedOutput()
+	// creates a proxy server or application-level gateway between localhost and the Kubernetes API Server
+	cmd := exec.Command("kubectl", "proxy", "--kubeconfig", nt.KubeconfigPath()) //nolint:staticcheck
+	stdout := &strings.Builder{}
+	stderr := &strings.Builder{}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Start()
+	if err != nil || stderr.Len() != 0 {
+		nt.T.Fatal(err)
+	}
+	nt.T.Cleanup(func() {
+		err := cmd.Process.Kill()
+		if err != nil {
+			nt.T.Errorf("killing port forward process: %v", err)
+		}
+	})
+
+	service := "git-importer"
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		out, err := exec.Command("curl", "-s", fmt.Sprintf("%s/%s:%s/threads", baseURL, service, port)).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to scrape %s /threads %v %s", service, err, string(out))
+		}
+		out, err = exec.Command("curl", "-s", fmt.Sprintf("%s/%s:%s/metrics", baseURL, service, port)).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to scrape %s /metrics %v %s", service, err, string(out))
+		}
+		return nil
+	})
 	if err != nil {
-		nt.T.Fatalf("Failed to scrape %s /metrics: %s", service, string(out))
+		nt.T.Fatal(err)
 	}
 }
