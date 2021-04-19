@@ -17,6 +17,7 @@ func SyncedAt(obj client.Object, token string) {
 // enableManagement marks the resource as Nomos-managed.
 func enableManagement(obj client.Object) {
 	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	core.SetAnnotation(obj, v1beta1.ResourceIDKey, core.GKNN(obj))
 	core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 }
 

@@ -111,20 +111,6 @@ test_teardown() {
   [[ "${labelValue}" == "null" ]] || debug::error "managed-by annotation not removed"
 }
 
-@test "${FILE_NAME}: Namespace with invalid management annotation cleaned" {
-  local validns=valid-annotation
-  local invalidns=invalid-annotation
-
-  namespace::declare $validns -l "testdata=true"
-  namespace::create $invalidns -a "configmanagement.gke.io/managed=a-garbage-annotation"
-  git::commit
-
-  wait::for -t 30 -- namespace::check_exists $validns -a "configmanagement.gke.io/managed=enabled"
-  namespace::check_exists $invalidns
-  managedValue=$(kubectl get ns $invalidns -ojson | jq '.metadata.annotations."configmanagement.gke.io/managed"')
-  [[ "${managedValue}" == "null" ]] || debug::error "invalid management annotation not removed"
-}
-
 @test "${FILE_NAME}: sync labels and annotations on kube-system namespace" {
   debug::log "Managing kube-system ns"
   namespace::declare "kube-system" \

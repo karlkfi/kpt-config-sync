@@ -22,6 +22,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// commonAnnotationKeys include the annotation keys used in both the mono-repo and multi-repo mode.
+var commonAnnotationKeys []string = []string{
+	v1.ClusterNameAnnotationKey,
+	v1.ResourceManagementKey,
+	v1.SourcePathAnnotationKey,
+	v1.SyncTokenAnnotationKey,
+	v1beta1.DeclaredFieldsKey,
+	v1beta1.ResourceIDKey,
+}
+
+// multiRepoOnlyAnnotationKeys include the annotation keys used only in the multi-repo mode.
+var multiRepoOnlyAnnotationKeys []string = []string{
+	v1beta1.GitContextKey,
+	v1beta1.ResourceManagerKey,
+	applier.OwningInventoryKey,
+}
+
 func TestPreserveGeneratedServiceFields(t *testing.T) {
 	nt := nomostest.New(t)
 
@@ -257,15 +274,9 @@ func TestPreserveLastApplied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	annotationKeys := []string{
-		v1.ClusterNameAnnotationKey,
-		v1.ResourceManagementKey,
-		v1.SourcePathAnnotationKey,
-		v1.SyncTokenAnnotationKey,
-		v1beta1.DeclaredFieldsKey,
-	}
+	annotationKeys := commonAnnotationKeys
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1beta1.GitContextKey, v1beta1.ResourceManagerKey, applier.OwningInventoryKey, v1beta1.ResourceIDKey)
+		annotationKeys = append(commonAnnotationKeys, multiRepoOnlyAnnotationKeys...)
 	}
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
@@ -392,15 +403,9 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSyncs()
 
-	annotationKeys := []string{
-		v1.ClusterNameAnnotationKey,
-		v1.ResourceManagementKey,
-		v1.SourcePathAnnotationKey,
-		v1.SyncTokenAnnotationKey,
-		v1beta1.DeclaredFieldsKey,
-	}
+	annotationKeys := commonAnnotationKeys
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1beta1.GitContextKey, v1beta1.ResourceManagerKey, applier.OwningInventoryKey, v1beta1.ResourceIDKey)
+		annotationKeys = append(commonAnnotationKeys, multiRepoOnlyAnnotationKeys...)
 	}
 
 	// Checking that the configmap with no annotations appears on cluster, and

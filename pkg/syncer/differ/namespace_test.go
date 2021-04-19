@@ -26,6 +26,7 @@ func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
 var (
 	disableManaged    = syncertest.ManagementDisabled
 	managementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
+	managementEmpty   = core.Annotation(v1.ResourceManagementKey, "")
 	preventDeletion   = core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)
 )
 
@@ -99,9 +100,19 @@ func TestNamespaceDiffType(t *testing.T) {
 			expectType: NoOp,
 		},
 		{
-			name:       "in cluster only, remove invalid management",
+			name:       "in cluster only, the `configmanagement.gke.io/managed` annotation is set to empty",
+			actual:     fake.NamespaceObject("foo", managementEmpty),
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, has an invalid `configmanagement.gke.io/managed` annotation",
 			actual:     fake.NamespaceObject("foo", managementInvalid),
-			expectType: Unmanage,
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, has an invalid `configmanagement.gke.io/managed` and other nomos metatdatas",
+			actual:     fake.NamespaceObject("foo", managementInvalid, syncertest.TokenAnnotation),
+			expectType: NoOp,
 		},
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,6 +29,19 @@ func name(s string) func(*unstructured.Unstructured) {
 func managed(s string) func(*unstructured.Unstructured) {
 	return func(u *unstructured.Unstructured) {
 		core.SetAnnotation(u, v1.ResourceManagementKey, s)
+	}
+}
+
+func managedByConfigSync() func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		core.SetAnnotation(u, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		core.SetAnnotation(u, v1beta1.ResourceIDKey, core.GKNN(u))
+	}
+}
+
+func tokenAnnotation(s string) func(*unstructured.Unstructured) {
+	return func(u *unstructured.Unstructured) {
+		core.SetAnnotation(u, v1.SyncTokenAnnotationKey, s)
 	}
 }
 
@@ -91,6 +105,12 @@ func TestDiffType(t *testing.T) {
 			expectType: Update,
 		},
 		{
+			name:       "in both (the actual resource has no nomos metadata), update",
+			declared:   buildUnstructured(),
+			actual:     buildUnstructured(),
+			expectType: Update,
+		},
+		{
 			name:       "in both, management disabled unmanage",
 			declared:   buildUnstructured(managed(v1.ResourceManagementDisabled)),
 			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled)),
@@ -103,8 +123,13 @@ func TestDiffType(t *testing.T) {
 			expectType: NoOp,
 		},
 		{
-			name:       "delete",
+			name:       "in cluster only, does not have the `configsync.gke.io./resource-id` annotation",
 			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled)),
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, delete a resource managed by Config Sync",
+			actual:     buildUnstructured(managedByConfigSync()),
 			expectType: Delete,
 		},
 		{
@@ -113,23 +138,33 @@ func TestDiffType(t *testing.T) {
 			expectType: NoOp,
 		},
 		{
-			name:       "in cluster only, remove invalid empty string",
-			actual:     buildUnstructured(managed("")),
-			expectType: Unmanage,
+			name:       "in cluster only, has the `configmanagement.gke.io/token` annotation, but is not managed by Config Sync",
+			actual:     buildUnstructured(tokenAnnotation("token1")),
+			expectType: NoOp,
 		},
 		{
-			name:       "in cluster only, remove invalid annotation",
+			name:       "in cluster only, the `configmanagement.gke.io/managed` annotation is empty",
+			actual:     buildUnstructured(managed("")),
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, has an invalid `configmanagement.gke.io/managed` annotation",
 			actual:     buildUnstructured(managed("invalid")),
-			expectType: Unmanage,
+			expectType: NoOp,
+		},
+		{
+			name:       "in cluster only, has an invalid `configmanagement.gke.io/managed`  and other nomos metatdatas",
+			actual:     buildUnstructured(managed("invalid"), tokenAnnotation("token1")),
+			expectType: NoOp,
 		},
 		{
 			name:       "in cluster only and owned, do nothing",
-			actual:     buildUnstructured(managed(v1.ResourceManagementEnabled), owned()),
+			actual:     buildUnstructured(managedByConfigSync(), owned()),
 			expectType: NoOp,
 		},
 		{
 			name: "in cluster only and owned and prevent deletion, unmanage",
-			actual: buildUnstructured(managed(v1.ResourceManagementEnabled), owned(),
+			actual: buildUnstructured(managedByConfigSync(), owned(),
 				preventDeletionUnstructured()),
 			expectType: NoOp,
 		},
@@ -165,9 +200,9 @@ func TestMultipleDifftypes(t *testing.T) {
 			expectTypes: map[string]Type{},
 		},
 		{
-			name: "not declared and in actual and management enabled, but in different version returns no diff",
+			name: "not declared and in actual and managed by Config Sync, but in different version returns no diff",
 			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("foo"), managed(v1.ResourceManagementEnabled)),
+				buildUnstructured(name("foo"), managedByConfigSync()),
 			},
 			allDeclaredVersions: map[string]bool{"foo": true},
 			expect:              map[string]*Diff{},
@@ -181,9 +216,10 @@ func TestMultipleDifftypes(t *testing.T) {
 				buildUnstructured(name("qux"), managed(v1.ResourceManagementDisabled)),
 			},
 			actuals: []*unstructured.Unstructured{
-				buildUnstructured(name("bar"), managed(v1.ResourceManagementEnabled)),
+				buildUnstructured(name("bar"), managedByConfigSync()),
 				buildUnstructured(name("qux")),
-				buildUnstructured(name("mun"), managed(v1.ResourceManagementEnabled)),
+				buildUnstructured(name("mun"), managedByConfigSync()),
+				buildUnstructured(name("mun-not-managed-by-ConfigSync")),
 			},
 			allDeclaredVersions: map[string]bool{
 				"foo": true, "bar": true, "qux": true,
@@ -196,7 +232,7 @@ func TestMultipleDifftypes(t *testing.T) {
 				"bar": {
 					Name:     "bar",
 					Declared: buildUnstructured(name("bar")),
-					Actual:   buildUnstructured(name("bar"), managed(v1.ResourceManagementEnabled)),
+					Actual:   buildUnstructured(name("bar"), managedByConfigSync()),
 				},
 				"qux": {
 					Name:     "qux",
@@ -205,14 +241,19 @@ func TestMultipleDifftypes(t *testing.T) {
 				},
 				"mun": {
 					Name:   "mun",
-					Actual: buildUnstructured(name("mun"), managed(v1.ResourceManagementEnabled)),
+					Actual: buildUnstructured(name("mun"), managedByConfigSync()),
+				},
+				"mun-not-managed-by-ConfigSync": {
+					Name:   "mun-not-managed-by-ConfigSync",
+					Actual: buildUnstructured(name("mun-not-managed-by-ConfigSync")),
 				},
 			},
 			expectTypes: map[string]Type{
-				"foo": Create,
-				"bar": Update,
-				"qux": NoOp,
-				"mun": Delete,
+				"foo":                           Create,
+				"bar":                           Update,
+				"qux":                           NoOp,
+				"mun":                           Delete,
+				"mun-not-managed-by-ConfigSync": NoOp,
 			},
 		},
 		{

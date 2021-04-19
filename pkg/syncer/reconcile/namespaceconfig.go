@@ -364,6 +364,7 @@ func newSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementErro
 
 func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	namespace := &corev1.Namespace{}
+	namespace.Name = namespaceConfig.Name
 	namespace.SetGroupVersionKind(kinds.Namespace())
 
 	for k, v := range namespaceConfig.Labels {
@@ -375,9 +376,6 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 	}
 	enableManagement(namespace)
 	core.SetAnnotation(namespace, v1.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
-
-	namespace.Name = namespaceConfig.Name
-	namespace.SetGroupVersionKind(kinds.Namespace())
 	return namespace
 }
 

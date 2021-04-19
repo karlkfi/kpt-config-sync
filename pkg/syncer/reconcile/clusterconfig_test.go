@@ -171,15 +171,13 @@ func TestClusterConfigReconcile(t *testing.T) {
 			},
 		},
 		// There is no declared state, just an invalid annotation.
-		// This was most likely put there by a user, so remove it.
 		{
 			name:   "unmanage if invalid",
 			actual: persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertest.ManagementInvalid),
 			want: []client.Object{
 				clusterCfgSynced,
-				persistentVolume(corev1.PersistentVolumeReclaimDelete),
+				persistentVolume(corev1.PersistentVolumeReclaimDelete, syncertest.ManagementInvalid),
 			},
-			wantEvent: clusterReconcileComplete,
 		},
 		{
 			name: "resource with owner reference is ignored",

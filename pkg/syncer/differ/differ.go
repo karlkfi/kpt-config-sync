@@ -101,35 +101,40 @@ func (d Diff) Type() Type {
 			return NoOp
 		}
 
-		if ManagementEnabled(d.Actual) {
-			// There are Nomos annotations or labels on the resource.
-
-			if lifecycle.HasPreventDeletion(d.Actual) {
-				// This object is marked with the lifecycle annotation that says to not
-				// delete it. We should orphan the objects by unmanaging them.
-				if d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
-					// Special case for Namespaces. Not strictly necessary; but here to keep
-					// consistent with namespace.go. Only happens in the Remediator, and
-					// the Remediator doesn't do anything special for Namespaces.
-					return UnmanageNamespace
-				}
-				return Unmanage
-			}
-
-			if IsManageableSystemNamespace(d.Actual) {
-				// Don't delete this Namespace from the cluster; unmanage it.
-
-				// The Syncer never creates a differ.Diff with a Namespace, so this only
-				// happens in the Remediator.
-				return UnmanageNamespace
-			}
-
-			// Delete resource with management enabled on API Server.
-			return Delete
+		// Returns NoOp if d.Actual is not managed by Config Sync.
+		//
+		// A resource having some Nomos annotations/labels may not be
+		// managed by Config Sync, because the annotations may be copied from another controller
+		// managed by Config Sync (see go/config-sync-managed-resources). Config Sync may not
+		// be allowed to unmanage such a resource, if the controller owning the resource
+		// has a webhook to prevent Config Sync from unmanaging the resource (See http://b/185161298
+		// for an example how Hierarchical Controller denies Config Sync unmanaging a resource).
+		if !ManagedByConfigSync(d.Actual) {
+			return NoOp
 		}
 
-		// The actual resource has Nomos artifacts and is explicitly unmanaged.
-		return Unmanage
+		if lifecycle.HasPreventDeletion(d.Actual) {
+			// This object is marked with the lifecycle annotation that says to not
+			// delete it. We should orphan the objects by unmanaging them.
+			if d.Actual.GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() {
+				// Special case for Namespaces. Not strictly necessary; but here to keep
+				// consistent with namespace.go. Only happens in the Remediator, and
+				// the Remediator doesn't do anything special for Namespaces.
+				return UnmanageNamespace
+			}
+			return Unmanage
+		}
+
+		if IsManageableSystemNamespace(d.Actual) {
+			// Don't delete this Namespace from the cluster; unmanage it.
+
+			// The Syncer never creates a differ.Diff with a Namespace, so this only
+			// happens in the Remediator.
+			return UnmanageNamespace
+		}
+
+		// Delete resource managed by Config Sync on API Server.
+		return Delete
 	}
 
 	// The resource is neither on the API Server nor in the repo, so do nothing.

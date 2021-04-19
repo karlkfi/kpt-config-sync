@@ -374,7 +374,7 @@ func (c *Client) Status() client.StatusWriter {
 	}
 }
 
-// Check reports an error to `t` if the passed objects in want do not match the
+// Check reports an error to `t` if the passed objects in wants do not match the
 // expected set of objects in the fake.Client, and only the passed updates to
 // Status fields were recorded.
 func (c *Client) Check(t *testing.T, wants ...client.Object) {

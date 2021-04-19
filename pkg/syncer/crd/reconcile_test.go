@@ -234,19 +234,16 @@ func TestClusterConfigReconcile(t *testing.T) {
 			},
 		},
 		// There is no declared state, just an invalid annotation.
-		// This was most likely put there by a user, so remove it.
 		{
-			name:   "unmanage if invalid",
+			name:   "unmanage noop",
 			actual: customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementInvalid),
 			initialCrds: []schema.GroupVersionKind{
 				{Group: "", Version: v1beta1Version, Kind: ""},
 			},
 			want: []client.Object{
 				clusterCfgSynced,
-				customResourceDefinitionV1Beta1(v1beta1Version),
+				customResourceDefinitionV1Beta1(v1beta1Version, syncertest.ManagementInvalid),
 			},
-			expectEvents:  []testingfake.Event{clusterReconcileComplete},
-			expectRestart: true,
 		},
 		{
 			name: "resource with owner reference is ignored",

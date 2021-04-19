@@ -59,24 +59,14 @@ func (d *NamespaceDiff) Type() Type {
 	}
 
 	// The NamespaceConfig IS NOT in the cluster.
-	if d.Actual != nil {
-		// The Namespace IS on the API Server.
-		if !HasNomosMeta(d.Actual) {
-			// No Nomos annotations or labels, so don't do anything.
-			return NoOp
-		}
-
-		// There are Nomos annotations or labels on the Namespace.
-		if ManagementEnabled(d.Actual) {
-			// This is a strange case to arrive at. A user would have to have a managed namespace,
-			// uninstall Nomos, remove the declaration of the namespace from the repo, then reinstall
-			// Nomos with the actual namespace still present and annotated from when it was managed. We
-			// can't infer the user's intent so we just NoOp.
-			glog.Warningf("Ignoring Namespace %q which has management annotations but there is no NamespaceConfig.", d.Name)
-			return NoOp
-		}
-		// The Namespace has Nomos artifacts but is unmanaged, so remove them.
-		return Unmanage
+	if d.Actual != nil && ManagedByConfigSync(d.Actual) {
+		// d.Actual is managed by Config Sync.
+		//
+		// This is a strange case to arrive at. A user would have to have a managed namespace,
+		// uninstall Nomos, remove the declaration of the namespace from the repo, then reinstall
+		// Nomos with the actual namespace still present and annotated from when it was managed. We
+		// can't infer the user's intent so we just NoOp.
+		glog.Warningf("Ignoring Namespace %q which has management annotations but there is no NamespaceConfig.", d.Name)
 	}
 
 	// The Namespace does not exist on the API Server and has no corresponding NamespaceConfig, so do nothing.

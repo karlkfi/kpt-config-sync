@@ -170,15 +170,13 @@ func TestManagedNamespaceConfigReconcile(t *testing.T) {
 			},
 		},
 		// There is no declared state, just an invalid annotation.
-		// This was most likely put there by a user, so remove it.
 		{
-			name:   "unmanage if invalid",
+			name:   "unmanage noop",
 			actual: deployment(appsv1.RecreateDeploymentStrategyType, syncertest.ManagementInvalid),
 			want: []client.Object{
 				namespaceCfgSynced,
-				deployment(appsv1.RecreateDeploymentStrategyType),
+				deployment(appsv1.RecreateDeploymentStrategyType, syncertest.ManagementInvalid),
 			},
-			wantEvent: managedNamespaceReconcileComplete,
 		},
 	}
 
@@ -429,8 +427,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
 					core.Namespace(metav1.NamespaceDefault),
-					syncertest.ManagementEnabled,
-					core.Name("my-deployment")),
+					core.Name("my-deployment"),
+					syncertest.ManagementEnabled),
 				deployment(appsv1.RecreateDeploymentStrategyType,
 					core.Namespace(metav1.NamespaceDefault),
 					core.Name("your-deployment")),
@@ -475,8 +473,8 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 				deployment(
 					appsv1.RecreateDeploymentStrategyType,
 					core.Namespace(metav1.NamespaceSystem),
-					syncertest.ManagementEnabled,
-					core.Name("my-deployment")),
+					core.Name("my-deployment"),
+					syncertest.ManagementEnabled),
 				deployment(appsv1.RecreateDeploymentStrategyType,
 					core.Namespace(metav1.NamespaceSystem),
 					core.Name("your-deployment")),
