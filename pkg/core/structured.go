@@ -5,6 +5,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,6 +27,7 @@ func init() {
 	utilruntime.Must(clusterregistry.AddToScheme(scheme.Scheme))
 	utilruntime.Must(v1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(v1beta1.AddToScheme(scheme.Scheme))
 }
 
 // RemarshalToStructured converts a runtime.Object to the literal Go struct, if
