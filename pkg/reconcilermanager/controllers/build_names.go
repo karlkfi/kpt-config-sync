@@ -16,35 +16,51 @@ func repoSyncResourceName(namespace, resourceName string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), resourceName)
 }
 
+var prefix string = reconciler.RepoSyncPrefix + "-"
+
 // nsOfReconciler return namespace by parsing namespace controller resource name.
 func nsOfReconciler(obj client.Object) string {
 	name := obj.GetName()
-	prefix := reconciler.RepoSyncPrefix + "-"
-	var ns string
 	if !strings.HasPrefix(name, prefix) {
 		return ""
 	}
-	ns = strings.TrimPrefix(name, prefix)
 
-	// If an obj is a ConfigMap then trim following suffix from the name of the
-	// object.
-	gitSyncSuffix := "-" + reconcilermanager.GitSync
-	reconcilerSufix := "-" + reconcilermanager.Reconciler
 	if _, ok := obj.(*corev1.ConfigMap); ok {
-		ns = trimConfigMapSuffix(ns, gitSyncSuffix, reconcilerSufix)
+		return getNSFromConfigMap(name)
 	}
 
-	// If an obj is a Secret then trim following suffix from the name of the
-	// object.
-	sshKeySuffix := "-ssh-key"
 	if _, ok := obj.(*corev1.Secret); ok {
-		ns = trimConfigMapSuffix(ns, sshKeySuffix)
+		return getNSFromSecret(name)
 	}
 
-	return ns
+	// For all the other non-RepoSync object types registered in RepoSyncReconciler.SetupWithManager,
+	// which currently includes Deployment, ServiceAccount, and RoleBinding.
+	return strings.TrimPrefix(name, prefix)
 }
 
-func trimConfigMapSuffix(name string, opts ...string) string {
+func getNSFromSecret(name string) string {
+	name = strings.TrimPrefix(name, prefix)
+	sshKeySuffix := "-ssh-key"
+	if strings.HasSuffix(name, sshKeySuffix) {
+		name = trimSuffixes(name, sshKeySuffix)
+	}
+
+	if name != "" {
+		// If the object name is in the format of "ns-reconciler-<ns>-token-xxxx"
+		tokenSeparator := "-token-"
+		name = strings.Split(name, tokenSeparator)[0]
+	}
+	return name
+}
+
+func getNSFromConfigMap(name string) string {
+	name = strings.TrimPrefix(name, prefix)
+	gitSyncSuffix := "-" + reconcilermanager.GitSync
+	reconcilerSufix := "-" + reconcilermanager.Reconciler
+	return trimSuffixes(name, gitSyncSuffix, reconcilerSufix)
+}
+
+func trimSuffixes(name string, opts ...string) string {
 	for _, opt := range opts {
 		name = strings.TrimSuffix(name, opt)
 	}
