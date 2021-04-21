@@ -190,11 +190,17 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 	// the RootSync object to reconcile.
 	mapSecretToRootSync := handler.MapFunc(
 		func(a client.Object) []reconcile.Request {
+			if a.GetNamespace() != configsync.ControllerNamespace {
+				return nil
+			}
+
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{
-					Name:      v1alpha1.RootSyncName,
-					Namespace: a.GetNamespace(),
-				}},
+				{
+					NamespacedName: types.NamespacedName{
+						Name:      v1alpha1.RootSyncName,
+						Namespace: configsync.ControllerNamespace,
+					},
+				},
 			}
 		})
 

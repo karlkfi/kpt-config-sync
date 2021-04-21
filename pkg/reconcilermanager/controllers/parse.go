@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"io/ioutil"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/core"
 	"sigs.k8s.io/yaml"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,18 +15,28 @@ import (
 var (
 	// deploymentConfig is defined in configmap manifests/templates/reconciler-manager-configmap.yaml
 	deploymentConfig = "deployment.yaml"
+	// deploymentConfigChecksumAnnotationKey tracks the checksum of the content in `deploymentConfig`.
+	deploymentConfigChecksumAnnotationKey = v1beta1.ConfigSyncPrefix + "config-checksum"
 )
 
 // parseDeployment parse deployment from deployment.yaml to deploy reconciler pod
 // Alias to enable test mocking.
 var parseDeployment = func(de *appsv1.Deployment) error {
-	return parseFromConfig(deploymentConfig, de)
+	return parseFromDeploymentConfig(deploymentConfig, de)
 }
 
-func parseFromConfig(config string, obj client.Object) error {
+func parseFromDeploymentConfig(config string, obj *appsv1.Deployment) error {
 	yamlDep, err := ioutil.ReadFile(config)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(yamlDep, obj)
+
+	if err := yaml.Unmarshal(yamlDep, obj); err != nil {
+		return err
+	}
+
+	sum := sha256.Sum256(yamlDep)
+	sumString := hex.EncodeToString(sum[:])
+	core.SetAnnotation(obj, deploymentConfigChecksumAnnotationKey, sumString)
+	return nil
 }

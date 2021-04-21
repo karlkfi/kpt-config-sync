@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -58,6 +59,7 @@ const (
 var filesystemPollingPeriod time.Duration
 
 var parsedDeployment = func(de *appsv1.Deployment) error {
+	de.TypeMeta = fake.ToTypeMeta(kinds.Deployment())
 	de.Spec = appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{

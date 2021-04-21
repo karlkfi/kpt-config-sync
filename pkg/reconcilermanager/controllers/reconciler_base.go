@@ -120,17 +120,18 @@ func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace s
 
 	childDep.Name = name
 	childDep.Namespace = namespace
-
-	return r.createOrPatchResource(ctx, &childDep, f)
+	return r.createOrPatchDeployment(ctx, &childDep, f)
 }
 
-// createOrPatchResource() first call Get() on the object. If the
+// createOrPatchDeployment() first call Get() on the object. If the
 // object does not exist, Create() will be called. If it does exist, Patch()
 // will be called.
-func (r *reconcilerBase) createOrPatchResource(ctx context.Context, obj client.Object, mutateObject mutateFn) (controllerutil.OperationResult, error) {
+func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv1.Deployment, mutateObject mutateFn) (controllerutil.OperationResult, error) {
 	key := client.ObjectKeyFromObject(obj)
 
-	if err := r.client.Get(ctx, key, obj); err != nil {
+	existing := &appsv1.Deployment{}
+
+	if err := r.client.Get(ctx, key, existing); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return controllerutil.OperationResultNone, err
 		}
@@ -145,7 +146,14 @@ func (r *reconcilerBase) createOrPatchResource(ctx context.Context, obj client.O
 		return controllerutil.OperationResultCreated, nil
 	}
 
-	existing := obj.DeepCopyObject()
+	// If the existing Deployment and the new Deployment have different `deploymentConfigChecksumAnnotation` annotations,
+	// we need to patch the Deployment definitely.
+	// If the existing Deployment and the new Deployment have the same `deploymentConfigChecksumAnnotation` annotation,
+	// we should only patch the Deployment when `mutateObject(obj)` changes the object.
+	if core.GetAnnotation(existing, deploymentConfigChecksumAnnotationKey) == core.GetAnnotation(obj, deploymentConfigChecksumAnnotationKey) {
+		obj = existing.DeepCopy()
+	}
+
 	patch := client.MergeFrom(existing)
 
 	if err := mutateObject(obj); err != nil {
@@ -155,6 +163,8 @@ func (r *reconcilerBase) createOrPatchResource(ctx context.Context, obj client.O
 	if reflect.DeepEqual(existing, obj) {
 		return controllerutil.OperationResultNone, nil
 	}
+
+	r.log.Info("The Deployment needs to be patched", "name", obj.Name)
 
 	if err := r.client.Patch(ctx, obj, patch); err != nil {
 		return controllerutil.OperationResultNone, err
