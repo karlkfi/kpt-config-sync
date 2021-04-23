@@ -2,10 +2,12 @@ package validate
 
 import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
+	"sigs.k8s.io/yaml"
 )
 
 // RepoSync checks if the given FileObject is a RepoSync and if so, verifies
@@ -18,22 +20,31 @@ func RepoSync(obj ast.FileObject) status.Error {
 	if err != nil {
 		return err
 	}
-	return RepoSyncObject(s.(*v1alpha1.RepoSync))
+	var rs *v1beta1.RepoSync
+	if obj.GroupVersionKind() == kinds.RepoSync() {
+		rs, err = toV1Beta1(s.(*v1alpha1.RepoSync))
+		if err != nil {
+			return err
+		}
+	} else {
+		rs = s.(*v1beta1.RepoSync)
+	}
+	return RepoSyncObject(rs)
 }
 
 var (
-	authSSH               = v1alpha1.GitSecretSSH
-	authCookiefile        = v1alpha1.GitSecretCookieFile
-	authGCENode           = v1alpha1.GitSecretGCENode
-	authToken             = v1alpha1.GitSecretToken
-	authNone              = v1alpha1.GitSecretNone
+	authSSH               = v1beta1.GitSecretSSH
+	authCookiefile        = v1beta1.GitSecretCookieFile
+	authGCENode           = v1beta1.GitSecretGCENode
+	authToken             = v1beta1.GitSecretToken
+	authNone              = v1beta1.GitSecretNone
 	authGCPServiceAccount = v1alpha1.GitSecretGCPServiceAccount
 )
 
 // RepoSyncObject validates the content and structure of a RepoSync for any
 // obvious problems.
-func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
-	if rs.GetName() != v1alpha1.RepoSyncName {
+func RepoSyncObject(rs *v1beta1.RepoSync) status.Error {
+	if rs.GetName() != v1beta1.RepoSyncName {
 		return nonhierarchical.InvalidSyncName(rs.Name, rs)
 	}
 
@@ -79,4 +90,16 @@ func RepoSyncObject(rs *v1alpha1.RepoSync) status.Error {
 		}
 	}
 	return nil
+}
+
+func toV1Beta1(rs *v1alpha1.RepoSync) (*v1beta1.RepoSync, status.Error) {
+	data, err := yaml.Marshal(rs)
+	if err != nil {
+		return nil, status.ResourceWrap(err, "failed marshalling", rs)
+	}
+	s := &v1beta1.RepoSync{}
+	if err := yaml.Unmarshal(data, s); err != nil {
+		return nil, status.ResourceWrap(err, "failed to convert to v1beta1 RepoSync", rs)
+	}
+	return s, nil
 }

@@ -4,48 +4,48 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
-func auth(authType string) func(*v1alpha1.RepoSync) {
-	return func(sync *v1alpha1.RepoSync) {
+func auth(authType string) func(*v1beta1.RepoSync) {
+	return func(sync *v1beta1.RepoSync) {
 		sync.Spec.Auth = authType
 	}
 }
 
-func named(name string) func(*v1alpha1.RepoSync) {
-	return func(sync *v1alpha1.RepoSync) {
+func named(name string) func(*v1beta1.RepoSync) {
+	return func(sync *v1beta1.RepoSync) {
 		sync.Name = name
 	}
 }
 
-func proxy(proxy string) func(*v1alpha1.RepoSync) {
-	return func(sync *v1alpha1.RepoSync) {
+func proxy(proxy string) func(*v1beta1.RepoSync) {
+	return func(sync *v1beta1.RepoSync) {
 		sync.Spec.Proxy = proxy
 	}
 }
 
-func secret(secretName string) func(*v1alpha1.RepoSync) {
-	return func(sync *v1alpha1.RepoSync) {
+func secret(secretName string) func(*v1beta1.RepoSync) {
+	return func(sync *v1beta1.RepoSync) {
 		sync.Spec.SecretRef.Name = secretName
 	}
 }
 
-func gcpSAEmail(email string) func(sync *v1alpha1.RepoSync) {
-	return func(sync *v1alpha1.RepoSync) {
+func gcpSAEmail(email string) func(sync *v1beta1.RepoSync) {
+	return func(sync *v1beta1.RepoSync) {
 		sync.Spec.GCPServiceAccountEmail = email
 	}
 }
 
-func missingRepo(rs *v1alpha1.RepoSync) {
+func missingRepo(rs *v1beta1.RepoSync) {
 	rs.Spec.Repo = ""
 }
 
-func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
-	rs := fake.RepoSyncObject()
+func repoSync(opts ...func(*v1beta1.RepoSync)) *v1beta1.RepoSync {
+	rs := fake.RepoSyncObjectV1Beta1()
 	rs.Spec.Git.Repo = "fake repo"
 	for _, opt := range opts {
 		opt(rs)
@@ -56,7 +56,7 @@ func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
 func TestRepoSyncObject(t *testing.T) {
 	testCases := []struct {
 		name    string
-		obj     *v1alpha1.RepoSync
+		obj     *v1beta1.RepoSync
 		wantErr status.Error
 	}{
 		{
