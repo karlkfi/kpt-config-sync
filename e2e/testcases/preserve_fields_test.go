@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
@@ -262,10 +262,10 @@ func TestPreserveLastApplied(t *testing.T) {
 		v1.ResourceManagementKey,
 		v1.SourcePathAnnotationKey,
 		v1.SyncTokenAnnotationKey,
-		v1alpha1.DeclaredFieldsKey,
+		v1beta1.DeclaredFieldsKey,
 	}
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, applier.OwningInventoryKey)
+		annotationKeys = append(annotationKeys, v1beta1.GitContextKey, v1beta1.ResourceManagerKey, applier.OwningInventoryKey, v1beta1.ResourceIDKey)
 	}
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
@@ -397,10 +397,10 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		v1.ResourceManagementKey,
 		v1.SourcePathAnnotationKey,
 		v1.SyncTokenAnnotationKey,
-		v1alpha1.DeclaredFieldsKey,
+		v1beta1.DeclaredFieldsKey,
 	}
 	if nt.MultiRepo {
-		annotationKeys = append(annotationKeys, v1alpha1.GitContextKey, v1alpha1.ResourceManagerKey, applier.OwningInventoryKey)
+		annotationKeys = append(annotationKeys, v1beta1.GitContextKey, v1beta1.ResourceManagerKey, applier.OwningInventoryKey, v1beta1.ResourceIDKey)
 	}
 
 	// Checking that the configmap with no annotations appears on cluster, and

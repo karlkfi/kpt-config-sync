@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -33,14 +33,16 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				Rev:    "HEAD",
 			},
 			commitHash: "1234567",
-			actual:     []ast.FileObject{fake.Role()},
+			actual:     []ast.FileObject{fake.Role(core.Namespace("foo"))},
 			expected: []ast.FileObject{fake.Role(
+				core.Namespace("foo"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, "enabled"),
-				core.Annotation(v1alpha1.ResourceManagerKey, "some-namespace"),
+				core.Annotation(v1beta1.ResourceManagerKey, "some-namespace"),
 				core.Annotation(v1.SyncTokenAnnotationKey, "1234567"),
-				core.Annotation(v1alpha1.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
+				core.Annotation(v1beta1.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
 				core.Annotation(applier.OwningInventoryKey, applier.InventoryID("some-namespace")),
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 			)},
 		},
 	}

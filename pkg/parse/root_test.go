@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -75,20 +75,22 @@ func TestRoot_Parse(t *testing.T) {
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
 					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
+					core.Annotation(v1beta1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
 					core.Annotation(applier.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(v1beta1.ResourceIDKey, "_namespace_foo"),
 					difftest.ManagedByRoot,
 				),
 				fake.Role(core.Namespace("foo"),
 					core.Label(v1.ManagedByKey, v1.ManagedByValue),
 					core.Label(configuration.DeclaredVersionLabel, "v1"),
-					core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:rules":{}}`),
+					core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:rules":{}}`),
 					core.Annotation(v1.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
 					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-					core.Annotation(v1alpha1.GitContextKey, nilGitContext),
+					core.Annotation(v1beta1.GitContextKey, nilGitContext),
 					core.Annotation(v1.SyncTokenAnnotationKey, ""),
 					core.Annotation(applier.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 					difftest.ManagedByRoot,
 				),
 			},

@@ -6,8 +6,8 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
@@ -127,8 +127,8 @@ func (v *Validator) handleDelete(oldObj client.Object) admission.Response {
 }
 
 func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Response {
-	// Verify that old and/or new objects are managed by Config Sync.
-	if !configSyncManaged(oldObj, newObj) {
+	if !configSyncManaged(oldObj) && !configSyncManaged(newObj) {
+		// Both oldObj and newObj are not managed by Config Sync.
 		// The webhook should be configured to only intercept resources which are
 		// managed by Config Sync.
 		glog.Warningf("Received admission request for unmanaged object: %v", newObj)
@@ -210,13 +210,10 @@ func convertObjects(req admission.Request) (client.Object, client.Object, error)
 	return oldObj, newObj, nil
 }
 
-func configSyncManaged(objs ...client.Object) bool {
-	for _, obj := range objs {
-		if obj != nil && obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementEnabled {
-			return true
-		}
-	}
-	return false
+// configSyncManaged returns true if obj is managed by Config Sync.
+func configSyncManaged(obj client.Object) bool {
+	return obj != nil && core.GetAnnotation(obj, v1.ResourceManagementKey) == v1.ResourceManagementEnabled &&
+		core.GetAnnotation(obj, v1beta1.ResourceIDKey) == core.GKNN(obj)
 }
 
 func objectManager(req admission.Request) (string, error) {
@@ -239,7 +236,7 @@ func getManager(obj client.Object) string {
 	if annotations == nil {
 		return ""
 	}
-	return annotations[v1alpha1.ResourceManagerKey]
+	return annotations[v1beta1.ResourceManagerKey]
 }
 
 func allow() admission.Response {

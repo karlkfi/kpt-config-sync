@@ -40,4 +40,7 @@ const (
 	// prevent mutating a resource. That is, if the resource exists on the cluster
 	// then ACM will make no attempt to modify it.
 	IgnoreMutation = "ignore"
+
+	// ResourceIDKey is the annotation that indicates the resource's GKNN.
+	ResourceIDKey = ConfigSyncPrefix + "resource-id"
 )
