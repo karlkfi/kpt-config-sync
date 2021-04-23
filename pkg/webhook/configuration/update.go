@@ -3,6 +3,7 @@ package configuration
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
@@ -51,6 +52,10 @@ func Update(ctx context.Context, c client.Client, dc discovery.ServerResourcer, 
 		return status.APIServerError(err, "getting admission webhook from API Server")
 	}
 
+	// skip updating the webhook configuration if the update is disabled.
+	if core.GetAnnotation(oldCfg, WebhookconfigurationKey) == WebhookConfigurationUpdateDisabled {
+		return nil
+	}
 	// We aren't yet concerned with removing stale rules, so just merge the two
 	// together.
 	newCfg = Merge(oldCfg, newCfg)

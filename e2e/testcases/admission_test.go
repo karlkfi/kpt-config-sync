@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -99,5 +101,52 @@ func TestIgnoreMutations(t *testing.T) {
 		nomostest.MissingAnnotation("goodbye"))
 	if err != nil {
 		t.Fatalf("got annotation 'goodbye' present, want missing")
+	}
+}
+
+func TestDisableWebhookConfigurationUpdate(t *testing.T) {
+	webhook := []byte(`
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    configsync.gke.io/webhook-configuration-update: disabled
+  name: admission-webhook.configsync.gke.io
+  labels:
+    configmanagement.gke.io/system: "true"
+    configmanagement.gke.io/arch: "csmr"
+`)
+
+	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "webhook.yaml"), webhook, 0644); err != nil {
+		t.Fatalf("failed to create a tmp file %v", err)
+	}
+
+	// Recreate the admission webhook
+	if _, err := nt.Kubectl("replace", "-f", filepath.Join(nt.TmpDir, "webhook.yaml")); err != nil {
+		t.Fatalf("failed to replace the admission webhook %v", err)
+	}
+
+	nt.Root.Add("acme/namespaces/hello/ns.yaml", fake.NamespaceObject("hello"))
+	nt.Root.CommitAndPush("add Namespace")
+	nt.WaitForRepoSyncs()
+
+	// Verify that the webhook is disabled.
+	if _, err := nt.Kubectl("delete", "ns", "hello"); err != nil {
+		t.Fatalf("failed to run `kubectl delete ns hello` %v", err)
+	}
+
+	// Remove the annotation for disabling webhook
+	if _, err := nt.Kubectl("annotate", "ValidatingWebhookConfiguration", "admission-webhook.configsync.gke.io", "configsync.gke.io/webhook-configuration-update-"); err != nil {
+		t.Fatalf("failed to remove the annotation in the admission webhook %v", err)
+	}
+
+	nt.Root.Add("acme/namespaces/test/ns.yaml", fake.NamespaceObject("test"))
+	nt.Root.CommitAndPush("add another Namespace")
+	nt.WaitForRepoSyncs()
+
+	// Verify that the webhook is now enabled
+	if _, err := nt.Kubectl("delete", "ns", "test"); err == nil {
+		t.Fatal("got `kubectl delete ns hello` success, want return err")
 	}
 }
