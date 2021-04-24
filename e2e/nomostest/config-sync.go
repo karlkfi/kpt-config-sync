@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
@@ -671,6 +673,22 @@ func RepoSyncObject(ns string) *v1alpha1.RepoSync {
 		Dir:    acmeDir,
 		Auth:   "ssh",
 		SecretRef: v1alpha1.SecretReference{
+			Name: "ssh-key",
+		},
+	}
+	return rs
+}
+
+// RepoSyncObjectV1Beta1 returns the default RepoSync object
+// with version v1beta1 in the given namespace.
+func RepoSyncObjectV1Beta1(ns string) *v1beta1.RepoSync {
+	rs := fake.RepoSyncObjectV1Beta1(core.Namespace(ns))
+	rs.Spec.Git = v1beta1.Git{
+		Repo:   gitRepo(ns),
+		Branch: MainBranch,
+		Dir:    acmeDir,
+		Auth:   "ssh",
+		SecretRef: v1beta1.SecretReference{
 			Name: "ssh-key",
 		},
 	}
