@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -113,21 +112,21 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 }
 
 func (v *Validator) handleCreate(newObj client.Object) admission.Response {
-	if configSyncManaged(newObj) {
+	if differ.ManagedByConfigSync(newObj) {
 		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to create managed resources")
 	}
 	return allow()
 }
 
 func (v *Validator) handleDelete(oldObj client.Object) admission.Response {
-	if configSyncManaged(oldObj) {
+	if differ.ManagedByConfigSync(oldObj) {
 		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to delete managed resources")
 	}
 	return allow()
 }
 
 func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Response {
-	if !configSyncManaged(oldObj) && !configSyncManaged(newObj) {
+	if !differ.ManagedByConfigSync(oldObj) && !differ.ManagedByConfigSync(newObj) {
 		// Both oldObj and newObj are not managed by Config Sync.
 		// The webhook should be configured to only intercept resources which are
 		// managed by Config Sync.
@@ -208,12 +207,6 @@ func convertObjects(req admission.Request) (client.Object, client.Object, error)
 		newObj = newU
 	}
 	return oldObj, newObj, nil
-}
-
-// configSyncManaged returns true if obj is managed by Config Sync.
-func configSyncManaged(obj client.Object) bool {
-	return obj != nil && core.GetAnnotation(obj, v1.ResourceManagementKey) == v1.ResourceManagementEnabled &&
-		core.GetAnnotation(obj, v1beta1.ResourceIDKey) == core.GKNN(obj)
 }
 
 func objectManager(req admission.Request) (string, error) {

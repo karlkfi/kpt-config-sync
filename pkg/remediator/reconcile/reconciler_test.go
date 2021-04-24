@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -56,10 +57,11 @@ func TestRemediator_Reconcile(t *testing.T) {
 			wantError: nil,
 		},
 		{
-			name:      "delete removed object",
-			version:   "v1",
-			declared:  nil,
-			actual:    fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
+			name:     "delete removed object",
+			version:  "v1",
+			declared: nil,
+			actual: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_default-name")),
 			want:      nil,
 			wantError: nil,
 		},
@@ -88,6 +90,16 @@ func TestRemediator_Reconcile(t *testing.T) {
 			declared:  nil,
 			actual:    fake.ClusterRoleBindingObject(),
 			want:      fake.ClusterRoleBindingObject(),
+			wantError: nil,
+		},
+		{
+			name:     "don't delete unmanaged object (the configsync.gke.io/resource-id annotation is incorrect)",
+			version:  "v1",
+			declared: nil,
+			actual: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
+			want: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
 			wantError: nil,
 		},
 		// Bad declared management annotation paths.
@@ -120,11 +132,11 @@ func TestRemediator_Reconcile(t *testing.T) {
 			wantError: nil,
 		},
 		{
-			name:      "don't delete, and remove bad actual management annotation",
+			name:      "don't update non-Config-Sync-managed-objects with invalid management annotation",
 			version:   "v1",
 			declared:  nil,
 			actual:    fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
-			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo")),
+			want:      fake.ClusterRoleBindingObject(core.Label("declared-label", "foo"), syncertest.ManagementInvalid),
 			wantError: nil,
 		},
 		// system namespaces
@@ -132,29 +144,33 @@ func TestRemediator_Reconcile(t *testing.T) {
 			name:     "don't delete kube-system Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespaceSystem, syncertest.ManagementEnabled),
-			want:     fake.NamespaceObject(metav1.NamespaceSystem),
+			actual: fake.NamespaceObject(metav1.NamespaceSystem, syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_kube-system")),
+			want: fake.NamespaceObject(metav1.NamespaceSystem),
 		},
 		{
 			name:     "don't delete kube-public Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespacePublic, syncertest.ManagementEnabled),
-			want:     fake.NamespaceObject(metav1.NamespacePublic),
+			actual: fake.NamespaceObject(metav1.NamespacePublic, syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_kube-public")),
+			want: fake.NamespaceObject(metav1.NamespacePublic),
 		},
 		{
 			name:     "don't delete default Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(metav1.NamespaceDefault, syncertest.ManagementEnabled),
-			want:     fake.NamespaceObject(metav1.NamespaceDefault),
+			actual: fake.NamespaceObject(metav1.NamespaceDefault, syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_default")),
+			want: fake.NamespaceObject(metav1.NamespaceDefault),
 		},
 		{
 			name:     "don't delete gatekeeper-system Namespace",
 			version:  "v1",
 			declared: nil,
-			actual:   fake.NamespaceObject(policycontroller.NamespaceSystem, syncertest.ManagementEnabled),
-			want:     fake.NamespaceObject(policycontroller.NamespaceSystem),
+			actual: fake.NamespaceObject(policycontroller.NamespaceSystem, syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_gatekeeper-system")),
+			want: fake.NamespaceObject(policycontroller.NamespaceSystem),
 		},
 		// Version difference paths.
 		{

@@ -89,8 +89,10 @@ func (d Diff) Operation(ctx context.Context, manager declared.Scope) Operation {
 func (d Diff) createType() Operation {
 	switch {
 	case differ.ManagementEnabled(d.Declared):
-		// Management is enabled on the declaration and it doesn't exist, so create
-		// it.
+		// Managed by ConfigSync and it doesn't exist, so create it.
+		// For this case, we can also use `differ.ManagedByConfigSync`, since
+		// the parser adds the `configsync.gke.io/resource-id` annotation to
+		// all the resources in declared.Resources.
 		return Create
 	case differ.ManagementDisabled(d.Declared):
 		// The resource doesn't exist but management is disabled, so take no action.
@@ -159,9 +161,13 @@ func (d Diff) deleteType(reconciler declared.Scope) Operation {
 		// We can't manage this and there isn't a competing declaration for it so,
 		// nothing to do.
 		return NoOp
+	case !differ.ManagedByConfigSync(d.Actual):
+		// d.Actual is not managed by Config Sync, so take no action.
+		return NoOp
 	}
 
-	// Anything below here has Nomos metadata and is manageable by this reconciler.
+	// Anything below here has Nomos metadata and is manageable by this reconciler,
+	// and is managed by Config Sync.
 	switch {
 	case lifecycle.HasPreventDeletion(d.Actual):
 		// We aren't supposed to delete this, so just unmanage it.
@@ -170,12 +176,9 @@ func (d Diff) deleteType(reconciler declared.Scope) Operation {
 	case differ.IsManageableSystemNamespace(d.Actual):
 		// This is a special Namespace we never want to remove.
 		return Unmanage
-	case differ.ManagementEnabled(d.Actual):
+	default:
 		// The expected path. Delete the resource from the cluster.
 		return Delete
-	default:
-		// The object somehow has Nomos metadata but it shouldn't.
-		return Unmanage
 	}
 }
 

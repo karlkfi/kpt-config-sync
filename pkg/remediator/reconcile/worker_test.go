@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
@@ -56,8 +57,10 @@ func TestWorker_ProcessNextObject(t *testing.T) {
 			name:     "delete undeclared objects",
 			declared: []client.Object{},
 			toProcess: []client.Object{
-				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled),
-				fake.ClusterRoleObject(syncertest.ManagementEnabled),
+				fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
+					core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_default-name")),
+				fake.ClusterRoleObject(syncertest.ManagementEnabled,
+					core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrole_default-name")),
 			},
 			want: []client.Object{},
 		},

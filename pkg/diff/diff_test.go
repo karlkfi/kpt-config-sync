@@ -122,63 +122,6 @@ func TestDiffType(t *testing.T) {
 			actual:   fake.RoleObject(syncertest.ManagementInvalid),
 			want:     Update,
 		},
-		// Actual + no declared paths.
-		{
-			name:   "actual + no declared, no meta: no-op",
-			scope:  declared.RootReconciler,
-			actual: fake.RoleObject(),
-			want:   NoOp,
-		},
-		{
-			name:  "actual + no declared, owned: noop",
-			scope: declared.RootReconciler,
-			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.OwnerReference([]metav1.OwnerReference{
-					{},
-				})),
-			want: NoOp,
-		},
-		{
-			name:  "actual + no declared, cannot manage: noop",
-			scope: "shipping",
-			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				difftest.ManagedByRoot),
-			want: NoOp,
-		},
-		{
-			name: "actual + no declared, prevent deletion: unmanage",
-			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)),
-			want: Unmanage,
-		},
-		{
-			name: "actual + no declared, system Namespace: unmanage",
-			actual: fake.NamespaceObject(metav1.NamespaceSystem,
-				syncertest.ManagementEnabled),
-			want: Unmanage,
-		},
-		{
-			name: "actual + no declared, gatekeeper Namespace: unmanage",
-			actual: fake.NamespaceObject(policycontroller.NamespaceSystem,
-				syncertest.ManagementEnabled),
-			want: Unmanage,
-		},
-		{
-			name: "actual + no declared, managed: delete",
-			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Name(metav1.NamespaceSystem)),
-			want: Delete,
-		},
-		{
-			name:   "actual + no declared, invalid management: unmanage",
-			actual: fake.RoleObject(syncertest.ManagementInvalid),
-			want:   Unmanage,
-		},
-		// Error path.
-		{
-			name: "no declared or actual, no op (log error)",
-			want: NoOp,
-		},
 		// IgnoreMutation path.
 		{
 			name: "prevent mutations",
@@ -226,6 +169,105 @@ func TestDiffType(t *testing.T) {
 				core.Annotation("foo", "qux"),
 			),
 			want: Update,
+		},
+		// Actual + no declared paths.
+		{
+			name:   "actual + no declared, no meta: no-op",
+			scope:  declared.RootReconciler,
+			actual: fake.RoleObject(),
+			want:   NoOp,
+		},
+		{
+			name:  "actual + no declared, owned: noop",
+			scope: declared.RootReconciler,
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.OwnerReference([]metav1.OwnerReference{
+					{},
+				})),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, cannot manage (actual is managed by Config Sync): noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, cannot manage (actual is not managed by Config Sync): noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, not managed by Config Sync but has other Config Sync annotations: noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.TokenAnnotation,
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, not managed by Config Sync (the configsync.gke.io/resource-id annotation is unset): noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, not managed by Config Sync (the configmanagement.gke.io/managed annotation is set to disabled): noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementDisabled,
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name:  "actual + no declared, not managed by Config Sync (the configsync.gke.io/resource-id annotation is incorrect): noop",
+			scope: "shipping",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
+				difftest.ManagedByRoot),
+			want: NoOp,
+		},
+		{
+			name: "actual + no declared, prevent deletion: unmanage",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)),
+			want: Unmanage,
+		},
+		{
+			name: "actual + no declared, system Namespace: unmanage",
+			actual: fake.NamespaceObject(metav1.NamespaceSystem,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_kube-system"),
+				syncertest.ManagementEnabled),
+			want: Unmanage,
+		},
+		{
+			name: "actual + no declared, gatekeeper Namespace: unmanage",
+			actual: fake.NamespaceObject(policycontroller.NamespaceSystem,
+				core.Annotation(v1beta1.ResourceIDKey, "_namespace_gatekeeper-system"),
+				syncertest.ManagementEnabled),
+			want: Unmanage,
+		},
+		{
+			name: "actual + no declared, managed: delete",
+			actual: fake.RoleObject(syncertest.ManagementEnabled,
+				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_kube-system"),
+				core.Name(metav1.NamespaceSystem)),
+			want: Delete,
+		},
+		{
+			name:   "actual + no declared, invalid management: unmanage",
+			actual: fake.RoleObject(syncertest.ManagementInvalid),
+			want:   NoOp,
+		},
+		// Error path.
+		{
+			name: "no declared or actual, no op (log error)",
+			want: NoOp,
 		},
 	}
 
