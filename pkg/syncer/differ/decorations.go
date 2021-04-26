@@ -2,7 +2,9 @@ package differ
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
+	"github.com/google/nomos/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,7 +29,7 @@ func ManagementUnset(obj client.Object) bool {
 // manages.
 func HasNomosMeta(obj client.Object) bool {
 	as := obj.GetAnnotations()
-	sas := append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2)
+	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2), v1beta1.ConfigSyncAnnotations...)
 	for _, a := range sas {
 		if _, ok := as[a]; ok {
 			return true
@@ -43,6 +45,8 @@ func HasNomosMeta(obj client.Object) bool {
 			return true
 		}
 	}
-
+	if _, ok := ls[configuration.DeclaredVersionLabel]; ok {
+		return true
+	}
 	return false
 }

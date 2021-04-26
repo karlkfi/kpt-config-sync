@@ -44,3 +44,11 @@ const (
 	// ResourceIDKey is the annotation that indicates the resource's GKNN.
 	ResourceIDKey = ConfigSyncPrefix + "resource-id"
 )
+
+// ConfigSyncAnnotations contain the keys for ConfigSync annotations.
+var ConfigSyncAnnotations = []string{
+	DeclaredFieldsKey,
+	GitContextKey,
+	ResourceManagerKey,
+	ResourceIDKey,
+}

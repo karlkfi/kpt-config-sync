@@ -32,6 +32,19 @@ func GetAnnotation(obj client.Object, annotation string) string {
 	return ""
 }
 
+// GetLabel gets the label value on the passed object for a given key.
+func GetLabel(obj client.Object, label string) string {
+	as := obj.GetLabels()
+	if as == nil {
+		return ""
+	}
+	value, found := as[label]
+	if found {
+		return value
+	}
+	return ""
+}
+
 // RemoveAnnotations removes the passed set of annotations from obj.
 func RemoveAnnotations(obj client.Object, annotations ...string) {
 	as := obj.GetAnnotations()

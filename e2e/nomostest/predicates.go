@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -113,4 +114,15 @@ func NotPendingDeletion(o client.Object) error {
 		return nil
 	}
 	return errors.Errorf("object has non-nil deletionTimestamp")
+}
+
+// NoConfigSyncMetadata ensures that the object doesn't
+// contain configsync labels and annotations.
+func NoConfigSyncMetadata() Predicate {
+	return func(o client.Object) error {
+		if differ.HasNomosMeta(o) {
+			return fmt.Errorf("object %q shouldn't have configsync metadta %v, %v", o.GetName(), o.GetLabels(), o.GetAnnotations())
+		}
+		return nil
+	}
 }

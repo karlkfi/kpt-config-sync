@@ -62,6 +62,9 @@ func cleanup(nt *nomostest.NT, ns *corev1.Namespace, pod *corev1.Pod) {
 	if err := nt.Delete(ns); err != nil {
 		nt.T.Fatal(err)
 	}
+	if err := nt.Validate(pod.Namespace, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata()); err != nil {
+		nt.T.Fatal(err)
+	}
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), ns.Name, "")
 	if err := nt.ValidateNotFound(pod.Name, pod.Namespace, &corev1.Pod{}); err != nil {
 		nt.T.Fatal(err)
