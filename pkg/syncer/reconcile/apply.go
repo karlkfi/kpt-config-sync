@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/kinds"
 	m "github.com/google/nomos/pkg/metrics"
@@ -136,7 +137,8 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 	updated := !isNoOpPatch(patch)
 	if updated {
 		if c.fights.detectFight(ctx, time.Now(), intendedState, &c.fLogger, "update") {
-			glog.Warningf("Fight detected on update of %s which applied the following patch:\n%s", description(intendedState), string(patch))
+			diff := cmp.Diff(currentState, intendedState)
+			glog.Warningf("Fight detected on update of %s with difference %s", description(intendedState), diff)
 		}
 	}
 	return updated, nil
