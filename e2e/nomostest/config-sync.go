@@ -286,15 +286,15 @@ func installationManifests(nt *NT, tmpManifestsDir string) []client.Object {
 		switch template {
 		case "reconciler-manager.yaml":
 			// For the reconciler manager template, we want the latest image for the reconciler manager.
-			imgName = *e2e.ImagePrefix + "/reconciler-manager:latest"
+			imgName = fmt.Sprintf("%s/reconciler-manager:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		case "reconciler-manager-configmap.yaml":
 			// For the reconciler deployment template, we want the latest image for the reconciler.
-			imgName = *e2e.ImagePrefix + "/reconciler:latest"
+			imgName = fmt.Sprintf("%s/reconciler:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		case "admission-webhook.yaml":
-			imgName = *e2e.ImagePrefix + "/admission-webhook:latest"
+			imgName = fmt.Sprintf("%s/admission-webhook:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		default:
 			// For any other template, we want the latest image for the nomos binary (mono-repo).
-			imgName = *e2e.ImagePrefix + "/nomos:latest"
+			imgName = fmt.Sprintf("%s/nomos:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		}
 
 		replaced := strings.ReplaceAll(string(bytes), "IMAGE_NAME", imgName)

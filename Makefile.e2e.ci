@@ -99,7 +99,8 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 			--p 1 \
 			--test-cluster=gke \
 			--share-test-env=true \
-			--image-prefix=gcr.io/$(GCR_PREFIX)
+			--image-prefix=gcr.io/$(GCR_PREFIX) \
+			--image-tag=$(LATEST_IMAGE_TAG)
 
 # The CI target that runs the golang e2e test for mono repo on a GKE cluster in prow.
 test-e2e-go-ci-mono-repo:

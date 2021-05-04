@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/reconcilermanager"
 )
@@ -69,10 +70,10 @@ func CheckImages(t testing.NTB) {
 }
 
 func checkImage(t testing.NTB, image string) {
-	url := fmt.Sprintf("http://localhost:5000/%s:latest", image)
+	url := fmt.Sprintf("http://%s/%s:%s", e2e.DefaultImagePrefix, image, *e2e.ImageTag)
 	resp, err := http.Get(url)
 	if err != nil {
-		t.Fatalf("Failed to check for image %s in regsitry: %s", image, err)
+		t.Fatalf("Failed to check for image %s in registry: %s", image, err)
 	}
 
 	defer func() {
@@ -80,6 +81,6 @@ func checkImage(t testing.NTB, image string) {
 	}()
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf("Failed to read response for image %s in regsitry: %s", image, err)
+		t.Fatalf("Failed to read response for image %s in registry: %s", image, err)
 	}
 }
