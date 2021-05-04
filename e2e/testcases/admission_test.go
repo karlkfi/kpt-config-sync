@@ -118,6 +118,11 @@ metadata:
 `)
 
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
+
+	nt.Root.Add("acme/namespaces/hello/ns.yaml", fake.NamespaceObject("hello"))
+	nt.Root.CommitAndPush("add Namespace")
+	nt.WaitForRepoSyncs()
+
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "webhook.yaml"), webhook, 0644); err != nil {
 		t.Fatalf("failed to create a tmp file %v", err)
 	}
@@ -126,10 +131,6 @@ metadata:
 	if _, err := nt.Kubectl("replace", "-f", filepath.Join(nt.TmpDir, "webhook.yaml")); err != nil {
 		t.Fatalf("failed to replace the admission webhook %v", err)
 	}
-
-	nt.Root.Add("acme/namespaces/hello/ns.yaml", fake.NamespaceObject("hello"))
-	nt.Root.CommitAndPush("add Namespace")
-	nt.WaitForRepoSyncs()
 
 	// Verify that the webhook is disabled.
 	if _, err := nt.Kubectl("delete", "ns", "hello"); err != nil {
