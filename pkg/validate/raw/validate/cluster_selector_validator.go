@@ -80,7 +80,5 @@ func forbidsSelector(obj ast.FileObject) bool {
 	gk := obj.GetObjectKind().GroupVersionKind().GroupKind()
 	return gk == kinds.Cluster().GroupKind() ||
 		gk == kinds.ClusterSelector().GroupKind() ||
-		gk == kinds.NamespaceSelector().GroupKind() ||
-		// TODO(b/181135981): Allow ClusterSelectors on CRDs.
-		gk == kinds.CustomResourceDefinition()
+		gk == kinds.NamespaceSelector().GroupKind()
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -636,6 +637,76 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 	if err != nil {
 		t.Errorf("validating metrics: %v", err)
 	}
+}
+
+func TestClusterSelectorForCRD(t *testing.T) {
+	nt := nomostest.New(t)
+
+	t.Log("Add CRD without ClusterSelectors or cluster-name-selector annotation")
+	crd := anvilV1CRD()
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
+	nt.Root.CommitAndPush("Add a custom resource definition")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test inline cluster-name-selector annotation
+	t.Log("Set the cluster-name-selector annotation to a not-selected cluster")
+	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: testClusterName})
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
+	nt.Root.CommitAndPush("Add a custom resource definition with an unselected cluster-name-selector annotation")
+	nt.WaitForRepoSyncs()
+	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Set the cluster-name-selector annotation to a selected cluster")
+	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: prodClusterName})
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
+	nt.Root.CommitAndPush("Add a custom resource definition with an selected cluster-name-selector annotation")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test legacy ClusterSelectors
+	nt.T.Log("Add cluster, and cluster registry data")
+	prodCluster := clusterObject(prodClusterName, environmentLabelKey, prodEnvironment)
+	nt.Root.Add("acme/clusterregistry/cluster-prod.yaml", prodCluster)
+	prodClusterSelector := clusterSelector(prodClusterSelectorName, environmentLabelKey, prodEnvironment)
+	testClusterSelector := clusterSelector(testClusterSelectorName, environmentLabelKey, testEnvironment)
+	nt.Root.Add("acme/clusterregistry/clusterselector-prod.yaml", prodClusterSelector)
+	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
+	nt.Root.CommitAndPush("Add cluster and cluster registry data")
+
+	t.Log("Set ClusterSelector to a not-selected cluster")
+	crd.SetAnnotations(legacyTestClusterSelectorAnnotation)
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
+	nt.Root.CommitAndPush("Add a custom resource definition with an unselected ClusterSelector")
+	nt.WaitForRepoSyncs()
+	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Set ClusterSelector to a selected cluster")
+	crd.SetAnnotations(map[string]string{v1.LegacyClusterSelectorAnnotationKey: prodClusterSelectorName})
+	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
+	nt.Root.CommitAndPush("Add a custom resource definition with an selected ClusterSelector")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate no error metrics are emitted.
+	// TODO(b/162601559): internal_errors_total metric from diff.go
+	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+	//	nt.ParseMetrics(prev)
+	//	return nt.ValidateErrorMetricsNotFound()
+	//})
+	//if err != nil {
+	//	t.Errorf("validating error metrics: %v", err)
+	//}
 }
 
 // renameCluster updates CLUSTER_NAME in the config map and restart the reconcilers.

@@ -59,26 +59,32 @@ func TestClusterSelectorsForHierarchical(t *testing.T) {
 			wantErrs: nonhierarchical.SelectorMetadataNameCollisionError(kinds.ClusterSelector().Kind, "first", fake.ClusterSelector()),
 		},
 		{
-			name: "Object with no cluster selector",
+			name: "Objects with no cluster selector",
 			objs: &objects.Raw{
 				Objects: []ast.FileObject{
 					fake.ClusterRole(),
+					fake.CustomResourceDefinitionV1(),
+					fake.CustomResourceDefinitionV1Beta1(),
 				},
 			},
 		},
 		{
-			name: "Object with legacy cluster selector",
+			name: "Objects with legacy cluster selector",
 			objs: &objects.Raw{
 				Objects: []ast.FileObject{
 					fake.ClusterRole(legacyClusterSelectorAnnotation),
+					fake.CustomResourceDefinitionV1(legacyClusterSelectorAnnotation),
+					fake.CustomResourceDefinitionV1Beta1(legacyClusterSelectorAnnotation),
 				},
 			},
 		},
 		{
-			name: "Object with inline cluster selector",
+			name: "Objects with inline cluster selector",
 			objs: &objects.Raw{
 				Objects: []ast.FileObject{
 					fake.ClusterRole(inlineClusterSelectorAnnotation),
+					fake.CustomResourceDefinitionV1(inlineClusterSelectorAnnotation),
+					fake.CustomResourceDefinitionV1Beta1(inlineClusterSelectorAnnotation),
 				},
 			},
 		},
@@ -89,8 +95,6 @@ func TestClusterSelectorsForHierarchical(t *testing.T) {
 					fake.Cluster(),
 					fake.ClusterSelector(),
 					fake.NamespaceSelector(),
-					fake.CustomResourceDefinitionV1(),
-					fake.CustomResourceDefinitionV1Beta1(),
 				},
 			},
 		},
@@ -101,16 +105,12 @@ func TestClusterSelectorsForHierarchical(t *testing.T) {
 					fake.Cluster(legacyClusterSelectorAnnotation),
 					fake.ClusterSelector(legacyClusterSelectorAnnotation),
 					fake.NamespaceSelector(legacyClusterSelectorAnnotation),
-					fake.CustomResourceDefinitionV1(legacyClusterSelectorAnnotation),
-					fake.CustomResourceDefinitionV1Beta1(legacyClusterSelectorAnnotation),
 				},
 			},
 			wantErrs: status.Append(nil,
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), "legacy"),
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.ClusterSelector(), "legacy"),
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.NamespaceSelector(), "legacy"),
-				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.CustomResourceDefinitionV1(), "legacy"),
-				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.CustomResourceDefinitionV1Beta1(), "legacy"),
 			),
 		},
 		{
@@ -120,16 +120,12 @@ func TestClusterSelectorsForHierarchical(t *testing.T) {
 					fake.Cluster(inlineClusterSelectorAnnotation),
 					fake.ClusterSelector(inlineClusterSelectorAnnotation),
 					fake.NamespaceSelector(inlineClusterSelectorAnnotation),
-					fake.CustomResourceDefinitionV1(inlineClusterSelectorAnnotation),
-					fake.CustomResourceDefinitionV1Beta1(inlineClusterSelectorAnnotation),
 				},
 			},
 			wantErrs: status.Append(nil,
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), "inline"),
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.ClusterSelector(), "inline"),
 				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.NamespaceSelector(), "inline"),
-				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.CustomResourceDefinitionV1(), "inline"),
-				nonhierarchical.IllegalClusterSelectorAnnotationError(fake.CustomResourceDefinitionV1Beta1(), "inline"),
 			),
 		},
 		{
