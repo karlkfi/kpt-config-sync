@@ -227,7 +227,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("update", intendedState.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
 	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), intendedState.GroupVersionKind(), start)
-	return []byte("updated"), err
+	return []byte(cmp.Diff(currentState, intendedState)), err
 }
 
 // updateAPIService updates APIService type resources.
@@ -417,6 +417,9 @@ func equal(dryrunState, currentState *unstructured.Unstructured) bool {
 		u.SetGeneration(0)
 		u.SetResourceVersion("")
 		u.SetManagedFields(nil)
+		u.SetCreationTimestamp(metav1.Time{})
+		// ignore status field
+		unstructured.RemoveNestedField(u.Object, "status")
 	}
 	obj1 := dryrunState.DeepCopy()
 	obj2 := currentState.DeepCopy()
