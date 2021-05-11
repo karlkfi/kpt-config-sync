@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -66,16 +67,16 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 		return allow()
 	}
 
+	username := req.UserInfo.Username
 	// Check UserInfo for Config Sync service account and handle if found.
 	if isConfigSyncSA(req.UserInfo) {
-		username := req.UserInfo.Username
 		if isImporter(username) {
 			// Config Sync importer can always update a resource.
 			return allow()
 		}
 		// Perform manager precedence check to verify this Config Sync reconciler
 		// can manage the object.
-		mgr, err := objectManager(req)
+		mgr, oldObj, err := objectManager(req)
 		if err != nil {
 			glog.Error(err.Error())
 			return allow()
@@ -83,7 +84,7 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 		if canManage(username, mgr) {
 			return allow()
 		}
-		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object which is already managed by %s", username, mgr))
+		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr))
 	}
 
 	// Handle the requests for ResourceGroup CRs.
@@ -100,51 +101,51 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	switch req.Operation {
 	case admissionv1.Create:
-		return v.handleCreate(newObj)
+		return v.handleCreate(newObj, username)
 	case admissionv1.Delete:
-		return v.handleDelete(oldObj)
+		return v.handleDelete(oldObj, username)
 	case admissionv1.Update:
-		return v.handleUpdate(oldObj, newObj)
+		return v.handleUpdate(oldObj, newObj, username)
 	default:
-		glog.Errorf("Unsupported operation: %v", req.Operation)
+		glog.Errorf("Unsupported operation: %v from %s", req.Operation, username)
 		return allow()
 	}
 }
 
-func (v *Validator) handleCreate(newObj client.Object) admission.Response {
+func (v *Validator) handleCreate(newObj client.Object, username string) admission.Response {
 	if differ.ManagedByConfigSync(newObj) {
-		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to create managed resources")
+		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj)))
 	}
 	return allow()
 }
 
-func (v *Validator) handleDelete(oldObj client.Object) admission.Response {
+func (v *Validator) handleDelete(oldObj client.Object, username string) admission.Response {
 	if differ.ManagedByConfigSync(oldObj) {
-		return deny(metav1.StatusReasonUnauthorized, "requester is not authorized to delete managed resources")
+		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj)))
 	}
 	return allow()
 }
 
-func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Response {
+func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) admission.Response {
 	if !differ.ManagedByConfigSync(oldObj) && !differ.ManagedByConfigSync(newObj) {
 		// Both oldObj and newObj are not managed by Config Sync.
 		// The webhook should be configured to only intercept resources which are
 		// managed by Config Sync.
-		glog.Warningf("Received admission request for unmanaged object: %v", newObj)
+		glog.Warningf("Received admission request from %s for unmanaged object %q", username, core.GKNN(newObj))
 		return allow()
 	}
 
 	// Build a diff set between old and new objects.
 	diffSet, err := v.differ.FieldDiff(oldObj, newObj)
 	if err != nil {
-		glog.Errorf("Failed to generate field diff set: %v", err)
+		glog.Errorf("Failed to generate field diff set for object %q: %v", core.GKNN(oldObj), err)
 		return allow()
 	}
 
 	// If the diff set includes any ConfigSync labels or annotations, reject the
 	// request immediately.
 	if csSet := ConfigSyncMetadata(diffSet); !csSet.Empty() {
-		return deny(metav1.StatusReasonForbidden, "Config Sync metadata can not be modified: "+csSet.String())
+		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String()))
 	}
 
 	if oldObj.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation {
@@ -157,7 +158,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Respons
 	// which should not be modified.
 	declaredSet, err := DeclaredFields(oldObj)
 	if err != nil {
-		glog.Errorf("Failed to decoded declared fields: %v", err)
+		glog.Errorf("Failed to decoded declared fields for object %q: %v", core.GKNN(oldObj), err)
 		return allow()
 	}
 
@@ -165,7 +166,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object) admission.Respons
 	// request. Otherwise allow it.
 	invalidSet := diffSet.Intersection(declaredSet)
 	if !invalidSet.Empty() {
-		return deny(metav1.StatusReasonForbidden, "fields managed by Config Sync can not be modified: "+invalidSet.String())
+		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String()))
 	}
 	return allow()
 }
@@ -209,16 +210,16 @@ func convertObjects(req admission.Request) (client.Object, client.Object, error)
 	return oldObj, newObj, nil
 }
 
-func objectManager(req admission.Request) (string, error) {
+func objectManager(req admission.Request) (string, client.Object, error) {
 	oldObj, newObj, err := convertObjects(req)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	mgr := getManager(oldObj)
 	if mgr == "" {
 		mgr = getManager(newObj)
 	}
-	return mgr, nil
+	return mgr, oldObj, nil
 }
 
 func getManager(obj client.Object) string {

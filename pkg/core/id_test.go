@@ -24,6 +24,11 @@ func TestGKNN(t *testing.T) {
 			obj:  fake.ClusterRoleObject(),
 			want: "rbac.authorization.k8s.io_clusterrole_default-name",
 		},
+		{
+			name: "a nil object",
+			obj:  nil,
+			want: "",
+		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

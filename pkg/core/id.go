@@ -31,6 +31,10 @@ func (i ID) String() string {
 // Changing this function should be avoided, since it may
 // introduce incompability across different Config Sync versions.
 func GKNN(o client.Object) string {
+	if o == nil {
+		return ""
+	}
+
 	group := o.GetObjectKind().GroupVersionKind().Group
 	kind := o.GetObjectKind().GroupVersionKind().Kind
 	if o.GetNamespace() == "" {
