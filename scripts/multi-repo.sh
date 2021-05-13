@@ -15,13 +15,16 @@ GCP_PROJECT=${GCP_PROJECT:-stolos-dev}
 NOMOS_TAG="gcr.io/${GCP_PROJECT}/${USER}/nomos:latest"
 MGR_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler-manager:latest"
 REC_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler:latest"
+WEBHOOK_TAG="gcr.io/${GCP_PROJECT}/${USER}/admission-webhook:latest"
 
 make -C "${REPO_DIR}" image-nomos \
   NOMOS_TAG="${NOMOS_TAG}" \
   RECONCILER_TAG="${REC_TAG}" \
-  RECONCILER_MANAGER_TAG="${MGR_TAG}"
+  RECONCILER_MANAGER_TAG="${MGR_TAG}" \
+  ADMISSION_WEBHOOK_TAG="${WEBHOOK_TAG}"
 docker push "${MGR_TAG}"
 docker push "${REC_TAG}"
+docker push "${WEBHOOK_TAG}"
 
 # Install CRDs for successfully running importer pod.
 # Note: CRD installation will handled by ConfigSync operator in future.
@@ -31,6 +34,7 @@ kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
 kubectl apply -f manifests/reconciler-manager-service-account.yaml
 kubectl apply -f manifests/otel-agent-cm.yaml
+kubectl apply -f manifests/test-resources/kpt-resourcegroup-crd.yaml
 
 # Fill in configmap template
 sed -e "s|IMAGE_NAME|$REC_TAG|" \
@@ -48,6 +52,11 @@ sed -e "s|IMAGE_NAME|$MGR_TAG|g" ./manifests/templates/reconciler-manager.yaml \
   | tee reconciler-manager.generated.yaml \
   | kubectl apply -f -
 kubectl apply -f ./manifests/templates/reconciler-manager/dev.yaml
+
+# Apply the admission-webhook.yaml manifest.
+sed -e "s|IMAGE_NAME|$WEBHOOK_TAG|g" ./manifests/templates/admission-webhook.yaml \
+  | tee admission-webhook.generated.yaml \
+  | kubectl apply -f -
 
 # Cleanup exiting root-ssh-key secret.
 kubectl delete secret root-ssh-key -n=config-management-system --ignore-not-found
