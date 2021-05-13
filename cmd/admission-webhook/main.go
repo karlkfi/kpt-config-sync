@@ -28,7 +28,7 @@ func main() {
 
 	setupLog.Info("starting manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Port:    configuration.Port,
+		Port:    configuration.ContainerPort,
 		CertDir: configuration.CertDir,
 	})
 	if err != nil {

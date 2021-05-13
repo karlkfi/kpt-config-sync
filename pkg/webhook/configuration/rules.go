@@ -84,7 +84,7 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 				Namespace: configsync.ControllerNamespace,
 				Name:      ShortName,
 				Path:      pointer.StringPtr(ServingPath),
-				Port:      pointer.Int32Ptr(Port),
+				Port:      pointer.Int32Ptr(ServicePort),
 			},
 		},
 		// Several essential k8s checks require creating sequences of objects and

@@ -26,7 +26,7 @@ spec:
         image: IMAGE_NAME
         ports:
           - name: admission
-            containerPort: 8676
+            containerPort: 10250
             protocol: TCP
         resources:
           requests:
@@ -60,7 +60,7 @@ spec:
     app: admission-webhook
   ports:
   - name: admission
-    port: 8676
+    port: 443
     targetPort: admission
 ---
 apiVersion: v1
