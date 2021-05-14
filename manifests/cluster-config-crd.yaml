@@ -1,7 +1,7 @@
 # Custom Resource Definition for ClusterConfig
 # which manages cluster level configs on the
 # kubernetes cluster.
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: clusterconfigs.configmanagement.gke.io
@@ -17,14 +17,15 @@ spec:
     kind: ClusterConfig
     shortNames:
     - cr
-  subresources:
-    status: {}
   versions:
   - name: v1
     served: true
     storage: true
-  validation:
+    subresources:
+      status: {}
+    schema:
       openAPIV3Schema:
+        type: object
         required:
         - spec
         properties:
@@ -35,10 +36,9 @@ spec:
               token:
                 type: string
               importTime: # metav1.Time
-                anyOf:
-                - format: date-time
-                  type: string
-                - {}
+                type: string
+                format: date-time
+                nullable: true
               resources:
                 type: array
                 items:
@@ -65,6 +65,8 @@ spec:
                             type: array
                             items:
                               type: object # runtime.RawExtension
+                              x-kubernetes-embedded-resource: true
+                              x-kubernetes-preserve-unknown-fields: true
                           version:
                             type: string
                         # /GenericVersionResources
@@ -82,20 +84,50 @@ spec:
                   # ClusterConfigSyncError
                   type: object
                   properties:
+                    sourcePath:
+                      type: string
                     resourceName:
                       type: string
-                    resourceKind:
+                    resourceNamespace:
                       type: string
-                    resourceAPI:
+                    resourceGVK: # schema.GroupVersionKind
+                      type: object
+                      properties:
+                        Group:
+                          type: string
+                        Version:
+                          type: string
+                        Kind:
+                          type: string
+                    code:
                       type: string
                     errorMessage:
                       type: string
+                    errorResources:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          sourcePath:
+                            type: string
+                          resourceName:
+                            type: string
+                          resourceNamespace:
+                            type: string
+                          resourceGVK:
+                            type: object # schema.GroupVersionKind
+                            properties:
+                              Group:
+                                type: string
+                              Version:
+                                type: string
+                              Kind:
+                                type: string
                   # /ClusterConfigSyncError
               syncTime: # metav1.Time
-                anyOf:
-                - format: date-time
-                  type: string
-                - {}
+                type: string
+                format: date-time
+                nullable: true
               syncState:
                 type: string
                 enum:
@@ -103,4 +135,27 @@ spec:
                 - "synced"
                 - "stale"
                 - "error"
+              resourceConditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    groupVersion:
+                      type: string
+                    kind:
+                      type: string
+                    namespacedName:
+                      type: string
+                    resourceState:
+                      type: string
+                    token:
+                      type: string
+                    reconcilingReasons:
+                      type: array
+                      items:
+                        type: string
+                    errors:
+                      type: array
+                      items:
+                        type: string
             # /ClusterConfigStatus
