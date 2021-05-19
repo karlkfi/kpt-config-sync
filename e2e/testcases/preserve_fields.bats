@@ -133,7 +133,7 @@ function validate_annotation_migrated() {
   local selector='.metadata.annotations | keys | map(select(. != "configmanagement.gke.io/cluster-name")) | sort'
   local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
   local default_keys
-  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\",\"kubectl.kubernetes.io/last-applied-configuration\""
+  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\",\"configsync.gke.io/resource-id\",\"kubectl.kubernetes.io/last-applied-configuration\""
   # This first check verifies that all of the annotation keys that we expect to be present are in fact present. See validate_configmap_annotations for full details.
   local annotations
   annotations=$(kubectl get clusterrole "${resname}" -ojson | jq -c "${selector}")
@@ -265,7 +265,7 @@ function validate_configmap_annotations() {
   local nested_default_keys='"configmanagement.gke.io/managed","configmanagement.gke.io/source-path","configmanagement.gke.io/token"'
   # These are annotation keys that we expect to be present in the annotations map of the resource.
   local default_keys
-  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\""
+  default_keys="${nested_default_keys},\"configsync.gke.io/declared-fields\",\"configsync.gke.io/resource-id\""
   # We initialize annotations by applying the selector above to the json of the resource.
   local annotations
   annotations=$(kubectl get configmap "${resname}" -n "${ns}" -ojson | jq -c "${selector}")
