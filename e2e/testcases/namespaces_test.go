@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"path/filepath"
 	"sort"
 	"testing"
 	"time"
@@ -52,6 +53,328 @@ func TestDeclareNamespace(t *testing.T) {
 	})
 	if err != nil {
 		t.Errorf("validating error metrics: %v", err)
+	}
+}
+
+func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Create foo namespace without any labels or annotations.
+	fooNamespace := fake.NamespaceObject("foo")
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Create foo namespace")
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists.
+	err := nt.Validate(fooNamespace.Name, "", &corev1.Namespace{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
+
+	// Add label and annotation to namespace.
+	fooNamespace.Labels["label"] = "test-label"
+	fooNamespace.Annotations["annotation"] = "test-annotation"
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Updated foo namespace to include label and annotation")
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists with label and annotation.
+	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasLabel("label", "test-label"), nomostest.HasAnnotation("annotation", "test-annotation"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
+
+	// Update label and annotation to namespace.
+	fooNamespace.Labels["label"] = "updated-test-label"
+	fooNamespace.Annotations["annotation"] = "updated-test-annotation"
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Updated foo namespace to include label and annotation")
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists with the updated label and annotation.
+	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasLabel("label", "updated-test-label"), nomostest.HasAnnotation("annotation", "updated-test-annotation"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
+
+	// Remove label and annotation to namespace and commit.
+	delete(fooNamespace.Labels, "label")
+	delete(fooNamespace.Annotations, "annotation")
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Updated foo namespace, removing label and annotation")
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists without the label and annotation.
+	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.MissingLabel("label"), nomostest.MissingAnnotation("annotation"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
+}
+
+func TestNamespaceExistsAndDeclared(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Create namespace using kubectl first then commit.
+	namespace := fake.NamespaceObject("decl-namespace-annotation-none")
+	nt.Root.Add("acme/namespaces/decl-namespace-annotation-none/ns.yaml", namespace)
+	nt.MustKubectl("apply", "-f", filepath.Join(nt.Root.Root, "acme/namespaces/decl-namespace-annotation-none/ns.yaml"))
+	nt.Root.CommitAndPush("Add namespace")
+
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists after sync.
+	err := nt.Validate(namespace.Name, "", &corev1.Namespace{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+}
+
+func TestNamespaceEnabledAnnotationNotDeclared(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Create namespace with managed annotation using kubectl.
+	namespace := fake.NamespaceObject("undeclared-annotation-enabled")
+	namespace.Annotations["configmanagement.gke.io/managed"] = "enabled"
+	nt.Root.Add("ns.yaml", namespace)
+	nt.MustKubectl("apply", "-f", filepath.Join(nt.Root.Root, "ns.yaml"))
+	nt.Root.Remove("ns.yaml")
+
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists after sync.
+	err := nt.Validate(namespace.Name, "", &corev1.Namespace{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+}
+
+func TestNamespaceManagementDisabledCleanup(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Create namespace.
+	fooNamespace := fake.NamespaceObject("foo")
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Create namespace")
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists with expected config management labels and annotations.
+	err := nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
+	// Update namespace to be no longer be managed
+	fooNamespace.Annotations["configmanagement.gke.io/managed"] = "disabled"
+	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
+	nt.Root.CommitAndPush("Update namespace to no longer be managed")
+	nt.WaitForRepoSyncs()
+
+	// Test that the now unmanaged namespace does not contain any config management labels or annotations
+	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+}
+
+func TestSyncLabelsAndAnnotationsonKubeSystem(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Update kube-system namespace to be managed.
+	kubeSystemNamespace := fake.NamespaceObject("kube-system")
+	kubeSystemNamespace.Labels["foo-corp.com/awesome-controller-flavour"] = "fuzzy"
+	kubeSystemNamespace.Annotations["foo-corp.com/awesome-controller-mixin"] = "green"
+	nt.Root.Add("acme/namespaces/kube-system/ns.yaml", kubeSystemNamespace)
+	nt.Root.CommitAndPush("Add namespace")
+	nt.WaitForRepoSyncs()
+
+	// Test that the kube-system namespace exists with label and annotation.
+	err := nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{},
+		nomostest.HasLabel("foo-corp.com/awesome-controller-flavour", "fuzzy"),
+		nomostest.HasAnnotation("foo-corp.com/awesome-controller-mixin", "green"),
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+}
+
+func TestDoNotRemoveManagedByLabelExceptForConfigManagement(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Create namespace using kubectl with managed by helm label.
+	helmManagedNamespace := fake.NamespaceObject("helm-managed-namespace")
+	helmManagedNamespace.Labels["app.kubernetes.io/managed-by"] = "helm"
+	nt.Root.Add("ns.yaml", helmManagedNamespace)
+	nt.MustKubectl("apply", "-f", filepath.Join(nt.Root.Root, "ns.yaml"))
+	nt.Root.Remove("ns.yaml")
+
+	nt.WaitForRepoSyncs()
+
+	// Test that the namespace exists with managed by helm label.
+	err := nt.Validate(helmManagedNamespace.Name, "", &corev1.Namespace{},
+		nomostest.HasLabel("app.kubernetes.io/managed-by", "helm"),
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
 	}
 }
 

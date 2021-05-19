@@ -9,8 +9,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -21,23 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// commonAnnotationKeys include the annotation keys used in both the mono-repo and multi-repo mode.
-var commonAnnotationKeys []string = []string{
-	v1.ClusterNameAnnotationKey,
-	v1.ResourceManagementKey,
-	v1.SourcePathAnnotationKey,
-	v1.SyncTokenAnnotationKey,
-	v1beta1.DeclaredFieldsKey,
-	v1beta1.ResourceIDKey,
-}
-
-// multiRepoOnlyAnnotationKeys include the annotation keys used only in the multi-repo mode.
-var multiRepoOnlyAnnotationKeys []string = []string{
-	v1beta1.GitContextKey,
-	v1beta1.ResourceManagerKey,
-	applier.OwningInventoryKey,
-}
 
 func TestPreserveGeneratedServiceFields(t *testing.T) {
 	nt := nomostest.New(t)
@@ -274,10 +255,7 @@ func TestPreserveLastApplied(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	annotationKeys := commonAnnotationKeys
-	if nt.MultiRepo {
-		annotationKeys = append(commonAnnotationKeys, multiRepoOnlyAnnotationKeys...)
-	}
+	annotationKeys := nomostest.GetNomosAnnotationKeys(nt.MultiRepo)
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
 	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
@@ -403,10 +381,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSyncs()
 
-	annotationKeys := commonAnnotationKeys
-	if nt.MultiRepo {
-		annotationKeys = append(commonAnnotationKeys, multiRepoOnlyAnnotationKeys...)
-	}
+	annotationKeys := nomostest.GetNomosAnnotationKeys(nt.MultiRepo)
 
 	// Checking that the configmap with no annotations appears on cluster, and
 	// that no user annotations are specified

@@ -203,17 +203,18 @@ func TestBats(t *testing.T) {
 		{fileName: "gatekeeper.bats"},
 		// Converted to multiversion_test.go.
 		// {fileName: "multiversion.bats"},
-		{
-			fileName: "namespaces.bats",
-			skipMultiRepo: testNums(
-				1, // TODO(b/169155915): run again once polling period is lower
-				5, // TODO(b/169174036): not clearing invalid management annotation
-				6, // TODO(b/169155915): run again once polling period is lower
-			),
-			multiRepoIncompatible: testNums(
-				3, // b/169155128 - namespace tombstoning that was used in MonoRepo for status, we decided to not implement this for CSMR
-			),
-		},
+		// Converted to namespaces.go.
+		// {
+		//	fileName: "namespaces.bats",
+		//	skipMultiRepo: testNums(
+		//		1, // TODO(b/169155915): run again once polling period is lower
+		//		5, // TODO(b/169174036): not clearing invalid management annotation
+		//		6, // TODO(b/169155915): run again once polling period is lower
+		//	),
+		//	multiRepoIncompatible: testNums(
+		//		3, // b/169155128 - namespace tombstoning that was used in MonoRepo for status, we decided to not implement this for CSMR
+		//	),
+		// },
 		{fileName: "operator-no-policy-dir.bats"},
 		// Converted to cluster_selectors_test.go.
 		// {fileName: "per_cluster_addressing.bats"},
