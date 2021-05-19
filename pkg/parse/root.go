@@ -202,7 +202,14 @@ func addImplicitNamespaces(objs []ast.FileObject) ([]ast.FileObject, status.Mult
 		u.SetGroupVersionKind(kinds.Namespace())
 		u.SetName(ns)
 		// We do NOT want to delete theses implicit Namespaces when the resources
-		// inside them are removed. Note that if the user later declares the
+		// inside them are removed from the repo. We don't know when it is safe to remove
+		// the implicit namespaces. An implicit namespace may already exist in the
+		// cluster. Deleting it will cause other unmanaged resources in that namespace
+		// being deleted.
+		//
+		// Adding the LifecycleDeleteAnnotation is to prevent the applier from deleting
+		// the implicit namespace when the namespaced config is removed from the repo.
+		// Note that if the user later declares the
 		// Namespace without this annotation, the annotation is removed as expected.
 		u.SetAnnotations(map[string]string{common.LifecycleDeleteAnnotation: common.PreventDeletion})
 		objs = append(objs, ast.NewFileObject(u, cmpath.RelativeOS("")))
