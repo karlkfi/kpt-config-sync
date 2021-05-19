@@ -354,7 +354,7 @@ func (w *filteredWatcher) shouldProcess(object client.Object) bool {
 
 	// Even if the object is undeclared, we still want to process it if it is
 	// tagged as a managed object.
-	if !differ.ManagementEnabled(object) {
+	if !differ.ManagedByConfigSync(object) {
 		return false
 	}
 

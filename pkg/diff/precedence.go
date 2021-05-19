@@ -15,7 +15,7 @@ func IsManager(reconciler declared.Scope, obj client.Object) bool {
 		return false
 	}
 	manager, ok := annotations[v1alpha1.ResourceManagerKey]
-	if !ok || !differ.ManagementEnabled(obj) {
+	if !ok || !differ.ManagedByConfigSync(obj) {
 		return false
 	}
 	return manager == string(reconciler)

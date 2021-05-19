@@ -61,6 +61,60 @@ func TestAdmission(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got `kubectl annotate ns hello stop-` error %v %s, want return nil", err, out)
 	}
+
+	// Prevent creating a managed resource.
+	ns := []byte(`
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    configmanagement.gke.io/managed: enabled
+    configsync.gke.io/resource-id: _namespace_test-ns
+  labels:
+    configsync.gke.io/declared-version: v1
+  name: test-ns
+`)
+
+	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
+		t.Fatalf("failed to create a tmp file %v", err)
+	}
+
+	_, err = nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
+	if err == nil {
+		t.Fatal("got `kubectl apply -f test-ns.yaml` success, want return err")
+	}
+
+	// Allow creating/deleting a resource whose `configsync.gke.io/resource-id` does not match the resource,
+	// but whose `configmanagement.gke.io/managed` annotation is `enabled` and whose
+	// `configsync.gke.io/declared-version` label is `v1`.
+	//
+	// The remediator will not remove the Nomos metadata from `test-ns`, since `test-ns` is
+	// not a managed resource.
+	ns = []byte(`
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    configmanagement.gke.io/managed: enabled
+    configsync.gke.io/resource-id: _namespace_wrong-ns
+  labels:
+    configsync.gke.io/declared-version: v1
+  name: test-ns
+`)
+
+	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
+		t.Fatalf("failed to create a tmp file %v", err)
+	}
+
+	out, err = nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
+	if err != nil {
+		t.Fatalf("got `kubectl apply -f test-ns.yaml` error %v %s, want return nil", err, out)
+	}
+
+	out, err = nt.Kubectl("delete", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
+	if err != nil {
+		t.Fatalf("got `kubectl delete -f test-ns.yaml` error %v %s, want return nil", err, out)
+	}
 }
 
 func TestIgnoreMutations(t *testing.T) {
