@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
@@ -23,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -55,10 +57,19 @@ func (c *statusClient) repoSync(ctx context.Context, ns string) (*v1alpha1.RepoS
 	return rs, nil
 }
 
-func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
+func (c *statusClient) resourceGroup(ctx context.Context, objectKey client.ObjectKey) (*unstructured.Unstructured, error) {
+	rg := &unstructured.Unstructured{}
+	rg.SetGroupVersionKind(live.ResourceGroupGVK)
+	if err := c.client.Get(ctx, objectKey, rg); err != nil {
+		return nil, err
+	}
+	return rg, nil
+}
+
+func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, []*unstructured.Unstructured, error) {
 	rsl := &v1alpha1.RepoSyncList{}
 	if err := c.client.List(ctx, rsl); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var repoSyncs []*v1alpha1.RepoSync
 	for _, rs := range rsl.Items {
@@ -67,7 +78,20 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 		localRS := rs
 		repoSyncs = append(repoSyncs, &localRS)
 	}
-	return repoSyncs, nil
+	rgl := &unstructured.UnstructuredList{}
+	rgGVK := live.ResourceGroupGVK
+	rgGVK.Kind += "List"
+	rgl.SetGroupVersionKind(rgGVK)
+	if err := c.client.List(ctx, rgl); err != nil {
+		return nil, nil, err
+	}
+	var resourceGroups []*unstructured.Unstructured
+	for _, rg := range rgl.Items {
+		localRG := rg
+		resourceGroups = append(resourceGroups, &localRG)
+	}
+	consistentOrder(repoSyncs, resourceGroups)
+	return repoSyncs, resourceGroups, nil
 }
 
 // clusterStatus returns the clusterState for the cluster this client is connected to.
@@ -161,16 +185,22 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
-		cs.repos = append(cs.repos, rootRepoStatus(rootSync))
+		rg, err := c.resourceGroup(ctx, rootsync.ObjectKey())
+		if err != nil {
+			errs = append(errs, err.Error())
+		} else {
+			cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg))
+		}
 	}
 
-	syncs, err := c.repoSyncs(ctx)
+	syncs, rgs, err := c.repoSyncs(ctx)
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
 		var repos []*repoState
-		for _, rs := range syncs {
-			repos = append(repos, namespaceRepoStatus(rs))
+		for i, rs := range syncs {
+			rg := rgs[i]
+			repos = append(repos, namespaceRepoStatus(rs, rg))
 		}
 		sort.Slice(repos, func(i, j int) bool {
 			return repos[i].scope < repos[j].scope
@@ -197,7 +227,12 @@ func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clust
 		return
 	}
 
-	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync))
+	rg, err := c.resourceGroup(ctx, reposync.ObjectKey(declared.Scope(ns)))
+	if err != nil {
+		cs.error = err.Error()
+		return
+	}
+	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync, rg))
 }
 
 // isInstalled returns true if the statusClient is connected to a cluster where
@@ -377,4 +412,18 @@ func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string)
 		fmt.Printf("Failed to connect to cluster %q: %v\n", cluster, err)
 	}
 	return false
+}
+
+func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) {
+	tmp := make([]*unstructured.Unstructured, len(resourcegroups))
+	copy(tmp, resourcegroups)
+	indexMap := map[string]int{}
+	for i, rs := range reposyncs {
+		indexMap[rs.GetNamespace()] = i
+	}
+	for _, rg := range tmp {
+		ns := rg.GetNamespace()
+		idx := indexMap[ns]
+		resourcegroups[idx] = rg
+	}
 }

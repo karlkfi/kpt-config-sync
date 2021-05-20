@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"sort"
 
 	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -51,11 +53,12 @@ func unavailableCluster(ref string) *clusterState {
 
 // repoState represents the sync status of a single repo on a cluster.
 type repoState struct {
-	scope  string
-	git    v1alpha1.Git
-	status string
-	commit string
-	errors []string
+	scope     string
+	git       v1alpha1.Git
+	status    string
+	commit    string
+	errors    []string
+	resources []resourceState
 }
 
 func (r *repoState) printRows(writer io.Writer) {
@@ -64,6 +67,15 @@ func (r *repoState) printRows(writer io.Writer) {
 
 	for _, err := range r.errors {
 		fmt.Fprintf(writer, "%sError:\t%s\t\n", indent, err)
+	}
+
+	if resourceStatus && len(r.resources) > 0 {
+		sort.Sort(byNamespaceAndType(r.resources))
+		fmt.Fprintf(writer, "%sManaged resources:\n", indent)
+		fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\n", indent)
+		for _, r := range r.resources {
+			fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status)
+		}
 	}
 }
 
@@ -183,24 +195,31 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 }
 
 // namespaceRepoStatus converts the given RepoSync into a repoState.
-func namespaceRepoStatus(rs *v1alpha1.RepoSync) *repoState {
+func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured) *repoState {
+	resources, _ := resourceLevelStatus(rg)
 	return &repoState{
-		scope:  rs.Namespace,
-		git:    rs.Spec.Git,
-		status: getRepoStatus(rs),
-		commit: commitHash(rs.Status.Sync.Commit),
-		errors: repoSyncErrors(rs),
+		scope:     rs.Namespace,
+		git:       rs.Spec.Git,
+		status:    getRepoStatus(rs),
+		commit:    commitHash(rs.Status.Sync.Commit),
+		errors:    repoSyncErrors(rs),
+		resources: resources,
 	}
 }
 
 // rootRepoStatus converts the given RootSync into a repoState.
-func rootRepoStatus(rs *v1alpha1.RootSync) *repoState {
+func rootRepoStatus(rs *v1alpha1.RootSync, rg *unstructured.Unstructured) *repoState {
+	var resources []resourceState
+	if rg != nil {
+		resources, _ = resourceLevelStatus(rg)
+	}
 	return &repoState{
-		scope:  "<root>",
-		git:    rs.Spec.Git,
-		status: getRootStatus(rs),
-		commit: commitHash(rs.Status.Sync.Commit),
-		errors: rootSyncErrors(rs),
+		scope:     "<root>",
+		git:       rs.Spec.Git,
+		status:    getRootStatus(rs),
+		commit:    commitHash(rs.Status.Sync.Commit),
+		errors:    rootSyncErrors(rs),
+		resources: resources,
 	}
 }
 

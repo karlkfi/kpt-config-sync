@@ -1,0 +1,90 @@
+package status
+
+import (
+	"fmt"
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
+)
+
+type resourceState struct {
+	Namespace  string      `json:"namespace"`
+	Name       string      `json:"name"`
+	Group      string      `json:"group,omitempty"`
+	Kind       string      `json:"kind"`
+	Status     string      `json:"status"`
+	Conditions []Condition `json:"conditions,omitempty"`
+}
+
+// Condition is the for the resource status condition
+type Condition struct {
+	// type of the condition
+	Type string `json:"type"`
+
+	// status of the condition
+	Status string `json:"status"`
+
+	// one-word CamelCase reason for the condition’s last transition
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// human-readable message indicating details about last transition
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// last time the condition transit from one status to another
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+func (r resourceState) String() string {
+	if r.Group == "" {
+		return fmt.Sprintf("%s/%s", strings.ToLower(r.Kind), r.Name)
+	}
+	return fmt.Sprintf("%s.%s/%s", strings.ToLower(r.Kind), r.Group, r.Name)
+}
+
+// byNamespaceAndType implements sort.Interface:
+// It first sort the resources by namespace, then sort them
+// by type.
+type byNamespaceAndType []resourceState
+
+func (b byNamespaceAndType) Len() int {
+	return len(b)
+}
+
+func (b byNamespaceAndType) Less(i, j int) bool {
+	if b[i].Namespace < b[j].Namespace {
+		return true
+	}
+	if b[i].Namespace > b[j].Namespace {
+		return false
+	}
+	return b[i].String() < b[j].String()
+}
+
+func (b byNamespaceAndType) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+func resourceLevelStatus(rg *unstructured.Unstructured) ([]resourceState, error) {
+	rawStatus, found, err := unstructured.NestedSlice(rg.Object, "status", "resourceStatuses")
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("ResourceGroup CR %s/%s doesn't contain resource status", rg.GetNamespace(), rg.GetName())
+	}
+
+	states := make([]resourceState, len(rawStatus))
+	data, err := yaml.Marshal(rawStatus)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(data, &states); err != nil {
+		return nil, err
+	}
+	return states, nil
+}

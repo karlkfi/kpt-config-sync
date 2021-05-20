@@ -29,6 +29,7 @@ var (
 	clientTimeout   time.Duration
 	pollingInterval time.Duration
 	namespace       string
+	resourceStatus  bool
 )
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
 	Cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace repo to get status for (multi-repo only, leave unset to get all repos)")
+	Cmd.Flags().BoolVar(&resourceStatus, "resources", true, "show resource level status for Namespace repo (multi-repo only)")
 }
 
 // GetStatusReadCloser returns a ReadCloser with the output produced by running the "nomos status" command as a string

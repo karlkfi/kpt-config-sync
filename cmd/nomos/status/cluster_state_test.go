@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,10 +26,11 @@ func TestRepoState_PrintRows(t *testing.T) {
 				git: v1alpha1.Git{
 					Repo: "git@github.com:tester/sample",
 				},
-				status: "SYNCED",
-				commit: "abc123",
+				status:    "SYNCED",
+				commit:    "abc123",
+				resources: exampleResources(),
 			},
-			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n",
+			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCURRENT\n  \tbookstore\tservice/test\tCURRENT\n",
 		},
 		{
 			"optional git subdirectory specified",
@@ -270,13 +272,15 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name     string
-		repoSync *v1alpha1.RepoSync
-		want     *repoState
+		name          string
+		repoSync      *v1alpha1.RepoSync
+		resourceGroup *unstructured.Unstructured
+		want          *repoState
 	}{
 		{
 			"repo is pending first sync",
 			fake.RepoSyncObject(core.Namespace("bookstore"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
 			&repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -287,16 +291,19 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			"repo is synced",
 			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc123"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
 			&repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: "SYNCED",
-				commit: "abc123",
+				scope:     "bookstore",
+				git:       git,
+				status:    "SYNCED",
+				commit:    "abc123",
+				resources: exampleResources(),
 			},
 		},
 		{
 			"repo has errors",
 			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123"), withErrorsRepoSync("KNV2010: I am unhappy"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
 			&repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -308,7 +315,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := namespaceRepoStatus(tc.repoSync)
+			got := namespaceRepoStatus(tc.repoSync, tc.resourceGroup)
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
 				t.Error(diff)
 			}
@@ -388,7 +395,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := rootRepoStatus(tc.rootSync)
+			got := rootRepoStatus(tc.rootSync, nil)
 			if diff := cmp.Diff(tc.want, got, cmp.AllowUnexported(*tc.want)); diff != "" {
 				t.Error(diff)
 			}
@@ -471,5 +478,47 @@ gke_sample-project_europe-west1-b_cluster-2
 				t.Errorf("got:\n%s\nwant:\n%s", got, tc.want)
 			}
 		})
+	}
+}
+
+func withResources() core.MetaMutator {
+	status := map[string]interface{}{
+		"resourceStatuses": []interface{}{
+			map[string]interface{}{
+				"group":     "apps",
+				"kind":      "Deployment",
+				"namespace": "bookstore",
+				"name":      "test",
+				"status":    "CURRENT",
+			},
+			map[string]interface{}{
+				"kind":      "Service",
+				"namespace": "bookstore",
+				"name":      "test",
+				"status":    "CURRENT",
+			},
+		},
+	}
+	return func(o client.Object) {
+		u := o.(*unstructured.Unstructured)
+		unstructured.SetNestedField(u.Object, status, "status") //nolint
+	}
+}
+func exampleResources() []resourceState {
+	return []resourceState{
+		{
+			Group:     "apps",
+			Kind:      "Deployment",
+			Namespace: "bookstore",
+			Name:      "test",
+			Status:    "CURRENT",
+		},
+		{
+			Group:     "",
+			Kind:      "Service",
+			Namespace: "bookstore",
+			Name:      "test",
+			Status:    "CURRENT",
+		},
 	}
 }
