@@ -24,8 +24,5 @@ func AddToManager(mgr manager.Manager) error {
 	if err := clusterconfig.AddController(mgr, repoCl, cs); err != nil {
 		return err
 	}
-	if err := namespaceconfig.AddController(mgr, repoCl, cs); err != nil {
-		return err
-	}
-	return nil
+	return namespaceconfig.AddController(mgr, repoCl, cs)
 }

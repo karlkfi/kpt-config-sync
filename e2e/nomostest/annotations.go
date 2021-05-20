@@ -7,7 +7,7 @@ import (
 )
 
 // CommonAnnotationKeys include the annotation keys used in both the mono-repo and multi-repo mode.
-var commonAnnotationKeys []string = []string{
+var commonAnnotationKeys = []string{
 	v1.ClusterNameAnnotationKey,
 	v1.ResourceManagementKey,
 	v1.SourcePathAnnotationKey,
@@ -17,7 +17,7 @@ var commonAnnotationKeys []string = []string{
 }
 
 // multiRepoOnlyAnnotationKeys include the annotation keys used only in the multi-repo mode.
-var multiRepoOnlyAnnotationKeys []string = []string{
+var multiRepoOnlyAnnotationKeys = []string{
 	v1beta1.GitContextKey,
 	v1beta1.ResourceManagerKey,
 	applier.OwningInventoryKey,

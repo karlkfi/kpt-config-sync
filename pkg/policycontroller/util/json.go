@@ -22,10 +22,7 @@ func UnmarshalStatus(obj unstructured.Unstructured, status interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(statusJSON, status); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(statusJSON, status)
 }
 
 // jsonify marshals the given string array as a JSON string.

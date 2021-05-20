@@ -43,10 +43,7 @@ func (r *RepoSyncReconciler) cleanupNSControllerResources(ctx context.Context, n
 		return err
 	}
 	// secret
-	if err := r.deleteSecret(ctx, ns); err != nil {
-		return err
-	}
-	return nil
+	return r.deleteSecret(ctx, ns)
 }
 
 func (r *RepoSyncReconciler) cleanup(ctx context.Context, name, namespace string, gvk schema.GroupVersionKind) error {
