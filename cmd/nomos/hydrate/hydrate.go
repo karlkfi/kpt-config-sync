@@ -61,8 +61,6 @@ apply the configuration to a cluster.`)
 }
 
 // Cmd is the Cobra object representing the hydrate command.
-//
-// TODO(b/136576007): Better error messages.
 var Cmd = &cobra.Command{
 	Use:   "hydrate",
 	Short: "Compiles the local repository to the exact form that would be sent to the APIServer.",
@@ -106,10 +104,6 @@ clusters.`,
 			Files:     files,
 		}
 
-		dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
-		if err != nil {
-			return err
-		}
 		parser := filesystem.NewParser(&reader.File{})
 
 		crds, err := parse.GetSyncedCRDs(cmd.Context(), flags.SkipAPIServer)
@@ -118,8 +112,15 @@ clusters.`,
 		}
 		addFunc := vet.AddCachedAPIResources(rootDir.Join(vet.APIResourcesPath))
 
+		var serverResourcer discovery.ServerResourcer = discovery.NoOpServerResourcer{}
 		var converter *declared.ValueConverter
 		if !flags.SkipAPIServer {
+			dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
+			if err != nil {
+				return err
+			}
+			serverResourcer = dc
+
 			converter, err = declared.NewValueConverter(dc)
 			if err != nil {
 				return err
@@ -129,7 +130,7 @@ clusters.`,
 		options := validate.Options{
 			PolicyDir:         policyDir,
 			PreviousCRDs:      crds,
-			BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+			BuildScoper:       discovery.ScoperBuilder(serverResourcer, addFunc),
 			Converter:         converter,
 			AllowUnknownKinds: flags.SkipAPIServer,
 		}

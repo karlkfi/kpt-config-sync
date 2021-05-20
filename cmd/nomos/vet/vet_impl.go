@@ -54,11 +54,6 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		return err
 	}
 
-	dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
-	if err != nil {
-		return err
-	}
-
 	if sourceFormat == "" {
 		if namespace == "" {
 			// Default to hierarchical if --namespace is not provided.
@@ -74,8 +69,15 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 		return err
 	}
 
+	var serverResourcer discovery.ServerResourcer = discovery.NoOpServerResourcer{}
 	var converter *declared.ValueConverter
 	if !skipAPIServer {
+		dc, err := importer.DefaultCLIOptions.ToDiscoveryClient()
+		if err != nil {
+			return err
+		}
+		serverResourcer = dc
+
 		converter, err = declared.NewValueConverter(dc)
 		if err != nil {
 			return err
@@ -87,7 +89,7 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 	options := validate.Options{
 		PolicyDir:         cmpath.RelativeOS(root),
 		PreviousCRDs:      syncedCRDs,
-		BuildScoper:       discovery.ScoperBuilder(dc, addFunc),
+		BuildScoper:       discovery.ScoperBuilder(serverResourcer, addFunc),
 		Converter:         converter,
 		AllowUnknownKinds: skipAPIServer,
 	}

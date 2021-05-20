@@ -15,6 +15,16 @@ type ServerResourcer interface {
 	ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error)
 }
 
+// NoOpServerResourcer is a ServerResourcer that returns nil.
+type NoOpServerResourcer struct{}
+
+// ServerGroupsAndResources returns nothing.
+func (n NoOpServerResourcer) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
+	return nil, nil, nil
+}
+
+var _ ServerResourcer = NoOpServerResourcer{}
+
 type invalidatable interface {
 	Invalidate()
 }
