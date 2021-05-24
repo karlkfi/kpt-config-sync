@@ -309,16 +309,16 @@ func TestSyncLabelsAndAnnotationsonKubeSystem(t *testing.T) {
 
 	// Update kube-system namespace to be managed.
 	kubeSystemNamespace := fake.NamespaceObject("kube-system")
-	kubeSystemNamespace.Labels["foo-corp.com/awesome-controller-flavour"] = "fuzzy"
-	kubeSystemNamespace.Annotations["foo-corp.com/awesome-controller-mixin"] = "green"
+	kubeSystemNamespace.Labels["test-corp.com/awesome-controller-flavour"] = "fuzzy"
+	kubeSystemNamespace.Annotations["test-corp.com/awesome-controller-mixin"] = "green"
 	nt.Root.Add("acme/namespaces/kube-system/ns.yaml", kubeSystemNamespace)
 	nt.Root.CommitAndPush("Add namespace")
 	nt.WaitForRepoSyncs()
 
 	// Test that the kube-system namespace exists with label and annotation.
 	err := nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{},
-		nomostest.HasLabel("foo-corp.com/awesome-controller-flavour", "fuzzy"),
-		nomostest.HasAnnotation("foo-corp.com/awesome-controller-mixin", "green"),
+		nomostest.HasLabel("test-corp.com/awesome-controller-flavour", "fuzzy"),
+		nomostest.HasAnnotation("test-corp.com/awesome-controller-mixin", "green"),
 	)
 	if err != nil {
 		t.Error(err)

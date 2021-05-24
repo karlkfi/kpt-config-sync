@@ -55,6 +55,9 @@ func Clean(nt *NT, failOnError FailOnError) {
 	// The admission-webhook prevents deleting test resources. Hence we delete it before cleaning other resources.
 	removeAdmissionWebhook(nt, failOnError)
 
+	// Reset any modified system namespaces.
+	resetSystemNamespaces(nt, failOnError)
+
 	// errDeleting ensures we delete everything possible to delete before failing.
 	errDeleting := false
 	for gvk := range nt.scheme.AllKnownTypes() {
@@ -127,7 +130,6 @@ func Clean(nt *NT, failOnError FailOnError) {
 		nt.T.Fatal("error waiting for test objects to be deleted")
 	}
 
-	resetSystemNamespaces(nt, failOnError)
 	deleteImplicitNamespaces(nt, failOnError)
 }
 
@@ -139,21 +141,29 @@ func isConfigSyncAnnotation(annotation string) bool {
 		annotation == hnc.AnnotationKeyV1A2
 }
 
-func isConfigSyncLabel(key, value string) bool {
-	return (key == v1.ManagedByKey && value == v1.ManagedByValue) || strings.Contains(key, hnc.DepthSuffix)
+func isTestAnnotation(annotation string) bool {
+	return strings.HasPrefix(annotation, "test-")
 }
 
-// deleteConfigSyncAnnotationsAndLabels removes the config sync annotations and labels from the namespace and update it.
-func deleteConfigSyncAnnotationsAndLabels(nt *NT, ns *corev1.Namespace) error {
+func isConfigSyncLabel(key, value string) bool {
+	return (key == v1.ManagedByKey && value == v1.ManagedByValue) || key == configuration.DeclaredVersionLabel || strings.Contains(key, hnc.DepthSuffix)
+}
+
+func isTestLabel(key string) bool {
+	return key == TestLabel || strings.HasPrefix(key, "test-")
+}
+
+// deleteConfigSyncAndTestAnnotationsAndLabels removes config sync and test annotations and labels from the namespace and update it.
+func deleteConfigSyncAndTestAnnotationsAndLabels(nt *NT, ns *corev1.Namespace) error {
 	var annotations = make(map[string]string)
 	var labels = make(map[string]string)
 	for k, v := range ns.Annotations {
-		if !isConfigSyncAnnotation(k) {
+		if !isConfigSyncAnnotation(k) && !isTestAnnotation(k) {
 			annotations[k] = v
 		}
 	}
 	for k, v := range ns.Labels {
-		if !isConfigSyncLabel(k, v) {
+		if !isConfigSyncLabel(k, v) && !isTestLabel(k) {
 			labels[k] = v
 		}
 	}
@@ -195,7 +205,7 @@ func resetSystemNamespaces(nt *NT, failOnError FailOnError) {
 	for _, ns := range nsList.Items {
 		ns.SetGroupVersionKind(kinds.Namespace())
 		if differ.IsManageableSystemNamespace(&ns) {
-			if err := deleteConfigSyncAnnotationsAndLabels(nt, &ns); err != nil {
+			if err := deleteConfigSyncAndTestAnnotationsAndLabels(nt, &ns); err != nil {
 				nt.T.Log(err)
 				errDeleting = true
 			}
