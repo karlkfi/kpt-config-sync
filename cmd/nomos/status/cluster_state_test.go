@@ -30,7 +30,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				commit:    "abc123",
 				resources: exampleResources(),
 			},
-			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCURRENT\n  \tbookstore\tservice/test\tCURRENT\n",
+			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCurrent\n  \tbookstore\tservice/test\tCurrent\n  \tbookstore\tservice/test2\tConflict\n",
 		},
 		{
 			"optional git subdirectory specified",
@@ -489,13 +489,31 @@ func withResources() core.MetaMutator {
 				"kind":      "Deployment",
 				"namespace": "bookstore",
 				"name":      "test",
-				"status":    "CURRENT",
+				"status":    "Current",
 			},
 			map[string]interface{}{
 				"kind":      "Service",
 				"namespace": "bookstore",
 				"name":      "test",
-				"status":    "CURRENT",
+				"status":    "Current",
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":   "Stalled",
+						"status": "False",
+					},
+				},
+			},
+			map[string]interface{}{
+				"kind":      "Service",
+				"namespace": "bookstore",
+				"name":      "test2",
+				"status":    "Current",
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":   "OwnershipOverlap",
+						"status": "True",
+					},
+				},
 			},
 		},
 	}
@@ -511,14 +529,23 @@ func exampleResources() []resourceState {
 			Kind:      "Deployment",
 			Namespace: "bookstore",
 			Name:      "test",
-			Status:    "CURRENT",
+			Status:    "Current",
 		},
 		{
-			Group:     "",
-			Kind:      "Service",
-			Namespace: "bookstore",
-			Name:      "test",
-			Status:    "CURRENT",
+			Group:      "",
+			Kind:       "Service",
+			Namespace:  "bookstore",
+			Name:       "test",
+			Status:     "Current",
+			Conditions: []Condition{{Type: "Stalled", Status: "False"}},
+		},
+		{
+			Group:      "",
+			Kind:       "Service",
+			Namespace:  "bookstore",
+			Name:       "test2",
+			Status:     "Conflict",
+			Conditions: []Condition{{Type: "OwnershipOverlap", Status: "True"}},
 		},
 	}
 }

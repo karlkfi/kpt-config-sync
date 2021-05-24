@@ -90,7 +90,7 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, []*
 		localRG := rg
 		resourceGroups = append(resourceGroups, &localRG)
 	}
-	consistentOrder(repoSyncs, resourceGroups)
+	repoSyncs, resourceGroups = consistentOrder(repoSyncs, resourceGroups)
 	return repoSyncs, resourceGroups, nil
 }
 
@@ -414,16 +414,25 @@ func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string)
 	return false
 }
 
-func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) {
-	tmp := make([]*unstructured.Unstructured, len(resourcegroups))
-	copy(tmp, resourcegroups)
+// consistentOrder sort the resourcegroups in the same order as the reposyncs by namespace.
+// The resourcegroup list contains ResourceGroup CRs from all namespaces, including the one
+// from config-management-system; The reposyncs only contains RepoSync CRs.
+// For a RepoSync CR, the corresponding ResourceGroup CR may not exist in the cluster.
+// We assign it to nil in this case.
+func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) ([]*v1alpha1.RepoSync, []*unstructured.Unstructured) {
 	indexMap := map[string]int{}
+	for i, r := range resourcegroups {
+		indexMap[r.GetNamespace()] = i
+	}
+	rgs := make([]*unstructured.Unstructured, len(reposyncs))
 	for i, rs := range reposyncs {
-		indexMap[rs.GetNamespace()] = i
+		ns := rs.Namespace
+		idx, found := indexMap[ns]
+		if !found {
+			rgs[i] = nil
+		} else {
+			rgs[i] = resourcegroups[idx]
+		}
 	}
-	for _, rg := range tmp {
-		ns := rg.GetNamespace()
-		idx := indexMap[ns]
-		resourcegroups[idx] = rg
-	}
+	return reposyncs, rgs
 }

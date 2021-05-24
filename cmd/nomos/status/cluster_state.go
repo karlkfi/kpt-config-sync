@@ -209,10 +209,7 @@ func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured) *
 
 // rootRepoStatus converts the given RootSync into a repoState.
 func rootRepoStatus(rs *v1alpha1.RootSync, rg *unstructured.Unstructured) *repoState {
-	var resources []resourceState
-	if rg != nil {
-		resources, _ = resourceLevelStatus(rg)
-	}
+	resources, _ := resourceLevelStatus(rg)
 	return &repoState{
 		scope:     "<root>",
 		git:       rs.Spec.Git,

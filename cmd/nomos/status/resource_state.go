@@ -70,6 +70,9 @@ func (b byNamespaceAndType) Swap(i, j int) {
 }
 
 func resourceLevelStatus(rg *unstructured.Unstructured) ([]resourceState, error) {
+	if rg == nil {
+		return nil, nil
+	}
 	rawStatus, found, err := unstructured.NestedSlice(rg.Object, "status", "resourceStatuses")
 	if err != nil {
 		return nil, err
@@ -86,5 +89,17 @@ func resourceLevelStatus(rg *unstructured.Unstructured) ([]resourceState, error)
 	if err := yaml.Unmarshal(data, &states); err != nil {
 		return nil, err
 	}
-	return states, nil
+	return checkConflict(states), nil
+}
+
+func checkConflict(states []resourceState) []resourceState {
+	for i, s := range states {
+		for _, c := range s.Conditions {
+			if c.Type == "OwnershipOverlap" && c.Status == "True" {
+				states[i].Status = "Conflict"
+			}
+		}
+	}
+
+	return states
 }
