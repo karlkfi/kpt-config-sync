@@ -10,12 +10,17 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
+// IsInvalidAnnotation returns true if the annotation cannot be declared by users.
+func IsInvalidAnnotation(k string) bool {
+	return hasConfigSyncPrefix(k) && !isSourceAnnotation(k)
+}
+
 // Annotations verifies that the given object does not have any invalid
 // annotations.
 func Annotations(obj ast.FileObject) status.Error {
 	var invalid []string
 	for a := range obj.GetAnnotations() {
-		if hasConfigSyncPrefix(a) && !isSourceAnnotation(a) {
+		if IsInvalidAnnotation(a) {
 			invalid = append(invalid, a)
 		}
 	}

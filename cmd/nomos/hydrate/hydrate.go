@@ -163,6 +163,7 @@ clusters.`,
 		})
 
 		multiCluster := numClusters > 1
+		hydrate.Clean(allObjects)
 		fileObjects := hydrate.GenerateUniqueFileNames(extension, multiCluster, allObjects...)
 		if flat {
 			err = printFlatOutput(fileObjects)
@@ -187,7 +188,7 @@ func printFlatOutput(fileObjects []ast.FileObject) error {
 		objects[i] = o.Unstructured
 	}
 
-	return printFile(outPath, objects)
+	return PrintFile(outPath, objects)
 }
 
 func printDirectoryOutput(fileObjects []ast.FileObject) error {
@@ -201,7 +202,7 @@ func printDirectoryOutput(fileObjects []ast.FileObject) error {
 	}
 
 	for file, objects := range files {
-		err := printFile(filepath.Join(outPath, file), objects)
+		err := PrintFile(filepath.Join(outPath, file), objects)
 		if err != nil {
 			return err
 		}
@@ -220,7 +221,8 @@ func toUnstructured(o client.Object) (*unstructured.Unstructured, error) {
 	return u, nil
 }
 
-func printFile(file string, objects []*unstructured.Unstructured) (err error) {
+// PrintFile prints the passed objects to file.
+func PrintFile(file string, objects []*unstructured.Unstructured) (err error) {
 	err = os.MkdirAll(filepath.Dir(file), os.ModePerm)
 	if err != nil {
 		return err
