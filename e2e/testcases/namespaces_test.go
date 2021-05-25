@@ -304,7 +304,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 	}
 }
 
-func TestSyncLabelsAndAnnotationsonKubeSystem(t *testing.T) {
+func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 	nt := nomostest.New(t)
 
 	// Update kube-system namespace to be managed.
@@ -328,6 +328,64 @@ func TestSyncLabelsAndAnnotationsonKubeSystem(t *testing.T) {
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//if err := nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating metrics: %v", err)
+	}
+
+	// Remove label and annotation from the kube-system namespace.
+	delete(kubeSystemNamespace.Labels, "test-corp.com/awesome-controller-flavour")
+	delete(kubeSystemNamespace.Annotations, "test-corp.com/awesome-controller-mixin")
+	nt.Root.Add("acme/namespaces/kube-system/ns.yaml", kubeSystemNamespace)
+	nt.Root.CommitAndPush("Remove label and annotation")
+	nt.WaitForRepoSyncs()
+
+	// Test that the kube-system namespace exists without the label and annotation.
+	err = nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{},
+		nomostest.MissingLabel("test-corp.com/awesome-controller-flavour"), nomostest.MissingAnnotation("test-corp.com/awesome-controller-mixin"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("validating error metrics: %v", err)
+	}
+
+	// Update kube-system namespace to be no longer be managed.
+	kubeSystemNamespace.Annotations["configmanagement.gke.io/managed"] = "disabled"
+	nt.Root.Add("acme/namespaces/kube-system/ns.yaml", kubeSystemNamespace)
+	nt.Root.CommitAndPush("Update namespace to no longer be managed")
+	nt.WaitForRepoSyncs()
+
+	// Test that the now unmanaged kube-system namespace does not contain any config management labels or annotations.
+	err = nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Validate multi-repo metrics.
+	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
+		nt.ParseMetrics(prev)
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
