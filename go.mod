@@ -7,7 +7,17 @@ go 1.15
 replace k8s.io/code-generator => k8s.io/code-generator v0.20.2
 
 // Prevent Go from updating gnostic to a version incompatible with kube-openapi.
-replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+replace github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.1
+
+// Keep the version of cli-runtime to v0.21.0 while keep other k8s dependency
+// versions to v0.20.4
+replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.0
+
+replace k8s.io/api => k8s.io/api v0.20.4
+
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.20.4
+
+replace k8s.io/client-go => k8s.io/client-go v0.20.4
 
 require (
 	cloud.google.com/go v0.72.0
@@ -36,13 +46,13 @@ require (
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
 	google.golang.org/grpc v1.35.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.20.4
+	k8s.io/api v0.21.0
 	k8s.io/apiextensions-apiserver v0.20.2
-	k8s.io/apimachinery v0.20.4
+	k8s.io/apimachinery v0.21.0
 	k8s.io/cli-runtime v0.20.4
-	k8s.io/client-go v0.20.4
+	k8s.io/client-go v0.21.0
 	k8s.io/cluster-registry v0.0.6
-	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
+	k8s.io/kube-openapi v0.0.0-20210527164424-3c818078ee3d
 	k8s.io/kubectl v0.20.4
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
 	sigs.k8s.io/cli-utils v0.24.0
