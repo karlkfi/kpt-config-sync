@@ -19,9 +19,18 @@ import (
 
 func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	nt := nomostest.New(t)
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	// Skip this test if v1beta1 CRD is not supported in the testing cluster.
+	if !support {
+		return
+	}
+
 	crdFile := filepath.Join(".", "..", "testdata", "customresources", "v1beta1_crds", "anvil-crd.yaml")
 	clusterFile := filepath.Join(".", "..", "testdata", "customresources", "v1beta1_crds", "clusteranvil-crd.yaml")
-	_, err := nt.Kubectl("apply", "-f", crdFile)
+	_, err = nt.Kubectl("apply", "-f", crdFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,6 +210,14 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 
 func TestSyncUpdateCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	// Skip this test if v1beta1 CRD is not supported in the testing cluster.
+	if !support {
+		return
+	}
 	for _, dir := range []string{"v1beta1_crds"} {
 		t.Run(dir, func(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd-structural.yaml")

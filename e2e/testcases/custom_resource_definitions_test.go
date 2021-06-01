@@ -36,6 +36,14 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 			fn:   func() client.Object { return anvilV1Beta1CRD() },
 		},
 	}
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	if !support {
+		testcases = testcases[0:1]
+	}
+
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			nt.Root.Add("acme/cluster/anvil-crd.yaml", tc.fn())
@@ -46,7 +54,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 			nt.RenewClient()
 
 			if nt.MultiRepo {
-				err := nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
+				err = nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
 					hasRule("acme.com.v1.admission-webhook.configsync.gke.io"))
 				if err != nil {
 					t.Fatal(err)
@@ -111,8 +119,18 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 
 func TestAddAndRemoveCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	var testcases []string
+	if support {
+		testcases = []string{"v1_crds", "v1beta1_crds"}
+	} else {
+		testcases = []string{"v1_crds"}
+	}
 
-	for _, dir := range []string{"v1_crds", "v1beta1_crds"} {
+	for _, dir := range testcases {
 		t.Run(dir, func(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
@@ -170,8 +188,18 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 
 func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	var testcases []string
+	if support {
+		testcases = []string{"v1_crds", "v1beta1_crds"}
+	} else {
+		testcases = []string{"v1_crds"}
+	}
 
-	for _, dir := range []string{"v1_crds", "v1beta1_crds"} {
+	for _, dir := range testcases {
 		t.Run(dir, func(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
@@ -229,7 +257,18 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 
 func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 	nt := nomostest.New(t)
-	for _, dir := range []string{"v1_crds", "v1beta1_crds"} {
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	var testcases []string
+	if support {
+		testcases = []string{"v1_crds", "v1beta1_crds"}
+	} else {
+		testcases = []string{"v1_crds"}
+	}
+
+	for _, dir := range testcases {
 		t.Run(dir, func(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "clusteranvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
@@ -315,7 +354,18 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 	nt := nomostest.New(t)
 
-	for _, dir := range []string{"v1_crds", "v1beta1_crds"} {
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	var testcases []string
+	if support {
+		testcases = []string{"v1_crds", "v1beta1_crds"}
+	} else {
+		testcases = []string{"v1_crds"}
+	}
+
+	for _, dir := range testcases {
 		t.Run(dir, func(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)

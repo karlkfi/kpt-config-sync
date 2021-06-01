@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -899,6 +901,24 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 		},
 		opts...,
 	)
+}
+
+// SupportV1Beta1CRD checks if v1beta1 CRD is supported
+// in the current testing cluster.
+func (nt *NT) SupportV1Beta1CRD() (bool, error) {
+	dc, err := discovery.NewDiscoveryClientForConfig(nt.Config)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to create discoveryclient")
+	}
+	serverVersion, err := dc.ServerVersion()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to get server version")
+	}
+	// Use only major version and minor version in case other parts
+	// may affect the comparison.
+	v := fmt.Sprintf("v%s.%s", serverVersion.Major, serverVersion.Minor)
+	cmp := version.CompareKubeAwareVersionStrings(v, "v1.22")
+	return cmp < 0, nil
 }
 
 // WaitOption is an optional parameter for Wait
