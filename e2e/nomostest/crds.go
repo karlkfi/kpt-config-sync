@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,7 +35,7 @@ var (
 func waitForCRDs(nt *NT, crds []string) error {
 	took, err := Retry(60*time.Second, func() error {
 		for _, crd := range crds {
-			err := nt.Validate(crd, "", &v1beta1.CustomResourceDefinition{}, IsEstablished)
+			err := nt.Validate(crd, "", &v1.CustomResourceDefinition{}, IsEstablished)
 			if err != nil {
 				return err
 			}
@@ -53,14 +53,14 @@ func waitForCRDs(nt *NT, crds []string) error {
 // which indicates if discovery knows about it yet. For more info see
 // https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition
 func IsEstablished(o client.Object) error {
-	crd, ok := o.(*v1beta1.CustomResourceDefinition)
+	crd, ok := o.(*v1.CustomResourceDefinition)
 	if !ok {
 		return WrongTypeErr(o, crd)
 	}
 
 	for _, condition := range crd.Status.Conditions {
-		if condition.Type == v1beta1.Established {
-			if condition.Status == v1beta1.ConditionTrue {
+		if condition.Type == v1.Established {
+			if condition.Status == v1.ConditionTrue {
 				return nil
 			}
 		}

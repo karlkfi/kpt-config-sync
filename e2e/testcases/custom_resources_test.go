@@ -30,7 +30,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.IsEstablished)
+		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.IsEstablished)
+		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -210,7 +210,7 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 			}
 
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.IsEstablished)
+				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 			})
 			if err != nil {
 				t.Fatal(err)

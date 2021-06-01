@@ -16,7 +16,7 @@ import (
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -159,7 +159,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 			nt.Root.CommitAndPush("Removing the Anvil CRD as well")
 			nt.WaitForRepoSyncs()
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object())
+				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -198,7 +198,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 			//}
 
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object())
+				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -218,7 +218,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 			nt.WaitForRepoSyncs()
 
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object())
+				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -277,7 +277,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 			nt.Root.CommitAndPush("Updating the Anvil CRD")
 			nt.WaitForRepoSyncs()
 
-			err = nt.Validate("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), hasTwoVersions)
+			err = nt.Validate("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), hasTwoVersions)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -303,7 +303,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 			nt.Root.CommitAndPush("Removing the Anvil CRD as well")
 			nt.WaitForRepoSyncs()
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.ValidateNotFound("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object())
+				return nt.ValidateNotFound("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -363,7 +363,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), hasTwoVersions)
+			err = nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), hasTwoVersions)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -380,7 +380,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 			nt.WaitForRepoSyncs()
 
 			_, err = nomostest.Retry(60*time.Second, func() error {
-				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.IsEstablished, hasTwoVersions)
+				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished, hasTwoVersions)
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -399,7 +399,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 
 			// Validate the CustomResource is also deleted from cluster.
 			_, err = nomostest.Retry(30*time.Second, func() error {
-				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Beta1Object())
+				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -460,7 +460,7 @@ func TestLargeCRD(t *testing.T) {
 	nt.Root.CommitAndPush("Update label for one CRD")
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Beta1Object(), nomostest.HasLabel("random-key", "random-value"))
+	err = nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object(), nomostest.HasLabel("random-key", "random-value"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func hasRule(name string) nomostest.Predicate {
 }
 
 func hasTwoVersions(obj client.Object) error {
-	crd := obj.(*apiextensionsv1beta1.CustomResourceDefinition)
+	crd := obj.(*apiextensionsv1.CustomResourceDefinition)
 	if len(crd.Spec.Versions) != 2 {
 		return errors.New("the CRD should contain 2 versions")
 	}
