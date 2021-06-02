@@ -200,6 +200,14 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 		// TODO(b/168918861): Re-enable this test when multi-repo supports resource condition annotations.
 		return
 	}
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	// Skip this test when the v1beta1 CRD is not supported in the testing cluster.
+	if !support {
+		return
+	}
 
 	if err := nt.ApplyGatekeeperTestData("constraint-template-crd.yaml", "constrainttemplates.templates.gatekeeper.sh"); err != nil {
 		t.Fatalf("Failed to create constraint template CRD: %v", err)
@@ -239,7 +247,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	// In the real world, this annotation would be removed once PolicyController
 	// created the CRD corresponding to this ConstraintTemplate. Thus, this test
 	// requires Gatekeeper to not be installed to test this path in a non-flaky way.
-	_, err := nomostest.Retry(20*time.Second, func() error {
+	_, err = nomostest.Retry(20*time.Second, func() error {
 		// This happens asynchronously with syncing the repo; so the Repo may report
 		// "synced" before this appears.
 		return nt.Validate(ctName, "", fake.UnstructuredObject(ctGVK),
@@ -255,6 +263,14 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 
 	if nt.MultiRepo {
 		// TODO(b/168918861): Re-enable this test when multi-repo supports resource condition annotations.
+		return
+	}
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	// Skip this test when v1beta1 CRD is not supported in the testing cluster.
+	if !support {
 		return
 	}
 
@@ -289,7 +305,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	// In the real world, this annotation would be removed once PolicyController
 	// began enforcing it. Thus, this test requires Gatekeeper to not be installed
 	// to test this path in a non-flaky way.
-	_, err := nomostest.Retry(20*time.Second, func() error {
+	_, err = nomostest.Retry(20*time.Second, func() error {
 		// This happens asynchronously with syncing the repo; so the Repo may report
 		// "synced" before this appears.
 		return nt.Validate(constraintName, "", fake.UnstructuredObject(constraintGVK),

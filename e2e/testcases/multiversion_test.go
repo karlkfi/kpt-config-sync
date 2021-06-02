@@ -22,6 +22,14 @@ import (
 
 func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	nt := nomostest.New(t)
+	support, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
+	// Skip this test when v1beta1 CRD is not supported in the testing cluster.
+	if !support {
+		return
+	}
 
 	// Add the Anvil CRD.
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", anvilV1Beta1CRD())
@@ -36,7 +44,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	nt.Root.CommitAndPush("Adding v1 and v2 Anvil CRs")
 	nt.WaitForRepoSyncs()
 
-	err := nt.Validate("first", "foo", anvilCR("v1", "", 0))
+	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,6 +291,10 @@ func anvilCR(version, name string, weight int64) *unstructured.Unstructured {
 
 func TestMultipleVersions_RoleBinding(t *testing.T) {
 	nt := nomostest.New(t)
+	supportV1beta1, err := nt.SupportV1Beta1CRD()
+	if err != nil {
+		t.Fatal("failed to check the supported CRD versions")
+	}
 
 	rbV1 := fake.RoleBindingObject(core.Name("v1user"))
 	rbV1.RoleRef = rbacv1.RoleRef{
@@ -311,19 +323,24 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	// Add the v1 and v1beta1 RoleBindings and verify they are created.
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.Add("acme/namespaces/foo/rbv1.yaml", rbV1)
-	nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
+	if supportV1beta1 {
+		nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
+	}
 	nt.Root.CommitAndPush("Adding v1 and v1beta1 RoleBindings")
 	nt.WaitForRepoSyncs()
 
-	err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
+	err = nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
 		hasV1Subjects("v1user@acme.com"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
-		hasV1Beta1Subjects("v1beta1user@acme.com"))
-	if err != nil {
-		t.Fatal(err)
+
+	if supportV1beta1 {
+		err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
+			hasV1Beta1Subjects("v1beta1user@acme.com"))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Modify the v1 and v1beta1 RoleBindings and verify they are updated.
@@ -340,7 +357,9 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
 	nt.Root.Add("acme/namespaces/foo/rbv1.yaml", rbV1)
-	nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
+	if supportV1beta1 {
+		nt.Root.Add("acme/namespaces/foo/rbv1beta1.yaml", rbV1Beta1)
+	}
 	nt.Root.CommitAndPush("Modifying v1 and v1beta1 RoleBindings")
 	nt.WaitForRepoSyncs()
 
@@ -349,22 +368,26 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
-		hasV1Beta1Subjects("v1beta1user@acme.com", "v1beta1admin@acme.com"))
-	if err != nil {
-		t.Fatal(err)
+	if supportV1beta1 {
+		err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
+			hasV1Beta1Subjects("v1beta1user@acme.com", "v1beta1admin@acme.com"))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	// Remove the v1beta1 RoleBinding and verify that only it is deleted.
-	nt.Root.Remove("acme/namespaces/foo/rbv1beta1.yaml")
-	nt.Root.CommitAndPush("Removing v1beta1 RoleBinding")
-	nt.WaitForRepoSyncs()
+	if supportV1beta1 {
+		// Remove the v1beta1 RoleBinding and verify that only it is deleted.
+		nt.Root.Remove("acme/namespaces/foo/rbv1beta1.yaml")
+		nt.Root.CommitAndPush("Removing v1beta1 RoleBinding")
+		nt.WaitForRepoSyncs()
 
-	if err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
-	}
-	if err := nt.ValidateNotFound("v1beta1user", "foo", &rbacv1beta1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		if err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
+			t.Fatal(err)
+		}
+		if err := nt.ValidateNotFound("v1beta1user", "foo", &rbacv1beta1.RoleBinding{}); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Remove the v1 RoleBinding and verify that it is also deleted.
