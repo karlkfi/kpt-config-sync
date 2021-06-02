@@ -151,7 +151,10 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv
 	// If the existing Deployment and the new Deployment have the same `deploymentConfigChecksumAnnotation` annotation,
 	// we should only patch the Deployment when `mutateObject(obj)` changes the object.
 	if core.GetAnnotation(existing, deploymentConfigChecksumAnnotationKey) == core.GetAnnotation(obj, deploymentConfigChecksumAnnotationKey) {
+		// We want to preserve the replicas from the deployment object.
+		replicas := obj.Spec.Replicas
 		obj = existing.DeepCopy()
+		obj.Spec.Replicas = replicas
 	}
 
 	patch := client.MergeFrom(existing)
