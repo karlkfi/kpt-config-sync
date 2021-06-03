@@ -9,7 +9,7 @@ import (
 	"github.com/google/nomos/pkg/policycontroller/constraint"
 	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/util/watch"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,7 +55,7 @@ func newReconciler(ctx context.Context, mgr manager.Manager) (*crdReconciler, er
 // change to which constraint kinds are both watched and established, then the
 // RestartableManager will be restarted.
 func (c *crdReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	crd := &v1beta1.CustomResourceDefinition{}
+	crd := &apiextensionsv1.CustomResourceDefinition{}
 	if err := c.client.Get(ctx, request.NamespacedName, crd); err != nil {
 		if !errors.IsNotFound(err) {
 			glog.Errorf("Error getting CustomResourceDefinition %q: %v", request.NamespacedName, err)
@@ -91,10 +91,10 @@ func (c *crdReconciler) Reconcile(ctx context.Context, request reconcile.Request
 // isEstablished returns true if the given CRD is established on the cluster,
 // which indicates if discovery knows about it yet. For more info see
 // https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#create-a-customresourcedefinition
-func isEstablished(crd *v1beta1.CustomResourceDefinition) bool {
+func isEstablished(crd *apiextensionsv1.CustomResourceDefinition) bool {
 	for _, condition := range crd.Status.Conditions {
-		if condition.Type == v1beta1.Established {
-			return condition.Status == v1beta1.ConditionTrue
+		if condition.Type == apiextensionsv1.Established {
+			return condition.Status == apiextensionsv1.ConditionTrue
 		}
 	}
 	return false

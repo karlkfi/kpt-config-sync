@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -156,8 +157,8 @@ func (c *Client) List(_ context.Context, list client.ObjectList, opts ...client.
 	}
 
 	switch l := list.(type) {
-	case *v1beta1.CustomResourceDefinitionList:
-		return c.listCRDs(l, options)
+	case *apiextensionsv1.CustomResourceDefinitionList:
+		return c.listV1CRDs(l, options)
 	case *v1.SyncList:
 		return c.listSyncs(l, options)
 	}
@@ -449,7 +450,7 @@ func (c *Client) list(gk schema.GroupKind) []client.Object {
 	return result
 }
 
-func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList, options client.ListOptions) error {
+func (c *Client) listV1CRDs(list *apiextensionsv1.CustomResourceDefinitionList, options client.ListOptions) error {
 	objs := c.list(kinds.CustomResourceDefinition())
 	for _, obj := range objs {
 		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
@@ -462,11 +463,16 @@ func (c *Client) listCRDs(list *v1beta1.CustomResourceDefinitionList, options cl
 			}
 		}
 		switch o := obj.(type) {
-		// TODO(b/154527698): Handle v1.CRDs once we're able to import the definition.
-		case *v1beta1.CustomResourceDefinition:
+		case *apiextensionsv1.CustomResourceDefinition:
 			list.Items = append(list.Items, *o)
+		case *v1beta1.CustomResourceDefinition:
+			crd, err := clusterconfig.V1Beta1ToV1CRD(o)
+			if err != nil {
+				return err
+			}
+			list.Items = append(list.Items, *crd)
 		case *unstructured.Unstructured:
-			crd, err := clusterconfig.AsCRD(o)
+			crd, err := clusterconfig.AsV1CRD(o)
 			if err != nil {
 				return err
 			}

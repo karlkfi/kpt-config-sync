@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/policycontroller/constraint"
 	"github.com/google/nomos/pkg/util/watch"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -98,29 +98,29 @@ func request(name string) reconcile.Request {
 	}
 }
 
-func constraintCRD(kind string, isEstablished bool) *v1beta1.CustomResourceDefinition {
+func constraintCRD(kind string, isEstablished bool) *apiextensionsv1.CustomResourceDefinition {
 	crd := randomCRD(kind, isEstablished)
 	crd.Spec.Group = constraint.GVK(kind).Group
 	return crd
 }
 
-func randomCRD(kind string, isEstablished bool) *v1beta1.CustomResourceDefinition {
-	established := v1beta1.ConditionTrue
+func randomCRD(kind string, isEstablished bool) *apiextensionsv1.CustomResourceDefinition {
+	established := apiextensionsv1.ConditionTrue
 	if !isEstablished {
-		established = v1beta1.ConditionFalse
+		established = apiextensionsv1.ConditionFalse
 	}
 
-	return &v1beta1.CustomResourceDefinition{
-		Spec: v1beta1.CustomResourceDefinitionSpec{
+	return &apiextensionsv1.CustomResourceDefinition{
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: "somethingsomething",
-			Names: v1beta1.CustomResourceDefinitionNames{
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
 				Kind: kind,
 			},
 		},
-		Status: v1beta1.CustomResourceDefinitionStatus{
-			Conditions: []v1beta1.CustomResourceDefinitionCondition{
+		Status: apiextensionsv1.CustomResourceDefinitionStatus{
+			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
 				{
-					Type:   v1beta1.Established,
+					Type:   apiextensionsv1.Established,
 					Status: established,
 				},
 			},

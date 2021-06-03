@@ -17,6 +17,7 @@ import (
 	testingfake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,18 +52,18 @@ func customResourceDefinitionV1Beta1(version string, opts ...core.MetaMutator) *
 	return result
 }
 
-func crdList(gvks []schema.GroupVersionKind) []v1beta1.CustomResourceDefinition {
+func crdList(gvks []schema.GroupVersionKind) []apiextensionsv1.CustomResourceDefinition {
 	crdSpecs := map[schema.GroupKind][]string{}
 	for _, gvk := range gvks {
 		gk := gvk.GroupKind()
 		crdSpecs[gk] = append(crdSpecs[gk], gvk.Version)
 	}
-	var crdList []v1beta1.CustomResourceDefinition
+	var crdList []apiextensionsv1.CustomResourceDefinition
 	for gk, vers := range crdSpecs {
-		crd := v1beta1.CustomResourceDefinition{
+		crd := apiextensionsv1.CustomResourceDefinition{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: kinds.CustomResourceDefinitionV1Beta1().GroupVersion().String(),
-				Kind:       kinds.CustomResourceDefinitionV1Beta1().Kind,
+				APIVersion: kinds.CustomResourceDefinitionV1().GroupVersion().String(),
+				Kind:       kinds.CustomResourceDefinitionV1().Kind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: strings.ToLower(gk.Kind + "s." + gk.Group),
@@ -71,7 +72,7 @@ func crdList(gvks []schema.GroupVersionKind) []v1beta1.CustomResourceDefinition 
 		crd.Spec.Group = gk.Group
 		crd.Spec.Names.Kind = gk.Kind
 		for _, ver := range vers {
-			crd.Spec.Versions = append(crd.Spec.Versions, v1beta1.CustomResourceDefinitionVersion{
+			crd.Spec.Versions = append(crd.Spec.Versions, apiextensionsv1.CustomResourceDefinitionVersion{
 				Name: ver,
 			})
 		}
@@ -353,7 +354,7 @@ func (tc crdTestCase) run(t *testing.T) {
 	s := runtime.NewScheme()
 	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1Beta1(), &v1beta1.CustomResourceDefinition{})
 	// TODO(b/154527698): Replace v1beta1 stand-ins with v1.CustomResourceDefinitions.
-	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1(), &v1beta1.CustomResourceDefinition{})
+	s.AddKnownTypeWithName(kinds.CustomResourceDefinitionV1(), &apiextensionsv1.CustomResourceDefinition{})
 	fakeClient := testingfake.NewClient(t, s, actual...)
 
 	testReconciler := newReconciler(syncerclient.New(fakeClient, metrics.APICallDuration), fakeClient.Applier(), fakeClient, fakeEventRecorder,

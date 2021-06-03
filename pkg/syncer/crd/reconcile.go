@@ -18,7 +18,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -107,15 +107,15 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) listCrds(ctx context.Context) ([]v1beta1.CustomResourceDefinition, error) {
-	crdList := &v1beta1.CustomResourceDefinitionList{}
+func (r *reconciler) listCrds(ctx context.Context) ([]apiextensionsv1.CustomResourceDefinition, error) {
+	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 	if err := r.client.List(ctx, crdList); err != nil {
 		return nil, err
 	}
 	return crdList.Items, nil
 }
 
-func (r *reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
+func (r *reconciler) toCrdSet(crds []apiextensionsv1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
 	allCRDs := map[schema.GroupVersionKind]struct{}{}
 	for _, crd := range crds {
 		crdGk := schema.GroupKind{
@@ -123,9 +123,6 @@ func (r *reconciler) toCrdSet(crds []v1beta1.CustomResourceDefinition) map[schem
 			Kind:  crd.Spec.Names.Kind,
 		}
 
-		if crd.Spec.Version != "" {
-			allCRDs[crdGk.WithVersion(crd.Spec.Version)] = struct{}{}
-		}
 		for _, ver := range crd.Spec.Versions {
 			allCRDs[crdGk.WithVersion(ver.Name)] = struct{}{}
 		}
@@ -161,28 +158,29 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	// Keep track of what version the declarations are in.
 	// We only want to compute diffs between CRDs of the same declared/actual version.
 	declVersions := make(map[string]string)
-	declaredInstancesV1Beta1 := grs[kinds.CustomResourceDefinitionV1Beta1()]
-	for _, decl := range declaredInstancesV1Beta1 {
+	declaredCRDsV1Beta1 := grs[kinds.CustomResourceDefinitionV1Beta1()]
+	for _, decl := range declaredCRDsV1Beta1 {
 		syncerreconcile.SyncedAt(decl, clusterConfig.Spec.Token)
 		declVersions[decl.GetName()] = versionV1beta1
 	}
-	declaredInstancesV1 := grs[kinds.CustomResourceDefinitionV1()]
-	for _, decl := range declaredInstancesV1 {
+	declaredCRDsV1 := grs[kinds.CustomResourceDefinitionV1()]
+	for _, decl := range declaredCRDsV1 {
 		syncerreconcile.SyncedAt(decl, clusterConfig.Spec.Token)
 		declVersions[decl.GetName()] = versionV1
 	}
 
 	var syncErrs []v1.ConfigManagementError
 
-	actualInstancesV1Beta1, err := r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1Beta1())
+	actualCRDs, err := r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1())
 	if err != nil {
 		mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1Beta1()))
 		syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
 		mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.initTime, r.now, syncErrs, nil))
 		return mErr
 	}
+
 	var actualV1Beta1 []*unstructured.Unstructured
-	for _, u := range actualInstancesV1Beta1 {
+	for _, u := range actualCRDs {
 		// Default to v1beta1 if the CRD is not declared.
 		// We can't assume v1 as this is incompatible with Kubernetes <1.16
 		if declVersions[u.GetName()] == versionV1 {
@@ -191,18 +189,8 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 		actualV1Beta1 = append(actualV1Beta1, u)
 	}
 
-	var actualInstancesV1 []*unstructured.Unstructured
-	if len(declaredInstancesV1) > 0 {
-		actualInstancesV1, err = r.cache.UnstructuredList(ctx, kinds.CustomResourceDefinitionV1())
-		if err != nil {
-			mErr = status.Append(mErr, status.APIServerErrorf(err, "failed to list from config controller for %q", kinds.CustomResourceDefinitionV1()))
-			syncErrs = append(syncErrs, syncerreconcile.NewConfigManagementError(clusterConfig, err))
-			mErr = status.Append(mErr, syncerreconcile.SetClusterConfigStatus(ctx, r.client, clusterConfig, r.initTime, r.now, syncErrs, nil))
-			return mErr
-		}
-	}
 	var actualV1 []*unstructured.Unstructured
-	for _, u := range actualInstancesV1 {
+	for _, u := range actualCRDs {
 		// Only keep CRDs declares as v1.
 		if declVersions[u.GetName()] == "v1" {
 			actualV1 = append(actualV1, u)
@@ -210,8 +198,8 @@ func (r *reconciler) reconcile(ctx context.Context, name string) status.MultiErr
 	}
 
 	allDeclaredVersions := syncerreconcile.AllVersionNames(grs, kinds.CustomResourceDefinition())
-	diffsV1Beta1 := differ.Diffs(declaredInstancesV1Beta1, actualV1Beta1, allDeclaredVersions)
-	diffsV1 := differ.Diffs(declaredInstancesV1, actualV1, allDeclaredVersions)
+	diffsV1Beta1 := differ.Diffs(declaredCRDsV1Beta1, actualV1Beta1, allDeclaredVersions)
+	diffsV1 := differ.Diffs(declaredCRDsV1, actualV1, allDeclaredVersions)
 	diffs := append(diffsV1Beta1, diffsV1...)
 
 	var reconcileCount int

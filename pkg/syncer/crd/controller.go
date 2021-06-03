@@ -8,7 +8,7 @@ import (
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/syncer/sync"
 	"github.com/pkg/errors"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +23,7 @@ const crdControllerName = "crd-resources"
 
 // AddCRDController adds the CRD controller to the Manager.
 func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
-	if err := v1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := apiextensionsv1.AddToScheme(mgr.GetScheme()); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func AddCRDController(mgr manager.Manager, signal sync.RestartSignal) error {
 	}
 
 	mapToClusterConfig := handler.EnqueueRequestsFromMapFunc(crdToClusterConfig)
-	if err = cpc.Watch(&source.Kind{Type: &v1beta1.CustomResourceDefinition{}}, mapToClusterConfig); err != nil {
+	if err = cpc.Watch(&source.Kind{Type: &apiextensionsv1.CustomResourceDefinition{}}, mapToClusterConfig); err != nil {
 		return errors.Wrapf(err, "could not watch CustomResourceDefinitions in the %q controller", crdControllerName)
 	}
 

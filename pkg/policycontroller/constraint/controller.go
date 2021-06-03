@@ -3,7 +3,7 @@ package constraint
 
 import (
 	"github.com/golang/glog"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -28,7 +28,7 @@ func GVK(kind string) schema.GroupVersionKind {
 }
 
 // MatchesGroup returns true if the given CRD seems to be in the constraints group.
-func MatchesGroup(crd *v1beta1.CustomResourceDefinition) bool {
+func MatchesGroup(crd *apiextensionsv1.CustomResourceDefinition) bool {
 	return crd.Spec.Group == constraintsGroup
 }
 

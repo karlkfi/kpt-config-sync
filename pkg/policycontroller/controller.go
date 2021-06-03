@@ -5,7 +5,7 @@ package policycontroller
 import (
 	"context"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -31,5 +31,5 @@ func AddControllers(ctx context.Context, mgr manager.Manager) error {
 
 	// The meta-controller watches CRDs since each new ConstraintTemplate will
 	// result in a new CRD for the corresponding type of Constraint.
-	return pc.Watch(&source.Kind{Type: &v1beta1.CustomResourceDefinition{}}, &handler.EnqueueRequestForObject{})
+	return pc.Watch(&source.Kind{Type: &apiextensionsv1.CustomResourceDefinition{}}, &handler.EnqueueRequestForObject{})
 }
