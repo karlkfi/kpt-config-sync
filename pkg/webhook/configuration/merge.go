@@ -59,10 +59,8 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		}
 
 		gv := schema.GroupVersion{Group: group, Version: version}
-		if oldWebhook, found := webhooksMap[gv]; found {
-			webhooksMap[gv] = mergeWebhooks(gv, oldWebhook, webhook)
-		} else {
-			webhooksMap[gv] = webhook
+		if _, found := webhooksMap[gv]; !found {
+			webhooksMap[gv] = toWebhook(gv)
 		}
 	}
 
@@ -83,25 +81,6 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 
 	left.Webhooks = webhooks
 	return left
-}
-
-// mergeWebhooks merges left and right. The only thing we really care about
-// is preserving the failure policy, as that is the only user-editable field.
-// Any other deviations are removed.
-func mergeWebhooks(gv schema.GroupVersion, left, right admissionv1.ValidatingWebhook) admissionv1.ValidatingWebhook {
-	result := toWebhook(gv)
-
-	// FailurePolicy set to Ignore wins, if set. We don't want to overwrite the
-	// user's change.
-	switch {
-	case left.FailurePolicy == nil:
-		result.FailurePolicy = right.FailurePolicy
-	case right.FailurePolicy != nil && *right.FailurePolicy == admissionv1.Ignore:
-		result.FailurePolicy = right.FailurePolicy
-	default:
-		result.FailurePolicy = left.FailurePolicy
-	}
-	return result
 }
 
 // InvalidWebhookWarningCode signals that the webhook was illegally modified.

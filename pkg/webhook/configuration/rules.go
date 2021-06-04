@@ -67,6 +67,7 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 	// You cannot take address of constants in Go.
 	equivalent := admissionv1.Equivalent
 	none := admissionv1.SideEffectClassNone
+	ignore := admissionv1.Ignore
 	return admissionv1.ValidatingWebhook{
 		Name:  webhookName(gv),
 		Rules: []admissionv1.RuleWithOperations{ruleFor(gv)},
@@ -90,6 +91,7 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 		// Several essential k8s checks require creating sequences of objects and
 		// time out after 10 seconds, so 3 seconds is a reasonable upper bound.
 		TimeoutSeconds: pointer.Int32Ptr(3),
+		FailurePolicy:  &ignore,
 	}
 }
 

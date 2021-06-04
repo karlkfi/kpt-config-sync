@@ -94,23 +94,38 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
-			name: "honor FailurePolicy set to Ignore",
+			name: "Overwrite FailurePolicy to Ignore (left)",
 			left: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{
-					toIgnoreWebhook(rbacv1.SchemeGroupVersion),
+					toFailWebhook(rbacv1.SchemeGroupVersion),
 				},
 			},
 			right: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
 				Webhooks: []admissionv1.ValidatingWebhook{
-					toIgnoreWebhook(rbacv1.SchemeGroupVersion),
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
+			},
+		},
+		{
+			name: "Overwrite FailurePolicy to Ignore (right)",
+			left: &admissionv1.ValidatingWebhookConfiguration{
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
+			},
+			right: &admissionv1.ValidatingWebhookConfiguration{
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toFailWebhook(rbacv1.SchemeGroupVersion),
+				},
+			},
+			want: &admissionv1.ValidatingWebhookConfiguration{
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
 				},
 			},
 		},
@@ -129,12 +144,9 @@ func TestMerge(t *testing.T) {
 				Webhooks: []admissionv1.ValidatingWebhook{{}},
 			},
 			want: &admissionv1.ValidatingWebhookConfiguration{
-				Webhooks: []admissionv1.ValidatingWebhook{{
-					Rules: []admissionv1.RuleWithOperations{
-						ruleFor(rbacv1.SchemeGroupVersion),
-					},
-					ObjectSelector: selectorFor(rbacv1.SchemeGroupVersion.Version),
-				}},
+				Webhooks: []admissionv1.ValidatingWebhook{
+					toWebhook(rbacv1.SchemeGroupVersion),
+				},
 			},
 		},
 		{
@@ -242,10 +254,10 @@ func TestMerge(t *testing.T) {
 	}
 }
 
-func toIgnoreWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
+func toFailWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 	result := toWebhook(gv)
 	// Go doesn't allow taking the address of constants.
-	ignore := admissionv1.Ignore
-	result.FailurePolicy = &ignore
+	fail := admissionv1.Fail
+	result.FailurePolicy = &fail
 	return result
 }

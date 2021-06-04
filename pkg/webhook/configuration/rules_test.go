@@ -16,6 +16,7 @@ import (
 
 func TestToWebhookConfiguration(t *testing.T) {
 	equivalent := admissionv1.Equivalent
+	ignore := admissionv1.Ignore
 
 	testCases := []struct {
 		name string
@@ -39,6 +40,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(rbacv1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				}},
 			},
 		},
@@ -63,6 +65,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(rbacv1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				}},
 			},
 		},
@@ -83,6 +86,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(rbacv1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				}, {
 					Name:           webhookName(rbacv1beta1.SchemeGroupVersion),
 					MatchPolicy:    &equivalent,
@@ -90,6 +94,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(rbacv1beta1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				},
 				},
 			},
@@ -115,6 +120,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(rbacv1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				}, {
 					Name:        webhookName(corev1.SchemeGroupVersion),
 					MatchPolicy: &equivalent,
@@ -126,6 +132,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					Rules: []admissionv1.RuleWithOperations{
 						ruleFor(corev1.SchemeGroupVersion),
 					},
+					FailurePolicy: &ignore,
 				},
 				},
 			},
