@@ -5,6 +5,7 @@ import (
 	"io"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -81,10 +82,10 @@ func (r *repoState) printRows(writer io.Writer) {
 
 func gitString(git v1alpha1.Git) string {
 	var gitStr string
-	if git.Dir != "" {
-		gitStr = path.Join(git.Repo, git.Dir)
+	if git.Dir == "" || git.Dir == "." || git.Dir == "/" {
+		gitStr = strings.TrimSuffix(git.Repo, "/")
 	} else {
-		gitStr = git.Repo
+		gitStr = strings.TrimSuffix(git.Repo, "/") + "/" + path.Clean(strings.TrimPrefix(git.Dir, "/"))
 	}
 
 	if git.Revision != "" && git.Revision != "HEAD" {

@@ -24,65 +24,104 @@ func TestRepoState_PrintRows(t *testing.T) {
 			&repoState{
 				scope: "<root>",
 				git: v1alpha1.Git{
-					Repo: "git@github.com:tester/sample",
+					Repo: "https://github.com/tester/sample/",
 				},
 				status:    "SYNCED",
 				commit:    "abc123",
 				resources: exampleResources(),
 			},
-			"  <root>\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCurrent\n  \tbookstore\tservice/test\tCurrent\n  \tbookstore\tservice/test2\tConflict\n",
+			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCurrent\n  \tbookstore\tservice/test\tCurrent\n  \tbookstore\tservice/test2\tConflict\n",
 		},
 		{
 			"optional git subdirectory specified",
 			&repoState{
 				scope: "<root>",
 				git: v1alpha1.Git{
-					Repo: "git@github.com:tester/sample",
-					Dir:  "admin",
+					Repo: "https://github.com/tester/sample/",
+					Dir:  "quickstart//multirepo//root/",
 				},
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"  <root>\tgit@github.com:tester/sample/admin@master\t\n  SYNCED\tabc123\t\n",
+			"  <root>\thttps://github.com/tester/sample/quickstart/multirepo/root@master\t\n  SYNCED\tabc123\t\n",
+		},
+		{
+			"optional git subdirectory is '/'",
+			&repoState{
+				scope: "<root>",
+				git: v1alpha1.Git{
+					Repo: "https://github.com/tester/sample/",
+					Dir:  "/",
+				},
+				status: "SYNCED",
+				commit: "abc123",
+			},
+			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n",
+		},
+		{
+			"optional git subdirectory is '.'",
+			&repoState{
+				scope: "<root>",
+				git: v1alpha1.Git{
+					Repo: "https://github.com/tester/sample/",
+					Dir:  ".",
+				},
+				status: "SYNCED",
+				commit: "abc123",
+			},
+			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n",
+		},
+		{
+			"optional git subdirectory starts with '/'",
+			&repoState{
+				scope: "<root>",
+				git: v1alpha1.Git{
+					Repo: "https://github.com/tester/sample/",
+					Dir:  "/admin",
+				},
+				status: "SYNCED",
+				commit: "abc123",
+			},
+			"  <root>\thttps://github.com/tester/sample/admin@master\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional git branch specified",
 			&repoState{
 				scope: "bookstore",
 				git: v1alpha1.Git{
-					Repo:   "git@github.com:tester/sample",
+					Repo:   "https://github.com/tester/sample",
 					Branch: "feature",
 				},
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"  bookstore\tgit@github.com:tester/sample@feature\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\thttps://github.com/tester/sample@feature\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional git revision specified",
 			&repoState{
 				scope: "bookstore",
 				git: v1alpha1.Git{
-					Repo:     "git@github.com:tester/sample",
+					Repo:     "https://github.com/tester/sample",
 					Revision: "v1",
 				},
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"  bookstore\tgit@github.com:tester/sample@v1\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\thttps://github.com/tester/sample@v1\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional default git revision HEAD specified",
 			&repoState{
 				scope: "bookstore",
 				git: v1alpha1.Git{
-					Repo:     "git@github.com:tester/sample",
+					Repo:     "https://github.com/tester/sample",
 					Revision: "HEAD",
 				},
 				status: "SYNCED",
 				commit: "abc123",
 			},
-			"  bookstore\tgit@github.com:tester/sample@master\t\n  SYNCED\tabc123\t\n",
+			"  bookstore\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n",
 		},
 		{
 			"optional default git revision HEAD and branch specified",
