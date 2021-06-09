@@ -19,6 +19,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/policycontroller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/nomos/cmd/nomos/status"
@@ -375,6 +376,7 @@ func (b *BugReporter) FetchCMSystemPods(ctx context.Context) (rd []Readable) {
 		metav1.NamespaceSystem,
 		RGControllerNamespace,
 		metrics.MonitoringNamespace,
+		policycontroller.NamespaceSystem,
 	}
 
 	for _, ns := range namespaces {
