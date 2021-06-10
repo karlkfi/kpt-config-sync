@@ -9,6 +9,7 @@ metadata:
     configmanagement.gke.io/arch: "csmr"
   name: rootsyncs.configsync.gke.io
 spec:
+  preserveUnknownFields: false
   group: configsync.gke.io
   names:
     kind: RootSync

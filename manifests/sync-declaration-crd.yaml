@@ -10,6 +10,7 @@ metadata:
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "legacy"
 spec:
+  preserveUnknownFields: false
   group: configmanagement.gke.io
   scope: Cluster
   names:

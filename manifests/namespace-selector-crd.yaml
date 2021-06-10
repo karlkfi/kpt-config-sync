@@ -6,6 +6,7 @@ metadata:
   labels:
     configmanagement.gke.io/system: "true"
 spec:
+  preserveUnknownFields: false
   group: configmanagement.gke.io
   scope: Cluster
   names:

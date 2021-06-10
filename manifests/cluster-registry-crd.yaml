@@ -14,6 +14,7 @@ metadata:
     # For group under k8s.io, this annotation is required to link to a PR where API is approved
     "api-approved.kubernetes.io": "https://github.com/kubernetes-retired/cluster-registry/pull/269"
 spec:
+  preserveUnknownFields: false
   group: clusterregistry.k8s.io
   names:
     kind: Cluster
