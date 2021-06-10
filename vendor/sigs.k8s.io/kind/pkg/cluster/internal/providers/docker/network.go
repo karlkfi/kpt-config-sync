@@ -21,12 +21,10 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 
 	"sigs.k8s.io/kind/pkg/errors"
@@ -63,11 +61,9 @@ func ensureNetwork(name string) error {
 
 	// Generate unique subnet per network based on the name
 	// obtained from the ULA fc00::/8 range
-	// Use the MTU configured for the docker default network
 	// Make N attempts with "probing" in case we happen to collide
 	subnet := generateULASubnetFromName(name, 0)
-	mtu := getDefaultNetworkMTU()
-	err = createNetworkNoDuplicates(name, subnet, mtu)
+	err = createNetworkNoDuplicates(name, subnet)
 	if err == nil {
 		// Success!
 		return nil
@@ -79,7 +75,7 @@ func ensureNetwork(name string) error {
 	// If it is, make more attempts below
 	if isIPv6UnavailableError(err) {
 		// only one attempt, IPAM is automatic in ipv4 only
-		return createNetworkNoDuplicates(name, "", mtu)
+		return createNetworkNoDuplicates(name, "")
 	}
 	if isPoolOverlapError(err) {
 		// pool overlap suggests perhaps another process created the network
@@ -101,7 +97,7 @@ func ensureNetwork(name string) error {
 	const maxAttempts = 5
 	for attempt := int32(1); attempt < maxAttempts; attempt++ {
 		subnet := generateULASubnetFromName(name, attempt)
-		err = createNetworkNoDuplicates(name, subnet, mtu)
+		err = createNetworkNoDuplicates(name, subnet)
 		if err == nil {
 			// success!
 			return nil
@@ -125,8 +121,8 @@ func ensureNetwork(name string) error {
 	return errors.New("exhausted attempts trying to find a non-overlapping subnet")
 }
 
-func createNetworkNoDuplicates(name, ipv6Subnet string, mtu int) error {
-	if err := createNetwork(name, ipv6Subnet, mtu); err != nil && !isNetworkAlreadyExistsError(err) {
+func createNetworkNoDuplicates(name, ipv6Subnet string) error {
+	if err := createNetwork(name, ipv6Subnet); err != nil && !isNetworkAlreadyExistsError(err) {
 		return err
 	}
 	_, err := removeDuplicateNetworks(name)
@@ -146,33 +142,15 @@ func removeDuplicateNetworks(name string) (bool, error) {
 	return len(networks) > 0, nil
 }
 
-func createNetwork(name, ipv6Subnet string, mtu int) error {
-	args := []string{"network", "create", "-d=bridge",
+func createNetwork(name, ipv6Subnet string) error {
+	if ipv6Subnet == "" {
+		return exec.Command("docker", "network", "create", "-d=bridge",
+			"-o", "com.docker.network.bridge.enable_ip_masquerade=true",
+			name).Run()
+	}
+	return exec.Command("docker", "network", "create", "-d=bridge",
 		"-o", "com.docker.network.bridge.enable_ip_masquerade=true",
-	}
-	if mtu > 0 {
-		args = append(args, "-o", fmt.Sprintf("com.docker.network.driver.mtu=%d", mtu))
-	}
-	if ipv6Subnet != "" {
-		args = append(args, "--ipv6", "--subnet", ipv6Subnet)
-	}
-	args = append(args, name)
-	return exec.Command("docker", args...).Run()
-}
-
-// getDefaultNetworkMTU obtains the MTU from the docker default network
-func getDefaultNetworkMTU() int {
-	cmd := exec.Command("docker", "network", "inspect", "bridge",
-		"-f", `{{ index .Options "com.docker.network.driver.mtu" }}`)
-	lines, err := exec.OutputLines(cmd)
-	if err != nil || len(lines) != 1 {
-		return 0
-	}
-	mtu, err := strconv.Atoi(lines[0])
-	if err != nil {
-		return 0
-	}
-	return mtu
+		"--ipv6", "--subnet", ipv6Subnet, name).Run()
 }
 
 func sortedNetworksWithName(name string) ([]string, error) {

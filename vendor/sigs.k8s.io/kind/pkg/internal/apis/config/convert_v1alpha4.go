@@ -51,7 +51,6 @@ func convertv1alpha4Node(in *v1alpha4.Node, out *Node) {
 	out.Role = NodeRole(in.Role)
 	out.Image = in.Image
 
-	out.Labels = in.Labels
 	out.KubeadmConfigPatches = in.KubeadmConfigPatches
 	out.ExtraMounts = make([]Mount, len(in.ExtraMounts))
 	out.ExtraPortMappings = make([]PortMapping, len(in.ExtraPortMappings))

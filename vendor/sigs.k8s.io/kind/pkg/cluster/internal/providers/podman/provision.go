@@ -51,8 +51,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 		// For now remote podman + multi control plane is not supported
 		apiServerPort = 0              // replaced with random ports
 		apiServerAddress = "127.0.0.1" // only the LB needs to be non-local
-		// only for IPv6 only clusters
-		if cfg.Networking.IPFamily == config.IPv6Family {
+		if clusterIsIPv6(cfg) {
 			apiServerAddress = "::1" // only the LB needs to be non-local
 		}
 		// plan loadbalancer node
@@ -121,7 +120,7 @@ func createContainer(args []string) error {
 }
 
 func clusterIsIPv6(cfg *config.Cluster) bool {
-	return cfg.Networking.IPFamily == config.IPv6Family || cfg.Networking.IPFamily == config.DualStackFamily
+	return cfg.Networking.IPFamily == "ipv6"
 }
 
 func clusterHasImplicitLoadBalancer(cfg *config.Cluster) bool {
@@ -144,8 +143,6 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 		"--net", networkName, // attach to its own network
 		// label the node with the cluster ID
 		"--label", fmt.Sprintf("%s=%s", clusterLabelKey, cfg.Name),
-		// specify container implementation to systemd
-		"-e", "container=podman",
 	}
 
 	// enable IPv6 if necessary
@@ -154,18 +151,12 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 	}
 
 	// pass proxy environment variables
-	proxyEnv, err := getProxyEnv(cfg, networkName)
+	proxyEnv, err := getProxyEnv(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "proxy setup error")
 	}
 	for key, val := range proxyEnv {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", key, val))
-	}
-
-	// handle Podman on Btrfs or ZFS same as we do with Docker
-	// https://github.com/kubernetes-sigs/kind/issues/1416#issuecomment-606514724
-	if mountDevMapper() {
-		args = append(args, "--volume", "/dev/mapper:/dev/mapper")
 	}
 
 	return args, nil
@@ -218,11 +209,6 @@ func runArgsForNode(node *config.Node, clusterIPFamily config.ClusterIPFamily, n
 	}
 	args = append(args, mappingArgs...)
 
-	switch node.Role {
-	case config.ControlPlaneRole:
-		args = append(args, "-e", "KUBECONFIG=/etc/kubernetes/admin.conf")
-	}
-
 	// finally, specify the image to run
 	_, image := sanitizeImage(node.Image)
 	return append(args, image), nil
@@ -257,12 +243,12 @@ func runArgsForLoadBalancer(cfg *config.Cluster, name string, args []string) ([]
 	return append(args, image), nil
 }
 
-func getProxyEnv(cfg *config.Cluster, networkName string) (map[string]string, error) {
+func getProxyEnv(cfg *config.Cluster) (map[string]string, error) {
 	envs := common.GetProxyEnvs(cfg)
 	// Specifically add the podman network subnets to NO_PROXY if we are using a proxy
 	if len(envs) > 0 {
-		// kind default bridge is "kind"
-		subnets, err := getSubnets(networkName)
+		// podman default bridge network is named "bridge" (https://docs.podman.com/network/bridge/#use-the-default-bridge-network)
+		subnets, err := getSubnets("bridge")
 		if err != nil {
 			return nil, err
 		}
@@ -281,8 +267,7 @@ func getProxyEnv(cfg *config.Cluster, networkName string) (map[string]string, er
 }
 
 func getSubnets(networkName string) ([]string, error) {
-	// TODO: unmarshall json and get rid of this complex query
-	format := `{{ range (index (index (index (index . "plugins") 0 ) "ipam" ) "ranges")}}{{ index ( index . 0 ) "subnet" }} {{end}}`
+	format := `{{range (index (index . "IPAM") "Config")}}{{index . "Subnet"}} {{end}}`
 	cmd := exec.Command("podman", "network", "inspect", "-f", format, networkName)
 	lines, err := exec.OutputLines(cmd)
 	if err != nil {

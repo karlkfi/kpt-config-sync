@@ -19,7 +19,6 @@ package podman
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -54,7 +53,6 @@ func NewProvider(logger log.Logger) providers.Provider {
 // see NewProvider
 type provider struct {
 	logger log.Logger
-	info   *providers.ProviderInfo
 }
 
 // String implements fmt.Stringer
@@ -68,6 +66,12 @@ func (p *provider) String() string {
 func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error) {
 	if err := ensureMinVersion(); err != nil {
 		return err
+	}
+
+	// kind doesn't work with podman rootless, surface an error
+	if os.Geteuid() != 0 {
+		p.logger.Errorf("podman provider does not work properly in rootless mode")
+		os.Exit(1)
 	}
 
 	// TODO: validate cfg
@@ -188,19 +192,13 @@ func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to check podman version")
 	}
-	// podman inspect was broken between 2.2.0 and 3.0.0
-	// https://github.com/containers/podman/issues/8444
-	if v.AtLeast(version.MustParseSemantic("2.2.0")) &&
-		v.LessThan(version.MustParseSemantic("3.0.0")) {
-		p.logger.Warnf("WARNING: podman version %s not fully supported, please use versions 3.0.0+")
-
+	if v.LessThan(version.MustParseSemantic("2.2.0")) {
 		cmd := exec.Command(
 			"podman", "inspect",
 			"--format",
-			"{{range .NetworkSettings.Ports }}{{range .}}{{.HostIP}}/{{.HostPort}}{{end}}{{end}}",
+			"{{ json .NetworkSettings.Ports }}",
 			n.String(),
 		)
-
 		lines, err := exec.OutputLines(cmd)
 		if err != nil {
 			return "", errors.Wrap(err, "failed to get api server port")
@@ -208,26 +206,59 @@ func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 		if len(lines) != 1 {
 			return "", errors.Errorf("network details should only be one line, got %d lines", len(lines))
 		}
-		// output is in the format IP/Port
-		parts := strings.Split(strings.TrimSpace(lines[0]), "/")
-		if len(parts) != 2 {
-			return "", errors.Errorf("network details should be in the format IP/Port, received: %s", parts)
+
+		// portMapping19 maps to the standard CNI portmapping capability used in podman 1.9
+		// see: https://github.com/containernetworking/cni/blob/spec-v0.4.0/CONVENTIONS.md
+		type portMapping19 struct {
+			HostPort      int32  `json:"hostPort"`
+			ContainerPort int32  `json:"containerPort"`
+			Protocol      string `json:"protocol"`
+			HostIP        string `json:"hostIP"`
 		}
-		host := parts[0]
-		port, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return "", errors.Errorf("network port not an integer: %v", err)
+		// portMapping20 maps to the podman 2.0 portmap type
+		// see: https://github.com/containers/podman/blob/05988fc74fc25f2ad2256d6e011dfb7ad0b9a4eb/libpod/define/container_inspect.go#L134-L143
+		type portMapping20 struct {
+			HostPort string `json:"HostPort"`
+			HostIP   string `json:"HostIp"`
 		}
 
-		return net.JoinHostPort(host, strconv.Itoa(port)), nil
+		portMappings20 := make(map[string][]portMapping20)
+		if err := json.Unmarshal([]byte(lines[0]), &portMappings20); err == nil {
+			for k, v := range portMappings20 {
+				protocol := "tcp"
+				parts := strings.Split(k, "/")
+				if len(parts) == 2 {
+					protocol = strings.ToLower(parts[1])
+				}
+				containerPort, err := strconv.Atoi(parts[0])
+				if err != nil {
+					return "", err
+				}
+				for _, pm := range v {
+					if containerPort == common.APIServerInternalPort && protocol == "tcp" {
+						return net.JoinHostPort(pm.HostIP, pm.HostPort), nil
+					}
+				}
+			}
+		}
+		var portMappings19 []portMapping19
+		if err := json.Unmarshal([]byte(lines[0]), &portMappings19); err != nil {
+			return "", errors.Errorf("invalid network details: %v", err)
+		}
+		for _, pm := range portMappings19 {
+			if pm.ContainerPort == common.APIServerInternalPort && pm.Protocol == "tcp" {
+				return net.JoinHostPort(pm.HostIP, strconv.Itoa(int(pm.HostPort))), nil
+			}
+		}
 	}
-
+	// TODO: hack until https://github.com/containers/podman/issues/8444 is resolved
 	cmd := exec.Command(
 		"podman", "inspect",
 		"--format",
-		"{{ json .NetworkSettings.Ports }}",
+		"{{range .NetworkSettings.Ports }}{{range .}}{{.HostIP}}/{{.HostPort}}{{end}}{{end}}",
 		n.String(),
 	)
+
 	lines, err := exec.OutputLines(cmd)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get api server port")
@@ -235,53 +266,18 @@ func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 	if len(lines) != 1 {
 		return "", errors.Errorf("network details should only be one line, got %d lines", len(lines))
 	}
-
-	// portMapping19 maps to the standard CNI portmapping capability used in podman 1.9
-	// see: https://github.com/containernetworking/cni/blob/spec-v0.4.0/CONVENTIONS.md
-	type portMapping19 struct {
-		HostPort      int32  `json:"hostPort"`
-		ContainerPort int32  `json:"containerPort"`
-		Protocol      string `json:"protocol"`
-		HostIP        string `json:"hostIP"`
+	// output is in the format IP/Port
+	parts := strings.Split(strings.TrimSpace(lines[0]), "/")
+	if len(parts) != 2 {
+		return "", errors.Errorf("network details should be in the format IP/Port, received: %s", parts)
 	}
-	// portMapping20 maps to the podman 2.0 portmap type
-	// see: https://github.com/containers/podman/blob/05988fc74fc25f2ad2256d6e011dfb7ad0b9a4eb/libpod/define/container_inspect.go#L134-L143
-	type portMapping20 struct {
-		HostPort string `json:"HostPort"`
-		HostIP   string `json:"HostIp"`
+	host := parts[0]
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", errors.Errorf("network port not an integer: %v", err)
 	}
 
-	portMappings20 := make(map[string][]portMapping20)
-	if err := json.Unmarshal([]byte(lines[0]), &portMappings20); err == nil {
-		for k, v := range portMappings20 {
-			protocol := "tcp"
-			parts := strings.Split(k, "/")
-			if len(parts) == 2 {
-				protocol = strings.ToLower(parts[1])
-			}
-			containerPort, err := strconv.Atoi(parts[0])
-			if err != nil {
-				return "", err
-			}
-			for _, pm := range v {
-				if containerPort == common.APIServerInternalPort && protocol == "tcp" {
-					return net.JoinHostPort(pm.HostIP, pm.HostPort), nil
-				}
-			}
-		}
-	}
-
-	var portMappings19 []portMapping19
-	if err := json.Unmarshal([]byte(lines[0]), &portMappings19); err != nil {
-		return "", errors.Errorf("invalid network details: %v", err)
-	}
-	for _, pm := range portMappings19 {
-		if pm.ContainerPort == common.APIServerInternalPort && pm.Protocol == "tcp" {
-			return net.JoinHostPort(pm.HostIP, strconv.Itoa(int(pm.HostPort))), nil
-		}
-	}
-
-	return "", errors.Errorf("failed to get api server port")
+	return net.JoinHostPort(host, strconv.Itoa(port)), nil
 }
 
 // GetAPIServerInternalEndpoint is part of the providers.Provider interface
@@ -353,50 +349,4 @@ func (p *provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	// run and collect up all errors
 	errs = append(errs, errors.AggregateConcurrent(fns))
 	return errors.NewAggregate(errs)
-}
-
-// Info returns the provider info.
-// The info is cached on the first time of the execution.
-func (p *provider) Info() (*providers.ProviderInfo, error) {
-	if p.info == nil {
-		p.info = info(p.logger)
-	}
-	return p.info, nil
-}
-
-func info(logger log.Logger) *providers.ProviderInfo {
-	euid := os.Geteuid()
-	info := &providers.ProviderInfo{
-		Rootless: euid != 0,
-	}
-	if _, err := os.Stat("/sys/fs/cgroup/cgroup.controllers"); err == nil {
-		info.Cgroup2 = true
-		// Unlike `docker info`, `podman info` does not print available cgroup controllers.
-		// So we parse "cgroup.subtree_control" file by ourselves.
-		subtreeControl := "/sys/fs/cgroup/cgroup.subtree_control"
-		if info.Rootless {
-			// Change subtreeControl to the path of the systemd user-instance.
-			// Non-systemd hosts are not supported.
-			subtreeControl = fmt.Sprintf("/sys/fs/cgroup/user.slice/user-%d.slice/user@%d.service/cgroup.subtree_control", euid, euid)
-		}
-		if subtreeControlBytes, err := ioutil.ReadFile(subtreeControl); err != nil {
-			logger.Warnf("failed to read %q: %+v", subtreeControl, err)
-		} else {
-			for _, controllerName := range strings.Fields(string(subtreeControlBytes)) {
-				switch controllerName {
-				case "cpu":
-					info.SupportsCPUShares = true
-				case "memory":
-					info.SupportsMemoryLimit = true
-				case "pids":
-					info.SupportsPidsLimit = true
-				}
-			}
-		}
-	} else if !info.Rootless {
-		info.SupportsCPUShares = true
-		info.SupportsMemoryLimit = true
-		info.SupportsPidsLimit = true
-	}
-	return info
 }

@@ -17,8 +17,6 @@ limitations under the License.
 package errors
 
 import (
-	stderrors "errors"
-
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -26,12 +24,6 @@ import (
 // New also records the stack trace at the point it was called.
 func New(message string) error {
 	return pkgerrors.New(message)
-}
-
-// NewWithoutStack is like new but does NOT wrap with a stack
-// This is useful for exported errors
-func NewWithoutStack(message string) error {
-	return stderrors.New(message)
 }
 
 // Errorf formats according to a format specifier and returns the string as a

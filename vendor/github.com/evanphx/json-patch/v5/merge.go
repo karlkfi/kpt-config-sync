@@ -27,31 +27,21 @@ func merge(cur, patch *lazyNode, mergeMerge bool) *lazyNode {
 }
 
 func mergeDocs(doc, patch *partialDoc, mergeMerge bool) {
-	for k, v := range patch.obj {
+	for k, v := range *patch {
 		if v == nil {
 			if mergeMerge {
-				idx := -1
-				for i, key := range doc.keys {
-					if key == k {
-						idx = i
-						break
-					}
-				}
-				if idx == -1 {
-					doc.keys = append(doc.keys, k)
-				}
-				doc.obj[k] = nil
+				(*doc)[k] = nil
 			} else {
-				_ = doc.remove(k, &ApplyOptions{})
+				delete(*doc, k)
 			}
 		} else {
-			cur, ok := doc.obj[k]
+			cur, ok := (*doc)[k]
 
 			if !ok || cur == nil {
 				pruneNulls(v)
-				_ = doc.set(k, v, &ApplyOptions{})
+				(*doc)[k] = v
 			} else {
-				_ = doc.set(k, merge(cur, v, mergeMerge), &ApplyOptions{})
+				(*doc)[k] = merge(cur, v, mergeMerge)
 			}
 		}
 	}
@@ -72,9 +62,9 @@ func pruneNulls(n *lazyNode) {
 }
 
 func pruneDocNulls(doc *partialDoc) *partialDoc {
-	for k, v := range doc.obj {
+	for k, v := range *doc {
 		if v == nil {
-			_ = doc.remove(k, &ApplyOptions{})
+			delete(*doc, k)
 		} else {
 			pruneNulls(v)
 		}
@@ -123,19 +113,19 @@ func doMergePatch(docData, patchData []byte, mergeMerge bool) ([]byte, error) {
 
 	patchErr := json.Unmarshal(patchData, patch)
 
-	if isSyntaxError(docErr) {
+	if _, ok := docErr.(*json.SyntaxError); ok {
 		return nil, errBadJSONDoc
 	}
 
-	if isSyntaxError(patchErr) {
+	if _, ok := patchErr.(*json.SyntaxError); ok {
 		return nil, errBadJSONPatch
 	}
 
-	if docErr == nil && doc.obj == nil {
+	if docErr == nil && *doc == nil {
 		return nil, errBadJSONDoc
 	}
 
-	if patchErr == nil && patch.obj == nil {
+	if patchErr == nil && *patch == nil {
 		return nil, errBadJSONPatch
 	}
 
@@ -170,16 +160,6 @@ func doMergePatch(docData, patchData []byte, mergeMerge bool) ([]byte, error) {
 	}
 
 	return json.Marshal(doc)
-}
-
-func isSyntaxError(err error) bool {
-	if _, ok := err.(*json.SyntaxError); ok {
-		return true
-	}
-	if _, ok := err.(*syntaxError); ok {
-		return true
-	}
-	return false
 }
 
 // resemblesJSONArray indicates whether the byte-slice "appears" to be
