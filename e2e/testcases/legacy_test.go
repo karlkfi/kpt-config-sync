@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
 
 	"github.com/google/nomos/e2e/nomostest"
 )
@@ -30,18 +31,19 @@ func (bt *BatsTest) batsPath() string {
 
 func (bt *BatsTest) Run(t *testing.T) {
 	e2e.EnableParallel(t)
+	tw := nomostesting.New(t)
 
 	countCmd := exec.Command(bt.batsPath(), "--count", bt.fileName)
 	out, err := countCmd.CombinedOutput()
 	if err != nil {
-		t.Errorf("%v: %s", countCmd, string(out))
-		t.Fatal("Failed to get test count from bats:", err)
+		tw.Errorf("%v: %s", countCmd, string(out))
+		tw.Fatal("Failed to get test count from bats:", err)
 	}
 	testCount, err := strconv.Atoi(strings.Trim(string(out), "\n"))
 	if err != nil {
-		t.Fatalf("Failed to parse test count %q from bats: %v", out, err)
+		tw.Fatalf("Failed to parse test count %q from bats: %v", out, err)
 	}
-	t.Logf("Found %d testcases in %s", testCount, bt.fileName)
+	tw.Logf("Found %d testcases in %s", testCount, bt.fileName)
 	for testNum := 1; testNum <= testCount; testNum++ {
 		t.Run(strconv.Itoa(testNum), bt.runTest(testNum))
 	}
@@ -67,13 +69,13 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 		batsHome := filepath.Join(nt.TmpDir, "bats", "home")
 		for _, dir := range []string{batsTmpDir, batsHome} {
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-				t.Fatalf("failed to create dir %s for bats testing: %v", dir, err)
+				nt.T.Fatalf("failed to create dir %s for bats testing: %v", dir, err)
 			}
 		}
 
 		pipeRead, pipeWrite, err := os.Pipe()
 		if err != nil {
-			t.Fatal("failed to create pipe for test output", err)
+			nt.T.Fatal("failed to create pipe for test output", err)
 		}
 		defer func() {
 			if pipeWrite != nil {
@@ -110,15 +112,15 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 			cmd.Env = append(cmd.Env, "CSMR=true")
 		}
 
-		t.Log("Using environment")
+		nt.T.Log("Using environment")
 		for _, env := range cmd.Env {
-			t.Logf("  %s", env)
+			nt.T.Logf("  %s", env)
 		}
 
-		t.Logf("Starting legacy test %s", bt.fileName)
+		nt.T.Logf("Starting legacy test %s", bt.fileName)
 		err = cmd.Start()
 		if err != nil {
-			t.Fatalf("failed to start command %s: %v", cmd, err)
+			nt.T.Fatalf("failed to start command %s: %v", cmd, err)
 		}
 
 		// Close our copy of pipe so our read end of the pipe will get EOF when the subprocess terminates (and closes
@@ -133,18 +135,18 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 			if err != nil {
 				if err == io.EOF {
 					if len(line) != 0 {
-						t.Log(string(line))
+						nt.T.Log(string(line))
 					}
 					break
 				}
-				t.Fatal("error reading from bats subprocess:", err)
+				nt.T.Fatal("error reading from bats subprocess:", err)
 			}
-			t.Log(strings.TrimRight(string(line), "\n"))
+			nt.T.Log(strings.TrimRight(string(line), "\n"))
 		}
 
 		err = cmd.Wait()
 		if err != nil {
-			t.Fatalf("command failed %s: %v", cmd, err)
+			nt.T.Fatalf("command failed %s: %v", cmd, err)
 		}
 	}
 }
@@ -167,7 +169,8 @@ func TestBats(t *testing.T) {
 
 	nomosDir, err := filepath.Abs("../..")
 	if err != nil {
-		t.Fatal("Failed to get nomos dir: ", err)
+		tw := nomostesting.New(t)
+		tw.Fatal("Failed to get nomos dir: ", err)
 	}
 
 	// NOTE: eventually all skipped tests will need a note on exemption (see basic.bats as an example).

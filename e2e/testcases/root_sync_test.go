@@ -23,20 +23,20 @@ func TestDeleteRootSync(t *testing.T) {
 	var rs v1alpha1.RootSync
 	err := nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete RootSync custom resource from the cluster.
 	err = nt.Delete(&rs)
 	if err != nil {
-		t.Fatalf("deleting RootSync: %v", err)
+		nt.T.Fatalf("deleting RootSync: %v", err)
 	}
 
 	_, err = nomostest.Retry(5*time.Second, func() error {
 		return nt.ValidateNotFound(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObject())
 	})
 	if err != nil {
-		t.Errorf("RootSync present after deletion: %v", err)
+		nt.T.Errorf("RootSync present after deletion: %v", err)
 	}
 
 	// Verify Root Reconciler deployment no longer present.
@@ -44,7 +44,7 @@ func TestDeleteRootSync(t *testing.T) {
 		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
-		t.Errorf("Reconciler deployment present after deletion: %v", err)
+		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
 	// validate Root Reconciler configmaps are no longer present.
@@ -53,13 +53,13 @@ func TestDeleteRootSync(t *testing.T) {
 	err3 := nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject())
 	if err1 != nil || err2 != nil || err3 != nil {
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -72,7 +72,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	var rs v1alpha1.RootSync
 	err := nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Add audit namespace in policy directory acme.
@@ -96,13 +96,13 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	// Validate namespace 'audit' created.
 	err = nt.Validate(acmeNS, "", fake.NamespaceObject(acmeNS))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate namespace 'shipping' not present.
 	err = nt.ValidateNotFound(fooNS, "", fake.NamespaceObject(fooNS))
 	if err != nil {
-		t.Errorf("%s present after deletion: %v", fooNS, err)
+		nt.T.Errorf("%s present after deletion: %v", fooNS, err)
 	}
 
 	// Validate multi-repo metrics.
@@ -118,7 +118,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Update RootSync.
@@ -139,7 +139,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		return err
 	})
 	if err != nil {
-		t.Fatalf("RootSync update failed: %v", err)
+		nt.T.Fatalf("RootSync update failed: %v", err)
 	}
 
 	// Validate namespace 'shipping' created with the correct sourcePath annotation.
@@ -148,7 +148,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 			nomostest.HasAnnotation(v1.SourcePathAnnotationKey, sourcePath))
 	})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate namespace 'audit' no longer present.
@@ -156,7 +156,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		return nt.ValidateNotFound(acmeNS, "", fake.NamespaceObject(acmeNS))
 	})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -180,7 +180,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -197,7 +197,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	// Validate namespace 'acme' created.
 	err := nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	testBranch := "test-branch"
@@ -214,7 +214,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	// from 'test-branch' yet.
 	err = nt.ValidateNotFound(testNS, "", fake.NamespaceObject(testNS))
 	if err != nil {
-		t.Errorf("%s present: %v", testNS, err)
+		nt.T.Errorf("%s present: %v", testNS, err)
 	}
 
 	// Update RootSync.
@@ -223,7 +223,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	rootsync := &v1alpha1.RootSync{}
 	err = nt.Get(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, rootsync)
 	if err != nil {
-		t.Fatalf("%v", err)
+		nt.T.Fatalf("%v", err)
 	}
 
 	// Update the branch in RootSync Custom Resource.
@@ -231,21 +231,21 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 
 	err = nt.Update(rootsync)
 	if err != nil {
-		t.Fatalf("%v", err)
+		nt.T.Fatalf("%v", err)
 	}
 	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'audit-test' created after updating rootsync.
 	err = nt.Validate(testNS, "", fake.NamespaceObject(testNS))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Get RootSync and then perform Update.
 	rs := &v1alpha1.RootSync{}
 	err = nt.Get(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, rs)
 	if err != nil {
-		t.Fatalf("%v", err)
+		nt.T.Fatalf("%v", err)
 	}
 
 	// Switch back to 'main' branch.
@@ -253,7 +253,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 
 	err = nt.Update(rs)
 	if err != nil {
-		t.Fatalf("%v", err)
+		nt.T.Fatalf("%v", err)
 	}
 	// Checkout back to 'main' branch to get the correct HEAD commit sha1.
 	nt.Root.CheckoutBranch(nomostest.MainBranch)
@@ -262,7 +262,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	// Validate namespace 'acme' present.
 	err = nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate namespace 'audit-test' not present to vaidate rootsync is not syncing
@@ -271,7 +271,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 		return nt.ValidateNotFound(testNS, "", fake.NamespaceObject(testNS))
 	})
 	if err != nil {
-		t.Fatalf("RootSync update failed: %v", err)
+		nt.T.Fatalf("RootSync update failed: %v", err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -281,7 +281,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -304,7 +304,7 @@ func TestForceRevert(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	nt.Root.Git("reset", "--hard", "HEAD^")
@@ -317,7 +317,7 @@ func TestForceRevert(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "")
 	})
 	if err != nil {
-		t.Errorf("validating reconciler_errors metric: %v", err)
+		nt.T.Errorf("validating reconciler_errors metric: %v", err)
 	}
 }
 
@@ -333,7 +333,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 			hasRootSyncReconcilingStatus(metav1.ConditionFalse), hasRootSyncStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
-		t.Errorf("RootSync did not finish reconciling: %v", err)
+		nt.T.Errorf("RootSync did not finish reconciling: %v", err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -343,7 +343,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 

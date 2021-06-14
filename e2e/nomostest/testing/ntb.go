@@ -20,7 +20,7 @@ type NTB interface {
 	Helper()
 	Log(args ...interface{})
 	Logf(format string, args ...interface{})
-	//Name() string
+	Name() string
 	Skip(args ...interface{})
 	SkipNow()
 	Skipf(format string, args ...interface{})
@@ -76,6 +76,11 @@ func (t *FakeNTB) Fatal(args ...interface{}) {
 func (t *FakeNTB) Fatalf(format string, args ...interface{}) {
 	t.Logf(format, args...)
 	t.FailNow()
+}
+
+// Name returns an empty string.
+func (t *FakeNTB) Name() string {
+	return ""
 }
 
 // Helper is a no-op function.

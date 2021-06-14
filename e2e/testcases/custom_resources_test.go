@@ -21,7 +21,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	// Skip this test if v1beta1 CRD is not supported in the testing cluster.
 	if !support {
@@ -32,17 +32,17 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	clusterFile := filepath.Join(".", "..", "testdata", "customresources", "v1beta1_crds", "clusteranvil-crd.yaml")
 	_, err = nt.Kubectl("apply", "-f", crdFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	_, err = nt.Kubectl("apply", "-f", clusterFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.Root.Add("acme/namespaces/prod/ns.yaml", fake.NamespaceObject("prod"))
@@ -55,7 +55,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		err := nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
 			hasRule("acme.com.v1.admission-webhook.configsync.gke.io"))
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -63,7 +63,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		return nt.Validate("heavy", "prod", anvilCR("v1", "", 0))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
@@ -79,13 +79,13 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove CRD
 	_, err = nt.Kubectl("delete", "-f", crdFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	if nt.MultiRepo {
@@ -107,7 +107,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove the CR.
@@ -123,17 +123,17 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 	clusterFile := filepath.Join(".", "..", "testdata", "customresources", "v1_crds", "clusteranvil-crd.yaml")
 	_, err := nt.Kubectl("apply", "-f", crdFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	_, err = nt.Kubectl("apply", "-f", clusterFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
@@ -146,7 +146,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		err := nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
 			hasRule("acme.com.v1.admission-webhook.configsync.gke.io"))
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -154,7 +154,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		return nt.Validate("heavy", "foo", anvilCR("v1", "", 0))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
@@ -170,13 +170,13 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove CRD
 	_, err = nt.Kubectl("delete", "-f", crdFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	if nt.MultiRepo {
@@ -198,7 +198,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove the CR.
@@ -212,7 +212,7 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	// Skip this test if v1beta1 CRD is not supported in the testing cluster.
 	if !support {
@@ -223,14 +223,14 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd-structural.yaml")
 			_, err := nt.Kubectl("apply", "-f", crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			_, err = nomostest.Retry(30*time.Second, func() error {
 				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
@@ -243,7 +243,7 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 				return nt.Validate("heavy", "foo", anvilCR("v1", "", 0), weightEqual10)
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Update CustomResource
@@ -256,7 +256,7 @@ func TestSyncUpdateCustomResource(t *testing.T) {
 				return nt.Validate("heavy", "foo", anvilCR("v1", "", 0), weightEqual100)
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 		})
 	}

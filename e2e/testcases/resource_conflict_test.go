@@ -74,7 +74,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Declare a conflicting Role in the shipping Namespace repo.
@@ -92,7 +92,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate reconciler error metric is emitted from namespace reconciler.
@@ -101,13 +101,13 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
 	})
 	if err != nil {
-		t.Errorf("validating reconciler_errors metric: %v", err)
+		nt.T.Errorf("validating reconciler_errors metric: %v", err)
 	}
 
 	// Ensure the Role matches the one in the Root repo.
 	err = nt.Validate("pods", "shipping", &rbacv1.Role{}, roleHasRules(rootPodRole().Rules))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Remove the declaration from the Root repo.
@@ -119,7 +119,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	err = nt.Validate("pods", "shipping", &rbacv1.Role{},
 		roleHasRules(namespacePodRole().Rules))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics from root reconciler.
@@ -135,7 +135,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	err := nt.Validate("pods", "shipping", &rbacv1.Role{},
 		roleHasRules(namespacePodRole().Rules))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
@@ -166,7 +166,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
@@ -180,7 +180,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate reconciler error metric is emitted from namespace reconciler.
@@ -189,13 +189,13 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
 	})
 	if err != nil {
-		t.Errorf("validating reconciler_errors metric: %v", err)
+		nt.T.Errorf("validating reconciler_errors metric: %v", err)
 	}
 
 	// Ensure the Role matches the one in the Root repo.
 	err = nt.Validate("pods", "shipping", &rbacv1.Role{}, roleHasRules(rootPodRole().Rules))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.NonRootRepos["shipping"].Remove("acme/namespaces/shipping/pod-role.yaml")
@@ -206,7 +206,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	err = nt.Validate("pods", "shipping", &rbacv1.Role{},
 		roleHasRules(rootPodRole().Rules))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
@@ -222,7 +222,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 

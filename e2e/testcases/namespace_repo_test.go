@@ -40,18 +40,18 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
-		t.Errorf("RepoSync did not finish reconciling: %v", err)
+		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
 	repo, exist := nt.NonRootRepos[bsNamespace]
 	if !exist {
-		t.Fatal("nonexistent repo")
+		nt.T.Fatal("nonexistent repo")
 	}
 
 	// Validate service account 'store' not present.
 	err = nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
 	if err != nil {
-		t.Errorf("store service account already present: %v", err)
+		nt.T.Errorf("store service account already present: %v", err)
 	}
 
 	sa := fake.ServiceAccountObject("store", core.Namespace(bsNamespace))
@@ -64,7 +64,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 		return nt.Validate("store", bsNamespace, &corev1.ServiceAccount{})
 	})
 	if err != nil {
-		t.Fatalf("service account store not found: %v", err)
+		nt.T.Fatalf("service account store not found: %v", err)
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
@@ -80,7 +80,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -110,18 +110,18 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
-		t.Errorf("RepoSync did not finish reconciling: %v", err)
+		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
 	repo, exist := nt.NonRootRepos[bsNamespace]
 	if !exist {
-		t.Fatal("nonexistent repo")
+		nt.T.Fatal("nonexistent repo")
 	}
 
 	// Validate service account 'store' not present.
 	err = nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
 	if err != nil {
-		t.Errorf("store service account already present: %v", err)
+		nt.T.Errorf("store service account already present: %v", err)
 	}
 
 	sa := fake.ServiceAccountObject("store", core.Namespace(bsNamespace))
@@ -134,7 +134,7 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 		return nt.Validate("store", bsNamespace, &corev1.ServiceAccount{})
 	})
 	if err != nil {
-		t.Fatalf("service account store not found: %v", err)
+		nt.T.Fatalf("service account store not found: %v", err)
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
@@ -150,7 +150,7 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -192,13 +192,13 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 
 	repo, exist := nt.NonRootRepos[bsNamespaceRepo]
 	if !exist {
-		t.Fatal("nonexistent repo")
+		nt.T.Fatal("nonexistent repo")
 	}
 
 	// Validate service account 'store' not present.
 	err := nt.ValidateNotFound("store", bsNamespaceRepo, &corev1.ServiceAccount{})
 	if err != nil {
-		t.Errorf("store service account already present: %v", err)
+		nt.T.Errorf("store service account already present: %v", err)
 	}
 
 	sa := fake.ServiceAccountObject("store", core.Namespace(bsNamespaceRepo))
@@ -209,7 +209,7 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 	// Validate service account 'store' is present.
 	err = nt.Validate("store", bsNamespaceRepo, &corev1.ServiceAccount{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
@@ -225,7 +225,7 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -241,13 +241,13 @@ func TestDeleteRepoSync_Delegated(t *testing.T) {
 
 	var rs v1alpha1.RepoSync
 	if err := nt.Get(v1alpha1.RepoSyncName, bsNamespace, &rs); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete RepoSync custom resource from the cluster.
 	err := nt.Delete(&rs)
 	if err != nil {
-		t.Fatalf("RepoSync delete failed: %v", err)
+		nt.T.Fatalf("RepoSync delete failed: %v", err)
 	}
 
 	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
@@ -286,7 +286,7 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -353,7 +353,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
-		t.Errorf("RepoSync did not finish reconciling: %v", err)
+		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
 	// Delete namespace reconciler deployment in bookstore namespace.
@@ -370,7 +370,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
-		t.Errorf("RepoSync did not finish reconciling: %v", err)
+		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -380,6 +380,6 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }

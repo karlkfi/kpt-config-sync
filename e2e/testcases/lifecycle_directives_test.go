@@ -23,7 +23,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	// Ensure the Namespace doesn't already exist.
 	err := nt.ValidateNotFound("shipping", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	role := fake.RoleObject(core.Name("shipping-admin"))
@@ -42,7 +42,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 
 	err = nt.Validate("shipping", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -59,7 +59,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Delete the declaration and ensure the Namespace isn't deleted.
@@ -72,12 +72,12 @@ func TestPreventDeletionNamespace(t *testing.T) {
 	err = nt.Validate("shipping", "", &corev1.Namespace{},
 		nomostest.NotPendingDeletion)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	// Ensure we deleted the undeclared Role that doesn't have the annotation.
 	err = nt.ValidateNotFound("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -94,7 +94,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove the lifecycle annotation from the namespace so that the namespace can be deleted after the test case.
@@ -109,7 +109,7 @@ func TestPreventDeletionRole(t *testing.T) {
 	// Ensure the Namespace doesn't already exist.
 	err := nt.ValidateNotFound("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Declare the Role with the lifecycle annotation, and ensure it is created.
@@ -126,7 +126,7 @@ func TestPreventDeletionRole(t *testing.T) {
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete the declaration and ensure the Namespace isn't deleted.
@@ -136,7 +136,7 @@ func TestPreventDeletionRole(t *testing.T) {
 
 	err = nt.Validate("shipping-admin", "shipping", &rbacv1.Role{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Remove the lifecycle annotation from the role so that the role can be deleted after the test case.
@@ -152,7 +152,7 @@ func TestPreventDeletionRole(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -162,7 +162,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	// Ensure the ClusterRole doesn't already exist.
 	err := nt.ValidateNotFound("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Declare the ClusterRole with the lifecycle annotation, and ensure it is created.
@@ -178,7 +178,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete the declaration and ensure the ClusterRole isn't deleted.
@@ -188,7 +188,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 
 	err = nt.Validate("test-admin", "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Remove the lifecycle annotation from the cluster-role so that it can be deleted after the test case.
@@ -204,7 +204,7 @@ func TestPreventDeletionClusterRole(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -226,11 +226,11 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	err := nt.Validate(implicitNamespace, "", &corev1.Namespace{},
 		nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("configmap-getter", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.Root.Remove("acme/role.yaml")
@@ -241,7 +241,7 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{},
 		nomostest.NotPendingDeletion)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Remove the lifecycle annotation from the implicit namespace so that it can be deleted after the test case.

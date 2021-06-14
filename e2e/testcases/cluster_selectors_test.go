@@ -90,7 +90,7 @@ func TestTargetingDifferentResourceQuotasToDifferentClusters(t *testing.T) {
 	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
 	nt.Root.CommitAndPush("Add test cluster and cluster registry data")
 
-	t.Log("Add a valid cluster selector annotation to a resource quota")
+	nt.T.Log("Add a valid cluster selector annotation to a resource quota")
 	resourceQuotaName := "pod-quota"
 	prodPodsQuota := "133"
 	testPodsQuota := "266"
@@ -104,19 +104,19 @@ func TestTargetingDifferentResourceQuotasToDifferentClusters(t *testing.T) {
 	nt.Root.CommitAndPush("Add a valid cluster selector annotation to a resource quota")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(prodPodsQuota)); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(testPodsQuota)); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(resourceQuotaName, frontendNamespace, &corev1.ResourceQuota{}, resourceQuotaHasHardPods(prodPodsQuota)); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -126,7 +126,7 @@ func TestTargetingDifferentResourceQuotasToDifferentClusters(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -135,7 +135,7 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 
 	configMapName := clusterNameConfigMapName(nt)
 
-	t.Log("Add a valid cluster selector annotation to a role binding")
+	nt.T.Log("Add a valid cluster selector annotation to a role binding")
 	rb := roleBinding(roleBindingName, inlineProdClusterSelectorAnnotation)
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
@@ -144,7 +144,7 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 	nt.Root.CommitAndPush("Add a valid cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.T.Log("Add test cluster, and cluster registry data")
@@ -154,34 +154,34 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
 	nt.Root.CommitAndPush("Add test cluster and cluster registry data")
 
-	t.Log("Change cluster selector to match test cluster")
+	nt.T.Log("Change cluster selector to match test cluster")
 	rb.Annotations = legacyTestClusterSelectorAnnotation
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Change cluster selector to match test cluster")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Revert cluster selector to match prod cluster")
+	nt.T.Log("Revert cluster selector to match prod cluster")
 	rb.Annotations = inlineProdClusterSelectorAnnotation
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Revert cluster selector to match prod cluster")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -191,7 +191,7 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -200,7 +200,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 
 	configMapName := clusterNameConfigMapName(nt)
 
-	t.Log("Add a valid cluster selector annotation to a namespace")
+	nt.T.Log("Add a valid cluster selector annotation to a namespace")
 	namespace := namespaceObject(backendNamespace, inlineProdClusterSelectorAnnotation)
 	rb := roleBinding(roleBindingName, inlineProdClusterSelectorAnnotation)
 	nt.Root.Add(
@@ -211,10 +211,10 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	nt.Root.CommitAndPush("Add a valid cluster selector annotation to a namespace and a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -231,23 +231,23 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
-	t.Log("Add test cluster, and cluster registry data")
+	nt.T.Log("Add test cluster, and cluster registry data")
 	testCluster := clusterObject(testClusterName, environmentLabelKey, testEnvironment)
 	nt.Root.Add("acme/clusterregistry/cluster-test.yaml", testCluster)
 	testClusterSelector := clusterSelector(testClusterSelectorName, environmentLabelKey, testEnvironment)
 	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
 	nt.Root.CommitAndPush("Add test cluster and cluster registry data")
 
-	t.Log("Change namespace to match test cluster")
+	nt.T.Log("Change namespace to match test cluster")
 	namespace.Annotations = legacyTestClusterSelectorAnnotation
 	nt.Root.Add("acme/namespaces/eng/backend/namespace.yaml", namespace)
 	nt.Root.CommitAndPush("Change namespace to match test cluster")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
@@ -265,17 +265,17 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	renameCluster(nt, configMapName, testClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	// bob-rolebinding won't reappear in the backend namespace as the cluster is inactive in the cluster-selector
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -292,16 +292,16 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
-	t.Log("Updating bob-rolebinding to NOT have cluster-selector")
+	nt.T.Log("Updating bob-rolebinding to NOT have cluster-selector")
 	rb.Annotations = map[string]string{}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Update bob-rolebinding to NOT have cluster-selector")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -318,16 +318,16 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
-	t.Log("Revert namespace to match prod cluster")
+	nt.T.Log("Revert namespace to match prod cluster")
 	namespace.Annotations = inlineProdClusterSelectorAnnotation
 	nt.Root.Add("acme/namespaces/eng/backend/namespace.yaml", namespace)
 	nt.Root.CommitAndPush("Revert namespace to match prod cluster")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
@@ -345,16 +345,16 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(backendNamespace, "", &corev1.Namespace{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -371,14 +371,14 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
 func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
 	nt := nomostest.New(t)
 
-	t.Log("Add a valid cluster selector annotation to a role binding")
+	nt.T.Log("Add a valid cluster selector annotation to a role binding")
 	rb := roleBinding(roleBindingName, inlineProdClusterSelectorAnnotation)
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
@@ -387,16 +387,16 @@ func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
 	nt.Root.CommitAndPush("Add a valid cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Modify the cluster selector to select an excluded cluster list")
+	nt.T.Log("Modify the cluster selector to select an excluded cluster list")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a, b, c"}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Modify the cluster selector to select an excluded cluster list")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -406,7 +406,7 @@ func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -420,7 +420,7 @@ func TestObjectReactsToChangeInLegacyClusterSelector(t *testing.T) {
 	nt.Root.Add("acme/clusterregistry/clusterselector-prod.yaml", prodClusterSelector)
 	nt.Root.CommitAndPush("Add prod cluster and cluster registry data")
 
-	t.Log("Add a valid cluster selector annotation to a role binding")
+	nt.T.Log("Add a valid cluster selector annotation to a role binding")
 	rb := roleBinding(roleBindingName, map[string]string{v1.LegacyClusterSelectorAnnotationKey: prodClusterSelectorName})
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
@@ -429,16 +429,16 @@ func TestObjectReactsToChangeInLegacyClusterSelector(t *testing.T) {
 	nt.Root.CommitAndPush("Add a valid cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Modify the cluster selector to select a different environment")
+	nt.T.Log("Modify the cluster selector to select a different environment")
 	prodClusterWithADifferentSelector := clusterSelector(prodClusterSelectorName, environmentLabelKey, "other")
 	nt.Root.Add("acme/clusterregistry/clusterselector-prod.yaml", prodClusterWithADifferentSelector)
 	nt.Root.CommitAndPush("Modify the cluster selector to select a different environment")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -448,7 +448,7 @@ func TestObjectReactsToChangeInLegacyClusterSelector(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -462,7 +462,7 @@ func TestImporterIgnoresNonSelectedCustomResources(t *testing.T) {
 	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
 	nt.Root.CommitAndPush("Add test cluster and cluster registry data")
 
-	t.Log("Add CRs (not targeted to this cluster) without its CRD")
+	nt.T.Log("Add CRs (not targeted to this cluster) without its CRD")
 	cr := anvilCR("v1", "e2e-test-anvil", 10)
 	cr.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: testClusterSelectorName})
 	nt.Root.Add(
@@ -483,7 +483,7 @@ func TestImporterIgnoresNonSelectedCustomResources(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -493,7 +493,7 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 		ntopts.NamespaceRepo(namespaceRepo),
 	)
 
-	t.Log("Add a valid cluster selector annotation to a role binding")
+	nt.T.Log("Add a valid cluster selector annotation to a role binding")
 	rb := roleBinding(roleBindingName, inlineProdClusterSelectorAnnotation)
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
@@ -502,16 +502,16 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 	nt.NonRootRepos[namespaceRepo].CommitAndPush("Add a valid cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, namespaceRepo, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Modify the cluster selector to select an excluded cluster list")
+	nt.T.Log("Modify the cluster selector to select an excluded cluster list")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a,b,,,c,d"}
 	nt.NonRootRepos[namespaceRepo].Add("acme/bob-rolebinding.yaml", rb)
 	nt.NonRootRepos[namespaceRepo].CommitAndPush("Modify the cluster selector to select an excluded cluster list")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, namespaceRepo, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -521,7 +521,7 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -531,7 +531,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	configMapName := clusterNameConfigMapName(nt)
 	renameCluster(nt, configMapName, "")
 
-	t.Log("Add a role binding without any cluster selectors")
+	nt.T.Log("Add a role binding without any cluster selectors")
 	rb := roleBinding(roleBindingName, map[string]string{})
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
@@ -540,58 +540,58 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	nt.Root.CommitAndPush("Add a role binding without any cluster selectors")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Logf("Add a prod cluster selector to the role binding")
+	nt.T.Logf("Add a prod cluster selector to the role binding")
 	rb.Annotations = inlineProdClusterSelectorAnnotation
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a prod cluster selector to the role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	renameCluster(nt, configMapName, prodClusterName)
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Add an empty cluster selector annotation to a role binding")
+	nt.T.Log("Add an empty cluster selector annotation to a role binding")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: ""}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add an empty cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Add a cluster selector annotation to a role binding with a list of included clusters")
+	nt.T.Log("Add a cluster selector annotation to a role binding with a list of included clusters")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a,%s,b", prodClusterName)}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of included clusters")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Add a cluster selector annotation to a role binding with a list of excluded clusters")
+	nt.T.Log("Add a cluster selector annotation to a role binding with a list of excluded clusters")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a,,b"}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of excluded clusters")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Add a cluster selector annotation to a role binding with a list of included clusters (with spaces)")
+	nt.T.Log("Add a cluster selector annotation to a role binding with a list of included clusters (with spaces)")
 	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a , %s , b", prodClusterName)}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of included clusters (with spaces)")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(roleBindingName, backendNamespace, &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -601,14 +601,14 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
 func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 	nt := nomostest.New(t)
 
-	t.Log("Add both cluster selector annotations to a role binding")
+	nt.T.Log("Add both cluster selector annotations to a role binding")
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
 		namespaceObject(backendNamespace, map[string]string{}))
@@ -635,39 +635,39 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
 func TestClusterSelectorForCRD(t *testing.T) {
 	nt := nomostest.New(t)
 
-	t.Log("Add CRD without ClusterSelectors or cluster-name-selector annotation")
+	nt.T.Log("Add CRD without ClusterSelectors or cluster-name-selector annotation")
 	crd := anvilV1CRD()
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Test inline cluster-name-selector annotation
-	t.Log("Set the cluster-name-selector annotation to a not-selected cluster")
+	nt.T.Log("Set the cluster-name-selector annotation to a not-selected cluster")
 	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: testClusterName})
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an unselected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Set the cluster-name-selector annotation to a selected cluster")
+	nt.T.Log("Set the cluster-name-selector annotation to a selected cluster")
 	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: prodClusterName})
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an selected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Test legacy ClusterSelectors
@@ -680,22 +680,22 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	nt.Root.Add("acme/clusterregistry/clusterselector-test.yaml", testClusterSelector)
 	nt.Root.CommitAndPush("Add cluster and cluster registry data")
 
-	t.Log("Set ClusterSelector to a not-selected cluster")
+	nt.T.Log("Set ClusterSelector to a not-selected cluster")
 	crd.SetAnnotations(legacyTestClusterSelectorAnnotation)
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an unselected ClusterSelector")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
-	t.Log("Set ClusterSelector to a selected cluster")
+	nt.T.Log("Set ClusterSelector to a selected cluster")
 	crd.SetAnnotations(map[string]string{v1.LegacyClusterSelectorAnnotationKey: prodClusterSelectorName})
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an selected ClusterSelector")
 	nt.WaitForRepoSyncs()
 	if err := nt.Validate(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -705,7 +705,7 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 

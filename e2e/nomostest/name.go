@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"testing"
 
+	"github.com/google/nomos/e2e/nomostest/testing"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -15,7 +15,7 @@ import (
 // so we know we aren't missing any of the text.
 var re = regexp.MustCompile(`[A-Z][^A-Z]*`)
 
-func testClusterName(t *testing.T) string {
+func testClusterName(t testing.NTB) string {
 	t.Helper()
 
 	// Kind seems to allow a max cluster name length of 49.  If we exceed that, hash the
@@ -39,7 +39,7 @@ func testClusterName(t *testing.T) string {
 	return n
 }
 
-func testDirName(t *testing.T) string {
+func testDirName(t testing.NTB) string {
 	t.Helper()
 
 	n := t.Name()

@@ -24,7 +24,7 @@ func TestIgnoreKptfiles(t *testing.T) {
 
 	err := nt.Validate("foo", "", fake.NamespaceObject("foo"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -41,6 +41,6 @@ func TestIgnoreKptfiles(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }

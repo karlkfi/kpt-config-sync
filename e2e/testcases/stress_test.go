@@ -56,11 +56,11 @@ func Test_100_x_100_Objects(t *testing.T) {
 	list := &corev1.ConfigMapList{}
 	err := nt.List(list, client.MatchingLabels{label: value})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	if len(list.Items) != nNamespaces*nConfigMaps {
-		t.Errorf("got %d ConfigMaps, want %d", len(list.Items), nNamespaces*nConfigMaps)
+		nt.T.Errorf("got %d ConfigMaps, want %d", len(list.Items), nNamespaces*nConfigMaps)
 	}
 }
 

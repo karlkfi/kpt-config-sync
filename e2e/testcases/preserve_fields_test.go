@@ -54,7 +54,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	// Ensure the Service has the target port we set.
 	err := nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// We want to wait until the Service specifies ClusterIP and NodePort.
@@ -73,9 +73,9 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 		gotService = service
 		return nil
 	})
-	t.Logf("waited %v for nodePort and clusterIP to be set", duration)
+	nt.T.Logf("waited %v for nodePort and clusterIP to be set", duration)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// If strategic merge is NOT being used, Nomos and Kubernetes fight over
@@ -96,7 +96,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 		// We want non-nil error from the Retry above - if err is nil then at least
 		// one was incorrectly changed.
 		// The node port or cluster IP was updated, so we aren't using StrategicMergePatch.
-		t.Fatal("not using strategic merge patch")
+		nt.T.Fatal("not using strategic merge patch")
 	}
 
 	// Validate multi-repo metrics.
@@ -113,7 +113,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	updatedService := service.DeepCopy()
@@ -125,7 +125,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	// Ensure the Service has the new target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -142,7 +142,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -191,9 +191,9 @@ aggregationRule:
 			nsViewer.Rules[0], rbacViewer.Rules[0],
 		}))
 	})
-	t.Logf("took %v to wait for aggregate ClusterRole", duration)
+	nt.T.Logf("took %v to wait for aggregate ClusterRole", duration)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Update aggregateRole with a new label.
@@ -217,7 +217,7 @@ aggregationRule:
 			nsViewer.Rules[0], rbacViewer.Rules[0],
 		}))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -227,7 +227,7 @@ aggregationRule:
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -252,7 +252,7 @@ func TestPreserveLastApplied(t *testing.T) {
 
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	annotationKeys := nomostest.GetNomosAnnotationKeys(nt.MultiRepo)
@@ -265,7 +265,7 @@ func TestPreserveLastApplied(t *testing.T) {
 		// as we prevented the change outright.
 		_, err = nt.Kubectl("replace", "-f", filepath.Join(nt.Root.Root, "ns-viewer-cr-replace.yaml"))
 		if err == nil {
-			t.Fatal("got kubectl replace err = nil, want admission webhook to deny")
+			nt.T.Fatal("got kubectl replace err = nil, want admission webhook to deny")
 		}
 
 		_, err = nomostest.Retry(20*time.Second, func() error {
@@ -273,7 +273,7 @@ func TestPreserveLastApplied(t *testing.T) {
 				nomostest.HasExactlyAnnotationKeys(annotationKeys...))
 		})
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	} else {
 		// No admission webhook in mono repo.
@@ -293,7 +293,7 @@ func TestPreserveLastApplied(t *testing.T) {
 				nomostest.HasExactlyAnnotationKeys(withDeclared...))
 		})
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -304,7 +304,7 @@ func TestPreserveLastApplied(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -329,7 +329,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
 		nomostest.HasExactlyLabelKeys(defaultLabels...))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	cm.Labels["baz"] = "qux"
@@ -341,7 +341,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
 		nomostest.HasExactlyLabelKeys(append(defaultLabels, "baz")...))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	delete(cm.Labels, "baz")
@@ -353,7 +353,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
 		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, configuration.DeclaredVersionLabel))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -363,7 +363,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -388,7 +388,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	err := nt.Validate(cmName, ns, &corev1.ConfigMap{},
 		nomostest.HasExactlyAnnotationKeys(annotationKeys...))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -405,7 +405,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	cm.Annotations["baz"] = "qux"
@@ -420,7 +420,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		nomostest.HasExactlyAnnotationKeys(updatedKeys...),
 		nomostest.HasAnnotation("baz", "qux"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -437,7 +437,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	delete(cm.Annotations, "baz")
@@ -449,7 +449,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
 		nomostest.HasExactlyAnnotationKeys(annotationKeys...))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -466,7 +466,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 

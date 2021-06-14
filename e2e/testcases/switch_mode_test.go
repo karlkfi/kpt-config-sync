@@ -53,19 +53,19 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	// Ensure the Service has the target port we set.
 	err := nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	var rs v1alpha1.RootSync
 	err = nt.Validate(v1alpha1.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete RootSync custom resource from the cluster.
 	err = nt.Delete(&rs)
 	if err != nil {
-		t.Fatalf("deleting RootSync: %v", err)
+		nt.T.Fatalf("deleting RootSync: %v", err)
 	}
 
 	// Verify Root Reconciler deployment no longer present.
@@ -73,7 +73,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
-		t.Errorf("Reconciler deployment present after deletion: %v", err)
+		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
 	}
 
 	// Switch to mono-repo mode.
@@ -83,7 +83,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	// Ensure the Service exists and has the target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	updatedService := service.DeepCopy()
@@ -95,7 +95,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	// Ensure the Service exists and has the target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 
@@ -133,19 +133,19 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	// Ensure the Service has the target port we set.
 	err := nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	d := fake.DeploymentObject()
 	err = nt.Validate(filesystem.GitImporterName, v1.NSConfigManagementSystem, d)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Delete git-importer from the cluster.
 	err = nt.Delete(d)
 	if err != nil {
-		t.Fatalf("deleting Repo: %v", err)
+		nt.T.Fatalf("deleting Repo: %v", err)
 	}
 
 	// Verify git-importer no longer present.
@@ -153,7 +153,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 		return nt.ValidateNotFound(filesystem.GitImporterName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
-		t.Errorf("Git importer deployment present after deletion: %v", err)
+		nt.T.Errorf("Git importer deployment present after deletion: %v", err)
 	}
 
 	// Switch to multi-repo mode.
@@ -164,7 +164,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	// Ensure the Service exists and has the target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	updatedService := service.DeepCopy()
@@ -177,6 +177,6 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	// Ensure the Service exists and has the target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }

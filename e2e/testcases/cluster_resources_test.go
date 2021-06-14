@@ -60,7 +60,7 @@ func TestRevertClusterRole(t *testing.T) {
 
 	err := nt.ValidateNotFound(crName, "", fake.ClusterRoleObject())
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Declare the ClusterRole.
@@ -80,7 +80,7 @@ func TestRevertClusterRole(t *testing.T) {
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
 		clusterRoleHasRules(declaredRules))
 	if err != nil {
-		t.Fatalf("validating ClusterRole precondition: %v", err)
+		nt.T.Fatalf("validating ClusterRole precondition: %v", err)
 	}
 
 	// Apply a conflicting ClusterRole.
@@ -97,12 +97,12 @@ func TestRevertClusterRole(t *testing.T) {
 	if nt.MultiRepo {
 		// The admission webhook should deny the conflicting change.
 		if err == nil {
-			t.Fatal("got Update error = nil, want admission webhook to deny conflicting update")
+			nt.T.Fatal("got Update error = nil, want admission webhook to deny conflicting update")
 		}
 	} else {
 		// The admission webhook isn't enabled in mono repo.
 		if err != nil {
-			t.Fatalf("applying conflicting ClusterRole: %v", err)
+			nt.T.Fatalf("applying conflicting ClusterRole: %v", err)
 		}
 	}
 
@@ -123,11 +123,11 @@ func TestRevertClusterRole(t *testing.T) {
 		if err == nil {
 			// This was probably a flake. Consider increasing test resources or
 			// reducing test parallelism.
-			t.Fatalf("reverted ClusterRole conflict after %v: %v", d+d2, err)
+			nt.T.Fatalf("reverted ClusterRole conflict after %v: %v", d+d2, err)
 		}
 
 		// There is definitely some sort of bug in ACM.
-		t.Errorf("bug alert: did not revert ClusterRole conflict after %v: %v", d+d2, err)
+		nt.T.Errorf("bug alert: did not revert ClusterRole conflict after %v: %v", d+d2, err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -137,7 +137,7 @@ func TestRevertClusterRole(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -150,7 +150,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 
 	err := nt.ValidateNotFound(crName, "", fake.ClusterRoleObject())
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Declare the ClusterRole in repo.
@@ -178,7 +178,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	err = nt.Validate(crName, "", &rbacv1.ClusterRole{},
 		clusterRoleHasRules(declaredRules), managerFieldsNonEmpty())
 	if err != nil {
-		t.Fatalf("validating ClusterRole precondition: %v", err)
+		nt.T.Fatalf("validating ClusterRole precondition: %v", err)
 	}
 
 	// Validate multi-repo metrics.
@@ -194,7 +194,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Update the ClusterRole in the SOT.
@@ -216,7 +216,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 			clusterRoleHasRules(updatedRules), managerFieldsNonEmpty())
 	})
 	if err != nil {
-		t.Errorf("updating ClusterRole: %v", err)
+		nt.T.Errorf("updating ClusterRole: %v", err)
 	}
 
 	// Validate multi-repo metrics.
@@ -232,7 +232,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Delete the ClusterRole from the SOT.
@@ -242,7 +242,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 
 	err = nt.ValidateNotFound(crName, "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Errorf("deleting ClusterRole: %v", err)
+		nt.T.Errorf("deleting ClusterRole: %v", err)
 	}
 
 	// Validate multi-repo metrics.
@@ -258,6 +258,6 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }

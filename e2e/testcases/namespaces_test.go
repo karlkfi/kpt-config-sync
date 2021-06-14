@@ -30,7 +30,7 @@ func TestDeclareNamespace(t *testing.T) {
 	err := nt.ValidateNotFound("foo", "", &corev1.Namespace{})
 	if err != nil {
 		// Failed test precondition.
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo"))
@@ -40,7 +40,7 @@ func TestDeclareNamespace(t *testing.T) {
 	// Test that the Namespace "foo" exists.
 	err = nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -52,7 +52,7 @@ func TestDeclareNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 	// Test that the namespace exists.
 	err := nt.Validate(fooNamespace.Name, "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -84,7 +84,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 
 	// Add label and annotation to namespace.
@@ -97,7 +97,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 	// Test that the namespace exists with label and annotation.
 	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasLabel("label", "test-label"), nomostest.HasAnnotation("annotation", "test-annotation"))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -113,7 +113,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 
 	// Update label and annotation to namespace.
@@ -126,7 +126,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 	// Test that the namespace exists with the updated label and annotation.
 	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasLabel("label", "updated-test-label"), nomostest.HasAnnotation("annotation", "updated-test-annotation"))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -142,7 +142,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 
 	// Remove label and annotation to namespace and commit.
@@ -155,7 +155,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 	// Test that the namespace exists without the label and annotation.
 	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.MissingLabel("label"), nomostest.MissingAnnotation("annotation"))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -171,7 +171,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestNamespaceExistsAndDeclared(t *testing.T) {
 	// Test that the namespace exists after sync.
 	err := nt.Validate(namespace.Name, "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -205,7 +205,7 @@ func TestNamespaceExistsAndDeclared(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -224,7 +224,7 @@ func TestNamespaceEnabledAnnotationNotDeclared(t *testing.T) {
 	// Test that the namespace exists after sync.
 	err := nt.Validate(namespace.Name, "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -240,7 +240,7 @@ func TestNamespaceEnabledAnnotationNotDeclared(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -256,7 +256,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 	// Test that the namespace exists with expected config management labels and annotations.
 	err := nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -272,7 +272,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Update namespace to be no longer be managed
@@ -284,7 +284,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 	// Test that the now unmanaged namespace does not contain any config management labels or annotations
 	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -300,7 +300,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -321,7 +321,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 		nomostest.HasAnnotation("test-corp.com/awesome-controller-mixin", "green"),
 	)
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -337,7 +337,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove label and annotation from the kube-system namespace.
@@ -351,7 +351,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 	err = nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{},
 		nomostest.MissingLabel("test-corp.com/awesome-controller-flavour"), nomostest.MissingAnnotation("test-corp.com/awesome-controller-mixin"))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -367,7 +367,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating error metrics: %v", err)
+		nt.T.Errorf("validating error metrics: %v", err)
 	}
 
 	// Update kube-system namespace to be no longer be managed.
@@ -379,7 +379,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 	// Test that the now unmanaged kube-system namespace does not contain any config management labels or annotations.
 	err = nt.Validate(kubeSystemNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -395,7 +395,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -416,7 +416,7 @@ func TestDoNotRemoveManagedByLabelExceptForConfigManagement(t *testing.T) {
 		nomostest.HasLabel("app.kubernetes.io/managed-by", "helm"),
 	)
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -432,7 +432,7 @@ func TestDoNotRemoveManagedByLabelExceptForConfigManagement(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -444,7 +444,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	err := nt.ValidateNotFound(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
 		// Failed test precondition. We want to ensure we create the Namespace.
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Phase 1: Declare a Role in a Namespace that doesn't exist, and ensure it
@@ -457,11 +457,11 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
 		// No need to continue test since Namespace was never created.
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("admin", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -478,7 +478,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Phase 2: Remove the Role, and ensure the implicit Namespace is NOT deleted.
@@ -488,11 +488,11 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 
 	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 	err = nt.ValidateNotFound("admin", implicitNamespace, &rbacv1.Role{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -508,7 +508,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -524,11 +524,11 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 
 	err := nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("bar", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -552,7 +552,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Remove the all declared Namespaces.
@@ -575,16 +575,16 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	}
 	if err != nil {
 		// Fail since we needn't continue the test if this action wasn't blocked.
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	err = nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("bar", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
@@ -592,13 +592,13 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, "2006")
 		if err != nil {
-			t.Errorf("validating parse_errors_total metric: %v", err)
+			nt.T.Errorf("validating parse_errors_total metric: %v", err)
 		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "sync")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Add safety back so we resume syncing.
@@ -608,14 +608,14 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 
 	err = nt.Validate(nomostest.SafetyNS, "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	_, err = nomostest.Retry(10*time.Second, func() error {
 		// It takes a few seconds for Namespaces to terminate.
 		return nt.ValidateNotFound("bar", "", &corev1.Namespace{})
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -644,7 +644,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Undeclare safety. We expect this to succeed since the user unambiguously wants
@@ -658,11 +658,11 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		return nt.ValidateNotFound(nomostest.SafetyNS, "", &corev1.Namespace{})
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.ValidateNotFound("bar", "", &corev1.Namespace{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -684,7 +684,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 

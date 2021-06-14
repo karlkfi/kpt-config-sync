@@ -21,7 +21,7 @@ func TestConflictingKubectlApply(t *testing.T) {
 
 	err := nt.ValidateNotFound("foo", "", &corev1.Namespace{})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	nt.Root.Add("acme/namespaces/foo/ns.yaml", fake.NamespaceObject("foo", core.Label("hello", "world")))
@@ -31,7 +31,7 @@ func TestConflictingKubectlApply(t *testing.T) {
 	// Test that the Namespace "foo" exists with the expected label.
 	err = nt.Validate("foo", "", &corev1.Namespace{}, nomostest.HasLabel("hello", "world"))
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -47,7 +47,7 @@ func TestConflictingKubectlApply(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	err = ioutil.WriteFile(filepath.Join(nt.TmpDir, "conflict.yaml"), []byte(`
@@ -59,7 +59,7 @@ metadata:
     goodnight: "moon"
 `), os.ModePerm)
 	if err != nil {
-		t.Fatalf("failed to write temporary yaml file: %v", err)
+		nt.T.Fatalf("failed to write temporary yaml file: %v", err)
 	}
 
 	// Add a new label via kubectl.
@@ -80,7 +80,7 @@ metadata:
 		return nil
 	})
 	if err != nil {
-		t.Error(err)
+		nt.T.Error(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -90,6 +90,6 @@ metadata:
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }

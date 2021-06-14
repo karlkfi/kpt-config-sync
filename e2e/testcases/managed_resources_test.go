@@ -42,12 +42,12 @@ metadata:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err := nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-ns.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-ns.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Wait 10 seconds so that the reconciler can process the event.
@@ -57,7 +57,7 @@ metadata:
 	err = nt.Validate("test-ns", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
 		v1.ResourceManagementKey, v1beta1.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	ns = []byte(`
@@ -71,12 +71,12 @@ metadata:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err = nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Wait 10 seconds so that the reconciler can process the event.
@@ -87,7 +87,7 @@ metadata:
 	err = nt.Validate("test-ns", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
 		v1.ResourceManagementKey, v1beta1.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 
@@ -111,12 +111,12 @@ metadata:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err := nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-ns.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-ns.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Config Sync should remove `test-ns`.
@@ -133,12 +133,12 @@ metadata:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-ns.yaml"), ns, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err = nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Wait 10 seconds so that the remediator can process the event.
@@ -149,7 +149,7 @@ metadata:
 	err = nt.Validate("test-ns", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
 		v1.ResourceManagementKey, v1beta1.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 
@@ -180,12 +180,12 @@ data:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-cm.yaml"), cm, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err := nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-cm.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Config Sync should remove `test-ns`.
@@ -205,12 +205,12 @@ data:
 `)
 
 	if err := ioutil.WriteFile(filepath.Join(nt.TmpDir, "test-cm.yaml"), cm, 0644); err != nil {
-		t.Fatalf("failed to create a tmp file %v", err)
+		nt.T.Fatalf("failed to create a tmp file %v", err)
 	}
 
 	out, err = nt.Kubectl("apply", "-f", filepath.Join(nt.TmpDir, "test-cm.yaml"))
 	if err != nil {
-		t.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
+		nt.T.Fatalf("got `kubectl apply -f test-cm.yaml` error %v %s, want return nil", err, out)
 	}
 
 	// Wait 10 seconds so that the reconciler can process the event.
@@ -221,6 +221,6 @@ data:
 	err = nt.Validate("test-cm", "bookstore", &corev1.ConfigMap{}, nomostest.HasExactlyAnnotationKeys(
 		v1.ResourceManagementKey, v1beta1.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }

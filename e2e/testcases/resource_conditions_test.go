@@ -61,13 +61,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		// There isn't a concise way of saying "If one of these three conditions fail,
 		// show all errors and then fail the test."
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -92,13 +92,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		hasConditions(string(v1.ResourceStateError)))
 	if err1 != nil || err2 != nil || err3 != nil {
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -122,13 +122,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		// There isn't a concise way of saying "If one of these three conditions fail,
 		// show all errors and then fail the test."
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -153,13 +153,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		hasConditions(string(v1.ResourceStateReconciling)))
 	if err1 != nil || err2 != nil || err3 != nil {
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -181,13 +181,13 @@ func TestResourceConditionAnnotations(t *testing.T) {
 		hasConditions())
 	if err1 != nil || err2 != nil || err3 != nil {
 		if err1 != nil {
-			t.Error(err1)
+			nt.T.Error(err1)
 		}
 		if err2 != nil {
-			t.Error(err2)
+			nt.T.Error(err2)
 		}
 		if err3 != nil {
-			t.Error(err3)
+			nt.T.Error(err3)
 		}
 		t.FailNow()
 	}
@@ -202,7 +202,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	}
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	// Skip this test when the v1beta1 CRD is not supported in the testing cluster.
 	if !support {
@@ -210,7 +210,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	}
 
 	if err := nt.ApplyGatekeeperTestData("constraint-template-crd.yaml", "constrainttemplates.templates.gatekeeper.sh"); err != nil {
-		t.Fatalf("Failed to create constraint template CRD: %v", err)
+		nt.T.Fatalf("Failed to create constraint template CRD: %v", err)
 	}
 
 	// Create and apply a ConstraintTemplate.
@@ -254,7 +254,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["ConstraintTemplate has not been created"]`))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 
@@ -267,7 +267,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	}
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	// Skip this test when v1beta1 CRD is not supported in the testing cluster.
 	if !support {
@@ -275,7 +275,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	}
 
 	if err := nt.ApplyGatekeeperTestData("constraint-crd.yaml", "k8sallowedrepos.constraints.gatekeeper.sh"); err != nil {
-		t.Fatalf("Failed to create constraint template CRD: %v", err)
+		nt.T.Fatalf("Failed to create constraint template CRD: %v", err)
 	}
 
 	constraintGVK := schema.GroupVersionKind{
@@ -312,7 +312,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["Constraint has not been processed by PolicyController"]`))
 	})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 

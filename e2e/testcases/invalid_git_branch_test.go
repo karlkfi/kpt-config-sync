@@ -35,7 +35,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Update RootSync to valid branch name
@@ -51,7 +51,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -70,13 +70,13 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, status.SourceErrorCode)
 		if err != nil {
-			t.Errorf("validating parse_errors_total metric: %v", err)
+			nt.T.Errorf("validating parse_errors_total metric: %v", err)
 		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	rs.Spec.Branch = nomostest.MainBranch
@@ -92,7 +92,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 

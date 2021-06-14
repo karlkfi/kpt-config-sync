@@ -40,7 +40,7 @@ spec:
 	pod := &corev1.Pod{}
 	err := nt.Validate("nginx", namespace.Name, pod)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// TODO(b/184764581): This should be deleted once b/184764581 is fixed.

@@ -38,7 +38,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 	}
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	if !support {
 		testcases = testcases[0:1]
@@ -57,13 +57,13 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 				err = nt.Validate(configuration.Name, "", &admissionv1.ValidatingWebhookConfiguration{},
 					hasRule("acme.com.v1.admission-webhook.configsync.gke.io"))
 				if err != nil {
-					t.Fatal(err)
+					nt.T.Fatal(err)
 				}
 			}
 
 			err := nt.Validate("heavy", "foo", anvilCR("v1", "", 0))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Validate multi-repo metrics.
@@ -73,7 +73,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 					metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("CustomResourceDefinition"), metrics.ResourceCreated("Anvil"))
 			})
 			if err != nil {
-				t.Errorf("validating metrics: %v", err)
+				nt.T.Errorf("validating metrics: %v", err)
 			}
 
 			// This should cause an error.
@@ -97,7 +97,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 				return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 			})
 			if err != nil {
-				t.Errorf("validating metrics: %v", err)
+				nt.T.Errorf("validating metrics: %v", err)
 			}
 
 			// This should fix the error.
@@ -111,7 +111,7 @@ func TestMustRemoveCustomResourceWithDefinition(t *testing.T) {
 				return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "")
 			})
 			if err != nil {
-				t.Errorf("validating reconciler_errors metric: %v", err)
+				nt.T.Errorf("validating reconciler_errors metric: %v", err)
 			}
 		})
 	}
@@ -121,7 +121,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	var testcases []string
 	if support {
@@ -135,7 +135,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/anvil-crd.yaml", crdContent)
 			nt.Root.Add("acme/namespaces/prod/ns.yaml", fake.NamespaceObject("prod"))
@@ -146,7 +146,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 
 			err = nt.Validate("e2e-test-anvil", "prod", anvilCR("v1", "", 10))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Validate multi-repo metrics.
@@ -160,7 +160,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Errorf("validating metrics: %v", err)
+				nt.T.Errorf("validating metrics: %v", err)
 			}
 
 			// Remove the CustomResource.
@@ -169,7 +169,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 			nt.WaitForRepoSyncs()
 			err = nt.ValidateNotFound("e2e-test-anvil", "prod", anvilCR("v1", "", 10))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Remove the CustomResourceDefinition.
@@ -180,7 +180,7 @@ func TestAddAndRemoveCustomResource(t *testing.T) {
 				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 		})
 	}
@@ -190,7 +190,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	var testcases []string
 	if support {
@@ -204,7 +204,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/anvil-crd.yaml", crdContent)
 			nt.Root.Add("acme/namespaces/prod/ns.yaml", fake.NamespaceObject("prod"))
@@ -222,14 +222,14 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 			//	return err
 			//})
 			//if err != nil {
-			//	t.Errorf("validating metrics: %v", err)
+			//	nt.T.Errorf("validating metrics: %v", err)
 			//}
 
 			_, err = nomostest.Retry(30*time.Second, func() error {
 				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Apply the CustomResource.
@@ -237,7 +237,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 			cr.SetNamespace("prod")
 			err = nt.Client.Create(context.TODO(), cr)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Remove the CustomResourceDefinition.
@@ -249,7 +249,7 @@ func TestMustRemoveUnManagedCustomResource(t *testing.T) {
 				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 		})
 	}
@@ -259,7 +259,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	var testcases []string
 	if support {
@@ -273,7 +273,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "clusteranvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/clusteranvil-crd.yaml", crdContent)
 			nt.Root.Add("acme/cluster/clusteranvil.yaml", clusteranvilCR("v1", "e2e-test-clusteranvil", 10))
@@ -285,7 +285,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 				return nt.Validate("e2e-test-clusteranvil", "", clusteranvilCR("v1", "", 10))
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Validate multi-repo metrics.
@@ -303,14 +303,14 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 				return nil
 			})
 			if err != nil {
-				t.Errorf("validating metrics: %v", err)
+				nt.T.Errorf("validating metrics: %v", err)
 			}
 
 			// Update the CRD from version v1 to version v2.
 			crdFile = filepath.Join(".", "..", "testdata", "customresources", dir, "clusteranvil-crd-v2.yaml")
 			crdContent, err = ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/clusteranvil-crd.yaml", crdContent)
 			nt.Root.CommitAndPush("Updating the Anvil CRD")
@@ -318,13 +318,13 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 
 			err = nt.Validate("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), hasTwoVersions)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			_, err = nomostest.Retry(30*time.Second, func() error {
 				return nt.Validate("e2e-test-clusteranvil", "", clusteranvilCR("v2", "", 10))
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Remove the CR and CRD so that they can be deleted after the test
@@ -334,7 +334,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 			nt.WaitForRepoSyncs()
 			err = nt.ValidateNotFound("e2e-test-clusteranvil", "prod", clusteranvilCR("v2", "", 10))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Remove the CustomResourceDefinition.
@@ -345,7 +345,7 @@ func TestAddUpdateRemoveClusterScopedCRD(t *testing.T) {
 				return nt.ValidateNotFound("clusteranvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 		})
 	}
@@ -356,7 +356,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	var testcases []string
 	if support {
@@ -370,7 +370,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 			crdFile := filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd.yaml")
 			crdContent, err := ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/anvil-crd.yaml", crdContent)
 			nt.Root.Add("acme/namespaces/prod/anvil.yaml", anvilCR("v1", "e2e-test-anvil", 10))
@@ -383,7 +383,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 				return nt.Validate("e2e-test-anvil", "prod", anvilCR("v1", "", 10))
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Validate multi-repo metrics.
@@ -396,14 +396,14 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 				return err
 			})
 			if err != nil {
-				t.Errorf("validating metrics: %v", err)
+				nt.T.Errorf("validating metrics: %v", err)
 			}
 
 			// Update the CRD from version v1 to version v2.
 			crdFile = filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd-v2.yaml")
 			crdContent, err = ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/anvil-crd.yaml", crdContent)
 			nt.Root.CommitAndPush("Updating the Anvil CRD")
@@ -411,18 +411,18 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 
 			err = nt.Validate("e2e-test-anvil", "prod", anvilCR("v2", "", 10))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			err = nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), hasTwoVersions)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Update CRD and CR to only support V2
 			crdFile = filepath.Join(".", "..", "testdata", "customresources", dir, "anvil-crd-only-v2.yaml")
 			crdContent, err = ioutil.ReadFile(crdFile)
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 			nt.Root.AddFile("acme/cluster/anvil-crd.yaml", crdContent)
 			nt.Root.Add("acme/namespaces/prod/anvil.yaml", anvilCR("v2", "e2e-test-anvil", 10))
@@ -433,12 +433,12 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 				return nt.Validate("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished, hasTwoVersions)
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			err = nt.Validate("e2e-test-anvil", "prod", anvilCR("v2", "", 10))
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 
 			// Remove CRD and CR
@@ -452,7 +452,7 @@ func TestAddUpdateNamespaceScopedCRD(t *testing.T) {
 				return nt.ValidateNotFound("anvils.acme.com", "", fake.CustomResourceDefinitionV1Object())
 			})
 			if err != nil {
-				t.Fatal(err)
+				nt.T.Fatal(err)
 			}
 		})
 	}
@@ -465,7 +465,7 @@ func TestLargeCRD(t *testing.T) {
 		crdFile := filepath.Join(".", "..", "testdata", "customresources", file)
 		crdContent, err := ioutil.ReadFile(crdFile)
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 		nt.Root.AddFile(fmt.Sprintf("acme/cluster/%s", file), crdContent)
 	}
@@ -475,11 +475,11 @@ func TestLargeCRD(t *testing.T) {
 
 	err := nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object())
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("solrclouds.solr.apache.org", "", fake.CustomResourceDefinitionV1Object())
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -497,14 +497,14 @@ func TestLargeCRD(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// update one CRD
 	crdFile := filepath.Join(".", "..", "testdata", "customresources", "challenges-acme-cert-manager-io_with_new_label.yaml")
 	crdContent, err := ioutil.ReadFile(crdFile)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	nt.Root.AddFile("acme/cluster/challenges-acme-cert-manager-io.yaml", crdContent)
 	nt.Root.CommitAndPush("Update label for one CRD")
@@ -512,7 +512,7 @@ func TestLargeCRD(t *testing.T) {
 
 	err = nt.Validate("challenges.acme.cert-manager.io", "", fake.CustomResourceDefinitionV1Object(), nomostest.HasLabel("random-key", "random-value"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 }
 

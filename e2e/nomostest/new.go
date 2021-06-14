@@ -90,12 +90,13 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 	t.Helper()
 	e2e.EnableParallel(t)
+	tw := testing2.New(t)
 
-	optsStruct := NewOptStruct(testClusterName(t), TestDir(t), t, ntOptions...)
+	optsStruct := NewOptStruct(testClusterName(tw), TestDir(tw), tw, ntOptions...)
 	if *e2e.ShareTestEnv {
-		return SharedTestEnv(t, optsStruct)
+		return SharedTestEnv(tw, optsStruct)
 	}
-	return FreshTestEnv(t, optsStruct)
+	return FreshTestEnv(tw, optsStruct)
 }
 
 // SharedTestEnv connects to a shared test cluster.
@@ -342,7 +343,7 @@ func SwitchMode(t *testing.T, nt *NT) {
 // TestDir creates a unique temporary directory for the E2E test.
 //
 // Returned directory is absolute and OS-specific.
-func TestDir(t *testing.T) string {
+func TestDir(t testing2.NTB) string {
 	t.Helper()
 
 	name := testDirName(t)

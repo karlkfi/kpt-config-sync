@@ -30,7 +30,7 @@ func TestAdoptClientSideAppliedResource(t *testing.T) {
 	// Validate the ClusterRole exist.
 	err := nt.Validate(nsViewerName, "", &rbacv1.ClusterRole{})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Add the ClusterRole and let ConfigSync to sync it.
@@ -48,10 +48,10 @@ func TestAdoptClientSideAppliedResource(t *testing.T) {
 	role := &rbacv1.ClusterRole{}
 	err = nt.Validate(nsViewerName, "", role)
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	if diff := cmp.Diff(role.Rules[0].Verbs, []string{"get"}); diff != "" {
-		t.Errorf(diff)
+		nt.T.Errorf(diff)
 	}
 }

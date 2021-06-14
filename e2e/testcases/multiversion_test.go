@@ -24,7 +24,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	nt := nomostest.New(t)
 	support, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 	// Skip this test when v1beta1 CRD is not supported in the testing cluster.
 	if !support {
@@ -46,11 +46,11 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 
 	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -75,7 +75,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 
 	// Modify the v1 and v1beta1 Anvils and verify they are updated.
@@ -86,11 +86,11 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 
 	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate multi-repo metrics.
@@ -115,7 +115,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("validating metrics: %v", err)
+		nt.T.Errorf("validating metrics: %v", err)
 	}
 }
 
@@ -178,11 +178,11 @@ func TestMultipleVersions_CustomResourceV1(t *testing.T) {
 
 	err := nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Modify the v1 and v1beta1 Anvils and verify they are updated.
@@ -193,11 +193,11 @@ func TestMultipleVersions_CustomResourceV1(t *testing.T) {
 
 	err = nt.Validate("first", "foo", anvilCR("v1", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	err = nt.Validate("second", "foo", anvilCR("v2", "", 0))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -207,7 +207,7 @@ func TestMultipleVersions_CustomResourceV1(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
@@ -293,7 +293,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	nt := nomostest.New(t)
 	supportV1beta1, err := nt.SupportV1Beta1CRD()
 	if err != nil {
-		t.Fatal("failed to check the supported CRD versions")
+		nt.T.Fatal("failed to check the supported CRD versions")
 	}
 
 	rbV1 := fake.RoleBindingObject(core.Name("v1user"))
@@ -332,14 +332,14 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	err = nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
 		hasV1Subjects("v1user@acme.com"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	if supportV1beta1 {
 		err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
 			hasV1Beta1Subjects("v1beta1user@acme.com"))
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -366,13 +366,13 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	err = nt.Validate("v1user", "foo", &rbacv1.RoleBinding{},
 		hasV1Subjects("v1user@acme.com", "v1admin@acme.com"))
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 	if supportV1beta1 {
 		err = nt.Validate("v1beta1user", "foo", &rbacv1beta1.RoleBinding{},
 			hasV1Beta1Subjects("v1beta1user@acme.com", "v1beta1admin@acme.com"))
 		if err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -383,10 +383,10 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 		nt.WaitForRepoSyncs()
 
 		if err := nt.Validate("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 		if err := nt.ValidateNotFound("v1beta1user", "foo", &rbacv1beta1.RoleBinding{}); err != nil {
-			t.Fatal(err)
+			nt.T.Fatal(err)
 		}
 	}
 
@@ -396,7 +396,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	if err := nt.ValidateNotFound("v1user", "foo", &rbacv1.RoleBinding{}); err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	// Validate no error metrics are emitted.
@@ -406,7 +406,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
-	//	t.Errorf("validating error metrics: %v", err)
+	//	nt.T.Errorf("validating error metrics: %v", err)
 	//}
 }
 
