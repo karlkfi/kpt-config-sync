@@ -10,12 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// OwningInventoryKey is the annotation key for marking the owning-inventory object.
-	// TODO(jingfangliu): Convert this key to a constant from the apply library.
-	OwningInventoryKey = "config.k8s.io/owning-inventory"
-)
-
 func partitionObjs(objs []client.Object) ([]client.Object, []client.Object) {
 	var enabled []client.Object
 	var disabled []client.Object
@@ -81,12 +75,4 @@ func removeFrom(all []object.ObjMetadata, toRemove []client.Object) []object.Obj
 		results = append(results, key)
 	}
 	return results
-}
-
-func removeConfigSyncLabelsAndAnnotations(obj *unstructured.Unstructured) (map[string]string, map[string]string, bool) {
-	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	_ = syncerreconcile.RemoveNomosLabelsAndAnnotations(obj)
-	core.RemoveAnnotations(obj, OwningInventoryKey)
-	after := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	return obj.GetLabels(), obj.GetAnnotations(), before != after
 }

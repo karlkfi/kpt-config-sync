@@ -41,7 +41,7 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				core.Annotation(constants.ResourceManagerKey, "some-namespace"),
 				core.Annotation(v1.SyncTokenAnnotationKey, "1234567"),
 				core.Annotation(constants.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
-				core.Annotation(applier.OwningInventoryKey, applier.InventoryID("some-namespace")),
+				core.Annotation(constants.OwningInventoryKey, applier.InventoryID("some-namespace")),
 				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 			)},
 		},

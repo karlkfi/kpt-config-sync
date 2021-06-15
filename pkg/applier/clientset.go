@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/syncer/differ"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -123,15 +123,15 @@ func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error
 		}
 		return err
 	}
-	if differ.HasNomosMeta(u) {
-		labels, annotations, updated := removeConfigSyncLabelsAndAnnotations(u)
+	if metadata.HasConfigSyncMetadata(u) {
+		updated := metadata.RemoveConfigSyncMetadata(u)
 		if !updated {
 			return nil
 		}
 		// APIService is handled specially by client-side apply due to
 		// https://github.com/kubernetes/kubernetes/issues/89264
 		if u.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
-			err = kptclient.UpdateLabelsAndAnnotations(u, labels, annotations)
+			err = kptclient.UpdateLabelsAndAnnotations(u, u.GetLabels(), u.GetAnnotations())
 			if err != nil {
 				return err
 			}

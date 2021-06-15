@@ -4,6 +4,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metadata"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -46,7 +47,7 @@ func (d *NamespaceDiff) Type() Type {
 		if ManagementDisabled(d.Declared) {
 			// The Namespace is explicitly marked management disabled in the repository.
 			if d.Actual != nil {
-				if HasNomosMeta(d.Actual) {
+				if metadata.HasConfigSyncMetadata(d.Actual) {
 					// Management is disabled for the Namespace, so remove management annotations from the API Server.
 					return Unmanage
 				}

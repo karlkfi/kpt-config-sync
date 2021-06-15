@@ -71,21 +71,6 @@ func SetLabel(obj Labeled, label, value string) {
 	obj.SetLabels(ls)
 }
 
-// RemoveLabels removes labels from the obj that key/value match the passed in map
-func RemoveLabels(obj client.Object, labels map[string]string) {
-	ls := obj.GetLabels()
-	for key, val := range labels {
-		if _, ok := ls[key]; !ok {
-			continue
-		}
-
-		if ls[key] == val {
-			delete(ls, key)
-		}
-	}
-	obj.SetLabels(ls)
-}
-
 // copyMap returns a copy of the passed map. Otherwise the Labels or Annotations maps will have two
 // owners.
 func copyMap(m map[string]string) map[string]string {

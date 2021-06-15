@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/declared"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
@@ -67,14 +65,12 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 		s := path.String()
 		if strings.HasPrefix(s, annotations) {
 			s = s[len(annotations):]
-			if strings.HasPrefix(s, configsync.GroupName) ||
-				strings.HasPrefix(s, configmanagement.GroupName) ||
-				strings.HasPrefix(s, constants.LifecyclePrefix) {
+			if csmetadata.IsConfigSyncAnnotationKey(s) {
 				csSet.Insert(path)
 			}
 		} else if strings.HasPrefix(s, labels) {
 			s = s[len(labels):]
-			if s == v1.ManagedByKey {
+			if csmetadata.IsConfigSyncLabelKey(s) {
 				csSet.Insert(path)
 			}
 		}

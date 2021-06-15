@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -68,7 +69,7 @@ func (d Diff) Type() Type {
 		if ManagementDisabled(d.Declared) {
 			// The resource is explicitly marked management disabled in the repository.
 			if d.Actual != nil {
-				if HasNomosMeta(d.Actual) {
+				if metadata.HasConfigSyncMetadata(d.Actual) {
 					// Management is disabled for the resource, so remove the annotation from the API Server.
 					return Unmanage
 				}
@@ -96,7 +97,7 @@ func (d Diff) Type() Type {
 			return NoOp
 		}
 
-		if !HasNomosMeta(d.Actual) {
+		if !metadata.HasConfigSyncMetadata(d.Actual) {
 			// No Nomos annotations or labels, so don't do anything.
 			return NoOp
 		}

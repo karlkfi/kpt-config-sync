@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/validate/raw/validate"
 )
 
@@ -34,7 +35,7 @@ func clean(o ast.FileObject) {
 	// Remove all the annotations starting with configsync.gke.io or configmanagement.gke.io
 	// except for the configmanagement.gke.io/managed annotation.
 	for k := range annotations {
-		if validate.HasConfigSyncPrefix(k) && k != v1.ResourceManagementKey {
+		if metadata.HasConfigSyncPrefix(k) && k != v1.ResourceManagementKey {
 			delete(annotations, k)
 		}
 	}
@@ -58,7 +59,7 @@ func clean(o ast.FileObject) {
 
 	// Remove all the labels starting with configsync.gke.io or configmanagement.gke.io.
 	for k := range labels {
-		if validate.HasConfigSyncPrefix(k) {
+		if metadata.HasConfigSyncPrefix(k) {
 			delete(labels, k)
 		}
 	}

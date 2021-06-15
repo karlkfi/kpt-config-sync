@@ -2,7 +2,6 @@ package v1
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/constants"
 )
 
 const (
@@ -11,30 +10,37 @@ const (
 
 	// ClusterNameAnnotationKey is the annotation key set on Nomos-managed resources that refers to
 	// the name of the cluster that the selectors are applied for.
+	// This annotation is set by Config Sync.
 	ClusterNameAnnotationKey = ConfigManagementPrefix + "cluster-name"
 
 	// LegacyClusterSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to the name of the ClusterSelector resource.
+	// This annotation is set by Config Sync users.
 	LegacyClusterSelectorAnnotationKey = ConfigManagementPrefix + "cluster-selector"
 
 	// NamespaceSelectorAnnotationKey is the annotation key set on Nomos-managed resources that refers
 	// to name of NamespaceSelector resource.
+	// This annotation is set by Config Sync users.
 	NamespaceSelectorAnnotationKey = ConfigManagementPrefix + "namespace-selector"
 
 	// DeclaredConfigAnnotationKey is the annotation key that stores the declared configuration of
 	// a resource in Git.
+	// This annotation is set by Config Sync.
 	DeclaredConfigAnnotationKey = ConfigManagementPrefix + "declared-config"
 
 	// SourcePathAnnotationKey is the annotation key representing the relative path from POLICY_DIR
 	// where the object was originally declared. Paths are slash-separated and OS-agnostic.
+	// This annotation is set by Config Sync.
 	SourcePathAnnotationKey = ConfigManagementPrefix + "source-path"
 
 	// SyncTokenAnnotationKey is the annotation key representing the last version token that a Nomos-
 	// managed resource was successfully synced from.
+	// This annotation is set by Config Sync.
 	SyncTokenAnnotationKey = ConfigManagementPrefix + "token"
 
 	// ResourceManagementKey is the annotation that indicates if Nomos will manage the content and
 	// lifecycle for the resource.
+	// This annotation is set by Config Sync.
 	ResourceManagementKey = ConfigManagementPrefix + "managed"
 	// ResourceManagementEnabled is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will manage content and lifecycle for the given resource.
@@ -49,25 +55,11 @@ const (
 	// The following annotations implement the extended resource status specification.
 
 	// ResourceStatusErrorsKey is the annotation that indicates any errors, encoded as a JSON array.
+	// This annotation is set by Config Sync.
 	ResourceStatusErrorsKey = ConfigManagementPrefix + "errors"
 
 	// ResourceStatusReconcilingKey is the annotation that indicates reasons why a resource is
 	// reconciling, encoded as a JSON array.
+	// This annotation is set by Config Sync.
 	ResourceStatusReconcilingKey = ConfigManagementPrefix + "reconciling"
 )
-
-// SyncerAnnotations returns the set of Nomos annotations that the syncer should manage.
-func SyncerAnnotations() []string {
-	return []string{
-		ClusterNameAnnotationKey,
-		LegacyClusterSelectorAnnotationKey,
-		constants.ClusterNameSelectorAnnotationKey,
-		NamespaceSelectorAnnotationKey,
-		DeclaredConfigAnnotationKey,
-		SourcePathAnnotationKey,
-		SyncTokenAnnotationKey,
-		ResourceManagementKey,
-		ResourceStatusErrorsKey,
-		ResourceStatusReconcilingKey,
-	}
-}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/syncer/differ"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -161,7 +161,7 @@ func NotPendingDeletion(o client.Object) error {
 // nomos labels and annotations.
 func HasAllNomosMetadata(multiRepo bool) Predicate {
 	return func(o client.Object) error {
-		annotationKeys := GetNomosAnnotationKeys(multiRepo)
+		annotationKeys := metadata.GetNomosAnnotationKeys(multiRepo)
 		labels := v1.SyncerLabels()
 
 		predicates := []Predicate{HasAllAnnotationKeys(annotationKeys...), HasAnnotation("configmanagement.gke.io/managed", "enabled")}
@@ -184,7 +184,7 @@ func HasAllNomosMetadata(multiRepo bool) Predicate {
 // contain configsync labels and annotations.
 func NoConfigSyncMetadata() Predicate {
 	return func(o client.Object) error {
-		if differ.HasNomosMeta(o) {
+		if metadata.HasConfigSyncMetadata(o) {
 			return fmt.Errorf("object %q shouldn't have configsync metadta %v, %v", o.GetName(), o.GetLabels(), o.GetAnnotations())
 		}
 		return nil

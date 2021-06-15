@@ -14,7 +14,7 @@ const (
 	ArchLabel = ConfigManagementPrefix + "arch"
 )
 
-// SyncerLabels returns the set of Nomos labels that the syncer should manage.
+// SyncerLabels returns the Nomos labels that the syncer should manage.
 func SyncerLabels() map[string]string {
 	return map[string]string{
 		ManagedByKey: ManagedByValue,

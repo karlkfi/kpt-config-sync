@@ -3,6 +3,7 @@ package fake
 import (
 	"context"
 
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -38,7 +39,7 @@ func (a *applier) Update(ctx context.Context, intendedState, _ *unstructured.Uns
 
 // RemoveNomosMeta implements reconcile.Applier.
 func (a *applier) RemoveNomosMeta(ctx context.Context, intent *unstructured.Unstructured) (bool, status.Error) {
-	updated := reconcile.RemoveNomosLabelsAndAnnotations(intent)
+	updated := metadata.RemoveConfigSyncMetadata(intent)
 	if !updated {
 		return false, nil
 	}

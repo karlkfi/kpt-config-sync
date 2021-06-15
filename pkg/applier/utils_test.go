@@ -5,9 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -155,27 +153,5 @@ func TestRemoveFrom(t *testing.T) {
 				t.Errorf("%s: Diff of removeFrom is: %s", tc.name, diff)
 			}
 		})
-	}
-}
-
-func TestRmoveConfigSyncLabelsAndAnnotations(t *testing.T) {
-	obj := fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"), syncertest.ManagementEnabled, core.Annotation(OwningInventoryKey, "random-value"), core.Label(v1.ManagedByKey, v1.ManagedByValue))
-	labels, annotations, updated := removeConfigSyncLabelsAndAnnotations(obj)
-	if !updated {
-		t.Errorf("updated should be true")
-	}
-	if len(labels) > 0 {
-		t.Errorf("labels should be empty, but got %v", labels)
-	}
-	expectedAnnotation := map[string]string{}
-	if diff := cmp.Diff(annotations, expectedAnnotation); diff != "" {
-		t.Errorf("Diff from the annotations is %s", diff)
-	}
-
-	obj.SetLabels(labels)
-	obj.SetAnnotations(annotations)
-	_, _, updated = removeConfigSyncLabelsAndAnnotations(obj)
-	if updated {
-		t.Errorf("the labels and annotations shouldn't be updated in this case")
 	}
 }

@@ -4,8 +4,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,30 +45,4 @@ func ManagementUnset(obj client.Object) bool {
 	}
 	_, found := as[v1.ResourceManagementKey]
 	return !found
-}
-
-// HasNomosMeta returns true if the given map has at least one Nomos annotation or label that syncer
-// manages.
-func HasNomosMeta(obj client.Object) bool {
-	as := obj.GetAnnotations()
-	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), constants.ConfigSyncAnnotations...)
-	for _, a := range sas {
-		if _, ok := as[a]; ok {
-			return true
-		}
-	}
-
-	ls := obj.GetLabels()
-	for key, val := range v1.SyncerLabels() {
-		if _, ok := ls[key]; !ok {
-			continue
-		}
-		if ls[key] == val {
-			return true
-		}
-	}
-	if _, ok := ls[configuration.DeclaredVersionLabel]; ok {
-		return true
-	}
-	return false
 }

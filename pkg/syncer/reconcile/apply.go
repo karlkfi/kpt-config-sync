@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -154,7 +155,7 @@ func (c *clientApplier) Update(ctx context.Context, intendedState, currentState 
 func (c *clientApplier) RemoveNomosMeta(ctx context.Context, u *unstructured.Unstructured) (bool, status.Error) {
 	var changed bool
 	_, err := c.client.Update(ctx, u, func(obj client.Object) (client.Object, error) {
-		changed = RemoveNomosLabelsAndAnnotations(obj)
+		changed = metadata.RemoveConfigSyncMetadata(obj)
 		if !changed {
 			return obj, syncerclient.NoUpdateNeeded()
 		}

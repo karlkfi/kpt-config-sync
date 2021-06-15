@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
@@ -130,7 +131,7 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 		// This reconciler can't manage this object but is erroneously being told to.
 		return ManagementConflict
 	case differ.ManagementDisabled(d.Declared) && canManage:
-		if differ.HasNomosMeta(d.Actual) {
+		if metadata.HasConfigSyncMetadata(d.Actual) {
 			switch d.Actual.GetAnnotations()[constants.ResourceManagerKey] {
 			case string(declared.RootReconciler), "":
 				return Unmanage
@@ -151,7 +152,7 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 func (d Diff) deleteType(reconciler declared.Scope) Operation {
 	// Degenerate cases where we never want to take any action.
 	switch {
-	case !differ.HasNomosMeta(d.Actual):
+	case !metadata.HasConfigSyncMetadata(d.Actual):
 		// This object has no Nomos metadata, so there's nothing to do.
 		return NoOp
 	case len(d.Actual.GetOwnerReferences()) > 0:

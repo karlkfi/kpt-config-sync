@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -255,7 +256,7 @@ func TestPreserveLastApplied(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	annotationKeys := nomostest.GetNomosAnnotationKeys(nt.MultiRepo)
+	annotationKeys := metadata.GetNomosAnnotationKeys(nt.MultiRepo)
 	withDeclared := append([]string{corev1.LastAppliedConfigAnnotation}, annotationKeys...)
 
 	nsViewer.Annotations[corev1.LastAppliedConfigAnnotation] = `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"annotations":{"configmanagement.gke.io/cluster-name":"e2e-test-cluster","configmanagement.gke.io/managed":"enabled","configmanagement.gke.io/source-path":"cluster/namespace-viewer-clusterrole.yaml"},"labels":{"app.kubernetes.io/managed-by":"configmanagement.gke.io","permissions":"viewer"},"name":"namespace-viewer"},"rules":[{"apiGroups":[""],"resources":["namespaces"],"verbs":["get","list"]}]}`
@@ -381,7 +382,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no annotations to repo")
 	nt.WaitForRepoSyncs()
 
-	annotationKeys := nomostest.GetNomosAnnotationKeys(nt.MultiRepo)
+	annotationKeys := metadata.GetNomosAnnotationKeys(nt.MultiRepo)
 
 	// Checking that the configmap with no annotations appears on cluster, and
 	// that no user annotations are specified

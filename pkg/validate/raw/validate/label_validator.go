@@ -3,12 +3,13 @@ package validate
 import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 )
 
 // IsInvalidLabel returns true if the label cannot be declared by users.
 func IsInvalidLabel(k string) bool {
-	return HasConfigSyncPrefix(k)
+	return csmetadata.HasConfigSyncPrefix(k)
 }
 
 // Labels verifies that the given object does not have any invalid labels.

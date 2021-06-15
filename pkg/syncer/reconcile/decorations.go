@@ -4,8 +4,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -19,20 +17,4 @@ func enableManagement(obj client.Object) {
 	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
 	core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
 	core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
-}
-
-// RemoveNomosLabelsAndAnnotations removes syncer-managed Nomos system
-// annotations and labels from the given resource. The resource is modified in
-// place. Returns true if the object was modified.
-func RemoveNomosLabelsAndAnnotations(obj client.Object) bool {
-	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	annotationKeys := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), constants.ConfigSyncAnnotations...)
-	core.RemoveAnnotations(obj, annotationKeys...)
-	core.RemoveLabels(obj, v1.SyncerLabels())
-	version := core.GetLabel(obj, configuration.DeclaredVersionLabel)
-	if version != "" {
-		core.RemoveLabels(obj, map[string]string{configuration.DeclaredVersionLabel: version})
-	}
-	after := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	return before != after
 }

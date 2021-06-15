@@ -38,11 +38,7 @@ func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc git
 		core.SetAnnotation(obj, constants.ResourceManagerKey, string(scope))
 		core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, commitHash)
 		core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
-
-		// set the owning-inventory annotation
-		// TODO(b/178744996): Remove setting the owning-inventory once the remediator
-		// is able to use kpt live apply library.
-		core.SetAnnotation(obj, applier.OwningInventoryKey, inventoryID)
+		core.SetAnnotation(obj, constants.OwningInventoryKey, inventoryID)
 
 		value := core.GetAnnotation(obj, v1.ResourceManagementKey)
 		if value != v1.ResourceManagementDisabled {
