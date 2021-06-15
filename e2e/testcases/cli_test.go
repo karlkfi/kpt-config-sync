@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -397,4 +398,83 @@ func TestSyncFromNomosHydrateOutputJSONFlat(t *testing.T) {
 
 func TestSyncFromNomosHydrateOutputYAMLFlat(t *testing.T) {
 	testSyncFromNomosHydrateOutputFlat(t, "yaml")
+}
+
+func TestNomosHydrateWithUnknownScopedObject(t *testing.T) {
+	tmpDir := nomostest.TestDir(t)
+	tw := nomostesting.New(t)
+
+	_ = nomostest.NewOptStruct(nomostest.TestClusterName(tw), tmpDir, tw)
+
+	compiledDirWithoutAPIServerCheck := fmt.Sprintf("%s/compiled-without-api-server-check", tmpDir)
+	compiledDirWithAPIServerCheck := fmt.Sprintf("%s/compiled-with-api-server-check", tmpDir)
+
+	kubevirtPath := "../../examples/kubevirt"
+
+	// Test `nomos vet --no-api-server-check`
+	out, err := exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", kubevirtPath)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	// Verify that `nomos vet` returns a KNV1021 error.
+	out, err = exec.Command("nomos", "vet", fmt.Sprintf("--path=%s", kubevirtPath)).CombinedOutput()
+	if err == nil {
+		tw.Error(fmt.Errorf("`nomos vet --path=%s` expects an error, got nil", kubevirtPath))
+	} else {
+		if !strings.Contains(string(out), "Error: 1 error(s)") || !strings.Contains(string(out), "KNV1021") {
+			tw.Error(fmt.Errorf("`nomos vet --path=%s` expects only one KNV1021 error, got %v", kubevirtPath, string(out)))
+		}
+	}
+
+	// Verify that `nomos hydrate --no-api-server-check` generates no error, and the output dir includes all the objects no matter their scopes.
+	out, err = exec.Command("nomos", "hydrate", "--no-api-server-check",
+		fmt.Sprintf("--path=%s", "../../examples/kubevirt"),
+		fmt.Sprintf("--output=%s", compiledDirWithoutAPIServerCheck)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("diff", "-r", compiledDirWithoutAPIServerCheck, "../../examples/kubevirt-compiled").CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	// Verify that `nomos hydrate` generates a KNV1021 error, and the output dir includes all the objects no matter their scopes.
+	out, err = exec.Command("nomos", "hydrate",
+		fmt.Sprintf("--path=%s", "../../examples/kubevirt"),
+		fmt.Sprintf("--output=%s", compiledDirWithAPIServerCheck)).CombinedOutput()
+	if err == nil {
+		tw.Error(fmt.Errorf("`nomo hydrate --path=%s` expects an error, got nil", kubevirtPath))
+	} else {
+		if !strings.Contains(string(out), ": 1 error(s)") || !strings.Contains(string(out), "KNV1021") {
+			tw.Error(fmt.Errorf("`nomos hydrate --path=%s` expects only one KNV1021 error, got %v", kubevirtPath, string(out)))
+		}
+	}
+
+	out, err = exec.Command("diff", "-r", compiledDirWithAPIServerCheck, "../../examples/kubevirt-compiled").CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	// Test `nomos vet --no-api-server-check` on the hydrated configs.
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s", compiledDirWithoutAPIServerCheck)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	// Verify that `nomos vet` on the hydrated configs returns a KNV1021 error.
+	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", fmt.Sprintf("--path=%s", compiledDirWithoutAPIServerCheck)).CombinedOutput()
+	if err == nil {
+		tw.Error(fmt.Errorf("`nomos vet --path=%s` expects an error, got nil", compiledDirWithoutAPIServerCheck))
+	} else {
+		if !strings.Contains(string(out), "Error: 1 error(s)") || !strings.Contains(string(out), "KNV1021") {
+			tw.Error(fmt.Errorf("`nomos vet --path=%s` expects only one KNV1021 error, got %v", compiledDirWithoutAPIServerCheck, string(out)))
+		}
+	}
 }

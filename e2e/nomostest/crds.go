@@ -31,8 +31,8 @@ var (
 	}
 )
 
-// waitForCRDs waits until the specified CRDs are established on the cluster.
-func waitForCRDs(nt *NT, crds []string) error {
+// WaitForCRDs waits until the specified CRDs are established on the cluster.
+func WaitForCRDs(nt *NT, crds []string) error {
 	took, err := Retry(60*time.Second, func() error {
 		for _, crd := range crds {
 			err := nt.Validate(crd, "", &v1.CustomResourceDefinition{}, IsEstablished)

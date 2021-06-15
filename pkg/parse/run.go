@@ -250,36 +250,35 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 }
 
 func parseSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
-	if state.cache.hasParserResult {
+	if state.cache.parserResultUpToDate() {
 		return nil
 	}
 
 	start := time.Now()
 	objs, sourceErrs := p.parseSource(ctx, state.cache.git)
 	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(sourceErrs), start)
-	if sourceErrs != nil {
-		return sourceErrs
+	state.cache.setParserResult(objs, sourceErrs)
+
+	if !status.HasActionableErrors(sourceErrs) {
+		err := webhookconfiguration.Update(ctx, p.options().k8sClient(), p.options().discoveryClient(), objs)
+		if err != nil {
+			// Don't block if updating the admission webhook fails.
+			// Return an error instead if we remove the remediator as otherwise we
+			// will simply never correct the type.
+			// This should be treated as a warning (go/nomos-warning) once we have
+			// that capability.
+			glog.Errorf("Failed to update admission webhook: %v", err)
+			// TODO(b/178605725): Handle case where multiple reconciler Pods try to
+			//  create or update the Configuration simultaneously.
+		}
 	}
 
-	state.cache.setParserResult(objs)
-
-	err := webhookconfiguration.Update(ctx, p.options().k8sClient(), p.options().discoveryClient(), objs)
-	if err != nil {
-		// Don't block if updating the admission webhook fails.
-		// Return an error instead if we remove the remediator as otherwise we
-		// will simply never correct the type.
-		// This should be treated as a warning (go/nomos-warning) once we have
-		// that capability.
-		glog.Errorf("Failed to update admission webhook: %v", err)
-		// TODO(b/178605725): Handle case where multiple reconciler Pods try to
-		//  create or update the Configuration simultaneously.
-	}
-	return nil
+	return sourceErrs
 }
 
 func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
 	sourceErrs := parseSource(ctx, p, trigger, state)
-	if sourceErrs != nil {
+	if status.HasActionableErrors(sourceErrs) {
 		newSourceStatus := gitStatus{
 			commit: state.cache.git.commit,
 			errs:   sourceErrs,
@@ -292,7 +291,7 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		return sourceErrs
 	}
 
-	// If `parseSource` succeeded, we will not call `setSourceStatus` immediately.
+	// If `status.HasActionableErrors` returns false, we will not call `setSourceStatus` immediately.
 	// Instead, we will call `p.options().update` first, and then update both the `Status.Source` and `Status.Sync` fields together in a single request.
 	// Updating the `Status.Source` and `Status.Sync` fields in two requests may cause the second one to fail if these two requests are too close to each other.
 
@@ -302,7 +301,7 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 
 	newSourceStatus := gitStatus{
 		commit: state.cache.git.commit,
-		errs:   nil,
+		errs:   sourceErrs,
 	}
 	newSyncStatus := gitStatus{
 		commit: state.cache.git.commit,

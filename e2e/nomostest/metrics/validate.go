@@ -343,7 +343,7 @@ func valueEquals(value int) Validation {
 			return err
 		}
 		if !cmp.Equal(mv, value) {
-			return errors.Errorf("unexpected metric value, got %v but expected %v", metric.Value, value)
+			return errors.Errorf("unexpected metric value (tags: %v), got %v but expected %v", metric.Tags, metric.Value, value)
 		}
 		return nil
 	}
@@ -357,8 +357,8 @@ func valueGTE(value int) Validation {
 			return err
 		}
 		if mv < value {
-			return errors.Errorf("unexpected metric value, got %v but expected "+
-				"a value greater than or equal to %v", mv, value)
+			return errors.Errorf("unexpected metric value (tags: %v), got %v but expected "+
+				"a value greater than or equal to %v", metric.Tags, mv, value)
 		}
 		return nil
 	}

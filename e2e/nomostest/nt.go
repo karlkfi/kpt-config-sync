@@ -746,7 +746,7 @@ func (nt *NT) ApplyGatekeeperTestData(file, crd string) error {
 	// We have to set validate=false because the default Gatekeeper YAMLs can't be
 	// applied without it, and we aren't going to define our own compliant version.
 	nt.MustKubectl("apply", "-f", absPath, "--validate=false")
-	err := waitForCRDs(nt, []string{crd})
+	err := WaitForCRDs(nt, []string{crd})
 	if err != nil {
 		nt.RenewClient()
 	}

@@ -144,8 +144,12 @@ which you could kubectl apply -fR to the cluster, or have Config Sync sync to th
 					clusterName = parse.UnregisteredCluster
 				}
 				util.PrintErrOrDie(errors.Wrapf(err, "errors for Cluster %q", clusterName))
+
 				encounteredError = true
-				return
+
+				if status.HasActionableErrors(err) {
+					return
+				}
 			}
 
 			allObjects = append(allObjects, fileObjects...)

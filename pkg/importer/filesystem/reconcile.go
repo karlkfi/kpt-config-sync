@@ -280,16 +280,19 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		IsNamespaceReconciler: false,
 	}
 
+	var validationErrs status.MultiError
 	if c.format == SourceFormatUnstructured {
-		fileObjects, mErr = validate.Unstructured(fileObjects, options)
+		fileObjects, validationErrs = validate.Unstructured(fileObjects, options)
 	} else {
-		fileObjects, mErr = validate.Hierarchical(fileObjects, options)
+		fileObjects, validationErrs = validate.Hierarchical(fileObjects, options)
 	}
-	if mErr != nil {
-		glog.Warningf("Failed to validate: %v", status.FormatSingleLine(mErr))
+	if validationErrs != nil {
+		glog.Warningf("Failed to validate: %v", status.FormatSingleLine(validationErrs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(mErr))
-		return reconcile.Result{}, nil
+		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(validationErrs))
+		if status.HasActionableErrors(validationErrs) {
+			return reconcile.Result{}, nil
+		}
 	}
 
 	gs := makeGitState(absGitDir.OSPath(), fileObjects)
@@ -329,7 +332,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if errs := differ.Update(ctx, c.client, c.decoder, *currentConfigs, *desiredConfigs, c.initTime); errs != nil {
 		glog.Warningf("Failed to apply actions: %v", status.FormatSingleLine(errs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(errs))
+		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(status.Append(errs, validationErrs)))
 		return reconcile.Result{}, nil
 	}
 

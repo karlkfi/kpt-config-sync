@@ -84,12 +84,12 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	// and before the next round of validation on them which includes:
 	//   - checking for namespaces being specified on cluster-scoped objects
 	//   - checking for namespace selectors on cluster-scoped objects
-	scopedObjects, errs := rawObjects.Scoped()
-	if errs != nil {
-		return nil, errs
+	scopedObjects, scopeErrs := rawObjects.Scoped()
+	if status.HasActionableErrors(scopeErrs) {
+		return nil, scopeErrs
 	}
-	if errs = scoped.Hierarchical(scopedObjects); errs != nil {
-		return nil, errs
+	if errs := scoped.Hierarchical(scopedObjects); errs != nil {
+		return nil, status.Append(scopeErrs, errs)
 	}
 
 	// Now we arrange the namespace-scoped objects into a hierarchical tree based
@@ -102,10 +102,10 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//     based upon their namespace selector
 	treeObjects, errs := objects.BuildTree(scopedObjects)
 	if errs != nil {
-		return nil, errs
+		return nil, status.Append(scopeErrs, errs)
 	}
 	if errs = tree.Hierarchical(treeObjects); errs != nil {
-		return nil, errs
+		return nil, status.Append(scopeErrs, errs)
 	}
 
 	// We perform a final round of validation on the flattened collection of
@@ -115,17 +115,17 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for managed resources in unmanaged namespaces
 	finalObjects := treeObjects.Objects()
 	if errs = final.Validation(finalObjects); errs != nil {
-		return nil, errs
+		return nil, status.Append(scopeErrs, errs)
 	}
 
 	for _, visitor := range opts.Visitors {
 		finalObjects, errs = visitor(finalObjects)
 		if errs != nil {
-			return nil, errs
+			return nil, status.Append(scopeErrs, errs)
 		}
 	}
 
-	return finalObjects, nil
+	return finalObjects, scopeErrs
 }
 
 // Unstructured validates and hydrates the given FileObjects from an
@@ -158,14 +158,14 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	// We also perform the next round of hydration which includes:
 	//   - copy "abstract" resources into zero or more namespaces based upon their
 	//     namespace selector
-	scopedObjects, errs := rawObjects.Scoped()
-	if errs != nil {
-		return nil, errs
+	scopedObjects, scopeErrs := rawObjects.Scoped()
+	if status.HasActionableErrors(scopeErrs) {
+		return nil, scopeErrs
 	}
 	scopedObjects.DefaultNamespace = opts.DefaultNamespace
 	scopedObjects.IsNamespaceReconciler = opts.IsNamespaceReconciler
-	if errs = scoped.Unstructured(scopedObjects); errs != nil {
-		return nil, errs
+	if errs := scoped.Unstructured(scopedObjects); errs != nil {
+		return nil, status.Append(scopeErrs, errs)
 	}
 
 	// We perform a final round of validation on the flattened collection of
@@ -174,16 +174,17 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for resources with duplicate GKNNs
 	//   - checking for managed resources in unmanaged namespaces
 	finalObjects := scopedObjects.Objects()
-	if errs = final.Validation(finalObjects); errs != nil {
-		return nil, errs
+	if errs := final.Validation(finalObjects); errs != nil {
+		return nil, status.Append(scopeErrs, errs)
 	}
 
 	for _, visitor := range opts.Visitors {
+		var errs status.MultiError
 		finalObjects, errs = visitor(finalObjects)
 		if errs != nil {
-			return nil, errs
+			return nil, status.Append(scopeErrs, errs)
 		}
 	}
 
-	return finalObjects, nil
+	return finalObjects, scopeErrs
 }

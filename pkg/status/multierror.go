@@ -17,6 +17,27 @@ type MultiError interface {
 	Errors() []Error
 }
 
+var nonActionableErrorCodes = map[string]struct{}{
+	UnknownKindErrorCode: {},
+}
+
+// HasActionableErrors return whether `errs` include any actionable errors.
+//
+// An error is actionable if it requires the users to do something so that
+// Config Sync can sync successfully.
+func HasActionableErrors(errs MultiError) bool {
+	if errs == nil {
+		return false
+	}
+
+	for _, err := range errs.Errors() {
+		if _, ok := nonActionableErrorCodes[err.Code()]; !ok {
+			return true
+		}
+	}
+	return false
+}
+
 // Append adds one or more errors to an existing MultiError.
 // If m, err, and errs are nil, returns nil.
 //

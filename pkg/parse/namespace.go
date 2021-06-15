@@ -97,7 +97,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	options = OptionsForScope(options, p.scope)
 
 	objs, err = validate.Unstructured(objs, options)
-	if err != nil {
+	if status.HasActionableErrors(err) {
 		return nil, err
 	}
 
@@ -107,7 +107,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 		err = status.Append(err, status.InternalErrorf("unable to add annotations and labels: %v", e))
 		return nil, err
 	}
-	return objs, nil
+	return objs, err
 }
 
 // setSourceStatus implements the Parser interface

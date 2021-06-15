@@ -62,7 +62,9 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 		if err != nil {
 			errs = status.Append(errs, err)
 		} else {
-			cache.resourceDeclSetUpdated = true
+			if cache.parserErrs == nil {
+				cache.resourceDeclSetUpdated = true
+			}
 			metrics.RecordDeclaredResources(ctx, len(objs))
 		}
 	}
@@ -79,7 +81,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 		//  path.
 		gvks, applyErrs = u.applier.Apply(ctx, objs)
 		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), cache.git.commit, applyStart)
-		if applyErrs == nil {
+		if applyErrs == nil && cache.parserErrs == nil {
 			cache.setApplierResult(gvks)
 		}
 		errs = status.Append(errs, applyErrs)

@@ -30,7 +30,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/clusterconfig"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate/raw/hydrate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -129,7 +128,7 @@ func Generate() AllExamples {
 	result.add(metadata.InvalidNamespaceNameError(fake.Namespace("namespaces/foo", core.Name("bar")), "foo"))
 
 	// 1021
-	result.add(discovery.UnknownObjectKindError(fake.UnstructuredAtPath(schema.GroupVersionKind{
+	result.add(status.UnknownObjectKindError(fake.UnstructuredAtPath(schema.GroupVersionKind{
 		Group:   "com.me",
 		Version: "v1",
 		Kind:    "Engineer",

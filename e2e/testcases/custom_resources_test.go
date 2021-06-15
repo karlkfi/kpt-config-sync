@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -90,19 +90,19 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	if nt.MultiRepo {
 		nt.Root.Add("acme/namespaces/prod/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
 		nt.Root.CommitAndPush("Adding Anvil CR")
-		nt.WaitForRootSyncSourceError(discovery.UnknownKindErrorCode)
+		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode)
 	} else {
-		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
+		nt.WaitForRepoImportErrorCode(status.UnknownKindErrorCode)
 	}
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate parse error metric is emitted.
-		err = nt.ValidateParseErrors(reconciler.RootSyncName, discovery.UnknownKindErrorCode)
+		err = nt.ValidateParseErrors(reconciler.RootSyncName, status.UnknownKindErrorCode)
 		if err != nil {
 			return err
 		}
 		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -179,19 +179,19 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 	if nt.MultiRepo {
 		nt.Root.Add("acme/namespaces/foo/anvil-v1.yaml", anvilCR("v1", "heavy", 100))
 		nt.Root.CommitAndPush("Adding Anvil CR")
-		nt.WaitForRootSyncSourceError(discovery.UnknownKindErrorCode)
+		nt.WaitForRootSyncSourceError(status.UnknownKindErrorCode)
 	} else {
-		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
+		nt.WaitForRepoImportErrorCode(status.UnknownKindErrorCode)
 	}
 
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate parse error metric is emitted.
-		err = nt.ValidateParseErrors(reconciler.RootSyncName, discovery.UnknownKindErrorCode)
+		err = nt.ValidateParseErrors(reconciler.RootSyncName, status.UnknownKindErrorCode)
 		if err != nil {
 			return err
 		}
 		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)

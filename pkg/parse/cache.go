@@ -28,8 +28,10 @@ type cacheForCommit struct {
 	hasParserResult bool
 
 	// parserResult contains the parser result.
-	// The field is only set when the parser succeeded.
 	parserResult []ast.FileObject
+
+	// parserErrs includes the parser errors.
+	parserErrs status.MultiError
 
 	// resourceDeclSetUpdated indicates whether the resource declaration set has been updated.
 	resourceDeclSetUpdated bool
@@ -58,9 +60,10 @@ type cacheForCommit struct {
 	errs status.MultiError
 }
 
-func (c *cacheForCommit) setParserResult(result []ast.FileObject) {
+func (c *cacheForCommit) setParserResult(result []ast.FileObject, parserErrs status.MultiError) {
 	c.hasParserResult = true
 	c.parserResult = result
+	c.parserErrs = parserErrs
 }
 
 func (c *cacheForCommit) setApplierResult(result map[schema.GroupVersionKind]struct{}) {
@@ -70,4 +73,8 @@ func (c *cacheForCommit) setApplierResult(result map[schema.GroupVersionKind]str
 
 func (c *cacheForCommit) readyToRetry() bool {
 	return !time.Now().Before(c.nextRetryTime)
+}
+
+func (c *cacheForCommit) parserResultUpToDate() bool {
+	return c.hasParserResult && c.parserErrs == nil
 }

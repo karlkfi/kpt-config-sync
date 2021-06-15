@@ -33,7 +33,7 @@ func (s *Scoper) GetObjectScope(o client.Object) (ScopeType, status.Error) {
 	scope, err := s.GetGroupKindScope(o.GetObjectKind().GroupVersionKind().GroupKind())
 	if err != nil {
 		// Make the error specific to the object.
-		return scope, UnknownObjectKindError(o)
+		return scope, status.UnknownObjectKindError(o)
 	}
 	return scope, nil
 }
@@ -48,7 +48,7 @@ func (s *Scoper) GetGroupKindScope(gk schema.GroupKind) (ScopeType, status.Error
 		return scope, nil
 	}
 	// We weren't able to get the scope for this type.
-	return UnknownScope, UnknownGroupKindError(gk)
+	return UnknownScope, status.UnknownGroupKindError(gk)
 }
 
 // HasScopesFor returns true if the Scoper knows the scopes for every type in the
@@ -204,26 +204,4 @@ func scopeFromCRD(crd *v1beta1.CustomResourceDefinition) GroupKindScope {
 		GroupKind: gk,
 		ScopeType: scope,
 	}
-}
-
-// UnknownKindErrorCode is the error code for UnknownObjectKindError
-const UnknownKindErrorCode = "1021" // Impossible to create consistent example.
-
-var unknownKindError = status.NewErrorBuilder(UnknownKindErrorCode)
-
-// UnknownObjectKindError reports that an object declared in the repo does not have a definition in the cluster.
-func UnknownObjectKindError(resource client.Object) status.Error {
-	return unknownKindError.
-		Sprintf("No CustomResourceDefinition is defined for the type %q in the cluster. "+
-			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.",
-			resource.GetObjectKind().GroupVersionKind().GroupKind()).
-		BuildWithResources(resource)
-}
-
-// UnknownGroupKindError reports that a GroupKind is not defined on the cluster, so we can't sync it.
-func UnknownGroupKindError(gk schema.GroupKind) status.Error {
-	return unknownKindError.
-		Sprintf("No CustomResourceDefinition is defined for the type %q in the cluster. "+
-			"\nResource types that are not native Kubernetes objects must have a CustomResourceDefinition.", gk).
-		Build()
 }

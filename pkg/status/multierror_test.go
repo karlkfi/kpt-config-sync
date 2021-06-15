@@ -34,6 +34,42 @@ func singleLineError() string {
 	return b.String()
 }
 
+func TestHasActionableErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  MultiError
+		want bool
+	}{
+		{
+			name: "An empty MultiError",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "All the errors are actionable",
+			err:  &multiError{errs: []Error{undocumented(errFooRaw), apiServerErrBar}},
+			want: true,
+		},
+		{
+			name: "Some of the errors are actionable",
+			err:  &multiError{errs: []Error{undocumented(errFooRaw), apiServerErrBar, unknownKindError.Build()}},
+			want: true,
+		},
+		{
+			name: "All the errors are non-actionable",
+			err:  &multiError{errs: []Error{unknownKindError.Build()}},
+			want: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := HasActionableErrors(tc.err)
+			if got != tc.want {
+				t.Errorf(" HasActionableErrors() got %v; want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestAppend(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

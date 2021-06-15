@@ -309,9 +309,9 @@ func setupTestCase(nt *NT, opts *ntopts.New) {
 	// First wait for CRDs to be established.
 	var err error
 	if nt.MultiRepo {
-		err = waitForCRDs(nt, multiRepoCRDs)
+		err = WaitForCRDs(nt, multiRepoCRDs)
 	} else {
-		err = waitForCRDs(nt, monoRepoCRDs)
+		err = WaitForCRDs(nt, monoRepoCRDs)
 	}
 	if err != nil {
 		nt.T.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
@@ -351,9 +351,9 @@ func SwitchMode(nt *NT, sourceFormat filesystem.SourceFormat) {
 	installConfigSync(nt, nm)
 	var err error
 	if nt.MultiRepo {
-		err = waitForCRDs(nt, multiRepoCRDs)
+		err = WaitForCRDs(nt, multiRepoCRDs)
 	} else {
-		err = waitForCRDs(nt, monoRepoCRDs)
+		err = WaitForCRDs(nt, monoRepoCRDs)
 	}
 	if err != nil {
 		nt.T.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)

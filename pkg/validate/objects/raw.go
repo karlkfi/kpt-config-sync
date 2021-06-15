@@ -62,10 +62,7 @@ func (r *Raw) Scoped() (*Scoped, status.MultiError) {
 			errs = status.Append(errs, status.InternalErrorf("unrecognized discovery scope: %s", s))
 		}
 	}
-	if errs != nil {
-		return nil, errs
-	}
-	return scoped, nil
+	return scoped, errs
 }
 
 // VisitAllRaw returns a RawVisitor which will call the given ObjectVisitor on

@@ -23,14 +23,14 @@ func TestScoper_GetScope(t *testing.T) {
 			name:      "nil scoper returns Unknown and error",
 			groupKind: kinds.Role().GroupKind(),
 			want:      UnknownScope,
-			wantErr:   UnknownGroupKindError(kinds.Namespace().GroupKind()),
+			wantErr:   status.UnknownGroupKindError(kinds.Namespace().GroupKind()),
 		},
 		{
 			name:      "missing GroupKind returns unknown",
 			scopes:    map[schema.GroupKind]ScopeType{},
 			groupKind: kinds.Role().GroupKind(),
 			want:      UnknownScope,
-			wantErr:   UnknownGroupKindError(kinds.Namespace().GroupKind()),
+			wantErr:   status.UnknownGroupKindError(kinds.Namespace().GroupKind()),
 		},
 		{
 			name: "NamespaceScope returns NamespaceScope",
