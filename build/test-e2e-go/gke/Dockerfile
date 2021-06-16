@@ -11,6 +11,8 @@ WORKDIR /repo
 ENV GO111MODULE=on
 # Build static binaries; otherwise go test complains.
 ENV CGO_ENABLED=0
+# Set Kubernetes environment.
+ENV KUBERNETES_ENV=GKE
 
 RUN apk add bash curl docker gcc git jq make openssh-client python
 
@@ -18,6 +20,9 @@ RUN apk add bash curl docker gcc git jq make openssh-client python
 COPY --from=gcloud-install /usr/lib/google-cloud-sdk /opt/gcloud/google-cloud-sdk
 COPY --from=gcloud-install /usr/bin/kubectl /opt/gcloud/google-cloud-sdk/bin/kubectl
 ENV PATH /opt/gcloud/google-cloud-sdk/bin:$PATH
+
+# Get go-junit-report
+RUN go get -u github.com/jstemmer/go-junit-report
 
 # Steps after here can't be cached since they touch the local filesystem.
 

@@ -6,6 +6,8 @@ WORKDIR /repo
 ENV GO111MODULE=on
 # Build static binaries; otherwise go test complains.
 ENV CGO_ENABLED=0
+# Set Kubernetes environment.
+ENV KUBERNETES_ENV=KIND
 
 # We're running tests within kind v0.10.0 clusters.
 # If you upgrade the version, you also need to update the special kubekins-with-Kind
@@ -19,6 +21,9 @@ RUN apk add --no-cache \
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 RUN chmod +x ./kubectl
 RUN mv ./kubectl /bin
+
+# Get go-junit-report.
+RUN go get -u github.com/jstemmer/go-junit-report
 
 # Steps after here can't be cached since they touch the local filesystem.
 

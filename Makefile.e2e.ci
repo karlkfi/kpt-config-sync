@@ -84,9 +84,11 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 	@echo "GCP_CLUSTER=$(GCP_CLUSTER)"
 	@echo "GCP_ZONE=$(GCP_ZONE)"
 	@echo "GCR_PREFIX=$(GCR_PREFIX)"
+	@echo "ARTIFACTS=$(ARTIFACTS)"
 	@docker run \
 		-v $(PROBER_CREDS):/tmp/prober_runner_client_key.json \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(ARTIFACTS):/logs/artifacts
 		--env GCP_PROBER_CREDS=/tmp/prober_runner_client_key.json \
 		--env GCP_PROJECT=$(GCP_PROJECT) \
 		--env GCP_CLUSTER=$(GCP_CLUSTER) \

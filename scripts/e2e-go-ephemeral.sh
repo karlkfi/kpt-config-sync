@@ -7,7 +7,7 @@ docker build . -f build/test-e2e-go/kind/Dockerfile -t prow-image
 
 echo "+++ Running go e2e tests with" "$@"
 docker run \
-  -e GO111MODULE=on \
   -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$ARTIFACTS":/logs/artifacts \
   --network="host" prow-image \
-  go test ./e2e/... --e2e "$@"
+  ./build/test-e2e-go/e2e.sh "$@"
