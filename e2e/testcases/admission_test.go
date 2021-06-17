@@ -13,6 +13,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// This file includes tests for drift correction and drift prevention.
+//
+// The drift prevention is only supported in the multi-repo mode, and utilizes the following Config Sync metadata:
+//  * the configmanagement.gke.io/managed annotation
+//  * the configsync.gke.io/resource-id annotation
+//  * the configsync.gke.io/delcared-version label
+
 func TestAdmission(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
