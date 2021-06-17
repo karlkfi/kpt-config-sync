@@ -113,7 +113,7 @@ func (cs *clientSet) removeFromInventory(rg *live.InventoryResourceGroup, objs [
 }
 
 // disableObject disables the management for a single object by removing
-// the ConfigSync labels and annotations and adding the annotation for disabled management.
+// the ConfigSync labels and annotations.
 func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error {
 	meta := objMetaFrom(obj)
 	u, err := cs.resouceClient.Get(ctx, meta)

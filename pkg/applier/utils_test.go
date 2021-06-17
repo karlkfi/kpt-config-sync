@@ -167,7 +167,7 @@ func TestRmoveConfigSyncLabelsAndAnnotations(t *testing.T) {
 	if len(labels) > 0 {
 		t.Errorf("labels should be empty, but got %v", labels)
 	}
-	expectedAnnotation := map[string]string{v1.ResourceManagementKey: v1.ResourceManagementDisabled}
+	expectedAnnotation := map[string]string{}
 	if diff := cmp.Diff(annotations, expectedAnnotation); diff != "" {
 		t.Errorf("Diff from the annotations is %s", diff)
 	}

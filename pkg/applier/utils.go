@@ -86,7 +86,6 @@ func removeFrom(all []object.ObjMetadata, toRemove []client.Object) []object.Obj
 func removeConfigSyncLabelsAndAnnotations(obj *unstructured.Unstructured) (map[string]string, map[string]string, bool) {
 	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
 	_ = syncerreconcile.RemoveNomosLabelsAndAnnotations(obj)
-	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementDisabled)
 	core.RemoveAnnotations(obj, OwningInventoryKey)
 	after := len(obj.GetAnnotations()) + len(obj.GetLabels())
 	return obj.GetLabels(), obj.GetAnnotations(), before != after

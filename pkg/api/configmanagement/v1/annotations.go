@@ -41,6 +41,9 @@ const (
 	ResourceManagementEnabled = "enabled"
 	// ResourceManagementDisabled is the value corresponding to ResourceManagementKey indicating that
 	// Nomos will not manage content and lifecycle for the given resource.
+	// By design, the `configmanagement.gke.io/managed: disabled` annotation
+	// should not be pushed to the cluster. Instead, we remove all the Config
+	// Sync metadata from the object on the cluster.
 	ResourceManagementDisabled = "disabled"
 
 	// The following annotations implement the extended resource status specification.
