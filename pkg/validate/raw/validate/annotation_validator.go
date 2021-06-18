@@ -4,8 +4,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/status"
@@ -34,11 +33,11 @@ func Annotations(obj ast.FileObject) status.Error {
 // sourceAnnotations is a map of annotations that are valid to exist on objects
 // in the source repository.
 var sourceAnnotations = map[string]bool{
-	v1.NamespaceSelectorAnnotationKey:         true,
-	v1.LegacyClusterSelectorAnnotationKey:     true,
-	v1alpha1.ClusterNameSelectorAnnotationKey: true,
-	v1.ResourceManagementKey:                  true,
-	v1beta1.LifecycleMutationAnnotation:       true,
+	v1.NamespaceSelectorAnnotationKey:          true,
+	v1.LegacyClusterSelectorAnnotationKey:      true,
+	constants.ClusterNameSelectorAnnotationKey: true,
+	v1.ResourceManagementKey:                   true,
+	constants.LifecycleMutationAnnotation:      true,
 }
 
 // isSourceAnnotation returns true if the annotation is a ConfigSync source
@@ -50,5 +49,5 @@ func isSourceAnnotation(s string) bool {
 // HasConfigSyncPrefix returns true if the string begins with a ConfigSync
 // annotation prefix.
 func HasConfigSyncPrefix(s string) bool {
-	return strings.HasPrefix(s, v1.ConfigManagementPrefix) || strings.HasPrefix(s, v1alpha1.ConfigSyncPrefix)
+	return strings.HasPrefix(s, v1.ConfigManagementPrefix) || strings.HasPrefix(s, constants.ConfigSyncPrefix)
 }

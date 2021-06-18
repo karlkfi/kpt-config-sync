@@ -10,7 +10,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -41,7 +41,7 @@ const (
 )
 
 var (
-	inlineProdClusterSelectorAnnotation = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: prodClusterName}
+	inlineProdClusterSelectorAnnotation = map[string]string{constants.ClusterNameSelectorAnnotationKey: prodClusterName}
 	legacyTestClusterSelectorAnnotation = map[string]string{v1.LegacyClusterSelectorAnnotationKey: testClusterSelectorName}
 )
 
@@ -391,7 +391,7 @@ func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
 	}
 
 	nt.T.Log("Modify the cluster selector to select an excluded cluster list")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a, b, c"}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: "a, b, c"}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Modify the cluster selector to select an excluded cluster list")
 	nt.WaitForRepoSyncs()
@@ -464,7 +464,7 @@ func TestImporterIgnoresNonSelectedCustomResources(t *testing.T) {
 
 	nt.T.Log("Add CRs (not targeted to this cluster) without its CRD")
 	cr := anvilCR("v1", "e2e-test-anvil", 10)
-	cr.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: testClusterSelectorName})
+	cr.SetAnnotations(map[string]string{constants.ClusterNameSelectorAnnotationKey: testClusterSelectorName})
 	nt.Root.Add(
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
 		namespaceObject(backendNamespace, map[string]string{}))
@@ -506,7 +506,7 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 	}
 
 	nt.T.Log("Modify the cluster selector to select an excluded cluster list")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a,b,,,c,d"}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: "a,b,,,c,d"}
 	nt.NonRootRepos[namespaceRepo].Add("acme/bob-rolebinding.yaml", rb)
 	nt.NonRootRepos[namespaceRepo].CommitAndPush("Modify the cluster selector to select an excluded cluster list")
 	nt.WaitForRepoSyncs()
@@ -559,7 +559,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	}
 
 	nt.T.Log("Add an empty cluster selector annotation to a role binding")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: ""}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: ""}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add an empty cluster selector annotation to a role binding")
 	nt.WaitForRepoSyncs()
@@ -568,7 +568,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	}
 
 	nt.T.Log("Add a cluster selector annotation to a role binding with a list of included clusters")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a,%s,b", prodClusterName)}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a,%s,b", prodClusterName)}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of included clusters")
 	nt.WaitForRepoSyncs()
@@ -577,7 +577,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	}
 
 	nt.T.Log("Add a cluster selector annotation to a role binding with a list of excluded clusters")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: "a,,b"}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: "a,,b"}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of excluded clusters")
 	nt.WaitForRepoSyncs()
@@ -586,7 +586,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 	}
 
 	nt.T.Log("Add a cluster selector annotation to a role binding with a list of included clusters (with spaces)")
-	rb.Annotations = map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a , %s , b", prodClusterName)}
+	rb.Annotations = map[string]string{constants.ClusterNameSelectorAnnotationKey: fmt.Sprintf("a , %s , b", prodClusterName)}
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add a cluster selector annotation to a role binding with a list of included clusters (with spaces)")
 	nt.WaitForRepoSyncs()
@@ -613,8 +613,8 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 		fmt.Sprintf("acme/namespaces/eng/%s/namespace.yaml", backendNamespace),
 		namespaceObject(backendNamespace, map[string]string{}))
 	rb := roleBinding(roleBindingName, map[string]string{
-		v1alpha1.ClusterNameSelectorAnnotationKey: prodClusterName,
-		v1.LegacyClusterSelectorAnnotationKey:     prodClusterSelectorName,
+		constants.ClusterNameSelectorAnnotationKey: prodClusterName,
+		v1.LegacyClusterSelectorAnnotationKey:      prodClusterSelectorName,
 	})
 	nt.Root.Add("acme/namespaces/eng/backend/bob-rolebinding.yaml", rb)
 	nt.Root.CommitAndPush("Add both cluster selector annotations to a role binding")
@@ -653,7 +653,7 @@ func TestClusterSelectorForCRD(t *testing.T) {
 
 	// Test inline cluster-name-selector annotation
 	nt.T.Log("Set the cluster-name-selector annotation to a not-selected cluster")
-	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: testClusterName})
+	crd.SetAnnotations(map[string]string{constants.ClusterNameSelectorAnnotationKey: testClusterName})
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an unselected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()
@@ -662,7 +662,7 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	}
 
 	nt.T.Log("Set the cluster-name-selector annotation to a selected cluster")
-	crd.SetAnnotations(map[string]string{v1alpha1.ClusterNameSelectorAnnotationKey: prodClusterName})
+	crd.SetAnnotations(map[string]string{constants.ClusterNameSelectorAnnotationKey: prodClusterName})
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an selected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()

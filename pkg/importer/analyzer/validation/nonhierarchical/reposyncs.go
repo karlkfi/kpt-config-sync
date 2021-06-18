@@ -4,17 +4,18 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	authSSH               = v1alpha1.GitSecretSSH
-	authCookiefile        = v1alpha1.GitSecretCookieFile
-	authGCENode           = v1alpha1.GitSecretGCENode
-	authToken             = v1alpha1.GitSecretToken
-	authNone              = v1alpha1.GitSecretNone
-	authGCPServiceAccount = v1alpha1.GitSecretGCPServiceAccount
+	authSSH               = constants.GitSecretSSH
+	authCookiefile        = constants.GitSecretCookieFile
+	authGCENode           = constants.GitSecretGCENode
+	authToken             = constants.GitSecretToken
+	authNone              = constants.GitSecretNone
+	authGCPServiceAccount = constants.GitSecretGCPServiceAccount
 )
 
 // gcpSASuffix specifies the default suffix used with gcp ServiceAccount email.
@@ -24,7 +25,7 @@ const gcpSASuffix = ".iam.gserviceaccount.com"
 // ValidateRepoSync validates the content and structure of a RepoSync for any
 // obvious problems.
 func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
-	if rs.GetName() != v1alpha1.RepoSyncName {
+	if rs.GetName() != constants.RepoSyncName {
 		return InvalidSyncName(rs.Name, rs)
 	}
 	return validateGitSpec(rs.Spec.Git, rs)

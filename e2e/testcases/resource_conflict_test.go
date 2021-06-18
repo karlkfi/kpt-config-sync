@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
@@ -88,7 +89,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(v1alpha1.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
+		return nt.Validate(constants.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {
@@ -176,7 +177,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(v1alpha1.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
+		return nt.Validate(constants.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {

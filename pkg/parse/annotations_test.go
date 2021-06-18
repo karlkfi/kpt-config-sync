@@ -5,8 +5,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -38,11 +38,11 @@ func TestAddAnnotationsAndLabels(t *testing.T) {
 				core.Namespace("foo"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, "enabled"),
-				core.Annotation(v1beta1.ResourceManagerKey, "some-namespace"),
+				core.Annotation(constants.ResourceManagerKey, "some-namespace"),
 				core.Annotation(v1.SyncTokenAnnotationKey, "1234567"),
-				core.Annotation(v1beta1.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
+				core.Annotation(constants.GitContextKey, `{"repo":"git@github.com/foo","branch":"main","rev":"HEAD"}`),
 				core.Annotation(applier.OwningInventoryKey, applier.InventoryID("some-namespace")),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 			)},
 		},
 	}

@@ -7,8 +7,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/declared"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,7 +69,7 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 			s = s[len(annotations):]
 			if strings.HasPrefix(s, configsync.GroupName) ||
 				strings.HasPrefix(s, configmanagement.GroupName) ||
-				strings.HasPrefix(s, v1beta1.LifecyclePrefix) {
+				strings.HasPrefix(s, constants.LifecyclePrefix) {
 				csSet.Insert(path)
 			}
 		} else if strings.HasPrefix(s, labels) {
@@ -85,9 +84,9 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 
 // DeclaredFields returns the declared fields for the given Object.
 func DeclaredFields(obj client.Object) (*fieldpath.Set, error) {
-	decls, ok := obj.GetAnnotations()[v1alpha1.DeclaredFieldsKey]
+	decls, ok := obj.GetAnnotations()[constants.DeclaredFieldsKey]
 	if !ok {
-		return nil, fmt.Errorf("%s annotation is missing from %s", v1alpha1.DeclaredFieldsKey, object.RuntimeToObjMeta(obj))
+		return nil, fmt.Errorf("%s annotation is missing from %s", constants.DeclaredFieldsKey, object.RuntimeToObjMeta(obj))
 	}
 
 	set := &fieldpath.Set{}

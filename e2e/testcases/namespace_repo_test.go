@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -240,7 +240,7 @@ func TestDeleteRepoSync_Delegated(t *testing.T) {
 	)
 
 	var rs v1alpha1.RepoSync
-	if err := nt.Get(v1alpha1.RepoSyncName, bsNamespace, &rs); err != nil {
+	if err := nt.Get(constants.RepoSyncName, bsNamespace, &rs); err != nil {
 		nt.T.Fatal(err)
 	}
 
@@ -292,7 +292,7 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 
 func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 	_, err := nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(v1alpha1.RepoSyncName, namespace, fake.RepoSyncObject())
+		return nt.ValidateNotFound(constants.RepoSyncName, namespace, fake.RepoSyncObject())
 	})
 	if err != nil {
 		nt.T.Errorf("RepoSync present after deletion: %v", err)
@@ -316,14 +316,14 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 
 	// Verify Namespace Reconciler configmaps no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", configsync.ControllerNamespace, fake.ConfigMapObject())
+		return nt.ValidateNotFound("ns-reconciler-bookstore-git-sync", constants.ControllerNamespace, fake.ConfigMapObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Configmap ns-reconciler-bookstore-git-sync present after deletion: %v", err)
 	}
 
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", configsync.ControllerNamespace, fake.ConfigMapObject())
+		return nt.ValidateNotFound("ns-reconciler-bookstore-reconciler", constants.ControllerNamespace, fake.ConfigMapObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Configmap reconciler-bookstore-reconciler present after deletion: %v", err)
@@ -349,7 +349,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// Here we are checking for false condition which requires atleast 2 reconcile
 	// request to be processed by the controller.
 	_, err := nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(constants.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
@@ -361,12 +361,12 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// so this should NOT be replaced with nt.Delete.
 	nsReconcilerDeployment := "ns-reconciler-bookstore"
 	nt.MustKubectl("delete", "deployment", nsReconcilerDeployment,
-		"-n", configsync.ControllerNamespace)
+		"-n", constants.ControllerNamespace)
 
 	// Verify that the deployment is re-created after deletion by checking the
 	// Reconciling and Stalled condition in RepoSync resource.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(v1alpha1.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(constants.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	traceapi "cloud.google.com/go/trace/apiv2"
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
@@ -140,7 +140,7 @@ func (r *OtelReconciler) updateDeploymentAnnotation(ctx context.Context, hash []
 
 	// Mutate Annotation with the hash of configmap.data from the otel ConfigMap
 	// creates/updates.
-	core.SetAnnotation(&dep.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", hash))
+	core.SetAnnotation(&dep.Spec.Template, constants.ConfigMapAnnotationKey, fmt.Sprintf("%x", hash))
 
 	if reflect.DeepEqual(existing, dep) {
 		return nil

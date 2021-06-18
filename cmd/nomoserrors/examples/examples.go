@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
@@ -71,7 +71,7 @@ func Generate() AllExamples {
 
 	// 1004
 	result.add(nonhierarchical.IllegalNamespaceSelectorAnnotationError(fake.Namespace("namespaces/foo")))
-	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), v1alpha1.ClusterNameSelectorAnnotationKey))
+	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), constants.ClusterNameSelectorAnnotationKey))
 
 	// 1005
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
@@ -279,7 +279,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(nonhierarchical.InvalidSyncName(v1alpha1.RepoSyncName, fake.RepoSyncObject(core.Name("invalid"))))
+	result.add(nonhierarchical.InvalidSyncName(constants.RepoSyncName, fake.RepoSyncObject(core.Name("invalid"))))
 
 	// 1062 is Deprecated.
 	result.markDeprecated("1062")

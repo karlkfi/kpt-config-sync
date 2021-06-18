@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reconciler"
+
+	"github.com/google/nomos/pkg/constants"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -25,7 +25,7 @@ import (
 // prefix in the `config-management-system` namespace to the RootSync object.
 func mapSecretToRootSync() handler.MapFunc {
 	return func(a client.Object) []reconcile.Request {
-		if a.GetNamespace() != configsync.ControllerNamespace {
+		if a.GetNamespace() != constants.ControllerNamespace {
 			return nil
 		}
 
@@ -37,8 +37,8 @@ func mapSecretToRootSync() handler.MapFunc {
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Name:      v1alpha1.RootSyncName,
-					Namespace: configsync.ControllerNamespace,
+					Name:      constants.RootSyncName,
+					Namespace: constants.ControllerNamespace,
 				},
 			},
 		}
@@ -49,14 +49,14 @@ func mapSecretToRootSync() handler.MapFunc {
 // namespace or a user namespace to a RepoSync to be reconciled.
 func mapSecretToRepoSync() handler.MapFunc {
 	return func(a client.Object) []reconcile.Request {
-		if a.GetNamespace() == configsync.ControllerNamespace {
+		if a.GetNamespace() == constants.ControllerNamespace {
 			return reconcileRequest(a)
 		}
 		glog.Infof("Changes to the secret (name: %s, namespace: %s) triggers a reconciliation for the RepoSync object in the same namespace", a.GetName(), a.GetNamespace())
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Name:      v1alpha1.RepoSyncName,
+					Name:      constants.RepoSyncName,
 					Namespace: a.GetNamespace(),
 				},
 			},
@@ -68,7 +68,7 @@ func mapSecretToRepoSync() handler.MapFunc {
 // namespace to a RepoSync to be reconciled.
 func mapObjectToRepoSync() handler.MapFunc {
 	return func(a client.Object) []reconcile.Request {
-		if a.GetNamespace() == configsync.ControllerNamespace {
+		if a.GetNamespace() == constants.ControllerNamespace {
 			return reconcileRequest(a)
 		}
 		return nil
@@ -89,7 +89,7 @@ func reconcileRequest(a client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{
 			NamespacedName: types.NamespacedName{
-				Name:      v1alpha1.RepoSyncName,
+				Name:      constants.RepoSyncName,
 				Namespace: ns,
 			},
 		},

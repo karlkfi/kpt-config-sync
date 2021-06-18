@@ -2,7 +2,7 @@ package differ
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -36,7 +36,7 @@ func ManagementDisabled(obj client.Object) bool {
 // managed by Config Sync, because the annotation may be copied from another resource
 // managed by Config Sync. See go/config-sync-managed-resources.
 func ManagedByConfigSync(obj client.Object) bool {
-	return obj != nil && ManagementEnabled(obj) && core.GetAnnotation(obj, v1beta1.ResourceIDKey) == core.GKNN(obj)
+	return obj != nil && ManagementEnabled(obj) && core.GetAnnotation(obj, constants.ResourceIDKey) == core.GKNN(obj)
 }
 
 // ManagementUnset returns true if the resource has no Nomos ResourceManagementKey.
@@ -53,7 +53,7 @@ func ManagementUnset(obj client.Object) bool {
 // manages.
 func HasNomosMeta(obj client.Object) bool {
 	as := obj.GetAnnotations()
-	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), v1beta1.ConfigSyncAnnotations...)
+	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), constants.ConfigSyncAnnotations...)
 	for _, a := range sas {
 		if _, ok := as[a]; ok {
 			return true

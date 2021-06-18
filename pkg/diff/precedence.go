@@ -2,7 +2,7 @@ package diff
 
 import (
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,7 +14,7 @@ func IsManager(reconciler declared.Scope, obj client.Object) bool {
 	if annotations == nil {
 		return false
 	}
-	manager, ok := annotations[v1alpha1.ResourceManagerKey]
+	manager, ok := annotations[constants.ResourceManagerKey]
 	if !ok || !differ.ManagedByConfigSync(obj) {
 		return false
 	}
@@ -34,7 +34,7 @@ func CanManage(reconciler declared.Scope, obj client.Object) bool {
 		// can be managed.
 		return true
 	}
-	manager, ok := annotations[v1alpha1.ResourceManagerKey]
+	manager, ok := annotations[constants.ResourceManagerKey]
 	if !ok || !differ.ManagementEnabled(obj) {
 		// Any reconciler can manage any unmanaged resource.
 		return true
@@ -49,7 +49,7 @@ func CanManage(reconciler declared.Scope, obj client.Object) bool {
 			// If it isn't actually managed, we'll show this message every time the
 			// object is updated - it is on the user to not mess with these annotations
 			// if they don't want to see the error message.
-			glog.Warningf("Invalid manager annotation %s=%q", v1alpha1.ResourceManagerKey, manager)
+			glog.Warningf("Invalid manager annotation %s=%q", constants.ResourceManagerKey, manager)
 		}
 	}
 	switch manager {

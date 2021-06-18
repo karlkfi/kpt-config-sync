@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
@@ -16,7 +16,7 @@ import (
 const (
 	legalAnnotation = "supported"
 	cmAnnotation    = v1.ConfigManagementPrefix + "unsupported"
-	csAnnotation    = v1alpha1.ConfigSyncPrefix + "unsupported"
+	csAnnotation    = constants.ConfigSyncPrefix + "unsupported"
 )
 
 func TestAnnotations(t *testing.T) {
@@ -43,7 +43,7 @@ func TestAnnotations(t *testing.T) {
 		},
 		{
 			name: "legal inline cluster selector annotation",
-			obj:  fake.Role(core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "a")),
+			obj:  fake.Role(core.Annotation(constants.ClusterNameSelectorAnnotationKey, "a")),
 		},
 		{
 			name: "legal management annotation",

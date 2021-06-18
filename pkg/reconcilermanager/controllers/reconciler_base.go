@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -96,8 +96,8 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, e
 		// Update annotation when Workload Identity is enabled on a GKE cluster.
 		// In case, Workload Identity is not enabled on a cluster and spec.git.auth: gcpserviceaccount,
 		// the added annotation will be a no-op.
-		if auth == v1alpha1.GitSecretGCPServiceAccount {
-			core.SetAnnotation(&childSA, v1alpha1.GCPSAAnnotationKey, email)
+		if auth == constants.GitSecretGCPServiceAccount {
+			core.SetAnnotation(&childSA, constants.GCPSAAnnotationKey, email)
 		}
 		return nil
 	})

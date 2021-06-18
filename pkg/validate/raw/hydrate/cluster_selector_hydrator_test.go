@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
@@ -56,7 +56,7 @@ func withLegacyClusterSelector(name string) core.MetaMutator {
 // withInlineClusterNameSelector modifies a FileObject to have an inline cluster-selector annotation
 // referencing the cluster matched with the labelSelector.
 func withInlineClusterNameSelector(clusters string) core.MetaMutator {
-	return core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, clusters)
+	return core.Annotation(constants.ClusterNameSelectorAnnotationKey, clusters)
 }
 
 var (

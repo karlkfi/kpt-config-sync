@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
@@ -16,7 +16,7 @@ import (
 const (
 	legalLabel = "supported"
 	cmLabel    = v1.ConfigManagementPrefix + "unsupported"
-	csLabel    = v1alpha1.ConfigSyncPrefix + "unsupported2"
+	csLabel    = constants.ConfigSyncPrefix + "unsupported2"
 )
 
 func TestLabels(t *testing.T) {

@@ -2,7 +2,7 @@ package reconcile
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -17,7 +17,7 @@ func SyncedAt(obj client.Object, token string) {
 // enableManagement marks the resource as Nomos-managed.
 func enableManagement(obj client.Object) {
 	core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-	core.SetAnnotation(obj, v1beta1.ResourceIDKey, core.GKNN(obj))
+	core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
 	core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 }
 
@@ -26,7 +26,7 @@ func enableManagement(obj client.Object) {
 // place. Returns true if the object was modified.
 func RemoveNomosLabelsAndAnnotations(obj client.Object) bool {
 	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	annotationKeys := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), v1beta1.ConfigSyncAnnotations...)
+	annotationKeys := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), constants.ConfigSyncAnnotations...)
 	core.RemoveAnnotations(obj, annotationKeys...)
 	core.RemoveLabels(obj, v1.SyncerLabels())
 	version := core.GetLabel(obj, configuration.DeclaredVersionLabel)

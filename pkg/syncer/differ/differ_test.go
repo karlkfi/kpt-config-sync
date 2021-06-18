@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,7 +35,7 @@ func managed(s string) func(*unstructured.Unstructured) {
 func managedByConfigSync() func(*unstructured.Unstructured) {
 	return func(u *unstructured.Unstructured) {
 		core.SetAnnotation(u, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-		core.SetAnnotation(u, v1beta1.ResourceIDKey, core.GKNN(u))
+		core.SetAnnotation(u, constants.ResourceIDKey, core.GKNN(u))
 	}
 }
 

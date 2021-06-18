@@ -1,6 +1,24 @@
-package v1alpha1
+package constants
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/nomos/pkg/api/configsync"
+)
+
+const (
+	// ControllerNamespace is the Namespace used for Nomos controllers
+	ControllerNamespace = "config-management-system"
+
+	// FieldManager is the field manager name for server-side apply.
+	FieldManager = configsync.GroupName
+
+	// ConfigSyncPrefix is the prefix for all ConfigSync annotations and labels.
+	ConfigSyncPrefix = configsync.GroupName + "/"
+
+	// LifecyclePrefix is the prefix for all lifecycle annotations.
+	LifecyclePrefix = "client.lifecycle.config.k8s.io"
+)
 
 // API type constants
 const (

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
@@ -18,7 +18,7 @@ import (
 
 var (
 	legacyClusterSelectorAnnotation = core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "prod-selector")
-	inlineClusterSelectorAnnotation = core.Annotation(v1alpha1.ClusterNameSelectorAnnotationKey, "prod-cluster")
+	inlineClusterSelectorAnnotation = core.Annotation(constants.ClusterNameSelectorAnnotationKey, "prod-cluster")
 )
 
 func TestClusterSelectorsForHierarchical(t *testing.T) {

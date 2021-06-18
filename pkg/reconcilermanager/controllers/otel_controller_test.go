@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metrics"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -121,7 +121,7 @@ func TestOtelReconcilerStackdriver(t *testing.T) {
 		core.Namespace(metrics.MonitoringNamespace),
 		core.Name(metrics.OtelCollectorName),
 	)
-	core.SetAnnotation(&wantDeployment.Spec.Template, v1alpha1.ConfigMapAnnotationKey, depAnnotationStackdriver)
+	core.SetAnnotation(&wantDeployment.Spec.Template, constants.ConfigMapAnnotationKey, depAnnotationStackdriver)
 
 	// compare ConfigMap
 	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantConfigMap)], wantConfigMap, cmpopts.EquateEmpty()); diff != "" {
@@ -164,7 +164,7 @@ func TestOtelReconcilerCustom(t *testing.T) {
 		core.Namespace(metrics.MonitoringNamespace),
 		core.Name(metrics.OtelCollectorName),
 	)
-	core.SetAnnotation(&wantDeployment.Spec.Template, v1alpha1.ConfigMapAnnotationKey, depAnnotationCustom)
+	core.SetAnnotation(&wantDeployment.Spec.Template, constants.ConfigMapAnnotationKey, depAnnotationCustom)
 
 	// compare Deployment annotation
 	gotDeployment := fakeClient.Objects[core.IDOf(wantDeployment)].(*appsv1.Deployment)

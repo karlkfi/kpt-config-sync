@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
@@ -847,7 +848,7 @@ func resetNamespaceRepos(nt *NT) {
 	for _, nr := range namespaceRepos.Items {
 		NewRepository(nt, nr.Namespace, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
 		nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
-			v1alpha1.RepoSyncName, nr.Namespace, RepoSyncHasStatusSyncCommit)
+			constants.RepoSyncName, nr.Namespace, RepoSyncHasStatusSyncCommit)
 	}
 }
 

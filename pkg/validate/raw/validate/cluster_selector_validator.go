@@ -3,7 +3,7 @@ package validate
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -70,8 +70,8 @@ func validateClusterSelectorAnnotation(obj ast.FileObject) status.Error {
 	if _, hasAnnotation := obj.GetAnnotations()[v1.LegacyClusterSelectorAnnotationKey]; hasAnnotation {
 		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, v1.LegacyClusterSelectorAnnotationKey)
 	}
-	if _, hasAnnotation := obj.GetAnnotations()[v1alpha1.ClusterNameSelectorAnnotationKey]; hasAnnotation {
-		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, v1alpha1.ClusterNameSelectorAnnotationKey)
+	if _, hasAnnotation := obj.GetAnnotations()[constants.ClusterNameSelectorAnnotationKey]; hasAnnotation {
+		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, constants.ClusterNameSelectorAnnotationKey)
 	}
 	return nil
 }

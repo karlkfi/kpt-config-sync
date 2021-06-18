@@ -1,7 +1,7 @@
 package webhook
 
 import (
-	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	cert "github.com/open-policy-agent/cert-controller/pkg/rotator"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,7 +14,7 @@ const (
 	caOrganization = "config-sync"
 
 	// dnsName is <service name>.<namespace>.svc
-	dnsName = configuration.ShortName + "." + configsync.ControllerNamespace + ".svc"
+	dnsName = configuration.ShortName + "." + constants.ControllerNamespace + ".svc"
 )
 
 // CreateCertsIfNeeded creates all certs for webhooks.
@@ -23,7 +23,7 @@ func CreateCertsIfNeeded(mgr manager.Manager, restartOnSecretRefresh bool) (chan
 	setupFinished := make(chan struct{})
 	err := cert.AddRotator(mgr, &cert.CertRotator{
 		SecretKey: types.NamespacedName{
-			Namespace: configsync.ControllerNamespace,
+			Namespace: constants.ControllerNamespace,
 			Name:      secret,
 		},
 		CertDir:        configuration.CertDir,

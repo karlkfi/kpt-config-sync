@@ -1,4 +1,4 @@
-package v1alpha1
+package constants
 
 const (
 	// ReconcilerLabel is the unique label given to each reconciler pod.

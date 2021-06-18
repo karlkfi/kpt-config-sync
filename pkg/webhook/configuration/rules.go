@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/constants"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -82,7 +82,7 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 		ClientConfig: admissionv1.WebhookClientConfig{
 			CABundle: []byte{},
 			Service: &admissionv1.ServiceReference{
-				Namespace: configsync.ControllerNamespace,
+				Namespace: constants.ControllerNamespace,
 				Name:      ShortName,
 				Path:      pointer.StringPtr(ServingPath),
 				Port:      pointer.Int32Ptr(ServicePort),

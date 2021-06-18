@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
@@ -37,7 +37,7 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 				errs = status.Append(errs, status.InternalErrorBuilder.Sprint("failed to encode declared fields").Wrap(err).Build())
 			}
 		}
-		core.SetAnnotation(obj, v1alpha1.DeclaredFieldsKey, string(fields))
+		core.SetAnnotation(obj, constants.DeclaredFieldsKey, string(fields))
 	}
 	return errs
 }

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ var (
 	// ManagementEnabled sets management labels and annotations on the object.
 	ManagementEnabled core.MetaMutator = func(obj client.Object) {
 		core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-		core.SetAnnotation(obj, v1beta1.ResourceIDKey, core.GKNN(obj))
+		core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
 		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
 	}
 	// ManagementDisabled sets the management disabled annotation on the object.

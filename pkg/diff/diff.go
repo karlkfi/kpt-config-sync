@@ -6,8 +6,7 @@ import (
 	"context"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
@@ -110,8 +109,8 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 	canManage := CanManage(manager, d.Actual)
 	switch {
 	case differ.ManagementEnabled(d.Declared) && canManage:
-		if d.Actual.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation &&
-			d.Declared.GetAnnotations()[v1beta1.LifecycleMutationAnnotation] == v1beta1.IgnoreMutation {
+		if d.Actual.GetAnnotations()[constants.LifecycleMutationAnnotation] == constants.IgnoreMutation &&
+			d.Declared.GetAnnotations()[constants.LifecycleMutationAnnotation] == constants.IgnoreMutation {
 			// The declared and actual object both have the lifecycle mutation
 			// annotation set to ignore, so we should take no action as the user does
 			// not want us to make changes to the object.
@@ -132,7 +131,7 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 		return ManagementConflict
 	case differ.ManagementDisabled(d.Declared) && canManage:
 		if differ.HasNomosMeta(d.Actual) {
-			switch d.Actual.GetAnnotations()[v1alpha1.ResourceManagerKey] {
+			switch d.Actual.GetAnnotations()[constants.ResourceManagerKey] {
 			case string(declared.RootReconciler), "":
 				return Unmanage
 			default:

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -45,7 +45,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: configSyncImporter(),
 		},
@@ -56,7 +56,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceManagerKey, ":root"),
+				core.Annotation(constants.ResourceManagerKey, ":root"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -64,7 +64,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
 			user: configSyncRootReconciler(),
 		},
@@ -75,7 +75,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceManagerKey, "bookstore"),
+				core.Annotation(constants.ResourceManagerKey, "bookstore"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -83,7 +83,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
 			user: configSyncRootReconciler(),
 		},
@@ -94,7 +94,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceManagerKey, "bookstore"),
+				core.Annotation(constants.ResourceManagerKey, "bookstore"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -102,7 +102,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
 			user: configSyncNamespaceReconciler("bookstore"),
 		},
@@ -113,7 +113,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceManagerKey, "videostore"),
+				core.Annotation(constants.ResourceManagerKey, "videostore"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -121,7 +121,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
 			user: configSyncNamespaceReconciler("bookstore"),
 			deny: metav1.StatusReasonUnauthorized,
@@ -133,7 +133,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceManagerKey, "videostore"),
+				core.Annotation(constants.ResourceManagerKey, "videostore"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -141,7 +141,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
 			user: configSyncNamespaceReconciler("bookstore"),
 			deny: metav1.StatusReasonUnauthorized,
@@ -182,7 +182,7 @@ func TestValidator_Handle(t *testing.T) {
 			newObj: fake.RoleObject(
 				core.Name("hello"),
 				core.Namespace("world"),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -229,7 +229,7 @@ func TestValidator_Handle(t *testing.T) {
 			oldObj: fake.RoleObject(
 				core.Name("hello"),
 				core.Namespace("world"),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -283,7 +283,7 @@ func TestValidator_Handle(t *testing.T) {
 			newObj: fake.RoleObject(
 				core.Name("hello"),
 				core.Namespace("world"),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -301,7 +301,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -309,7 +309,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 			deny: metav1.StatusReasonUnauthorized,
@@ -321,7 +321,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -329,7 +329,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 			deny: metav1.StatusReasonUnauthorized,
@@ -341,7 +341,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -349,7 +349,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			newObj: fake.RoleObject(
 				core.Name("hello"),
@@ -357,7 +357,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Label("acme.com/foo", "bar"),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -365,7 +365,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 		},
@@ -376,7 +376,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -384,14 +384,14 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			newObj: fake.RoleObject(
 				core.Name("hello"),
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -399,7 +399,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"*"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 			deny: metav1.StatusReasonForbidden,
@@ -411,7 +411,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(v1.ManagedByKey, v1.ManagedByValue),
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -419,14 +419,14 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			newObj: fake.RoleObject(
 				core.Name("hello"),
 				core.Namespace("world"),
 				// Removed managed-by label
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -434,7 +434,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 			deny: metav1.StatusReasonForbidden,
@@ -453,7 +453,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			newObj: fake.RoleObject(
 				core.Name("hello"),
@@ -467,7 +467,7 @@ func TestValidator_Handle(t *testing.T) {
 						Verbs:     []string{"get", "list"},
 					},
 				}),
-				core.Annotation(v1beta1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{}}},"f:rules":{}}`),
 			),
 			user: bob(),
 		},
@@ -540,43 +540,43 @@ func TestValidator_Handle(t *testing.T) {
 			name: "Bob manually modifies lifecycle annotation of an object, whose configmanagement.gke.io/managed annotation is set to enabled, but whose configsync.gke.io/resource-id annotation is unset",
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
+				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation)),
 			newObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, "other")),
+				core.Annotation(constants.LifecycleMutationAnnotation, "other")),
 		},
 		{
 			name: "Bob manually modifies lifecycle annotation of an object, whose configsync.gke.io/resource-id annotation is incorrect",
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation)),
 			newObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, "other")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_world_hello"),
+				core.Annotation(constants.LifecycleMutationAnnotation, "other")),
 		},
 		{
 			name: "Bob manually modifies lifecycle annotation of a managed object",
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation)),
 			newObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, "other")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(constants.LifecycleMutationAnnotation, "other")),
 			deny: metav1.StatusReasonForbidden,
 		},
 		{
 			name: "Bob manually adds lifecycle annotation",
 			oldObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name")),
 			newObj: fake.RoleObject(
 				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
-				core.Annotation(v1beta1.LifecycleMutationAnnotation, v1beta1.IgnoreMutation)),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation)),
 			deny: metav1.StatusReasonForbidden,
 		},
 	}

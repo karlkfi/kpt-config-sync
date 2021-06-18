@@ -1,7 +1,7 @@
 package reposync
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/declared"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -11,6 +11,6 @@ import (
 func ObjectKey(scope declared.Scope) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: string(scope),
-		Name:      v1alpha1.RepoSyncName,
+		Name:      constants.RepoSyncName,
 	}
 }

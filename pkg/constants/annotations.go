@@ -1,11 +1,6 @@
-package v1beta1
-
-import "github.com/google/nomos/pkg/api/configsync"
+package constants
 
 const (
-	// ConfigSyncPrefix is the prefix for all ConfigSync annotations and labels.
-	ConfigSyncPrefix = configsync.GroupName + "/"
-
 	// ConfigMapAnnotationKey is the annotation key representing the hash of all the configmaps
 	// required to run root reconciler and namespace reconciler process.
 	ConfigMapAnnotationKey = ConfigSyncPrefix + "configmap"
@@ -24,9 +19,6 @@ const (
 	// ClusterNameSelectorAnnotationKey is the annotation key set on ConfigSync-managed resources that refers
 	// to the name of the ClusterSelector resource.
 	ClusterNameSelectorAnnotationKey = ConfigSyncPrefix + "cluster-name-selector"
-
-	// LifecyclePrefix is the prefix for all lifecycle annotations.
-	LifecyclePrefix = "client.lifecycle.config.k8s.io"
 
 	// LifecycleMutationAnnotation is the lifecycle annotation key for the mutation
 	// operation. The annotation must be declared in the repository in order to

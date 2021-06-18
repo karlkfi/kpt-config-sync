@@ -2,8 +2,8 @@ package nomostest
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 )
 
 // CommonAnnotationKeys include the annotation keys used in both the mono-repo and multi-repo mode.
@@ -12,14 +12,14 @@ var commonAnnotationKeys = []string{
 	v1.ResourceManagementKey,
 	v1.SourcePathAnnotationKey,
 	v1.SyncTokenAnnotationKey,
-	v1beta1.DeclaredFieldsKey,
-	v1beta1.ResourceIDKey,
+	constants.DeclaredFieldsKey,
+	constants.ResourceIDKey,
 }
 
 // multiRepoOnlyAnnotationKeys include the annotation keys used only in the multi-repo mode.
 var multiRepoOnlyAnnotationKeys = []string{
-	v1beta1.GitContextKey,
-	v1beta1.ResourceManagerKey,
+	constants.GitContextKey,
+	constants.ResourceManagerKey,
 	applier.OwningInventoryKey,
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/glogr"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
@@ -125,5 +126,5 @@ func pollingPeriod() time.Duration {
 		}
 		return pollingFreq
 	}
-	return v1alpha1.DefaultFilesystemPollingPeriod
+	return constants.DefaultFilesystemPollingPeriod
 }

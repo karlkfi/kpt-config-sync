@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -61,7 +61,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_default-name")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_default-name")),
 			want:      nil,
 			wantError: nil,
 		},
@@ -97,9 +97,9 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
 			want: fake.ClusterRoleBindingObject(syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
+				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_clusterrolebinding_wrong-name")),
 			wantError: nil,
 		},
 		// Bad declared management annotation paths.
@@ -145,7 +145,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.NamespaceObject(metav1.NamespaceSystem, syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "_namespace_kube-system")),
+				core.Annotation(constants.ResourceIDKey, "_namespace_kube-system")),
 			want: fake.NamespaceObject(metav1.NamespaceSystem),
 		},
 		{
@@ -153,7 +153,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.NamespaceObject(metav1.NamespacePublic, syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "_namespace_kube-public")),
+				core.Annotation(constants.ResourceIDKey, "_namespace_kube-public")),
 			want: fake.NamespaceObject(metav1.NamespacePublic),
 		},
 		{
@@ -161,7 +161,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.NamespaceObject(metav1.NamespaceDefault, syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "_namespace_default")),
+				core.Annotation(constants.ResourceIDKey, "_namespace_default")),
 			want: fake.NamespaceObject(metav1.NamespaceDefault),
 		},
 		{
@@ -169,7 +169,7 @@ func TestRemediator_Reconcile(t *testing.T) {
 			version:  "v1",
 			declared: nil,
 			actual: fake.NamespaceObject(policycontroller.NamespaceSystem, syncertest.ManagementEnabled,
-				core.Annotation(v1beta1.ResourceIDKey, "_namespace_gatekeeper-system")),
+				core.Annotation(constants.ResourceIDKey, "_namespace_gatekeeper-system")),
 			want: fake.NamespaceObject(policycontroller.NamespaceSystem),
 		},
 		// Version difference paths.

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/kinds"
@@ -102,7 +102,7 @@ func buildHydratorSet(objs *objects.Raw) (*hydratorSet, status.MultiError) {
 
 func objectSelectionState(clusterName string, object ast.FileObject, activeSelectors map[string]bool) (state, status.Error) {
 	legacyAnnotation, hasLegacyAnnotation := object.GetAnnotations()[v1.LegacyClusterSelectorAnnotationKey]
-	inlineAnnotation, hasInlineAnnotation := object.GetAnnotations()[v1alpha1.ClusterNameSelectorAnnotationKey]
+	inlineAnnotation, hasInlineAnnotation := object.GetAnnotations()[constants.ClusterNameSelectorAnnotationKey]
 
 	switch {
 	case hasLegacyAnnotation && hasInlineAnnotation:

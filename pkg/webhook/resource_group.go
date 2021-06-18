@@ -5,9 +5,8 @@ import (
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -61,8 +60,8 @@ func fromConfigSync(req admission.Request) (bool, error) {
 
 	hasInventoryLabel := labels[common.InventoryLabel] == applier.InventoryID(namespace)
 
-	if namespace == configsync.ControllerNamespace {
-		return name == v1alpha1.RootSyncName && hasInventoryLabel, nil
+	if namespace == constants.ControllerNamespace {
+		return name == constants.RootSyncName && hasInventoryLabel, nil
 	}
-	return name == v1alpha1.RepoSyncName && hasInventoryLabel, nil
+	return name == constants.RepoSyncName && hasInventoryLabel, nil
 }

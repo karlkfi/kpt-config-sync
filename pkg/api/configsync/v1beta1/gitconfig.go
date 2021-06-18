@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	"github.com/google/nomos/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,7 +67,7 @@ type SecretReference struct {
 // GetPeriodSecs returns the sync period defaulting to 15 if empty.
 func GetPeriodSecs(g *Git) float64 {
 	if g.Period.Duration == 0 {
-		return DefaultPeriodSecs
+		return constants.DefaultPeriodSecs
 	}
 	return g.Period.Duration.Seconds()
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"sigs.k8s.io/yaml"
 
@@ -16,7 +16,7 @@ var (
 	// deploymentConfig is defined in configmap manifests/templates/reconciler-manager-configmap.yaml
 	deploymentConfig = "deployment.yaml"
 	// deploymentConfigChecksumAnnotationKey tracks the checksum of the content in `deploymentConfig`.
-	deploymentConfigChecksumAnnotationKey = v1beta1.ConfigSyncPrefix + "config-checksum"
+	deploymentConfigChecksumAnnotationKey = constants.ConfigSyncPrefix + "config-checksum"
 )
 
 // parseDeployment parse deployment from deployment.yaml to deploy reconciler pod

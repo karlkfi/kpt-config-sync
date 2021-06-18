@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 )
 
 const (
@@ -61,7 +61,7 @@ func SyncerAnnotations() []string {
 	return []string{
 		ClusterNameAnnotationKey,
 		LegacyClusterSelectorAnnotationKey,
-		v1alpha1.ClusterNameSelectorAnnotationKey,
+		constants.ClusterNameSelectorAnnotationKey,
 		NamespaceSelectorAnnotationKey,
 		DeclaredConfigAnnotationKey,
 		SourcePathAnnotationKey,

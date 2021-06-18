@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -184,7 +184,6 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
 func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
-
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RootSync{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync())).
@@ -265,7 +264,7 @@ func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.Cluster
 
 	var subjects []rbacv1.Subject
 	subjects = append(subjects, subject(reconciler.RootSyncName,
-		configsync.ControllerNamespace,
+		constants.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
 	crb.Subjects = subjects
@@ -300,10 +299,10 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
-		core.SetAnnotation(&d.Spec.Template, v1alpha1.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+		core.SetAnnotation(&d.Spec.Template, constants.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 		// Add unique reconciler label
-		core.SetLabel(&d.Spec.Template, v1alpha1.ReconcilerLabel, reconciler.RootSyncName)
+		core.SetLabel(&d.Spec.Template, constants.ReconcilerLabel, reconciler.RootSyncName)
 
 		templateSpec := &d.Spec.Template.Spec
 
@@ -356,7 +355,7 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
 		// The container is added first time when the reconciler deployment is created.
 		switch rs.Spec.Auth {
-		case v1alpha1.GitSecretGCPServiceAccount, v1alpha1.GitSecretGCENode:
+		case constants.GitSecretGCPServiceAccount, constants.GitSecretGCENode:
 			if !containsGCENodeAskPassSidecar(updatedContainers) {
 				sidecar := gceNodeAskPassSidecar()
 				updatedContainers = append(updatedContainers, sidecar)

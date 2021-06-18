@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -34,10 +34,10 @@ func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc git
 	}
 	for _, obj := range objs {
 		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
-		core.SetAnnotation(obj, v1beta1.GitContextKey, string(gcVal))
-		core.SetAnnotation(obj, v1beta1.ResourceManagerKey, string(scope))
+		core.SetAnnotation(obj, constants.GitContextKey, string(gcVal))
+		core.SetAnnotation(obj, constants.ResourceManagerKey, string(scope))
 		core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, commitHash)
-		core.SetAnnotation(obj, v1beta1.ResourceIDKey, core.GKNN(obj))
+		core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
 
 		// set the owning-inventory annotation
 		// TODO(b/178744996): Remove setting the owning-inventory once the remediator

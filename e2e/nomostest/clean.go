@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest/testing"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
@@ -136,7 +136,7 @@ func Clean(nt *NT, failOnError FailOnError) {
 func isConfigSyncAnnotation(annotation string) bool {
 	return annotation == common.LifecycleDeleteAnnotation ||
 		strings.Contains(annotation, v1.ConfigManagementPrefix) ||
-		strings.Contains(annotation, v1alpha1.ConfigSyncPrefix) ||
+		strings.Contains(annotation, constants.ConfigSyncPrefix) ||
 		annotation == applier.OwningInventoryKey ||
 		annotation == hnc.AnnotationKeyV1A2
 }

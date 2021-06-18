@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -244,7 +244,7 @@ func TestDeclaredFields(t *testing.T) {
 		{
 			name: "With declared fields",
 			obj: roleForTest(
-				core.Annotation(v1alpha1.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:this":{}}},"f:rules":{}}`)),
+				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:this":{}}},"f:rules":{}}`)),
 			want: ".rules\n.metadata.labels.this",
 		},
 		{
@@ -283,9 +283,9 @@ func TestConfigSyncMetadata(t *testing.T) {
 			name: "With metadata",
 			obj: roleForTest(
 				core.Annotations(map[string]string{
-					"hello":                     "goodbye",
-					v1alpha1.ResourceManagerKey: ":root",
-					v1.ResourceManagementKey:    "enabled",
+					"hello":                      "goodbye",
+					constants.ResourceManagerKey: ":root",
+					v1.ResourceManagementKey:     "enabled",
 				}),
 				core.Labels(map[string]string{
 					"here":          "there",
