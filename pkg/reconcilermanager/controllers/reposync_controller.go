@@ -35,6 +35,7 @@ import (
 // RepoSyncReconciler reconciles a RepoSync object.
 type RepoSyncReconciler struct {
 	reconcilerBase
+	namespaces map[string]struct{}
 }
 
 // NewRepoSyncReconciler returns a new RepoSyncReconciler.
@@ -47,6 +48,7 @@ func NewRepoSyncReconciler(clusterName string, pollingPeriod time.Duration, clie
 			scheme:                  scheme,
 			filesystemPollingPeriod: pollingPeriod,
 		},
+		namespaces: make(map[string]struct{}),
 	}
 }
 
@@ -61,16 +63,27 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	var rs v1alpha1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
-
 		if apierrors.IsNotFound(err) {
+			if _, ok := r.namespaces[req.Namespace]; !ok {
+				log.Error(err, "The RepoSync reconciler does not manage a RepoSync object for the namespace", "namespace", req.Namespace)
+				// return `controllerruntime.Result{}, nil` here to make sure the request will not be requeued.
+				return controllerruntime.Result{}, nil
+			}
 			// Namespace controller resources are cleaned up when reposync no longer present.
 			//
 			// Note: Update cleanup resources in cleanupNSControllerResources(...) when
 			// resources created by namespace controller changes.
-			return controllerruntime.Result{}, r.cleanupNSControllerResources(ctx, req.Namespace)
+			cleanupErr := r.cleanupNSControllerResources(ctx, req.Namespace)
+			if cleanupErr == nil {
+				delete(r.namespaces, req.Namespace)
+			}
+			// if cleanupErr != nil, the request will be requeued.
+			return controllerruntime.Result{}, cleanupErr
 		}
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RepoSync")
 	}
+
+	r.namespaces[req.Namespace] = struct{}{}
 
 	var err error
 	if err = nonhierarchical.ValidateRepoSync(&rs); err != nil {

@@ -70,10 +70,13 @@ func TestCreate(t *testing.T) {
 		wantSecret *corev1.Secret
 	}{
 		{
-			name:       "Secret created",
-			reposync:   reposync(sshAuth, core.Namespace(ns)),
-			client:     fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(ns))),
-			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+			name:     "Secret created",
+			reposync: reposync(sshAuth, core.Namespace(ns)),
+			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(ns))),
+			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth,
+				core.Namespace(v1.NSConfigManagementSystem),
+				core.Annotation(NSReconcilerNSAnnotationKey, ns),
+			),
 		},
 		{
 			name:     "Secret updated",
@@ -81,7 +84,10 @@ func TestCreate(t *testing.T) {
 			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, core.Namespace(ns)),
 				secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 			),
-			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), updatedKeyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), updatedKeyData, sshAuth,
+				core.Namespace(v1.NSConfigManagementSystem),
+				core.Annotation(NSReconcilerNSAnnotationKey, ns),
+			),
 		},
 		{
 			name:      "Secret not found",

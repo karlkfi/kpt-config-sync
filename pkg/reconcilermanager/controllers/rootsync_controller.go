@@ -25,13 +25,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -186,27 +184,10 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 // SetupWithManager registers RootSync controller with reconciler-manager.
 func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
-	// mapSecretToRootSync define a mapping from the Secret object in the event to
-	// the RootSync object to reconcile.
-	mapSecretToRootSync := handler.MapFunc(
-		func(a client.Object) []reconcile.Request {
-			if a.GetNamespace() != configsync.ControllerNamespace {
-				return nil
-			}
-
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      v1alpha1.RootSyncName,
-						Namespace: configsync.ControllerNamespace,
-					},
-				},
-			}
-		})
 
 	return controllerruntime.NewControllerManagedBy(mgr).
 		For(&v1alpha1.RootSync{}).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync)).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync())).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)

@@ -6,6 +6,8 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/pkg/errors"
@@ -14,6 +16,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// NSReconcilerNSAnnotationKey is used to map the Secret object in the config-management-system namespace
+// to the RepoSync object in namespaceSecret.Namespace so that a change to the Secret object
+// in the config-management-system namespace trigger an reconciliation of the corresponding
+// RepoSync object.
+const NSReconcilerNSAnnotationKey = v1beta1.ConfigSyncPrefix + "ns-reconciler-namespace"
 
 // Put secret in config-management-system namespace using the
 // existing secret in the reposync.namespace.
@@ -75,6 +83,11 @@ func create(ctx context.Context, namespaceSecret *corev1.Secret, c client.Client
 			Kind:       kinds.Secret().Kind,
 			APIVersion: kinds.Secret().Version,
 		},
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				NSReconcilerNSAnnotationKey: namespaceSecret.Namespace,
+			},
+		},
 	}
 
 	// mutate newSecret with values from the secret in reposync.namespace.
@@ -89,6 +102,7 @@ func create(ctx context.Context, namespaceSecret *corev1.Secret, c client.Client
 // update secret fetch the existing secret from the cluster and use secret.data and
 // secret.type to create a new secret in config-management-system namespace.
 func update(ctx context.Context, existingsecret *corev1.Secret, namespaceSecret *corev1.Secret, c client.Client) error {
+	core.SetAnnotation(existingsecret, NSReconcilerNSAnnotationKey, namespaceSecret.Namespace)
 
 	// Update data and type for the existing secret with values from the secret in
 	// reposync.namespace

@@ -188,6 +188,15 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
+	wantNamespaces := map[string]struct{}{
+		reposyncReqNamespace: {},
+	}
+
+	// compare namespaces.
+	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("namespaces diff %s", diff)
+	}
+
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -313,6 +322,15 @@ func TestRepoSyncAuthGCENode(t *testing.T) {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
 	}
 
+	wantNamespaces := map[string]struct{}{
+		reposyncReqNamespace: {},
+	}
+
+	// compare namespaces.
+	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("namespaces diff %s", diff)
+	}
+
 	wantDeployments := []*appsv1.Deployment{
 		repoSyncDeployment(
 			rs,
@@ -362,6 +380,15 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	ctx := context.Background()
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
 		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantNamespaces := map[string]struct{}{
+		reposyncReqNamespace: {},
+	}
+
+	// compare namespaces.
+	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("namespaces diff %s", diff)
 	}
 
 	wantConfigMap := []*corev1.ConfigMap{

@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,7 +31,11 @@ func nsOfReconciler(obj client.Object) string {
 		return getNSFromConfigMap(name)
 	}
 
-	if _, ok := obj.(*corev1.Secret); ok {
+	if secret, ok := obj.(*corev1.Secret); ok {
+		ns := core.GetAnnotation(secret, secrets.NSReconcilerNSAnnotationKey)
+		if ns != "" {
+			return ns
+		}
 		return getNSFromSecret(name)
 	}
 
