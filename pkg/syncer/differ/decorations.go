@@ -53,7 +53,7 @@ func ManagementUnset(obj client.Object) bool {
 // manages.
 func HasNomosMeta(obj client.Object) bool {
 	as := obj.GetAnnotations()
-	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2), v1beta1.ConfigSyncAnnotations...)
+	sas := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), v1beta1.ConfigSyncAnnotations...)
 	for _, a := range sas {
 		if _, ok := as[a]; ok {
 			return true

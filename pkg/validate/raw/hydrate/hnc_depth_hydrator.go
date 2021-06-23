@@ -18,6 +18,10 @@ func HNCDepth(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
 		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			addDepthLabels(obj)
+			originalHNCManagedByValue := core.GetAnnotation(obj, oldhnc.AnnotationKeyV1A2)
+			if originalHNCManagedByValue != "" {
+				core.SetAnnotation(obj, oldhnc.OriginalHNCManagedByValue, originalHNCManagedByValue)
+			}
 			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
 		}
 	}

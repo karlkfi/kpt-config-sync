@@ -47,7 +47,9 @@ func TestNomosInitHydrate(t *testing.T) {
 	//
 	// 1) git init
 	// 2) nomos init
-	// 3) nomos hydrate --no-api-server-check
+	// 3) nomos vet --no-api-server-check
+	// 4) nomos hydrate --no-api-server-check
+	// 5) nomos vet --no-api-server-check --path=<hydrated-dir>
 	tmpDir := nomostest.TestDir(t)
 	tw := nomostesting.New(t)
 
@@ -71,6 +73,12 @@ func TestNomosInitHydrate(t *testing.T) {
 		tw.Fatal(err)
 	}
 
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", tmpDir)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
 	out, err = exec.Command("nomos", "hydrate", "--no-api-server-check",
 		fmt.Sprintf("--path=%s", tmpDir), fmt.Sprintf("--output=%s/compiled", tmpDir)).CombinedOutput()
 	if err != nil {
@@ -80,6 +88,51 @@ func TestNomosInitHydrate(t *testing.T) {
 
 	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured",
 		fmt.Sprintf("--path=%s/compiled", tmpDir)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+}
+
+func TestNomosHydrateWithClusterSelectors(t *testing.T) {
+	tmpDir := nomostest.TestDir(t)
+	tw := nomostesting.New(t)
+	compiledDir := fmt.Sprintf("%s/compiled", tmpDir)
+
+	out, err := exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors")).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "hydrate", "--no-api-server-check",
+		fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors"),
+		"--clusters=cluster-dev,cluster-prod,cluster-staging",
+		fmt.Sprintf("--output=%s", compiledDir)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("diff", "-r", compiledDir, "../../examples/hierarchical-repo-with-cluster-selectors-compiled").CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s/cluster-dev", compiledDir)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s/cluster-staging", compiledDir)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s/cluster-prod", compiledDir)).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)

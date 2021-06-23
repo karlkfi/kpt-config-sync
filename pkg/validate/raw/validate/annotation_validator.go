@@ -5,6 +5,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
 	"github.com/google/nomos/pkg/status"
@@ -12,7 +13,7 @@ import (
 
 // IsInvalidAnnotation returns true if the annotation cannot be declared by users.
 func IsInvalidAnnotation(k string) bool {
-	return hasConfigSyncPrefix(k) && !isSourceAnnotation(k)
+	return HasConfigSyncPrefix(k) && !isSourceAnnotation(k)
 }
 
 // Annotations verifies that the given object does not have any invalid
@@ -37,6 +38,7 @@ var sourceAnnotations = map[string]bool{
 	v1.LegacyClusterSelectorAnnotationKey:     true,
 	v1alpha1.ClusterNameSelectorAnnotationKey: true,
 	v1.ResourceManagementKey:                  true,
+	v1beta1.LifecycleMutationAnnotation:       true,
 }
 
 // isSourceAnnotation returns true if the annotation is a ConfigSync source
@@ -45,8 +47,8 @@ func isSourceAnnotation(s string) bool {
 	return sourceAnnotations[s]
 }
 
-// hasConfigSyncPrefix returns true if the string begins with a ConfigSync
+// HasConfigSyncPrefix returns true if the string begins with a ConfigSync
 // annotation prefix.
-func hasConfigSyncPrefix(s string) bool {
+func HasConfigSyncPrefix(s string) bool {
 	return strings.HasPrefix(s, v1.ConfigManagementPrefix) || strings.HasPrefix(s, v1alpha1.ConfigSyncPrefix)
 }

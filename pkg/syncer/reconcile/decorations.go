@@ -26,7 +26,7 @@ func enableManagement(obj client.Object) {
 // place. Returns true if the object was modified.
 func RemoveNomosLabelsAndAnnotations(obj client.Object) bool {
 	before := len(obj.GetAnnotations()) + len(obj.GetLabels())
-	annotationKeys := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2), v1beta1.ConfigSyncAnnotations...)
+	annotationKeys := append(append(v1.SyncerAnnotations(), hnc.AnnotationKeyV1A2, hnc.OriginalHNCManagedByValue), v1beta1.ConfigSyncAnnotations...)
 	core.RemoveAnnotations(obj, annotationKeys...)
 	core.RemoveLabels(obj, v1.SyncerLabels())
 	version := core.GetLabel(obj, configuration.DeclaredVersionLabel)

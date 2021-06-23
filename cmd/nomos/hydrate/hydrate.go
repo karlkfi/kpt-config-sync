@@ -67,9 +67,8 @@ var Cmd = &cobra.Command{
 	Long: `Compiles the local repository to the exact form that would be sent to the APIServer.
 
 The output directory consists of one directory per declared Cluster, and defaultcluster/ for
-clusters without declarations. Each directory holds the full set of manifests which you could
-kubectl apply -fR to the cluster, and is equivalent to the state ConfigManagement maintains on your
-clusters.`,
+clusters without declarations. Each directory holds the full set of configs for a single cluster,
+which you could kubectl apply -fR to the cluster, or have Config Sync sync to the cluster.`,
 	Args: cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Don't show usage on error, as argument validation passed.
@@ -163,8 +162,8 @@ clusters.`,
 		})
 
 		multiCluster := numClusters > 1
-		hydrate.Clean(allObjects)
 		fileObjects := hydrate.GenerateUniqueFileNames(extension, multiCluster, allObjects...)
+		hydrate.Clean(fileObjects)
 		if flat {
 			err = printFlatOutput(fileObjects)
 		} else {

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-prod
+  namespace: bookstore1
+  annotations:
+    configmanagement.gke.io/cluster-selector: cluster-selector-prod

@@ -8,8 +8,8 @@ import (
 	"github.com/google/nomos/pkg/status"
 )
 
-// hasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".
-func hasDepthSuffix(s string) bool {
+// HasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".
+func HasDepthSuffix(s string) bool {
 	return strings.HasSuffix(s, oldhnc.DepthSuffix)
 }
 
@@ -17,7 +17,7 @@ func hasDepthSuffix(s string) bool {
 func HNCLabels(obj ast.FileObject) status.Error {
 	var errors []string
 	for l := range obj.GetLabels() {
-		if hasDepthSuffix(l) {
+		if HasDepthSuffix(l) {
 			errors = append(errors, l)
 		}
 	}

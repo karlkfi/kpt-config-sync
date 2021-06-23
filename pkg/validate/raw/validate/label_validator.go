@@ -8,7 +8,7 @@ import (
 
 // IsInvalidLabel returns true if the label cannot be declared by users.
 func IsInvalidLabel(k string) bool {
-	return hasConfigSyncPrefix(k)
+	return HasConfigSyncPrefix(k)
 }
 
 // Labels verifies that the given object does not have any invalid labels.
