@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
     ./cmd/admission-webhook
 
 # Reconciler image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.7.1 as reconciler
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.8.0 as reconciler
 WORKDIR /
 COPY --from=bins /go/bin/reconciler .
 RUN apt-get update && apt-get install -y git
@@ -71,7 +71,7 @@ COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 ENTRYPOINT ["/admission-webhook"]
 
 # Nomos image
-FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.7.1 as nomos
+FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.8.0 as nomos
 
 # https://github.com/GoogleCloudPlatform/google-cloud-go/issues/791#issuecomment-353689746
 RUN apt-get update && apt-get install -y \
