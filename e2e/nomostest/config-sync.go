@@ -98,16 +98,18 @@ var (
 	// multiObjects contains the names of all objects that are necessary to
 	// install and run multi-repo Config Sync.
 	multiObjects = map[string]bool{
-		webhookconfig.ShortName:                true,
-		"admission-webhook-cert":               true,
-		"configsync.gke.io:reconciler-manager": true,
-		reconcilermanager.ManagerName:          true,
-		"reconciler-manager-cm":                true,
-		"reposyncs.configsync.gke.io":          true,
-		"rootsyncs.configsync.gke.io":          true,
-		metrics.OtelAgentName:                  true,
-		metrics.OtelCollectorName:              true,
-		"resourcegroups.kpt.dev":               true,
+		webhookconfig.ShortName:                      true,
+		"admission-webhook-cert":                     true,
+		"configsync.gke.io:reconciler-manager":       true,
+		reconcilermanager.ManagerName:                true,
+		"reconciler-manager-cm":                      true,
+		"reposyncs.configsync.gke.io":                true,
+		"rootsyncs.configsync.gke.io":                true,
+		metrics.OtelAgentName:                        true,
+		metrics.OtelCollectorName:                    true,
+		"resourcegroups.kpt.dev":                     true,
+		"acm-psp":                                    true,
+		"configmanagement.gke.io:otel-collector-psp": true,
 	}
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.
