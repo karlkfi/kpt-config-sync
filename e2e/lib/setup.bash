@@ -273,6 +273,7 @@ setup::__skip_test() {
 
 # Clean up test resources.
 setup::cleanup() {
+  kubectl delete --ignore-not-found apiservices -l "testdata=true"
   kubectl delete --ignore-not-found ns -l "testdata=true"
   resource::delete -r ns -a configmanagement.gke.io/managed=enabled
 }

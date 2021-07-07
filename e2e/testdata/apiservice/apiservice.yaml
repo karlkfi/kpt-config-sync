@@ -2,6 +2,8 @@ apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.custom.metrics.k8s.io
+  labels:
+    testdata: "true"
 spec:
   insecureSkipTLSVerify: true
   group: custom.metrics.k8s.io
@@ -16,6 +18,8 @@ apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta2.custom.metrics.k8s.io
+  labels:
+    testdata: "true"
 spec:
   insecureSkipTLSVerify: true
   group: custom.metrics.k8s.io
@@ -30,6 +34,8 @@ apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.external.metrics.k8s.io
+  labels:
+    testdata: "true"
 spec:
   insecureSkipTLSVerify: true
   group: external.metrics.k8s.io
