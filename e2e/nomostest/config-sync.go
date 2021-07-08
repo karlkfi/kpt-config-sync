@@ -461,6 +461,12 @@ func repoSyncClusterRole() *rbacv1.ClusterRole {
 			Resources: []string{rbacv1.ResourceAll},
 			Verbs:     []string{rbacv1.VerbAll},
 		},
+		{
+			APIGroups:     []string{"policy"},
+			Resources:     []string{"podsecuritypolicies"},
+			ResourceNames: []string{"acm-psp"},
+			Verbs:         []string{"use"},
+		},
 	}
 	return cr
 }
@@ -469,6 +475,27 @@ func repoSyncClusterRole() *rbacv1.ClusterRole {
 // permission to manage resources in the namespace.
 func repoSyncRoleBinding(ns string) *rbacv1.RoleBinding {
 	rb := fake.RoleBindingObject(core.Name("syncs"), core.Namespace(ns))
+	sb := []rbacv1.Subject{
+		{
+			Kind:      "ServiceAccount",
+			Name:      fmt.Sprintf("ns-reconciler-%s", ns),
+			Namespace: configmanagement.ControllerNamespace,
+		},
+	}
+	rf := rbacv1.RoleRef{
+		APIGroup: "rbac.authorization.k8s.io",
+		Kind:     "ClusterRole",
+		Name:     clusterRoleName,
+	}
+	rb.Subjects = sb
+	rb.RoleRef = rf
+	return rb
+}
+
+// repoSyncClusterRoleBinding returns clusterrolebinding that grants service account
+// permission to manage resources in the namespace.
+func repoSyncClusterRoleBinding(ns string) *rbacv1.ClusterRoleBinding {
+	rb := fake.ClusterRoleBindingObject(core.Name("syncs-" + ns))
 	sb := []rbacv1.Subject{
 		{
 			Kind:      "ServiceAccount",
@@ -703,11 +730,22 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
 		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
+		cluster := os.Getenv("GCP_CLUSTER")
+		if strings.Contains(cluster, "psp") {
+			// Add a ClusterRoleBinding so that the pods can be created
+			// when the cluster has PodSecurityPolicy enabled.
+			// Background: If a RoleBinding (not a ClusterRoleBinding) is used,
+			// it will only grant usage for pods being run in the same namespace as the binding.
+			// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
+			// available on GKE.
+			crb := repoSyncClusterRoleBinding(ns)
+			nt.Root.Add("acme/cluster/crb.yaml", crb)
+		}
 
 		rs := RepoSyncObject(ns)
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
-		nt.Root.CommitAndPush("Adding namespace,clusterrole, rolebinding and RepoSync")
+		nt.Root.CommitAndPush("Adding namespace, clusterrole, rolebinding, clusterrolebinding and RepoSync")
 		// This waits for the Namespace to be created.
 		nt.WaitForRepoSyncs()
 
@@ -725,9 +763,17 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		// Validate multi-repo metrics.
 		err = nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
 			nt.ParseMetrics(prev)
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
-				testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
-				testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))
+			var err error
+			if strings.Contains(cluster, "psp") {
+				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6,
+					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
+					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"),
+					testmetrics.ResourceCreated("ClusterRoleBinding"))
+			} else {
+				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
+					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
+					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))
+			}
 			if err != nil {
 				return err
 			}
