@@ -112,13 +112,15 @@ func TestRoot_Parse(t *testing.T) {
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					converter:          converter,
 					updater: updater{
-						scope:     declared.RootReconciler,
-						resources: &declared.Resources{},
+						scope:      declared.RootReconciler,
+						resources:  &declared.Resources{},
+						remediator: &noOpRemediator{},
+						applier:    &fakeApplier{},
 					},
 				},
 			}
 			state := reconcilerState{}
-			if err := parse(context.Background(), parser, triggerReimport, &state); err != nil {
+			if err := parseAndUpdate(context.Background(), parser, triggerReimport, &state); err != nil {
 				t.Fatal(err)
 			}
 
@@ -173,7 +175,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 					},
 				},
 			}
-			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
+			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if err == nil {
 				t.Errorf("parse() should return errors")
 			}
@@ -227,7 +229,7 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 					},
 				},
 			}
-			err := parse(context.Background(), parser, triggerReimport, &reconcilerState{})
+			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if err == nil {
 				t.Errorf("parse() should return errors")
 			}
@@ -238,7 +240,7 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 	}
 }
 
-func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
+func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 	testCases := []struct {
 		name        string
 		applyErrors []status.Error
@@ -250,6 +252,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 				applier.Error(errors.New("sync error")),
 			},
 			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
 				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
 			},
 		},
@@ -260,6 +263,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 				status.InternalError("internal error"),
 			},
 			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
 				{Data: &view.LastValueData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
 			},
 		},
@@ -272,6 +276,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
+					parser: &fakeParser{},
 					updater: updater{
 						scope:      declared.RootReconciler,
 						resources:  &declared.Resources{},
@@ -282,7 +287,7 @@ func TestRoot_SyncReconcilerErrorsMetricValidation(t *testing.T) {
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 				},
 			}
-			err := update(context.Background(), parser, triggerReimport, &reconcilerState{})
+			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if err == nil {
 				t.Errorf("update() should return errors")
 			}

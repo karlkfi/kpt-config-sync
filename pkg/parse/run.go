@@ -69,8 +69,7 @@ func Run(ctx context.Context, p Parser) {
 func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
 	oldPolicyDir := state.cache.git.policyDir
 	// `read` is called no matter what the trigger is.
-	errs := read(ctx, p, trigger, state)
-	if errs != nil {
+	if errs := read(ctx, p, trigger, state); errs != nil {
 		state.invalidate(errs)
 		return
 	}
@@ -86,22 +85,7 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 		return
 	}
 
-	errs = parse(ctx, p, trigger, state)
-	// errs includes the error(s) returned from `parseSource` and `p.setSourceStatus`.
-	// if `parseSource` succeeds, but `p.setSourceStatus` fails, the function calls `state.invalidate` and returns.
-	// Moving forward to `update` in this case may result in confusing `Status` field in RepoSync/RootSync.
-	// Imagine we have two git commits: A and B (which was committed after A). First, commit A is fully synced, and
-	// is recorded in both the `Status.Source` and `Status.Sync` fields. Then while reconciling commit B, `parseSource`
-	// succeeds, but `p.setSourceStatus` fails, which leaves `Status.Source.Commit` as A. If we move forward to
-	// `update` here instead of returning, and both `update` and `p.setSyncStatus` succeed, `Status.Sync.Commit`
-	// will be updated to B. Then the users will see that `Status.Sync.Commit` includes a commit committed after
-	// the commit in `Status.Source.Commit`, and get confused.
-	if errs != nil {
-		state.invalidate(errs)
-		return
-	}
-
-	errs = update(ctx, p, trigger, state)
+	errs := parseAndUpdate(ctx, p, trigger, state)
 	if errs != nil {
 		state.invalidate(errs)
 		return
@@ -161,21 +145,6 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	return gitState.commit, sourceErrs
 }
 
-func parse(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
-	sourceErrs := parseSource(ctx, p, trigger, state)
-	gs := gitStatus{
-		commit: state.cache.git.commit,
-		errs:   sourceErrs,
-	}
-	// After `parse` is done, we have all the source errors, and call `setSourceStatus` even if
-	// sourceErrs is nil to make sure that the `Status.Source` field of RepoSync/RootSync is up-to-date.
-	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
-	if setSourceStatusErr == nil {
-		state.sourceStatus = gs
-	}
-	return status.Append(sourceErrs, setSourceStatusErr)
-}
-
 func parseSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
 	if state.cache.hasParserResult {
 		return nil
@@ -204,18 +173,43 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 	return nil
 }
 
-func update(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
+func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
+	sourceErrs := parseSource(ctx, p, trigger, state)
+	if sourceErrs != nil {
+		newSourceStatus := gitStatus{
+			commit: state.cache.git.commit,
+			errs:   sourceErrs,
+		}
+		if err := p.setSourceStatus(ctx, state.sourceStatus, newSourceStatus); err != nil {
+			sourceErrs = status.Append(sourceErrs, err)
+		} else {
+			state.sourceStatus = newSourceStatus
+		}
+		return sourceErrs
+	}
+
+	// If `parseSource` succeeded, we will not call `setSourceStatus` immediately.
+	// Instead, we will call `p.options().update` first, and then update both the `Status.Source` and `Status.Sync` fields together in a single request.
+	// Updating the `Status.Source` and `Status.Sync` fields in two requests may cause the second one to fail if these two requests are too close to each other.
+
 	start := time.Now()
 	syncErrs := p.options().update(ctx, &state.cache)
 	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
-	gs := gitStatus{
+
+	newSourceStatus := gitStatus{
+		commit: state.cache.git.commit,
+		errs:   nil,
+	}
+	newSyncStatus := gitStatus{
 		commit: state.cache.git.commit,
 		errs:   syncErrs,
 	}
-	setSyncStatusErr := p.setSyncStatus(ctx, state.syncStatus, gs)
-	if setSyncStatusErr == nil {
-		state.syncStatus = gs
+	if err := p.setSourceAndSyncStatus(ctx, state.sourceStatus, newSourceStatus, state.syncStatus, newSyncStatus); err != nil {
+		syncErrs = status.Append(syncErrs, err)
+	} else {
+		state.sourceStatus = newSourceStatus
+		state.syncStatus = newSyncStatus
 	}
 
-	return status.Append(syncErrs, setSyncStatusErr)
+	return syncErrs
 }

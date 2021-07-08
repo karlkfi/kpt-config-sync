@@ -148,9 +148,9 @@ func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStat
 	return nil
 }
 
-// setSyncStatus implements the Parser interface
-func (p *root) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus) error {
-	if oldStatus.equal(newStatus) {
+// setSourceAndSyncStatus implements the Parser interface
+func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newSourceStatus, oldSyncStatus, newSyncStatus gitStatus) error {
+	if oldSourceStatus.equal(newSourceStatus) && oldSyncStatus.equal(newSyncStatus) {
 		return nil
 	}
 
@@ -159,14 +159,18 @@ func (p *root) setSyncStatus(ctx context.Context, oldStatus, newStatus gitStatus
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
-	now := metav1.Now()
-	cse := status.ToCSE(newStatus.errs)
-	rs.Status.Sync.Commit = newStatus.commit
-	rs.Status.Sync.Errors = cse
-	rs.Status.Sync.LastUpdate = now
+	sourceErrs := status.ToCSE(newSourceStatus.errs)
+	rs.Status.Source.Commit = newSourceStatus.commit
+	rs.Status.Source.Errors = sourceErrs
+	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
 
-	metrics.RecordReconcilerErrors(ctx, "sync", len(cse))
-	metrics.RecordLastSync(ctx, newStatus.commit, now.Time)
+	now := metav1.Now()
+	syncErrs := status.ToCSE(newSyncStatus.errs)
+	rs.Status.Sync.Commit = newSyncStatus.commit
+	rs.Status.Sync.Errors = syncErrs
+	rs.Status.Sync.LastUpdate = now
+	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
+	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync sync status from parser")
