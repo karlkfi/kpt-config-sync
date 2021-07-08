@@ -1,12 +1,9 @@
 package controllers
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"io/ioutil"
 
 	"github.com/google/nomos/pkg/constants"
-	"github.com/google/nomos/pkg/core"
 	"sigs.k8s.io/yaml"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,12 +28,5 @@ func parseFromDeploymentConfig(config string, obj *appsv1.Deployment) error {
 		return err
 	}
 
-	if err := yaml.Unmarshal(yamlDep, obj); err != nil {
-		return err
-	}
-
-	sum := sha256.Sum256(yamlDep)
-	sumString := hex.EncodeToString(sum[:])
-	core.SetAnnotation(obj, deploymentConfigChecksumAnnotationKey, sumString)
-	return nil
+	return yaml.Unmarshal(yamlDep, obj)
 }

@@ -362,6 +362,11 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 			}
 		}
 		templateSpec.Containers = updatedContainers
+		deploymentHash, err := hash(d)
+		if err != nil {
+			return errors.Errorf("failed to compute deployment hash: %v", err)
+		}
+		core.SetAnnotation(d, deploymentConfigChecksumAnnotationKey, fmt.Sprintf("%x", deploymentHash))
 		return nil
 	}
 }

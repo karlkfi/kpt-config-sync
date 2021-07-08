@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -146,24 +145,19 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv
 		return controllerutil.OperationResultCreated, nil
 	}
 
-	// If the existing Deployment and the new Deployment have different `deploymentConfigChecksumAnnotation` annotations,
-	// we need to patch the Deployment definitely.
-	// If the existing Deployment and the new Deployment have the same `deploymentConfigChecksumAnnotation` annotation,
-	// we should only patch the Deployment when `mutateObject(obj)` changes the object.
-	if core.GetAnnotation(existing, deploymentConfigChecksumAnnotationKey) == core.GetAnnotation(obj, deploymentConfigChecksumAnnotationKey) {
-		// We want to preserve the replicas from the deployment object.
-		replicas := obj.Spec.Replicas
-		obj = existing.DeepCopy()
-		obj.Spec.Replicas = replicas
-	}
-
 	patch := client.MergeFrom(existing)
 
 	if err := mutateObject(obj); err != nil {
 		return controllerutil.OperationResultNone, err
 	}
 
-	if reflect.DeepEqual(existing, obj) {
+	// We can skip patching the Deployment only when both `deploymentConfigChecksumAnnotation`
+	// and `spec.replicas` remain the same.
+	// The `deploymentConfigChecksumAnnotation` is computed after the mutation.
+	// Otherwise, it will be always set to the checksum of the original template.
+	if core.GetAnnotation(existing, deploymentConfigChecksumAnnotationKey) ==
+		core.GetAnnotation(obj, deploymentConfigChecksumAnnotationKey) &&
+		*existing.Spec.Replicas == *obj.Spec.Replicas {
 		return controllerutil.OperationResultNone, nil
 	}
 
