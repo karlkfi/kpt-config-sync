@@ -532,6 +532,16 @@ func revokeRepoSyncRoleBinding(nt *NT, ns string) {
 	WaitToTerminate(nt, kinds.RoleBinding(), "syncs", ns)
 }
 
+func revokeRepoSyncClusterRoleBinding(nt *NT, ns string) {
+	if err := nt.Delete(repoSyncClusterRoleBinding(ns)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		nt.T.Fatal(err)
+	}
+	WaitToTerminate(nt, kinds.ClusterRoleBinding(), "syncs-"+ns, "")
+}
+
 func revokeRepoSyncSecret(nt *NT, ns string) {
 	secret := &corev1.Secret{}
 	if err := nt.Get(namespaceSecret, ns, secret); err != nil {
@@ -640,6 +650,18 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 
 	for ns := range opts.MultiRepo.NamespaceRepos {
 		nt.NamespaceRepos[ns] = ns
+
+		// Add a ClusterRoleBinding so that the pods can be created
+		// when the cluster has PodSecurityPolicy enabled.
+		// Background: If a RoleBinding (not a ClusterRoleBinding) is used,
+		// it will only grant usage for pods being run in the same namespace as the binding.
+		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
+		// available on GKE.
+		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
+			if err := nt.Create(repoSyncClusterRoleBinding(ns)); err != nil {
+				nt.T.Fatal(err)
+			}
+		}
 
 		// create namespace for namespace reconciler.
 		err := nt.Create(fake.NamespaceObject(ns))
@@ -916,6 +938,9 @@ func deleteNamespaceRepos(nt *NT) {
 		revokeRepoSyncRoleBinding(nt, nr.Namespace)
 		revokeRepoSyncSecret(nt, nr.Namespace)
 		revokeRepoSyncNamespace(nt, nr.Namespace)
+		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
+			revokeRepoSyncClusterRoleBinding(nt, nr.Namespace)
+		}
 	}
 
 	rsClusterRole := repoSyncClusterRole()
