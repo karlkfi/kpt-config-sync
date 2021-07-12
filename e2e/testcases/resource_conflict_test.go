@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,7 +128,14 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	// Validate multi-repo metrics from root reconciler.
 	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5, metrics.ResourceDeleted("Role"))
+		var err error
+		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
+		// available on GKE.
+		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6, metrics.ResourceDeleted("Role"))
+		} else {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5, metrics.ResourceDeleted("Role"))
+		}
 		if err != nil {
 			return err
 		}

@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -276,7 +278,14 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 	// Validate multi-repo metrics from root reconciler.
 	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
 		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4, metrics.ResourceDeleted("RepoSync"))
+		var err error
+		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
+		// available on GKE.
+		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5, metrics.ResourceDeleted("RepoSync"))
+		} else {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4, metrics.ResourceDeleted("RepoSync"))
+		}
 		if err != nil {
 			return err
 		}
