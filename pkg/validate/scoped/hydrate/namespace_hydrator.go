@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,7 @@ func NamespaceSelectors(objs *objects.Scoped) status.MultiError {
 	}
 	var result []ast.FileObject
 	for _, obj := range objs.Namespace {
-		_, hasSelector := obj.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+		_, hasSelector := obj.GetAnnotations()[metadata.NamespaceSelectorAnnotationKey]
 		if hasSelector {
 			copies, err := makeNamespaceCopies(obj, nsSelectors)
 			if err != nil {
@@ -110,7 +111,7 @@ func labelSelector(obj ast.FileObject) (labels.Selector, status.Error) {
 // makeNamespaceCopies uses the given object's namespace selector to make a copy
 // of it into each namespace that is selected by it.
 func makeNamespaceCopies(obj ast.FileObject, nsSelectors map[string][]string) ([]ast.FileObject, status.Error) {
-	selector := obj.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+	selector := obj.GetAnnotations()[metadata.NamespaceSelectorAnnotationKey]
 	selected, exists := nsSelectors[selector]
 	if !exists {
 		return nil, selectors.ObjectHasUnknownNamespaceSelector(obj, selector)

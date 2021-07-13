@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -186,7 +186,7 @@ func TestNamespaceSelectors(t *testing.T) {
 											core.Label("sre-support", "true")),
 										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
+											core.Annotation(metadata.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},
@@ -214,7 +214,7 @@ func TestNamespaceSelectors(t *testing.T) {
 											core.Label("sre-support", "true")),
 										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
+											core.Annotation(metadata.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},
@@ -244,7 +244,7 @@ func TestNamespaceSelectors(t *testing.T) {
 										fake.Namespace("namespaces/foo/frontend"),
 										fake.RoleAtPath("namespaces/foo/role.yaml",
 											core.Namespace("frontend"),
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "sre")),
+											core.Annotation(metadata.NamespaceSelectorAnnotationKey, "sre")),
 									},
 								},
 							},

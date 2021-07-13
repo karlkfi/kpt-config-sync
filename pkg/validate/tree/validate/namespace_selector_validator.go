@@ -3,11 +3,11 @@ package validate
 import (
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +40,7 @@ func validateNamespaceSelectors(objs []ast.FileObject, nsSelectors map[string]as
 		case kinds.Namespace():
 			namespaceDir = obj.Dir().SlashPath()
 		default:
-			name, hasSelector := obj.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+			name, hasSelector := obj.GetAnnotations()[metadata.NamespaceSelectorAnnotationKey]
 			if hasSelector {
 				selector, known := nsSelectors[name]
 				if !known {

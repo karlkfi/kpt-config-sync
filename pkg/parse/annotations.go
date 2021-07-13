@@ -5,12 +5,11 @@ import (
 	"fmt"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 )
 
 // gitContext contains the fields which identify where a resource is being synced
@@ -33,16 +32,16 @@ func addAnnotationsAndLabels(objs []ast.FileObject, scope declared.Scope, gc git
 		inventoryID = applier.InventoryID(string(scope))
 	}
 	for _, obj := range objs {
-		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
-		core.SetAnnotation(obj, constants.GitContextKey, string(gcVal))
-		core.SetAnnotation(obj, constants.ResourceManagerKey, string(scope))
-		core.SetAnnotation(obj, v1.SyncTokenAnnotationKey, commitHash)
-		core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
-		core.SetAnnotation(obj, constants.OwningInventoryKey, inventoryID)
+		core.SetLabel(obj, metadata.ManagedByKey, metadata.ManagedByValue)
+		core.SetAnnotation(obj, metadata.GitContextKey, string(gcVal))
+		core.SetAnnotation(obj, metadata.ResourceManagerKey, string(scope))
+		core.SetAnnotation(obj, metadata.SyncTokenAnnotationKey, commitHash)
+		core.SetAnnotation(obj, metadata.ResourceIDKey, core.GKNN(obj))
+		core.SetAnnotation(obj, metadata.OwningInventoryKey, inventoryID)
 
-		value := core.GetAnnotation(obj, v1.ResourceManagementKey)
-		if value != v1.ResourceManagementDisabled {
-			core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+		value := core.GetAnnotation(obj, metadata.ResourceManagementKey)
+		if value != metadata.ResourceManagementDisabled {
+			core.SetAnnotation(obj, metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)
 		}
 	}
 	return nil

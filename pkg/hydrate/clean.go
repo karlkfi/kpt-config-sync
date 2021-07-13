@@ -1,9 +1,7 @@
 package hydrate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/validate/raw/validate"
@@ -22,9 +20,9 @@ func clean(o ast.FileObject) {
 	// Restore or remove the hnc.x-k8s.io/managed-by annotation from namespace objects.
 	if o.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 		for k := range annotations {
-			if k == hnc.AnnotationKeyV1A2 {
-				if value, ok := annotations[hnc.OriginalHNCManagedByValue]; ok {
-					annotations[hnc.AnnotationKeyV1A2] = value
+			if k == metadata.HNCManagedBy {
+				if value, ok := annotations[metadata.OriginalHNCManagedByValue]; ok {
+					annotations[metadata.HNCManagedBy] = value
 				} else {
 					delete(annotations, k)
 				}
@@ -35,7 +33,7 @@ func clean(o ast.FileObject) {
 	// Remove all the annotations starting with configsync.gke.io or configmanagement.gke.io
 	// except for the configmanagement.gke.io/managed annotation.
 	for k := range annotations {
-		if metadata.HasConfigSyncPrefix(k) && k != v1.ResourceManagementKey {
+		if metadata.HasConfigSyncPrefix(k) && k != metadata.ResourceManagementKey {
 			delete(annotations, k)
 		}
 	}

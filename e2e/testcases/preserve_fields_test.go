@@ -8,12 +8,10 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -323,7 +321,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 	nt.Root.CommitAndPush("Adding ConfigMap with no labels to repo")
 	nt.WaitForRepoSyncs()
 
-	var defaultLabels = []string{v1.ManagedByKey, configuration.DeclaredVersionLabel}
+	var defaultLabels = []string{metadata.ManagedByKey, metadata.DeclaredVersionLabel}
 
 	// Checking that the configmap with no labels appears on cluster, and
 	// that no user labels are specified
@@ -352,7 +350,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Check that the label is deleted after syncing.
 	err = nt.Validate(cmName, ns, &corev1.ConfigMap{},
-		nomostest.HasExactlyLabelKeys(v1.ManagedByKey, configuration.DeclaredVersionLabel))
+		nomostest.HasExactlyLabelKeys(metadata.ManagedByKey, metadata.DeclaredVersionLabel))
 	if err != nil {
 		nt.T.Fatal(err)
 	}

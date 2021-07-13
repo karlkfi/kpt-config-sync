@@ -6,7 +6,7 @@ import (
 	kptclient "github.com/GoogleContainerTools/kpt/pkg/client"
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
@@ -138,7 +138,7 @@ func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error
 			return cs.resouceClient.Update(ctx, meta, u, nil)
 		}
 		u.SetManagedFields(nil)
-		return cs.client.Patch(ctx, u, client.Apply, client.FieldOwner(constants.FieldManager), client.ForceOwnership)
+		return cs.client.Patch(ctx, u, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)
 	}
 	return nil
 }

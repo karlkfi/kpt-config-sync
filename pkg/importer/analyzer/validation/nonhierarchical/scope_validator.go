@@ -1,7 +1,7 @@
 package nonhierarchical
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,7 +30,7 @@ var missingNamespaceOnNamespacedResourceErrorBuilder = status.NewErrorBuilder(Mi
 func NamespaceAndSelectorResourceError(resource client.Object) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.
 		Sprintf("namespace-scoped resources MUST NOT declare both metadata.namespace and "+
-			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).
+			"metadata.annotations.%s", metadata.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
 
@@ -39,7 +39,7 @@ func NamespaceAndSelectorResourceError(resource client.Object) status.Error {
 func MissingNamespaceOnNamespacedResourceError(resource client.Object) status.Error {
 	return missingNamespaceOnNamespacedResourceErrorBuilder.
 		Sprintf("namespace-scoped resources MUST either declare either metadata.namespace or "+
-			"metadata.annotations.%s", v1.NamespaceSelectorAnnotationKey).
+			"metadata.annotations.%s", metadata.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }
 

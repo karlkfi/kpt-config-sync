@@ -7,11 +7,12 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -264,7 +265,7 @@ func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.Cluster
 
 	var subjects []rbacv1.Subject
 	subjects = append(subjects, subject(reconciler.RootSyncName,
-		constants.ControllerNamespace,
+		configsync.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
 	crb.Subjects = subjects
@@ -299,10 +300,10 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
-		core.SetAnnotation(&d.Spec.Template, constants.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 
 		// Add unique reconciler label
-		core.SetLabel(&d.Spec.Template, constants.ReconcilerLabel, reconciler.RootSyncName)
+		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconciler.RootSyncName)
 
 		templateSpec := &d.Spec.Template.Spec
 
@@ -355,7 +356,7 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 		// a constant) to the reconciler Deployment when the `Auth` is "gcenode".
 		// The container is added first time when the reconciler deployment is created.
 		switch rs.Spec.Auth {
-		case constants.GitSecretGCPServiceAccount, constants.GitSecretGCENode:
+		case configsync.GitSecretGCPServiceAccount, configsync.GitSecretGCENode:
 			if !containsGCENodeAskPassSidecar(updatedContainers) {
 				sidecar := gceNodeAskPassSidecar()
 				updatedContainers = append(updatedContainers, sidecar)

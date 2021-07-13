@@ -4,13 +4,13 @@ import (
 	"errors"
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/ast/node"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
@@ -88,7 +88,7 @@ func TestNamespaceSelector(t *testing.T) {
 									Objects: []ast.FileObject{
 										fake.Namespace("namespaces/hello/world"),
 										fake.RoleAtPath("namespaces/hello/world/role.yaml",
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev")),
+											core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev")),
 									},
 								},
 							},
@@ -118,7 +118,7 @@ func TestNamespaceSelector(t *testing.T) {
 									Objects: []ast.FileObject{
 										fake.Namespace("namespaces/hello/world"),
 										fake.RoleAtPath("namespaces/hello/world/role.yaml",
-											core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev")),
+											core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev")),
 									},
 								},
 							},

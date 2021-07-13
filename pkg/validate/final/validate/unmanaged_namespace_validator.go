@@ -1,10 +1,10 @@
 package validate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -43,6 +43,6 @@ func UnmanagedNamespaces(objs []ast.FileObject) status.MultiError {
 }
 
 func isUnmanaged(obj client.Object) bool {
-	annotation, hasAnnotation := obj.GetAnnotations()[v1.ResourceManagementKey]
-	return hasAnnotation && annotation == v1.ResourceManagementDisabled
+	annotation, hasAnnotation := obj.GetAnnotations()[metadata.ResourceManagementKey]
+	return hasAnnotation && annotation == metadata.ResourceManagementDisabled
 }

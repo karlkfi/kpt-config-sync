@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
@@ -75,7 +76,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/dev2", core.Label("environment", "dev")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 				},
 			},
 			want: &objects.Scoped{
@@ -87,10 +88,10 @@ func TestNamespaceSelectors(t *testing.T) {
 				Namespace: []ast.FileObject{
 					fake.Role(
 						core.Namespace("dev1"),
-						core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+						core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 					fake.Role(
 						core.Namespace("dev2"),
-						core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+						core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 				},
 			},
 		},
@@ -102,7 +103,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 				},
 			},
 			want: &objects.Scoped{
@@ -141,7 +142,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 				},
 			},
 			want: &objects.Scoped{
@@ -149,7 +150,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "dev-only")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "dev-only")),
 				},
 			},
 			wantErrs: selectors.ObjectHasUnknownNamespaceSelector(fake.Role(), "dev-only"),
@@ -162,7 +163,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "empty")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "empty")),
 				},
 			},
 			want: &objects.Scoped{
@@ -171,7 +172,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "empty")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "empty")),
 				},
 			},
 			wantErrs: selectors.EmptySelectorError(emptyNss),
@@ -184,7 +185,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "invalid")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "invalid")),
 				},
 			},
 			want: &objects.Scoped{
@@ -193,7 +194,7 @@ func TestNamespaceSelectors(t *testing.T) {
 					fake.Namespace("namespaces/prod", core.Label("environment", "prod")),
 				},
 				Namespace: []ast.FileObject{
-					fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "invalid")),
+					fake.Role(core.Annotation(metadata.NamespaceSelectorAnnotationKey, "invalid")),
 				},
 			},
 			wantErrs: selectors.InvalidSelectorError(invalidNSS, errors.New("")),

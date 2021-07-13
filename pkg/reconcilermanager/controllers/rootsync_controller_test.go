@@ -7,8 +7,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reconciler"
@@ -64,7 +64,7 @@ func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRo
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
 	sub.Name = reconciler.RootSyncName
-	sub.Namespace = constants.ControllerNamespace
+	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
 	return result
@@ -164,7 +164,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(constants.GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -183,7 +183,7 @@ func TestRootSyncReconciler(t *testing.T) {
 				branch:     branch,
 				repo:       rootsyncRepo,
 				secretType: "ssh",
-				period:     constants.DefaultPeriodSecs,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -272,7 +272,7 @@ func TestRootSyncReconciler(t *testing.T) {
 				branch:     branch,
 				repo:       rootsyncRepo,
 				secretType: "ssh",
-				period:     constants.DefaultPeriodSecs,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -321,7 +321,7 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(constants.GitSecretGCENode))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretGCENode))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs)
 
@@ -372,7 +372,7 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(constants.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs)
 
@@ -390,8 +390,8 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
-				secretType: constants.GitSecretGCPServiceAccount,
-				period:     constants.DefaultPeriodSecs,
+				secretType: configsync.GitSecretGCPServiceAccount,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -422,7 +422,7 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 		core.OwnerReference([]metav1.OwnerReference{
 			ownerReference(rootsyncKind, rootsyncName, ""),
 		}),
-		core.Annotation(constants.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
 	)
 
 	wantDeployments := []*appsv1.Deployment{
@@ -479,7 +479,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(constants.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretGCPServiceAccount), rootsyncGCPSAEmail(gcpSAEmail))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -497,8 +497,8 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
-				secretType: constants.GitSecretGCPServiceAccount,
-				period:     constants.DefaultPeriodSecs,
+				secretType: configsync.GitSecretGCPServiceAccount,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -529,7 +529,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		core.OwnerReference([]metav1.OwnerReference{
 			ownerReference(rootsyncKind, rootsyncName, ""),
 		}),
-		core.Annotation(constants.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
 	)
 
 	wantDeployments := []*appsv1.Deployment{
@@ -611,7 +611,7 @@ func TestRootSyncReconcilerRestart(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(constants.GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 

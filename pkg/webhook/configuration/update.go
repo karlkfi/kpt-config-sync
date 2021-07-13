@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/discovery"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -53,7 +54,7 @@ func Update(ctx context.Context, c client.Client, dc discovery.ServerResourcer, 
 	}
 
 	// skip updating the webhook configuration if the update is disabled.
-	if core.GetAnnotation(oldCfg, WebhookconfigurationKey) == WebhookConfigurationUpdateDisabled {
+	if core.GetAnnotation(oldCfg, metadata.WebhookconfigurationKey) == metadata.WebhookConfigurationUpdateDisabled {
 		return nil
 	}
 	// We aren't yet concerned with removing stale rules, so just merge the two

@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/golang/glog"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -87,7 +87,7 @@ func (r *reconciler) Remediate(ctx context.Context, id core.ID, obj client.Objec
 		// Should never happen as the Parser would have thrown an error.
 		return nonhierarchical.IllegalManagementAnnotationError(
 			d.Declared,
-			d.Declared.GetAnnotations()[v1.ResourceManagementKey],
+			d.Declared.GetAnnotations()[metadata.ResourceManagementKey],
 		)
 	case diff.Unmanage:
 		actual, err := d.UnstructuredActual()

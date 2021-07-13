@@ -6,9 +6,8 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/hnc"
@@ -24,6 +23,7 @@ import (
 	"github.com/google/nomos/pkg/importer/id"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/client"
@@ -71,13 +71,13 @@ func Generate() AllExamples {
 
 	// 1004
 	result.add(nonhierarchical.IllegalNamespaceSelectorAnnotationError(fake.Namespace("namespaces/foo")))
-	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), constants.ClusterNameSelectorAnnotationKey))
+	result.add(nonhierarchical.IllegalClusterSelectorAnnotationError(fake.Cluster(), csmetadata.ClusterNameSelectorAnnotationKey))
 
 	// 1005
 	result.add(nonhierarchical.IllegalManagementAnnotationError(fake.Role(), "invalid"))
 
 	// 1006
-	result.add(core.ObjectParseError(fake.Role(), errors.New("wrong type")))
+	result.add(status.ObjectParseError(fake.Role(), errors.New("wrong type")))
 
 	// 1007
 	result.add(validation.IllegalAbstractNamespaceObjectKindError(fake.RoleAtPath("namespaces/foo/bar/role.yaml")))
@@ -90,10 +90,10 @@ func Generate() AllExamples {
 		fake.RoleAtPath("namespaces/foo/r.yaml", core.Namespace("bar")), "foo"))
 
 	// 1010
-	result.add(metadata.IllegalAnnotationDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "illegal-annotation"}))
+	result.add(metadata.IllegalAnnotationDefinitionError(fake.Role(), []string{csmetadata.ConfigManagementPrefix + "illegal-annotation"}))
 
 	// 1011
-	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{v1.ConfigManagementPrefix + "label"}))
+	result.add(metadata.IllegalLabelDefinitionError(fake.Role(), []string{csmetadata.ConfigManagementPrefix + "label"}))
 
 	// 1012 is Deprecated.
 	result.markDeprecated("1012")
@@ -267,7 +267,7 @@ func Generate() AllExamples {
 	result.add(nonhierarchical.ManagedResourceInUnmanagedNamespace("foo", fake.Role()))
 
 	// 1057
-	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label" + hnc.DepthSuffix}))
+	result.add(hnc.IllegalDepthLabelError(fake.Role(), []string{"label" + csmetadata.DepthSuffix}))
 
 	// 1058
 	result.add(parse.BadScopeErr(fake.Role(core.Namespace("shipping")), "dev"))
@@ -279,7 +279,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(nonhierarchical.InvalidSyncName(constants.RepoSyncName, fake.RepoSyncObject(core.Name("invalid"))))
+	result.add(nonhierarchical.InvalidSyncName(configsync.RepoSyncName, fake.RepoSyncObject(core.Name("invalid"))))
 
 	// 1062 is Deprecated.
 	result.markDeprecated("1062")

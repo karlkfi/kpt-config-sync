@@ -1,9 +1,9 @@
 package validate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,7 +37,7 @@ func NamespaceScoped(obj ast.FileObject) status.Error {
 }
 
 func hasNamespaceSelector(obj ast.FileObject) bool {
-	_, ok := obj.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+	_, ok := obj.GetAnnotations()[metadata.NamespaceSelectorAnnotationKey]
 	return ok
 }
 

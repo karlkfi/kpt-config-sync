@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
@@ -148,7 +148,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String()))
 	}
 
-	if oldObj.GetAnnotations()[constants.LifecycleMutationAnnotation] == constants.IgnoreMutation {
+	if oldObj.GetAnnotations()[csmetadata.LifecycleMutationAnnotation] == csmetadata.IgnoreMutation {
 		// We ignore user modifications to this resource. Per the above check, we
 		// know that this annotation has not been altered.
 		return allow()
@@ -230,7 +230,7 @@ func getManager(obj client.Object) string {
 	if annotations == nil {
 		return ""
 	}
-	return annotations[constants.ResourceManagerKey]
+	return annotations[csmetadata.ResourceManagerKey]
 }
 
 func allow() admission.Response {

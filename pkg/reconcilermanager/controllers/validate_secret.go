@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,23 +32,23 @@ func validateSecretExist(ctx context.Context, secretRef, namespace string, c cli
 // validateSecretData verify secret data for the given auth type.
 func validateSecretData(auth string, secret *corev1.Secret) error {
 	switch auth {
-	case constants.GitSecretSSH:
-		if _, ok := secret.Data[constants.GitSecretConfigKeySSH]; !ok {
+	case configsync.GitSecretSSH:
+		if _, ok := secret.Data[GitSecretConfigKeySSH]; !ok {
 			return fmt.Errorf("git secretType was set as \"ssh\" but ssh key is not present in %v secret", secret.Name)
 		}
-	case constants.GitSecretCookieFile:
-		if _, ok := secret.Data[constants.GitSecretConfigKeyCookieFile]; !ok {
+	case configsync.GitSecretCookieFile:
+		if _, ok := secret.Data[GitSecretConfigKeyCookieFile]; !ok {
 			return fmt.Errorf("git secretType was set as \"cookiefile\" but cookie_file key is not present in %v secret", secret.Name)
 		}
-	case constants.GitSecretToken:
-		if _, ok := secret.Data[constants.GitSecretConfigKeyToken]; !ok {
+	case configsync.GitSecretToken:
+		if _, ok := secret.Data[GitSecretConfigKeyToken]; !ok {
 			return fmt.Errorf("git secretType was set as \"token\" but token key is not present in %v secret", secret.Name)
 		}
-		if _, ok := secret.Data[constants.GitSecretConfigKeyTokenUsername]; !ok {
+		if _, ok := secret.Data[GitSecretConfigKeyTokenUsername]; !ok {
 			return fmt.Errorf("git secretType was set as \"token\" but username key is not present in %v secret", secret.Name)
 		}
-	case constants.GitSecretNone:
-	case constants.GitSecretGCENode:
+	case configsync.GitSecretNone:
+	case configsync.GitSecretGCENode:
 	default:
 		return fmt.Errorf("git secretType is set to unsupported value: %q", auth)
 	}

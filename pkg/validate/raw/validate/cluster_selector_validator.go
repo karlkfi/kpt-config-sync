@@ -1,14 +1,13 @@
 package validate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,11 +66,11 @@ func validateClusterSelectorAnnotation(obj ast.FileObject) status.Error {
 		return nil
 	}
 
-	if _, hasAnnotation := obj.GetAnnotations()[v1.LegacyClusterSelectorAnnotationKey]; hasAnnotation {
-		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, v1.LegacyClusterSelectorAnnotationKey)
+	if _, hasAnnotation := obj.GetAnnotations()[metadata.LegacyClusterSelectorAnnotationKey]; hasAnnotation {
+		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, metadata.LegacyClusterSelectorAnnotationKey)
 	}
-	if _, hasAnnotation := obj.GetAnnotations()[constants.ClusterNameSelectorAnnotationKey]; hasAnnotation {
-		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, constants.ClusterNameSelectorAnnotationKey)
+	if _, hasAnnotation := obj.GetAnnotations()[metadata.ClusterNameSelectorAnnotationKey]; hasAnnotation {
+		return nonhierarchical.IllegalClusterSelectorAnnotationError(obj, metadata.ClusterNameSelectorAnnotationKey)
 	}
 	return nil
 }

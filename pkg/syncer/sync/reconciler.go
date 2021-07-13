@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -234,7 +235,7 @@ func (r *metaReconciler) gcResources(ctx context.Context, sync *v1.Sync, gvks ma
 	}
 	for _, u := range ul.Items {
 		annots := u.GetAnnotations()
-		if v, ok := annots[v1.ResourceManagementKey]; !ok || v != v1.ResourceManagementEnabled {
+		if v, ok := annots[metadata.ResourceManagementKey]; !ok || v != metadata.ResourceManagementEnabled {
 			continue
 		}
 		if err := cl.Delete(ctx, &u); err != nil {

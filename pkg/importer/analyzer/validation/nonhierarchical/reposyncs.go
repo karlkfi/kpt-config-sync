@@ -3,19 +3,19 @@ package nonhierarchical
 import (
 	"strings"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	authSSH               = constants.GitSecretSSH
-	authCookiefile        = constants.GitSecretCookieFile
-	authGCENode           = constants.GitSecretGCENode
-	authToken             = constants.GitSecretToken
-	authNone              = constants.GitSecretNone
-	authGCPServiceAccount = constants.GitSecretGCPServiceAccount
+	authSSH               = configsync.GitSecretSSH
+	authCookiefile        = configsync.GitSecretCookieFile
+	authGCENode           = configsync.GitSecretGCENode
+	authToken             = configsync.GitSecretToken
+	authNone              = configsync.GitSecretNone
+	authGCPServiceAccount = configsync.GitSecretGCPServiceAccount
 )
 
 // gcpSASuffix specifies the default suffix used with gcp ServiceAccount email.
@@ -25,7 +25,7 @@ const gcpSASuffix = ".iam.gserviceaccount.com"
 // ValidateRepoSync validates the content and structure of a RepoSync for any
 // obvious problems.
 func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
-	if rs.GetName() != constants.RepoSyncName {
+	if rs.GetName() != configsync.RepoSyncName {
 		return InvalidSyncName(rs.Name, rs)
 	}
 	return validateGitSpec(rs.Spec.Git, rs)

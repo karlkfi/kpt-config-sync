@@ -1,7 +1,7 @@
 package nonhierarchical
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,6 +27,6 @@ func IllegalNamespaceSelectorAnnotationError(resource client.Object) status.Erro
 	return illegalSelectorAnnotationError.
 		Sprintf("Cluster-scoped objects may not be namespace-selected, and so MUST NOT declare the annotation '%s'. "+
 			"To fix, remove `metadata.annotations.%s` from:",
-			v1.NamespaceSelectorAnnotationKey, v1.NamespaceSelectorAnnotationKey).
+			metadata.NamespaceSelectorAnnotationKey, metadata.NamespaceSelectorAnnotationKey).
 		BuildWithResources(resource)
 }

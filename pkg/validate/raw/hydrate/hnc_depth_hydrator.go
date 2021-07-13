@@ -3,11 +3,10 @@ package hydrate
 import (
 	"strconv"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	oldhnc "github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -18,11 +17,11 @@ func HNCDepth(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
 		if obj.GetObjectKind().GroupVersionKind() == kinds.Namespace() {
 			addDepthLabels(obj)
-			originalHNCManagedByValue := core.GetAnnotation(obj, oldhnc.AnnotationKeyV1A2)
+			originalHNCManagedByValue := core.GetAnnotation(obj, metadata.HNCManagedBy)
 			if originalHNCManagedByValue != "" {
-				core.SetAnnotation(obj, oldhnc.OriginalHNCManagedByValue, originalHNCManagedByValue)
+				core.SetAnnotation(obj, metadata.OriginalHNCManagedByValue, originalHNCManagedByValue)
 			}
-			core.SetAnnotation(obj, oldhnc.AnnotationKeyV1A2, v1.ManagedByValue)
+			core.SetAnnotation(obj, metadata.HNCManagedBy, metadata.ManagedByValue)
 		}
 	}
 	return nil
@@ -47,7 +46,7 @@ func addDepthLabels(obj ast.FileObject) {
 	p = p[1 : len(p)-1]
 
 	for i, ans := range p {
-		l := ans + oldhnc.DepthSuffix
+		l := ans + metadata.DepthSuffix
 		dist := strconv.Itoa(len(p) - i - 1)
 		core.SetLabel(obj, l, dist)
 	}

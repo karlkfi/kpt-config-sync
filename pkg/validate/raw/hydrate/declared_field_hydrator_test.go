@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -60,7 +60,7 @@ func TestDeclaredFields(t *testing.T) {
 								"name":      "hello",
 								"namespace": "world",
 								"annotations": map[string]interface{}{
-									constants.DeclaredFieldsKey: `{"f:rules":{}}`,
+									metadata.DeclaredFieldsKey: `{"f:rules":{}}`,
 								},
 							},
 							"rules": []interface{}{
@@ -109,7 +109,7 @@ func TestDeclaredFields(t *testing.T) {
 									"this": "that",
 								},
 								"annotations": map[string]interface{}{
-									constants.DeclaredFieldsKey: `{"f:metadata":{"f:labels":{"f:this":{}}}}`,
+									metadata.DeclaredFieldsKey: `{"f:metadata":{"f:labels":{"f:this":{}}}}`,
 								},
 							},
 						},
@@ -150,7 +150,7 @@ func TestDeclaredFields(t *testing.T) {
 								"name":      "heavy",
 								"namespace": "foo",
 								"annotations": map[string]interface{}{
-									constants.DeclaredFieldsKey: `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:lbs":{}}}`,
+									metadata.DeclaredFieldsKey: `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:spec":{".":{},"f:lbs":{}}}`,
 								},
 							},
 							"spec": map[string]interface{}{

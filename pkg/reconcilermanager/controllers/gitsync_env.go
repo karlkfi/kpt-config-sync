@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -44,5 +44,5 @@ func gitSyncTokenAuthEnv(secretRef string) []corev1.EnvVar {
 }
 
 func authTypeToken(secret string) bool {
-	return constants.GitSecretToken == secret
+	return configsync.GitSecretToken == secret
 }

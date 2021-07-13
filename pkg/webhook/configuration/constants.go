@@ -35,15 +35,3 @@ const ContainerPort = 10250
 
 // CertDir matches the mountPath specified in admission-webhook.yaml.
 const CertDir = "/certs"
-
-// DeclaredVersionLabel declares the API Version in which a resource was initially
-// declared.
-const DeclaredVersionLabel = configsync.GroupName + "/declared-version"
-
-// WebhookconfigurationKey annotation declares if the webhook configuration
-// should be updated.
-const WebhookconfigurationKey = configsync.GroupName + "/webhook-configuration-update"
-
-// WebhookConfigurationUpdateDisabled is the value for WebhookConfigurationKey
-// to disable updating the webhook configuration.
-const WebhookConfigurationUpdateDisabled = "disabled"

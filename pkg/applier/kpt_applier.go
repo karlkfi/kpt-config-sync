@@ -8,10 +8,10 @@ import (
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/metadata"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -58,7 +58,7 @@ var _ Interface = &Applier{}
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
 func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
-	u := newInventoryUnstructured(constants.RepoSyncName, string(namespace))
+	u := newInventoryUnstructured(configsync.RepoSyncName, string(namespace))
 	a := &Applier{
 		inventory:     live.WrapInventoryResourceGroup(u),
 		client:        c,
@@ -72,7 +72,7 @@ func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
 func NewRootApplier(c client.Client) *Applier {
-	u := newInventoryUnstructured(constants.RootSyncName, configmanagement.ControllerNamespace)
+	u := newInventoryUnstructured(configsync.RootSyncName, configmanagement.ControllerNamespace)
 	a := &Applier{
 		inventory:     live.WrapInventoryResourceGroup(u),
 		client:        c,
@@ -182,7 +182,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		ServerSideOptions: common.ServerSideOptions{
 			ServerSideApply: true,
 			ForceConflicts:  true,
-			FieldManager:    constants.FieldManager,
+			FieldManager:    configsync.FieldManager,
 		},
 		InventoryPolicy: a.policy,
 	}
@@ -248,8 +248,8 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (m
 func newInventoryUnstructured(name, namespace string) *unstructured.Unstructured {
 	id := InventoryID(namespace)
 	u := live.ResourceGroupUnstructured(name, namespace, id)
-	core.SetLabel(u, v1.ManagedByKey, v1.ManagedByValue)
-	core.SetAnnotation(u, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
+	core.SetLabel(u, metadata.ManagedByKey, metadata.ManagedByValue)
+	core.SetAnnotation(u, metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)
 	return u
 }
 
@@ -262,9 +262,9 @@ func newInventoryUnstructured(name, namespace string) *unstructured.Unstructured
 func InventoryID(namespace string) string {
 	var name string
 	if namespace == configmanagement.ControllerNamespace {
-		name = constants.RootSyncName
+		name = configsync.RootSyncName
 	} else {
-		name = constants.RepoSyncName
+		name = configsync.RepoSyncName
 	}
 	return namespace + "_" + name
 }

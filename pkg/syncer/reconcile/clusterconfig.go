@@ -8,6 +8,7 @@ import (
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -184,7 +185,7 @@ func (r *clusterConfigReconciler) manageConfigs(ctx context.Context, config *v1.
 // NewConfigManagementError returns a ConfigManagementError corresponding to the given ClusterConfig and error.
 func NewConfigManagementError(config *v1.ClusterConfig, err error) v1.ConfigManagementError {
 	e := v1.ErrorResource{
-		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
+		SourcePath:        config.GetAnnotations()[metadata.SourcePathAnnotationKey],
 		ResourceName:      config.GetName(),
 		ResourceNamespace: config.GetNamespace(),
 		ResourceGVK:       config.GroupVersionKind(),

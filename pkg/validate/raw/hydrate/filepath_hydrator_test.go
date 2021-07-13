@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -36,15 +36,15 @@ func TestFilepath(t *testing.T) {
 				Objects: []ast.FileObject{
 					fake.ClusterRoleAtPath("cluster/clusterrole.yaml",
 						core.Name("reader"),
-						core.Annotation(v1.SourcePathAnnotationKey, dir+"cluster/clusterrole.yaml")),
+						core.Annotation(metadata.SourcePathAnnotationKey, dir+"cluster/clusterrole.yaml")),
 					fake.RoleAtPath("namespaces/role.yaml",
 						core.Name("writer"),
-						core.Annotation(v1.SourcePathAnnotationKey, dir+"namespaces/role.yaml")),
+						core.Annotation(metadata.SourcePathAnnotationKey, dir+"namespaces/role.yaml")),
 					fake.Namespace("namespaces/hello",
-						core.Annotation(v1.SourcePathAnnotationKey, dir+"namespaces/hello/namespace.yaml")),
+						core.Annotation(metadata.SourcePathAnnotationKey, dir+"namespaces/hello/namespace.yaml")),
 					fake.RoleBindingAtPath("namespaces/hello/binding.yaml",
 						core.Name("bind-writer"),
-						core.Annotation(v1.SourcePathAnnotationKey, dir+"namespaces/hello/binding.yaml")),
+						core.Annotation(metadata.SourcePathAnnotationKey, dir+"namespaces/hello/binding.yaml")),
 				},
 			},
 		},
@@ -64,7 +64,7 @@ func TestFilepath(t *testing.T) {
 					fake.ClusterRoleAtPath("cluster/clusterrole.yaml",
 						core.Name("reader"),
 						core.Annotation("color", "blue"),
-						core.Annotation(v1.SourcePathAnnotationKey, dir+"cluster/clusterrole.yaml")),
+						core.Annotation(metadata.SourcePathAnnotationKey, dir+"cluster/clusterrole.yaml")),
 				},
 			},
 		},

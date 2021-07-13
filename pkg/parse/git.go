@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -51,7 +51,7 @@ func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, stat
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
 		return result, status.SourceError.Wrap(err).Sprintf("unable to sync repo\n%s",
-			git.SyncError(fmt.Sprintf("%s=%s", constants.ReconcilerLabel, reconcilerName))).Build()
+			git.SyncError(fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
 	}
 
 	commit, e := git.CommitHash(gitDir.OSPath())

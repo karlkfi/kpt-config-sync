@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -51,10 +51,10 @@ spec:
 // Due to b/184764581, the pod and the namespace are stuck in the terminating state.
 // To delete them gracefully, we unmanage them from the repo and manually delete them.
 func cleanup(nt *nomostest.NT, ns *corev1.Namespace, pod *corev1.Pod) {
-	ns.Annotations[v1.ResourceManagementKey] = v1.ResourceManagementDisabled
+	ns.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
 	nt.Root.Add("acme/ns.yaml", ns)
 	pod = fake.PodObject(pod.Name, pod.Spec.Containers, core.Namespace(pod.Namespace),
-		core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled))
+		core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementDisabled))
 	nt.Root.Add("acme/pod.yaml", pod)
 	nt.Root.CommitAndPush("unmanage the pod and the namespace")
 	nt.WaitForRepoSyncs()

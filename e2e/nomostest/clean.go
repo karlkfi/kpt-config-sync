@@ -6,10 +6,10 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest/testing"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
@@ -134,10 +134,10 @@ func Clean(nt *NT, failOnError FailOnError) {
 
 func isConfigSyncAnnotation(annotation string) bool {
 	return annotation == common.LifecycleDeleteAnnotation ||
-		strings.Contains(annotation, v1.ConfigManagementPrefix) ||
-		strings.Contains(annotation, constants.ConfigSyncPrefix) ||
-		annotation == constants.OwningInventoryKey ||
-		annotation == hnc.AnnotationKeyV1A2
+		strings.Contains(annotation, metadata.ConfigManagementPrefix) ||
+		strings.Contains(annotation, configsync.ConfigSyncPrefix) ||
+		annotation == metadata.OwningInventoryKey ||
+		annotation == metadata.HNCManagedBy
 }
 
 func isTestAnnotation(annotation string) bool {
@@ -145,7 +145,7 @@ func isTestAnnotation(annotation string) bool {
 }
 
 func isConfigSyncLabel(key, value string) bool {
-	return (key == v1.ManagedByKey && value == v1.ManagedByValue) || key == configuration.DeclaredVersionLabel || strings.Contains(key, hnc.DepthSuffix)
+	return (key == metadata.ManagedByKey && value == metadata.ManagedByValue) || key == metadata.DeclaredVersionLabel || strings.Contains(key, metadata.DepthSuffix)
 }
 
 func isTestLabel(key string) bool {

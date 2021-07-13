@@ -6,14 +6,15 @@ import (
 
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	oldhnc "github.com/google/nomos/pkg/importer/analyzer/hnc"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
 const (
-	illegalSuffixedLabel  = "unsupported" + oldhnc.DepthSuffix
-	illegalSuffixedLabel2 = "unsupported2" + oldhnc.DepthSuffix
+	illegalSuffixedLabel  = "unsupported" + metadata.DepthSuffix
+	illegalSuffixedLabel2 = "unsupported2" + metadata.DepthSuffix
 )
 
 func TestHNCLabels(t *testing.T) {
@@ -35,21 +36,21 @@ func TestHNCLabels(t *testing.T) {
 			name: "one illegal label",
 			obj: fake.RoleAtPath("namespaces/hello/role.yaml",
 				core.Label(illegalSuffixedLabel, "")),
-			wantErr: oldhnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel}),
+			wantErr: hnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel}),
 		},
 		{
 			name: "two illegal labels",
 			obj: fake.RoleAtPath("namespaces/hello/role.yaml",
 				core.Label(illegalSuffixedLabel, ""),
 				core.Label(illegalSuffixedLabel2, "")),
-			wantErr: oldhnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel, illegalSuffixedLabel2}),
+			wantErr: hnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel, illegalSuffixedLabel2}),
 		},
 		{
 			name: "one legal and one illegal label",
 			obj: fake.RoleAtPath("namespaces/hello/role.yaml",
 				core.Label(legalLabel, ""),
 				core.Label(illegalSuffixedLabel, "")),
-			wantErr: oldhnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel}),
+			wantErr: hnc.IllegalDepthLabelError(fake.Role(), []string{illegalSuffixedLabel}),
 		},
 	}
 

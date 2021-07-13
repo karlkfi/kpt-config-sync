@@ -6,9 +6,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
-	"github.com/google/nomos/pkg/webhook/configuration"
 )
 
 func TestDeclaredVersion(t *testing.T) {
@@ -26,7 +26,7 @@ func TestDeclaredVersion(t *testing.T) {
 			},
 			want: &objects.Raw{
 				Objects: []ast.FileObject{
-					fake.RoleBinding(core.Label(configuration.DeclaredVersionLabel, "v1")),
+					fake.RoleBinding(core.Label(metadata.DeclaredVersionLabel, "v1")),
 				},
 			},
 		},
@@ -39,7 +39,7 @@ func TestDeclaredVersion(t *testing.T) {
 			},
 			want: &objects.Raw{
 				Objects: []ast.FileObject{
-					fake.RoleBindingV1Beta1(core.Label(configuration.DeclaredVersionLabel, "v1beta1")),
+					fake.RoleBindingV1Beta1(core.Label(metadata.DeclaredVersionLabel, "v1beta1")),
 				},
 			},
 		},

@@ -3,10 +3,10 @@ package validate
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -34,7 +34,7 @@ func TestValidManagementAnnotation(t *testing.T) {
 		},
 		{
 			name: "invalid management fails",
-			obj:  fake.Role(core.Annotation(v1.ResourceManagementKey, "invalid")),
+			obj:  fake.Role(core.Annotation(metadata.ResourceManagementKey, "invalid")),
 			want: fake.Error(nonhierarchical.IllegalManagementAnnotationErrorCode),
 		},
 	}

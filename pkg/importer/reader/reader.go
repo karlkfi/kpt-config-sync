@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/syntax"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -254,7 +254,7 @@ func getInvalidKeys(o interface{}) ([]string, error) {
 // namespace, and name.
 func parseID(content map[string]interface{}, path cmpath.Absolute) (*unstructured.Unstructured, []string) {
 	u := &unstructured.Unstructured{}
-	core.Annotation(v1.SourcePathAnnotationKey, path.OSPath())(u)
+	core.Annotation(metadata.SourcePathAnnotationKey, path.OSPath())(u)
 	var errs []string
 
 	apiVersion, err := parseString(content, "apiVersion")

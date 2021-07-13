@@ -1,18 +1,16 @@
-package metadata
+// Set the package name to `metadata_test` to avoid import cycles.
+package metadata_test
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/analyzer/hnc"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -28,76 +26,76 @@ func TestHasConfigSyncMetadata(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "An object with the `constants.OwningInventoryKey` annotation",
+			name: "An object with the `OwningInventoryKey` annotation",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(constants.OwningInventoryKey, "random-value")),
+				core.Annotation(metadata.OwningInventoryKey, "random-value")),
 			want: true,
 		},
 		{
-			name: "An object with the `constants.LifecycleMutationAnnotation` annotation",
+			name: "An object with the `LifecycleMutationAnnotation` annotation",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(constants.LifecycleMutationAnnotation, "random-value")),
+				core.Annotation(metadata.LifecycleMutationAnnotation, "random-value")),
 			want: true,
 		},
 		{
 			name: "An object with the `client.lifecycle.config.k8s.io/others` annotation",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(constants.LifecyclePrefix+"/others", "random-value")),
+				core.Annotation(metadata.LifecyclePrefix+"/others", "random-value")),
 			want: false,
 		},
 		{
-			name: "An object with the `v1.ResourceManagementKey` annotation",
+			name: "An object with the `ResourceManagementKey` annotation",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled)),
+				core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)),
 			want: true,
 		},
 		{
-			name: "An object with the `constants.ResourceIDKey` annotation",
+			name: "An object with the `ResourceIDKey` annotation",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(constants.ResourceIDKey, "random-value")),
+				core.Annotation(metadata.ResourceIDKey, "random-value")),
 			want: true,
 		},
 		{
-			name: "An object with the `hnc.AnnotationKeyV1A2` annotation (random value)",
+			name: "An object with the `HNCManagedBy` annotation (random value)",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(hnc.AnnotationKeyV1A2, "random-value")),
+				core.Annotation(metadata.HNCManagedBy, "random-value")),
 			want: false,
 		},
 		{
-			name: "An object with the `hnc.AnnotationKeyV1A2` annotation (correct value)",
+			name: "An object with the `HNCManagedBy` annotation (correct value)",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Annotation(hnc.AnnotationKeyV1A2, configmanagement.GroupName)),
+				core.Annotation(metadata.HNCManagedBy, configmanagement.GroupName)),
 			want: true,
 		},
 		{
-			name: "An object with the `configuration.DeclaredVersionLabel` label",
+			name: "An object with the `DeclaredVersionLabel` label",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Label(configuration.DeclaredVersionLabel, "v1")),
+				core.Label(metadata.DeclaredVersionLabel, "v1")),
 			want: true,
 		},
 		{
-			name: "An object with the `v1.SystemLabel` label",
+			name: "An object with the `SystemLabel` label",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Label(v1.SystemLabel, "random-value")),
+				core.Label(metadata.SystemLabel, "random-value")),
 			want: true,
 		},
 		{
-			name: "An object with the `v1.ManagedByKey` label (correct value)",
+			name: "An object with the `ManagedByKey` label (correct value)",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Label(v1.ManagedByKey, v1.ManagedByValue)),
+				core.Label(metadata.ManagedByKey, metadata.ManagedByValue)),
 			want: true,
 		},
 		{
-			name: "An object with the `v1.ManagedByKey` label (random value)",
+			name: "An object with the `ManagedByKey` label (random value)",
 			obj: fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
-				core.Label(v1.ManagedByKey, "random-value")),
+				core.Label(metadata.ManagedByKey, "random-value")),
 			want: false,
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := HasConfigSyncMetadata(tc.obj)
+			got := metadata.HasConfigSyncMetadata(tc.obj)
 			if got != tc.want {
 				t.Errorf("got HasConfigSyncMetadata() = %v, want %v", got, tc.want)
 			}
@@ -108,13 +106,13 @@ func TestHasConfigSyncMetadata(t *testing.T) {
 func TestRemoveConfigSyncMetadata(t *testing.T) {
 	obj := fake.UnstructuredObject(kinds.Deployment(), core.Name("deploy"),
 		syncertest.ManagementEnabled,
-		core.Annotation(constants.OwningInventoryKey, "random-value"),
-		core.Annotation(constants.LifecycleMutationAnnotation, "random-value"),
-		core.Annotation(hnc.AnnotationKeyV1A2, configmanagement.GroupName),
-		core.Label(configuration.DeclaredVersionLabel, "v1"),
-		core.Label(v1.SystemLabel, "random-value"),
-		core.Label(v1.ManagedByKey, v1.ManagedByValue))
-	updated := RemoveConfigSyncMetadata(obj)
+		core.Annotation(metadata.OwningInventoryKey, "random-value"),
+		core.Annotation(metadata.LifecycleMutationAnnotation, "random-value"),
+		core.Annotation(metadata.HNCManagedBy, configmanagement.GroupName),
+		core.Label(metadata.DeclaredVersionLabel, "v1"),
+		core.Label(metadata.SystemLabel, "random-value"),
+		core.Label(metadata.ManagedByKey, metadata.ManagedByValue))
+	updated := metadata.RemoveConfigSyncMetadata(obj)
 	if !updated {
 		t.Errorf("updated should be true")
 	}
@@ -125,13 +123,13 @@ func TestRemoveConfigSyncMetadata(t *testing.T) {
 
 	annotations := obj.GetAnnotations()
 	expectedAnnotation := map[string]string{
-		constants.LifecycleMutationAnnotation: "random-value",
+		metadata.LifecycleMutationAnnotation: "random-value",
 	}
 	if diff := cmp.Diff(annotations, expectedAnnotation); diff != "" {
 		t.Errorf("Diff from the annotations is %s", diff)
 	}
 
-	updated = RemoveConfigSyncMetadata(obj)
+	updated = metadata.RemoveConfigSyncMetadata(obj)
 	if updated {
 		t.Errorf("the labels and annotations shouldn't be updated in this case")
 	}

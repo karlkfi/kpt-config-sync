@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/metadata"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,7 +42,7 @@ func filename(extension string, o client.Object, includeCluster bool, includeGro
 		path = filepath.Join(namespace, path)
 	}
 	if includeCluster {
-		if clusterName, found := o.GetAnnotations()[v1.ClusterNameAnnotationKey]; found {
+		if clusterName, found := o.GetAnnotations()[metadata.ClusterNameAnnotationKey]; found {
 			path = filepath.Join(clusterName, path)
 		} else {
 			path = filepath.Join(defaultCluster, path)

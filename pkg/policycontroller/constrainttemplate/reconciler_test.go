@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -20,35 +20,35 @@ func TestAnnotateConstraintTemplate(t *testing.T) {
 			"ConstraintTemplate not yet created",
 			ct().generation(5).created(false).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been created"]`,
+				metadata.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been created"]`,
 			},
 		},
 		{
 			"ConstraintTemplate not yet processed",
 			ct().generation(5).created(true).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been processed by PolicyController"]`,
+				metadata.ResourceStatusReconcilingKey: `["ConstraintTemplate has not been processed by PolicyController"]`,
 			},
 		},
 		{
 			"PolicyController has outdated version of ConstraintTemplate",
 			ct().generation(5).created(true).byPod(4).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				metadata.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has two errors",
 			ct().generation(5).created(true).byPod(5, "looks bad", "smells bad too").build(),
 			map[string]string{
-				nomosv1.ResourceStatusErrorsKey: `["[0] test-code: looks bad","[0] test-code: smells bad too"]`,
+				metadata.ResourceStatusErrorsKey: `["[0] test-code: looks bad","[0] test-code: smells bad too"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has error, but is out of date",
 			ct().generation(5).created(true).byPod(4, "looks bad").build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
+				metadata.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of ConstraintTemplate"]`,
 			},
 		},
 		{
@@ -90,12 +90,12 @@ func (c *ctBuilder) build() unstructured.Unstructured {
 }
 
 func (c *ctBuilder) annotateErrors(msg string) *ctBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusErrorsKey, msg)
+	core.SetAnnotation(c, metadata.ResourceStatusErrorsKey, msg)
 	return c
 }
 
 func (c *ctBuilder) annotateReconciling(msg string) *ctBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusReconcilingKey, msg)
+	core.SetAnnotation(c, metadata.ResourceStatusReconcilingKey, msg)
 	return c
 }
 

@@ -4,13 +4,14 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	oldhnc "github.com/google/nomos/pkg/importer/analyzer/hnc"
+	"github.com/google/nomos/pkg/importer/analyzer/hnc"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 )
 
 // HasDepthSuffix returns true if the string ends with ".tree.hnc.x-k8s.io/depth".
 func HasDepthSuffix(s string) bool {
-	return strings.HasSuffix(s, oldhnc.DepthSuffix)
+	return strings.HasSuffix(s, metadata.DepthSuffix)
 }
 
 // HNCLabels verifies that the given object does not have any HNC depth labels.
@@ -22,7 +23,7 @@ func HNCLabels(obj ast.FileObject) status.Error {
 		}
 	}
 	if errors != nil {
-		return oldhnc.IllegalDepthLabelError(&obj, errors)
+		return hnc.IllegalDepthLabelError(&obj, errors)
 	}
 	return nil
 }

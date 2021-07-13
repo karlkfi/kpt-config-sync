@@ -6,7 +6,6 @@ import (
 	"context"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/lifecycle"
@@ -110,8 +109,8 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 	canManage := CanManage(manager, d.Actual)
 	switch {
 	case differ.ManagementEnabled(d.Declared) && canManage:
-		if d.Actual.GetAnnotations()[constants.LifecycleMutationAnnotation] == constants.IgnoreMutation &&
-			d.Declared.GetAnnotations()[constants.LifecycleMutationAnnotation] == constants.IgnoreMutation {
+		if d.Actual.GetAnnotations()[metadata.LifecycleMutationAnnotation] == metadata.IgnoreMutation &&
+			d.Declared.GetAnnotations()[metadata.LifecycleMutationAnnotation] == metadata.IgnoreMutation {
 			// The declared and actual object both have the lifecycle mutation
 			// annotation set to ignore, so we should take no action as the user does
 			// not want us to make changes to the object.
@@ -132,7 +131,7 @@ func (d Diff) updateType(manager declared.Scope) Operation {
 		return ManagementConflict
 	case differ.ManagementDisabled(d.Declared) && canManage:
 		if metadata.HasConfigSyncMetadata(d.Actual) {
-			switch d.Actual.GetAnnotations()[constants.ResourceManagerKey] {
+			switch d.Actual.GetAnnotations()[metadata.ResourceManagerKey] {
 			case string(declared.RootReconciler), "":
 				return Unmanage
 			default:

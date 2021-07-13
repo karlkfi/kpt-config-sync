@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -26,6 +26,6 @@ func IllegalLabelDefinitionError(resource client.Object, labels []string) status
 	return illegalLabelDefinitionError.
 		Sprintf("Configs MUST NOT declare labels starting with %q. "+
 			"The config has disallowed labels: %s",
-			v1.ConfigManagementPrefix, l).
+			metadata.ConfigManagementPrefix, l).
 		BuildWithResources(resource)
 }

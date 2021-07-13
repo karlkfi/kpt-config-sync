@@ -7,9 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/applier"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
@@ -17,12 +15,12 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/reader"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	syncertest "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/testing/testmetrics"
-	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
@@ -72,25 +70,25 @@ func TestRoot_Parse(t *testing.T) {
 				fake.UnstructuredAtPath(kinds.Namespace(),
 					"",
 					core.Name("foo"),
-					core.Label(v1.ManagedByKey, v1.ManagedByValue),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
 					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
-					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-					core.Annotation(constants.GitContextKey, nilGitContext),
-					core.Annotation(v1.SyncTokenAnnotationKey, ""),
-					core.Annotation(constants.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
-					core.Annotation(constants.ResourceIDKey, "_namespace_foo"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "_namespace_foo"),
 					difftest.ManagedByRoot,
 				),
 				fake.Role(core.Namespace("foo"),
-					core.Label(v1.ManagedByKey, v1.ManagedByValue),
-					core.Label(configuration.DeclaredVersionLabel, "v1"),
-					core.Annotation(constants.DeclaredFieldsKey, `{"f:rules":{}}`),
-					core.Annotation(v1.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
-					core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled),
-					core.Annotation(constants.GitContextKey, nilGitContext),
-					core.Annotation(v1.SyncTokenAnnotationKey, ""),
-					core.Annotation(constants.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
-					core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
+					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
+					core.Label(metadata.DeclaredVersionLabel, "v1"),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:rules":{}}`),
+					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
+					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
+					core.Annotation(metadata.GitContextKey, nilGitContext),
+					core.Annotation(metadata.SyncTokenAnnotationKey, ""),
+					core.Annotation(metadata.OwningInventoryKey, applier.InventoryID(configmanagement.ControllerNamespace)),
+					core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_foo_default-name"),
 					difftest.ManagedByRoot,
 				),
 			},

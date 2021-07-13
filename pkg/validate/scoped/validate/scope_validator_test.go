@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
@@ -30,7 +30,7 @@ func TestClusterScoped(t *testing.T) {
 		{
 			name: "Object with namespace selector fails",
 			obj: fake.ClusterRole(
-				core.Annotation(v1.NamespaceSelectorAnnotationKey, "value")),
+				core.Annotation(metadata.NamespaceSelectorAnnotationKey, "value")),
 			wantErr: nonhierarchical.IllegalNamespaceSelectorAnnotationError(fake.ClusterRole()),
 		},
 	}
@@ -85,13 +85,13 @@ func TestNamespaceScoped(t *testing.T) {
 		{
 			name: "Object with namespace selector passes",
 			obj: fake.Role(
-				core.Annotation(v1.NamespaceSelectorAnnotationKey, "value")),
+				core.Annotation(metadata.NamespaceSelectorAnnotationKey, "value")),
 		},
 		{
 			name: "Object with namespace and namespace selector fails",
 			obj: fake.Role(
 				core.Namespace("hello"),
-				core.Annotation(v1.NamespaceSelectorAnnotationKey, "value")),
+				core.Annotation(metadata.NamespaceSelectorAnnotationKey, "value")),
 			wantErr: nonhierarchical.NamespaceAndSelectorResourceError(fake.Role()),
 		},
 	}

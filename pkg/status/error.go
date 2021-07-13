@@ -146,7 +146,7 @@ func CodeRegistry() []string {
 // toErrorResource converts a Resource into a v1.ErrorResource.
 func toErrorResource(r client.Object) v1.ErrorResource {
 	return v1.ErrorResource{
-		SourcePath:        id.GetSourceAnnotation(r),
+		SourcePath:        GetSourceAnnotation(r),
 		ResourceName:      r.GetName(),
 		ResourceNamespace: r.GetNamespace(),
 		ResourceGVK:       r.GetObjectKind().GroupVersionKind(),
@@ -184,7 +184,7 @@ func fromResourceError(err ResourceError) v1.ConfigManagementError {
 func toResourceRef(r client.Object) v1alpha1.ResourceRef {
 	gvk := r.GetObjectKind().GroupVersionKind()
 	return v1alpha1.ResourceRef{
-		SourcePath: id.GetSourceAnnotation(r),
+		SourcePath: GetSourceAnnotation(r),
 		Name:       r.GetName(),
 		Namespace:  r.GetNamespace(),
 		GVK: metav1.GroupVersionKind{

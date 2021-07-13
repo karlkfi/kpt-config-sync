@@ -5,15 +5,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func cluster(name string) core.MetaMutator {
-	return core.Annotation(v1.ClusterNameAnnotationKey, name)
+	return core.Annotation(metadata.ClusterNameAnnotationKey, name)
 }
 
 func TestToFileObjects(t *testing.T) {

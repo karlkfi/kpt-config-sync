@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 )
 
 // GitConfig constants.
@@ -60,15 +60,15 @@ func gitSyncData(opts options) map[string]string {
 		result["GIT_SYNC_REV"] = opts.ref
 	}
 	switch opts.secretType {
-	case constants.GitSecretGCENode, constants.GitSecretGCPServiceAccount:
+	case configsync.GitSecretGCENode, configsync.GitSecretGCPServiceAccount:
 		result["GIT_ASKPASS_URL"] = gceNodeAskpassURL
-	case constants.GitSecretSSH:
+	case configsync.GitSecretSSH:
 		result["GIT_SYNC_SSH"] = "true"
-	case constants.GitSecretCookieFile:
+	case configsync.GitSecretCookieFile:
 		result["GIT_COOKIE_FILE"] = "true"
 
 		fallthrough
-	case constants.GitSecretConfigKeyToken, "", constants.GitSecretNone:
+	case GitSecretConfigKeyToken, "", configsync.GitSecretNone:
 		result["HTTPS_PROXY"] = opts.proxy
 	default:
 		// TODO b/168553377 Return error while setting up gitSyncData.

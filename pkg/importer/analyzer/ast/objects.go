@@ -56,7 +56,7 @@ func (o *FileObject) DeepCopy() FileObject {
 func (o *FileObject) Structured() (runtime.Object, status.Error) {
 	obj, err := core.RemarshalToStructured(o.Unstructured)
 	if err != nil {
-		return nil, core.ObjectParseError(o.Unstructured, err)
+		return nil, status.ObjectParseError(o.Unstructured, err)
 	}
 	return obj, nil
 }

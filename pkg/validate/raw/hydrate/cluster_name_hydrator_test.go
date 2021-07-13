@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -30,9 +30,9 @@ func TestClusterName(t *testing.T) {
 				ClusterName: "hello-world",
 				Objects: []ast.FileObject{
 					fake.ClusterRoleAtPath("cluster/clusterrole.yaml",
-						core.Annotation(v1.ClusterNameAnnotationKey, "hello-world")),
+						core.Annotation(metadata.ClusterNameAnnotationKey, "hello-world")),
 					fake.RoleBindingAtPath("namespaces/foo/rolebinding.yaml",
-						core.Annotation(v1.ClusterNameAnnotationKey, "hello-world")),
+						core.Annotation(metadata.ClusterNameAnnotationKey, "hello-world")),
 				},
 			},
 		},

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
@@ -27,18 +27,18 @@ func TestMapSecretToRootSync(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			secret: fake.SecretObject(fmt.Sprintf("%s-bookstore", reconciler.RepoSyncPrefix), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			secret: fake.SecretObject(fmt.Sprintf("%s-bookstore", reconciler.RepoSyncPrefix), core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			secret: fake.SecretObject("s1", core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			secret: fake.SecretObject("s1", core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RootSyncName,
-						Namespace: constants.ControllerNamespace,
+						Name:      configsync.RootSyncName,
+						Namespace: configsync.ControllerNamespace,
 					},
 				},
 			},
@@ -67,84 +67,84 @@ func TestMapSecretToRepoSync(t *testing.T) {
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "default",
 					},
 				},
 			},
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			secret: fake.SecretObject("s1", core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			secret: fake.SecretObject("s1", core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
 			name: fmt.Sprintf("A secret from the %s namespace starting with %s and having the %s annotation",
-				constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-", secrets.NSReconcilerNSAnnotationKey),
+				configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-", secrets.NSReconcilerNSAnnotationKey),
 			secret: fake.SecretObject(fmt.Sprintf("%s-gamestore-token-123-ssh-key", reconciler.RepoSyncPrefix),
-				core.Namespace(constants.ControllerNamespace),
+				core.Namespace(configsync.ControllerNamespace),
 				core.Annotation(secrets.NSReconcilerNSAnnotationKey, "bookstore"),
 			),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "bookstore",
 					},
 				},
 			},
 		},
 		{
-			name: fmt.Sprintf("A secret from the %s namespace starting with %s, including `-token-`, and ending with `-ssh-key`", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			name: fmt.Sprintf("A secret from the %s namespace starting with %s, including `-token-`, and ending with `-ssh-key`", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
 			secret: fake.SecretObject(fmt.Sprintf("%s-gamestore-token-123-ssh-key", reconciler.RepoSyncPrefix),
-				core.Namespace(constants.ControllerNamespace),
+				core.Namespace(configsync.ControllerNamespace),
 			),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
 			},
 		},
 		{
-			name: fmt.Sprintf("A secret from the %s namespace starting with %s and ending with `-ssh-key`", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			name: fmt.Sprintf("A secret from the %s namespace starting with %s and ending with `-ssh-key`", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
 			secret: fake.SecretObject(fmt.Sprintf("%s-gamestore-1-ssh-key", reconciler.RepoSyncPrefix),
-				core.Namespace(constants.ControllerNamespace),
+				core.Namespace(configsync.ControllerNamespace),
 			),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore-1",
 					},
 				},
 			},
 		},
 		{
-			name: fmt.Sprintf("A secret from the %s namespace starting with %s and including `-token-`", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			name: fmt.Sprintf("A secret from the %s namespace starting with %s and including `-token-`", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
 			secret: fake.SecretObject(fmt.Sprintf("%s-gamestore-token-133", reconciler.RepoSyncPrefix),
-				core.Namespace(constants.ControllerNamespace),
+				core.Namespace(configsync.ControllerNamespace),
 			),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
 			},
 		},
 		{
-			name: fmt.Sprintf("A secret from the %s namespace starting with %s and including neither `-token-` nor the `-ssh-key` suffix", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			name: fmt.Sprintf("A secret from the %s namespace starting with %s and including neither `-token-` nor the `-ssh-key` suffix", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
 			secret: fake.SecretObject(fmt.Sprintf("%s-gamestore-git-creds", reconciler.RepoSyncPrefix),
-				core.Namespace(constants.ControllerNamespace),
+				core.Namespace(configsync.ControllerNamespace),
 			),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore-git-creds",
 					},
 				},
@@ -175,41 +175,41 @@ func TestMapObjectToRepoSync(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ConfigMapObject(core.Name("cm1"), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ConfigMapObject(core.Name("cm1"), core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and with the `-reconciler` suffix", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore-reconciler", reconciler.RepoSyncPrefix)), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and with the `-reconciler` suffix", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore-reconciler", reconciler.RepoSyncPrefix)), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
 			},
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and with the `-git-sync` suffix", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore-git-sync", reconciler.RepoSyncPrefix)), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and with the `-git-sync` suffix", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore-git-sync", reconciler.RepoSyncPrefix)), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
 			},
 		},
 		{
-			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and without the `-reconciler` and `-git-sync` suffix", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A secret from the %s namespace starting with %s and without the `-reconciler` and `-git-sync` suffix", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ConfigMapObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
@@ -222,17 +222,17 @@ func TestMapObjectToRepoSync(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A deployment from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.DeploymentObject(core.Name("deploy1"), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A deployment from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.DeploymentObject(core.Name("deploy1"), core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A deployment from the %s namespace starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.DeploymentObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A deployment from the %s namespace starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.DeploymentObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
@@ -245,17 +245,17 @@ func TestMapObjectToRepoSync(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A serviceaccount from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ServiceAccountObject("sa1", core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A serviceaccount from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ServiceAccountObject("sa1", core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A serviceaccount from the %s namespace starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.ServiceAccountObject(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A serviceaccount from the %s namespace starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.ServiceAccountObject(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},
@@ -268,17 +268,17 @@ func TestMapObjectToRepoSync(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A rolebinding from the %s namespace NOT starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.RoleBindingObject(core.Name("rb1"), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A rolebinding from the %s namespace NOT starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.RoleBindingObject(core.Name("rb1"), core.Namespace(configsync.ControllerNamespace)),
 			want:   nil,
 		},
 		{
-			name:   fmt.Sprintf("A rolebinding from the %s namespace starting with %s", constants.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
-			object: fake.RoleBindingObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(constants.ControllerNamespace)),
+			name:   fmt.Sprintf("A rolebinding from the %s namespace starting with %s", configsync.ControllerNamespace, reconciler.RepoSyncPrefix+"-"),
+			object: fake.RoleBindingObject(core.Name(fmt.Sprintf("%s-gamestore", reconciler.RepoSyncPrefix)), core.Namespace(configsync.ControllerNamespace)),
 			want: []reconcile.Request{
 				{
 					NamespacedName: types.NamespacedName{
-						Name:      constants.RepoSyncName,
+						Name:      configsync.RepoSyncName,
 						Namespace: "gamestore",
 					},
 				},

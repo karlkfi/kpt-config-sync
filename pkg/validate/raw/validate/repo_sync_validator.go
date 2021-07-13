@@ -1,9 +1,9 @@
 package validate
 
 import (
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
@@ -34,18 +34,18 @@ func RepoSync(obj ast.FileObject) status.Error {
 }
 
 var (
-	authSSH               = constants.GitSecretSSH
-	authCookiefile        = constants.GitSecretCookieFile
-	authGCENode           = constants.GitSecretGCENode
-	authToken             = constants.GitSecretToken
-	authNone              = constants.GitSecretNone
-	authGCPServiceAccount = constants.GitSecretGCPServiceAccount
+	authSSH               = configsync.GitSecretSSH
+	authCookiefile        = configsync.GitSecretCookieFile
+	authGCENode           = configsync.GitSecretGCENode
+	authToken             = configsync.GitSecretToken
+	authNone              = configsync.GitSecretNone
+	authGCPServiceAccount = configsync.GitSecretGCPServiceAccount
 )
 
 // RepoSyncObject validates the content and structure of a RepoSync for any
 // obvious problems.
 func RepoSyncObject(rs *v1beta1.RepoSync) status.Error {
-	if rs.GetName() != constants.RepoSyncName {
+	if rs.GetName() != configsync.RepoSyncName {
 		return nonhierarchical.InvalidSyncName(rs.Name, rs)
 	}
 

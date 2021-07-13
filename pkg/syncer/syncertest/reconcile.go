@@ -5,8 +5,8 @@ import (
 	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -24,16 +24,16 @@ var (
 
 	// ManagementEnabled sets management labels and annotations on the object.
 	ManagementEnabled core.MetaMutator = func(obj client.Object) {
-		core.SetAnnotation(obj, v1.ResourceManagementKey, v1.ResourceManagementEnabled)
-		core.SetAnnotation(obj, constants.ResourceIDKey, core.GKNN(obj))
-		core.SetLabel(obj, v1.ManagedByKey, v1.ManagedByValue)
+		core.SetAnnotation(obj, metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)
+		core.SetAnnotation(obj, metadata.ResourceIDKey, core.GKNN(obj))
+		core.SetLabel(obj, metadata.ManagedByKey, metadata.ManagedByValue)
 	}
 	// ManagementDisabled sets the management disabled annotation on the object.
-	ManagementDisabled = core.Annotation(v1.ResourceManagementKey, v1.ResourceManagementDisabled)
+	ManagementDisabled = core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementDisabled)
 	// ManagementInvalid sets an invalid management annotation on the object.
-	ManagementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
+	ManagementInvalid = core.Annotation(metadata.ResourceManagementKey, "invalid")
 	// TokenAnnotation sets the sync token annotation on the object
-	TokenAnnotation = core.Annotation(v1.SyncTokenAnnotationKey, Token)
+	TokenAnnotation = core.Annotation(metadata.SyncTokenAnnotationKey, Token)
 )
 
 // ToUnstructured converts the object to an unstructured.Unstructured.

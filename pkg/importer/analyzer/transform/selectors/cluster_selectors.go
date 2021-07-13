@@ -1,9 +1,9 @@
 package selectors
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	clusterregistry "k8s.io/cluster-registry/pkg/apis/clusterregistry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +32,6 @@ func FilterClusters(objects []ast.FileObject) ([]clusterregistry.Cluster, status
 func ObjectHasUnknownClusterSelector(resource client.Object, annotation string) status.Error {
 	return objectHasUnknownSelector.
 		Sprintf("Config %q MUST refer to an existing ClusterSelector, but has annotation \"%s=%s\" which maps to no declared ClusterSelector",
-			resource.GetName(), v1.LegacyClusterSelectorAnnotationKey, annotation).
+			resource.GetName(), metadata.LegacyClusterSelectorAnnotationKey, annotation).
 		BuildWithResources(resource)
 }

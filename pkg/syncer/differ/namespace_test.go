@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -25,8 +26,8 @@ func markForDeletion(nsConfig *v1.NamespaceConfig) *v1.NamespaceConfig {
 
 var (
 	disableManaged    = syncertest.ManagementDisabled
-	managementInvalid = core.Annotation(v1.ResourceManagementKey, "invalid")
-	managementEmpty   = core.Annotation(v1.ResourceManagementKey, "")
+	managementInvalid = core.Annotation(metadata.ResourceManagementKey, "invalid")
+	managementEmpty   = core.Annotation(metadata.ResourceManagementKey, "")
 	preventDeletion   = core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)
 )
 

@@ -7,11 +7,12 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -273,7 +274,7 @@ func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
 
 	var subjects []rbacv1.Subject
 	subjects = append(subjects, subject(reconciler.RepoSyncName(rs.Namespace),
-		constants.ControllerNamespace,
+		configsync.ControllerNamespace,
 		"ServiceAccount"))
 	// Update subject.
 	rb.Subjects = subjects
@@ -298,9 +299,9 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		}
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
-		core.SetAnnotation(&d.Spec.Template, constants.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
+		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 		// Add unique reconciler label
-		core.SetLabel(&d.Spec.Template, constants.ReconcilerLabel, reconciler.RepoSyncName(rs.Namespace))
+		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconciler.RepoSyncName(rs.Namespace))
 		templateSpec := &d.Spec.Template.Spec
 		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
 		templateSpec.ServiceAccountName = reconciler.RepoSyncName(rs.Namespace)
@@ -347,7 +348,7 @@ func (r *RepoSyncReconciler) mutationsFor(rs v1alpha1.RepoSync, configMapDataHas
 		// a constant) to the reconciler Deployment if auth: gcenode or auth: gcpserveraccount.
 		// The container is added first time when the reconciler deployment is created.
 		switch rs.Spec.Auth {
-		case constants.GitSecretGCPServiceAccount, constants.GitSecretGCENode:
+		case configsync.GitSecretGCPServiceAccount, configsync.GitSecretGCENode:
 			if !containsGCENodeAskPassSidecar(updatedContainers) {
 				sidecar := gceNodeAskPassSidecar()
 				updatedContainers = append(updatedContainers, sidecar)

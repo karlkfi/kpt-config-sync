@@ -11,6 +11,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncercache "github.com/google/nomos/pkg/syncer/cache"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
@@ -132,7 +133,7 @@ func (r *namespaceConfigReconciler) getNamespace(ctx context.Context, name strin
 
 func invalidManagementLabel(invalid string) string {
 	return fmt.Sprintf("Namespace has invalid management annotation %s=%s should be %q or unset",
-		v1.ResourceManagementKey, invalid, v1.ResourceManagementEnabled)
+		metadata.ResourceManagementKey, invalid, metadata.ResourceManagementEnabled)
 }
 
 func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
@@ -192,7 +193,7 @@ func (r *namespaceConfigReconciler) reconcileNamespaceConfig(
 		return r.manageConfigs(ctx, name, config, syncErrs)
 
 	case differ.Error:
-		value := config.GetAnnotations()[v1.ResourceManagementKey]
+		value := config.GetAnnotations()[metadata.ResourceManagementKey]
 		glog.Warningf("Namespace %q has invalid management annotation %q", name, value)
 		r.recorder.Eventf(
 			config,
@@ -248,7 +249,7 @@ func (r *namespaceConfigReconciler) manageConfigs(ctx context.Context, namespace
 	for _, gvk := range r.toSync {
 		declaredInstances := grs[gvk]
 		for _, decl := range declaredInstances {
-			core.SetAnnotation(decl, v1.SyncTokenAnnotationKey, config.Spec.Token)
+			core.SetAnnotation(decl, metadata.SyncTokenAnnotationKey, config.Spec.Token)
 		}
 
 		actualInstances, err := r.cache.UnstructuredList(ctx, gvk, client.InNamespace(namespace))
@@ -350,7 +351,7 @@ func (r *namespaceConfigReconciler) setNamespaceConfigStatus(ctx context.Context
 // newSyncError returns a ConfigManagementError corresponding to the given NamespaceConfig and error
 func newSyncError(config *v1.NamespaceConfig, err error) v1.ConfigManagementError {
 	e := v1.ErrorResource{
-		SourcePath:        config.GetAnnotations()[v1.SourcePathAnnotationKey],
+		SourcePath:        config.GetAnnotations()[metadata.SourcePathAnnotationKey],
 		ResourceName:      config.GetName(),
 		ResourceNamespace: config.GetNamespace(),
 		ResourceGVK:       config.GroupVersionKind(),
@@ -375,7 +376,7 @@ func asNamespace(namespaceConfig *v1.NamespaceConfig) *corev1.Namespace {
 		core.SetAnnotation(namespace, k, v)
 	}
 	enableManagement(namespace)
-	core.SetAnnotation(namespace, v1.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
+	core.SetAnnotation(namespace, metadata.SyncTokenAnnotationKey, namespaceConfig.Spec.Token)
 	return namespace
 }
 

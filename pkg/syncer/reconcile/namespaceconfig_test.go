@@ -8,6 +8,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
@@ -403,13 +404,13 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name: "default namespace is not deleted when namespace config is removed",
 			namespace: namespace(metav1.NamespaceDefault, core.Annotations(
 				map[string]string{
-					v1.ClusterNameAnnotationKey:           "cluster-name",
-					v1.LegacyClusterSelectorAnnotationKey: "some-selector",
-					v1.NamespaceSelectorAnnotationKey:     "some-selector",
-					v1.ResourceManagementKey:              v1.ResourceManagementEnabled,
-					v1.SourcePathAnnotationKey:            "some-path",
-					v1.SyncTokenAnnotationKey:             "syncertest.Token",
-					"some-user-annotation":                "some-annotation-value",
+					metadata.ClusterNameAnnotationKey:           "cluster-name",
+					metadata.LegacyClusterSelectorAnnotationKey: "some-selector",
+					metadata.NamespaceSelectorAnnotationKey:     "some-selector",
+					metadata.ResourceManagementKey:              metadata.ResourceManagementEnabled,
+					metadata.SourcePathAnnotationKey:            "some-path",
+					metadata.SyncTokenAnnotationKey:             "syncertest.Token",
+					"some-user-annotation":                      "some-annotation-value",
 				},
 			),
 				core.Labels(
@@ -449,13 +450,13 @@ func TestNamespaceConfigReconcile(t *testing.T) {
 			name: "kube-system namespace is not deleted when namespace config is removed",
 			namespace: namespace(metav1.NamespaceSystem, core.Annotations(
 				map[string]string{
-					v1.ClusterNameAnnotationKey:           "cluster-name",
-					v1.LegacyClusterSelectorAnnotationKey: "some-selector",
-					v1.NamespaceSelectorAnnotationKey:     "some-selector",
-					v1.ResourceManagementKey:              v1.ResourceManagementEnabled,
-					v1.SourcePathAnnotationKey:            "some-path",
-					v1.SyncTokenAnnotationKey:             "syncertest.Token",
-					"some-user-annotation":                "some-annotation-value",
+					metadata.ClusterNameAnnotationKey:           "cluster-name",
+					metadata.LegacyClusterSelectorAnnotationKey: "some-selector",
+					metadata.NamespaceSelectorAnnotationKey:     "some-selector",
+					metadata.ResourceManagementKey:              metadata.ResourceManagementEnabled,
+					metadata.SourcePathAnnotationKey:            "some-path",
+					metadata.SyncTokenAnnotationKey:             "syncertest.Token",
+					"some-user-annotation":                      "some-annotation-value",
 				},
 			),
 				core.Labels(

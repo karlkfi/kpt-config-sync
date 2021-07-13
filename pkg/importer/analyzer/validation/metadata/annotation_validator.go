@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,6 +27,6 @@ func IllegalAnnotationDefinitionError(resource client.Object, annotations []stri
 	return illegalAnnotationDefinitionError.
 		Sprintf("Configs MUST NOT declare unsupported annotations starting with %q or %q. "+
 			"The config has invalid annotations: %s",
-			v1.ConfigManagementPrefix, constants.ConfigSyncPrefix, a).
+			metadata.ConfigManagementPrefix, configsync.ConfigSyncPrefix, a).
 		BuildWithResources(resource)
 }

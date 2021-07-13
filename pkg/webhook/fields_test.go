@@ -3,10 +3,9 @@ package webhook
 import (
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -244,7 +243,7 @@ func TestDeclaredFields(t *testing.T) {
 		{
 			name: "With declared fields",
 			obj: roleForTest(
-				core.Annotation(constants.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:this":{}}},"f:rules":{}}`)),
+				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:this":{}}},"f:rules":{}}`)),
 			want: ".rules\n.metadata.labels.this",
 		},
 		{
@@ -283,13 +282,13 @@ func TestConfigSyncMetadata(t *testing.T) {
 			name: "With metadata",
 			obj: roleForTest(
 				core.Annotations(map[string]string{
-					"hello":                      "goodbye",
-					constants.ResourceManagerKey: ":root",
-					v1.ResourceManagementKey:     "enabled",
+					"hello":                          "goodbye",
+					csmetadata.ResourceManagerKey:    ":root",
+					csmetadata.ResourceManagementKey: "enabled",
 				}),
 				core.Labels(map[string]string{
-					"here":          "there",
-					v1.ManagedByKey: "config-sync",
+					"here":                  "there",
+					csmetadata.ManagedByKey: "config-sync",
 				}),
 			),
 			want: ".annotations.configmanagement.gke.io/managed\n.annotations.configsync.gke.io/manager\n.labels.app.kubernetes.io/managed-by",

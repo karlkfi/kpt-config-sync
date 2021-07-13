@@ -4,19 +4,19 @@ import (
 	"errors"
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
 const (
 	legalLabel = "supported"
-	cmLabel    = v1.ConfigManagementPrefix + "unsupported"
-	csLabel    = constants.ConfigSyncPrefix + "unsupported2"
+	cmLabel    = csmetadata.ConfigManagementPrefix + "unsupported"
+	csLabel    = configsync.ConfigSyncPrefix + "unsupported2"
 )
 
 func TestLabels(t *testing.T) {

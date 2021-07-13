@@ -4,19 +4,19 @@ import (
 	"errors"
 	"testing"
 
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/metadata"
+	csmetadata "github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
 const (
 	legalAnnotation = "supported"
-	cmAnnotation    = v1.ConfigManagementPrefix + "unsupported"
-	csAnnotation    = constants.ConfigSyncPrefix + "unsupported"
+	cmAnnotation    = csmetadata.ConfigManagementPrefix + "unsupported"
+	csAnnotation    = configsync.ConfigSyncPrefix + "unsupported"
 )
 
 func TestAnnotations(t *testing.T) {
@@ -35,19 +35,19 @@ func TestAnnotations(t *testing.T) {
 		},
 		{
 			name: "legal namespace selector annotation",
-			obj:  fake.Role(core.Annotation(v1.NamespaceSelectorAnnotationKey, "a")),
+			obj:  fake.Role(core.Annotation(csmetadata.NamespaceSelectorAnnotationKey, "a")),
 		},
 		{
 			name: "legal legacy cluster selector annotation",
-			obj:  fake.Role(core.Annotation(v1.LegacyClusterSelectorAnnotationKey, "a")),
+			obj:  fake.Role(core.Annotation(csmetadata.LegacyClusterSelectorAnnotationKey, "a")),
 		},
 		{
 			name: "legal inline cluster selector annotation",
-			obj:  fake.Role(core.Annotation(constants.ClusterNameSelectorAnnotationKey, "a")),
+			obj:  fake.Role(core.Annotation(csmetadata.ClusterNameSelectorAnnotationKey, "a")),
 		},
 		{
 			name: "legal management annotation",
-			obj:  fake.RoleBinding(core.Annotation(v1.ResourceManagementKey, "a")),
+			obj:  fake.RoleBinding(core.Annotation(csmetadata.ResourceManagementKey, "a")),
 		},
 		{
 			name:    "illegal ConfigManagement annotation",

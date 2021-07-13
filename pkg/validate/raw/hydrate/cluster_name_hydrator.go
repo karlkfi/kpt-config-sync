@@ -1,8 +1,8 @@
 package hydrate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -14,7 +14,7 @@ func ClusterName(objs *objects.Raw) status.MultiError {
 		return nil
 	}
 	for _, obj := range objs.Objects {
-		core.Annotation(v1.ClusterNameAnnotationKey, objs.ClusterName)(obj)
+		core.Annotation(metadata.ClusterNameAnnotationKey, objs.ClusterName)(obj)
 	}
 	return nil
 }

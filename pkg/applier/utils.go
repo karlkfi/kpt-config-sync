@@ -1,8 +1,8 @@
 package applier
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncerreconcile "github.com/google/nomos/pkg/syncer/reconcile"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -14,7 +14,7 @@ func partitionObjs(objs []client.Object) ([]client.Object, []client.Object) {
 	var enabled []client.Object
 	var disabled []client.Object
 	for _, obj := range objs {
-		if obj.GetAnnotations()[v1.ResourceManagementKey] == v1.ResourceManagementDisabled {
+		if obj.GetAnnotations()[metadata.ResourceManagementKey] == metadata.ResourceManagementDisabled {
 			disabled = append(disabled, obj)
 		} else {
 			enabled = append(enabled, obj)

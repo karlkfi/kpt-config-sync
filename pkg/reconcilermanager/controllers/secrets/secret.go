@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
@@ -21,7 +21,7 @@ import (
 // to the RepoSync object in namespaceSecret.Namespace so that a change to the Secret object
 // in the config-management-system namespace trigger an reconciliation of the corresponding
 // RepoSync object.
-const NSReconcilerNSAnnotationKey = constants.ConfigSyncPrefix + "ns-reconciler-namespace"
+const NSReconcilerNSAnnotationKey = configsync.ConfigSyncPrefix + "ns-reconciler-namespace"
 
 // Put secret in config-management-system namespace using the
 // existing secret in the reposync.namespace.
@@ -122,7 +122,7 @@ func NamespaceReconcilerSecretName(namespace, name string) string {
 // 'gcpserviceaccount'.
 func SkipForAuth(auth string) bool {
 	switch auth {
-	case constants.GitSecretNone, constants.GitSecretGCENode, constants.GitSecretGCPServiceAccount:
+	case configsync.GitSecretNone, configsync.GitSecretGCENode, configsync.GitSecretGCPServiceAccount:
 		return true
 	default:
 		return false

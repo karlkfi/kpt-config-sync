@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 )
@@ -43,7 +44,7 @@ func AllVersionNames(resources map[schema.GroupVersionKind][]*unstructured.Unstr
 // cmeForNamespace returns a ConfigManagementError for the given Namespace and error message.
 func cmeForNamespace(ns *corev1.Namespace, errMsg string) v1.ConfigManagementError {
 	e := v1.ErrorResource{
-		SourcePath:        ns.GetAnnotations()[v1.SourcePathAnnotationKey],
+		SourcePath:        ns.GetAnnotations()[metadata.SourcePathAnnotationKey],
 		ResourceName:      ns.GetName(),
 		ResourceNamespace: ns.GetNamespace(),
 		ResourceGVK:       ns.GroupVersionKind(),
@@ -107,10 +108,10 @@ func SetClusterConfigStatus(ctx context.Context, c *syncerclient.Client, config 
 
 // annotationsHaveResourceCondition checks if the given annotations contain at least one resource condition
 func annotationsHaveResourceCondition(annotations map[string]string) bool {
-	if _, ok := annotations[v1.ResourceStatusErrorsKey]; ok {
+	if _, ok := annotations[metadata.ResourceStatusErrorsKey]; ok {
 		return true
 	}
-	if _, ok := annotations[v1.ResourceStatusReconcilingKey]; ok {
+	if _, ok := annotations[metadata.ResourceStatusReconcilingKey]; ok {
 		return true
 	}
 	return false
@@ -123,7 +124,7 @@ func makeResourceCondition(obj unstructured.Unstructured, token string) v1.Resou
 	resourceCondition.Kind = obj.GroupVersionKind().Kind
 	resourceCondition.NamespacedName = fmt.Sprintf("%v/%v", obj.GetNamespace(), obj.GetName())
 
-	if val, ok := obj.GetAnnotations()[v1.ResourceStatusReconcilingKey]; ok {
+	if val, ok := obj.GetAnnotations()[metadata.ResourceStatusReconcilingKey]; ok {
 		resourceCondition.ResourceState = v1.ResourceStateReconciling
 		var reconciling []string
 		err := json.Unmarshal([]byte(val), &reconciling)
@@ -134,7 +135,7 @@ func makeResourceCondition(obj unstructured.Unstructured, token string) v1.Resou
 
 		resourceCondition.ReconcilingReasons = append(resourceCondition.ReconcilingReasons, reconciling...)
 	}
-	if val, ok := obj.GetAnnotations()[v1.ResourceStatusErrorsKey]; ok {
+	if val, ok := obj.GetAnnotations()[metadata.ResourceStatusErrorsKey]; ok {
 		resourceCondition.ResourceState = v1.ResourceStateError
 		var errs []string
 		err := json.Unmarshal([]byte(val), &errs)

@@ -10,10 +10,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
@@ -71,7 +72,7 @@ var parsedDeployment = func(de *appsv1.Deployment) error {
 	de.Spec = appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				constants.ReconcilerLabel: reconcilermanager.Reconciler,
+				metadata.ReconcilerLabel: reconcilermanager.Reconciler,
 			},
 		},
 		Replicas: &reconcilerDeploymentReplicaCount,
@@ -144,7 +145,7 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 	var sub rbacv1.Subject
 	sub.Kind = "ServiceAccount"
 	sub.Name = reconciler.RepoSyncName(namespace)
-	sub.Namespace = constants.ControllerNamespace
+	sub.Namespace = configsync.ControllerNamespace
 	result.Subjects = append(result.Subjects, sub)
 
 	return result
@@ -152,7 +153,7 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 
 func deploymentAnnotation(value string) map[string]string {
 	return map[string]string{
-		constants.ConfigMapAnnotationKey: value,
+		metadata.ConfigMapAnnotationKey: value,
 	}
 }
 
@@ -213,7 +214,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 				branch:     branch,
 				repo:       reposyncRepo,
 				secretType: "ssh",
-				period:     constants.DefaultPeriodSecs,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 		),
@@ -285,7 +286,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 				branch:     branch,
 				repo:       reposyncRepo,
 				secretType: "ssh",
-				period:     constants.DefaultPeriodSecs,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 		),
@@ -321,7 +322,7 @@ func TestRepoSyncAuthGCENode(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(constants.GitSecretGCENode))
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(configsync.GitSecretGCENode))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs)
 	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
@@ -384,7 +385,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(constants.GitSecretGCPServiceAccount), reposyncGCPSAEmail(gcpSAEmail))
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(configsync.GitSecretGCPServiceAccount), reposyncGCPSAEmail(gcpSAEmail))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs)
 	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
@@ -412,8 +413,8 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
-				secretType: constants.GitSecretGCPServiceAccount,
-				period:     constants.DefaultPeriodSecs,
+				secretType: configsync.GitSecretGCPServiceAccount,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 		),
@@ -427,7 +428,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	wantServiceAccount := fake.ServiceAccountObject(
 		nsReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Annotation(constants.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
 	)
 
 	wantDeployments := []*appsv1.Deployment{
@@ -475,8 +476,8 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 				ref:        gitUpdatedRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
-				secretType: constants.GitSecretGCPServiceAccount,
-				period:     constants.DefaultPeriodSecs,
+				secretType: configsync.GitSecretGCPServiceAccount,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 		),
@@ -490,7 +491,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	wantServiceAccount = fake.ServiceAccountObject(
 		nsReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Annotation(constants.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
 	)
 
 	wantDeployments = []*appsv1.Deployment{
@@ -524,7 +525,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(constants.GitSecretGCPServiceAccount), reposyncGCPSAEmail(gcpSAEmail))
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(configsync.GitSecretGCPServiceAccount), reposyncGCPSAEmail(gcpSAEmail))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
@@ -552,8 +553,8 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
-				secretType: constants.GitSecretGCPServiceAccount,
-				period:     constants.DefaultPeriodSecs,
+				secretType: configsync.GitSecretGCPServiceAccount,
+				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
 		),
@@ -567,7 +568,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	wantServiceAccount := fake.ServiceAccountObject(
 		nsReconcilerName,
 		core.Namespace(v1.NSConfigManagementSystem),
-		core.Annotation(constants.GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
+		core.Annotation(GCPSAAnnotationKey, rs.Spec.GCPServiceAccountEmail),
 	)
 
 	wantDeployments := []*appsv1.Deployment{

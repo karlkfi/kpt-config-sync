@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -162,7 +161,7 @@ func NotPendingDeletion(o client.Object) error {
 func HasAllNomosMetadata(multiRepo bool) Predicate {
 	return func(o client.Object) error {
 		annotationKeys := metadata.GetNomosAnnotationKeys(multiRepo)
-		labels := v1.SyncerLabels()
+		labels := metadata.SyncerLabels()
 
 		predicates := []Predicate{HasAllAnnotationKeys(annotationKeys...), HasAnnotation("configmanagement.gke.io/managed", "enabled")}
 		for labelKey, value := range labels {

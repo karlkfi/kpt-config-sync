@@ -1,7 +1,7 @@
 package selectors
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -11,7 +11,7 @@ import (
 func ObjectHasUnknownNamespaceSelector(resource client.Object, selector string) status.Error {
 	return objectHasUnknownSelector.
 		Sprintf("Config %q MUST refer to an existing NamespaceSelector, but has annotation \"%s=%s\" which maps to no declared NamespaceSelector",
-			resource.GetName(), v1.NamespaceSelectorAnnotationKey, selector).
+			resource.GetName(), metadata.NamespaceSelectorAnnotationKey, selector).
 		BuildWithResources(resource)
 }
 
@@ -21,6 +21,6 @@ func ObjectNotInNamespaceSelectorSubdirectory(resource client.Object, selector c
 	return objectHasUnknownSelector.
 		Sprintf("Config %q MUST refer to a NamespaceSelector in its directory or a parent directory. "+
 			"Either remove the annotation \"%s=%s\" from %q or move NamespaceSelector %q to a parent directory of %q.",
-			resource.GetName(), v1.NamespaceSelectorAnnotationKey, selector.GetName(), resource.GetName(), selector.GetName(), resource.GetName()).
+			resource.GetName(), metadata.NamespaceSelectorAnnotationKey, selector.GetName(), resource.GetName(), selector.GetName(), resource.GetName()).
 		BuildWithResources(selector, resource)
 }

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,6 +28,6 @@ func IllegalDepthLabelError(resource client.Object, labels []string) status.Erro
 	return illegalDepthLabelError.
 		Sprintf("Configs MUST NOT declare labels ending with %q. "+
 			"The config has disallowed labels: %s",
-			DepthSuffix, l).
+			metadata.DepthSuffix, l).
 		BuildWithResources(resource)
 }

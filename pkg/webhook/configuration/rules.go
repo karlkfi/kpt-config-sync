@@ -5,7 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/metadata"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -82,7 +83,7 @@ func toWebhook(gv schema.GroupVersion) admissionv1.ValidatingWebhook {
 		ClientConfig: admissionv1.WebhookClientConfig{
 			CABundle: []byte{},
 			Service: &admissionv1.ServiceReference{
-				Namespace: constants.ControllerNamespace,
+				Namespace: configsync.ControllerNamespace,
 				Name:      ShortName,
 				Path:      pointer.StringPtr(ServingPath),
 				Port:      pointer.Int32Ptr(ServicePort),
@@ -109,7 +110,7 @@ func ruleFor(gv schema.GroupVersion) admissionv1.RuleWithOperations {
 func selectorFor(version string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			DeclaredVersionLabel: version,
+			metadata.DeclaredVersionLabel: version,
 		},
 	}
 }

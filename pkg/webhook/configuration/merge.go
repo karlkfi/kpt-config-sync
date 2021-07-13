@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,7 +50,7 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 			glog.Warning(InvalidWebhookWarning("removed admission webhook missing objectSelector.matchLabels"))
 			continue
 		}
-		version := webhook.ObjectSelector.MatchLabels[DeclaredVersionLabel]
+		version := webhook.ObjectSelector.MatchLabels[metadata.DeclaredVersionLabel]
 
 		if group == "*" || version == "*" {
 			// This was probably added by a user. It can cause the webhook to have
@@ -74,8 +75,8 @@ func Merge(left, right *admissionv1.ValidatingWebhookConfiguration) *admissionv1
 		if groupI != groupJ {
 			return groupI < groupJ
 		}
-		versionI := webhooks[i].ObjectSelector.MatchLabels[DeclaredVersionLabel]
-		versionJ := webhooks[j].ObjectSelector.MatchLabels[DeclaredVersionLabel]
+		versionI := webhooks[i].ObjectSelector.MatchLabels[metadata.DeclaredVersionLabel]
+		versionJ := webhooks[j].ObjectSelector.MatchLabels[metadata.DeclaredVersionLabel]
 		return versionI < versionJ
 	})
 

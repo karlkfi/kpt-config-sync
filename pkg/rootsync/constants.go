@@ -1,7 +1,7 @@
 package rootsync
 
 import (
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -9,7 +9,7 @@ import (
 // namespace.
 func ObjectKey() client.ObjectKey {
 	return client.ObjectKey{
-		Namespace: constants.ControllerNamespace,
-		Name:      constants.RootSyncName,
+		Namespace: configsync.ControllerNamespace,
+		Name:      configsync.RootSyncName,
 	}
 }

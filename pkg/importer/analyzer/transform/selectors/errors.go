@@ -1,8 +1,7 @@
 package selectors
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,5 +39,5 @@ func ClusterSelectorAnnotationConflictError(resource client.Object) status.Error
 	return clusterSelectorAnnotationConflict.Sprintf(
 		"Config %q MUST declare ONLY ONE cluster-selector annotation, but has both inline annotation %q and legacy annotation %q. "+
 			"To fix, remove one of the annotations from:", resource.GetName(),
-		constants.ClusterNameSelectorAnnotationKey, v1.LegacyClusterSelectorAnnotationKey).BuildWithResources(resource)
+		metadata.ClusterNameSelectorAnnotationKey, metadata.LegacyClusterSelectorAnnotationKey).BuildWithResources(resource)
 }

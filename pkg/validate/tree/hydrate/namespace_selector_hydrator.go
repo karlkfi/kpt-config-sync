@@ -5,6 +5,7 @@ import (
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,7 +84,7 @@ func applySelectors(node *ast.TreeNode, namespace ast.FileObject, nsSelectors ma
 			continue
 		}
 
-		selectorName, hasAnnotation := obj.GetAnnotations()[v1.NamespaceSelectorAnnotationKey]
+		selectorName, hasAnnotation := obj.GetAnnotations()[metadata.NamespaceSelectorAnnotationKey]
 		if !hasAnnotation {
 			filtered = append(filtered, obj)
 			continue

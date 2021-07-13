@@ -6,10 +6,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/diff/difftest"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/policycontroller"
 	"github.com/google/nomos/pkg/syncer/syncertest"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -127,12 +127,12 @@ func TestDiffType(t *testing.T) {
 			name: "prevent mutations",
 			declared: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation),
+				core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation),
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation),
+				core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation),
 				core.Annotation("foo", "qux"),
 			),
 			want: NoOp,
@@ -143,7 +143,7 @@ func TestDiffType(t *testing.T) {
 			// need to update the object so the actual one has the annotation now.
 			declared: fake.RoleObject(
 				syncertest.ManagementEnabled,
-				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation),
+				core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation),
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
@@ -165,7 +165,7 @@ func TestDiffType(t *testing.T) {
 				core.Annotation("foo", "bar"),
 			),
 			actual: fake.RoleObject(
-				core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation),
+				core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation),
 				core.Annotation("foo", "qux"),
 			),
 			want: Update,
@@ -190,7 +190,7 @@ func TestDiffType(t *testing.T) {
 			name:  "actual + no declared, cannot manage (actual is managed by Config Sync): noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
 				difftest.ManagedByRoot),
 			want: NoOp,
 		},
@@ -198,7 +198,7 @@ func TestDiffType(t *testing.T) {
 			name:  "actual + no declared, cannot manage (actual is not managed by Config Sync): noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
+				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
 				difftest.ManagedByRoot),
 			want: NoOp,
 		},
@@ -227,35 +227,35 @@ func TestDiffType(t *testing.T) {
 			name:  "actual + no declared, not managed by Config Sync (the configsync.gke.io/resource-id annotation is incorrect): noop",
 			scope: "shipping",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
+				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_wrong-name"),
 				difftest.ManagedByRoot),
 			want: NoOp,
 		},
 		{
 			name: "actual + no declared, prevent deletion: unmanage",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
+				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_default-name"),
 				core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion)),
 			want: Unmanage,
 		},
 		{
 			name: "actual + no declared, system Namespace: unmanage",
 			actual: fake.NamespaceObject(metav1.NamespaceSystem,
-				core.Annotation(constants.ResourceIDKey, "_namespace_kube-system"),
+				core.Annotation(metadata.ResourceIDKey, "_namespace_kube-system"),
 				syncertest.ManagementEnabled),
 			want: Unmanage,
 		},
 		{
 			name: "actual + no declared, gatekeeper Namespace: unmanage",
 			actual: fake.NamespaceObject(policycontroller.NamespaceSystem,
-				core.Annotation(constants.ResourceIDKey, "_namespace_gatekeeper-system"),
+				core.Annotation(metadata.ResourceIDKey, "_namespace_gatekeeper-system"),
 				syncertest.ManagementEnabled),
 			want: Unmanage,
 		},
 		{
 			name: "actual + no declared, managed: delete",
 			actual: fake.RoleObject(syncertest.ManagementEnabled,
-				core.Annotation(constants.ResourceIDKey, "rbac.authorization.k8s.io_role_kube-system"),
+				core.Annotation(metadata.ResourceIDKey, "rbac.authorization.k8s.io_role_kube-system"),
 				core.Name(metav1.NamespaceSystem)),
 			want: Delete,
 		},

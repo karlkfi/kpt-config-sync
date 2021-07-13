@@ -4,10 +4,10 @@ import (
 	"errors"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 				errs = status.Append(errs, status.InternalErrorBuilder.Sprint("failed to encode declared fields").Wrap(err).Build())
 			}
 		}
-		core.SetAnnotation(obj, constants.DeclaredFieldsKey, string(fields))
+		core.SetAnnotation(obj, metadata.DeclaredFieldsKey, string(fields))
 	}
 	return errs
 }
@@ -113,7 +113,7 @@ func setDefaultProtocol(u *unstructured.Unstructured) status.MultiError {
 		for _, err := range errs {
 			message += err.Error() + "\n"
 		}
-		return core.ObjectParseError(u, errors.New(message))
+		return status.ObjectParseError(u, errors.New(message))
 	}
 
 	return nil

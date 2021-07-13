@@ -5,9 +5,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/google/nomos/testing/testoutput"
@@ -64,7 +64,7 @@ func TestFlatten(t *testing.T) {
 			name: "one Namespaced object",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(metadata.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},
@@ -77,10 +77,10 @@ func TestFlatten(t *testing.T) {
 			name: "two Namespaced objects",
 			configs: &namespaceconfig.AllConfigs{
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(metadata.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				), testoutput.NamespaceConfig(
-					"", "namespaces/foo", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/foo", core.WithoutAnnotation(metadata.SourcePathAnnotationKey),
 					fake.RoleObject(),
 				)),
 			},
@@ -101,7 +101,7 @@ func TestFlatten(t *testing.T) {
 					fake.ClusterRoleBindingObject(),
 				),
 				NamespaceConfigs: testoutput.NamespaceConfigs(testoutput.NamespaceConfig(
-					"", "namespaces/bar", core.WithoutAnnotation(v1.SourcePathAnnotationKey),
+					"", "namespaces/bar", core.WithoutAnnotation(metadata.SourcePathAnnotationKey),
 					fake.RoleBindingObject(),
 				)),
 			},

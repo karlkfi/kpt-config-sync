@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
@@ -105,7 +105,7 @@ func (c *clientApplier) Create(ctx context.Context, intendedState *unstructured.
 	if intendedState.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
 		err = c.create(ctx, intendedState)
 	} else {
-		if err1 := c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(constants.FieldManager)); err1 != nil {
+		if err1 := c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(configsync.FieldManager)); err1 != nil {
 			err = status.ResourceWrap(err1, "unable to apply resource", intendedState)
 		}
 	}
@@ -228,7 +228,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	objCopy := intendedState.DeepCopy()
 	// Run the server-side apply dryrun first.
 	// If the returned object doesn't change, skip running server-side apply.
-	err := c.client.Patch(ctx, objCopy, client.Apply, client.FieldOwner(constants.FieldManager), client.ForceOwnership, client.DryRunAll)
+	err := c.client.Patch(ctx, objCopy, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership, client.DryRunAll)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func (c *clientApplier) update(ctx context.Context, intendedState, currentState 
 	}
 
 	start := time.Now()
-	err = c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(constants.FieldManager), client.ForceOwnership)
+	err = c.client.Patch(ctx, intendedState, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)
 	duration := time.Since(start).Seconds()
 	metrics.APICallDuration.WithLabelValues("update", intendedState.GroupVersionKind().String(), metrics.StatusLabel(err)).Observe(duration)
 	m.RecordAPICallDuration(ctx, "update", m.StatusTagKey(err), intendedState.GroupVersionKind(), start)

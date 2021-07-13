@@ -12,10 +12,9 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/webhook/configuration"
 )
@@ -76,7 +75,7 @@ metadata:
 
 	// Config Sync should not modify the namespace.
 	err = nt.Validate("test-ns", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -106,7 +105,7 @@ metadata:
 	// Config Sync should not modify the namespace, since its `configsync.gke.io/resource-id`
 	// annotation is incorrect.
 	err = nt.Validate("test-ns", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -173,7 +172,7 @@ metadata:
 	// The `configsync.gke.io/manager` annotation of `test-ns2` suggests that its manager is ':abcdef'.
 	// The root reconciler does not manage `test-ns2`, therefore should not remove `test-ns2`.
 	err = nt.Validate("test-ns2", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, constants.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, metadata.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -203,7 +202,7 @@ metadata:
 
 	// Config Sync should not modify the namespace, since it does not have a `configsync.gke.io/manager` annotation.
 	err = nt.Validate("test-ns3", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -235,7 +234,7 @@ metadata:
 	// Config Sync should not modify the namespace, since its `configsync.gke.io/resource-id`
 	// annotation is incorrect.
 	err = nt.Validate("test-ns4", "", &corev1.Namespace{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, constants.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, metadata.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -312,7 +311,7 @@ data:
 	// Config Sync should not modify the configmap, since its `configsync.gke.io/resource-id`
 	// annotation is incorrect.
 	err = nt.Validate("test-cm2", "bookstore", &corev1.ConfigMap{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, constants.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, metadata.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -348,7 +347,7 @@ data:
 		// The `configsync.gke.io/manager` annotation of `test-ns3` suggests that its manager is ':abcdef'.
 		// The root reconciler does not manage `test-ns3`, therefore should not remove `test-ns3`.
 		err = nt.Validate("test-cm3", "bookstore", &corev1.ConfigMap{}, nomostest.HasExactlyAnnotationKeys(
-			v1.ResourceManagementKey, constants.ResourceIDKey, constants.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
+			metadata.ResourceManagementKey, metadata.ResourceIDKey, metadata.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
 		if err != nil {
 			nt.T.Fatal(err)
 		}
@@ -381,7 +380,7 @@ data:
 
 		// Config Sync should not modify the configmap, since it does not have a `configsync.gke.io/manager` annotation.
 		err = nt.Validate("test-cm4", "bookstore", &corev1.ConfigMap{}, nomostest.HasExactlyAnnotationKeys(
-			v1.ResourceManagementKey, constants.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
+			metadata.ResourceManagementKey, metadata.ResourceIDKey, "kubectl.kubernetes.io/last-applied-configuration"))
 		if err != nil {
 			nt.T.Fatal(err)
 		}
@@ -415,7 +414,7 @@ metadata:
 	// Config Sync should not modify the secret, since the GVKs of the resources declared in the git repository
 	// do not include the GVK for Secret.
 	err = nt.Validate("test-secret", "bookstore", &corev1.Secret{}, nomostest.HasExactlyAnnotationKeys(
-		v1.ResourceManagementKey, constants.ResourceIDKey, constants.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
+		metadata.ResourceManagementKey, metadata.ResourceIDKey, metadata.ResourceManagerKey, "kubectl.kubernetes.io/last-applied-configuration"))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -505,7 +504,7 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 	if nt.MultiRepo {
 		// Add the `client.lifecycle.config.k8s.io/mutation` annotation into the namespace object
 		// The webhook should deny the requests since this annotation is a part of the Config Sync metadata.
-		ignoreMutation := fmt.Sprintf("%s=%s", constants.LifecycleMutationAnnotation, constants.IgnoreMutation)
+		ignoreMutation := fmt.Sprintf("%s=%s", metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation)
 		_, err = nt.Kubectl("annotate", "namespace", "bookstore", ignoreMutation)
 		if err == nil {
 			nt.T.Fatalf("got `kubectl annotate namespace bookstore %s` success, want err", ignoreMutation)
@@ -514,7 +513,7 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 	}
 
 	// Add the `client.lifecycle.config.k8s.io/mutation` annotation into the namespace object
-	ignoreMutation := fmt.Sprintf("%s=%s", constants.LifecycleMutationAnnotation, constants.IgnoreMutation)
+	ignoreMutation := fmt.Sprintf("%s=%s", metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation)
 	out, err = nt.Kubectl("annotate", "namespace", "bookstore", ignoreMutation)
 	if err != nil {
 		nt.T.Fatalf("got `kubectl annotate namespace bookstore %s` error %v %s, want return nil", ignoreMutation, err, out)
@@ -522,7 +521,7 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 
 	// Verify Config Sync does not remove this field
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation))
+		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -546,9 +545,9 @@ func TestModifyManagedFields(t *testing.T) {
 		}
 
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from modifying Config Sync metadata.
-		_, err = nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", fmt.Sprintf("%s=winter", v1.ResourceManagementKey))
+		_, err = nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", fmt.Sprintf("%s=winter", metadata.ResourceManagementKey))
 		if err == nil {
-			nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` success, want err", v1.ResourceManagementKey)
+			nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` success, want err", metadata.ResourceManagementKey)
 		}
 		stopWebhook(nt)
 	}
@@ -568,14 +567,14 @@ func TestModifyManagedFields(t *testing.T) {
 	}
 
 	// Modify a Config Sync annotation
-	out, err = nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", fmt.Sprintf("%s=winter", v1.ResourceManagementKey))
+	out, err = nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", fmt.Sprintf("%s=winter", metadata.ResourceManagementKey))
 	if err != nil {
-		nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` error %v %s, want return nil", v1.ResourceManagementKey, err, out)
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` error %v %s, want return nil", metadata.ResourceManagementKey, err, out)
 	}
 
 	// Verify Config Sync corrects it
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -600,9 +599,9 @@ func TestDeleteManagedFields(t *testing.T) {
 		}
 
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from deleting Config Sync metadata.
-		_, err = nt.Kubectl("annotate", "namespace", "bookstore", fmt.Sprintf("%s-", v1.ResourceManagementKey))
+		_, err = nt.Kubectl("annotate", "namespace", "bookstore", fmt.Sprintf("%s-", metadata.ResourceManagementKey))
 		if err == nil {
-			nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` success, want err", v1.ResourceManagementKey)
+			nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` success, want err", metadata.ResourceManagementKey)
 		}
 		stopWebhook(nt)
 	}
@@ -621,13 +620,13 @@ func TestDeleteManagedFields(t *testing.T) {
 	}
 
 	// Delete a Config Sync annotation
-	out, err = nt.Kubectl("annotate", "namespace", "bookstore", fmt.Sprintf("%s-", v1.ResourceManagementKey))
+	out, err = nt.Kubectl("annotate", "namespace", "bookstore", fmt.Sprintf("%s-", metadata.ResourceManagementKey))
 	if err != nil {
-		nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` error %v %s, want return nil", v1.ResourceManagementKey, err, out)
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` error %v %s, want return nil", metadata.ResourceManagementKey, err, out)
 	}
 
 	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(v1.ResourceManagementKey, v1.ResourceManagementEnabled))
+		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -638,15 +637,15 @@ func stopWebhook(nt *nomostest.NT) {
 	webhookName := configuration.Name
 	webhookGK := "validatingwebhookconfigurations.admissionregistration.k8s.io"
 
-	out, err := nt.Kubectl("annotate", webhookGK, webhookName, fmt.Sprintf("%s=%s", configuration.WebhookconfigurationKey, configuration.WebhookConfigurationUpdateDisabled))
+	out, err := nt.Kubectl("annotate", webhookGK, webhookName, fmt.Sprintf("%s=%s", metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled))
 	if err != nil {
 		nt.T.Fatalf("got `kubectl annotate %s %s %s=%s` error %v %s, want return nil",
-			webhookGK, webhookName, configuration.WebhookconfigurationKey, configuration.WebhookConfigurationUpdateDisabled, err, out)
+			webhookGK, webhookName, metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled, err, out)
 	}
 
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate(webhookName, "", &admissionv1.ValidatingWebhookConfiguration{},
-			nomostest.HasAnnotation(configuration.WebhookconfigurationKey, configuration.WebhookConfigurationUpdateDisabled))
+			nomostest.HasAnnotation(metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled))
 	})
 	if err != nil {
 		nt.T.Fatal(err)

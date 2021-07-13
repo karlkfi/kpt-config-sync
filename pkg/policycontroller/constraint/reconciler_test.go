@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	nomosv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -20,35 +20,35 @@ func TestAnnotateConstraint(t *testing.T) {
 			"Constraint not yet processed",
 			con().generation(5).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["Constraint has not been processed by PolicyController"]`,
+				metadata.ResourceStatusReconcilingKey: `["Constraint has not been processed by PolicyController"]`,
 			},
 		},
 		{
 			"Constraint not yet enforced",
 			con().generation(5).byPod(5, false).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController is not enforcing Constraint"]`,
+				metadata.ResourceStatusReconcilingKey: `["[0] PolicyController is not enforcing Constraint"]`,
 			},
 		},
 		{
 			"PolicyController has outdated version of Constraint",
 			con().generation(5).byPod(4, true).build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
+				metadata.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has two errors",
 			con().generation(5).byPod(5, true, "looks bad", "smells bad too").build(),
 			map[string]string{
-				nomosv1.ResourceStatusErrorsKey: `["[0] test-code: looks bad","[0] test-code: smells bad too"]`,
+				metadata.ResourceStatusErrorsKey: `["[0] test-code: looks bad","[0] test-code: smells bad too"]`,
 			},
 		},
 		{
 			"ConstraintTemplate has error, but is out of date",
 			con().generation(5).byPod(4, true, "looks bad").build(),
 			map[string]string{
-				nomosv1.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
+				metadata.ResourceStatusReconcilingKey: `["[0] PolicyController has an outdated version of Constraint"]`,
 			},
 		},
 		{
@@ -92,12 +92,12 @@ func (c *conBuilder) build() unstructured.Unstructured {
 }
 
 func (c *conBuilder) annotateErrors(msg string) *conBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusErrorsKey, msg)
+	core.SetAnnotation(c, metadata.ResourceStatusErrorsKey, msg)
 	return c
 }
 
 func (c *conBuilder) annotateReconciling(msg string) *conBuilder {
-	core.SetAnnotation(c, nomosv1.ResourceStatusReconcilingKey, msg)
+	core.SetAnnotation(c, metadata.ResourceStatusReconcilingKey, msg)
 	return c
 }
 

@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -130,7 +130,7 @@ func TestIgnoreMutations(t *testing.T) {
 	nt.Root.Add("acme/namespaces/hello/ns.yaml",
 		fake.NamespaceObject("hello",
 			core.Annotation("goodbye", "moon"),
-			core.Annotation(constants.LifecycleMutationAnnotation, constants.IgnoreMutation)))
+			core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation)))
 	nt.Root.CommitAndPush("add Namespace")
 	nt.WaitForRepoSyncs()
 

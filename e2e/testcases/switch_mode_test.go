@@ -9,8 +9,8 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
@@ -58,7 +58,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	}
 
 	var rs v1alpha1.RootSync
-	err = nt.Validate(constants.RootSyncName, v1.NSConfigManagementSystem, &rs)
+	err = nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		nt.T.Fatal(err)
 	}

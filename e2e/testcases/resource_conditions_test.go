@@ -11,6 +11,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem/gatekeeper"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -251,7 +252,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 		// This happens asynchronously with syncing the repo; so the Repo may report
 		// "synced" before this appears.
 		return nt.Validate(ctName, "", fake.UnstructuredObject(ctGVK),
-			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["ConstraintTemplate has not been created"]`))
+			nomostest.HasAnnotation(metadata.ResourceStatusReconcilingKey, `["ConstraintTemplate has not been created"]`))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -309,7 +310,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 		// This happens asynchronously with syncing the repo; so the Repo may report
 		// "synced" before this appears.
 		return nt.Validate(constraintName, "", fake.UnstructuredObject(constraintGVK),
-			nomostest.HasAnnotation(v1.ResourceStatusReconcilingKey, `["Constraint has not been processed by PolicyController"]`))
+			nomostest.HasAnnotation(metadata.ResourceStatusReconcilingKey, `["Constraint has not been processed by PolicyController"]`))
 	})
 	if err != nil {
 		nt.T.Fatal(err)

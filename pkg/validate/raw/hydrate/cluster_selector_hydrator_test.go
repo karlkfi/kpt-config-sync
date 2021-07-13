@@ -6,11 +6,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform/selectors"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/validate/objects"
@@ -50,13 +49,13 @@ func cluster(name, label, value string) ast.FileObject {
 // withLegacyClusterSelector modifies a FileObject to have a legacy cluster-selector annotation
 // referencing the ClusterSelector named "name".
 func withLegacyClusterSelector(name string) core.MetaMutator {
-	return core.Annotation(v1.LegacyClusterSelectorAnnotationKey, name)
+	return core.Annotation(metadata.LegacyClusterSelectorAnnotationKey, name)
 }
 
 // withInlineClusterNameSelector modifies a FileObject to have an inline cluster-selector annotation
 // referencing the cluster matched with the labelSelector.
 func withInlineClusterNameSelector(clusters string) core.MetaMutator {
-	return core.Annotation(constants.ClusterNameSelectorAnnotationKey, clusters)
+	return core.Annotation(metadata.ClusterNameSelectorAnnotationKey, clusters)
 }
 
 var (

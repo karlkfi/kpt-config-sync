@@ -18,8 +18,8 @@ import (
 	"github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -448,7 +448,7 @@ func (nt *NT) WaitForRepoSyncs() {
 
 		for ns, repo := range nt.NamespaceRepos {
 			nt.WaitForRepoSync(repo, kinds.RepoSync(),
-				constants.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
+				configsync.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
 		}
 
 		_, err := Retry(60*time.Second, func() error {

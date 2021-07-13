@@ -9,9 +9,10 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,7 @@ func TestDeleteRootSync(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
 	var rs v1alpha1.RootSync
-	err := nt.Validate(constants.RootSyncName, v1.NSConfigManagementSystem, &rs)
+	err := nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -34,7 +35,7 @@ func TestDeleteRootSync(t *testing.T) {
 	}
 
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(constants.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObject())
+		return nt.ValidateNotFound(configsync.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObject())
 	})
 	if err != nil {
 		nt.T.Errorf("RootSync present after deletion: %v", err)
@@ -71,7 +72,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 
 	// Validate RootSync is present.
 	var rs v1alpha1.RootSync
-	err := nt.Validate(constants.RootSyncName, v1.NSConfigManagementSystem, &rs)
+	err := nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	// version mismatch.
 	_, err = nomostest.Retry(5*time.Second, func() error {
 		rootsync := &v1alpha1.RootSync{}
-		err := nt.Get(constants.RootSyncName, v1.NSConfigManagementSystem, rootsync)
+		err := nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rootsync)
 		if err != nil {
 			return err
 		}
@@ -146,7 +147,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	// Validate namespace 'shipping' created with the correct sourcePath annotation.
 	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.Validate(fooNS, "", fake.NamespaceObject(fooNS),
-			nomostest.HasAnnotation(v1.SourcePathAnnotationKey, sourcePath))
+			nomostest.HasAnnotation(metadata.SourcePathAnnotationKey, sourcePath))
 	})
 	if err != nil {
 		nt.T.Error(err)
@@ -222,7 +223,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	//
 	// Get RootSync and then perform Update.
 	rootsync := &v1alpha1.RootSync{}
-	err = nt.Get(constants.RootSyncName, v1.NSConfigManagementSystem, rootsync)
+	err = nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rootsync)
 	if err != nil {
 		nt.T.Fatalf("%v", err)
 	}
@@ -244,7 +245,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 
 	// Get RootSync and then perform Update.
 	rs := &v1alpha1.RootSync{}
-	err = nt.Get(constants.RootSyncName, v1.NSConfigManagementSystem, rs)
+	err = nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rs)
 	if err != nil {
 		nt.T.Fatalf("%v", err)
 	}
@@ -330,7 +331,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 	// Log error if the Reconciling condition does not progress to False before the timeout
 	// expires.
 	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate(constants.RootSyncName, v1.NSConfigManagementSystem, &v1alpha1.RootSync{},
+		return nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &v1alpha1.RootSync{},
 			hasRootSyncReconcilingStatus(metav1.ConditionFalse), hasRootSyncStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {

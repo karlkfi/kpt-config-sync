@@ -1,7 +1,7 @@
 package reconcile
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/metadata"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,13 +31,13 @@ func updateConfigAnnotation(resource *unstructured.Unstructured) error {
 	}
 
 	// First check for the new annotation.
-	_, ok := annots[v1.DeclaredConfigAnnotationKey]
+	_, ok := annots[metadata.DeclaredConfigAnnotationKey]
 	if ok {
 		return nil
 	}
 
 	// Verify that this resource is actually managed by Config Sync.
-	if _, ok = annots[v1.ResourceManagementKey]; !ok {
+	if _, ok = annots[metadata.ResourceManagementKey]; !ok {
 		return nil
 	}
 
@@ -116,7 +116,7 @@ func setOriginalConfiguration(obj client.Object, original []byte) error {
 		annots = map[string]string{}
 	}
 
-	annots[v1.DeclaredConfigAnnotationKey] = string(original)
+	annots[metadata.DeclaredConfigAnnotationKey] = string(original)
 	return metadataAccessor.SetAnnotations(obj, annots)
 }
 
@@ -132,7 +132,7 @@ func getOriginalConfiguration(obj client.Object) ([]byte, error) {
 		return nil, nil
 	}
 
-	original, ok := annots[v1.DeclaredConfigAnnotationKey]
+	original, ok := annots[metadata.DeclaredConfigAnnotationKey]
 	if !ok {
 		return nil, nil
 	}
@@ -160,8 +160,8 @@ func getModifiedConfiguration(obj client.Object, annotate bool, codec runtime.En
 		annots = map[string]string{}
 	}
 
-	original := annots[v1.DeclaredConfigAnnotationKey]
-	delete(annots, v1.DeclaredConfigAnnotationKey)
+	original := annots[metadata.DeclaredConfigAnnotationKey]
+	delete(annots, metadata.DeclaredConfigAnnotationKey)
 	if err := metadataAccessor.SetAnnotations(obj, annots); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func getModifiedConfiguration(obj client.Object, annotate bool, codec runtime.En
 	}
 
 	if annotate {
-		annots[v1.DeclaredConfigAnnotationKey] = string(modified)
+		annots[metadata.DeclaredConfigAnnotationKey] = string(modified)
 		if err := metadataAccessor.SetAnnotations(obj, annots); err != nil {
 			return nil, err
 		}
@@ -184,7 +184,7 @@ func getModifiedConfiguration(obj client.Object, annotate bool, codec runtime.En
 	}
 
 	// Restore the object to its original condition.
-	annots[v1.DeclaredConfigAnnotationKey] = original
+	annots[metadata.DeclaredConfigAnnotationKey] = original
 	if err := metadataAccessor.SetAnnotations(obj, annots); err != nil {
 		return nil, err
 	}

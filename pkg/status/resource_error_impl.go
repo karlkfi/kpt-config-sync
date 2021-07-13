@@ -1,12 +1,14 @@
 package status
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
-	"github.com/google/nomos/pkg/importer/id"
+	"github.com/google/nomos/pkg/metadata"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,9 +68,60 @@ func (r resourceErrorImpl) Cause() error {
 func formatResources(resources []client.Object) string {
 	resStrs := make([]string, len(resources))
 	for i, res := range resources {
-		resStrs[i] = id.PrintResource(res)
+		resStrs[i] = PrintResource(res)
 	}
 	// Sort to ensure deterministic resource printing order.
 	sort.Strings(resStrs)
 	return strings.Join(resStrs, "\n\n")
+}
+
+// GetSourceAnnotation returns the string value of the SourcePath Annotation.
+// Returns empty string if unset or the object has no annotations.
+func GetSourceAnnotation(obj client.Object) string {
+	as := obj.GetAnnotations()
+	if as == nil {
+		return ""
+	}
+	return as[metadata.SourcePathAnnotationKey]
+}
+
+// PrintResource returns a human-readable output for the Resource.
+func PrintResource(r client.Object) string {
+	var sb strings.Builder
+	if sourcePath := GetSourceAnnotation(r); sourcePath != "" {
+		sb.WriteString(fmt.Sprintf("source: %s\n", sourcePath))
+	}
+	if r.GetNamespace() != "" {
+		sb.WriteString(fmt.Sprintf("namespace: %s\n", r.GetNamespace()))
+	}
+	sb.WriteString(fmt.Sprintf("metadata.name:%s\n", name(r)))
+	sb.WriteString(printGroupVersionKind(r.GetObjectKind().GroupVersionKind()))
+	return sb.String()
+}
+
+// name returns the empty string if r.Name is the empty string, otherwise prepends a space.
+func name(r client.Object) string {
+	if r.GetName() == "" {
+		return ""
+	}
+	return " " + r.GetName()
+}
+
+// printGroupVersionKind returns a human-readable output for the GroupVersionKind.
+func printGroupVersionKind(gvk schema.GroupVersionKind) string {
+	return fmt.Sprintf(
+		"group:%[1]s\n"+
+			"version: %[2]s\n"+
+			"kind: %[3]s",
+		group(gvk.GroupKind()), gvk.Version, gvk.Kind)
+}
+
+// group returns the empty string if gvk.Group is the empty string, otherwise prepends a space.
+func group(gk schema.GroupKind) string {
+	if gk.Group == "" {
+		// Avoid unsightly whitespace if group is the empty string.
+		return ""
+	}
+	// Prepends space to separate it from "group:"
+	return " " + gk.Group
 }

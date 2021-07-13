@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -59,7 +60,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							DeclaredVersionLabel: "v1",
+							metadata.DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{
@@ -114,7 +115,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							DeclaredVersionLabel: "v1",
+							metadata.DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{
@@ -126,7 +127,7 @@ func TestToWebhookConfiguration(t *testing.T) {
 					MatchPolicy: &equivalent,
 					ObjectSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							DeclaredVersionLabel: "v1",
+							metadata.DeclaredVersionLabel: "v1",
 						},
 					},
 					Rules: []admissionv1.RuleWithOperations{

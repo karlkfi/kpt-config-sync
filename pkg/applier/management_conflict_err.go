@@ -1,7 +1,7 @@
 package applier
 
 import (
-	"github.com/google/nomos/pkg/constants"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,6 +17,6 @@ func ManagementConflictError(resource client.Object) status.Error {
 	return managementConflictErrorBuilder.
 		Sprintf("The %q reconciler cannot manage resources declared in the Root repository. "+
 			"Remove the declaration for this resource from either the Namespace repository, or the Root repository.",
-			resource.GetAnnotations()[constants.ResourceManagerKey]).
+			resource.GetAnnotations()[metadata.ResourceManagerKey]).
 		BuildWithResources(resource)
 }

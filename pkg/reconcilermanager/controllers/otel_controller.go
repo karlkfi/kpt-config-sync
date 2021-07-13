@@ -7,9 +7,8 @@ import (
 
 	traceapi "cloud.google.com/go/trace/apiv2"
 	"github.com/go-logr/logr"
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/constants"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"golang.org/x/oauth2/google"
@@ -97,10 +96,10 @@ func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]b
 
 		op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &cm, func() error {
 			cm.Labels = map[string]string{
-				"app":          metrics.OpenTelemetry,
-				"component":    metrics.OtelCollectorName,
-				v1.SystemLabel: "true",
-				v1.ArchLabel:   "csmr",
+				"app":                metrics.OpenTelemetry,
+				"component":          metrics.OtelCollectorName,
+				metadata.SystemLabel: "true",
+				metadata.ArchLabel:   "csmr",
 			}
 			cm.Data = map[string]string{
 				"otel-collector-config.yaml": metrics.CollectorConfigStackdriver,
@@ -140,7 +139,7 @@ func (r *OtelReconciler) updateDeploymentAnnotation(ctx context.Context, hash []
 
 	// Mutate Annotation with the hash of configmap.data from the otel ConfigMap
 	// creates/updates.
-	core.SetAnnotation(&dep.Spec.Template, constants.ConfigMapAnnotationKey, fmt.Sprintf("%x", hash))
+	core.SetAnnotation(&dep.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", hash))
 
 	if reflect.DeepEqual(existing, dep) {
 		return nil

@@ -1,8 +1,8 @@
 package hydrate
 
 import (
-	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/objects"
 )
@@ -12,7 +12,7 @@ import (
 func Filepath(objs *objects.Raw) status.MultiError {
 	for _, obj := range objs.Objects {
 		path := objs.PolicyDir.Join(obj.Relative).SlashPath()
-		core.SetAnnotation(obj, v1.SourcePathAnnotationKey, path)
+		core.SetAnnotation(obj, metadata.SourcePathAnnotationKey, path)
 	}
 	return nil
 }
