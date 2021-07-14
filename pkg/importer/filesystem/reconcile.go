@@ -3,6 +3,8 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -137,10 +139,17 @@ func newReconciler(clusterName string, gitDir string, policyDir string, parser C
 }
 
 // dirError updates repo source status with an error due to failure to read mounted git repo.
-func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error) (reconcile.Result, error) {
-	glog.Errorf("Failed to resolve config directory: %v", status.FormatSingleLine(err))
+func (c *reconciler) dirError(ctx context.Context, startTime time.Time, err error, errorFilePath string) (reconcile.Result, error) {
 	importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
-	sErr := status.SourceError.Wrap(err).Sprintf("unable to sync repo\n%s", git.SyncError("app=git-importer")).Build()
+	gitSyncError := git.SyncError(errorFilePath, "app=git-importer")
+	errBuilder := status.SourceError
+	if err != nil {
+		errBuilder = errBuilder.Wrap(err)
+	} else {
+		err = fmt.Errorf(gitSyncError)
+	}
+	glog.Errorf("Failed to resolve config directory: %v", status.FormatSingleLine(err))
+	sErr := errBuilder.Sprintf("unable to sync repo\n%s", gitSyncError).Build()
 	c.updateSourceStatus(ctx, nil, sErr.ToCME())
 	return reconcile.Result{}, nil
 }
@@ -168,16 +177,22 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	glog.V(4).Infof("Reconciling: %v", request)
 	startTime := time.Now()
 
+	// Check if the source configs are synced successfully.
+	errorFilePath := filepath.Join(path.Dir(c.absGitDir.OSPath()), git.ErrorFile)
+	if _, err := os.Stat(errorFilePath); err == nil || !os.IsNotExist(err) {
+		return c.dirError(ctx, startTime, err, errorFilePath)
+	}
+
 	// Ensure we're working with the absolute path, as most symlinks are relative
 	// paths and filepath.EvalSymlinks does not get the absolute destination.
 	absGitDir, err := c.absGitDir.EvalSymlinks()
 	if err != nil {
-		return c.dirError(ctx, startTime, err)
+		return c.dirError(ctx, startTime, err, errorFilePath)
 	}
 
 	absPolicyDir, err := absGitDir.Join(c.policyDir).EvalSymlinks()
 	if err != nil {
-		return c.dirError(ctx, startTime, err)
+		return c.dirError(ctx, startTime, err, errorFilePath)
 	}
 
 	// Detect whether symlink has changed, if the reconcile trigger is to periodically poll the filesystem.

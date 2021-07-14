@@ -296,6 +296,16 @@ func (g *Repository) CheckoutBranch(branch string) {
 	g.Git("checkout", branch)
 }
 
+// RenameBranch renames the current branch with a new one both locally and remotely.
+// The old branch will be deleted from remote.
+func (g *Repository) RenameBranch(current, new string) {
+	g.T.Helper()
+
+	g.Git("branch", "-m", current, new)
+	g.Git("push", remoteName, "-u", new)
+	g.Git("push", remoteName, "--delete", current)
+}
+
 // Hash returns the current hash of the git repository.
 //
 // Immediately ends the test on error.

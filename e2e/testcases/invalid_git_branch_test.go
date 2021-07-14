@@ -107,6 +107,35 @@ func TestInvalidMonoRepoBranchStatus(t *testing.T) {
 	nt.WaitForRepoSourceErrorClear()
 }
 
+func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
+	nt := nomostest.New(t)
+
+	// Add audit namespace.
+	auditNS := "audit"
+	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", auditNS),
+		fake.NamespaceObject(auditNS))
+	nt.Root.CommitAndPush("add namespace to acme directory")
+	nt.WaitForRepoSyncs()
+
+	// Validate namespace 'acme' created.
+	err := nt.Validate(auditNS, "", fake.NamespaceObject(auditNS))
+	if err != nil {
+		nt.T.Error(err)
+	}
+
+	// Make the sync fail by invalidating the source repo.
+	nt.Root.RenameBranch(nomostest.MainBranch, "invalid-branch")
+	if nt.MultiRepo {
+		nt.WaitForRootSyncSourceError(status.SourceErrorCode)
+	} else {
+		nt.WaitForRepoSourceError(status.SourceErrorCode)
+	}
+
+	// Change the remote branch name back to the original name.
+	nt.Root.RenameBranch("invalid-branch", nomostest.MainBranch)
+	nt.WaitForRepoSyncs()
+}
+
 // resetGitBranch updates GIT_SYNC_BRANCH in the config map and restart the reconcilers.
 func resetGitBranch(nt *nomostest.NT, branch string) {
 	nt.T.Logf("Change the GIT_SYNC_BRANCH name to %q", branch)

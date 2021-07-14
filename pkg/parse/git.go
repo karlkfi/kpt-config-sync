@@ -2,6 +2,9 @@ package parse
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
@@ -48,10 +51,21 @@ type gitState struct {
 func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error) {
 	result := gitState{}
 
+	// Check if the source configs are synced successfully.
+	errorFilePath := filepath.Join(path.Dir(o.GitDir.OSPath()), git.ErrorFile)
+	if _, err := os.Stat(errorFilePath); err == nil || !os.IsNotExist(err) {
+		errBuilder := status.SourceError
+		if err != nil {
+			errBuilder = errBuilder.Wrap(err)
+		}
+		return result, errBuilder.Sprintf("unable to sync repo\n%s",
+			git.SyncError(errorFilePath, fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
+	}
+
 	gitDir, err := o.GitDir.EvalSymlinks()
 	if err != nil {
 		return result, status.SourceError.Wrap(err).Sprintf("unable to sync repo\n%s",
-			git.SyncError(fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
+			git.SyncError(errorFilePath, fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
 	}
 
 	commit, e := git.CommitHash(gitDir.OSPath())
