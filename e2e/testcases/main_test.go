@@ -16,7 +16,8 @@ func TestMain(m *testing.M) {
 	// This TestMain function is required in every e2e test case file.
 	flag.Parse()
 
-	if !*e2e.E2E {
+	if !*e2e.E2E && !*e2e.Load && !*e2e.Stress {
+		// This allows `go test ./...` to function as expected without triggering any long running tests.
 		return
 	}
 	rand.Seed(time.Now().UnixNano())

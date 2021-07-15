@@ -24,6 +24,7 @@ type New struct {
 
 	Nomos
 	MultiRepo
+	TestType
 }
 
 // RequireManual requires the --manual flag is set. Otherwise it will skip the test.

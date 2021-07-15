@@ -49,6 +49,19 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 		opt(optsStruct)
 	}
 
+	e2eTest := !optsStruct.LoadTest && !optsStruct.StressTest
+	if !*e2e.E2E && e2eTest {
+		t.Skip("Test skipped since it is an e2e test")
+	}
+
+	if !*e2e.Load && optsStruct.LoadTest {
+		t.Skip("Test skipped since it is a load test")
+	}
+
+	if !*e2e.Stress && optsStruct.StressTest {
+		t.Skip("Test skipped since it is a stress test")
+	}
+
 	switch {
 	case optsStruct.Nomos.MultiRepo:
 		if optsStruct.MultiRepoIncompatible {
@@ -180,13 +193,6 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 // 3) A fresh ACM installation.
 func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 	t.Helper()
-
-	if !*e2e.E2E {
-		// This safeguard prevents test authors from accidentally forgetting to
-		// check for the e2e test flag, so `go test ./...` functions as expected
-		// without triggering e2e tests.
-		t.Fatal("Attempting to create or mutate a test cluster for non-e2e test. To fix, copy TestMain() from another e2e test.")
-	}
 
 	scheme := newScheme(t)
 	c := connect(t, opts.RESTConfig, scheme)
