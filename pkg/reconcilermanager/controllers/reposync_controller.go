@@ -319,6 +319,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 				configmapRef := make(map[string]*bool)
 				configmapRef[repoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
+				mutateContainerResource(&container, rs.Spec.Override)
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
 				configmapRef[repoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
@@ -333,6 +334,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 				}
 				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
+				mutateContainerResource(&container, rs.Spec.Override)
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.

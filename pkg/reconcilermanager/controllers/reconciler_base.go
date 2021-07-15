@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -186,4 +187,17 @@ func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.Object
 		return nil, errors.Wrapf(err, "error while retrieving deployment")
 	}
 	return checkDeploymentConditions(&depObj)
+}
+
+func mutateContainerResource(c *corev1.Container, override v1alpha1.OverrideSpec) {
+	for _, override := range override.Resources {
+		if override.ContainerName == c.Name {
+			if !override.CPULimit.IsZero() {
+				c.Resources.Limits[corev1.ResourceCPU] = override.CPULimit
+			}
+			if !override.MemoryLimit.IsZero() {
+				c.Resources.Limits[corev1.ResourceMemory] = override.MemoryLimit
+			}
+		}
+	}
 }

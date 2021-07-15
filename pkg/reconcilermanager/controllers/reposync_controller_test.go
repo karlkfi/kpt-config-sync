@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,12 +60,18 @@ const (
 	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
 	nsAnnotationNone           = "551985d0f09594c9f82527a4ae3770d8"
 
-	nsDeploymentGCENodeChecksum        = "0347b9bd42dc798b1d2b2437f2babdf3"
-	nsDeploymentSecretChecksum         = "526e033d0ad8c5fa617d2911b3ee7d8f"
-	nsDeploymentProxyChecksum          = "ca44edf64c5d691e4cd3f5ca2af03737"
-	nsDeploymentSecretUpdatedChecksum  = "239b45bf27dea7b27d2128fd8467c856"
-	nsDeploymentGCENodeUpdatedChecksum = "23f8caabbe7d083c1215ec1f0931eb29"
-	nsDeploymentNoneChecksum           = "dda680d55ec972e5dabfae730baf8bc3"
+	nsDeploymentGCENodeChecksum        = "d3a88860c72e5b39c38096c2dc657e85"
+	nsDeploymentSecretChecksum         = "cc1e15e0abab9cd7e9ee92fd00340f65"
+	nsDeploymentProxyChecksum          = "d6c4f21f2460ad88441a31376a99e761"
+	nsDeploymentSecretUpdatedChecksum  = "9025b2dba5936ba6eb9aecbfcaa8008c"
+	nsDeploymentGCENodeUpdatedChecksum = "c38f58f74e8a658f18b6bcb5005a4d4b"
+	nsDeploymentNoneChecksum           = "a4aee26433917ddc4cce86d27b6f33cd"
+
+	// Checksums of the Deployment whose container resource limits are updated
+	nsDeploymentResourceLimitsChecksum                         = "94961815c1490fa2a0fd52f05b98dd2b"
+	nsDeploymentReconcilerLimitsChecksum                       = "51ef264dfa236523ffa4b22fee6983de"
+	nsDeploymentGitSyncMemLimitsChecksum                       = "b3a970a2d3c763b3da65a7033604b2f7"
+	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "a48562544a396572b3a96298e830757e"
 )
 
 // Set in init.
@@ -127,6 +134,14 @@ func reposyncGCPSAEmail(email string) func(sync *v1alpha1.RepoSync) {
 	}
 }
 
+func reposyncOverrideResourceLimits(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RepoSync) {
+	return func(sync *v1alpha1.RepoSync) {
+		sync.Spec.Override = v1alpha1.OverrideSpec{
+			Resources: containers,
+		}
+	}
+}
+
 func repoSync(opts ...func(*v1alpha1.RepoSync)) *v1alpha1.RepoSync {
 	rs := fake.RepoSyncObject(core.Namespace(reposyncReqNamespace))
 	rs.Spec.Repo = reposyncRepo
@@ -182,6 +197,342 @@ func setupNSReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Client,
 		s,
 	)
 	return fakeClient, testReconciler
+}
+
+func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: "reconciler",
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: "git-sync",
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+	}
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth),
+		reposyncSecretRef(reposyncSSHKey), reposyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentResourceLimitsChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Test overriding the CPU limits of the reconciler container and the memory limits of the git-sync container
+	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: "reconciler",
+			CPULimit:      resource.MustParse("1.2"),
+		},
+		{
+			ContainerName: "git-sync",
+			MemoryLimit:   resource.MustParse("888Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+			containerResourceLimitsMutator(overrideReconcilerCPULimitsAndGitSyncMemLimits),
+		),
+	}
+
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+}
+
+func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Test overriding the CPU/memory limits of both the reconciler and git-sync container
+	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: "reconciler",
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: "git-sync",
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideReconcilerAndGitSyncResourceLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentResourceLimitsChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+		),
+	}
+
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Test overriding the CPU/memory limits of the reconciler container
+	overrideReconcilerResourceLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: "reconciler",
+			CPULimit:      resource.MustParse("2"),
+			MemoryLimit:   resource.MustParse("2Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideReconcilerResourceLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentReconcilerLimitsChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+			containerResourceLimitsMutator(overrideReconcilerResourceLimits),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Test overriding the memory limits of the git-sync container
+	overrideGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: "git-sync",
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideGitSyncMemLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentGitSyncMemLimitsChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+			containerResourceLimitsMutator(overrideGitSyncMemLimits),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
 }
 
 func TestRepoSyncReconciler(t *testing.T) {
@@ -831,10 +1182,16 @@ func validateDeployments(wants []*appsv1.Deployment, fakeClient *syncerFake.Clie
 						cmpopts.SortSlices(func(x, y corev1.VolumeMount) bool { return x.Name < y.Name })); diff != "" {
 						return errors.Errorf("Unexpected volumeMount found, diff %s", diff)
 					}
+
 					// Compare Env fields in the container.
 					if diff := cmp.Diff(i.Env, j.Env,
 						cmpopts.SortSlices(func(x, y corev1.EnvVar) bool { return x.Name < y.Name })); diff != "" {
 						return errors.Errorf("Unexpected EnvVar found, diff %s", diff)
+					}
+
+					// Compare Resources fields in the container.
+					if diff := cmp.Diff(i.Resources, j.Resources); diff != "" {
+						return errors.Errorf("Unexpected resources found for the %q container, diff %s", i.Name, diff)
 					}
 				}
 			}

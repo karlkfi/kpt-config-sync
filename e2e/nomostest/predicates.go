@@ -6,7 +6,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/metadata"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -140,6 +144,36 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 		sort.Strings(gotKeys)
 		if diff := cmp.Diff(wantKeys, gotKeys); diff != "" {
 			return errors.Errorf("unexpected diff in metadata.annotation keys: %s", diff)
+		}
+		return nil
+	}
+}
+
+// HasCorrectResourceLimits verify a root/namespace reconciler has the correct resource limits.
+func HasCorrectResourceLimits(reconcilerCPULimits, reconcilerMemLimits, gitSyncCPULimits, gitSyncMemLimits resource.Quantity) Predicate {
+	return func(o client.Object) error {
+		dep, ok := o.(*appsv1.Deployment)
+		if !ok {
+			return WrongTypeErr(dep, &appsv1.Deployment{})
+		}
+		for _, container := range dep.Spec.Template.Spec.Containers {
+			switch container.Name {
+			case reconcilermanager.Reconciler:
+				if container.Resources.Limits[corev1.ResourceCPU] != reconcilerCPULimits {
+					return errors.Errorf("The CPU limit of the %q container should be %v, got %v", container.Name, reconcilerCPULimits, container.Resources.Limits[corev1.ResourceCPU])
+				}
+				if container.Resources.Limits[corev1.ResourceMemory] != reconcilerMemLimits {
+					return errors.Errorf("The memory limit of the %q container should be %v, got %v", container.Name, reconcilerMemLimits, container.Resources.Limits[corev1.ResourceMemory])
+				}
+
+			case reconcilermanager.GitSync:
+				if container.Resources.Limits[corev1.ResourceCPU] != gitSyncCPULimits {
+					return errors.Errorf("The CPU limit of the %q container should be %v, got %v", container.Name, gitSyncCPULimits, container.Resources.Limits[corev1.ResourceCPU])
+				}
+				if container.Resources.Limits[corev1.ResourceMemory] != gitSyncMemLimits {
+					return errors.Errorf("The memory limit of the %q container should be %v, got %v", container.Name, gitSyncMemLimits, container.Resources.Limits[corev1.ResourceMemory])
+				}
+			}
 		}
 		return nil
 	}

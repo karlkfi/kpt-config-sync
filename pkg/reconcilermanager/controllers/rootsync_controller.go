@@ -327,6 +327,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 				configmapRef[rootSyncResourceName(reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				configmapRef[rootSyncResourceName(reconcilermanager.SourceFormat)] = pointer.BoolPtr(true)
 				container.EnvFrom = envFromSources(configmapRef)
+				mutateContainerResource(&container, rs.Spec.Override)
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
 				configmapRef[rootSyncResourceName(reconcilermanager.GitSync)] = pointer.BoolPtr(false)
@@ -342,6 +343,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 				}
 				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
+				mutateContainerResource(&container, rs.Spec.Override)
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.

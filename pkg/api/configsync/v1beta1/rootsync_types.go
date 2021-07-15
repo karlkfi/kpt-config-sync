@@ -38,6 +38,11 @@ type RootSyncSpec struct {
 	// git contains configuration specific to importing policies from a Git repo.
 	// +optional
 	Git `json:"git,omitempty"`
+
+	// override allows to override the settings for a root reconciler.
+	// +nullable
+	// +optional
+	Override OverrideSpec `json:"override,omitempty"`
 }
 
 // RootSyncStatus defines the observed state of RootSync

@@ -104,6 +104,42 @@ spec:
                         description: name represents the secret name.
                         type: string
                     type: object
+              override:
+                description: override allows to override the settings for a root reconciler.
+                nullable: true
+                properties:
+                  resources:
+                    description: resources allow one to override the resource requirements
+                      for the containers in a reconciler pod.
+                    items:
+                      description: ContainerResourcesSpec allows to override the resource
+                        requirements for a container
+                      properties:
+                        containerName:
+                          description: containerName specifies the name of a container
+                            whose resource requirements will be overriden. Must be "reconciler"
+                            or "git-sync".
+                          pattern: ^(reconciler|git-sync)$
+                          type: string
+                        cpuLimit:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: cpuLimit allows one to override the CPU limit
+                            of a container
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        memoryLimit:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: memoryLimit allows one to override the memory
+                            limit of a container
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                      type: object
+                    type: array
+                type: object
               sourceFormat:
                 description: "sourceFormat specifies how the repository is formatted.
                       See documentation for specifics of what these options do. \n Must
@@ -203,6 +239,42 @@ spec:
                         description: name represents the secret name.
                         type: string
                     type: object
+              override:
+                description: override allows to override the settings for a root reconciler.
+                nullable: true
+                properties:
+                  resources:
+                    description: resources allow one to override the resource requirements
+                      for the containers in a reconciler pod.
+                    items:
+                      description: ContainerResourcesSpec allows to override the resource
+                        requirements for a container
+                      properties:
+                        containerName:
+                          description: containerName specifies the name of a container
+                            whose resource requirements will be overriden. Must be "reconciler"
+                            or "git-sync".
+                          pattern: ^(reconciler|git-sync)$
+                          type: string
+                        cpuLimit:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: cpuLimit allows one to override the CPU limit
+                            of a container
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        memoryLimit:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: memoryLimit allows one to override the memory
+                            limit of a container
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                      type: object
+                    type: array
+                type: object
               sourceFormat:
                 description: "sourceFormat specifies how the repository is formatted.
                           See documentation for specifics of what these options do. \n Must

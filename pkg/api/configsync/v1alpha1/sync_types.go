@@ -20,6 +20,11 @@ type SyncSpec struct {
 	// Git contains configuration specific to importing policies from a Git repo.
 	// +optional
 	Git `json:"git,omitempty"`
+
+	// override allows to override the settings for a reconciler.
+	// +nullable
+	// +optional
+	Override OverrideSpec `json:"override,omitempty"`
 }
 
 // SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.

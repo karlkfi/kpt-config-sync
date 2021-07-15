@@ -75,6 +75,13 @@ data:
            envFrom:
            - configMapRef:
                name: git-sync
+           resources:
+             limits:
+               cpu: "1"
+               memory: "200Mi"
+             requests:
+               cpu: "10m"
+               memory: "10Mi"
          - name: otel-agent
            image: gcr.io/config-management-release/otelcol:v0.22.0
            command:

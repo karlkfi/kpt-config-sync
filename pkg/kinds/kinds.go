@@ -207,6 +207,11 @@ func RootSync() schema.GroupVersionKind {
 	return v1alpha1.SchemeGroupVersion.WithKind("RootSync")
 }
 
+// RootSyncV1Beta1 returns the v1beta1 RootSync GroupVersionKind.
+func RootSyncV1Beta1() schema.GroupVersionKind {
+	return v1beta1.SchemeGroupVersion.WithKind("RootSync")
+}
+
 // Service returns the canonical Service GroupVersionKind.
 func Service() schema.GroupVersionKind {
 	return corev1.SchemeGroupVersion.WithKind("Service")
