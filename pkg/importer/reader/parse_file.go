@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -78,8 +80,7 @@ func parseYAMLFile(contents []byte) ([]*unstructured.Unstructured, error) {
 		}
 		result = append(result, &u)
 	}
-
-	return result, nil
+	return filterLocalConfigUnstructured(result), nil
 }
 
 func parseJSONFile(contents []byte) ([]*unstructured.Unstructured, error) {
@@ -93,7 +94,10 @@ func parseJSONFile(contents []byte) ([]*unstructured.Unstructured, error) {
 	// have to do the same work we had to do for YAML.
 	var u unstructured.Unstructured
 	err := u.UnmarshalJSON(contents)
-	return []*unstructured.Unstructured{&u}, err
+	if err != nil {
+		return nil, err
+	}
+	return filterLocalConfigUnstructured([]*unstructured.Unstructured{&u}), nil
 }
 
 func parseKptfile(contents []byte) ([]*unstructured.Unstructured, error) {
@@ -123,4 +127,15 @@ func hasStatusField(u runtime.Unstructured) bool {
 		glog.Errorf("unexpected error retrieving status field: %v:\n%v", err, u)
 	}
 	return ok && m != nil && len(m.(map[string]interface{})) != 0
+}
+
+func filterLocalConfigUnstructured(unstructureds []*unstructured.Unstructured) []*unstructured.Unstructured {
+	var result []*unstructured.Unstructured
+	for _, u := range unstructureds {
+		if core.GetAnnotation(u, metadata.LocalConfigAnnotationKey) == metadata.LocalConfigValue {
+			continue
+		}
+		result = append(result, u)
+	}
+	return result
 }

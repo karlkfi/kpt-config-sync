@@ -3,6 +3,7 @@ package metadata
 import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
+	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 )
 
 // Annotations with the `configmanagement.gke.io/` prefix.
@@ -149,3 +150,16 @@ var ConfigSyncAnnotations = []string{
 	ResourceManagerKey,
 	ResourceIDKey,
 }
+
+// Annotation for local configuration
+const (
+	// LocalConfigAnnotationKey is the annotation key to mark
+	// a resource is only local. When its value is "true",
+	// the resource shouldn't be applied to the cluster.
+	// This annotation is set by Config Sync users on a resource that
+	// should be only used by local tools such as kpt function.
+	LocalConfigAnnotationKey = filters.LocalConfigAnnotation
+
+	// LocalConfigValue marks a resource as a local configuration.
+	LocalConfigValue = "true"
+)

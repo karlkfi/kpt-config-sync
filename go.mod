@@ -58,6 +58,7 @@ require (
 	sigs.k8s.io/cli-utils v0.24.0
 	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/kind v0.10.0
+	sigs.k8s.io/kustomize/kyaml v0.10.15
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
 	sigs.k8s.io/yaml v1.2.0
 )

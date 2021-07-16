@@ -140,6 +140,17 @@ metadata:
 				fake.UnstructuredObject(kinds.Namespace(), core.Name("bar")),
 			},
 		},
+		{
+			name: "ignore local configuration",
+			contents: `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  annotations:
+    config.kubernetes.io/local-config: "true"
+`,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -214,6 +225,27 @@ func TestParseJsonFile(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name: "ignore local configuration",
+			contents: `{
+  "apiVersion": "rbac/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "admin",
+    "namespace": "shipping",
+    "annotations": {
+      "config.kubernetes.io/local-config": "true"
+    }
+  },
+  "rules": [
+    {
+      "apiGroups": ["rbac"],
+      "verbs": ["all"]
+    }
+  ]
+}
+`,
 		},
 	}
 
