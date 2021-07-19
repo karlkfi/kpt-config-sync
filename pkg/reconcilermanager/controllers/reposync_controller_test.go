@@ -42,6 +42,7 @@ const (
 	reposyncRepo         = "https://github.com/test/reposync/csp-config-management/"
 	reposyncDir          = "foo-corp"
 	reposyncSSHKey       = "ssh-key"
+	reposyncCookie       = "cookie"
 	reposyncCluster      = "abc-123"
 
 	gcpSAEmail = "config-sync@cs-project.iam.gserviceaccount.com"
@@ -49,19 +50,21 @@ const (
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation = "7c45f159e7c8005a792dcb402c078957"
+	nsAnnotation      = "7c45f159e7c8005a792dcb402c078957"
+	nsProxyAnnotation = "41b1ab0e5dbdeaf735a6e9f6740509c8"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
 	nsUpdatedAnnotation = "ad9eec9d09067c7aa5c339b3cef083f3"
 
 	nsAnnotationGCENode        = "1e0a718052edc00039f6acc3738a02ae"
 	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
-	nsAnnotationNone           = "16b1a82808b5bd13ed552122796c7ea4"
+	nsAnnotationNone           = "551985d0f09594c9f82527a4ae3770d8"
 
 	nsDeploymentGCENodeChecksum        = "0347b9bd42dc798b1d2b2437f2babdf3"
 	nsDeploymentSecretChecksum         = "526e033d0ad8c5fa617d2911b3ee7d8f"
+	nsDeploymentProxyChecksum          = "ca44edf64c5d691e4cd3f5ca2af03737"
 	nsDeploymentSecretUpdatedChecksum  = "239b45bf27dea7b27d2128fd8467c856"
 	nsDeploymentGCENodeUpdatedChecksum = "23f8caabbe7d083c1215ec1f0931eb29"
-	nsDeploymentNoneChecksum           = "71d331f52d4a6fc3bb48cb034e443295"
+	nsDeploymentNoneChecksum           = "dda680d55ec972e5dabfae730baf8bc3"
 )
 
 // Set in init.
@@ -696,6 +699,94 @@ func TestRepoSyncReconcilerRestart(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
+func TestRepoSyncWithProxy(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(configsync.GitSecretCookieFile), reposyncSecretRef(reposyncCookie))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObjWithProxy(t, reposyncCookie, "cookie_file", core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantNamespaces := map[string]struct{}{
+		reposyncReqNamespace: {},
+	}
+
+	// compare namespaces.
+	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("namespaces diff %s", diff)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: configsync.GitSecretCookieFile,
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantServiceAccount := fake.ServiceAccountObject(
+		nsReconcilerName,
+		core.Namespace(v1.NSConfigManagementSystem),
+	)
+
+	wantRoleBinding := rolebinding(
+		repoSyncPermissionsName(),
+		reposyncReqNamespace,
+		core.Namespace(reposyncReqNamespace),
+	)
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsProxyAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentProxyChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncCookie),
+			envVarMutator("HTTPS_PROXY", nsReconcilerName+"-"+reposyncCookie),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("Service Account diff %s", diff)
+	}
+
+	// compare RoleBinding.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantRoleBinding)], wantRoleBinding, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("RoleBinding diff %s", diff)
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap, ServiceAccount, RoleBinding, Service, and Deployment successfully created")
+}
+
 // validateDeployments validates that important fields in the `wants` deployments match those same fields in the deployments found in the fakeClient
 func validateDeployments(wants []*appsv1.Deployment, fakeClient *syncerFake.Client) error {
 	for _, want := range wants {
@@ -739,6 +830,11 @@ func validateDeployments(wants []*appsv1.Deployment, fakeClient *syncerFake.Clie
 					if diff := cmp.Diff(i.VolumeMounts, j.VolumeMounts,
 						cmpopts.SortSlices(func(x, y corev1.VolumeMount) bool { return x.Name < y.Name })); diff != "" {
 						return errors.Errorf("Unexpected volumeMount found, diff %s", diff)
+					}
+					// Compare Env fields in the container.
+					if diff := cmp.Diff(i.Env, j.Env,
+						cmpopts.SortSlices(func(x, y corev1.EnvVar) bool { return x.Name < y.Name })); diff != "" {
+						return errors.Errorf("Unexpected EnvVar found, diff %s", diff)
 					}
 				}
 			}

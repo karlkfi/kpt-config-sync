@@ -125,7 +125,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		return controllerruntime.Result{}, errors.Wrap(err, "ClusterRoleBinding reconcile failed")
 	}
 
-	mut := r.mutationsFor(rs, configMapDataHash)
+	mut := r.mutationsFor(ctx, rs, configMapDataHash)
 
 	// Upsert Root reconciler deployment.
 	op, err := r.upsertDeployment(ctx, reconciler.RootSyncName, v1.NSConfigManagementSystem, mut)
@@ -282,7 +282,7 @@ func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Root
 	return err
 }
 
-func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHash []byte) mutateFn {
+func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootSync, configMapDataHash []byte) mutateFn {
 	return func(obj client.Object) error {
 		d, ok := obj.(*appsv1.Deployment)
 		if !ok {
@@ -336,9 +336,12 @@ func (r *RootSyncReconciler) mutationsFor(rs v1alpha1.RootSync, configMapDataHas
 					container.VolumeMounts)
 				// Update Environment variables for `token` Auth, which
 				// passes the credentials as the Username and Password.
+				secretName := rs.Spec.SecretRef.Name
 				if authTypeToken(rs.Spec.Auth) {
-					container.Env = gitSyncTokenAuthEnv(rs.Spec.SecretRef.Name)
+					container.Env = gitSyncTokenAuthEnv(secretName)
 				}
+				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
+				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.

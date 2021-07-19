@@ -65,6 +65,20 @@ func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
 	return nil
 }
 
+// GetKeys returns the keys that are contained in the Secret.
+func GetKeys(ctx context.Context, c client.Client, secretName, namespace string) map[string]bool {
+	// namespaceSecret represent secret in reposync.namespace.
+	namespaceSecret := &corev1.Secret{}
+	if err := get(ctx, secretName, namespace, namespaceSecret, c); err != nil {
+		return nil
+	}
+	results := map[string]bool{}
+	for k := range namespaceSecret.Data {
+		results[k] = true
+	}
+	return results
+}
+
 // get secret using provided namespace and name.
 func get(ctx context.Context, name, namespace string, secret *corev1.Secret, c client.Client) error {
 	// NamespacedName for the secret.

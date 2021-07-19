@@ -69,7 +69,9 @@ func gitSyncData(opts options) map[string]string {
 
 		fallthrough
 	case GitSecretConfigKeyToken, "", configsync.GitSecretNone:
-		result["HTTPS_PROXY"] = opts.proxy
+		if opts.proxy != "" {
+			result["HTTPS_PROXY"] = opts.proxy
+		}
 	default:
 		// TODO b/168553377 Return error while setting up gitSyncData.
 		glog.Errorf("Unrecognized secret type %s", opts.secretType)

@@ -36,21 +36,23 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation = "75a76c9c0de8e20c5e387df1a752f87f"
+	rsAnnotation      = "75a76c9c0de8e20c5e387df1a752f87f"
+	rsProxyAnnotation = "2bbd46312681904ae0095b0c08f267cc"
 	// Updated hash of all configmap.data updated by Root Reconciler.
 	rsUpdatedAnnotation = "afcc0fc36266b70500c33218f773bd7f"
 
 	rsAnnotationGCENode        = "13c7343a532901cd51b815a9ff10db8c"
 	rsUpdatedAnnotationGCENode = "87db1abb4c04ba6e9b0a4e7ba9423588"
-	rsAnnotationNone           = "0acf0cf0d52e90d05476584c7eb5cdc0"
+	rsAnnotationNone           = "14f98a674e039300f9385a0440dc8d36"
 
 	rootsyncSSHKey = "root-ssh-key"
 
 	deploymentGCENodeChecksum        = "5b0f1ba4ee9cb3a5f484fb6abfed194e"
 	deploymentSecretChecksum         = "ceb0d9faa80cfc10463aaba067369f3b"
+	deploymentProxyChecksum          = "d5f71bf2c072a44da779f761b24a2222"
 	deploymentSecretUpdatedChecksum  = "31f88adb18d1fc3a2bb62e22c8f525d1"
 	deploymentGCENodeUpdatedChecksum = "86a3c5daa443b7e9efef2cf4f6332fb6"
-	deploymentNoneChecksum           = "0f6f2d57c404b93c251f02f94b8b5f0c"
+	deploymentNoneChecksum           = "c1958fcb0c7669fca3f2df2efbb6eeab"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -93,6 +95,17 @@ func secretObj(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev
 	t.Helper()
 	result := fake.SecretObject(name, opts...)
 	result.Data = secretData(t, auth)
+	return result
+}
+
+func secretObjWithProxy(t *testing.T, name, auth string, opts ...core.MetaMutator) *corev1.Secret {
+	t.Helper()
+	result := fake.SecretObject(name, opts...)
+	result.Data = secretData(t, auth)
+	m2 := secretData(t, "https_proxy")
+	for k, v := range m2 {
+		result.Data[k] = v
+	}
 	return result
 }
 
@@ -653,6 +666,75 @@ func TestRootSyncReconcilerRestart(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
+func TestRootSyncWithProxy(t *testing.T) {
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretCookieFile), rootsyncSecretRef(reposyncCookie))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObjWithProxy(t, reposyncCookie, "cookie_file", core.Namespace(rootsyncReqNamespace)))
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: configsync.GitSecretCookieFile,
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.Reconciler),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			rootSyncResourceName(reconcilermanager.SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsProxyAnnotation)),
+			setServiceAccountName(reconciler.RootSyncName),
+			secretMutator(deploymentProxyChecksum, reconciler.RootSyncName, reposyncCookie),
+			envVarMutator("HTTPS_PROXY", reposyncCookie),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+}
+
 type depMutator func(*appsv1.Deployment)
 
 func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
@@ -679,6 +761,28 @@ func secretMutator(deploymentConfigChecksum, reconcilerName, secretName string) 
 		dep.Annotations[deploymentConfigChecksumAnnotationKey] = deploymentConfigChecksum
 		dep.Spec.Template.Spec.Volumes = deploymentSecretVolumes(secretName)
 		dep.Spec.Template.Spec.Containers = secretMountContainers(reconcilerName)
+	}
+}
+
+func envVarMutator(envName, secretName string) depMutator {
+	return func(dep *appsv1.Deployment) {
+		for i, con := range dep.Spec.Template.Spec.Containers {
+			if con.Name == reconcilermanager.GitSync {
+				dep.Spec.Template.Spec.Containers[i].Env = []corev1.EnvVar{
+					{
+						Name: envName,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secretName,
+								},
+								Key: "https_proxy",
+							},
+						},
+					},
+				}
+			}
+		}
 	}
 }
 
