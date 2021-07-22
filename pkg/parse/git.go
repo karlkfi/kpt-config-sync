@@ -1,9 +1,19 @@
 package parse
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/golang/glog"
+	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
+	"github.com/google/nomos/pkg/metadata"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -12,6 +22,12 @@ import (
 type FileSource struct {
 	// GitDir is the path to the symbolic link of the git repository.
 	GitDir cmpath.Absolute
+	// HydratedRoot is the path to the root of the hydrated directory.
+	HydratedRoot string
+	// RepoRoot is the absolute path to the parent directory of GitRoot and HydratedRoot.
+	RepoRoot cmpath.Absolute
+	// HydratedLink is the relative path to the symbolic link of the hydrated configs.
+	HydratedLink string
 	// PolicyDir is the path to the directory of policies within the git repository.
 	PolicyDir cmpath.Relative
 	// GitRepo is the git repo to sync.
@@ -41,25 +57,36 @@ type gitState struct {
 	files []cmpath.Absolute
 }
 
-// readGitState reads all the files under state.policyDir and sets state.files.
-// readGitFiles should be called after readGitCommitAndPolicyDir.
-func (o *files) readGitFiles(state *gitState) status.Error {
+// readConfigFiles reads all the files under state.policyDir and sets state.files.
+// - if renderingPhase is 'skipped', state.policyDir contains the source files.
+// - if renderingPhase is 'succeeded', state.policyDir contains the hydrated files.
+// readConfigFiles should be called after gitState is populated.
+func (o *files) readConfigFiles(state *gitState, renderingPhase v1alpha1.RenderingPhase) status.Error {
 	if state == nil || state.commit == "" || state.policyDir.OSPath() == "" {
-		return status.InternalError("readGitCommitAndPolicyDir should be called first")
+		return status.InternalError("gitState is not populated yet")
 	}
 	policyDir := state.policyDir
 	if policyDir.OSPath() == o.currentPolicyDir {
-		glog.V(4).Infof("Git directory is unchanged: %s", policyDir.OSPath())
+		glog.V(4).Infof("The configs directory is unchanged: %s", policyDir.OSPath())
 	} else {
-		glog.Infof("Reading updated git dir: %s", policyDir.OSPath())
+		glog.Infof("Reading updated configs dir: %s", policyDir.OSPath())
 		o.currentPolicyDir = policyDir.OSPath()
 	}
 
-	files, err := git.ListFiles(policyDir)
-	if err != nil {
-		return status.PathWrapError(errors.Wrap(err, "listing files in policy dir"), policyDir.OSPath())
+	var fileList []cmpath.Absolute
+	var err error
+	switch renderingPhase {
+	case v1alpha1.RenderingSkipped:
+		fileList, err = git.ListFiles(policyDir)
+	case v1alpha1.RenderingSucceeded:
+		fileList, err = listFiles(policyDir)
+	default:
+		return status.InternalErrorf("rendering should have completed, but the phase is %s", renderingPhase)
 	}
-	state.files = files
+	if err != nil {
+		return status.PathWrapError(errors.Wrap(err, "listing files in the configs directory"), policyDir.OSPath())
+	}
+	state.files = fileList
 	return nil
 }
 
@@ -69,4 +96,73 @@ func (o *files) gitContext() gitContext {
 		Branch: o.GitBranch,
 		Rev:    o.GitRev,
 	}
+}
+
+// readHydratedDir returns a gitState object whose `commit` and `policyDir` fields are set if succeeded.
+func (o *files) readHydratedDir(hydratedRoot cmpath.Absolute, link, reconciler string) (gitState, error) {
+	result := gitState{}
+	errorFile := hydratedRoot.Join(cmpath.RelativeSlash(hydrate.ErrorFile))
+	if _, err := os.Stat(errorFile.OSPath()); err == nil {
+		return result, errors.New(hydratedError(errorFile.OSPath(),
+			fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconciler)))
+	} else if !os.IsNotExist(err) {
+		return result, errors.Wrapf(err, "failed to check the error file: %s", errorFile.OSPath())
+	}
+	hydratedDir, err := hydratedRoot.Join(cmpath.RelativeSlash(link)).EvalSymlinks()
+	if err != nil {
+		return result, errors.Wrapf(err, "unable to load the hydrated configs under %s", hydratedRoot.OSPath())
+	}
+
+	commit, err := git.CommitHash(hydratedDir.OSPath())
+	if err != nil {
+		return result, errors.Wrapf(err, "unable to parse commit hash from the hydrated directory: %s", hydratedDir.OSPath())
+	}
+	result.commit = commit
+
+	relSyncDir := hydratedDir.Join(o.PolicyDir)
+	syncDir, err := relSyncDir.EvalSymlinks()
+	if err != nil {
+		return result, errors.Wrapf(err, "unable to evaluate symbolic link to the hydrated sync directory: %s", relSyncDir.OSPath())
+	}
+	result.policyDir = syncDir
+	return result, nil
+}
+
+// listFiles returns a list of all files in the specified directory.
+func listFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
+	var result []cmpath.Absolute
+	err := filepath.Walk(dir.OSPath(),
+		func(path string, fi os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if fi.IsDir() {
+				return nil
+			}
+			abs, err := cmpath.AbsoluteOS(path)
+			if err != nil {
+				return err
+			}
+			abs, err = abs.EvalSymlinks()
+			if err != nil {
+				return err
+			}
+			result = append(result, abs)
+			return nil
+		})
+	return result, err
+}
+
+// hydratedError returns the error details from the error file generated by the hydration controller.
+func hydratedError(errorFile, label string) string {
+	content, err := ioutil.ReadFile(errorFile)
+	if err != nil {
+		return fmt.Sprintf("Unable to load %s: %v. Please check %s logs for more info: kubectl logs -n %s -l %s -c %s",
+			errorFile, err, reconcilermanager.HydrationController, v1.NSConfigManagementSystem, label, reconcilermanager.HydrationController)
+	}
+	if len(content) == 0 {
+		return fmt.Sprintf("%s is empty. Please check %s logs for more info: kubectl logs -n %s -l %s -c %s",
+			errorFile, reconcilermanager.HydrationController, v1.NSConfigManagementSystem, label, reconcilermanager.HydrationController)
+	}
+	return fmt.Sprintf("Error in the %s container: %s", reconcilermanager.HydrationController, string(content))
 }

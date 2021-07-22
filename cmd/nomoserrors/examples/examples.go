@@ -353,6 +353,12 @@ func Generate() AllExamples {
 	// 2014
 	result.add(configuration.InvalidWebhookWarning("invalid webhook"))
 
+	// 2015
+	result.add(status.HydrationError.Sprint("Rendering error").Build())
+
+	// 9997
+	result.add(status.HydrationInProgress("abcd123"))
+
 	// 9998
 	result.add(status.InternalError("we made a mistake"))
 

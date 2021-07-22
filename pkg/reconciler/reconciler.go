@@ -57,6 +57,14 @@ type Options struct {
 	// GitRoot is the absolute path to the Git repository.
 	// Usually contains a symlink that must be resolved every time before parsing.
 	GitRoot cmpath.Absolute
+	// HydratedRoot is the absolute path to the hydrated configs.
+	// If hydration is not performed, it will be an empty path.
+	HydratedRoot string
+	// RepoRoot is the absolute path to the parent directory of GitRoot and HydratedRoot.
+	RepoRoot cmpath.Absolute
+	// HydratedLink is the relative path to the hydrated root.
+	// It is a symlink that links to the hydrated configs under the hydrated root dir.
+	HydratedLink string
 	// GitRev is the git revision being synced.
 	GitRev string
 	// GitBranch is the git branch being synced.
@@ -145,11 +153,14 @@ func Run(opts Options) {
 	// Configure the Parser.
 	var parser parse.Parser
 	fs := parse.FileSource{
-		GitDir:    opts.GitRoot,
-		PolicyDir: opts.PolicyDir,
-		GitRepo:   opts.GitRepo,
-		GitBranch: opts.GitBranch,
-		GitRev:    opts.GitRev,
+		GitDir:       opts.GitRoot,
+		RepoRoot:     opts.RepoRoot,
+		HydratedRoot: opts.HydratedRoot,
+		HydratedLink: opts.HydratedLink,
+		PolicyDir:    opts.PolicyDir,
+		GitRepo:      opts.GitRepo,
+		GitBranch:    opts.GitBranch,
+		GitRev:       opts.GitRev,
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
 		parser, err = parse.NewRootRunner(opts.ClusterName, RootSyncName, opts.SourceFormat, &reader.File{}, cl,

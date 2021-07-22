@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -22,12 +23,25 @@ func (gs gitStatus) equal(other gitStatus) bool {
 	return gs.commit == other.commit && status.DeepEqual(gs.errs, other.errs)
 }
 
+type renderingStatus struct {
+	commit string
+	phase  v1alpha1.RenderingPhase
+	errs   status.MultiError
+}
+
+func (rs renderingStatus) equal(other renderingStatus) bool {
+	return rs.commit == other.commit && rs.phase == other.phase && status.DeepEqual(rs.errs, other.errs)
+}
+
 type reconcilerState struct {
 	// lastApplied keeps the state for the last successful-applied policyDir.
 	lastApplied string
 
 	// sourceStatus tracks info from the `Status.Source` field of a RepoSync/RootSync.
 	sourceStatus gitStatus
+
+	// renderingStatus tracks info from the `Status.Rendering` field of a RepoSync/RootSync.
+	renderingStatus renderingStatus
 
 	// syncStatus tracks info from the `Status.Sync` field of a RepoSync/RootSync.
 	syncStatus gitStatus
@@ -53,7 +67,7 @@ func (s *reconcilerState) checkpoint() {
 // invalidate logs the errors, clears the state tracking information.
 // invalidate does not clean up the `s.cache`.
 func (s *reconcilerState) invalidate(errs status.MultiError) {
-	glog.Errorf("Reconciler checkpoint invalidated with errors: %v", status.FormatSingleLine(errs))
+	glog.Errorf("Invalidating reconciler checkpoint: %v", status.FormatSingleLine(errs))
 	oldErrs := s.cache.errs
 	s.cache.errs = errs
 	// Invalidate state on error since this could be the result of switching

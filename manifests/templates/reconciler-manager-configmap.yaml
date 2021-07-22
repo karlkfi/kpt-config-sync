@@ -49,7 +49,7 @@ data:
            securityContext:
              runAsUser: 65533
            env:
-             - name: HYDRATION_CONTROLLER_NAME
+             - name: RECONCILER_NAME
                valueFrom:
                  fieldRef:
                    fieldPath: metadata.name
@@ -69,7 +69,10 @@ data:
            - /reconciler
            args:
            - "--v=0"
+           - "--repo-root=/repo"
            - "--git-dir=/repo/source/rev"
+           - "--hydrated-root=/repo/hydrated"
+           - "--hydrated-link=rev"
            volumeMounts:
              - name: repo
                mountPath: /repo

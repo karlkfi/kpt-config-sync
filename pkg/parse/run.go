@@ -2,10 +2,13 @@ package parse
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
@@ -68,9 +71,55 @@ func Run(ctx context.Context, p Parser) {
 }
 
 func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
+	var syncDir cmpath.Absolute
+	gs := gitStatus{}
+	gs.commit, syncDir, gs.errs = hydrate.SourceCommitAndDir(p.options().GitDir, p.options().PolicyDir, p.options().reconcilerName)
+
+	// If failed to fetch the source commit and directory, set `.status.source` to fail early.
+	// Otherwise, set `.status.rendering` before `.status.source` because the parser needs to
+	// read and parse the configs after rendering is done and there might have errors.
+	if gs.errs != nil {
+		setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
+		if setSourceStatusErr == nil {
+			state.sourceStatus = gs
+		}
+		state.invalidate(status.Append(gs.errs, setSourceStatusErr))
+		return
+	}
+
+	rs := renderingStatus{
+		commit: gs.commit,
+	}
+	// set the rendering status by checking the done file.
+	doneFilePath := p.options().RepoRoot.Join(cmpath.RelativeSlash(hydrate.DoneFile)).OSPath()
+	if _, err := os.Stat(doneFilePath); err != nil {
+		var readErrs status.MultiError
+		if os.IsNotExist(err) {
+			rs.phase = v1alpha1.RenderingInProgress
+			readErrs = status.HydrationInProgress(gs.commit)
+		} else {
+			rs.phase = v1alpha1.RenderingFailed
+			rs.errs = status.HydrationError.Wrap(err).
+				Sprintf("unable to read the done file: %s", doneFilePath).
+				Build()
+			readErrs = rs.errs
+		}
+		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
+		if setRenderingStatusErr == nil {
+			state.renderingStatus = rs
+		}
+		state.invalidate(status.Append(readErrs, setRenderingStatusErr))
+		return
+	}
+
+	// rendering is done, starts to read the source or hydrated configs.
 	oldPolicyDir := state.cache.git.policyDir
 	// `read` is called no matter what the trigger is.
-	if errs := read(ctx, p, trigger, state); errs != nil {
+	sourceState := gitState{
+		commit:    gs.commit,
+		policyDir: syncDir,
+	}
+	if errs := read(ctx, p, trigger, state, sourceState); errs != nil {
 		state.invalidate(errs)
 		return
 	}
@@ -96,56 +145,93 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	state.checkpoint()
 }
 
-func read(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
-	commit, sourceErrs := readFromSource(ctx, p, trigger, state)
-	if sourceErrs == nil {
+// read reads config files from source if no rendering is needed, or from hydrated output if rendering is done.
+// It also updates the .status.rendering and .status.source fields.
+func read(ctx context.Context, p Parser, trigger string, state *reconcilerState, sourceState gitState) status.MultiError {
+	hydrationStatus, sourceStatus := readFromSource(ctx, p, trigger, state, sourceState)
+	// update the rendering status before source status because the parser needs to
+	// read and parse the configs after rendering is done and there might have errors.
+	setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, hydrationStatus)
+	if setRenderingStatusErr == nil {
+		state.renderingStatus = hydrationStatus
+	}
+	renderingErrs := status.Append(hydrationStatus.errs, setRenderingStatusErr)
+	if renderingErrs != nil {
+		return renderingErrs
+	}
+
+	if sourceStatus.errs == nil {
 		return nil
 	}
 
-	gs := gitStatus{
-		commit: commit,
-		errs:   sourceErrs,
-	}
 	// Only call `setSourceStatus` if `readFromSource` fails.
 	// If `readFromSource` succeeds, `parse` may still fail.
-	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
+	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, sourceStatus)
 	if setSourceStatusErr == nil {
-		state.sourceStatus = gs
+		state.sourceStatus = sourceStatus
 	}
-	return status.Append(sourceErrs, setSourceStatusErr)
+	return status.Append(sourceStatus.errs, setSourceStatusErr)
 }
 
-// readFromSource reads the git commit and policyDir from the git repo, checks whether the gitstate in
-// the cache is up-to-date. If the cache is not up-to-date, reads all the git files from the
-// git repo.
-// readFromSource returns the git commit hash, and any encountered error.
-func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) (string, status.Error) {
+// readFromSource reads the source or hydrated configs, checks whether the gitState in
+// the cache is up-to-date. If the cache is not up-to-date, reads all the source or hydrated files.
+// readFromSource returns the rendering status and source status.
+func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState, sourceState gitState) (renderingStatus, gitStatus) {
 	opts := p.options()
 	start := time.Now()
-	gs := gitState{}
-	var sourceErrs status.Error
-	gs.commit, gs.policyDir, sourceErrs = hydrate.SourceCommitAndDir(opts.GitDir, opts.PolicyDir, opts.reconcilerName)
-	if sourceErrs != nil {
-		return gs.commit, sourceErrs
+
+	hydrationStatus := renderingStatus{
+		commit: sourceState.commit,
+	}
+	sourceStatus := gitStatus{
+		commit: sourceState.commit,
 	}
 
-	if gs.policyDir == state.cache.git.policyDir {
-		return gs.commit, nil
+	// Check if the hydratedRoot directory exists.
+	// If exists, read the hydrated directory. Otherwise, read the source directory.
+	absHydratedRoot, err := cmpath.AbsoluteOS(opts.HydratedRoot)
+	if err != nil {
+		hydrationStatus.phase = v1alpha1.RenderingFailed
+		hydrationStatus.errs = status.HydrationError.Wrap(err).
+			Sprint("hydrated-dir must be an absolute path").Build()
+		return hydrationStatus, sourceStatus
 	}
 
-	glog.Infof("New git changes (%s) detected, reset the cache", gs.policyDir.OSPath())
+	var hydrationErr error
+	if _, err := os.Stat(absHydratedRoot.OSPath()); err == nil {
+		sourceState, hydrationErr = opts.readHydratedDir(absHydratedRoot, opts.HydratedLink, opts.reconcilerName)
+		if hydrationErr != nil {
+			hydrationStatus.phase = v1alpha1.RenderingFailed
+			hydrationStatus.errs = status.HydrationError.Wrap(hydrationErr).Build()
+			return hydrationStatus, sourceStatus
+		}
+		hydrationStatus.phase = v1alpha1.RenderingSucceeded
+	} else if !os.IsNotExist(err) {
+		hydrationStatus.phase = v1alpha1.RenderingFailed
+		hydrationStatus.errs = status.HydrationError.Wrap(err).
+			Sprintf("unable to evaluate the hydrated path %s", absHydratedRoot.OSPath()).Build()
+		return hydrationStatus, sourceStatus
+	} else {
+		hydrationStatus.phase = v1alpha1.RenderingSkipped
+	}
+
+	if sourceState.policyDir == state.cache.git.policyDir {
+		return hydrationStatus, sourceStatus
+	}
+
+	glog.Infof("New git changes (%s) detected, reset the cache", sourceState.policyDir.OSPath())
 
 	// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 	state.resetCache()
 
 	// Read all the files under state.policyDir
-	sourceErrs = opts.readGitFiles(&gs)
-	if sourceErrs == nil {
-		// Set `state.cache.git` after `readGitFiles` succeeded
-		state.cache.git = gs
+	sourceStatus.errs = opts.readConfigFiles(&sourceState, hydrationStatus.phase)
+	if sourceStatus.errs == nil {
+		// Set `state.cache.git` after `readConfigFiles` succeeded
+		state.cache.git = sourceState
 	}
-	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceErrs), start)
-	return gs.commit, sourceErrs
+	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceStatus.errs), start)
+	return hydrationStatus, sourceStatus
 }
 
 func parseSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {

@@ -26,6 +26,15 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// RenderingErrorsView aggregates the RenderingErrors metric measurements.
+	RenderingErrorsView = &view.View{
+		Name:        RenderingErrors.Name(),
+		Measure:     RenderingErrors,
+		Description: "The current number of errors in the RootSync and RepoSync rendering process",
+		TagKeys:     []tag.Key{KeyReconciler, KeyComponent},
+		Aggregation: view.LastValue(),
+	}
+
 	// ReconcileDurationView aggregates the ReconcileDuration metric measurements.
 	ReconcileDurationView = &view.View{
 		Name:        ReconcileDuration.Name(),

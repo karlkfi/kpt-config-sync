@@ -37,11 +37,17 @@ var (
 	gitRev = flag.String("git-rev", os.Getenv("GIT_REV"),
 		"The git reference we're syncing to in the git repo. Could be a specific commit.")
 	policyDir = flag.String("policy-dir", os.Getenv("POLICY_DIR"),
-		"Relative path of the root policy directory within the repo.")
+		"The relative path of the root policy directory within the repo.")
 
 	// Performance tuning flags.
-	gitDir = flag.String(flags.gitDir, "/repo/rev",
-		"Absolute path in the container running the Reconciler to the clone of the git repo.")
+	gitDir = flag.String(flags.gitDir, "/repo/source/rev",
+		"The absolute path in the container running the reconciler to the clone of the git repo.")
+	repoRootDir = flag.String(flags.repoRootDir, "/repo",
+		"The absolute path in the container running the reconciler to the repo root directory.")
+	hydratedRootDir = flag.String(flags.hydratedRootDir, "/repo/hydrated",
+		"The absolute path in the container running the reconciler to the hydrated root directory.")
+	hydratedLinkDir = flag.String("hydrated-link", "rev",
+		"The name of (a symlink to) the source directory under --hydrated-root, which contains the hydrated configs")
 	fightDetectionThreshold = flag.Float64(
 		"fight-detection-threshold", 5.0,
 		"The rate of updates per minute to an API Resource at which the Syncer logs warnings about too many updates to the resource.")
@@ -62,13 +68,17 @@ var (
 )
 
 var flags = struct {
-	gitDir       string
-	clusterName  string
-	sourceFormat string
+	gitDir          string
+	repoRootDir     string
+	hydratedRootDir string
+	clusterName     string
+	sourceFormat    string
 }{
-	gitDir:       "git-dir",
-	clusterName:  "cluster-name",
-	sourceFormat: reconcilermanager.SourceFormat,
+	repoRootDir:     "repo-root",
+	gitDir:          "git-dir",
+	hydratedRootDir: "hydrated-root",
+	clusterName:     "cluster-name",
+	sourceFormat:    reconcilermanager.SourceFormat,
 }
 
 func main() {
@@ -96,6 +106,11 @@ func main() {
 			glog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
 		}
 	}()
+
+	absRepoRoot, err := cmpath.AbsoluteOS(*repoRootDir)
+	if err != nil {
+		glog.Fatalf("%s must be an absolute path: %v", flags.repoRootDir, err)
+	}
 
 	// Normalize policyDirRelative.
 	// Some users specify the directory as if the root of the repository is "/".
@@ -126,6 +141,9 @@ func main() {
 		ResyncPeriod:               *resyncPeriod,
 		FilesystemPollingFrequency: *filesystemPollingPeriod,
 		GitRoot:                    absGitDir,
+		RepoRoot:                   absRepoRoot,
+		HydratedRoot:               *hydratedRootDir,
+		HydratedLink:               *hydratedLinkDir,
 		GitRev:                     *gitRev,
 		GitBranch:                  *gitBranch,
 		GitRepo:                    *gitRepo,

@@ -15,6 +15,12 @@ var (
 		"The number of errors in the reconciler",
 		stats.UnitDimensionless)
 
+	// RenderingErrors metric measures the number of errors in the rendering process.
+	RenderingErrors = stats.Int64(
+		"rendering_errors",
+		"The number of errors in the rendering process",
+		stats.UnitDimensionless)
+
 	// ReconcileDuration metric measures the latency of reconcile events.
 	ReconcileDuration = stats.Float64(
 		"reconcile_duration_seconds",

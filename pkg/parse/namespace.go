@@ -143,6 +143,30 @@ func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gi
 	return nil
 }
 
+// setRenderingStatus implements the Parser interface
+func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error {
+	if oldStatus.equal(newStatus) {
+		return nil
+	}
+
+	var rs v1alpha1.RepoSync
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+		return status.APIServerError(err, "failed to get RepoSync for parser")
+	}
+
+	cse := status.ToCSE(newStatus.errs)
+	rs.Status.Rendering.Commit = newStatus.commit
+	rs.Status.Rendering.Phase = newStatus.phase
+	rs.Status.Rendering.Errors = cse
+
+	metrics.RecordRenderingErrors(ctx, "rendering", len(cse))
+
+	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		return status.APIServerError(err, "failed to update RepoSync rendering status from parser")
+	}
+	return nil
+}
+
 // setSourceAndSyncStatus implements the Parser interface
 //
 // setSourceAndSyncStatus sets the source and sync status with a given git state and set of errors.  If errs is empty, all errors

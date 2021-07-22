@@ -24,6 +24,13 @@ func RecordReconcilerErrors(ctx context.Context, component string, numErrors int
 	stats.Record(tagCtx, measurement)
 }
 
+// RecordRenderingErrors produces a measurement for the RenderingErrors view.
+func RecordRenderingErrors(ctx context.Context, component string, numErrors int) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyComponent, component))
+	measurement := RenderingErrors.M(int64(numErrors))
+	stats.Record(tagCtx, measurement)
+}
+
 // RecordReconcileDuration produces a measurement for the ReconcileDuration view.
 func RecordReconcileDuration(ctx context.Context, status string, startTime time.Time) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))
