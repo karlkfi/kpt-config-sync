@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
@@ -23,6 +24,8 @@ const (
 	Helm = "helm"
 	// Kustomize is the binary name of the installed Kustomize.
 	Kustomize = "kustomize"
+
+	maxRetries = 5
 )
 
 var (
@@ -54,6 +57,24 @@ func hasKustomization(filename string) bool {
 	return false
 }
 
+// mustDeleteOutput deletes the hydrated output directory with retries.
+// It will exit if all attempts failed.
+func mustDeleteOutput(err error, output string) {
+	retries := 0
+	for retries < maxRetries {
+		err := os.RemoveAll(output)
+		if err == nil {
+			return
+		}
+		glog.Errorf("Unable to delete directory %s: %v", output, err)
+		retries++
+	}
+	if err != nil {
+		glog.Error(err)
+	}
+	glog.Fatalf("Attempted to delete the output directory %s for %d times, but all failed. Exiting now...", output, retries)
+}
+
 // KustomizeBuild runs the 'kustomize build' command to render the configs.
 func KustomizeBuild(input, output string) error {
 	// The `--enable-alpha-plugins` and `--enable-exec` flags are to support rendering
@@ -66,9 +87,7 @@ func KustomizeBuild(input, output string) error {
 	args := []string{"build", input, "--enable-alpha-plugins", "--enable-exec", "--enable-helm", "--output", output}
 
 	if _, err := os.Stat(output); err == nil {
-		if err := os.RemoveAll(output); err != nil {
-			return errors.Wrapf(err, "unable to delete directory: %s", output)
-		}
+		mustDeleteOutput(err, output)
 	}
 
 	fileMode := os.FileMode(0755)
@@ -78,10 +97,9 @@ func KustomizeBuild(input, output string) error {
 
 	out, err := runCommand("", Kustomize, args...)
 	if err != nil {
-		if err := os.RemoveAll(output); err != nil {
-			return errors.Wrapf(err, "unable to delete directory: %s", output)
-		}
-		return errors.Wrapf(err, "failed to run kustomize build, stdout: %s", out)
+		kustomizeErr := errors.Wrapf(err, "failed to run kustomize build, stdout: %s", out)
+		mustDeleteOutput(kustomizeErr, output)
+		return kustomizeErr
 	}
 	return nil
 }

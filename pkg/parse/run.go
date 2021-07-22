@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
@@ -121,28 +122,30 @@ func read(ctx context.Context, p Parser, trigger string, state *reconcilerState)
 func readFromSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) (string, status.Error) {
 	opts := p.options()
 	start := time.Now()
-	gitState, sourceErrs := opts.readGitCommitAndPolicyDir(opts.reconcilerName)
+	gs := gitState{}
+	var sourceErrs status.Error
+	gs.commit, gs.policyDir, sourceErrs = hydrate.SourceCommitAndDir(opts.GitDir, opts.PolicyDir, opts.reconcilerName)
 	if sourceErrs != nil {
-		return gitState.commit, sourceErrs
+		return gs.commit, sourceErrs
 	}
 
-	if gitState.policyDir == state.cache.git.policyDir {
-		return gitState.commit, nil
+	if gs.policyDir == state.cache.git.policyDir {
+		return gs.commit, nil
 	}
 
-	glog.Infof("New git changes (%s) detected, reset the cache", gitState.policyDir.OSPath())
+	glog.Infof("New git changes (%s) detected, reset the cache", gs.policyDir.OSPath())
 
 	// Reset the cache to make sure all the steps of a parse-apply-watch loop will run.
 	state.resetCache()
 
 	// Read all the files under state.policyDir
-	sourceErrs = opts.readGitFiles(&gitState)
+	sourceErrs = opts.readGitFiles(&gs)
 	if sourceErrs == nil {
 		// Set `state.cache.git` after `readGitFiles` succeeded
-		state.cache.git = gitState
+		state.cache.git = gs
 	}
 	metrics.RecordParserDuration(ctx, trigger, "read", metrics.StatusTagKey(sourceErrs), start)
-	return gitState.commit, sourceErrs
+	return gs.commit, sourceErrs
 }
 
 func parseSource(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {

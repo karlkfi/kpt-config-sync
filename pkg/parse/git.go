@@ -1,15 +1,9 @@
 package parse
 
 import (
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
-	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -45,53 +39,6 @@ type gitState struct {
 	policyDir cmpath.Absolute
 	// files is the list of all observed files in the policy directory (recursively).
 	files []cmpath.Absolute
-}
-
-// readGitCommitAndPolicyDir returns a gitState object whose `commit` and `policyDir` fields are set if succeeded.
-func (o *files) readGitCommitAndPolicyDir(reconcilerName string) (gitState, status.Error) {
-	result := gitState{}
-
-	// Check if the source configs are synced successfully.
-	errorFilePath := filepath.Join(path.Dir(o.GitDir.OSPath()), git.ErrorFile)
-	if _, err := os.Stat(errorFilePath); err == nil || !os.IsNotExist(err) {
-		errBuilder := status.SourceError
-		if err != nil {
-			errBuilder = errBuilder.Wrap(err)
-		}
-		return result, errBuilder.Sprintf("unable to sync repo\n%s",
-			git.SyncError(errorFilePath, fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
-	}
-
-	gitDir, err := o.GitDir.EvalSymlinks()
-	if err != nil {
-		return result, status.SourceError.Wrap(err).Sprintf("unable to sync repo\n%s",
-			git.SyncError(errorFilePath, fmt.Sprintf("%s=%s", metadata.ReconcilerLabel, reconcilerName))).Build()
-	}
-
-	commit, e := git.CommitHash(gitDir.OSPath())
-	if e != nil {
-		return gitState{}, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash").Build()
-	}
-	result.commit = commit
-
-	err = git.CheckClean(gitDir.OSPath())
-	if err != nil {
-		// Return `result` here instead of an empty gitState object so that `result.commit`
-		// can be used to set the `Status.Source.Commit` field of RepoSync/RootSync.
-		return result, status.PathWrapError(
-			errors.Wrap(err, "checking that the git repository has no changes"), o.GitDir.OSPath())
-	}
-
-	relPolicyDir := gitDir.Join(o.PolicyDir)
-	policyDir, err := relPolicyDir.EvalSymlinks()
-	if err != nil {
-		// Return `result` here instead of an empty gitState object so that `result.commit`
-		// can be used to set the `Status.Source.Commit` field of RepoSync/RootSync.
-		return result, status.PathWrapError(
-			errors.Wrap(err, "evaluating symbolic link to policy dir"), relPolicyDir.OSPath())
-	}
-	result.policyDir = policyDir
-	return result, nil
 }
 
 // readGitState reads all the files under state.policyDir and sets state.files.

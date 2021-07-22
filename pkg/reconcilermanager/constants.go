@@ -27,4 +27,8 @@ const (
 	// FilesystemPollingPeriod indicates the time between checking the filesystem
 	// for git updates.
 	FilesystemPollingPeriod = "FILESYSTEM_POLLING_PERIOD"
+
+	// HydrationPollingPeriod indicates the time between checking the filesystem
+	// for rendering the DRY configs.
+	HydrationPollingPeriod = "HYDRATION_POLLING_PERIOD"
 )

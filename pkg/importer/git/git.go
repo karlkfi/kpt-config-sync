@@ -45,6 +45,17 @@ func CheckClean(dir string) error {
 	return nil
 }
 
+// ForceClean forces to clean the working directory, which prevents from syncing uncommitted changes.
+func ForceClean(dir string) error {
+	cmd := exec.Command("git", "-C", dir, "clean", "-fd")
+	outBytes, err := cmd.CombinedOutput()
+	out := string(outBytes)
+	if err != nil {
+		return errors.Wrapf(err, "force to clean working directory: failed to call git clean -fd on dir %s, output: %s", dir, out)
+	}
+	return nil
+}
+
 // ListFiles returns a list of all files tracked by git in the specified
 // repo directory.
 func ListFiles(dir cmpath.Absolute) ([]cmpath.Absolute, error) {
