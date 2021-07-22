@@ -28,9 +28,13 @@ const (
 	// DefaultPeriodSecs is the default value in seconds between consecutive syncs.
 	DefaultPeriodSecs = 15
 
-	// DefaultFilesystemPollingPeriod specifies time between checking the filesystem
-	// for udpates to the local Git repository.
-	DefaultFilesystemPollingPeriod = 5 * time.Second
+	// DefaultReconcilerPollingPeriod defines how often the reconciler should poll
+	// the filesystem for updates to the source or rendered configs.
+	DefaultReconcilerPollingPeriod = 5 * time.Second
+
+	// DefaultHydrationPollingPeriod defines how often the hydration controller
+	// should poll the filesystem for rendering the DRY configs.
+	DefaultHydrationPollingPeriod = 5 * time.Second
 )
 
 // Git secret values

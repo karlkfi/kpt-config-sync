@@ -40,14 +40,15 @@ type RepoSyncReconciler struct {
 }
 
 // NewRepoSyncReconciler returns a new RepoSyncReconciler.
-func NewRepoSyncReconciler(clusterName string, pollingPeriod time.Duration, client client.Client, log logr.Logger, scheme *runtime.Scheme) *RepoSyncReconciler {
+func NewRepoSyncReconciler(clusterName string, reconcilerPollingPeriod, hydrationPollingPeriod time.Duration, client client.Client, log logr.Logger, scheme *runtime.Scheme) *RepoSyncReconciler {
 	return &RepoSyncReconciler{
 		reconcilerBase: reconcilerBase{
 			clusterName:             clusterName,
 			client:                  client,
 			log:                     log,
 			scheme:                  scheme,
-			filesystemPollingPeriod: pollingPeriod,
+			reconcilerPollingPeriod: reconcilerPollingPeriod,
+			hydrationPollingPeriod:  hydrationPollingPeriod,
 		},
 		namespaces: make(map[string]struct{}),
 	}
@@ -231,8 +232,12 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []con
 			}),
 		},
 		{
+			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.HydrationController),
+			data:   hydrationData(&rs.Spec.Git, declared.Scope(rs.Namespace), r.hydrationPollingPeriod.String()),
+		},
+		{
 			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.filesystemPollingPeriod.String()),
+			data:   reconcilerData(r.clusterName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
 		},
 	}
 }

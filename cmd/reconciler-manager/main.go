@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-	"time"
 
 	"github.com/go-logr/glogr"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -12,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -24,8 +22,11 @@ var (
 	clusterName = flag.String("cluster-name", os.Getenv(reconcilermanager.ClusterNameKey),
 		"Cluster name to use for Cluster selection")
 
-	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", pollingPeriod(),
-		"Period of time between checking the filesystem for udpates to the local Git repository.")
+	reconcilerPollingPeriod = flag.Duration("reconciler-polling-period", controllers.PollingPeriod(reconcilermanager.ReconcilerPollingPeriod, configsync.DefaultReconcilerPollingPeriod),
+		"How often the reconciler should poll the filesystem for updates to the source or rendered configs.")
+
+	hydrationPollingPeriod = flag.Duration("hydration-polling-period", controllers.PollingPeriod(reconcilermanager.HydrationPollingPeriod, configsync.DefaultHydrationPollingPeriod),
+		"How often the hydration-controller should poll the filesystem for rendering the DRY configs.")
 
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -61,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repoSync := controllers.NewRepoSyncReconciler(*clusterName, *filesystemPollingPeriod, mgr.GetClient(),
+	repoSync := controllers.NewRepoSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RepoSync"),
 		mgr.GetScheme())
 	if err := repoSync.SetupWithManager(mgr); err != nil {
@@ -69,7 +70,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rootSync := controllers.NewRootSyncReconciler(*clusterName, *filesystemPollingPeriod, mgr.GetClient(),
+	rootSync := controllers.NewRootSyncReconciler(*clusterName, *reconcilerPollingPeriod, *hydrationPollingPeriod, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("RootSync"),
 		mgr.GetScheme())
 	if err := rootSync.SetupWithManager(mgr); err != nil {
@@ -114,17 +115,4 @@ func main() {
 		}
 		os.Exit(1)
 	}
-}
-
-func pollingPeriod() time.Duration {
-	val, present := os.LookupEnv(reconcilermanager.FilesystemPollingPeriod)
-	if present {
-		pollingFreq, err := time.ParseDuration(val)
-		if err != nil {
-			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
-				"got value: %v, want err: nil", reconcilermanager.FilesystemPollingPeriod, pollingFreq))
-		}
-		return pollingFreq
-	}
-	return configsync.DefaultFilesystemPollingPeriod
 }

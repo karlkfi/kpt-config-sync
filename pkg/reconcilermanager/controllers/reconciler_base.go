@@ -32,7 +32,8 @@ type reconcilerBase struct {
 	client                  client.Client
 	log                     logr.Logger
 	scheme                  *runtime.Scheme
-	filesystemPollingPeriod time.Duration
+	reconcilerPollingPeriod time.Duration
+	hydrationPollingPeriod  time.Duration
 }
 
 // configMapMutation provides an interface for named mutation functions passed to upsertConfigMaps

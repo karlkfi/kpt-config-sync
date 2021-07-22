@@ -653,7 +653,7 @@ func setReconcilerFilesystemPollingPeriod(t testing.NTB, obj client.Object) {
 		t.Fatalf("parsed Reconciler Manager ConfigMap was not ConfigMap %T %v", obj, obj)
 	}
 
-	cm.Data[reconcilermanager.FilesystemPollingPeriod] = filesystemPollingPeriod.String()
+	cm.Data[reconcilermanager.ReconcilerPollingPeriod] = filesystemPollingPeriod.String()
 	t.Log("Set filesystem polling period")
 }
 

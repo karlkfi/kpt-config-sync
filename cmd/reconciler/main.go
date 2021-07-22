@@ -16,9 +16,9 @@ import (
 	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/util/log"
-	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -49,8 +49,8 @@ var (
 		"Period of time between forced re-syncs from Git (even without a new commit).")
 	workers = flag.Int("workers", 1,
 		"Number of concurrent remediator workers to run at once.")
-	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", pollingPeriod(),
-		"Period of time between checking the filessystem for udpates to the local Git repository.")
+	filesystemPollingPeriod = flag.Duration("filesystem-polling-period", controllers.PollingPeriod(reconcilermanager.ReconcilerPollingPeriod, configsync.DefaultReconcilerPollingPeriod),
+		"Period of time between checking the filesystem for updates to the source or rendered configs.")
 
 	// Root-Repo-only flags. If set for a Namespace-scoped Reconciler, causes the Reconciler to fail immediately.
 	sourceFormat = flag.String(flags.sourceFormat, os.Getenv(filesystem.SourceFormatKey),
@@ -153,17 +153,4 @@ func main() {
 		}
 	}
 	reconciler.Run(opts)
-}
-
-func pollingPeriod() time.Duration {
-	val, present := os.LookupEnv(reconcilermanager.FilesystemPollingPeriod)
-	if present {
-		pollingFreq, err := time.ParseDuration(val)
-		if err != nil {
-			panic(errors.Wrapf(err, "failed to parse environment variable %q,"+
-				"got value: %v, want err: nil", reconcilermanager.FilesystemPollingPeriod, pollingFreq))
-		}
-		return pollingFreq
-	}
-	return configsync.DefaultFilesystemPollingPeriod
 }

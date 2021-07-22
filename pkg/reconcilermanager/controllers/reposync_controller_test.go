@@ -51,41 +51,42 @@ const (
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation      = "7c45f159e7c8005a792dcb402c078957"
-	nsProxyAnnotation = "41b1ab0e5dbdeaf735a6e9f6740509c8"
+	nsAnnotation      = "59152c00ed0f7cfcabe2da006293c638"
+	nsProxyAnnotation = "e8411037bea6bc20cc4011362c787129"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
-	nsUpdatedAnnotation = "ad9eec9d09067c7aa5c339b3cef083f3"
+	nsUpdatedAnnotation = "de29666acd0334d11b470903d42cfc38"
 
-	nsUpdatedAnnotationOverrideGitSyncDepth     = "7b357148ed82ae58c36940b25a563547"
-	nsUpdatedAnnotationOverrideGitSyncDepthZero = "cb17525173bc95ea9cf3d067769fceb0"
+	nsUpdatedAnnotationOverrideGitSyncDepth     = "54dd1b6b43478af70ff5af41d278c988"
+	nsUpdatedAnnotationOverrideGitSyncDepthZero = "b60f026202d1c059004abd839806efc1"
 
-	nsUpdatedAnnotationNoSSLVerify = "e971a6d9edd45b3dd421abcee7cd47c4"
+	nsUpdatedAnnotationNoSSLVerify = "d6a2b0e3a61735a005b4649d47fd97fd"
 
-	nsAnnotationGCENode        = "1e0a718052edc00039f6acc3738a02ae"
-	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
-	nsAnnotationNone           = "551985d0f09594c9f82527a4ae3770d8"
+	nsAnnotationGCENode        = "1ae459d6e48a4b08514475ed0cdddecb"
+	nsUpdatedAnnotationGCENode = "801faefb64294bf651f77ba7736fab17"
+	nsAnnotationNone           = "096755b105668b37c6dbb0abdfc5af99"
 
-	nsDeploymentGCENodeChecksum        = "d3a88860c72e5b39c38096c2dc657e85"
-	nsDeploymentSecretChecksum         = "cc1e15e0abab9cd7e9ee92fd00340f65"
-	nsDeploymentProxyChecksum          = "d6c4f21f2460ad88441a31376a99e761"
-	nsDeploymentSecretUpdatedChecksum  = "9025b2dba5936ba6eb9aecbfcaa8008c"
-	nsDeploymentGCENodeUpdatedChecksum = "c38f58f74e8a658f18b6bcb5005a4d4b"
-	nsDeploymentNoneChecksum           = "a4aee26433917ddc4cce86d27b6f33cd"
+	nsDeploymentGCENodeChecksum        = "f8d6ae32663de6c3e094b17fc53d9c75"
+	nsDeploymentSecretChecksum         = "189c6f0f872a3cf48f6bee395a901cfe"
+	nsDeploymentProxyChecksum          = "34e92a88583873ad655bb6629bf1a918"
+	nsDeploymentSecretUpdatedChecksum  = "02880ee050ddd331be627d349be738e8"
+	nsDeploymentGCENodeUpdatedChecksum = "1b558c97bb9d78fa84376f3db4d8872b"
+	nsDeploymentNoneChecksum           = "b08cfa284228f2122eeb4211c2d465dc"
 
 	// Checksums of the Deployment whose container resource limits are updated
-	nsDeploymentResourceLimitsChecksum                         = "94961815c1490fa2a0fd52f05b98dd2b"
-	nsDeploymentReconcilerLimitsChecksum                       = "51ef264dfa236523ffa4b22fee6983de"
-	nsDeploymentGitSyncMemLimitsChecksum                       = "b3a970a2d3c763b3da65a7033604b2f7"
-	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "a48562544a396572b3a96298e830757e"
+	nsDeploymentResourceLimitsChecksum                         = "cca0897cb6ac0dc9ab8f960b8190dc2c"
+	nsDeploymentReconcilerLimitsChecksum                       = "2c81a25800592e1e960c8197555b52a7"
+	nsDeploymentGitSyncMemLimitsChecksum                       = "215ef29d002dd3cc5c41afe457c58b10"
+	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "57407589b4fd9f0af7f06ef5199c0e17"
 
-	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "63792a36e4f7ed8a81b71306a0f66724"
-	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "436570a6448441e799e98cea390de5b5"
+	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "37f1e5a6f25ffdaefc874902becf47f2"
+	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "89bcca2a165d2d6f2a34dbb37ea8186a"
 
-	nsDeploymentSecretNoSSLVerifyChecksum = "8730ff26ff34ad04f41e3403da7aa102"
+	nsDeploymentSecretNoSSLVerifyChecksum = "1f5d8ff962ac10f968bef7690f67b728"
 )
 
 // Set in init.
 var filesystemPollingPeriod time.Duration
+var hydrationPollingPeriod time.Duration
 
 var parsedDeployment = func(de *appsv1.Deployment) error {
 	de.TypeMeta = fake.ToTypeMeta(kinds.Deployment())
@@ -112,6 +113,7 @@ func init() {
 	if err != nil {
 		glog.Exitf("failed to parse polling period: %q, got error: %v, want error: nil", pollingPeriod, err)
 	}
+	hydrationPollingPeriod = filesystemPollingPeriod
 }
 
 func reposyncRef(rev string) func(*v1alpha1.RepoSync) {
@@ -214,6 +216,7 @@ func setupNSReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Client,
 	testReconciler := NewRepoSyncReconciler(
 		reposyncCluster,
 		filesystemPollingPeriod,
+		hydrationPollingPeriod,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RepoSync"),
 		s,
@@ -262,6 +265,11 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -388,6 +396,11 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -1068,6 +1081,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
@@ -1137,6 +1155,11 @@ func TestRepoSyncReconciler(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -1268,6 +1291,11 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
@@ -1328,6 +1356,11 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -1405,6 +1438,11 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
@@ -1580,6 +1618,11 @@ func TestRepoSyncWithProxy(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,

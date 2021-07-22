@@ -37,39 +37,39 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation      = "75a76c9c0de8e20c5e387df1a752f87f"
-	rsProxyAnnotation = "2bbd46312681904ae0095b0c08f267cc"
+	rsAnnotation      = "5009e76f3fcd754688552d5d21b25b69"
+	rsProxyAnnotation = "1c408d92779e06c559bf152fde87d9b0"
 	// Updated hash of all configmap.data updated by Root Reconciler.
-	rsUpdatedAnnotation = "afcc0fc36266b70500c33218f773bd7f"
+	rsUpdatedAnnotation = "fdcefb720a69315220f234f1675f8219"
 
-	rsUpdatedAnnotationOverrideGitSyncDepth     = "f93b13ad2156e5e4d84f5ee535de98b7"
-	rsUpdatedAnnotationOverrideGitSyncDepthZero = "aac36d55f3af1f7c699d0049ff22a8ea"
+	rsUpdatedAnnotationOverrideGitSyncDepth     = "567ce7dfd9f82312dc182d8a47e60d11"
+	rsUpdatedAnnotationOverrideGitSyncDepthZero = "c04e047037af017710405de2988ad782"
 
-	rsUpdatedAnnotationNoSSLVerify = "3f1e5ecd702226838f4918887a1133c4"
+	rsUpdatedAnnotationNoSSLVerify = "964761cb87ca908c20eec42cd6438df8"
 
-	rsAnnotationGCENode        = "13c7343a532901cd51b815a9ff10db8c"
-	rsUpdatedAnnotationGCENode = "87db1abb4c04ba6e9b0a4e7ba9423588"
-	rsAnnotationNone           = "14f98a674e039300f9385a0440dc8d36"
+	rsAnnotationGCENode        = "078fb3d0f21b6627061d2693d70e6770"
+	rsUpdatedAnnotationGCENode = "cebd25606cc952db52fea0c5e65cdc54"
+	rsAnnotationNone           = "836c0021b1532c9c6f2f4d11f661c12e"
 
 	rootsyncSSHKey = "root-ssh-key"
 
-	deploymentGCENodeChecksum        = "7ac2cd97e5e98a5bad6cf72050c5be66"
-	deploymentSecretChecksum         = "146d69562353eb39ec41ab9f21f3ed3b"
-	deploymentProxyChecksum          = "4a84ea262f1004db71eb136082fde954"
-	deploymentSecretUpdatedChecksum  = "7e4b5b92bc078988c7e8c515f63d6f39"
-	deploymentGCENodeUpdatedChecksum = "f161f6c4cada5f81a4b7a6ed3dcb7a2e"
-	deploymentNoneChecksum           = "7eef9b29abfb0452f1a3a1b4f95f1943"
+	deploymentGCENodeChecksum        = "5db4e924f81e03f72703579f7aa0ffc1"
+	deploymentSecretChecksum         = "11086fbe1223835ad94df772aef60210"
+	deploymentProxyChecksum          = "b109c2ee920d1a744fba442fedc8e6f2"
+	deploymentSecretUpdatedChecksum  = "fad17d40e46203b5504d047ed7a2ab9e"
+	deploymentGCENodeUpdatedChecksum = "935d60fc29f7e637993de0755d057023"
+	deploymentNoneChecksum           = "5fe2e3470e391b919715ee93c2554eb8"
 
 	// Checksums of the Deployment whose container resource limits are updated
-	deploymentResourceLimitsChecksum                         = "34ae24894c61fdbdd9fef662d9807f71"
-	deploymentReconcilerLimitsChecksum                       = "a9ebd7e8ad76f3bd336277aa82189c84"
-	deploymentGitSyncMemLimitsChecksum                       = "df78bffb42ee562729e771eac2703fe9"
-	deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "8bf75c7864cb36c5c1d4e3b3929db392"
+	deploymentResourceLimitsChecksum                         = "a1bc9f3c1353716d29612b82d6c92f52"
+	deploymentReconcilerLimitsChecksum                       = "cafd9616c47ae5b9b066c08d2872dcf1"
+	deploymentGitSyncMemLimitsChecksum                       = "5facb97a4d555bc5643bdc0e1859259a"
+	deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "dd8d60fe1faf5d3a46fce08538db1a9f"
 
-	rsDeploymentSecretOverrideGitSyncDepthChecksum     = "37eb53a216da0c40cbbcce5e1389b22b"
-	rsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "ca38275f30cf5d840992237a7c443509"
+	rsDeploymentSecretOverrideGitSyncDepthChecksum     = "16f89a14291dbde4f536a6bd2d88e34b"
+	rsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "0a5555e16a057ff9034ac64849b96f71"
 
-	rsDeploymentSecretNoSSLVerifyChecksum = "563ff3e7ce9133e8043a30c0f187e9af"
+	rsDeploymentSecretNoSSLVerifyChecksum = "bbed1efb1ce3cad9674fe9e98a1e9802"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -143,6 +143,7 @@ func setupRootReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Clien
 	testReconciler := NewRootSyncReconciler(
 		rootsyncCluster,
 		filesystemPollingPeriod,
+		hydrationPollingPeriod,
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("RootSync"),
 		s,
@@ -258,6 +259,14 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.Reconciler),
 			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
 				ownerReference(rootsyncKind, rootsyncName, ""),
 			}),
@@ -387,6 +396,14 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
 				ownerReference(rootsyncKind, rootsyncName, ""),
 			}),
@@ -1157,6 +1174,14 @@ func TestRootSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.Reconciler),
 			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -1240,6 +1265,14 @@ func TestRootSyncReconciler(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
 				ownerReference(rootsyncKind, rootsyncName, ""),
 			}),
@@ -1373,6 +1406,14 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 		),
 		configMapWithData(
 			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.SourceFormat),
 			sourceFormatData(""),
 			core.OwnerReference([]metav1.OwnerReference{
@@ -1466,6 +1507,14 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
 				ownerReference(rootsyncKind, rootsyncName, ""),
 			}),
@@ -1643,6 +1692,14 @@ func TestRootSyncWithProxy(t *testing.T) {
 				period:     configsync.DefaultPeriodSecs,
 				proxy:      rs.Spec.Proxy,
 			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
 			core.OwnerReference([]metav1.OwnerReference{
 				ownerReference(rootsyncKind, rootsyncName, ""),
 			}),

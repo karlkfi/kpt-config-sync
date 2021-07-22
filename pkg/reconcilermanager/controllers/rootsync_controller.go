@@ -40,14 +40,15 @@ type RootSyncReconciler struct {
 }
 
 // NewRootSyncReconciler returns a new RootSyncReconciler.
-func NewRootSyncReconciler(clusterName string, pollingPeriod time.Duration, client client.Client, log logr.Logger, scheme *runtime.Scheme) *RootSyncReconciler {
+func NewRootSyncReconciler(clusterName string, reconcilerPollingPeriod, hydrationPollingPeriod time.Duration, client client.Client, log logr.Logger, scheme *runtime.Scheme) *RootSyncReconciler {
 	return &RootSyncReconciler{
 		reconcilerBase: reconcilerBase{
 			clusterName:             clusterName,
 			client:                  client,
 			log:                     log,
 			scheme:                  scheme,
-			filesystemPollingPeriod: pollingPeriod,
+			reconcilerPollingPeriod: reconcilerPollingPeriod,
+			hydrationPollingPeriod:  hydrationPollingPeriod,
 		},
 	}
 }
@@ -213,8 +214,12 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 			}),
 		},
 		{
+			cmName: RootSyncResourceName(reconcilermanager.HydrationController),
+			data:   hydrationData(&rs.Spec.Git, declared.RootReconciler, r.hydrationPollingPeriod.String()),
+		},
+		{
 			cmName: RootSyncResourceName(reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, declared.RootReconciler, &rs.Spec.Git, r.filesystemPollingPeriod.String()),
+			data:   reconcilerData(r.clusterName, declared.RootReconciler, &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
 		},
 	}
 }
