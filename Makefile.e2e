@@ -146,6 +146,8 @@ __push-local-image: image-nomos
 	@docker push localhost:5000/nomos:$(LATEST_IMAGE_TAG)
 	@docker tag $(RECONCILER_TAG) localhost:5000/reconciler:$(LATEST_IMAGE_TAG)
 	@docker push localhost:5000/reconciler:$(LATEST_IMAGE_TAG)
+	@docker tag $(HYDRATION_CONTROLLER_TAG) localhost:5000/hydration-controller:$(LATEST_IMAGE_TAG)
+	@docker push localhost:5000/hydration-controller:$(LATEST_IMAGE_TAG)
 	@docker tag $(RECONCILER_MANAGER_TAG) localhost:5000/reconciler-manager:$(LATEST_IMAGE_TAG)
 	@docker push localhost:5000/reconciler-manager:$(LATEST_IMAGE_TAG)
 	@docker tag $(ADMISSION_WEBHOOK_TAG) localhost:5000/admission-webhook:$(LATEST_IMAGE_TAG)

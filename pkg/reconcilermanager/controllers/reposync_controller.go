@@ -327,6 +327,11 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				mutateContainerResource(&container, rs.Spec.Override)
+			case reconcilermanager.HydrationController:
+				configmapRef := make(map[string]*bool)
+				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
+				container.EnvFrom = envFromSources(configmapRef)
+				mutateContainerResource(&container, rs.Spec.Override)
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
 				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)

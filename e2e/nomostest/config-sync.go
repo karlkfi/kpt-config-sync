@@ -123,8 +123,12 @@ var (
 	// config-management-system, this namespace gets created elsewhere
 )
 
-// filesystemPollingPeriod specifies filesystem polling period as time.Duration
-var filesystemPollingPeriod time.Duration
+var (
+	// reconcilerPollingPeriod specifies reconciler polling period as time.Duration
+	reconcilerPollingPeriod time.Duration
+	// hydrationPollingPeriod specifies hydration-controller polling period as time.Duration
+	hydrationPollingPeriod time.Duration
+)
 
 // IsReconcilerManagerConfigMap returns true if passed obj is the
 // reconciler-manager ConfigMap reconciler-manager-cm in config-management namespace.
@@ -143,8 +147,9 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	objs := installationManifests(nt, tmpManifestsDir, nomos)
 	objs = convertObjects(nt, objs)
 	if nomos.MultiRepo {
-		filesystemPollingPeriod = nt.FilesystemPollingPeriod
-		objs = multiRepoObjects(nt.T, objs, setReconcilerDebugMode, setReconcilerFilesystemPollingPeriod)
+		reconcilerPollingPeriod = nt.ReconcilerPollingPeriod
+		hydrationPollingPeriod = nt.HydrationPollingPeriod
+		objs = multiRepoObjects(nt.T, objs, setReconcilerDebugMode, setPollingPeriods)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -295,6 +300,7 @@ func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) [
 		if err != nil {
 			nt.T.Fatal(err)
 		}
+		replaced := string(bytes)
 
 		var imgName string
 		switch template {
@@ -302,8 +308,11 @@ func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) [
 			// For the reconciler manager template, we want the latest image for the reconciler manager.
 			imgName = fmt.Sprintf("%s/reconciler-manager:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		case "reconciler-manager-configmap.yaml":
-			// For the reconciler deployment template, we want the latest image for the reconciler.
-			imgName = fmt.Sprintf("%s/reconciler:%s", *e2e.ImagePrefix, *e2e.ImageTag)
+			// For the reconciler deployment template, we want the latest image for the reconciler and hydration-controller.
+			reconcilerImgName := fmt.Sprintf("%s/reconciler:%s", *e2e.ImagePrefix, *e2e.ImageTag)
+			replaced = strings.ReplaceAll(replaced, "RECONCILER_IMAGE_NAME", reconcilerImgName)
+			hydrationControllerImgName := fmt.Sprintf("%s/hydration-controller:%s", *e2e.ImagePrefix, *e2e.ImageTag)
+			replaced = strings.ReplaceAll(replaced, "HYDRATION_CONTROLLER_IMAGE_NAME", hydrationControllerImgName)
 		case "admission-webhook.yaml":
 			imgName = fmt.Sprintf("%s/admission-webhook:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		default:
@@ -311,7 +320,9 @@ func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) [
 			imgName = fmt.Sprintf("%s/nomos:%s", *e2e.ImagePrefix, *e2e.ImageTag)
 		}
 
-		replaced := strings.ReplaceAll(string(bytes), "IMAGE_NAME", imgName)
+		if template != "reconciler-manager-configmap.yaml" {
+			replaced = strings.ReplaceAll(replaced, "IMAGE_NAME", imgName)
+		}
 
 		err = ioutil.WriteFile(filepath.Join(tmpManifestsDir, template), []byte(replaced), fileMode)
 		if err != nil {
@@ -620,7 +631,7 @@ func setReconcilerDebugMode(t testing.NTB, obj client.Object) {
 	found = false
 	for i, line := range lines {
 		// We want to set the debug flag immediately after setting the git-dir flag.
-		if strings.Contains(line, "- \"--git-dir=/repo/root/rev\"") {
+		if strings.Contains(line, "- \"--git-dir=/repo/source/rev\"") {
 			// Standard Go "insert into slice" idiom.
 			lines = append(lines, "")
 			copy(lines[i+2:], lines[i+1:])
@@ -641,9 +652,10 @@ func setReconcilerDebugMode(t testing.NTB, obj client.Object) {
 	t.Log("Set deployment.yaml")
 }
 
-// setReconcilerFilesystemPollingPeriod update Reconciler Manager configmap
-// reconciler-manager-cm with filesystem polling period to override the default.
-func setReconcilerFilesystemPollingPeriod(t testing.NTB, obj client.Object) {
+// setPollingPeriods update Reconciler Manager configmap
+// reconciler-manager-cm with reconciler and hydration-controller polling
+// periods to override the default.
+func setPollingPeriods(t testing.NTB, obj client.Object) {
 	if !IsReconcilerManagerConfigMap(obj) {
 		return
 	}
@@ -653,7 +665,8 @@ func setReconcilerFilesystemPollingPeriod(t testing.NTB, obj client.Object) {
 		t.Fatalf("parsed Reconciler Manager ConfigMap was not ConfigMap %T %v", obj, obj)
 	}
 
-	cm.Data[reconcilermanager.ReconcilerPollingPeriod] = filesystemPollingPeriod.String()
+	cm.Data[reconcilermanager.ReconcilerPollingPeriod] = reconcilerPollingPeriod.String()
+	cm.Data[reconcilermanager.HydrationPollingPeriod] = hydrationPollingPeriod.String()
 	t.Log("Set filesystem polling period")
 }
 

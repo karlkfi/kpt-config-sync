@@ -80,9 +80,13 @@ type NT struct {
 	// containing configs for that Namespace.
 	NamespaceRepos map[string]string
 
-	// FilesystemPollingPeriod is the time between checking the filessystem for udpates
-	// to the local Git repository.
-	FilesystemPollingPeriod time.Duration
+	// ReconcilerPollingPeriod defines how often the reconciler should poll the
+	// filesystem for updates to the source or rendered configs.
+	ReconcilerPollingPeriod time.Duration
+
+	// HydrationPollingPeriod defines how often the hydration-controller should
+	// poll the filesystem for rendering the DRY configs.
+	HydrationPollingPeriod time.Duration
 
 	// gitPrivateKeyPath is the path to the private key used for communicating with the Git server.
 	gitPrivateKeyPath string

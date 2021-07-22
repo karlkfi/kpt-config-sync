@@ -32,13 +32,44 @@ data:
        spec:
          serviceAccountName: # this field will be assigned dynamically by the reconciler-manager
          containers:
+         - name: hydration-controller
+           image: HYDRATION_CONTROLLER_IMAGE_NAME
+           command:
+           - /hydration-controller
+           args:
+           - "--v=0"
+           - "--repo-root=/repo"
+           - "--source-root=source"
+           - "--hydrated-root=hydrated"
+           - "--source-link=rev"
+           - "--hydrated-link=rev"
+           volumeMounts:
+             - name: repo
+               mountPath: /repo
+           securityContext:
+             runAsUser: 65533
+           env:
+             - name: HYDRATION_CONTROLLER_NAME
+               valueFrom:
+                 fieldRef:
+                   fieldPath: metadata.name
+           envFrom:
+             - configMapRef:
+                 name: hydration-controller
+           resources:
+             limits:
+               cpu: "1"
+               memory: "300Mi"
+             requests:
+               cpu: "150m"
+               memory: "100Mi"
          - name: reconciler
-           image: IMAGE_NAME
+           image: RECONCILER_IMAGE_NAME
            command:
            - /reconciler
            args:
            - "--v=0"
-           - "--git-dir=/repo/root/rev"
+           - "--git-dir=/repo/source/rev"
            volumeMounts:
              - name: repo
                mountPath: /repo
@@ -63,7 +94,7 @@ data:
                memory: "100Mi"
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.3.3-gke.0__linux_amd64
-           args: ["--root=/repo/root", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
+           args: ["--root=/repo/source", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
            volumeMounts:
            - name: repo
              mountPath: /repo

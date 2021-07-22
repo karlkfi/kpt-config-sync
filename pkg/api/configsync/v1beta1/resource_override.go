@@ -21,10 +21,10 @@ type OverrideSpec struct {
 
 // ContainerResourcesSpec allows to override the resource requirements for a container
 type ContainerResourcesSpec struct {
-	// containerName specifies the name of a container whose resource requirements will be overriden.
+	// containerName specifies the name of a container whose resource requirements will be overridden.
 	// Must be "reconciler" or "git-sync".
 	//
-	// +kubebuilder:validation:Pattern=^(reconciler|git-sync)$
+	// +kubebuilder:validation:Pattern=^(reconciler|git-sync|hydration-controller)$
 	// +optional
 	ContainerName string `json:"containerName,omitempty"`
 	// cpuLimit allows one to override the CPU limit of a container

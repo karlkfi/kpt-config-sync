@@ -14,15 +14,18 @@ REPO_DIR="$(readlink -f "$(dirname "$0")")/.."
 GCP_PROJECT=${GCP_PROJECT:-stolos-dev}
 NOMOS_TAG="gcr.io/${GCP_PROJECT}/${USER}/nomos:latest"
 MGR_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler-manager:latest"
+HC_TAG="gcr.io/${GCP_PROJECT}/${USER}/hydration-controller:latest"
 REC_TAG="gcr.io/${GCP_PROJECT}/${USER}/reconciler:latest"
 WEBHOOK_TAG="gcr.io/${GCP_PROJECT}/${USER}/admission-webhook:latest"
 
 make -C "${REPO_DIR}" image-nomos \
   NOMOS_TAG="${NOMOS_TAG}" \
   RECONCILER_TAG="${REC_TAG}" \
+  HYDRATION_CONTROLLER_TAG="${HC_TAG}" \
   RECONCILER_MANAGER_TAG="${MGR_TAG}" \
   ADMISSION_WEBHOOK_TAG="${WEBHOOK_TAG}"
 docker push "${MGR_TAG}"
+docker push "${HC_TAG}"
 docker push "${REC_TAG}"
 docker push "${WEBHOOK_TAG}"
 
@@ -37,7 +40,7 @@ kubectl apply -f manifests/otel-agent-cm.yaml
 kubectl apply -f manifests/test-resources/kpt-resourcegroup-crd.yaml
 
 # Fill in configmap template
-sed -e "s|IMAGE_NAME|$REC_TAG|" \
+sed -e "s|RECONCILER_IMAGE_NAME|$REC_TAG|" -e "s|HYDRATION_CONTROLLER_IMAGE_NAME|$HC_TAG|" \
   manifests/templates/reconciler-manager-configmap.yaml \
   | tee reconciler-manager-configmap.generated.yaml \
   | kubectl apply -f -
@@ -85,7 +88,7 @@ kubectl apply -f e2e/testdata/reconciler-manager/reposync-sample.yaml
 
 sleep 10s
 
-# Verify whether respective controllers create various obejcts i.e. Deployments.
+# Verify whether respective controllers create various objects i.e. Deployments.
 kubectl get all -n config-management-system
 
 # Verify whether config map is created.

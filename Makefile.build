@@ -64,6 +64,12 @@ image-nomos:
 		-t $(ADMISSION_WEBHOOK_TAG) \
 		-f build/all/Dockerfile \
 		.
+	@echo "+++ Building the Hydration Controller image"
+	@docker build $(DOCKER_BUILD_QUIET) \
+		--target $(HYDRATION_CONTROLLER_IMAGE) \
+		-t $(HYDRATION_CONTROLLER_TAG) \
+		-f build/all/Dockerfile \
+		.
 
 # Pushes the specified component's docker image to gcr.io.
 push-to-gcr-nomos: image-nomos
@@ -75,6 +81,7 @@ push-to-gcr-nomos: image-nomos
 	docker push $(RECONCILER_TAG)
 	docker push $(RECONCILER_MANAGER_TAG)
 	docker push $(ADMISSION_WEBHOOK_TAG)
+	docker push $(HYDRATION_CONTROLLER_TAG)
 
 ###################################
 # Deployment generation
@@ -114,7 +121,8 @@ $(GEN_DEPLOYMENT_DIR)/reconciler-manager-configmap.yaml: \
 		manifests/templates/reconciler-manager-configmap.yaml
 	@echo "+++ Generating yaml $@"
 	@mkdir -p $(dir $@)
-	@sed -e 's|IMAGE_NAME|$(RECONCILER_TAG)|' < $< > $@
+	@sed -e 's|RECONCILER_IMAGE_NAME|$(RECONCILER_TAG)|' \
+		-e 's|HYDRATION_CONTROLLER_IMAGE_NAME|$(HYDRATION_CONTROLLER_TAG)|' < $< > $@
 
 .PHONY: $(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml
 $(GEN_DEPLOYMENT_DIR)/reconciler-manager.yaml: \

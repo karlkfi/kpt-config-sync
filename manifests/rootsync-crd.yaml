@@ -136,7 +136,7 @@ spec:
                           description: containerName specifies the name of a container
                             whose resource requirements will be overriden. Must be "reconciler"
                             or "git-sync".
-                          pattern: ^(reconciler|git-sync)$
+                          pattern: ^(reconciler|git-sync|hydration-controller)$
                           type: string
                         cpuLimit:
                           anyOf:
@@ -288,7 +288,7 @@ spec:
                           description: containerName specifies the name of a container
                             whose resource requirements will be overriden. Must be "reconciler"
                             or "git-sync".
-                          pattern: ^(reconciler|git-sync)$
+                          pattern: ^(reconciler|git-sync|hydration-controller)$
                           type: string
                         cpuLimit:
                           anyOf:

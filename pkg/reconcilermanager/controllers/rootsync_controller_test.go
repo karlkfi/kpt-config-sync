@@ -53,23 +53,23 @@ const (
 
 	rootsyncSSHKey = "root-ssh-key"
 
-	deploymentGCENodeChecksum        = "5db4e924f81e03f72703579f7aa0ffc1"
-	deploymentSecretChecksum         = "11086fbe1223835ad94df772aef60210"
-	deploymentProxyChecksum          = "b109c2ee920d1a744fba442fedc8e6f2"
-	deploymentSecretUpdatedChecksum  = "fad17d40e46203b5504d047ed7a2ab9e"
-	deploymentGCENodeUpdatedChecksum = "935d60fc29f7e637993de0755d057023"
-	deploymentNoneChecksum           = "5fe2e3470e391b919715ee93c2554eb8"
+	deploymentGCENodeChecksum        = "fb7197b50397eafc27bb6dbb96f93651"
+	deploymentSecretChecksum         = "bf642e8754657fdd8b808701045a66b4"
+	deploymentProxyChecksum          = "50429932edd585a028d4eb65a763978e"
+	deploymentSecretUpdatedChecksum  = "9788d38a8155aee817d8300c2809389e"
+	deploymentGCENodeUpdatedChecksum = "5fb27a85ac8b7ce37045c129282e853f"
+	deploymentNoneChecksum           = "1dfe0ad848df07553cb36efa2cde7f44"
 
 	// Checksums of the Deployment whose container resource limits are updated
-	deploymentResourceLimitsChecksum                         = "a1bc9f3c1353716d29612b82d6c92f52"
-	deploymentReconcilerLimitsChecksum                       = "cafd9616c47ae5b9b066c08d2872dcf1"
-	deploymentGitSyncMemLimitsChecksum                       = "5facb97a4d555bc5643bdc0e1859259a"
-	deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "dd8d60fe1faf5d3a46fce08538db1a9f"
+	deploymentResourceLimitsChecksum                         = "3eb139bd47e5d3176d960bee1e3bb191"
+	deploymentReconcilerLimitsChecksum                       = "4308d19d32ef68c29939159c3f021bc3"
+	deploymentGitSyncMemLimitsChecksum                       = "a77249892e77d1bc72f5297fd461ac6e"
+	deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "eec8fd9816f06a1d673e20289b8788b0"
 
-	rsDeploymentSecretOverrideGitSyncDepthChecksum     = "16f89a14291dbde4f536a6bd2d88e34b"
-	rsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "0a5555e16a057ff9034ac64849b96f71"
+	rsDeploymentSecretOverrideGitSyncDepthChecksum     = "0cc33d5906b8d128eae663cb5c43c8ef"
+	rsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "c9a8d788642aee80acc1b6a10e18c8c1"
 
-	rsDeploymentSecretNoSSLVerifyChecksum = "bbed1efb1ce3cad9674fe9e98a1e9802"
+	rsDeploymentSecretNoSSLVerifyChecksum = "2b0d71b390447edeaacfac5770edee32"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -217,12 +217,17 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
@@ -305,11 +310,15 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU limits of the reconciler container and the memory limits of the git-sync container
 	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1.2"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("0.8"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			MemoryLimit:   resource.MustParse("888Gi"),
 		},
 	}
@@ -449,12 +458,17 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU/memory limits of both the reconciler and git-sync container
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
@@ -494,9 +508,14 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU/memory limits of the reconciler container
 	overrideReconcilerResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("2"),
 			MemoryLimit:   resource.MustParse("2Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1.3"),
+			MemoryLimit:   resource.MustParse("4Gi"),
 		},
 	}
 
@@ -528,7 +547,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 	// Test overriding the memory limits of the git-sync container
 	overrideGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.GitSync,
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
@@ -1821,7 +1840,7 @@ func containerResourceLimitsMutator(overrides []v1alpha1.ContainerResourcesSpec)
 	return func(dep *appsv1.Deployment) {
 		for _, container := range dep.Spec.Template.Spec.Containers {
 			switch container.Name {
-			case reconcilermanager.Reconciler, reconcilermanager.GitSync:
+			case reconcilermanager.Reconciler, reconcilermanager.GitSync, reconcilermanager.HydrationController:
 				for _, override := range overrides {
 					if override.ContainerName == container.Name {
 						mutateContainerResourceLimits(&container, override)
@@ -1866,6 +1885,10 @@ func defaultContainers() []corev1.Container {
 			Resources: defaultResourceRequirements(),
 		},
 		{
+			Name:      reconcilermanager.HydrationController,
+			Resources: defaultResourceRequirements(),
+		},
+		{
 			Name:      reconcilermanager.GitSync,
 			Resources: defaultResourceRequirements(),
 			VolumeMounts: []corev1.VolumeMount{
@@ -1881,6 +1904,11 @@ func secretMountContainers(reconcilerName string) []corev1.Container {
 			Name:      reconcilermanager.Reconciler,
 			Resources: defaultResourceRequirements(),
 			EnvFrom:   reconcilerContainerEnvFrom(reconcilerName),
+		},
+		{
+			Name:      reconcilermanager.HydrationController,
+			Resources: defaultResourceRequirements(),
+			EnvFrom:   hydrationContainerEnvFrom(reconcilerName),
 		},
 		{
 			Name:      reconcilermanager.GitSync,
@@ -1900,6 +1928,11 @@ func noneContainers(reconcilerName string) []corev1.Container {
 			Name:      reconcilermanager.Reconciler,
 			Resources: defaultResourceRequirements(),
 			EnvFrom:   reconcilerContainerEnvFrom(reconcilerName),
+		},
+		{
+			Name:      reconcilermanager.HydrationController,
+			Resources: defaultResourceRequirements(),
+			EnvFrom:   hydrationContainerEnvFrom(reconcilerName),
 		},
 		{
 			Name:      reconcilermanager.GitSync,
@@ -1954,6 +1987,16 @@ func gitSyncContainerEnvFrom(reconcilerName string) []corev1.EnvFromSource {
 	return []corev1.EnvFromSource{
 		{ConfigMapRef: &corev1.ConfigMapEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: reconcilerName + "-git-sync"},
+			Optional:             &optionalFalse,
+		}},
+	}
+}
+
+func hydrationContainerEnvFrom(reconcilerName string) []corev1.EnvFromSource {
+	optionalFalse := false
+	return []corev1.EnvFromSource{
+		{ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: reconcilerName + "-hydration-controller"},
 			Optional:             &optionalFalse,
 		}},
 	}

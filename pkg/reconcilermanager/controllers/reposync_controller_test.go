@@ -65,23 +65,23 @@ const (
 	nsUpdatedAnnotationGCENode = "801faefb64294bf651f77ba7736fab17"
 	nsAnnotationNone           = "096755b105668b37c6dbb0abdfc5af99"
 
-	nsDeploymentGCENodeChecksum        = "f8d6ae32663de6c3e094b17fc53d9c75"
-	nsDeploymentSecretChecksum         = "189c6f0f872a3cf48f6bee395a901cfe"
-	nsDeploymentProxyChecksum          = "34e92a88583873ad655bb6629bf1a918"
-	nsDeploymentSecretUpdatedChecksum  = "02880ee050ddd331be627d349be738e8"
-	nsDeploymentGCENodeUpdatedChecksum = "1b558c97bb9d78fa84376f3db4d8872b"
-	nsDeploymentNoneChecksum           = "b08cfa284228f2122eeb4211c2d465dc"
+	nsDeploymentGCENodeChecksum        = "ad0c3cde22f773a5481b2bcedb48e3e0"
+	nsDeploymentSecretChecksum         = "a059a7cd192872cc83ab07fc1bbd8dcb"
+	nsDeploymentProxyChecksum          = "0a4b0387b6f00aa29dbf60180b1590bb"
+	nsDeploymentSecretUpdatedChecksum  = "82afe04f1e31c5772a503fcdcab457dd"
+	nsDeploymentGCENodeUpdatedChecksum = "45ac4158f629af210ccb28d7e8758646"
+	nsDeploymentNoneChecksum           = "4f4f0808180940ae8a0c773d424e8dd3"
 
 	// Checksums of the Deployment whose container resource limits are updated
-	nsDeploymentResourceLimitsChecksum                         = "cca0897cb6ac0dc9ab8f960b8190dc2c"
-	nsDeploymentReconcilerLimitsChecksum                       = "2c81a25800592e1e960c8197555b52a7"
-	nsDeploymentGitSyncMemLimitsChecksum                       = "215ef29d002dd3cc5c41afe457c58b10"
-	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "57407589b4fd9f0af7f06ef5199c0e17"
+	nsDeploymentResourceLimitsChecksum                         = "3fa19d32127637934a51716b7d185ec8"
+	nsDeploymentReconcilerLimitsChecksum                       = "cca87cc404058c9ab7aecd9303435668"
+	nsDeploymentGitSyncMemLimitsChecksum                       = "fbdbcb8f7c2684cef455a3d19029e849"
+	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "6501fc1fdad647d8ddf8581fb09362dd"
 
-	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "37f1e5a6f25ffdaefc874902becf47f2"
-	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "89bcca2a165d2d6f2a34dbb37ea8186a"
+	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "27f1a588f5efd8a37ccd52c4b9365e77"
+	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "7fbca62d78f7d29ba670081fcd49958f"
 
-	nsDeploymentSecretNoSSLVerifyChecksum = "1f5d8ff962ac10f968bef7690f67b728"
+	nsDeploymentSecretNoSSLVerifyChecksum = "4ed4252f5691aff11ec2c69ced56191d"
 )
 
 // Set in init.
@@ -230,12 +230,17 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
@@ -303,11 +308,15 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU limits of the reconciler container and the memory limits of the git-sync container
 	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1.2"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("0.8"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			MemoryLimit:   resource.MustParse("888Gi"),
 		},
 	}
@@ -433,12 +442,17 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU/memory limits of both the reconciler and git-sync container
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
 			CPULimit:      resource.MustParse("1"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
@@ -479,9 +493,14 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 	// Test overriding the CPU/memory limits of the reconciler container
 	overrideReconcilerResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "reconciler",
+			ContainerName: reconcilermanager.Reconciler,
 			CPULimit:      resource.MustParse("2"),
 			MemoryLimit:   resource.MustParse("2Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1.3"),
+			MemoryLimit:   resource.MustParse("4Gi"),
 		},
 	}
 
@@ -514,7 +533,7 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 	// Test overriding the memory limits of the git-sync container
 	overrideGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
 		{
-			ContainerName: "git-sync",
+			ContainerName: reconcilermanager.GitSync,
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
