@@ -6,6 +6,7 @@ import (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="RenderingCommit",type="string",JSONPath=".status.rendering.commit"
 // +kubebuilder:printcolumn:name="SourceCommit",type="string",JSONPath=".status.source.commit"
 // +kubebuilder:printcolumn:name="SyncCommit",type="string",JSONPath=".status.sync.commit"
 

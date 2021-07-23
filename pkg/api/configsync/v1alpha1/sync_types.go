@@ -27,6 +27,23 @@ type SyncSpec struct {
 	Override OverrideSpec `json:"override,omitempty"`
 }
 
+// RenderingPhase is an enum of rendering phases.
+type RenderingPhase string
+
+const (
+	// RenderingInProgress means that the configs are still being rendered by Config Sync.
+	RenderingInProgress RenderingPhase = "InProgress"
+
+	// RenderingSucceeded means that the configs have been rendered successfully.
+	RenderingSucceeded RenderingPhase = "Succeeded"
+
+	// RenderingFailed means that the configs have failed to be rendered.
+	RenderingFailed RenderingPhase = "Failed"
+
+	// RenderingSkipped means that the configs don't need to be rendered.
+	RenderingSkipped RenderingPhase = "Skipped"
+)
+
 // SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
 type SyncStatus struct {
 	// ObservedGeneration is the most recent generation observed for the sync resource.
@@ -43,6 +60,11 @@ type SyncStatus struct {
 	// truth.
 	// +optional
 	Source GitSourceStatus `json:"source,omitempty"`
+
+	// Rendering contains fields describing the status of rendering resources from
+	// the source of truth.
+	// +optional
+	Rendering RenderingStatus `json:"rendering,omitempty"`
 
 	// Sync contains fields describing the status of syncing resources from the
 	// source of truth to the cluster.
@@ -61,6 +83,21 @@ type GitSourceStatus struct {
 	Commit string `json:"commit,omitempty"`
 
 	// Errors is a list of any errors that occurred while reading from the source of truth.
+	// +optional
+	Errors []ConfigSyncError `json:"errors,omitempty"`
+}
+
+// RenderingStatus describes the status of rendering the source DRY configs to the WET format.
+type RenderingStatus struct {
+
+	// Commit is the hash of the commit in the source of truth that is rendered.
+	// +optional
+	Commit string `json:"commit,omitempty"`
+
+	// Phase describes the rendering status.
+	Phase RenderingPhase `json:"phase,omitempty"`
+
+	// Errors is a list of any errors that occurred while rendering the source of truth.
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
 }

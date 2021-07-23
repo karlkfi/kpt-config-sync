@@ -19,6 +19,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.rendering.commit
+      name: RenderingCommit
+      type: string
     - jsonPath: .status.source.commit
       name: SourceCommit
       type: string
@@ -168,6 +171,9 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
+    - jsonPath: .status.rendering.commit
+      name: RenderingCommit
+      type: string
     - jsonPath: .status.source.commit
       name: SourceCommit
       type: string
