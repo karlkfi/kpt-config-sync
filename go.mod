@@ -23,6 +23,7 @@ require (
 	cloud.google.com/go v0.72.0
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
 	github.com/GoogleContainerTools/kpt v0.37.1-0.20210128185716-8a1032f5571e
+	github.com/Masterminds/semver v1.5.0
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/go-logr/glogr v0.3.0
