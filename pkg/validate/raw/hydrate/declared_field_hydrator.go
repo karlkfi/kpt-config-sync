@@ -27,17 +27,35 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 	}
 
 	var errs status.MultiError
+	needRefresh := false
 	for _, obj := range objs.Objects {
 		fields, err := encodeDeclaredFields(objs.Converter, obj.Unstructured)
 		if err != nil {
 			switch err.(type) {
 			case status.MultiError:
+				// This error is from the function setDefaultProtocol.
+				// No schema checking involved.
 				errs = status.Append(errs, err)
 			default:
 				errs = status.Append(errs, status.InternalErrorBuilder.Sprint("failed to encode declared fields").Wrap(err).Build())
+				// This error could be due to an out of date schema.
+				// So the converter needs to be refreshed.
+				needRefresh = true
 			}
 		}
 		core.SetAnnotation(obj, metadata.DeclaredFieldsKey, string(fields))
+	}
+
+	if needRefresh {
+		// Refresh the converter so that the new schema of types can be used in the next loop of parsing/validating.
+		// If the error returned by `encodeDeclaredFields` is due to the
+		// out of date schema in the Converter, it will be gone in the next loop of hydration/validation.
+		glog.Info("Got error from encoding declared fields. It might be due to an out of date schemas. Refreshing the schemas from the discovery client")
+		if err := objs.Converter.Refresh(); err != nil {
+			// No special handling for the error here.
+			// If Refresh function fails, the next loop of hydration/validation will trigger it again.
+			glog.Warningf("failed to refresh the schemas %v", err)
+		}
 	}
 	return errs
 }
