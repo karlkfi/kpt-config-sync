@@ -196,11 +196,11 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []configMapMutation {
 	return []configMapMutation{
 		{
-			cmName: rootSyncResourceName(reconcilermanager.SourceFormat),
+			cmName: RootSyncResourceName(reconcilermanager.SourceFormat),
 			data:   sourceFormatData(rs.Spec.SourceFormat),
 		},
 		{
-			cmName: rootSyncResourceName(reconcilermanager.GitSync),
+			cmName: RootSyncResourceName(reconcilermanager.GitSync),
 			data: gitSyncData(options{
 				ref:        rs.Spec.Git.Revision,
 				branch:     rs.Spec.Git.Branch,
@@ -208,10 +208,11 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 				secretType: rs.Spec.Git.Auth,
 				period:     v1alpha1.GetPeriodSecs(&rs.Spec.Git),
 				proxy:      rs.Spec.Proxy,
+				depth:      rs.Spec.Override.GitSyncDepth,
 			}),
 		},
 		{
-			cmName: rootSyncResourceName(reconcilermanager.Reconciler),
+			cmName: RootSyncResourceName(reconcilermanager.Reconciler),
 			data:   reconcilerData(r.clusterName, declared.RootReconciler, &rs.Spec.Git, r.filesystemPollingPeriod.String()),
 		},
 	}
@@ -324,13 +325,13 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 			switch container.Name {
 			case reconcilermanager.Reconciler:
 				configmapRef := make(map[string]*bool)
-				configmapRef[rootSyncResourceName(reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
-				configmapRef[rootSyncResourceName(reconcilermanager.SourceFormat)] = pointer.BoolPtr(true)
+				configmapRef[RootSyncResourceName(reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
+				configmapRef[RootSyncResourceName(reconcilermanager.SourceFormat)] = pointer.BoolPtr(true)
 				container.EnvFrom = envFromSources(configmapRef)
 				mutateContainerResource(&container, rs.Spec.Override)
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
-				configmapRef[rootSyncResourceName(reconcilermanager.GitSync)] = pointer.BoolPtr(false)
+				configmapRef[RootSyncResourceName(reconcilermanager.GitSync)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 				container.VolumeMounts = volumeMounts(rs.Spec.Auth,

@@ -60,7 +60,7 @@ func defaultResourceLimits(nt *nomostest.NT) (corev1.ResourceList, corev1.Resour
 	return reconcilerResourceLimits, gitSyncResourceLimits
 }
 
-func TestOverrideV1Alpha1(t *testing.T) {
+func TestOverrideResourceLimitsV1Alpha1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 
@@ -239,7 +239,7 @@ func TestOverrideV1Alpha1(t *testing.T) {
 	}
 }
 
-func TestOverrideV1Beta1(t *testing.T) {
+func TestOverrideResourceLimitsV1Beta1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 

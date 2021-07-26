@@ -7,6 +7,16 @@ type OverrideSpec struct {
 	// resources allow one to override the resource requirements for the containers in a reconciler pod.
 	// +optional
 	Resources []ContainerResourcesSpec `json:"resources,omitempty"`
+
+	// gitSyncDepth allows one to override the number of git commits to fetch.
+	// Must be no less than 0.
+	// Config Sync would do a full clone if this field is 0, and a shallow
+	// clone if this field is greater than 0.
+	// If this field is not provided, Config Sync would configure it automatically.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	GitSyncDepth *int64 `json:"gitSyncDepth,omitempty"`
 }
 
 // ContainerResourcesSpec allows to override the resource requirements for a container

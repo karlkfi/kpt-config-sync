@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/pkg/errors"
@@ -144,6 +145,24 @@ func HasExactlyLabelKeys(wantKeys ...string) Predicate {
 		sort.Strings(gotKeys)
 		if diff := cmp.Diff(wantKeys, gotKeys); diff != "" {
 			return errors.Errorf("unexpected diff in metadata.annotation keys: %s", diff)
+		}
+		return nil
+	}
+}
+
+// HasKeyValuePairInConfigMapData verifies that a ConfigMap object has a key/value pair.
+func HasKeyValuePairInConfigMapData(k, v string) Predicate {
+	return func(o client.Object) error {
+		cm, ok := o.(*corev1.ConfigMap)
+		if !ok {
+			return WrongTypeErr(cm, &corev1.ConfigMap{})
+		}
+		valueInCM, ok := cm.Data[k]
+		if !ok {
+			return errors.Errorf("The Data field of the %q ConfigMap does not have key %q.", core.GKNN(cm), k)
+		}
+		if valueInCM != v {
+			return errors.Errorf("The value for the %q key in the Data field of the %q ConfigMap should be %q, got %q.", k, core.GKNN(cm), v, valueInCM)
 		}
 		return nil
 	}

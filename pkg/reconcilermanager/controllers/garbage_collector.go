@@ -84,8 +84,8 @@ func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, namespace string)
 
 func (r *RepoSyncReconciler) deleteConfigmap(ctx context.Context, namespace string) error {
 	cms := []string{
-		repoSyncResourceName(namespace, reconcilermanager.Reconciler),
-		repoSyncResourceName(namespace, reconcilermanager.GitSync),
+		RepoSyncResourceName(namespace, reconcilermanager.Reconciler),
+		RepoSyncResourceName(namespace, reconcilermanager.GitSync),
 	}
 	for _, c := range cms {
 		if err := r.cleanup(ctx, c, v1.NSConfigManagementSystem, kinds.ConfigMap()); err != nil {

@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// repoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
-func repoSyncResourceName(namespace, resourceName string) string {
+// RepoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
+func RepoSyncResourceName(namespace, resourceName string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), resourceName)
 }
 
@@ -73,8 +73,8 @@ func trimSuffixes(name string, opts ...string) string {
 	return name
 }
 
-// rootSyncResourceName returns name in the format root-reconciler-<resourcename>.
-func rootSyncResourceName(resourceName string) string {
+// RootSyncResourceName returns name in the format root-reconciler-<resourcename>.
+func RootSyncResourceName(resourceName string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RootSyncName, resourceName)
 }
 

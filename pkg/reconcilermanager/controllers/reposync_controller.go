@@ -218,7 +218,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
 	return []configMapMutation{
 		{
-			cmName: repoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
+			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
 			data: gitSyncData(options{
 				ref:        rs.Spec.Git.Revision,
 				branch:     rs.Spec.Git.Branch,
@@ -226,10 +226,11 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []con
 				secretType: rs.Spec.Git.Auth,
 				period:     v1alpha1.GetPeriodSecs(&rs.Spec.Git),
 				proxy:      rs.Spec.Proxy,
+				depth:      rs.Spec.Override.GitSyncDepth,
 			}),
 		},
 		{
-			cmName: repoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler),
+			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler),
 			data:   reconcilerData(r.clusterName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.filesystemPollingPeriod.String()),
 		},
 	}
@@ -317,12 +318,12 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 			switch container.Name {
 			case reconcilermanager.Reconciler:
 				configmapRef := make(map[string]*bool)
-				configmapRef[repoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
+				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				mutateContainerResource(&container, rs.Spec.Override)
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
-				configmapRef[repoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
+				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 				container.VolumeMounts = volumeMounts(rs.Spec.Auth,

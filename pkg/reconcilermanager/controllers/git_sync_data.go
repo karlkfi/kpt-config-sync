@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -32,23 +33,33 @@ type options struct {
 	proxy string
 	// period is the time in seconds between consecutive syncs.
 	period float64
+	// depth is the number of git commits to sync.
+	depth *int64
 }
 
 func gitSyncData(opts options) map[string]string {
 	result := make(map[string]string)
 	result["GIT_SYNC_REPO"] = opts.repo
 	result["GIT_KNOWN_HOSTS"] = "false" // disable known_hosts checking because it provides no benefit for our use case.
-	// If syncRev is set, git-sync checks out the source repo at master and then resets to
-	// the specified rev. This means that the rev has to be in the pulled history and thus
-	// will fail if rev is earlier than the configured depth.
-	// However, if history is too large git-sync will OOM when it tries to pull all of it.
-	// Try to set a happy medium here -- if syncRev is set, pull 500 commits from master;
-	// if it isn't, just the latest commit will do and will save memory.
-	// See b/175088702 and b/158988143
-	if opts.ref == "" || opts.ref == DefaultSyncRev {
-		result["GIT_SYNC_DEPTH"] = SyncDepthNoRev
+	if opts.depth != nil && *opts.depth >= 0 {
+		// git-sync would do a shallow clone if *opts.depth > 0;
+		// git-sync would do a full clone if *opts.depth == 0.
+		result["GIT_SYNC_DEPTH"] = strconv.FormatInt(*opts.depth, 10)
 	} else {
-		result["GIT_SYNC_DEPTH"] = SyncDepthRev
+		// git-sync would do a shallow clone.
+		//
+		// If syncRev is set, git-sync checks out the source repo at master and then resets to
+		// the specified rev. This means that the rev has to be in the pulled history and thus
+		// will fail if rev is earlier than the configured depth.
+		// However, if history is too large git-sync will OOM when it tries to pull all of it.
+		// Try to set a happy medium here -- if syncRev is set, pull 500 commits from master;
+		// if it isn't, just the latest commit will do and will save memory.
+		// See b/175088702 and b/158988143
+		if opts.ref == "" || opts.ref == DefaultSyncRev {
+			result["GIT_SYNC_DEPTH"] = SyncDepthNoRev
+		} else {
+			result["GIT_SYNC_DEPTH"] = SyncDepthRev
+		}
 	}
 	result["GIT_SYNC_WAIT"] = fmt.Sprintf("%f", opts.period)
 	// When branch and ref not set in RootSync/RepoSync then dont set GIT_SYNC_BRANCH

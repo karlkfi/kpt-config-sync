@@ -108,6 +108,15 @@ spec:
                 description: override allows to override the settings for a namespace reconciler.
                 nullable: true
                 properties:
+                  gitSyncDepth:
+                    description: gitSyncDepth allows one to override the number of git
+                      commits to fetch. Must be no less than 0. Config Sync would do
+                      a full clone if this field is 0, and a shallow clone if this field
+                      is greater than 0. If this field is not provided, Config Sync
+                      would configure it automatically.
+                    format: int64
+                    minimum: 0
+                    type: integer
                   resources:
                     description: resources allow one to override the resource requirements
                       for the containers in a reconciler pod.
@@ -243,6 +252,15 @@ spec:
                 description: override allows to override the settings for a namespace reconciler.
                 nullable: true
                 properties:
+                  gitSyncDepth:
+                    description: gitSyncDepth allows one to override the number of git
+                      commits to fetch. Must be no less than 0. Config Sync would do
+                      a full clone if this field is 0, and a shallow clone if this field
+                      is greater than 0. If this field is not provided, Config Sync
+                      would configure it automatically.
+                    format: int64
+                    minimum: 0
+                    type: integer
                   resources:
                     description: resources allow one to override the resource requirements
                       for the containers in a reconciler pod.

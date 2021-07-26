@@ -56,6 +56,9 @@ const (
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
 	nsUpdatedAnnotation = "ad9eec9d09067c7aa5c339b3cef083f3"
 
+	nsUpdatedAnnotationOverrideGitSyncDepth     = "7b357148ed82ae58c36940b25a563547"
+	nsUpdatedAnnotationOverrideGitSyncDepthZero = "cb17525173bc95ea9cf3d067769fceb0"
+
 	nsAnnotationGCENode        = "1e0a718052edc00039f6acc3738a02ae"
 	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
 	nsAnnotationNone           = "551985d0f09594c9f82527a4ae3770d8"
@@ -72,6 +75,9 @@ const (
 	nsDeploymentReconcilerLimitsChecksum                       = "51ef264dfa236523ffa4b22fee6983de"
 	nsDeploymentGitSyncMemLimitsChecksum                       = "b3a970a2d3c763b3da65a7033604b2f7"
 	nsDeploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "a48562544a396572b3a96298e830757e"
+
+	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "63792a36e4f7ed8a81b71306a0f66724"
+	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "436570a6448441e799e98cea390de5b5"
 )
 
 // Set in init.
@@ -139,6 +145,12 @@ func reposyncOverrideResourceLimits(containers []v1alpha1.ContainerResourcesSpec
 		sync.Spec.Override = v1alpha1.OverrideSpec{
 			Resources: containers,
 		}
+	}
+}
+
+func reposyncOverrideGitSyncDepth(depth int64) func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.Override.GitSyncDepth = &depth
 	}
 }
 
@@ -231,7 +243,7 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -243,7 +255,7 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -357,7 +369,7 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -369,7 +381,7 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -535,6 +547,268 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
+func TestRepoSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey), reposyncOverrideGitSyncDepth(5))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMapOverrideGitSyncDepth := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+				depth:      rs.Spec.Override.GitSyncDepth,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeploymentsOverrideGitSyncDepth := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationOverrideGitSyncDepth)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretOverrideGitSyncDepthChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	for _, cm := range wantConfigMapOverrideGitSyncDepth {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeploymentsOverrideGitSyncDepth, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+}
+
+func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Test overriding the git sync depth to a positive value
+	var depth int64 = 5
+	rs.Spec.Override.GitSyncDepth = &depth
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMapOverrideGitSyncDepth := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+				depth:      rs.Spec.Override.GitSyncDepth,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeploymentsOverrideGitSyncDepth := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationOverrideGitSyncDepth)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretOverrideGitSyncDepthChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	for _, cm := range wantConfigMapOverrideGitSyncDepth {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeploymentsOverrideGitSyncDepth, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Test overriding the git sync depth to 0
+	depth = 0
+	rs.Spec.Override.GitSyncDepth = &depth
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMapOverrideGitSyncDepthZero := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+				depth:      rs.Spec.Override.GitSyncDepth,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeploymentsOverrideGitSyncDepthZero := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationOverrideGitSyncDepthZero)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretOverrideGitSyncDepthZeroChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	for _, cm := range wantConfigMapOverrideGitSyncDepthZero {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeploymentsOverrideGitSyncDepthZero, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Set rs.Spec.Override.GitSyncDepth to nil.
+	rs.Spec.Override.GitSyncDepth = nil
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("No need to update ConfigMap and Deployment.")
+}
+
 func TestRepoSyncReconciler(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
@@ -562,7 +836,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -574,7 +848,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -634,7 +908,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
@@ -646,7 +920,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -762,7 +1036,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -774,7 +1048,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -825,7 +1099,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 	wantConfigMap = []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
@@ -837,7 +1111,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -902,7 +1176,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -914,7 +1188,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
@@ -1077,7 +1351,7 @@ func TestRepoSyncWithProxy(t *testing.T) {
 	wantConfigMap := []*corev1.ConfigMap{
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
 			gitSyncData(options{
 				ref:        gitRevision,
 				branch:     branch,
@@ -1089,7 +1363,7 @@ func TestRepoSyncWithProxy(t *testing.T) {
 		),
 		configMapWithData(
 			v1.NSConfigManagementSystem,
-			repoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
 			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
 		),
 	}
