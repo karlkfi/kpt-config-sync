@@ -330,6 +330,19 @@ func (b *BugReporter) fetchResources(ctx context.Context, gv schema.GroupVersion
 	return rd
 }
 
+// fetchConfigMaps provides a set of Readables for the ConfigMap objects under the config-management-system namespace
+func (b *BugReporter) fetchConfigMaps(ctx context.Context) (rd []Readable) {
+	ns := configmanagement.ControllerNamespace
+	configMapList, err := b.clientSet.CoreV1().ConfigMaps(ns).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s configmaps: %v", ns, err))
+	} else {
+		filePath := path.Join(Namespace, ns, "ConfigMaps")
+		rd = b.appendPrettyJSON(rd, filePath, configMapList)
+	}
+	return rd
+}
+
 // FetchResources provides a set of Readables for configsync, configmanagement and resourcegroup resources.
 func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 	var rd []Readable
@@ -357,6 +370,9 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 		readables := b.fetchResources(ctx, gv, namespacedResourceToReadables)
 		rd = append(rd, readables...)
 	}
+
+	readables := b.fetchConfigMaps(ctx)
+	rd = append(rd, readables...)
 	return rd
 }
 
