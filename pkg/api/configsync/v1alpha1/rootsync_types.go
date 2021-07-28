@@ -61,9 +61,11 @@ type RootSyncCondition struct {
 	// Status of the condition, one of True, False, Unknown.
 	Status metav1.ConditionStatus `json:"status"`
 	// The last time this condition was updated.
+	// +nullable
 	// +optional
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 	// Last time the condition transitioned from one status to another.
+	// +nullable
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 	// The reason for the condition's last transition.

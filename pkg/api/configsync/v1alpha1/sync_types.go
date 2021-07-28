@@ -67,6 +67,7 @@ type GitSourceStatus struct {
 
 	// LastUpdate is the timestamp of when this status was last updated by a
 	// reconciler.
+	// +nullable
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
@@ -90,6 +91,7 @@ type RenderingStatus struct {
 
 	// LastUpdate is the timestamp of when this status was last updated by a
 	// reconciler.
+	// +nullable
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
@@ -111,6 +113,7 @@ type GitSyncStatus struct {
 
 	// LastUpdate is the timestamp of when this status was last updated by a
 	// reconciler.
+	// +nullable
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
