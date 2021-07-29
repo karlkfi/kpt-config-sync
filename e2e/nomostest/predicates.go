@@ -168,6 +168,20 @@ func HasKeyValuePairInConfigMapData(k, v string) Predicate {
 	}
 }
 
+// MissingKeyInConfigMapData verifies that a ConfigMap object does not have a key.
+func MissingKeyInConfigMapData(k string) Predicate {
+	return func(o client.Object) error {
+		cm, ok := o.(*corev1.ConfigMap)
+		if !ok {
+			return WrongTypeErr(cm, &corev1.ConfigMap{})
+		}
+		if _, ok := cm.Data[k]; ok {
+			return errors.Errorf("The Data field of the %q ConfigMap should not have key %q.", core.GKNN(cm), k)
+		}
+		return nil
+	}
+}
+
 // HasCorrectResourceLimits verify a root/namespace reconciler has the correct resource limits.
 func HasCorrectResourceLimits(reconcilerCPULimits, reconcilerMemLimits, gitSyncCPULimits, gitSyncMemLimits resource.Quantity) Predicate {
 	return func(o client.Object) error {

@@ -75,6 +75,11 @@ spec:
                           used to annotate the RootSync controller Kubernetes Service
                           Account. Note: The field is used when spec.git.auth: gcpserviceaccount.'
                     type: string
+                  noSSLVerify:
+                    description: 'noSSLVerify specifies whether to enable or disable
+                      the SSL certificate verification. Default: false. If noSSLVerify
+                      is set to true, it tells Git to skip the SSL certificate verification.'
+                    type: boolean
                   period:
                     description: 'period is the time duration in seconds between consecutive
                           syncs.  Default: 15 seconds. Note to developers that customers
@@ -219,6 +224,11 @@ spec:
                               used to annotate the RootSync controller Kubernetes Service
                               Account. Note: The field is used when spec.git.auth: gcpserviceaccount.'
                     type: string
+                  noSSLVerify:
+                    description: 'noSSLVerify specifies whether to enable or disable
+                      the SSL certificate verification. Default: false. If noSSLVerify
+                      is set to true, it tells Git to skip the SSL certificate verification.'
+                    type: boolean
                   period:
                     description: 'period is the time duration in seconds between consecutive
                               syncs.  Default: 15 seconds. Note to developers that customers

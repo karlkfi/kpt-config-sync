@@ -220,13 +220,14 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []con
 		{
 			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
 			data: gitSyncData(options{
-				ref:        rs.Spec.Git.Revision,
-				branch:     rs.Spec.Git.Branch,
-				repo:       rs.Spec.Git.Repo,
-				secretType: rs.Spec.Git.Auth,
-				period:     v1alpha1.GetPeriodSecs(&rs.Spec.Git),
-				proxy:      rs.Spec.Proxy,
-				depth:      rs.Spec.Override.GitSyncDepth,
+				ref:         rs.Spec.Git.Revision,
+				branch:      rs.Spec.Git.Branch,
+				repo:        rs.Spec.Git.Repo,
+				secretType:  rs.Spec.Git.Auth,
+				period:      v1alpha1.GetPeriodSecs(&rs.Spec.Git),
+				proxy:       rs.Spec.Proxy,
+				depth:       rs.Spec.Override.GitSyncDepth,
+				noSSLVerify: rs.Spec.Git.NoSSLVerify,
 			}),
 		},
 		{

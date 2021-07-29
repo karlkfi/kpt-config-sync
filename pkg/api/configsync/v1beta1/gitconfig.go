@@ -54,6 +54,11 @@ type Git struct {
 	// SecretRef is the secret used to connect to the Git source of truth.
 	// +optional
 	SecretRef SecretReference `json:"secretRef,omitempty"`
+
+	// noSSLVerify specifies whether to enable or disable the SSL certificate verification. Default: false.
+	// If noSSLVerify is set to true, it tells Git to skip the SSL certificate verification.
+	// +optional
+	NoSSLVerify bool `json:"noSSLVerify,omitempty"`
 }
 
 // SecretReference contains the reference to the secret used to connect to

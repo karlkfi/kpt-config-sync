@@ -35,12 +35,17 @@ type options struct {
 	period float64
 	// depth is the number of git commits to sync.
 	depth *int64
+	// noSSLVerify specifies whether to skip the SSL certificate verification in Git.
+	noSSLVerify bool
 }
 
 func gitSyncData(opts options) map[string]string {
 	result := make(map[string]string)
 	result["GIT_SYNC_REPO"] = opts.repo
 	result["GIT_KNOWN_HOSTS"] = "false" // disable known_hosts checking because it provides no benefit for our use case.
+	if opts.noSSLVerify {
+		result["GIT_SSL_NO_VERIFY"] = "true"
+	}
 	if opts.depth != nil && *opts.depth >= 0 {
 		// git-sync would do a shallow clone if *opts.depth > 0;
 		// git-sync would do a full clone if *opts.depth == 0.

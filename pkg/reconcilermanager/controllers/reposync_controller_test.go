@@ -59,6 +59,8 @@ const (
 	nsUpdatedAnnotationOverrideGitSyncDepth     = "7b357148ed82ae58c36940b25a563547"
 	nsUpdatedAnnotationOverrideGitSyncDepthZero = "cb17525173bc95ea9cf3d067769fceb0"
 
+	nsUpdatedAnnotationNoSSLVerify = "e971a6d9edd45b3dd421abcee7cd47c4"
+
 	nsAnnotationGCENode        = "1e0a718052edc00039f6acc3738a02ae"
 	nsUpdatedAnnotationGCENode = "4a5db0cdb29526ef77b8d3d9e3a18c06"
 	nsAnnotationNone           = "551985d0f09594c9f82527a4ae3770d8"
@@ -78,6 +80,8 @@ const (
 
 	nsDeploymentSecretOverrideGitSyncDepthChecksum     = "63792a36e4f7ed8a81b71306a0f66724"
 	nsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "436570a6448441e799e98cea390de5b5"
+
+	nsDeploymentSecretNoSSLVerifyChecksum = "8730ff26ff34ad04f41e3403da7aa102"
 )
 
 // Set in init.
@@ -151,6 +155,12 @@ func reposyncOverrideResourceLimits(containers []v1alpha1.ContainerResourcesSpec
 func reposyncOverrideGitSyncDepth(depth int64) func(*v1alpha1.RepoSync) {
 	return func(rs *v1alpha1.RepoSync) {
 		rs.Spec.Override.GitSyncDepth = &depth
+	}
+}
+
+func reposyncNoSSLVerify() func(*v1alpha1.RepoSync) {
+	return func(rs *v1alpha1.RepoSync) {
+		rs.Spec.NoSSLVerify = true
 	}
 }
 
@@ -539,6 +549,216 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
 		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+}
+
+func TestRepoSyncCreateWithNoSSLVerify(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey), reposyncNoSSLVerify())
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMapNoSSLVerify := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:         gitRevision,
+				branch:      branch,
+				repo:        reposyncRepo,
+				secretType:  "ssh",
+				period:      configsync.DefaultPeriodSecs,
+				proxy:       rs.Spec.Proxy,
+				noSSLVerify: rs.Spec.NoSSLVerify,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeploymentsNoSSLVerify := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationNoSSLVerify)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretNoSSLVerifyChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	for _, cm := range wantConfigMapNoSSLVerify {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeploymentsNoSSLVerify, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+}
+
+func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:         gitRevision,
+				branch:      branch,
+				repo:        reposyncRepo,
+				secretType:  "ssh",
+				period:      configsync.DefaultPeriodSecs,
+				proxy:       rs.Spec.Proxy,
+				noSSLVerify: rs.Spec.NoSSLVerify,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Set rs.Spec.NoSSLVerify to false
+	rs.Spec.NoSSLVerify = false
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("No need to update ConfigMap and Deployment")
+
+	// Set rs.Spec.NoSSLVerify to true
+	rs.Spec.NoSSLVerify = true
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMapNoSSLVerify := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(options{
+				ref:         gitRevision,
+				branch:      branch,
+				repo:        reposyncRepo,
+				secretType:  "ssh",
+				period:      configsync.DefaultPeriodSecs,
+				proxy:       rs.Spec.Proxy,
+				noSSLVerify: rs.Spec.NoSSLVerify,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantDeploymentsNoSSLVerify := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsUpdatedAnnotationNoSSLVerify)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentSecretNoSSLVerifyChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
+		),
+	}
+
+	for _, cm := range wantConfigMapNoSSLVerify {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("Config Map diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeploymentsNoSSLVerify, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Set rs.Spec.NoSSLVerify to false
+	rs.Spec.NoSSLVerify = false
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
 	}
 
 	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
