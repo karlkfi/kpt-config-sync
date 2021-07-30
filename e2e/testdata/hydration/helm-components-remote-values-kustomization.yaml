@@ -2,6 +2,7 @@ helmCharts:
 - name: cert-manager
   releaseName: my-cert-manager
   namespace: cert-manager
+  valuesFile: https://raw.githubusercontent.com/nan-yu/helm-components/main/cert-manager-values.yaml
 - name: prometheus
   repo: https://prometheus-community.github.io/helm-charts
   version: 14.3.0

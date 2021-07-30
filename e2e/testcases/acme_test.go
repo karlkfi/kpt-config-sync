@@ -38,7 +38,7 @@ func configSyncManagementLabels(namespace, folder string) map[string]string {
 func TestAcmeCorpRepo(t *testing.T) {
 	nt := nomostest.New(t)
 
-	nt.Root.CopyDirectory("../../examples/acme", ".")
+	nt.Root.Copy("../../examples/acme", ".")
 	nt.Root.CommitAndPush("Initialize the acme directory")
 	nt.WaitForRepoSyncs()
 

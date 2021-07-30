@@ -318,7 +318,7 @@ func testSyncFromNomosHydrateOutput(t *testing.T, config string) {
 		nt.T.Fatal(err)
 	}
 
-	nt.Root.CopyDirectory(config, "acme")
+	nt.Root.Copy(config, "acme")
 	nt.Root.CommitAndPush("Add cluster-dev configs")
 	nt.WaitForRepoSyncs()
 

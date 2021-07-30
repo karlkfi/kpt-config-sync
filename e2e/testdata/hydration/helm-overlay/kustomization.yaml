@@ -1,0 +1,5 @@
+resources:
+- overlay
+
+commonLabels:
+  test-case: hydration

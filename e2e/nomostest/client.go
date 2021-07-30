@@ -12,6 +12,7 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
@@ -60,6 +61,7 @@ func newScheme(t testing.NTB) *runtime.Scheme {
 		configsyncv1alpha1.SchemeBuilder,
 		configsyncv1beta1.SchemeBuilder,
 		policyv1beta1.SchemeBuilder,
+		networkingv1.SchemeBuilder,
 		rbacv1.SchemeBuilder,
 		rbacv1beta1.SchemeBuilder,
 	}

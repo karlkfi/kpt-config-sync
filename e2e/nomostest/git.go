@@ -264,15 +264,15 @@ func (g *Repository) AddFile(path string, bytes []byte) {
 	g.Git("add", absPath)
 }
 
-// CopyDirectory copies the directory from source to destination.
-// Overwrites the directory if it already exists.
+// Copy copies the file or directory from source to destination.
+// Overwrites the file if it already exists.
 // Does not commit/push.
-func (g *Repository) CopyDirectory(sourceDir, destDir string) {
+func (g *Repository) Copy(sourceDir, destDir string) {
 	g.T.Helper()
 
 	absDestPath := filepath.Join(g.Root, destDir)
-	if _, err := exec.Command("cp", "-r", sourceDir, absDestPath).CombinedOutput(); err != nil {
-		g.T.Fatal(err)
+	if out, err := exec.Command("cp", "-r", sourceDir, absDestPath).CombinedOutput(); err != nil {
+		g.T.Fatalf("failed to copy directory: %s", string(out))
 	}
 	// Add the directory to Git.
 	g.Git("add", absDestPath)
