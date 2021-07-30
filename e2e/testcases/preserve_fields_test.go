@@ -99,8 +99,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Service"))
 		if err != nil {
@@ -128,8 +127,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("Service", 2))
 		if err != nil {
@@ -221,8 +219,7 @@ aggregationRule:
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -298,8 +295,7 @@ func TestPreserveLastApplied(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -357,8 +353,7 @@ func TestAddUpdateDeleteLabels(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -391,8 +386,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
 		if err != nil {
@@ -423,8 +417,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("ConfigMap", 2))
 		if err != nil {
@@ -452,8 +445,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourcePatched("Namespace", 3), metrics.ResourcePatched("ConfigMap", 3))
 		if err != nil {

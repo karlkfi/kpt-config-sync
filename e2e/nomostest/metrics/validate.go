@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -128,33 +127,20 @@ func (csm ConfigSyncMetrics) ValidateGVKMetrics(reconciler string, gvkMetric GVK
 	return csm.validateRemediateDuration(reconciler, gvkMetric.GVK)
 }
 
-// ValidateTimestampMetrics checks that the `last_sync_timestamp` and `last_apply_timestamp`
-// metrics are recorded. If previous timestamps were recorded, this also checks that
-// their values have incremented.
-func (csm ConfigSyncMetrics) ValidateTimestampMetrics(before ConfigSyncMetrics) error {
-	metrics := []string{
-		ocmetrics.LastSyncTimestampView.Name,
-		ocmetrics.LastApplyTimestampView.Name,
-	}
-	for _, metric := range metrics {
-		if measurements, ok := before[metric]; ok {
-			// Get the latest measured timestamp that was previously recorded.
-			var latest float64
-			for _, measurement := range measurements {
-				t, err := strconv.ParseFloat(measurement.Value, 64)
-				if err != nil {
-					return errors.Errorf("validating timestamp metric: %v", err)
-				}
-				if t > latest {
-					latest = t
-				}
-			}
-			if err := csm.validateMetric(metric, hasIncrementedTimestamp(fmt.Sprintf("%f", latest))); err != nil {
-				return err
-			}
+// ValidateMetricsCommitApplied checks that the `last_apply_timestamp` metric has been
+// recorded for a particular commit hash.
+func (csm ConfigSyncMetrics) ValidateMetricsCommitApplied(commitHash string) error {
+	validation := hasTags([]tag.Tag{
+		{Key: ocmetrics.KeyCommit, Value: commitHash},
+	})
+
+	for _, metric := range csm[ocmetrics.LastApplyTimestampView.Name] {
+		if validation(metric) == nil {
+			return nil
 		}
 	}
-	return nil
+
+	return errors.Errorf("Commit hash %s not found in config sync metrics", commitHash)
 }
 
 // ValidateErrorMetrics checks for the absence of all the error metrics except
@@ -373,24 +359,6 @@ func valueGTE(value int) Validation {
 		if mv < value {
 			return errors.Errorf("unexpected metric value, got %v but expected "+
 				"a value greater than or equal to %v", mv, value)
-		}
-		return nil
-	}
-}
-
-// hasIncrementedTimestamp checks that the timestamp measurement value has incremented.
-func hasIncrementedTimestamp(value string) Validation {
-	return func(metric Measurement) error {
-		t1, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return errors.Errorf("validating incremented timestamp: %v", err)
-		}
-		t2, err := strconv.ParseFloat(metric.Value, 64)
-		if err != nil {
-			return errors.Errorf("validating incremented timestamp: %v", err)
-		}
-		if t2 < t1 {
-			return errors.Errorf("timestamp %v did not occur after %v", t2, t1)
 		}
 		return nil
 	}

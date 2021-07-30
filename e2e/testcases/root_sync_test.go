@@ -108,8 +108,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
@@ -162,24 +161,25 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
-			metrics.GVKMetric{
-				GVK:   "Namespace",
-				APIOp: "delete",
-				ApplyOps: []metrics.Operation{
-					{Name: "delete", Count: 1},
-				},
-				Watches: "1",
-			})
-		if err != nil {
-			return err
-		}
-		// Validate no error metrics are emitted.
-		// TODO(b/162601559): internal_errors_total metric from diff.go
-		//return nt.ValidateErrorMetricsNotFound()
-		return nil
+	_, err = nomostest.Retry(20*time.Second, func() error {
+		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+				metrics.GVKMetric{
+					GVK:   "Namespace",
+					APIOp: "delete",
+					ApplyOps: []metrics.Operation{
+						{Name: "delete", Count: 1},
+					},
+					Watches: "1",
+				})
+			if err != nil {
+				return err
+			}
+			// Validate no error metrics are emitted.
+			// TODO(b/162601559): internal_errors_total metric from diff.go
+			//return nt.ValidateErrorMetricsNotFound()
+			return nil
+		})
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -278,8 +278,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -295,8 +294,7 @@ func TestForceRevert(t *testing.T) {
 
 	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
 
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, "1017")
 		if err != nil {
@@ -314,8 +312,7 @@ func TestForceRevert(t *testing.T) {
 
 	nt.WaitForRepoSyncs()
 
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "")
 	})
 	if err != nil {
@@ -340,8 +337,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {

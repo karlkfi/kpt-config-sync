@@ -227,19 +227,6 @@ func (nt *NT) MustMergePatch(obj client.Object, patch string, opts ...client.Pat
 	}
 }
 
-// ParseMetrics parses the metric output from the otel-collector and diffs the
-// result against the previous set of parsed metrics. This diffed set of metrics
-// contains all the new or updated measurements and is saved to NT.
-func (nt *NT) ParseMetrics(prev testmetrics.ConfigSyncMetrics) {
-	if nt.MultiRepo {
-		csm, err := testmetrics.ParseMetrics(nt.otelCollectorPort)
-		if err != nil {
-			nt.T.Fatal(err)
-		}
-		nt.updateMetrics(prev, csm)
-	}
-}
-
 // updateMetrics performs a diff between the current metrics and the previously
 // recorded metrics to get all the metrics with new or changed measurements.
 // If unchanged, the `declared_resources` and `watches` metrics are also added
@@ -272,10 +259,12 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 	// These metrics are always validated so we need to add them to the map even
 	// if their measurements haven't changed.
 	validatedMetrics := []string{
+		ocmetrics.APICallDurationView.Name,
 		ocmetrics.ParseDurationView.Name,
 		ocmetrics.ApplyDurationView.Name,
 		ocmetrics.ApplyOperationsView.Name,
 		ocmetrics.WatchManagerUpdatesDurationView.Name,
+		ocmetrics.ReconcileDurationView.Name,
 		ocmetrics.RemediateDurationView.Name,
 		ocmetrics.DeclaredResourcesView.Name,
 		ocmetrics.WatchesView.Name,
@@ -310,15 +299,19 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 	nt.ReconcilerMetrics = newCsm
 }
 
-// RetryMetrics is a convenience wrapper for Retry and is specifically used for
-// retrying metrics validations. It saves the existing metrics as a local variable
-// and passes it to the parameter function.
-func (nt *NT) RetryMetrics(timeout time.Duration, fn func(csm testmetrics.ConfigSyncMetrics) error) error {
-	prev := nt.ReconcilerMetrics
-	_, err := Retry(timeout, func() error {
-		return fn(prev)
-	})
-	return err
+// ValidateMetrics is a convenience wrapper that pulls the latest metrics, updates the
+// metrics on NT and execute the parameter function.
+func (nt *NT) ValidateMetrics(syncOption MetricsSyncOption, fn func() error) error {
+	if nt.MultiRepo {
+		prevMetrics := nt.ReconcilerMetrics
+		currentMetrics := nt.GetCurrentMetrics(syncOption)
+
+		nt.updateMetrics(prevMetrics, currentMetrics)
+
+		return fn()
+	}
+
+	return nil
 }
 
 // Validate returns an error if the indicated object does not exist.
@@ -436,9 +429,6 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 //
 // If you want to check the internals of specific objects (e.g. the error field
 // of a RepoSync), use nt.Validate() - possibly in a Retry.
-//
-// It additionally validates that the `last_sync_timestamp` and `last_apply_timestamp`
-// metric values exist and have incremented.
 func (nt *NT) WaitForRepoSyncs() {
 	nt.T.Helper()
 
@@ -450,24 +440,43 @@ func (nt *NT) WaitForRepoSyncs() {
 			nt.WaitForRepoSync(repo, kinds.RepoSync(),
 				configsync.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
 		}
+	} else {
+		nt.WaitForRootSync(kinds.Repo(),
+			"repo", "", RepoHasStatusSyncLatestToken)
+	}
+}
 
-		_, err := Retry(60*time.Second, func() error {
-			csm, err := testmetrics.ParseMetrics(nt.otelCollectorPort)
+// GetCurrentMetrics fetches metrics from the otel-collector ensuring that the
+// metrics have been updated for with the most recent commit hashes.
+func (nt *NT) GetCurrentMetrics(syncOption MetricsSyncOption) testmetrics.ConfigSyncMetrics {
+	nt.T.Helper()
+
+	var metrics testmetrics.ConfigSyncMetrics
+
+	if nt.MultiRepo {
+		_, err := Retry(30*time.Second, func() error {
+			var err error
+			metrics, err = testmetrics.ParseMetrics(nt.otelCollectorPort)
 			if err != nil {
 				// Port forward again to fix intermittent "exit status 56" errors when
 				// parsing from the port.
 				nt.PortForwardOtelCollector()
 				return err
 			}
-			return csm.ValidateTimestampMetrics(nt.ReconcilerMetrics)
+
+			err = syncOption(&metrics)
+			if err != nil {
+				return err
+			}
+
+			return nil
 		})
 		if err != nil {
-			nt.T.Fatalf("timestamp metric validation failed: %v", err)
+			nt.T.Fatalf("unable to get latest metrics: %v", err)
 		}
-	} else {
-		nt.WaitForRootSync(kinds.Repo(),
-			"repo", "", RepoHasStatusSyncLatestToken)
 	}
+
+	return metrics
 }
 
 // WaitForRepoSync waits for the specified RepoSync to be synced to HEAD
@@ -967,4 +976,33 @@ func Wait(t testing.NTB, opName string, condition func() error, opts ...WaitOpti
 		}
 	}
 	t.Logf("took %v to wait for %s", took, opName)
+}
+
+// MetricsSyncOption determines where metrics will be synced to
+type MetricsSyncOption func(csm *testmetrics.ConfigSyncMetrics) error
+
+// SyncMetricsToLatestCommit syncs metrics to the latest commit
+func SyncMetricsToLatestCommit(nt *NT) MetricsSyncOption {
+	return func(metrics *testmetrics.ConfigSyncMetrics) error {
+		err := metrics.ValidateMetricsCommitApplied(nt.Root.Hash())
+		if err != nil {
+			return err
+		}
+
+		for ns := range nt.NamespaceRepos {
+			err = metrics.ValidateMetricsCommitApplied(nt.NonRootRepos[ns].Hash())
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
+// SyncMetricsToReconcilerSourceError syncs metrics to a reconciler source error
+func SyncMetricsToReconcilerSourceError(reconciler string) MetricsSyncOption {
+	return func(metrics *testmetrics.ConfigSyncMetrics) error {
+		return metrics.ValidateReconcilerErrors(reconciler, 1, 0)
+	}
 }

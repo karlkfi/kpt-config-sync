@@ -679,8 +679,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 	}
 
 	// Validate multi-repo metrics in root reconciler.
-	err := nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
 		if err != nil {
 			return err
@@ -700,8 +699,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 		}
 
 		// Validate multi-repo metrics in namespace reconciler.
-		err := nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
-			nt.ParseMetrics(prev)
+		err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 			return nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(ns), 0)
 		})
 		if err != nil {
@@ -782,8 +780,7 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		}
 
 		// Validate multi-repo metrics.
-		err = nt.RetryMetrics(60*time.Second, func(prev testmetrics.ConfigSyncMetrics) error {
-			nt.ParseMetrics(prev)
+		err = nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 			var err error
 			if strings.Contains(cluster, "psp") {
 				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6,

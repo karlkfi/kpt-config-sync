@@ -66,8 +66,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
@@ -96,8 +95,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
 	}
 
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate parse error metric is emitted.
 		err = nt.ValidateParseErrors(reconciler.RootSyncName, discovery.UnknownKindErrorCode)
 		if err != nil {
@@ -157,8 +155,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
@@ -187,8 +184,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 		nt.WaitForRepoImportErrorCode(discovery.UnknownKindErrorCode)
 	}
 
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate parse error metric is emitted.
 		err = nt.ValidateParseErrors(reconciler.RootSyncName, discovery.UnknownKindErrorCode)
 		if err != nil {

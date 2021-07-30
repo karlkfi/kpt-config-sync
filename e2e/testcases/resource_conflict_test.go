@@ -65,8 +65,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	// Validate multi-repo metrics from root reconciler.
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6, metrics.ResourceCreated("Role"))
 		if err != nil {
 			return err
@@ -99,8 +98,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	}
 
 	// Validate reconciler error metric is emitted from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
 	})
 	if err != nil {
@@ -126,8 +124,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from root reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		var err error
 		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 		// available on GKE.
@@ -164,8 +161,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 1, metrics.ResourceCreated("Role"))
 		if err != nil {
 			return err
@@ -194,8 +190,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	}
 
 	// Validate reconciler error metric is emitted from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		return nt.ValidateReconcilerErrors(reconciler.RepoSyncName("shipping"), "sync")
 	})
 	if err != nil {
@@ -220,8 +215,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName("shipping"), 0)
 		if err != nil {
 			return err

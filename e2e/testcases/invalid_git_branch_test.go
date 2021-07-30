@@ -3,10 +3,8 @@ package e2e
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
-	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/reconciler"
@@ -24,8 +22,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
 
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, status.SourceErrorCode)
 		if err != nil {
@@ -46,8 +43,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -65,8 +61,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 
 	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode)
 
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, status.SourceErrorCode)
 		if err != nil {
@@ -87,8 +82,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {

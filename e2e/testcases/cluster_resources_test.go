@@ -132,8 +132,7 @@ func TestRevertClusterRole(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -182,8 +181,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("ClusterRole"))
 		if err != nil {
 			return err
@@ -220,8 +218,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("ClusterRole", 2))
 		if err != nil {
 			return err
@@ -246,8 +243,7 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceDeleted("ClusterRole"))
 		if err != nil {
 			return err

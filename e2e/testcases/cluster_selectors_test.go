@@ -3,7 +3,6 @@ package e2e
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
@@ -121,8 +120,7 @@ func TestTargetingDifferentResourceQuotasToDifferentClusters(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -186,8 +184,7 @@ func TestClusterSelectorOnObjects(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -218,8 +215,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("RoleBinding"))
 		if err != nil {
@@ -252,8 +248,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
 			metrics.ResourceDeleted("RoleBinding"))
 		if err != nil {
@@ -279,9 +274,8 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
 			metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
@@ -305,8 +299,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("RoleBinding"))
 		if err != nil {
@@ -332,8 +325,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	nomostest.WaitToTerminate(nt, kinds.Namespace(), backendNamespace, "")
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
 			metrics.ResourceDeleted("RoleBinding"))
 		if err != nil {
@@ -358,8 +350,7 @@ func TestClusterSelectorOnNamespaces(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("RoleBinding"))
 		if err != nil {
@@ -401,8 +392,7 @@ func TestObjectReactsToChangeInInlineClusterSelector(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -443,8 +433,7 @@ func TestObjectReactsToChangeInLegacyClusterSelector(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -478,8 +467,7 @@ func TestImporterIgnoresNonSelectedCustomResources(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -516,8 +504,7 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -596,8 +583,7 @@ func TestInlineClusterSelectorFormat(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -624,8 +610,7 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 		nt.WaitForRepoImportErrorCode(selectors.ClusterSelectorAnnotationConflictErrorCode)
 	}
 
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
 		// Validate parse error metric is emitted.
 		err := nt.ValidateParseErrors(reconciler.RootSyncName, selectors.ClusterSelectorAnnotationConflictErrorCode)
 		if err != nil {
@@ -700,8 +685,7 @@ func TestClusterSelectorForCRD(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err := nt.ValidateMetrics(nomostest.MetricsLatestCommit(nt), func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {

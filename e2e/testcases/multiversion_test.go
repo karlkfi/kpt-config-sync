@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
@@ -54,8 +53,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
 			metrics.ResourceCreated("CustomResourceDefinition"), metrics.ResourceCreated("Namespace"),
 			metrics.GVKMetric{
@@ -94,8 +92,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
 			metrics.ResourcePatched("Namespace", 2),
 			metrics.GVKMetric{
@@ -202,8 +199,7 @@ func TestMultipleVersions_CustomResourceV1(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
@@ -401,8 +397,7 @@ func TestMultipleVersions_RoleBinding(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {

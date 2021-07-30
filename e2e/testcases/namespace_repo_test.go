@@ -70,8 +70,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespace), 1, metrics.ResourceCreated("ServiceAccount"))
 		if err != nil {
 			return err
@@ -140,8 +139,7 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespace), 1, metrics.ResourceCreated("ServiceAccount"))
 		if err != nil {
 			return err
@@ -215,8 +213,7 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespaceRepo), 1, metrics.ResourceCreated("ServiceAccount"))
 		if err != nil {
 			return err
@@ -276,8 +273,7 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
 
 	// Validate multi-repo metrics from root reconciler.
-	err := nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-		nt.ParseMetrics(prev)
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		var err error
 		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 		// available on GKE.
@@ -384,8 +380,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	// TODO(b/162601559): internal_errors_total metric from diff.go
-	//err = nt.RetryMetrics(60*time.Second, func(prev metrics.ConfigSyncMetrics) error {
-	//	nt.ParseMetrics(prev)
+	//err = nt.ValidateMetrics(nomostest.MetricsLatestCommit, func() error {
 	//	return nt.ValidateErrorMetricsNotFound()
 	//})
 	//if err != nil {
