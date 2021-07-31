@@ -42,5 +42,7 @@ func RegisterReconcilerMetricsViews() error {
 		WatchManagerUpdatesDurationView,
 		RemediateDurationView,
 		ResourceConflictsView,
-		InternalErrorsView)
+		InternalErrorsView,
+		RenderingCountView,
+		SkipRenderingCountView)
 }

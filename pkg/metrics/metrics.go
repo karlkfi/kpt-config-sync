@@ -110,4 +110,16 @@ var (
 		"internal_errors",
 		"The number of internal errors triggered by Config Sync",
 		stats.UnitDimensionless)
+
+	// RenderingCount metrics measures the number of renderings are performed.
+	RenderingCount = stats.Int64(
+		"rendering_count",
+		"The number of renderings that are performed",
+		stats.UnitDimensionless)
+
+	// SkipRenderingCount metrics measures the number of renderings are skipped.
+	SkipRenderingCount = stats.Int64(
+		"skip_rendering_count",
+		"The number of renderings that are skipped",
+		stats.UnitDimensionless)
 )

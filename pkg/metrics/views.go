@@ -169,4 +169,22 @@ var (
 		TagKeys:     []tag.Key{KeyReconciler, KeyInternalErrorSource},
 		Aggregation: view.Count(),
 	}
+
+	// RenderingCountView aggregates the RenderingCount metric measurements.
+	RenderingCountView = &view.View{
+		Name:        RenderingCount.Name() + "_total",
+		Measure:     RenderingCount,
+		Description: "The total number of renderings that are skipped",
+		TagKeys:     []tag.Key{KeyReconciler},
+		Aggregation: view.Count(),
+	}
+
+	// SkipRenderingCountView aggregates the SkipRenderingCount metric measurements.
+	SkipRenderingCountView = &view.View{
+		Name:        SkipRenderingCount.Name() + "_total",
+		Measure:     SkipRenderingCount,
+		Description: "The total number of renderings that are performed",
+		TagKeys:     []tag.Key{KeyReconciler},
+		Aggregation: view.Count(),
+	}
 )

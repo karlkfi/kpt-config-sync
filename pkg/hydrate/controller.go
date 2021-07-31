@@ -13,6 +13,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/metadata"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -59,7 +60,7 @@ func (h *Hydrator) Run(ctx context.Context) {
 			if err != nil {
 				glog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
 			} else {
-				hydrateErr := h.hydrate(commit, syncDir.OSPath())
+				hydrateErr := h.hydrate(ctx, commit, syncDir.OSPath())
 				if err := h.complete(commit, hydrateErr); err != nil {
 					glog.Errorf("failed to complete the rendering execution for commit %q: %v", commit, err)
 				}
@@ -69,12 +70,13 @@ func (h *Hydrator) Run(ctx context.Context) {
 }
 
 // hydrate renders the source git repo to hydrated configs.
-func (h *Hydrator) hydrate(sourceCommit, syncDir string) error {
+func (h *Hydrator) hydrate(ctx context.Context, sourceCommit, syncDir string) error {
 	hydrate, err := NeedsKustomize(syncDir)
 	if err != nil {
 		return errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir)
 	}
 	if !hydrate {
+		metrics.RecordSkipRenderingCount(ctx)
 		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
 		return os.RemoveAll(h.HydratedRoot.OSPath())
 	}
@@ -109,6 +111,7 @@ func (h *Hydrator) hydrate(sourceCommit, syncDir string) error {
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
 		return errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath())
 	}
+	metrics.RecordRenderingRepoCount(ctx)
 	glog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
 	return nil
 }
