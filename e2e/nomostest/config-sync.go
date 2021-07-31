@@ -760,7 +760,7 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 			// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 			// available on GKE.
 			crb := repoSyncClusterRoleBinding(ns)
-			nt.Root.Add("acme/cluster/crb.yaml", crb)
+			nt.Root.Add(fmt.Sprintf("acme/cluster/crb-%s.yaml", ns), crb)
 		}
 
 		rs := RepoSyncObject(ns)
