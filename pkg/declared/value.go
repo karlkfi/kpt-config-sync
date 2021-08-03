@@ -37,7 +37,7 @@ func NewValueConverter(dc discovery.DiscoveryInterface) (*ValueConverter, error)
 // instantiates the ValueConverter with them. This can be called periodically as
 // new custom types (eg CRDs) are added to the cluster.
 func (v *ValueConverter) Refresh() error {
-	oa, err := openapi.NewOpenAPIGetter(v.discoveryClient).Get()
+	oa, err := openapi.NewOpenAPIParser(v.discoveryClient).Parse()
 	if err != nil {
 		return err
 	}

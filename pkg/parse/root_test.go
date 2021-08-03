@@ -82,7 +82,7 @@ func TestRoot_Parse(t *testing.T) {
 				fake.Role(core.Namespace("foo"),
 					core.Label(metadata.ManagedByKey, metadata.ManagedByValue),
 					core.Label(metadata.DeclaredVersionLabel, "v1"),
-					core.Annotation(metadata.DeclaredFieldsKey, `{"f:rules":{}}`),
+					core.Annotation(metadata.DeclaredFieldsKey, `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`),
 					core.Annotation(metadata.SourcePathAnnotationKey, "namespaces/foo/role.yaml"),
 					core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled),
 					core.Annotation(metadata.GitContextKey, nilGitContext),

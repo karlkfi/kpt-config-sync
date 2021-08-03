@@ -60,7 +60,7 @@ func TestDeclaredFields(t *testing.T) {
 								"name":      "hello",
 								"namespace": "world",
 								"annotations": map[string]interface{}{
-									metadata.DeclaredFieldsKey: `{"f:rules":{}}`,
+									metadata.DeclaredFieldsKey: `{"f:metadata":{"f:annotations":{},"f:labels":{}},"f:rules":{}}`,
 								},
 							},
 							"rules": []interface{}{
@@ -109,7 +109,7 @@ func TestDeclaredFields(t *testing.T) {
 									"this": "that",
 								},
 								"annotations": map[string]interface{}{
-									metadata.DeclaredFieldsKey: `{"f:metadata":{"f:labels":{"f:this":{}}}}`,
+									metadata.DeclaredFieldsKey: `{"f:metadata":{"f:annotations":{},"f:labels":{"f:this":{}}}}`,
 								},
 							},
 						},

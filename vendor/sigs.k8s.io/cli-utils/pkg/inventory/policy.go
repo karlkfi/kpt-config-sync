@@ -16,6 +16,7 @@ import (
 // can go through for a resource based on the comparison
 // the inventory-id value in the package and the owning-inventory
 // annotation in the live object.
+//go:generate stringer -type=InventoryPolicy
 type InventoryPolicy int
 
 const (
@@ -69,6 +70,7 @@ const owningInventoryKey = "config.k8s.io/owning-inventory"
 
 // inventoryIDMatchStatus represents the result of comparing the
 // id from current inventory info and the inventory-id from a live object.
+//go:generate stringer -type=inventoryIDMatchStatus
 type inventoryIDMatchStatus int
 
 const (
@@ -77,7 +79,7 @@ const (
 	NoMatch
 )
 
-func inventoryIDMatch(inv InventoryInfo, obj *unstructured.Unstructured) inventoryIDMatchStatus {
+func InventoryIDMatch(inv InventoryInfo, obj *unstructured.Unstructured) inventoryIDMatchStatus {
 	annotations := obj.GetAnnotations()
 	value, found := annotations[owningInventoryKey]
 	if !found {
@@ -93,7 +95,7 @@ func CanApply(inv InventoryInfo, obj *unstructured.Unstructured, policy Inventor
 	if obj == nil {
 		return true, nil
 	}
-	matchStatus := inventoryIDMatch(inv, obj)
+	matchStatus := InventoryIDMatch(inv, obj)
 	switch matchStatus {
 	case Empty:
 		if policy != InventoryPolicyMustMatch {
@@ -118,7 +120,7 @@ func CanPrune(inv InventoryInfo, obj *unstructured.Unstructured, policy Inventor
 	if obj == nil {
 		return false
 	}
-	matchStatus := inventoryIDMatch(inv, obj)
+	matchStatus := InventoryIDMatch(inv, obj)
 	switch matchStatus {
 	case Empty:
 		return policy == AdoptIfNoInventory || policy == AdoptAll

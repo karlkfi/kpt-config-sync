@@ -23,23 +23,21 @@ type InfoHelper interface {
 	BuildInfo(obj *unstructured.Unstructured) (*resource.Info, error)
 }
 
-func NewInfoHelper(factory util.Factory) *infoHelper {
+func NewInfoHelper(mapper meta.RESTMapper, factory util.Factory) *infoHelper {
 	return &infoHelper{
+		mapper:  mapper,
 		factory: factory,
 	}
 }
 
 type infoHelper struct {
+	mapper  meta.RESTMapper
 	factory util.Factory
 }
 
 func (ih *infoHelper) UpdateInfo(info *resource.Info) error {
-	mapper, err := ih.factory.ToRESTMapper()
-	if err != nil {
-		return err
-	}
 	gvk := info.Object.GetObjectKind().GroupVersionKind()
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	mapping, err := ih.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return err
 	}
@@ -60,10 +58,6 @@ func (ih *infoHelper) BuildInfo(obj *unstructured.Unstructured) (*resource.Info,
 	}
 	err = ih.UpdateInfo(info)
 	return info, err
-}
-
-func (ih *infoHelper) ToRESTMapper() (meta.RESTMapper, error) {
-	return ih.factory.ToRESTMapper()
 }
 
 func (ih *infoHelper) getClient(gv schema.GroupVersion) (*rest.RESTClient, error) {

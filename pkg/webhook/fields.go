@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	csmetadata "github.com/google/nomos/pkg/metadata"
-	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 )
@@ -81,7 +81,7 @@ func ConfigSyncMetadata(set *fieldpath.Set) *fieldpath.Set {
 func DeclaredFields(obj client.Object) (*fieldpath.Set, error) {
 	decls, ok := obj.GetAnnotations()[csmetadata.DeclaredFieldsKey]
 	if !ok {
-		return nil, fmt.Errorf("%s annotation is missing from %s", csmetadata.DeclaredFieldsKey, object.RuntimeToObjMeta(obj))
+		return nil, fmt.Errorf("%s annotation is missing from %s", csmetadata.DeclaredFieldsKey, core.GKNN(obj))
 	}
 
 	set := &fieldpath.Set{}

@@ -289,7 +289,7 @@ func TestParseKptfile(t *testing.T) {
 		},
 		{
 			name: "one document with one Kptfile",
-			contents: `apiVersion: kpt.dev/v1alpha1
+			contents: `apiVersion: kpt.dev/v1
 kind: Kptfile
 metadata:
   name: package-name

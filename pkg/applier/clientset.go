@@ -3,7 +3,6 @@ package applier
 import (
 	"context"
 
-	kptclient "github.com/GoogleContainerTools/kpt/pkg/client"
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -17,31 +16,42 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
+	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
+	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/cli-utils/pkg/util/factory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type kptApplier interface {
-	Run(context.Context, inventory.InventoryInfo, []*unstructured.Unstructured, apply.Options) <-chan event.Event
+	Run(context.Context, inventory.InventoryInfo, object.UnstructuredSet, apply.Options) <-chan event.Event
 }
 
+// clientSet includes the clients required for using the apply library from cli-utils
 type clientSet struct {
 	kptApplier    kptApplier
 	invClient     inventory.InventoryClient
 	client        client.Client
-	resouceClient *kptclient.Client
+	resouceClient *resourceClient
 }
 
+// newClientSet creates a clientSet object.
 func newClientSet(c client.Client) (*clientSet, error) {
 	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
 	matchVersionKubeConfigFlags := util.NewMatchVersionFlags(&factory.CachingRESTClientGetter{
 		Delegate: kubeConfigFlags,
 	})
 	f := util.NewFactory(matchVersionKubeConfigFlags)
-	provider := live.NewResourceGroupProvider(f)
-	applier := apply.NewApplier(provider)
-	invClient, err := provider.InventoryClient()
+
+	poller, err := factory.NewStatusPoller(f)
+	if err != nil {
+		return nil, err
+	}
+	invClient, err := inventory.NewInventoryClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc)
+	if err != nil {
+		return nil, err
+	}
+	applier, err := apply.NewApplier(f, invClient, poller)
 	if err != nil {
 		return nil, err
 	}
@@ -54,15 +64,8 @@ func newClientSet(c client.Client) (*clientSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	resourceClient := kptclient.NewClient(dy, mapper)
+	resourceClient := newResourceClient(dy, mapper)
 
-	// TODO(b/177469646): The applier currently needs to be re-initialized
-	// to capture the new applied CRDs. We can optimize this by
-	// avoiding unnecessary re-initialization.
-	err = applier.Initialize()
-	if err != nil {
-		return nil, err
-	}
 	return &clientSet{
 		kptApplier:    applier,
 		invClient:     invClient,
@@ -72,7 +75,7 @@ func newClientSet(c client.Client) (*clientSet, error) {
 }
 
 func (cs *clientSet) apply(ctx context.Context, inv inventory.InventoryInfo, resources []*unstructured.Unstructured, option apply.Options) <-chan event.Event {
-	return cs.kptApplier.Run(ctx, inv, resources, option)
+	return cs.kptApplier.Run(ctx, inv, object.UnstructuredSet(resources), option)
 }
 
 // handleDisabledObjects remove the specified objects from the inventory, and then disable them
@@ -109,14 +112,14 @@ func (cs *clientSet) removeFromInventory(rg *live.InventoryResourceGroup, objs [
 	if err != nil {
 		return err
 	}
-	return cs.invClient.Replace(rg, newObjs)
+	return cs.invClient.Replace(rg, newObjs, common.DryRunNone)
 }
 
 // disableObject disables the management for a single object by removing
 // the ConfigSync labels and annotations.
 func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error {
 	meta := objMetaFrom(obj)
-	u, err := cs.resouceClient.Get(ctx, meta)
+	u, err := cs.resouceClient.get(ctx, meta)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -131,11 +134,11 @@ func (cs *clientSet) disableObject(ctx context.Context, obj client.Object) error
 		// APIService is handled specially by client-side apply due to
 		// https://github.com/kubernetes/kubernetes/issues/89264
 		if u.GroupVersionKind().GroupKind() == kinds.APIService().GroupKind() {
-			err = kptclient.UpdateLabelsAndAnnotations(u, u.GetLabels(), u.GetAnnotations())
+			err = updateLabelsAndAnnotations(u, u.GetLabels(), u.GetAnnotations())
 			if err != nil {
 				return err
 			}
-			return cs.resouceClient.Update(ctx, meta, u, nil)
+			return cs.resouceClient.update(ctx, meta, u, nil)
 		}
 		u.SetManagedFields(nil)
 		return cs.client.Patch(ctx, u, client.Apply, client.FieldOwner(configsync.FieldManager), client.ForceOwnership)

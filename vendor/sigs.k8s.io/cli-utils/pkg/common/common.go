@@ -5,8 +5,8 @@ package common
 
 import (
 	"fmt"
-	"math/rand"
 
+	"k8s.io/apimachinery/pkg/util/rand"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
@@ -44,9 +44,8 @@ const (
 )
 
 // RandomStr returns an eight-digit (with leading zeros) string of a
-// random number seeded with the parameter.
-func RandomStr(seed int64) string {
-	rand.Seed(seed)
+// random number.
+func RandomStr() string {
 	randomInt := rand.Intn(maxRandInt) // nolint:gosec
 	return fmt.Sprintf("%08d", randomInt)
 }
@@ -66,6 +65,7 @@ func NoDeletion(key, value string) bool {
 
 var Strategies = []DryRunStrategy{DryRunClient, DryRunServer}
 
+//go:generate stringer -type=DryRunStrategy
 type DryRunStrategy int
 
 const (

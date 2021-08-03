@@ -125,9 +125,12 @@ func Run(opts Options) {
 
 	var a *applier.Applier
 	if opts.ReconcilerScope == declared.RootReconciler {
-		a = applier.NewRootApplier(cl)
+		a, err = applier.NewRootApplier(cl)
 	} else {
-		a = applier.NewNamespaceApplier(cl, opts.ReconcilerScope)
+		a, err = applier.NewNamespaceApplier(cl, opts.ReconcilerScope)
+	}
+	if err != nil {
+		glog.Fatalf("failed to create the applier: %v", err)
 	}
 
 	// Configure the Remediator.

@@ -1,7 +1,7 @@
 #
 # NOTE: When updating this file, you will also need to do the following:
 #
-# 1. Increment the BUILDENV_IMAGE_VERSION variable in Makefile
+# 1. Increment the BUILDENV_IMAGE variable in Makefile
 # 2. Run the following locally to test the build then push the image so it's
 #    accessible by CI:
 #    $ make build-buildenv && make build && make push-buildenv

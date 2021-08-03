@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
@@ -34,7 +33,7 @@ func newFakeApplier(err error, events []event.Event) *fakeApplier {
 	}
 }
 
-func (a *fakeApplier) Run(_ context.Context, _ inventory.InventoryInfo, _ []*unstructured.Unstructured, _ apply.Options) <-chan event.Event {
+func (a *fakeApplier) Run(_ context.Context, _ inventory.InventoryInfo, _ object.UnstructuredSet, _ apply.Options) <-chan event.Event {
 	events := make(chan event.Event, len(a.events))
 	go func() {
 		for _, e := range a.events {
@@ -63,8 +62,8 @@ func TestSync(t *testing.T) {
 		{
 			name: "unknown type for some resource",
 			events: []event.Event{
-				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
-				formApplyEvent(event.ApplyEventCompleted, nil, nil),
+				formApplyEvent(fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
+				formApplyEvent(nil, nil),
 			},
 			multiErr: ErrorForResource(errors.New("unknown type"), idFrom(*fakeID())),
 			gvks:     map[schema.GroupVersionKind]struct{}{kinds.Deployment(): {}},
@@ -72,8 +71,8 @@ func TestSync(t *testing.T) {
 		{
 			name: "conflict error for some resource",
 			events: []event.Event{
-				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), inventory.NewInventoryOverlapError(errors.New("conflict"))),
-				formApplyEvent(event.ApplyEventCompleted, nil, nil),
+				formApplyEvent(fakeID(), inventory.NewInventoryOverlapError(errors.New("conflict"))),
+				formApplyEvent(nil, nil),
 			},
 			multiErr: ManagementConflictError(resources[0]),
 			gvks: map[schema.GroupVersionKind]struct{}{
@@ -84,8 +83,8 @@ func TestSync(t *testing.T) {
 		{
 			name: "failed to apply",
 			events: []event.Event{
-				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
-				formApplyEvent(event.ApplyEventCompleted, nil, nil),
+				formApplyEvent(fakeID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
+				formApplyEvent(nil, nil),
 			},
 			multiErr: ErrorForResource(errors.New("failed apply"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
@@ -96,8 +95,8 @@ func TestSync(t *testing.T) {
 		{
 			name: "failed to prune",
 			events: []event.Event{
-				formPruneEvent(event.PruneEventFailed, event.Pruned, fakeID(), errors.New("failed pruning")),
-				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
+				formPruneEvent(event.Pruned, fakeID(), errors.New("failed pruning")),
+				formPruneEvent(event.Pruned, nil, nil),
 			},
 			multiErr: ErrorForResource(errors.New("failed pruning"), idFrom(*fakeID())),
 			gvks: map[schema.GroupVersionKind]struct{}{
@@ -108,9 +107,9 @@ func TestSync(t *testing.T) {
 		{
 			name: "skipped pruning",
 			events: []event.Event{
-				formPruneEvent(event.PruneEventResourceUpdate, event.Pruned, fakeID(), nil),
-				formPruneEvent(event.PruneEventResourceUpdate, event.PruneSkipped, deploymentID(), nil),
-				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
+				formPruneEvent(event.Pruned, fakeID(), nil),
+				formPruneEvent(event.PruneSkipped, deploymentID(), nil),
+				formPruneEvent(event.Pruned, nil, nil),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
@@ -120,10 +119,10 @@ func TestSync(t *testing.T) {
 		{
 			name: "all passed",
 			events: []event.Event{
-				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), nil),
-				formApplyEvent(event.ApplyEventResourceUpdate, deploymentID(), nil),
-				formApplyEvent(event.ApplyEventCompleted, nil, nil),
-				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
+				formApplyEvent(fakeID(), nil),
+				formApplyEvent(deploymentID(), nil),
+				formApplyEvent(nil, nil),
+				formPruneEvent(event.Pruned, nil, nil),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
@@ -133,10 +132,10 @@ func TestSync(t *testing.T) {
 		{
 			name: "all failed",
 			events: []event.Event{
-				formApplyEvent(event.ApplyEventResourceUpdate, fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
-				formApplyEvent(event.ApplyEventResourceUpdate, deploymentID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
-				formApplyEvent(event.ApplyEventCompleted, nil, nil),
-				formPruneEvent(event.PruneEventCompleted, event.Pruned, nil, nil),
+				formApplyEvent(fakeID(), applyerror.NewUnknownTypeError(errors.New("unknown type"))),
+				formApplyEvent(deploymentID(), applyerror.NewApplyRunError(errors.New("failed apply"))),
+				formApplyEvent(nil, nil),
+				formPruneEvent(event.Pruned, nil, nil),
 			},
 			gvks: map[schema.GroupVersionKind]struct{}{
 				kinds.Deployment(): {},
@@ -151,11 +150,18 @@ func TestSync(t *testing.T) {
 				kptApplier: newFakeApplier(tc.initErr, tc.events),
 			}, tc.initErr
 		}
-		applier := NewNamespaceApplier(nil, "test-namespace")
-		applier.clientSetFunc = applierFunc
-		gvks, errs := applier.sync(context.Background(), resources, cache)
-		if diff := cmp.Diff(tc.gvks, gvks, cmpopts.EquateEmpty()); diff != "" {
-			t.Errorf("%s: Diff of GVK map from Apply(): %s", tc.name, diff)
+
+		var errs status.MultiError
+		applier, err := NewNamespaceApplier(nil, "test-namespace")
+		if err != nil {
+			errs = Error(err)
+		} else {
+			applier.clientSetFunc = applierFunc
+			var gvks map[schema.GroupVersionKind]struct{}
+			gvks, errs = applier.sync(context.Background(), resources, cache)
+			if diff := cmp.Diff(tc.gvks, gvks, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("%s: Diff of GVK map from Apply(): %s", tc.name, diff)
+			}
 		}
 		if tc.multiErr == nil {
 			if errs != nil {
@@ -222,11 +228,10 @@ func fakeKind() schema.GroupVersionKind {
 	}
 }
 
-func formApplyEvent(t event.ApplyEventType, id *object.ObjMetadata, err error) event.Event {
+func formApplyEvent(id *object.ObjMetadata, err error) event.Event {
 	e := event.Event{
 		Type: event.ApplyType,
 		ApplyEvent: event.ApplyEvent{
-			Type:  t,
 			Error: err,
 		},
 	}
@@ -236,11 +241,10 @@ func formApplyEvent(t event.ApplyEventType, id *object.ObjMetadata, err error) e
 	return e
 }
 
-func formPruneEvent(t event.PruneEventType, op event.PruneEventOperation, id *object.ObjMetadata, err error) event.Event {
+func formPruneEvent(op event.PruneEventOperation, id *object.ObjMetadata, err error) event.Event {
 	e := event.Event{
 		Type: event.PruneType,
 		PruneEvent: event.PruneEvent{
-			Type:      t,
 			Error:     err,
 			Operation: op,
 		},

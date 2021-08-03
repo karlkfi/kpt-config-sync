@@ -37,8 +37,8 @@ var _ sort.Interface = SortableUnstructureds{}
 func (a SortableUnstructureds) Len() int      { return len(a) }
 func (a SortableUnstructureds) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a SortableUnstructureds) Less(i, j int) bool {
-	first := object.UnstructuredToObjMeta(a[i])
-	second := object.UnstructuredToObjMeta(a[j])
+	first := object.UnstructuredToObjMetaOrDie(a[i])
+	second := object.UnstructuredToObjMetaOrDie(a[j])
 	return less(first, second)
 }
 
@@ -58,61 +58,68 @@ func less(i, j object.ObjMetadata) bool {
 	}
 	// In case of tie, compare the namespace and name combination so that the output
 	// order is consistent irrespective of input order
-	return i.Namespace+i.Name < j.Namespace+j.Name
+	if i.Namespace != j.Namespace {
+		return i.Namespace < j.Namespace
+	}
+	return i.Name < j.Name
 }
 
-// An attempt to order things to help k8s, e.g.
-// a Service should come before things that refer to it.
-// Namespace should be first.
-// In some cases order just specified to provide determinism.
-var orderFirst = []string{
-	"Namespace",
-	"ResourceQuota",
-	"StorageClass",
-	"CustomResourceDefinition",
-	"MutatingWebhookConfiguration",
-	"ServiceAccount",
-	"PodSecurityPolicy",
-	"Role",
-	"ClusterRole",
-	"RoleBinding",
-	"ClusterRoleBinding",
-	"ConfigMap",
-	"Secret",
-	"Service",
-	"LimitRange",
-	"PriorityClass",
-	"Deployment",
-	"StatefulSet",
-	"CronJob",
-	"PodDisruptionBudget",
-}
+var groupKind2index = computeGroupKind2index()
 
-var orderLast = []string{
-	"ValidatingWebhookConfiguration",
-}
-
-// getIndexByKind returns the index of the kind respecting the order
-func getIndexByKind(kind string) int {
-	m := map[string]int{}
+func computeGroupKind2index() map[schema.GroupKind]int {
+	// An attempt to order things to help k8s, e.g.
+	// a Service should come before things that refer to it.
+	// Namespace should be first.
+	// In some cases order just specified to provide determinism.
+	orderFirst := []schema.GroupKind{
+		{Group: "", Kind: "Namespace"},
+		{Group: "", Kind: "ResourceQuota"},
+		{Group: "storage.k8s.io", Kind: "StorageClass"},
+		{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"},
+		{Group: "admissionregistration.k8s.io", Kind: "MutatingWebhookConfiguration"},
+		{Group: "", Kind: "ServiceAccount"},
+		{Group: "extensions", Kind: "PodSecurityPolicy"}, // deprecated=1.11, removed=1.16
+		{Group: "policy", Kind: "PodSecurityPolicy"},     // deprecated=1.21, removed=1.25
+		{Group: "rbac.authorization.k8s.io", Kind: "Role"},
+		{Group: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
+		{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding"},
+		{Group: "rbac.authorization.k8s.io", Kind: "ClusterRoleBinding"},
+		{Group: "", Kind: "ConfigMap"},
+		{Group: "", Kind: "Secret"},
+		{Group: "", Kind: "Service"},
+		{Group: "", Kind: "LimitRange"},
+		{Group: "scheduling.k8s.io", Kind: "PriorityClass"},
+		{Group: "extensions", Kind: "Deployment"}, // deprecated=1.8, removed=1.16
+		{Group: "apps", Kind: "Deployment"},
+		{Group: "apps", Kind: "StatefulSet"},
+		{Group: "batch", Kind: "CronJob"},
+		{Group: "policy", Kind: "PodDisruptionBudget"},
+	}
+	orderLast := []schema.GroupKind{
+		{Group: "admissionregistration.k8s.io", Kind: "ValidatingWebhookConfiguration"},
+	}
+	kind2indexResult := make(map[schema.GroupKind]int, len(orderFirst)+len(orderLast))
 	for i, n := range orderFirst {
-		m[n] = -len(orderFirst) + i
+		kind2indexResult[n] = -len(orderFirst) + i
 	}
 	for i, n := range orderLast {
-		m[n] = 1 + i
+		kind2indexResult[n] = 1 + i
 	}
-	return m[kind]
+	return kind2indexResult
 }
 
-func Equals(x schema.GroupKind, o schema.GroupKind) bool {
-	return x.Group == o.Group && x.Kind == o.Kind
+func Equals(i, j schema.GroupKind) bool {
+	return i.Group == j.Group && i.Kind == j.Kind
 }
 
-func IsLessThan(x schema.GroupKind, o schema.GroupKind) bool {
-	indexI := getIndexByKind(x.Kind)
-	indexJ := getIndexByKind(o.Kind)
+func IsLessThan(i, j schema.GroupKind) bool {
+	indexI := groupKind2index[i]
+	indexJ := groupKind2index[j]
 	if indexI != indexJ {
 		return indexI < indexJ
 	}
-	return x.String() < o.String()
+	if i.Group != j.Group {
+		return i.Group < j.Group
+	}
+	return i.Kind < j.Kind
 }

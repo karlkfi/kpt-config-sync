@@ -15,19 +15,30 @@
 package live
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/kubectl/pkg/util"
+	"sigs.k8s.io/cli-utils/pkg/apply/cache"
+	"sigs.k8s.io/cli-utils/pkg/apply/event"
+	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
+	utilfactory "sigs.k8s.io/cli-utils/pkg/util/factory"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+)
+
+const (
+	applyCRDTimeout      = 10 * time.Second
+	applyCRDPollInterval = 2 * time.Second
 )
 
 // ResourceGroupGVK is the group/version/kind of the custom
@@ -46,19 +57,24 @@ type InventoryResourceGroup struct {
 	objMetas []object.ObjMetadata
 }
 
+func (icm *InventoryResourceGroup) Strategy() inventory.InventoryStrategy {
+	return inventory.NameStrategy
+}
+
 var _ inventory.Inventory = &InventoryResourceGroup{}
 var _ inventory.InventoryInfo = &InventoryResourceGroup{}
 
-// WrapInventoryObj takes a passed ResourceGroup (as an unstructured),
+// WrapInventoryObj takes a passed ResourceGroup (as a resource.Info),
 // wraps it with the InventoryResourceGroup and upcasts the wrapper as
 // an the Inventory interface.
 func WrapInventoryObj(obj *unstructured.Unstructured) inventory.Inventory {
-	return WrapInventoryResourceGroup(obj)
+	if obj != nil {
+		klog.V(4).Infof("wrapping Inventory obj: %s/%s\n", obj.GetNamespace(), obj.GetName())
+	}
+	return &InventoryResourceGroup{inv: obj}
 }
 
-// WrapInventoryResourceGroup takes a passed ResourceGroup (as an unstructured),
-// wraps it with the InventoryResourceGroup.
-func WrapInventoryResourceGroup(obj *unstructured.Unstructured) *InventoryResourceGroup {
+func WrapInventoryInfoObj(obj *unstructured.Unstructured) inventory.InventoryInfo {
 	if obj != nil {
 		klog.V(4).Infof("wrapping InventoryInfo obj: %s/%s\n", obj.GetNamespace(), obj.GetName())
 	}
@@ -94,8 +110,8 @@ func (icm *InventoryResourceGroup) ID() string {
 
 // Load is an Inventory interface function returning the set of
 // object metadata from the wrapped ResourceGroup, or an error.
-func (icm *InventoryResourceGroup) Load() ([]object.ObjMetadata, error) {
-	objs := []object.ObjMetadata{}
+func (icm *InventoryResourceGroup) Load() (object.ObjMetadataSet, error) {
+	objs := object.ObjMetadataSet{}
 	if icm.inv == nil {
 		return objs, fmt.Errorf("inventory info is nil")
 	}
@@ -132,7 +148,7 @@ func (icm *InventoryResourceGroup) Load() ([]object.ObjMetadata, error) {
 			Group: strings.TrimSpace(group),
 			Kind:  strings.TrimSpace(kind),
 		}
-		klog.V(4).Infof(`creating obj metadata: "%s/%s/%s"`, namespace, name, groupKind)
+		klog.V(4).Infof("creating obj metadata: %s/%s/%s", namespace, name, groupKind)
 		objMeta, err := object.CreateObjMetadata(namespace, name, groupKind)
 		if err != nil {
 			return []object.ObjMetadata{}, err
@@ -145,7 +161,7 @@ func (icm *InventoryResourceGroup) Load() ([]object.ObjMetadata, error) {
 // Store is an Inventory interface function implemented to store
 // the object metadata in the wrapped ResourceGroup. Actual storing
 // happens in "GetObject".
-func (icm *InventoryResourceGroup) Store(objMetas []object.ObjMetadata) error {
+func (icm *InventoryResourceGroup) Store(objMetas object.ObjMetadataSet) error {
 	icm.objMetas = objMetas
 	return nil
 }
@@ -161,7 +177,7 @@ func (icm *InventoryResourceGroup) GetObject() (*unstructured.Unstructured, erro
 	klog.V(4).Infof("Creating list of %d resources", len(icm.objMetas))
 	var objs []interface{}
 	for _, objMeta := range icm.objMetas {
-		klog.V(4).Infof(`storing inventory obj reference: "%s/%s"`, objMeta.Namespace, objMeta.Name)
+		klog.V(4).Infof("storing inventory obj refercence: %s/%s", objMeta.Namespace, objMeta.Name)
 		objs = append(objs, map[string]interface{}{
 			"group":     objMeta.GroupKind.Group,
 			"kind":      objMeta.GroupKind.Kind,
@@ -211,23 +227,106 @@ var crdGroupKind = schema.GroupKind{
 	Kind:  "CustomResourceDefinition",
 }
 
-// ApplyResourceGroupCRD applies the custom resource definition for the
-// ResourceGroup. The apiextensions version applied is based on the RESTMapping
-// returned by the RESTMapper. Returns an error if one occurs, including an
-// "Already Exists" error.
-func ApplyResourceGroupCRD(factory cmdutil.Factory) error {
-	// Create the mapping from the CustomResourceDefinision GroupKind.
+// ResourceGroupCRDApplied returns true if the inventory ResourceGroup
+// CRD is available from the current RESTMapper, or false otherwise.
+func ResourceGroupCRDApplied(factory cmdutil.Factory) bool {
 	mapper, err := factory.ToRESTMapper()
 	if err != nil {
-		return err
+		klog.V(4).Infof("error retrieving RESTMapper when checking ResourceGroup CRD: %s\n", err)
+		return false
 	}
+	_, err = mapper.RESTMapping(ResourceGroupGVK.GroupKind())
+	if err != nil {
+		klog.V(7).Infof("error retrieving ResourceGroup RESTMapping: %s\n", err)
+		return false
+	}
+	return true
+}
+
+// InstallResourceGroupCRD applies the custom resource definition for the
+// ResourceGroup by creating and running a TaskQueue of Tasks necessary.
+// The Tasks are 1) Apply CRD task, 2) Wait Task (for CRD to become
+// established), and 3) Reset RESTMapper task. Returns an error if
+// a non-"AlreadyExists" error is returned on the event channel.
+// Runs the CRD installation in a separate goroutine (timeout
+// ensures no hanging).
+func InstallResourceGroupCRD(factory cmdutil.Factory) error {
+	eventChannel := make(chan event.Event)
+	go func() {
+		defer close(eventChannel)
+		mapper, err := factory.ToRESTMapper()
+		if err != nil {
+			handleError(eventChannel, err)
+			return
+		}
+		crd, err := rgCRD(mapper)
+		if err != nil {
+			handleError(eventChannel, err)
+			return
+		}
+		// Create the task to apply the ResourceGroup CRD.
+		applyRGTask := NewApplyCRDTask(factory, crd)
+		objs := object.UnstructuredsToObjMetasOrDie([]*unstructured.Unstructured{crd})
+		// Create the tasks to apply the ResourceGroup CRD.
+		tasks := []taskrunner.Task{
+			applyRGTask,
+			taskrunner.NewWaitTask("wait-rg-crd", objs, taskrunner.AllCurrent,
+				applyCRDTimeout, mapper),
+		}
+		// Create the task queue channel, and send tasks in order into the channel.
+		taskQueue := make(chan taskrunner.Task, len(tasks))
+		for _, t := range tasks {
+			taskQueue <- t
+		}
+		statusPoller, err := utilfactory.NewStatusPoller(factory)
+		if err != nil {
+			handleError(eventChannel, err)
+			return
+		}
+		// Create a new cache map to hold the last known resource state & status
+		resourceCache := cache.NewResourceCacheMap()
+		// Run the task queue.
+		runner := taskrunner.NewTaskStatusRunner(objs, statusPoller, resourceCache)
+		err = runner.Run(context.Background(), taskQueue, eventChannel, taskrunner.Options{
+			PollInterval:     applyCRDPollInterval,
+			UseCache:         true,
+			EmitStatusEvents: true,
+		})
+		if err != nil {
+			handleError(eventChannel, err)
+			return
+		}
+	}()
+
+	// Return the error on the eventChannel if it exists; return
+	// closes the channel. "AlreadyExists" is NOT an error.
+	for e := range eventChannel {
+		if e.Type == event.ErrorType {
+			err := e.ErrorEvent.Err
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// handleError sends an error onto the event channel.
+func handleError(eventChannel chan event.Event, err error) {
+	eventChannel <- event.Event{
+		Type: event.ErrorType,
+		ErrorEvent: event.ErrorEvent{
+			Err: err,
+		},
+	}
+}
+
+// rgCRD returns the ResourceGroup CRD in Unstructured format or an error.
+func rgCRD(mapper meta.RESTMapper) (*unstructured.Unstructured, error) {
 	mapping, err := mapper.RESTMapping(crdGroupKind)
 	if err != nil {
-		return err
-	}
-	client, err := factory.UnstructuredClientForMapping(mapping)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	// mapping contains the full GVK version, which is used to determine
 	// the version of the ResourceGroup CRD to create. We have defined the
@@ -237,23 +336,13 @@ func ApplyResourceGroupCRD(factory cmdutil.Factory) error {
 	rgCRDStr, ok := resourceGroupCRDs[version]
 	if !ok {
 		klog.V(4).Infof("ResourceGroup CRD version %s not found", version)
-		return err
+		return nil, err
 	}
 	crd, err := stringToUnstructured(rgCRDStr)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Set the "last-applied-annotation" so future applies work correctly.
-	if err := util.CreateApplyAnnotation(crd, unstructured.UnstructuredJSONScheme); err != nil {
-		return err
-	}
-	// Apply the CRD to the cluster and ignore already exists error.
-	var clearResourceVersion = false
-	var emptyNamespace = ""
-	helper := resource.NewHelper(client, mapping)
-	klog.V(4).Infoln("applying ResourceGroup CRD...")
-	_, err = helper.Create(emptyNamespace, clearResourceVersion, crd)
-	return err
+	return crd, nil
 }
 
 // stringToUnstructured transforms a single resource represented by
@@ -318,25 +407,25 @@ spec:
         metadata:
           type: object
         spec:
-          description: spec defines the desired state of ResourceGroup
+          description: ResourceGroupSpec defines the desired state of ResourceGroup
           properties:
             descriptor:
-              description: descriptor regroups the information and metadata about
+              description: Descriptor regroups the information and metadata about
                 a resource group
               properties:
                 description:
-                  description: description is a brief description of a group of resources
+                  description: Description is a brief description of a group of resources
                   type: string
                 links:
-                  description: links are a list of descriptive URLs intended to be
+                  description: Links are a list of descriptive URLs intended to be
                     used to surface additional information
                   items:
                     properties:
                       description:
-                        description: description explains the purpose of the link
+                        description: Description explains the purpose of the link
                         type: string
                       url:
-                        description: url is the URL of the link
+                        description: Url is the URL of the link
                         type: string
                     required:
                     - description
@@ -344,18 +433,17 @@ spec:
                     type: object
                   type: array
                 revision:
-                  description: revision is an optional revision for a group of resources
+                  description: Revision is an optional revision for a group of resources
                   type: string
                 type:
-                  description: type can contain prefix, such as Application/WordPress
+                  description: Type can contain prefix, such as Application/WordPress
                     or Service/Spanner
                   type: string
               type: object
             resources:
-              description: resources contains a list of resources that form the resource
-                group
+              description: Resources contains a list of resources that form the resource group
               items:
-                description: each item organizes and stores the identifying information
+                description: ObjMetadata organizes and stores the identifying information
                   for an object. This struct (as a string) is stored in a grouping
                   object to keep track of sets of applied objects.
                 properties:
@@ -374,28 +462,12 @@ spec:
                 - namespace
                 type: object
               type: array
-            subgroups:
-              description: subgroups contains a list of sub groups that the current
-                group includes.
-              items:
-                description: each item organizes and stores the identifying information
-                  for a ResourceGroup object. It includes name and namespace.
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-              type: array
           type: object
         status:
-          description: status defines the observed state of ResourceGroup
+          description: ResourceGroupStatus defines the observed state of ResourceGroup
           properties:
             conditions:
-              description: conditions lists the conditions of the current status for
+              description: Conditions lists the conditions of the current status for
                 the group
               items:
                 properties:
@@ -409,14 +481,14 @@ spec:
                       transition
                     type: string
                   reason:
-                    description: one-word CamelCase reason for the condition’s last
+                    description: one-word CamelCase reason for the condition's last
                       transition
                     type: string
                   status:
-                    description: status of the condition
+                    description: Status of the condition
                     type: string
                   type:
-                    description: type of the condition
+                    description: Type of the condition
                     type: string
                 required:
                 - status
@@ -424,18 +496,18 @@ spec:
                 type: object
               type: array
             observedGeneration:
-              description: observedGeneration is the most recent generation observed.
+              description: ObservedGeneration is the most recent generation observed.
                 It corresponds to the Object's generation, which is updated on mutation
                 by the API Server. Everytime the controller does a successful reconcile,
-                it sets observedGeneration to match ResourceGroup.metadata.generation.
+                it sets ObservedGeneration to match ResourceGroup.metadata.generation.
               format: int64
               type: integer
             resourceStatuses:
-              description: resourceStatuses lists the status for each resource in
+              description: ResourceStatuses lists the status for each resource in
                 the group
               items:
-                description: each item contains the status of a given resource uniquely
-                  identified by its group, kind, name and namespace.
+                description: ResourceStatus contains the status of a given resource
+                  uniquely identified by its group, kind, name and namespace.
                 properties:
                   conditions:
                     items:
@@ -454,10 +526,10 @@ spec:
                             last transition
                           type: string
                         status:
-                          description: status of the condition
+                          description: Status of the condition
                           type: string
                         type:
-                          description: type of the condition
+                          description: Type of the condition
                           type: string
                       required:
                       - status
@@ -478,52 +550,6 @@ spec:
                 required:
                 - group
                 - kind
-                - name
-                - namespace
-                - status
-                type: object
-              type: array
-            subgroupStatuses:
-              description: subgroupStatuses lists the status for each subgroup.
-              items:
-                description: each item contains the status of a given group uniquely
-                  identified by its name and namespace.
-                properties:
-                  conditions:
-                    items:
-                      properties:
-                        lastTransitionTime:
-                          description: last time the condition transit from one status
-                            to another
-                          format: date-time
-                          type: string
-                        message:
-                          description: human-readable message indicating details about
-                            last transition
-                          type: string
-                        reason:
-                          description: one-word CamelCase reason for the condition’s
-                            last transition
-                          type: string
-                        status:
-                          description: status of the condition
-                          type: string
-                        type:
-                          description: type of the condition
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    type: array
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                  status:
-                    description: Status describes the status of a resource
-                    type: string
-                required:
                 - name
                 - namespace
                 - status
@@ -585,25 +611,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of ResourceGroup
+            description: ResourceGroupSpec defines the desired state of ResourceGroup
             properties:
               descriptor:
-                description: descriptor regroups the information and metadata about
+                description: Descriptor regroups the information and metadata about
                   a resource group
                 properties:
                   description:
-                    description: description is a brief description of a group of resources
+                    description: Description is a brief description of a group of
+                      resources
                     type: string
                   links:
-                    description: links are a list of descriptive URLs intended to be
-                      used to surface additional information
+                    description: Links are a list of descriptive URLs intended to
+                      be used to surface additional information
                     items:
                       properties:
                         description:
-                          description: description explains the purpose of the link
+                          description: Description explains the purpose of the link
                           type: string
                         url:
-                          description: url is the URL of the link
+                          description: Url is the URL of the link
                           type: string
                       required:
                       - description
@@ -611,18 +638,18 @@ spec:
                       type: object
                     type: array
                   revision:
-                    description: revision is an optional revision for a group of resources
+                    description: Revision is an optional revision for a group of resources
                     type: string
                   type:
-                    description: type can contain prefix, such as Application/WordPress
+                    description: Type can contain prefix, such as Application/WordPress
                       or Service/Spanner
                     type: string
                 type: object
               resources:
-                description: resources contains a list of resources that form the resource
-                  group
+                description: Resources contains a list of resources that form the
+                  resource group
                 items:
-                  description: each item organizes and stores the identifying information
+                  description: ObjMetadata organizes and stores the identifying information
                     for an object. This struct (as a string) is stored in a grouping
                     object to keep track of sets of applied objects.
                   properties:
@@ -641,49 +668,33 @@ spec:
                   - namespace
                   type: object
                 type: array
-              subgroups:
-                description: subgroups contains a list of sub groups that the current
-                  group includes.
-                items:
-                  description: Each item organizes and stores the identifying information
-                    for a ResourceGroup object. It includes name and namespace.
-                  properties:
-                    name:
-                      type: string
-                    namespace:
-                      type: string
-                  required:
-                  - name
-                  - namespace
-                  type: object
-                type: array
             type: object
           status:
-            description: status defines the observed state of ResourceGroup
+            description: ResourceGroupStatus defines the observed state of ResourceGroup
             properties:
               conditions:
-                description: conditions lists the conditions of the current status for
-                  the group
+                description: Conditions lists the conditions of the current status
+                  for the group
                 items:
                   properties:
                     lastTransitionTime:
-                      description: last time the condition transit from one status to
-                        another
+                      description: last time the condition transit from one status
+                        to another
                       format: date-time
                       type: string
                     message:
-                      description: human-readable message indicating details about last
-                        transition
+                      description: human-readable message indicating details about
+                        last transition
                       type: string
                     reason:
                       description: one-word CamelCase reason for the condition’s last
                         transition
                       type: string
                     status:
-                      description: status of the condition
+                      description: Status of the condition
                       type: string
                     type:
-                      description: type of the condition
+                      description: Type of the condition
                       type: string
                   required:
                   - status
@@ -691,40 +702,40 @@ spec:
                   type: object
                 type: array
               observedGeneration:
-                description: observedGeneration is the most recent generation observed.
+                description: ObservedGeneration is the most recent generation observed.
                   It corresponds to the Object's generation, which is updated on mutation
                   by the API Server. Everytime the controller does a successful reconcile,
-                  it sets observedGeneration to match ResourceGroup.metadata.generation.
+                  it sets ObservedGeneration to match ResourceGroup.metadata.generation.
                 format: int64
                 type: integer
               resourceStatuses:
-                description: resourceStatuses lists the status for each resource in
+                description: ResourceStatuses lists the status for each resource in
                   the group
                 items:
-                  description: each item contains the status of a given resource uniquely
-                    identified by its group, kind, name and namespace.
+                  description: ResourceStatus contains the status of a given resource
+                    uniquely identified by its group, kind, name and namespace.
                   properties:
                     conditions:
                       items:
                         properties:
                           lastTransitionTime:
-                            description: last time the condition transit from one status
-                              to another
+                            description: last time the condition transit from one
+                              status to another
                             format: date-time
                             type: string
                           message:
-                            description: human-readable message indicating details about
-                              last transition
+                            description: human-readable message indicating details
+                              about last transition
                             type: string
                           reason:
                             description: one-word CamelCase reason for the condition’s
                               last transition
                             type: string
                           status:
-                            description: status of the condition
+                            description: Status of the condition
                             type: string
                           type:
-                            description: type of the condition
+                            description: Type of the condition
                             type: string
                         required:
                         - status
@@ -745,52 +756,6 @@ spec:
                   required:
                   - group
                   - kind
-                  - name
-                  - namespace
-                  - status
-                  type: object
-                type: array
-              subgroupStatuses:
-                description: subgroupStatuses lists the status for each subgroup.
-                items:
-                  description: Each item contains the status of a given group uniquely
-                    identified by its name and namespace.
-                  properties:
-                    conditions:
-                      items:
-                        properties:
-                          lastTransitionTime:
-                            description: last time the condition transit from one status
-                              to another
-                            format: date-time
-                            type: string
-                          message:
-                            description: human-readable message indicating details about
-                              last transition
-                            type: string
-                          reason:
-                            description: one-word CamelCase reason for the condition’s
-                              last transition
-                            type: string
-                          status:
-                            description: status of the condition
-                            type: string
-                          type:
-                            description: type of the condition
-                            type: string
-                        required:
-                        - status
-                        - type
-                        type: object
-                      type: array
-                    name:
-                      type: string
-                    namespace:
-                      type: string
-                    status:
-                      description: Status describes the status of a resource
-                      type: string
-                  required:
                   - name
                   - namespace
                   - status

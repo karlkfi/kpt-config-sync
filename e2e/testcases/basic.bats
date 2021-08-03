@@ -112,7 +112,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   git::add ${YAML_DIR}/deployment-helloworld.yaml acme/namespaces/dir/deployment.yaml
   git::add ${YAML_DIR}/replicaset-helloworld.yaml acme/namespaces/dir/replicaset.yaml
   git::commit
-  wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 120 -- nomos::repo_synced
 
   debug::log "check that the deployment and replicaset were created"
   wait::for -t 60 -- kubectl get deployment hello-world -n dir

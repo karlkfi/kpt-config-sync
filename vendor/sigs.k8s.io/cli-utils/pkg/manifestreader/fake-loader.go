@@ -20,14 +20,14 @@ type fakeLoader struct {
 
 var _ ManifestLoader = &fakeLoader{}
 
-func NewFakeLoader(f util.Factory, objs []object.ObjMetadata) *fakeLoader {
+func NewFakeLoader(f util.Factory, objs object.ObjMetadataSet) *fakeLoader {
 	return &fakeLoader{
 		factory:   f,
 		InvClient: inventory.NewFakeInventoryClient(objs),
 	}
 }
 
-func (f *fakeLoader) ManifestReader(reader io.Reader, _ []string) (ManifestReader, error) {
+func (f *fakeLoader) ManifestReader(reader io.Reader, _ string) (ManifestReader, error) {
 	mapper, err := f.factory.ToRESTMapper()
 	if err != nil {
 		return nil, err

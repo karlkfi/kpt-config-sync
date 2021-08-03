@@ -2,6 +2,7 @@ package applier
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	m "github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/resourcegroup"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
@@ -23,6 +25,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
+	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,42 +63,44 @@ var _ Interface = &Applier{}
 
 // NewNamespaceApplier initializes an applier that fetches a certain namespace's resources from
 // the API server.
-func NewNamespaceApplier(c client.Client, namespace declared.Scope) *Applier {
+func NewNamespaceApplier(c client.Client, namespace declared.Scope) (*Applier, error) {
 	u := newInventoryUnstructured(configsync.RepoSyncName, string(namespace))
+	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
+	if !ok {
+		return nil, errors.New("failed to create an ResourceGroup object")
+	}
+
 	a := &Applier{
-		inventory:     live.WrapInventoryResourceGroup(u),
+		inventory:     inv,
 		client:        c,
 		clientSetFunc: newClientSet,
 		scope:         namespace,
 		policy:        inventory.AdoptIfNoInventory,
 	}
 	glog.V(4).Infof("Applier %v is initialized", namespace)
-	return a
+	return a, nil
 }
 
 // NewRootApplier initializes an applier that can fetch all resources from the API server.
-func NewRootApplier(c client.Client) *Applier {
+func NewRootApplier(c client.Client) (*Applier, error) {
 	u := newInventoryUnstructured(configsync.RootSyncName, configmanagement.ControllerNamespace)
+	inv, ok := live.WrapInventoryObj(u).(*live.InventoryResourceGroup)
+	if !ok {
+		return nil, errors.New("failed to create an ResourceGroup object")
+	}
+
 	a := &Applier{
-		inventory:     live.WrapInventoryResourceGroup(u),
+		inventory:     inv,
 		client:        c,
 		clientSetFunc: newClientSet,
 		scope:         declared.RootReconciler,
 		policy:        inventory.AdoptAll,
 	}
 	glog.V(4).Infof("Root applier is initialized and synced with the API server")
-	return a
+	return a, nil
 }
 
 func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEventStats, cache map[core.ID]client.Object, unknownTypeResources map[core.ID]struct{}) status.Error {
-	// ApplyEvent.Type has two types: ApplyEventResourceUpdate and ApplyEventCompleted.
-	// ApplyEventResourceUpdate is for applying a single resource;
-	// ApplyEventCompleted indicates all resources have been applied.
-
-	if e.Type != event.ApplyEventResourceUpdate {
-		return nil
-	}
-
 	id := idFrom(e.Identifier)
 	if e.Error != nil {
 		stats.errCount++
@@ -128,9 +133,6 @@ func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEven
 		return ErrorForResource(e.Error, id)
 	}
 
-	if e.Type != event.PruneEventResourceUpdate {
-		return nil
-	}
 	id := idFrom(e.Identifier)
 	if e.Operation == event.PruneSkipped {
 		glog.V(4).Infof("skipped pruning resource %v", id)
@@ -204,6 +206,9 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
+			if _, ok := taskrunner.IsTimeoutError(e.ErrorEvent.Err); ok {
+				continue
+			}
 			errs = status.Append(errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.ApplyType:
@@ -260,7 +265,7 @@ func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (m
 // newInventoryUnstructured creates an inventory object as an unstructured.
 func newInventoryUnstructured(name, namespace string) *unstructured.Unstructured {
 	id := InventoryID(namespace)
-	u := live.ResourceGroupUnstructured(name, namespace, id)
+	u := resourcegroup.Unstructured(name, namespace, id)
 	core.SetLabel(u, metadata.ManagedByKey, metadata.ManagedByValue)
 	core.SetAnnotation(u, metadata.ResourceManagementKey, metadata.ResourceManagementEnabled)
 	return u

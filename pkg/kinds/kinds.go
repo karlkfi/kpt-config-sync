@@ -1,7 +1,7 @@
 package kinds
 
 import (
-	"github.com/GoogleContainerTools/kpt/pkg/kptfile"
+	kptfilev1 "github.com/GoogleContainerTools/kpt/pkg/api/kptfile/v1"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
@@ -229,7 +229,7 @@ func ServiceAccount() schema.GroupVersionKind {
 
 // KptFile returns the canonical Kptfile GroupVersionKind.
 func KptFile() schema.GroupVersionKind {
-	return schema.GroupVersionKind{Group: kptfile.KptFileGroup, Version: kptfile.KptFileVersion, Kind: kptfile.KptFileName}
+	return schema.GroupVersionKind{Group: kptfilev1.KptFileGroup, Version: kptfilev1.KptFileVersion, Kind: kptfilev1.KptFileKind}
 }
 
 // APIService returns the APIService kind.

@@ -81,7 +81,7 @@ func newApplier(cfg *rest.Config, client *syncerclient.Client, multirepoEnabled 
 		return nil, err
 	}
 
-	oa, err := openapi.NewOpenAPIGetter(dc).Get()
+	oa, err := openapi.NewOpenAPIParser(dc).Parse()
 	if err != nil {
 		return nil, err
 	}

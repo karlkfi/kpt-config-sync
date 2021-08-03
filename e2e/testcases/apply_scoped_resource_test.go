@@ -21,7 +21,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.Copy("../../examples/kubevirt/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
-	_, err := nomostest.Retry(60*time.Second, func() error {
+	_, err := nomostest.Retry(120*time.Second, func() error {
 		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 			err := nt.ValidateReconcilerNonBlockingErrors(reconciler.RootSyncName, status.UnknownKindErrorCode, 1)
 			if err != nil {

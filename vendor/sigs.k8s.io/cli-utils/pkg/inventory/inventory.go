@@ -14,11 +14,9 @@ package inventory
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
@@ -31,9 +29,9 @@ const legacyInvName = "inventory"
 // operations.
 type Inventory interface {
 	// Load retrieves the set of object metadata from the inventory object
-	Load() ([]object.ObjMetadata, error)
+	Load() (object.ObjMetadataSet, error)
 	// Store the set of object metadata in the inventory object
-	Store(objs []object.ObjMetadata) error
+	Store(objs object.ObjMetadataSet) error
 	// GetObject returns the object that stores the inventory
 	GetObject() (*unstructured.Unstructured, error)
 }
@@ -48,7 +46,7 @@ type InventoryToUnstructuredFunc func(InventoryInfo) *unstructured.Unstructured
 
 // FindInventoryObj returns the "Inventory" object (ConfigMap with
 // inventory label) if it exists, or nil if it does not exist.
-func FindInventoryObj(objs []*unstructured.Unstructured) *unstructured.Unstructured {
+func FindInventoryObj(objs object.UnstructuredSet) *unstructured.Unstructured {
 	for _, obj := range objs {
 		if IsInventoryObject(obj) {
 			return obj
@@ -74,26 +72,17 @@ func IsInventoryObject(obj *unstructured.Unstructured) bool {
 // for the passed inventory object. Returns error if the passed object is nil or
 // is not a inventory object.
 func retrieveInventoryLabel(obj *unstructured.Unstructured) (string, error) {
-	if obj == nil {
-		return "", fmt.Errorf("inventory info is nil")
-	}
-
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return "", err
-	}
-	labels := accessor.GetLabels()
-	inventoryLabel, exists := labels[common.InventoryLabel]
+	inventoryLabel, exists := obj.GetLabels()[common.InventoryLabel]
 	if !exists {
 		return "", fmt.Errorf("inventory label does not exist for inventory object: %s", common.InventoryLabel)
 	}
-	return strings.TrimSpace(inventoryLabel), nil
+	return inventoryLabel, nil
 }
 
-// ValidateNoInventory takes a slice of unstructured.Unstructured objects and
+// ValidateNoInventory takes a set of unstructured.Unstructured objects and
 // validates that no inventory object is in the input slice.
-func ValidateNoInventory(objs []*unstructured.Unstructured) error {
-	invs := make([]*unstructured.Unstructured, 0)
+func ValidateNoInventory(objs object.UnstructuredSet) error {
+	invs := make(object.UnstructuredSet, 0)
 	for _, obj := range objs {
 		if IsInventoryObject(obj) {
 			invs = append(invs, obj)
@@ -107,12 +96,12 @@ func ValidateNoInventory(objs []*unstructured.Unstructured) error {
 	}
 }
 
-// splitUnstructureds takes a slice of unstructured.Unstructured objects and
-// splits it into one slice that contains the inventory object templates and
+// splitUnstructureds takes a set of unstructured.Unstructured objects and
+// splits it into one set that contains the inventory object templates and
 // another one that contains the remaining resources.
-func SplitUnstructureds(objs []*unstructured.Unstructured) (*unstructured.Unstructured, []*unstructured.Unstructured, error) {
-	invs := make([]*unstructured.Unstructured, 0)
-	resources := make([]*unstructured.Unstructured, 0)
+func SplitUnstructureds(objs object.UnstructuredSet) (*unstructured.Unstructured, object.UnstructuredSet, error) {
+	invs := make(object.UnstructuredSet, 0)
+	resources := make(object.UnstructuredSet, 0)
 	for _, obj := range objs {
 		if IsInventoryObject(obj) {
 			invs = append(invs, obj)
@@ -135,16 +124,12 @@ func SplitUnstructureds(objs []*unstructured.Unstructured) (*unstructured.Unstru
 // an error if name stored in the object differs from the name in
 // the Info struct.
 func addSuffixToName(obj *unstructured.Unstructured, suffix string) error {
-	if obj == nil {
-		return fmt.Errorf("nil unstructured.Unstructured")
-	}
 	suffix = strings.TrimSpace(suffix)
 	if len(suffix) == 0 {
 		return fmt.Errorf("passed empty suffix")
 	}
 
-	accessor, _ := meta.Accessor(obj)
-	name := accessor.GetName()
+	name := obj.GetName()
 	if name != obj.GetName() {
 		return fmt.Errorf("inventory object (%s) and resource.Info (%s) have different names", name, obj.GetName())
 	}
@@ -154,7 +139,7 @@ func addSuffixToName(obj *unstructured.Unstructured, suffix string) error {
 		return fmt.Errorf("name already has suffix: %s", name)
 	}
 	name += suffix
-	accessor.SetName(name)
+	obj.SetName(name)
 
 	return nil
 }
@@ -164,18 +149,9 @@ func addSuffixToName(obj *unstructured.Unstructured, suffix string) error {
 // This fixes a problem where inventory object names collide if
 // they are created in the same namespace.
 func fixLegacyInventoryName(obj *unstructured.Unstructured) error {
-	if obj == nil {
-		return fmt.Errorf("invalid inventory object is nil")
-	}
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return err
-	}
-	name := accessor.GetName()
-	if obj.GetName() == legacyInvName || name == legacyInvName {
+	if obj.GetName() == legacyInvName {
 		klog.V(4).Infof("renaming legacy inventory name")
-		seed := time.Now().UTC().UnixNano()
-		randomSuffix := common.RandomStr(seed)
+		randomSuffix := common.RandomStr()
 		return addSuffixToName(obj, randomSuffix)
 	}
 	return nil
