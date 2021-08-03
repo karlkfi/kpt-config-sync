@@ -95,8 +95,13 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 		ntopts.WithCentralizedControl,
 	)
 
+	repo, exist := nt.NonRootRepos[bsNamespace]
+	if !exist {
+		nt.T.Fatal("nonexistent repo")
+	}
+
 	// update the RepoSync version to v1beta1
-	rs := nomostest.RepoSyncObjectV1Beta1(bsNamespace)
+	rs := nomostest.RepoSyncObjectV1Beta1(bsNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/%s", bsNamespace, nomostest.RepoSyncFileName), rs)
 	nt.Root.CommitAndPush("update RepoSync version to v1beta1")
 
@@ -112,11 +117,6 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 	})
 	if err != nil {
 		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
-	}
-
-	repo, exist := nt.NonRootRepos[bsNamespace]
-	if !exist {
-		nt.T.Fatal("nonexistent repo")
 	}
 
 	// Validate service account 'store' not present.

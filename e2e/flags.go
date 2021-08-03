@@ -76,6 +76,10 @@ var KubeConfig = flag.String(Kubeconfig, "",
 var ShareTestEnv = flag.Bool("share-test-env", false,
 	"Specify that the test is using a shared test environment instead of fresh installation per test case.")
 
+// GitProvider is the provider that hosts the Git repositories.
+var GitProvider = flag.String("git-provider", Local,
+	"The git provider that hosts the Git repositories. Defaults to local")
+
 const (
 	// RunAll runs all tests whether skipped or not
 	RunAll = "runAll"
@@ -92,6 +96,19 @@ const (
 	GKE = "gke"
 	// Kubeconfig provides the context via KUBECONFIG for testing.
 	Kubeconfig = "kube-config"
+)
+
+const (
+	// Local indicates using a local git-test-server.
+	Local = "local"
+	// Bitbucket indicates using Bitbucket to host the repositories.
+	Bitbucket = "bitbucket"
+	// Github indicates using GitHub to host the repositories.
+	Github = "github"
+	// GitLab indicates using GitLab to host the repositories.
+	GitLab = "gitlab"
+	// CSR indicates using Google Cloud Source Repositories to host the repositories.
+	CSR = "csr"
 )
 
 // RunInParallel indicates whether the test is running in parallel.

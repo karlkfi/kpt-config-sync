@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/testing"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
@@ -337,4 +338,20 @@ func WaitToTerminate(nt *NT, gvk schema.GroupVersionKind, name, namespace string
 		u.SetGroupVersionKind(gvk)
 		return nt.ValidateNotFound(name, namespace, u)
 	}, opts...)
+}
+
+// DeleteRemoteRepos removes all remote repos on the Git provider.
+func DeleteRemoteRepos(nt *NT) {
+	if nt.GitProvider.Type() == e2e.Local {
+		return
+	}
+
+	var repos []string
+	for _, repo := range nt.RemoteRepositories {
+		repos = append(repos, repo.RemoteRepoName)
+	}
+	err := nt.GitProvider.DeleteRepositories(repos...)
+	if err != nil {
+		nt.T.Error(err)
+	}
 }

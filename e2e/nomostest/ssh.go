@@ -2,6 +2,7 @@ package nomostest
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,6 +74,30 @@ func generateSSHKeys(nt *NT) string {
 
 	createSecret(nt, testGitNamespace, gitServerSecret,
 		filepath.Join(publicKeyPath(nt)))
+
+	return privateKeyPath(nt)
+}
+
+// downloadSSHKey downloads the private SSH key from Cloud Secret Manager.
+func downloadSSHKey(nt *NT) string {
+	dir := sshDir(nt)
+	err := os.MkdirAll(dir, fileMode)
+	if err != nil {
+		nt.T.Fatal("creating ssh directory:", err)
+	}
+
+	out, err := exec.Command("gcloud", "secrets", "versions", "access", "latest", "--secret=config-sync-ci-ssh-private-key").CombinedOutput()
+	if err != nil {
+		nt.T.Log(string(out))
+		nt.T.Fatal("downloading SSH key:", err)
+	}
+
+	if err := ioutil.WriteFile(privateKeyPath(nt), out, 0600); err != nil {
+		nt.T.Fatal("saving SSH key:", err)
+	}
+
+	createSecret(nt, configmanagement.ControllerNamespace, controllers.GitCredentialVolume,
+		fmt.Sprintf("ssh=%s", privateKeyPath(nt)))
 
 	return privateKeyPath(nt)
 }

@@ -48,22 +48,25 @@ type Repository struct {
 
 	T testing.NTB
 
-	// Name is the repository name.
+	// Name is the local repository name.
 	Name string
+
+	// RemoteRepoName is the name of the remote repository.
+	RemoteRepoName string
+
+	// RemoteURL is the remote URL of the repository.
+	RemoteURL string
 }
 
-// NewRepository creates a repository named `name`, that connects to git-server
-// via port `port`.
+// NewRepository creates a remote repo on the git provider.
+// Locally, it writes the repository to `tmpdir`/repos/`name`.
 //
-// Writes the repository to `tmpdir`/repos/`name`. Repositories in the same
-// test must have unique names.
-//
-// For now, `name` must be "sot.git" until we support dynamically creating
-// repositories.
-func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesystem.SourceFormat) *Repository {
+// For root repo, `name` is `sot.git`.
+// For namespace repo, `name` is the name of the namespace.
+func NewRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *Repository {
 	nt.T.Helper()
 
-	localDir := filepath.Join(tmpDir, "repos", name)
+	localDir := filepath.Join(nt.TmpDir, "repos", name)
 
 	g := &Repository{
 		Root:   localDir,
@@ -71,10 +74,26 @@ func NewRepository(nt *NT, name, tmpDir string, port int, sourceFormat filesyste
 		T:      nt.T,
 		Name:   name,
 	}
-	g.init(nt.gitPrivateKeyPath, port)
+
+	repoName, err := nt.GitProvider.CreateRepository(name)
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	g.RemoteRepoName = repoName
+	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, repoName)
+
+	g.init(nt.gitPrivateKeyPath)
 	g.initialCommit(sourceFormat)
 
 	return g
+}
+
+// ReInit re-initializes the repo to the initial state.
+func (g *Repository) ReInit(nt *NT, sourceFormat filesystem.SourceFormat) {
+	nt.T.Helper()
+
+	g.init(nt.gitPrivateKeyPath)
+	g.initialCommit(sourceFormat)
 }
 
 func (g *Repository) gitCmd(command ...string) *exec.Cmd {
@@ -125,7 +144,7 @@ func (g *Repository) initialCommit(sourceFormat filesystem.SourceFormat) {
 
 // init initializes this git repository and configures it to talk to the cluster
 // under test.
-func (g *Repository) init(privateKey string, port int) {
+func (g *Repository) init(privateKey string) {
 	g.T.Helper()
 
 	if err := os.RemoveAll(g.Root); err != nil {
@@ -153,9 +172,8 @@ func (g *Repository) init(privateKey string, port int) {
 	// 2) Use the private key file we generated.
 	g.Git("config", "core.sshCommand",
 		fmt.Sprintf("ssh -q -o StrictHostKeyChecking=no -i %s", privateKey))
-	// Point the origin remote at the port we've forwarded to git-server.
-	g.Git("remote", "add", remoteName,
-		fmt.Sprintf("ssh://git@localhost:%d/git-server/repos/%s", port, g.Name))
+	// Point the origin remote.
+	g.Git("remote", "add", remoteName, g.RemoteURL)
 }
 
 // Add writes a YAML or JSON representation of obj to `path` in the git

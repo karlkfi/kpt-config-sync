@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/nomos/e2e/nomostest/gitproviders"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
@@ -103,6 +104,14 @@ type NT struct {
 
 	// ReconcilerMetrics is a map of scraped multirepo metrics.
 	ReconcilerMetrics testmetrics.ConfigSyncMetrics
+
+	// GitProvider is the provider that hosts the Git repositories.
+	GitProvider gitproviders.GitProvider
+
+	// RemoteRepositories maintains a map between the repo local name and the remote repository.
+	// It includes both root repo and namespace repos and can be shared among test cases.
+	// It is used to reuse existing repositories instead of creating new ones.
+	RemoteRepositories map[string]*Repository
 }
 
 const (

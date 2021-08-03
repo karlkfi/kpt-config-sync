@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/e2e/nomostest/docker"
+	"github.com/google/nomos/e2e/nomostest/gitproviders"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	testing2 "github.com/google/nomos/e2e/nomostest/testing"
@@ -135,6 +136,8 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		otelCollectorPort:       sharedNt.otelCollectorPort,
 		otelCollectorPodName:    sharedNt.otelCollectorPodName,
 		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
+		GitProvider:             sharedNT.GitProvider,
+		RemoteRepositories:      sharedNT.RemoteRepositories,
 	}
 
 	t.Cleanup(func() {
@@ -162,7 +165,6 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 		resetNamespaceRepos(nt)
 		// reset the root-repo to the initial state so that the namespace repos can be deleted.
 		nt.NamespaceRepos = map[string]string{}
-		nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
 		resetRootRepoSpec(nt, opts.SourceFormat)
 		// delete the namespace repos in case they're set up in the delegated mode.
 		deleteNamespaceRepos(nt)
@@ -172,7 +174,7 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 		}
 	} else {
 		nt.NamespaceRepos = map[string]string{}
-		nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+		nt.Root = resetRepository(nt, rootRepo, opts.SourceFormat)
 		resetMonoRepoSpec(nt, opts.SourceFormat)
 		nt.WaitForRepoSyncs()
 	}
@@ -217,6 +219,8 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		NamespaceRepos:          make(map[string]string),
 		scheme:                  scheme,
 		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
+		GitProvider:             gitproviders.NewGitProvider(*e2e.GitProvider),
+		RemoteRepositories:      make(map[string]*Repository),
 	}
 
 	if *e2e.ImagePrefix == e2e.DefaultImagePrefix {
@@ -236,22 +240,33 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		})
 	}
 
+	t.Cleanup(func() {
+		DeleteRemoteRepos(nt)
+	})
+
 	// You can't add Secrets to Namespaces that don't exist, so create them now.
-	err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace))
-	if err != nil {
+	if err := nt.Create(fake.NamespaceObject(configmanagement.ControllerNamespace)); err != nil {
 		nt.T.Fatal(err)
 	}
-	err = nt.Create(fake.NamespaceObject(metrics.MonitoringNamespace))
-	if err != nil {
+	if err := nt.Create(fake.NamespaceObject(metrics.MonitoringNamespace)); err != nil {
 		nt.T.Fatal(err)
 	}
-	err = nt.Create(gitNamespace())
-	if err != nil {
-		nt.T.Fatal(err)
+
+	if nt.GitProvider.Type() == e2e.Local {
+		if err := nt.Create(gitNamespace()); err != nil {
+			nt.T.Fatal(err)
+		}
+		// Pods don't always restart if the secrets don't exist, so we have to
+		// create the Namespaces + Secrets before anything else.
+		nt.gitPrivateKeyPath = generateSSHKeys(nt)
+
+		waitForGit := installGitServer(nt)
+		if err := waitForGit(); err != nil {
+			t.Fatalf("waiting for git-server Deployment to become available: %v", err)
+		}
+	} else {
+		nt.gitPrivateKeyPath = downloadSSHKey(nt)
 	}
-	// Pods don't always restart if the secrets don't exist, so we have to
-	// create the Namespaces + Secrets before anything else.
-	nt.gitPrivateKeyPath = generateSSHKeys(nt)
 
 	t.Cleanup(func() {
 		if t.Failed() {
@@ -262,11 +277,6 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 			nt.testPods()
 		}
 	})
-
-	waitForGit := installGitServer(nt)
-	if err := waitForGit(); err != nil {
-		t.Fatalf("waiting for git-server Deployment to become available: %v", err)
-	}
 
 	installConfigSync(nt, opts.Nomos)
 
@@ -281,11 +291,13 @@ func setupTestCase(nt *NT, opts *ntopts.New) {
 		allRepos = append(allRepos, repo)
 	}
 
-	nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
-	nt.Root = NewRepository(nt, rootRepo, nt.TmpDir, nt.gitRepoPort, opts.SourceFormat)
+	if nt.GitProvider.Type() == e2e.Local {
+		nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
+	}
+	nt.Root = resetRepository(nt, rootRepo, opts.SourceFormat)
 
 	for nsr := range opts.MultiRepo.NamespaceRepos {
-		nt.NonRootRepos[nsr] = NewRepository(nt, nsr, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
+		nt.NonRootRepos[nsr] = resetRepository(nt, nsr, filesystem.SourceFormatUnstructured)
 	}
 
 	// First wait for CRDs to be established.

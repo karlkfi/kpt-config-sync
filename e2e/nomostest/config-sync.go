@@ -134,11 +134,6 @@ var IsReconcilerManagerConfigMap = func(obj client.Object) bool {
 		obj.GetObjectKind().GroupVersionKind() == kinds.ConfigMap()
 }
 
-// gitRepo returns fully qualified git repo name hosted in test git server.
-func gitRepo(repoName string) string {
-	return fmt.Sprintf("git@test-git-server.config-management-system-test:/git-server/repos/%s", repoName)
-}
-
 // installConfigSync installs ConfigSync on the test cluster, and returns a
 // callback for checking that the installation succeeded.
 func installConfigSync(nt *NT, nomos ntopts.Nomos) {
@@ -392,7 +387,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	rs := fake.RootSyncObject()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
 	rs.Spec.Git = v1alpha1.Git{
-		Repo:      gitRepo(rootRepo),
+		Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
 		Branch:    MainBranch,
 		Dir:       acmeDir,
 		Auth:      "ssh",
@@ -431,8 +426,12 @@ func validateMultiRepoDeployments(nt *NT) error {
 }
 
 func setupRepoSync(nt *NT, ns string) {
+	repo, exist := nt.NonRootRepos[ns]
+	if !exist {
+		nt.T.Fatal("nonexistent repo")
+	}
 	// create RepoSync to initialize the Namespace reconciler.
-	rs := RepoSyncObject(ns)
+	rs := RepoSyncObject(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -714,10 +713,10 @@ func StructuredNSPath(namespace, resourceName string) string {
 }
 
 // RepoSyncObject returns the default RepoSync object in the given namespace.
-func RepoSyncObject(ns string) *v1alpha1.RepoSync {
+func RepoSyncObject(ns, repoURL string) *v1alpha1.RepoSync {
 	rs := fake.RepoSyncObject(core.Namespace(ns))
 	rs.Spec.Git = v1alpha1.Git{
-		Repo:   gitRepo(ns),
+		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    acmeDir,
 		Auth:   "ssh",
@@ -730,10 +729,10 @@ func RepoSyncObject(ns string) *v1alpha1.RepoSync {
 
 // RepoSyncObjectV1Beta1 returns the default RepoSync object
 // with version v1beta1 in the given namespace.
-func RepoSyncObjectV1Beta1(ns string) *v1beta1.RepoSync {
+func RepoSyncObjectV1Beta1(ns, repoURL string) *v1beta1.RepoSync {
 	rs := fake.RepoSyncObjectV1Beta1(core.Namespace(ns))
 	rs.Spec.Git = v1beta1.Git{
-		Repo:   gitRepo(ns),
+		Repo:   repoURL,
 		Branch: MainBranch,
 		Dir:    acmeDir,
 		Auth:   "ssh",
@@ -761,7 +760,11 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 			nt.Root.Add(fmt.Sprintf("acme/cluster/crb-%s.yaml", ns), crb)
 		}
 
-		rs := RepoSyncObject(ns)
+		repo, exist := nt.NonRootRepos[ns]
+		if !exist {
+			nt.T.Fatal("nonexistent repo")
+		}
+		rs := RepoSyncObject(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace, clusterrole, rolebinding, clusterrolebinding and RepoSync")
@@ -891,6 +894,17 @@ func resetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
 	}
 }
 
+// resetRepository re-initializes an existing remote repository or creates a new remote repository.
+func resetRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *Repository {
+	if repo, found := nt.RemoteRepositories[name]; found {
+		repo.ReInit(nt, sourceFormat)
+		return repo
+	}
+	repo := NewRepository(nt, name, sourceFormat)
+	nt.RemoteRepositories[name] = repo
+	return repo
+}
+
 // resetRootRepoSpec sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
 // It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
 func resetRootRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
@@ -900,6 +914,7 @@ func resetRootRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
 			nt.T.Fatal(err)
 		}
 	} else {
+		nt.Root = resetRepository(nt, rootRepo, sourceFormat)
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, acmeDir))
 		nt.WaitForRepoSyncs()
 	}
@@ -912,9 +927,13 @@ func resetNamespaceRepos(nt *NT) {
 		nt.T.Fatal(err)
 	}
 	for _, nr := range namespaceRepos.Items {
-		NewRepository(nt, nr.Namespace, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
-		nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
-			configsync.RepoSyncName, nr.Namespace, 120*time.Second, RepoSyncHasStatusSyncCommit)
+		// reset the namespace repo only when it is in 'nt.NonRootRepos' (created by test).
+		// This prevents from resetting an existing namespace repo from a remote git provider.
+		if _, found := nt.NonRootRepos[nr.Namespace]; found {
+			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, filesystem.SourceFormatUnstructured)
+			nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
+				configsync.RepoSyncName, nr.Namespace, 120*time.Second, RepoSyncHasStatusSyncCommit)
+		}
 	}
 }
 

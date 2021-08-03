@@ -41,8 +41,12 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	repo, exist := nt.NonRootRepos[backendNamespace]
+	if !exist {
+		nt.T.Fatal("nonexistent repo")
+	}
 	rootSync := fake.RootSyncObject()
-	repoSyncBackend := nomostest.RepoSyncObject(backendNamespace)
+	repoSyncBackend := nomostest.RepoSyncObject(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
@@ -156,8 +160,13 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	repo, exist := nt.NonRootRepos[backendNamespace]
+	if !exist {
+		nt.T.Fatal("nonexistent repo")
+	}
+
 	rootSync := fake.RootSyncObjectV1Beta1()
-	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNamespace)
+	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)
