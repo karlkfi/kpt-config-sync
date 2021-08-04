@@ -123,3 +123,10 @@ test-e2e-go-local-multi-repo: __download_prober_creds
 	$(MAKE) E2E_ARGS="--multirepo" \
 		PROBER_CREDS="/tmp/prober_runner_client_key.json" \
 		__docker-run-e2e-go
+
+# The CI target that runs the e2e test for multi repo with KCC resources on a GKE cluster.
+test-e2e-go-local-multi-repo-kcc: __download_prober_creds
+	$(MAKE) E2E_ARGS="--multirepo --kcc -run=TestKCC*" \
+		PROBER_CREDS="/tmp/prober_runner_client_key.json" \
+		__docker-run-e2e-go
+

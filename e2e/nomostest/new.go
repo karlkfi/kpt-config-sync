@@ -63,6 +63,10 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 		t.Skip("Test skipped since it is a stress test")
 	}
 
+	if !*e2e.Kcc && optsStruct.KccTest {
+		t.Skip("Test skipped since it is a KCC test")
+	}
+
 	switch {
 	case optsStruct.Nomos.MultiRepo:
 		if optsStruct.MultiRepoIncompatible {

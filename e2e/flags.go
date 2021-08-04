@@ -23,6 +23,10 @@ var Load = flag.Bool("load", false,
 var Stress = flag.Bool("stress", false,
 	"If true, run stress tests.")
 
+// Kcc enables running the e2e tests for kcc resources.
+var Kcc = flag.Bool("kcc", false,
+	"If true, run kcc tests.")
+
 // Debug enables running the test in debug mode.
 // In debug mode:
 // 1) Test execution immediately stops on a call to t.Fatal.
