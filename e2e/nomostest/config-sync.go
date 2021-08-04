@@ -914,7 +914,7 @@ func resetNamespaceRepos(nt *NT) {
 	for _, nr := range namespaceRepos.Items {
 		NewRepository(nt, nr.Namespace, nt.TmpDir, nt.gitRepoPort, filesystem.SourceFormatUnstructured)
 		nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
-			configsync.RepoSyncName, nr.Namespace, RepoSyncHasStatusSyncCommit)
+			configsync.RepoSyncName, nr.Namespace, 120*time.Second, RepoSyncHasStatusSyncCommit)
 	}
 }
 

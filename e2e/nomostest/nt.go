@@ -429,20 +429,30 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 //
 // If you want to check the internals of specific objects (e.g. the error field
 // of a RepoSync), use nt.Validate() - possibly in a Retry.
-func (nt *NT) WaitForRepoSyncs() {
+func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	nt.T.Helper()
+
+	waitForRepoSyncsOptions := newWaitForRepoSyncsOptions()
+	for _, option := range options {
+		option(&waitForRepoSyncsOptions)
+	}
+
+	syncTimeout := waitForRepoSyncsOptions.timeout
 
 	if nt.MultiRepo {
 		nt.WaitForRootSync(kinds.RootSync(),
-			"root-sync", configmanagement.ControllerNamespace, RootSyncHasStatusSyncCommit)
+			"root-sync", configmanagement.ControllerNamespace, syncTimeout, RootSyncHasStatusSyncCommit)
 
-		for ns, repo := range nt.NamespaceRepos {
-			nt.WaitForRepoSync(repo, kinds.RepoSync(),
-				configsync.RepoSyncName, ns, RepoSyncHasStatusSyncCommit)
+		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
+		if syncNamespaceRepos {
+			for ns, repo := range nt.NamespaceRepos {
+				nt.WaitForRepoSync(repo, kinds.RepoSync(),
+					configsync.RepoSyncName, ns, syncTimeout, RepoSyncHasStatusSyncCommit)
+			}
 		}
 	} else {
 		nt.WaitForRootSync(kinds.Repo(),
-			"repo", "", RepoHasStatusSyncLatestToken)
+			"repo", "", syncTimeout, RepoHasStatusSyncLatestToken)
 	}
 }
 
@@ -482,7 +492,7 @@ func (nt *NT) GetCurrentMetrics(syncOption MetricsSyncOption) testmetrics.Config
 // WaitForRepoSync waits for the specified RepoSync to be synced to HEAD
 // of the specified repository.
 func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
-	name, namespace string, syncedTo func(sha1 string) Predicate) {
+	name, namespace string, timeout time.Duration, syncedTo func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	// Get the repository this RepoSync is syncing to, and ensure it is synced
@@ -492,7 +502,7 @@ func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
 		nt.T.Fatal("checked if nonexistent repo is synced")
 	}
 	sha1 := repo.Hash()
-	nt.waitForSync(gvk, name, namespace, syncedTo(sha1))
+	nt.waitForSync(gvk, name, namespace, timeout, syncedTo(sha1))
 }
 
 // waitForSync waits for the specified object to be synced.
@@ -503,13 +513,15 @@ func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
 //
 // name and namespace identify the specific object to check.
 //
+// timeout specifies the maximum duration allowed for the object to sync.
+//
 // predicates is a list of Predicates to use to tell whether the object is
 // synced as desired.
-func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, predicates ...Predicate) {
+func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, predicates ...Predicate) {
 	nt.T.Helper()
 
 	// Wait for the repository to report it is synced.
-	took, err := Retry(120*time.Second, func() error {
+	took, err := Retry(timeout, func() error {
 		obj, err := nt.scheme.New(gvk)
 		if err != nil {
 			return fmt.Errorf("%w: got unrecognized GVK %v", ErrWrongType, gvk)
@@ -547,9 +559,11 @@ func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, p
 //
 // name and namespace uniquely specify an object of the desired type.
 //
+// timeout specifies the maximum duration allowed for the object to sync.
+//
 // syncedTo specify how to check that the object is synced to HEAD. This function
 // automatically checks for HEAD of the root repository.
-func (nt *NT) WaitForRootSync(gvk schema.GroupVersionKind, name, namespace string, syncedTo ...func(sha1 string) Predicate) {
+func (nt *NT) WaitForRootSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	sha1 := nt.Root.Hash()
@@ -557,7 +571,7 @@ func (nt *NT) WaitForRootSync(gvk schema.GroupVersionKind, name, namespace strin
 	for i, s := range syncedTo {
 		isSynced[i] = s(sha1)
 	}
-	nt.waitForSync(gvk, name, namespace, isSynced...)
+	nt.waitForSync(gvk, name, namespace, timeout, isSynced...)
 }
 
 // RenewClient gets a new Client for talking to the cluster.
@@ -1004,5 +1018,35 @@ func SyncMetricsToLatestCommit(nt *NT) MetricsSyncOption {
 func SyncMetricsToReconcilerSourceError(reconciler string) MetricsSyncOption {
 	return func(metrics *testmetrics.ConfigSyncMetrics) error {
 		return metrics.ValidateReconcilerErrors(reconciler, 1, 0)
+	}
+}
+
+type waitForRepoSyncsOptions struct {
+	timeout            time.Duration
+	syncNamespaceRepos bool
+}
+
+func newWaitForRepoSyncsOptions() waitForRepoSyncsOptions {
+	options := waitForRepoSyncsOptions{}
+	options.timeout = 120 * time.Second
+	options.syncNamespaceRepos = true
+
+	return options
+}
+
+// WaitForRepoSyncsOption is an optional parameter for WaitForRepoSyncs.
+type WaitForRepoSyncsOption func(*waitForRepoSyncsOptions)
+
+// WithTimeout provides the timeout to WaitForRepoSyncs.
+func WithTimeout(timeout time.Duration) WaitForRepoSyncsOption {
+	return func(options *waitForRepoSyncsOptions) {
+		options.timeout = timeout
+	}
+}
+
+// RootSyncOnly specifies that only the root-sync repo should be synced.
+func RootSyncOnly() WaitForRepoSyncsOption {
+	return func(options *waitForRepoSyncsOptions) {
+		options.syncNamespaceRepos = false
 	}
 }

@@ -7,13 +7,11 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/filesystem"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -160,9 +158,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	// Switch to multi-repo mode.
 	nomostest.SwitchMode(t, nt)
 
-	nt.WaitForRootSync(kinds.RootSync(),
-		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
-	// Ensure the Service exists and has the target port we set.
+	nt.WaitForRepoSyncs()
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))
 	if err != nil {
 		nt.T.Fatal(err)
@@ -172,8 +168,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	updatedService.Spec.Ports[0].TargetPort = intstr.FromInt(targetPort2)
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/service.yaml", ns), updatedService)
 	nt.Root.CommitAndPush("update declared Service")
-	nt.WaitForRootSync(kinds.RootSync(),
-		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
+	nt.WaitForRepoSyncs()
 
 	// Ensure the Service exists and has the target port we set.
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort2))

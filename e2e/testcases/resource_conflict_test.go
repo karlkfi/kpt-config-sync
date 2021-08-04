@@ -12,12 +12,10 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -85,8 +83,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 
 	// The RootSync should report no problems - it has no way to detect there is
 	// a problem.
-	nt.WaitForRootSync(kinds.RootSync(),
-		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
+	nt.WaitForRepoSyncs(nomostest.RootSyncOnly())
 
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
@@ -178,8 +175,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	nt.Root.Add("acme/namespaces/shipping/pod-role.yaml", rootPodRole())
 	nt.Root.CommitAndPush("add conflicting pod role to Root")
 
-	nt.WaitForRootSync(kinds.RootSync(),
-		"root-sync", configmanagement.ControllerNamespace, nomostest.RootSyncHasStatusSyncCommit)
+	nt.WaitForRepoSyncs(nomostest.RootSyncOnly())
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.Validate(configsync.RepoSyncName, "shipping", &v1alpha1.RepoSync{},

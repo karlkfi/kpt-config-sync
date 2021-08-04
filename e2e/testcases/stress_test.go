@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
@@ -28,7 +29,7 @@ func Test_10000_Objects(t *testing.T) {
 		nt.Root.Add(path(i), configMap(1, i))
 	}
 	nt.Root.CommitAndPush("add ConfigMaps")
-	nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(1 * time.Hour))
 }
 
 func Test_100_x_100_Objects(t *testing.T) {
@@ -51,7 +52,7 @@ func Test_100_x_100_Objects(t *testing.T) {
 		}
 		repo.CommitAndPush("Add ConfigMaps")
 	}
-	nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(30 * time.Minute))
 
 	list := &corev1.ConfigMapList{}
 	err := nt.List(list, client.MatchingLabels{label: value})
