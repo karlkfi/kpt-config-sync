@@ -37,7 +37,7 @@ func DeclaredFields(objs *objects.Raw) status.MultiError {
 				// No schema checking involved.
 				errs = status.Append(errs, err)
 			default:
-				errs = status.Append(errs, status.InternalErrorBuilder.Sprint("failed to encode declared fields").Wrap(err).Build())
+				errs = status.Append(errs, EncodeDeclaredFieldError(obj.Unstructured, err))
 				// This error could be due to an out of date schema.
 				// So the converter needs to be refreshed.
 				needRefresh = true
