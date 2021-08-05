@@ -228,7 +228,7 @@ func (csm ConfigSyncMetrics) validateAPICallDuration(reconciler, operation, gvk 
 		{Key: ocmetrics.KeyStatus, Value: "success"},
 		{Key: ocmetrics.KeyType, Value: gvk},
 	})
-	return csm.validateMetric(ocmetrics.APICallDurationView.Name, validation)
+	return errors.Wrapf(csm.validateMetric(ocmetrics.APICallDurationView.Name, validation), "%s %s operation", gvk, operation)
 }
 
 // validateDeclaredResources checks that the declared_resources metric is recorded
@@ -257,7 +257,7 @@ func (csm ConfigSyncMetrics) validateApplyOperations(reconciler, operation, gvk 
 		}),
 		valueGTE(value),
 	}
-	return csm.validateMetric(ocmetrics.ApplyOperationsView.Name, validations...)
+	return errors.Wrapf(csm.validateMetric(ocmetrics.ApplyOperationsView.Name, validations...), "%s %s operation", gvk, operation)
 }
 
 // validateWatches checks that the `watches` metric is recorded with
@@ -275,7 +275,7 @@ func (csm ConfigSyncMetrics) validateWatches(reconciler, gvk, value string) erro
 		}),
 		valueEquals(mv),
 	}
-	return csm.validateMetric(ocmetrics.WatchesView.Name, validations...)
+	return errors.Wrap(csm.validateMetric(ocmetrics.WatchesView.Name, validations...), gvk)
 }
 
 // validateRemediateDuration checks that the `remediate_duration_seconds` metric
@@ -289,7 +289,7 @@ func (csm ConfigSyncMetrics) validateRemediateDuration(reconciler, gvk string) e
 			{Key: ocmetrics.KeyType, Value: gvk},
 		}),
 	}
-	return csm.validateMetric(ocmetrics.RemediateDurationView.Name, validations...)
+	return errors.Wrap(csm.validateMetric(ocmetrics.RemediateDurationView.Name, validations...), gvk)
 }
 
 // validateMetric checks that at least one measurement from the metric passes all the validations.
