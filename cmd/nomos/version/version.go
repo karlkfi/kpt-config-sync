@@ -213,7 +213,7 @@ func entries(vs map[string]vErr) []entry {
 	}
 	// Also fill in the client version here.
 	es = append(es, entry{
-		component: "<client>",
+		component: "<nomos CLI>",
 		vErr:      vErr{version: clientVersion(), err: nil}})
 	sort.SliceStable(es, func(i, j int) bool {
 		return es[i].name < es[j].name
@@ -233,7 +233,7 @@ func tabulate(es []entry, out io.Writer) {
 		}
 	}()
 	// nolint:errcheck
-	fmt.Fprintf(w, format, "CURRENT", "NAME", "COMPONENT", "VERSION")
+	fmt.Fprintf(w, format, "CURRENT", "CLUSTER_CONTEXT_NAME", "COMPONENT", "VERSION")
 	for _, e := range es {
 		if e.err != nil {
 			// nolint:errcheck
