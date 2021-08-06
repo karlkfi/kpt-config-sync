@@ -304,11 +304,33 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 func (nt *NT) ValidateMetrics(syncOption MetricsSyncOption, fn func() error) error {
 	if nt.MultiRepo {
 		prevMetrics := nt.ReconcilerMetrics
-		currentMetrics := nt.GetCurrentMetrics(syncOption)
-
+		took, currentMetrics := nt.GetCurrentMetrics(syncOption)
 		nt.updateMetrics(prevMetrics, currentMetrics)
 
-		return fn()
+		nt.T.Logf("took %v to wait for metrics to be synced", took)
+
+		err := fn()
+
+		if err != nil {
+			// Although not ideal, certain scenarios require metrics to be repulled to allow the validations parameter
+			// function to successfully pass. Original error is logged so these scenarios can be reseached and resolved
+			// in the future.
+
+			originalErr := err
+
+			duration, err := Retry(20*time.Second, func() error {
+				_, currentMetrics = nt.GetCurrentMetrics()
+				nt.updateMetrics(prevMetrics, currentMetrics)
+
+				return fn()
+			})
+
+			if err == nil {
+				nt.T.Log(errors.Wrapf(originalErr, "WARNING: Metric validations initially failed, retry successful after %v", duration))
+			}
+
+			return err
+		}
 	}
 
 	return nil
@@ -363,7 +385,7 @@ func (nt *NT) ValidateMultiRepoMetrics(reconciler string, numResources int, gvkM
 		// Validate metrics that have a GVK "type" TagKey.
 		for _, tm := range gvkMetrics {
 			if err := nt.ReconcilerMetrics.ValidateGVKMetrics(reconciler, tm); err != nil {
-				return err
+				return errors.Wrapf(err, "%s %s operation", tm.GVK, tm.APIOp)
 			}
 		}
 	}
@@ -458,13 +480,13 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 
 // GetCurrentMetrics fetches metrics from the otel-collector ensuring that the
 // metrics have been updated for with the most recent commit hashes.
-func (nt *NT) GetCurrentMetrics(syncOption MetricsSyncOption) testmetrics.ConfigSyncMetrics {
+func (nt *NT) GetCurrentMetrics(syncOptions ...MetricsSyncOption) (time.Duration, testmetrics.ConfigSyncMetrics) {
 	nt.T.Helper()
 
-	var metrics testmetrics.ConfigSyncMetrics
-
 	if nt.MultiRepo {
-		_, err := Retry(30*time.Second, func() error {
+		var metrics testmetrics.ConfigSyncMetrics
+
+		took, err := Retry(45*time.Second, func() error {
 			var err error
 			metrics, err = testmetrics.ParseMetrics(nt.otelCollectorPort)
 			if err != nil {
@@ -474,9 +496,11 @@ func (nt *NT) GetCurrentMetrics(syncOption MetricsSyncOption) testmetrics.Config
 				return err
 			}
 
-			err = syncOption(&metrics)
-			if err != nil {
-				return err
+			for _, syncOption := range syncOptions {
+				err = syncOption(&metrics)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -484,9 +508,11 @@ func (nt *NT) GetCurrentMetrics(syncOption MetricsSyncOption) testmetrics.Config
 		if err != nil {
 			nt.T.Fatalf("unable to get latest metrics: %v", err)
 		}
+
+		return took, metrics
 	}
 
-	return metrics
+	return 0, nil
 }
 
 // WaitForRepoSync waits for the specified RepoSync to be synced to HEAD

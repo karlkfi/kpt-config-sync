@@ -161,25 +161,23 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	}
 
 	// Validate multi-repo metrics.
-	_, err = nomostest.Retry(20*time.Second, func() error {
-		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
-				metrics.GVKMetric{
-					GVK:   "Namespace",
-					APIOp: "delete",
-					ApplyOps: []metrics.Operation{
-						{Name: "delete", Count: 1},
-					},
-					Watches: "1",
-				})
-			if err != nil {
-				return err
-			}
-			// Validate no error metrics are emitted.
-			// TODO(b/162601559): internal_errors_total metric from diff.go
-			//return nt.ValidateErrorMetricsNotFound()
-			return nil
-		})
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+			metrics.GVKMetric{
+				GVK:   "Namespace",
+				APIOp: "delete",
+				ApplyOps: []metrics.Operation{
+					{Name: "delete", Count: 1},
+				},
+				Watches: "1",
+			})
+		if err != nil {
+			return err
+		}
+		// Validate no error metrics are emitted.
+		// TODO(b/162601559): internal_errors_total metric from diff.go
+		//return nt.ValidateErrorMetricsNotFound()
+		return nil
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
