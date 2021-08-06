@@ -80,6 +80,10 @@ func newKind(t testing.NTB, name, tmpDir string, version KindVersion) *rest.Conf
 	p := cluster.NewProvider()
 	kcfgPath := filepath.Join(tmpDir, Kubeconfig)
 
+	if err := os.Setenv(Kubeconfig, kcfgPath); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
 	start := time.Now()
 	t.Logf("started creating cluster at %s", start.Format(time.RFC3339))
 
