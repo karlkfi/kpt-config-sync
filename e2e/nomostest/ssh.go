@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/google/nomos/e2e/nomostest/gitproviders"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 )
@@ -86,13 +87,13 @@ func downloadSSHKey(nt *NT) string {
 		nt.T.Fatal("creating ssh directory:", err)
 	}
 
-	out, err := exec.Command("gcloud", "secrets", "versions", "access", "latest", "--secret=config-sync-ci-ssh-private-key").CombinedOutput()
+	out, err := gitproviders.FetchCloudSecret(gitproviders.PrivateSSHKey)
 	if err != nil {
-		nt.T.Log(string(out))
+		nt.T.Log(out)
 		nt.T.Fatal("downloading SSH key:", err)
 	}
 
-	if err := ioutil.WriteFile(privateKeyPath(nt), out, 0600); err != nil {
+	if err := ioutil.WriteFile(privateKeyPath(nt), []byte(out), 0600); err != nil {
 		nt.T.Fatal("saving SSH key:", err)
 	}
 

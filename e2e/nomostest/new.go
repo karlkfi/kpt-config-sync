@@ -223,7 +223,7 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		NamespaceRepos:          make(map[string]string),
 		scheme:                  scheme,
 		ReconcilerMetrics:       make(testmetrics.ConfigSyncMetrics),
-		GitProvider:             gitproviders.NewGitProvider(*e2e.GitProvider),
+		GitProvider:             gitproviders.NewGitProvider(t, *e2e.GitProvider),
 		RemoteRepositories:      make(map[string]*Repository),
 	}
 

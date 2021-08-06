@@ -110,9 +110,22 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 
 	// Add audit namespace.
 	auditNS := "audit"
+	// The test will delete the branch later, but the main branch can't be deleted
+	// on some Git providers (e.g. Bitbucket), so using a develop branch.
+	devBranch := "develop"
+	nt.Root.CreateBranch(devBranch)
+	nt.Root.CheckoutBranch(devBranch)
 	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", auditNS),
 		fake.NamespaceObject(auditNS))
-	nt.Root.CommitAndPush("add namespace to acme directory")
+	nt.Root.CommitAndPushBranch("add namespace to acme directory", devBranch)
+
+	// Update RootSync to sync from the dev branch
+	if nt.MultiRepo {
+		rs := fake.RootSyncObject()
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"branch": "%s"}}}`, devBranch))
+	} else {
+		resetGitBranch(nt, devBranch)
+	}
 	nt.WaitForRepoSyncs()
 
 	// Validate namespace 'acme' created.
@@ -122,7 +135,7 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 	}
 
 	// Make the sync fail by invalidating the source repo.
-	nt.Root.RenameBranch(nomostest.MainBranch, "invalid-branch")
+	nt.Root.RenameBranch(devBranch, "invalid-branch")
 	if nt.MultiRepo {
 		nt.WaitForRootSyncSourceError(status.SourceErrorCode)
 	} else {
@@ -130,8 +143,15 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 	}
 
 	// Change the remote branch name back to the original name.
-	nt.Root.RenameBranch("invalid-branch", nomostest.MainBranch)
+	nt.Root.RenameBranch("invalid-branch", devBranch)
 	nt.WaitForRepoSyncs()
+	// Reset RootSync because the cleanup stage will check if RootSync is synced from the main branch.
+	if nt.MultiRepo {
+		rs := fake.RootSyncObject()
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"branch": "%s"}}}`, nomostest.MainBranch))
+	} else {
+		resetGitBranch(nt, nomostest.MainBranch)
+	}
 }
 
 // resetGitBranch updates GIT_SYNC_BRANCH in the config map and restart the reconcilers.

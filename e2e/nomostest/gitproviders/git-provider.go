@@ -2,6 +2,7 @@ package gitproviders
 
 import (
 	"github.com/google/nomos/e2e"
+	"github.com/google/nomos/e2e/nomostest/testing"
 )
 
 const (
@@ -19,10 +20,14 @@ type GitProvider interface {
 }
 
 // NewGitProvider creates a GitProvider for the specific provider type.
-func NewGitProvider(provider string) GitProvider {
+func NewGitProvider(t testing.NTB, provider string) GitProvider {
 	switch provider {
 	case e2e.Bitbucket:
-		return &BitbucketClient{}
+		client, err := newBitbucketClient()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return client
 	default:
 		return &LocalProvider{}
 	}
