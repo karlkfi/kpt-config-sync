@@ -152,6 +152,9 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 }
 
 func TestBats(t *testing.T) {
+	if *e2e.GitProvider != e2e.Local {
+		t.Skip("Skip running bats test on non-local git providers")
+	}
 	e2e.EnableParallel(t)
 	allTests := func(int) bool {
 		return true
