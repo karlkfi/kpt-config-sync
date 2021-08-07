@@ -343,9 +343,9 @@ func setupTestCase(nt *NT, opts *ntopts.New) {
 // SwitchMode switches either from mono-repo to multi-repo
 // or from multi-repo to mono-repo.
 // It then installs ConfigSync for the new mode.
-func SwitchMode(t *testing.T, nt *NT) {
+func SwitchMode(nt *NT, sourceFormat filesystem.SourceFormat) {
 	nt.MultiRepo = !nt.MultiRepo
-	nm := ntopts.Nomos{MultiRepo: nt.MultiRepo}
+	nm := ntopts.Nomos{SourceFormat: sourceFormat, MultiRepo: nt.MultiRepo}
 	installConfigSync(nt, nm)
 	var err error
 	if nt.MultiRepo {
@@ -354,11 +354,11 @@ func SwitchMode(t *testing.T, nt *NT) {
 		err = waitForCRDs(nt, monoRepoCRDs)
 	}
 	if err != nil {
-		t.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
+		nt.T.Fatalf("waiting for ConfigSync CRDs to become established: %v", err)
 	}
 	err = waitForConfigSync(nt, nm)
 	if err != nil {
-		t.Errorf("waiting for ConfigSync Deployments to become available: %v", err)
+		nt.T.Errorf("waiting for ConfigSync Deployments to become available: %v", err)
 	}
 }
 

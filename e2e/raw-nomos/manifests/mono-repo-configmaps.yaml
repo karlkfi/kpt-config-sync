@@ -20,7 +20,7 @@ metadata:
 data:
   GIT_KNOWN_HOSTS: "false"
   GIT_SYNC_BRANCH: main
-  GIT_SYNC_REPO: git@test-git-server.config-management-system-test:/git-server/repos/sot.git
+  GIT_SYNC_REPO: GIT_REPO_URL
   GIT_SYNC_REV: HEAD
   GIT_SYNC_WAIT: "1"
   GIT_SYNC_SSH: "true"

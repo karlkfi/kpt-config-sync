@@ -12,7 +12,7 @@ load "../lib/nomos"
 FILE_NAME="$(basename "${BATS_TEST_FILENAME}" '.bats')"
 
 test_teardown() {
-  repair_state
+  nomos::reset_mono_repo_configmaps
 }
 
 @test "${FILE_NAME}: Syncs correctly with explicit namespace declarations" {
@@ -73,9 +73,4 @@ test_teardown() {
   resource::check_count -c 0 -r namespace -l "default.tree.hnc.x-k8s.io=0"
   resource::check_count -c 0 -r namespace -a "hnc.x-k8s.io/managed-by=configmanagement.gke.io"
   resource::check role pod-reader-default -n default
-}
-
-function repair_state() {
-  kubectl apply -f "${MANIFEST_DIR}/mono-repo-configmaps.yaml"
-  nomos::restart_pods
 }

@@ -76,7 +76,7 @@ func TestSwitchFromMultiRepoToMonoRepo(t *testing.T) {
 	}
 
 	// Switch to mono-repo mode.
-	nomostest.SwitchMode(t, nt)
+	nomostest.SwitchMode(nt, nt.Root.Format)
 
 	nt.WaitForRepoSyncs()
 	// Ensure the Service exists and has the target port we set.
@@ -156,7 +156,7 @@ func TestSwitchFromMonoRepoToMultiRepo(t *testing.T) {
 	}
 
 	// Switch to multi-repo mode.
-	nomostest.SwitchMode(t, nt)
+	nomostest.SwitchMode(nt, nt.Root.Format)
 
 	nt.WaitForRepoSyncs()
 	err = nt.Validate(serviceName, ns, &corev1.Service{}, hasTargetPort(targetPort1))

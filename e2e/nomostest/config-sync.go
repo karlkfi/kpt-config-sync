@@ -140,7 +140,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
-	objs := installationManifests(nt, tmpManifestsDir)
+	objs := installationManifests(nt, tmpManifestsDir, nomos.SourceFormat)
 	objs = convertObjects(nt, objs)
 	if nomos.MultiRepo {
 		filesystemPollingPeriod = nt.FilesystemPollingPeriod
@@ -242,7 +242,7 @@ func copyDirContents(src, dest string) error {
 
 // installationManifests generates the ConfigSync installation YAML and copies
 // it to the test's temporary directory.
-func installationManifests(nt *NT, tmpManifestsDir string) []client.Object {
+func installationManifests(nt *NT, tmpManifestsDir string, sourceFormat filesystem.SourceFormat) []client.Object {
 	nt.T.Helper()
 	err := os.MkdirAll(tmpManifestsDir, fileMode)
 	if err != nil {
@@ -261,12 +261,29 @@ func installationManifests(nt *NT, tmpManifestsDir string) []client.Object {
 	}
 
 	// Copy ConfigMaps
-	err = copyFile(monoConfigMaps, filepath.Join(tmpManifestsDir, monoConfigMapsName))
+	// 'GIT_REPO_URL' in the `git-sync` configmap for monorepo-mode needs to be reset dynamically.
+	bytes, err := ioutil.ReadFile(monoConfigMaps)
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-	err = copyFile(multiConfigMaps, filepath.Join(tmpManifestsDir, multiConfigMapsName))
-	if err != nil {
+
+	var syncURL string
+	if nt.GitProvider.Type() == e2e.Local {
+		syncURL = nt.GitProvider.SyncURL(rootRepo)
+	} else {
+		if nt.Root == nil {
+			// Setting GIT_REPO_URL in the configmap requires a remote repo to be present, so we need to create one if not exists.
+			// We can't call resetRepository() because it resets the existing repo to an initial state.
+			// There are cases that we want to install config sync but keep using the current repo (e.g. switch_mode_test.go).
+			nt.Root = NewRepository(nt, rootRepo, sourceFormat)
+		}
+		syncURL = nt.GitProvider.SyncURL(nt.Root.RemoteRepoName)
+	}
+	replaced := strings.ReplaceAll(string(bytes), "GIT_REPO_URL", syncURL)
+	if err := ioutil.WriteFile(filepath.Join(tmpManifestsDir, monoConfigMapsName), []byte(replaced), fileMode); err != nil {
+		nt.T.Fatal(err)
+	}
+	if err := copyFile(multiConfigMaps, filepath.Join(tmpManifestsDir, multiConfigMapsName)); err != nil {
 		nt.T.Fatal(err)
 	}
 
@@ -901,7 +918,6 @@ func resetRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) 
 		return repo
 	}
 	repo := NewRepository(nt, name, sourceFormat)
-	nt.RemoteRepositories[name] = repo
 	return repo
 }
 

@@ -191,3 +191,18 @@ function nomos::__import_error_code() {
     kubectl get repo repo -o=jsonpath='{.status.import.errors[0].code}'
   fi
 }
+
+# Resets the mono-repo configmaps to the initial state.
+# It also restarts the nomos pods to pick up the new config.
+function nomos::reset_mono_repo_configmaps() {
+  if ! env::csmr; then
+    # Replace GIT_REPO_URL with the local test git-server URL.
+    # Bats tests will be skipped with other git providers.
+    sed -e "s|GIT_REPO_URL|git@test-git-server.config-management-system-test:/git-server/repos/sot.git|g" \
+      "${MANIFEST_DIR}/mono-repo-configmaps.yaml" \
+      | tee mono-repo-configmaps.copy.yaml \
+      | kubectl apply -f -
+    rm mono-repo-configmaps.copy.yaml
+    nomos::restart_pods
+  fi
+}

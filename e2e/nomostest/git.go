@@ -76,6 +76,8 @@ func NewRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *R
 	}
 
 	repoName, err := nt.GitProvider.CreateRepository(name)
+	// Add the repo to nt.RemoteRepositories immediately after it is created to reuse the repo.
+	nt.RemoteRepositories[name] = g
 	if err != nil {
 		nt.T.Fatal(err)
 	}
