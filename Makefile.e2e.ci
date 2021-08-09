@@ -78,7 +78,7 @@ GCP_ZONE ?= us-central1-a
 # Run the golang e2e tests sequentially (--parallel 1) on a GKE cluster.
 # It requires a GKE cluster to be installed in `$(GCP_PROJECT)` and `$(GCP_ZONE)`.
 # The cluster name should follow the pattern `$(USER)-cluster-1`.
-__docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
+__docker-run-e2e-go-gke: push-to-gcr-nomos __build-e2e-go-container
 	@echo "+++ Running go e2e tests $(E2E_ARGS)"
 	@echo "GCP_PROJECT=$(GCP_PROJECT)"
 	@echo "GCP_CLUSTER=$(GCP_CLUSTER)"
@@ -104,29 +104,33 @@ __docker-run-e2e-go: push-to-gcr-nomos __build-e2e-go-container
 			--image-prefix=gcr.io/$(GCR_PREFIX) \
 			--image-tag=$(LATEST_IMAGE_TAG)
 
-# The CI target that runs the golang e2e test for mono repo on a GKE cluster in prow.
-test-e2e-go-ci-mono-repo:
-	$(MAKE) PROBER_CREDS="/etc/prober-gcp-service-account/prober_runner_client_key.json" \
-		__docker-run-e2e-go
+# The CI target that runs the golang e2e test on a GKE cluster in prow with various E2E_ARGS.
+# Examples:
+# 1. Run tests in mono-repo mode:
+#    make test-e2e-go-gke-ci
+# 2. Run tests in multi-repo mode:
+#    make E2E_ARGS="--multirepo" test-e2e-go-gke-ci
+# 3. Run tests in multi-repo mode with Bitbucket:
+#    make E2E_ARGS="--multirepo --git-provider=bitbucket" test-e2e-go-gke-ci
+# 4. Run tests in mono-repo mode with Bitbucket:
+#    make E2E_ARGS="--git-provider=bitbucket" test-e2e-go-gke-ci
+# 5. Run tests in multi-repo mode with KCC resources:
+#    make E2E_ARGS="--multirepo --kcc -run=TestKCC*" test-e2e-go-gke-ci"
+test-e2e-go-gke-ci:
+	$(MAKE) E2E_ARGS="$(E2E_ARGS)" PROBER_CREDS="/etc/prober-gcp-service-account/prober_runner_client_key.json" \
+		__docker-run-e2e-go-gke
 
-# The CI target that runs the golang e2e test for multi repo on a GKE cluster in prow.
-test-e2e-go-ci-multi-repo:
-	$(MAKE) PROBER_CREDS="/etc/prober-gcp-service-account/prober_runner_client_key.json" \
-		E2E_ARGS="--multirepo" __docker-run-e2e-go
-
-# The CI target that runs the golang e2e test for mono repo on a GKE cluster from a local machine.
-test-e2e-go-local-mono-repo: __download_prober_creds
-	$(MAKE) PROBER_CREDS="/tmp/prober_runner_client_key.json" __docker-run-e2e-go
-
-# The CI target that runs the golang e2e test for multi repo on a GKE cluster from a local machine.
-test-e2e-go-local-multi-repo: __download_prober_creds
-	$(MAKE) E2E_ARGS="--multirepo" \
-		PROBER_CREDS="/tmp/prober_runner_client_key.json" \
-		__docker-run-e2e-go
-
-# The CI target that runs the e2e test for multi repo with KCC resources on a GKE cluster.
-test-e2e-go-local-multi-repo-kcc: __download_prober_creds
-	$(MAKE) E2E_ARGS="--multirepo --kcc -run=TestKCC*" \
-		PROBER_CREDS="/tmp/prober_runner_client_key.json" \
-		__docker-run-e2e-go
-
+# The CI target that runs the golang e2e test for mono repo on a GKE cluster from a local machine with various E2E_ARGS.
+# Examples:
+# 1. Run tests in mono-repo mode:
+#    make test-e2e-go-gke-local
+# 2. Run tests in multi-repo mode:
+#    make E2E_ARGS="--multirepo" test-e2e-go-gke-local
+# 3. Run tests in multi-repo mode with Bitbucket:
+#    make E2E_ARGS="--multirepo --git-provider=bitbucket" test-e2e-go-gke-local
+# 4. Run tests in mono-repo mode with Bitbucket:
+#    make E2E_ARGS="--git-provider=bitbucket" test-e2e-go-gke-local
+# 5. Run tests in multi-repo mode with KCC resources:
+#    make E2E_ARGS="--multirepo --kcc -run=TestKCC*" test-e2e-go-gke-local"
+test-e2e-go-gke-local: __download_prober_creds
+	$(MAKE) E2E_ARGS="$(E2E_ARGS)" PROBER_CREDS="/tmp/prober_runner_client_key.json" __docker-run-e2e-go-gke
