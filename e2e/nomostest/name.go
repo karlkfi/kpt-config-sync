@@ -15,7 +15,8 @@ import (
 // so we know we aren't missing any of the text.
 var re = regexp.MustCompile(`[A-Z][^A-Z]*`)
 
-func testClusterName(t testing.NTB) string {
+// TestClusterName returns the name of the test cluster.
+func TestClusterName(t testing.NTB) string {
 	t.Helper()
 
 	// Kind seems to allow a max cluster name length of 49.  If we exceed that, hash the

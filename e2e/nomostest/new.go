@@ -110,7 +110,7 @@ func New(t *testing.T, ntOptions ...ntopts.Opt) *NT {
 	e2e.EnableParallel(t)
 	tw := testing2.New(t)
 
-	optsStruct := NewOptStruct(testClusterName(tw), TestDir(tw), tw, ntOptions...)
+	optsStruct := NewOptStruct(TestClusterName(tw), TestDir(tw), tw, ntOptions...)
 	if *e2e.ShareTestEnv {
 		return SharedTestEnv(tw, optsStruct)
 	}
