@@ -21,7 +21,7 @@ var _ id.Path = Absolute{}
 //
 // It is an error to pass a non-absolute path.
 func AbsoluteSlash(p string) (Absolute, error) {
-	if !path.IsAbs(p) {
+	if !filepath.IsAbs(p) {
 		return Absolute{}, errors.Errorf("not an absolute path")
 	}
 	return Absolute{path: path.Clean(p)}, nil
