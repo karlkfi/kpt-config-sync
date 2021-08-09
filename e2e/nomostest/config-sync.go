@@ -140,7 +140,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
-	objs := installationManifests(nt, tmpManifestsDir, nomos.SourceFormat)
+	objs := installationManifests(nt, tmpManifestsDir, nomos)
 	objs = convertObjects(nt, objs)
 	if nomos.MultiRepo {
 		filesystemPollingPeriod = nt.FilesystemPollingPeriod
@@ -242,7 +242,7 @@ func copyDirContents(src, dest string) error {
 
 // installationManifests generates the ConfigSync installation YAML and copies
 // it to the test's temporary directory.
-func installationManifests(nt *NT, tmpManifestsDir string, sourceFormat filesystem.SourceFormat) []client.Object {
+func installationManifests(nt *NT, tmpManifestsDir string, nomos ntopts.Nomos) []client.Object {
 	nt.T.Helper()
 	err := os.MkdirAll(tmpManifestsDir, fileMode)
 	if err != nil {
@@ -275,7 +275,7 @@ func installationManifests(nt *NT, tmpManifestsDir string, sourceFormat filesyst
 			// Setting GIT_REPO_URL in the configmap requires a remote repo to be present, so we need to create one if not exists.
 			// We can't call resetRepository() because it resets the existing repo to an initial state.
 			// There are cases that we want to install config sync but keep using the current repo (e.g. switch_mode_test.go).
-			nt.Root = NewRepository(nt, rootRepo, sourceFormat)
+			nt.Root = NewRepository(nt, rootRepo, nomos.UpstreamURL, nomos.SourceFormat)
 		}
 		syncURL = nt.GitProvider.SyncURL(nt.Root.RemoteRepoName)
 	}
@@ -912,25 +912,25 @@ func resetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
 }
 
 // resetRepository re-initializes an existing remote repository or creates a new remote repository.
-func resetRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *Repository {
+func resetRepository(nt *NT, name string, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
 	if repo, found := nt.RemoteRepositories[name]; found {
 		repo.ReInit(nt, sourceFormat)
 		return repo
 	}
-	repo := NewRepository(nt, name, sourceFormat)
+	repo := NewRepository(nt, name, upstream, sourceFormat)
 	return repo
 }
 
 // resetRootRepoSpec sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
 // It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
-func resetRootRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
+func resetRootRepoSpec(nt *NT, upstream string, sourceFormat filesystem.SourceFormat) {
 	rs := fake.RootSyncObject()
 	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil {
 		if !apierrors.IsNotFound(err) {
 			nt.T.Fatal(err)
 		}
 	} else {
-		nt.Root = resetRepository(nt, rootRepo, sourceFormat)
+		nt.Root = resetRepository(nt, rootRepo, upstream, sourceFormat)
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, acmeDir))
 		nt.WaitForRepoSyncs()
 	}
@@ -945,8 +945,8 @@ func resetNamespaceRepos(nt *NT) {
 	for _, nr := range namespaceRepos.Items {
 		// reset the namespace repo only when it is in 'nt.NonRootRepos' (created by test).
 		// This prevents from resetting an existing namespace repo from a remote git provider.
-		if _, found := nt.NonRootRepos[nr.Namespace]; found {
-			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, filesystem.SourceFormatUnstructured)
+		if r, found := nt.NonRootRepos[nr.Namespace]; found {
+			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
 			nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
 				configsync.RepoSyncName, nr.Namespace, 120*time.Second, RepoSyncHasStatusSyncCommit)
 		}

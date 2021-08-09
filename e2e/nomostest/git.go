@@ -20,8 +20,11 @@ import (
 )
 
 const (
-	// remoteName is static as every git repository has exactly one remote.
-	remoteName = "origin"
+	// remoteUpstream git upstream repository
+	remoteUpstream = "upstream"
+
+	// remoteOrigin is static as every git repository has exactly one remote.
+	remoteOrigin = "origin"
 	// MainBranch is static as behavior when switching branches is never under
 	// test.
 	MainBranch = "main"
@@ -56,6 +59,9 @@ type Repository struct {
 
 	// RemoteURL is the remote URL of the repository.
 	RemoteURL string
+
+	// UpstreamRepoURL is the URL of the seed repo
+	UpstreamRepoURL string
 }
 
 // NewRepository creates a remote repo on the git provider.
@@ -63,7 +69,7 @@ type Repository struct {
 //
 // For root repo, `name` is `sot.git`.
 // For namespace repo, `name` is the name of the namespace.
-func NewRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *Repository {
+func NewRepository(nt *NT, name string, upstream string, sourceFormat filesystem.SourceFormat) *Repository {
 	nt.T.Helper()
 
 	localDir := filepath.Join(nt.TmpDir, "repos", name)
@@ -83,6 +89,7 @@ func NewRepository(nt *NT, name string, sourceFormat filesystem.SourceFormat) *R
 	}
 	g.RemoteRepoName = repoName
 	g.RemoteURL = nt.GitProvider.RemoteURL(nt.gitRepoPort, repoName)
+	g.UpstreamRepoURL = upstream
 
 	g.init(nt.gitPrivateKeyPath)
 	g.initialCommit(sourceFormat)
@@ -174,8 +181,15 @@ func (g *Repository) init(privateKey string) {
 	// 2) Use the private key file we generated.
 	g.Git("config", "core.sshCommand",
 		fmt.Sprintf("ssh -q -o StrictHostKeyChecking=no -i %s", privateKey))
-	// Point the origin remote.
-	g.Git("remote", "add", remoteName, g.RemoteURL)
+	// Point the origin remote
+	g.Git("remote", "add", remoteOrigin, g.RemoteURL)
+
+	if g.UpstreamRepoURL != "" {
+		// Point the origin remote
+		g.Git("remote", "add", remoteUpstream, g.UpstreamRepoURL)
+		g.Git("fetch", remoteUpstream)
+		g.Git("merge", "upstream/"+MainBranch)
+	}
 }
 
 // Add writes a YAML or JSON representation of obj to `path` in the git
@@ -298,7 +312,7 @@ func (g *Repository) CommitAndPushBranch(msg, branch string) {
 	g.Git("commit", "-m", msg)
 
 	g.T.Logf("[repo %s] committing %q (%s)", path.Base(g.Root), msg, g.Hash())
-	g.Git("push", "-f", "-u", remoteName, branch)
+	g.Git("push", "-f", "-u", remoteOrigin, branch)
 }
 
 // CreateBranch creates and checkouts a new branch at once.
@@ -322,8 +336,8 @@ func (g *Repository) RenameBranch(current, new string) {
 	g.T.Helper()
 
 	g.Git("branch", "-m", current, new)
-	g.Git("push", remoteName, "-u", new)
-	g.Git("push", remoteName, "--delete", current)
+	g.Git("push", remoteOrigin, "-u", new)
+	g.Git("push", remoteOrigin, "--delete", current)
 }
 
 // Hash returns the current hash of the git repository.

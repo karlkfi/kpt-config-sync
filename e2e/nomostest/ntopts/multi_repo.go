@@ -1,5 +1,11 @@
 package ntopts
 
+// NamespaceRepoOpts defines options for a NamespaceRepo
+type NamespaceRepoOpts struct {
+	// UpstreamURL provides the upstream repo to initialize the namespace repo with
+	UpstreamURL string
+}
+
 // MultiRepo configures the NT for use with multi-repo tests.
 // If NonRootRepos is non-empty, the test is assumed to be running in
 // multi-repo mode.
@@ -9,7 +15,7 @@ type MultiRepo struct {
 	// We don't support referencing the Root repository in this map; while we do
 	// support this use case, it isn't special behavior that tests any unique code
 	// paths.
-	NamespaceRepos map[string]struct{}
+	NamespaceRepos map[string]NamespaceRepoOpts
 
 	// Control indicates options for configuring Namespace Repos.
 	Control repoControl
@@ -30,7 +36,22 @@ type MultiRepo struct {
 // that points at the provided Repository.
 func NamespaceRepo(namespace string) func(opt *New) {
 	return func(opt *New) {
-		opt.NamespaceRepos[namespace] = struct{}{}
+		opt.NamespaceRepos[namespace] = NamespaceRepoOpts{UpstreamURL: ""}
+	}
+}
+
+// NamespaceRepoWithUpstream tells the test case that a Namespace Repo should be configured
+// that points at the provided Repository.
+func NamespaceRepoWithUpstream(namespace string, upstreamURL string) func(opt *New) {
+	return func(opt *New) {
+		opt.NamespaceRepos[namespace] = NamespaceRepoOpts{UpstreamURL: upstreamURL}
+	}
+}
+
+// UpstreamRepo tells the test case that an Upstream Repo should be used to seed the test repo
+func UpstreamRepo(upstreamURL string) func(opt *New) {
+	return func(opt *New) {
+		opt.UpstreamURL = upstreamURL
 	}
 }
 

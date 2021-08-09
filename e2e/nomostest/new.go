@@ -43,7 +43,7 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 			MultiRepo:    *e2e.MultiRepo,
 		},
 		MultiRepo: ntopts.MultiRepo{
-			NamespaceRepos: make(map[string]struct{}),
+			NamespaceRepos: make(map[string]ntopts.NamespaceRepoOpts),
 		},
 	}
 	for _, opt := range ntOptions {
@@ -169,7 +169,7 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 		resetNamespaceRepos(nt)
 		// reset the root-repo to the initial state so that the namespace repos can be deleted.
 		nt.NamespaceRepos = map[string]string{}
-		resetRootRepoSpec(nt, opts.SourceFormat)
+		resetRootRepoSpec(nt, opts.UpstreamURL, opts.SourceFormat)
 		// delete the namespace repos in case they're set up in the delegated mode.
 		deleteNamespaceRepos(nt)
 		// delete the out-of-sync namespaces in case they're set up in the delegated mode.
@@ -178,7 +178,7 @@ func resetSyncedRepos(nt *NT, opts *ntopts.New) {
 		}
 	} else {
 		nt.NamespaceRepos = map[string]string{}
-		nt.Root = resetRepository(nt, rootRepo, opts.SourceFormat)
+		nt.Root = resetRepository(nt, rootRepo, opts.UpstreamURL, opts.SourceFormat)
 		resetMonoRepoSpec(nt, opts.SourceFormat)
 		nt.WaitForRepoSyncs()
 	}
@@ -298,10 +298,10 @@ func setupTestCase(nt *NT, opts *ntopts.New) {
 	if nt.GitProvider.Type() == e2e.Local {
 		nt.gitRepoPort = portForwardGitServer(nt, allRepos...)
 	}
-	nt.Root = resetRepository(nt, rootRepo, opts.SourceFormat)
+	nt.Root = resetRepository(nt, rootRepo, opts.UpstreamURL, opts.SourceFormat)
 
 	for nsr := range opts.MultiRepo.NamespaceRepos {
-		nt.NonRootRepos[nsr] = resetRepository(nt, nsr, filesystem.SourceFormatUnstructured)
+		nt.NonRootRepos[nsr] = resetRepository(nt, nsr, opts.MultiRepo.NamespaceRepos[nsr].UpstreamURL, filesystem.SourceFormatUnstructured)
 	}
 
 	// First wait for CRDs to be established.
