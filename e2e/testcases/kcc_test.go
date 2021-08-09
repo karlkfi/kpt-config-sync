@@ -36,6 +36,8 @@ kind: Service
 metadata:
   name: pubsub.googleapis.com
   namespace: foo
+  annotations:
+    cnrm.cloud.google.com/deletion-policy: "abandon"
 `)
 	pubsubTopic := []byte(`
 apiVersion: pubsub.cnrm.cloud.google.com/v1beta1
