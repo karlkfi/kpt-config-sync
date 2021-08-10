@@ -307,7 +307,7 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 	}
 }
 
-func TestSyncFromNomosHydrateOutput(t *testing.T) {
+func testSyncFromNomosHydrateOutput(t *testing.T, config string) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
 	if err := nt.ValidateNotFound("bookstore1", "", &corev1.Namespace{}); err != nil {
@@ -318,7 +318,7 @@ func TestSyncFromNomosHydrateOutput(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	nt.Root.CopyDirectory("../../examples/hierarchical-repo-with-cluster-selectors-compiled/cluster-dev/.", "acme")
+	nt.Root.CopyDirectory(config, "acme")
 	nt.Root.CommitAndPush("Add cluster-dev configs")
 	nt.WaitForRepoSyncs()
 
@@ -361,4 +361,40 @@ func TestSyncFromNomosHydrateOutput(t *testing.T) {
 	if err := nt.ValidateNotFound("cm-all", "bookstore2", &corev1.ConfigMap{}); err != nil {
 		nt.T.Fatal(err)
 	}
+}
+
+func TestSyncFromNomosHydrateOutputYAMLDir(t *testing.T) {
+	testSyncFromNomosHydrateOutput(t, "../../examples/hierarchical-repo-with-cluster-selectors-compiled/cluster-dev/.")
+}
+
+func TestSyncFromNomosHydrateOutputJSONDir(t *testing.T) {
+	testSyncFromNomosHydrateOutput(t, "../../examples/hierarchical-repo-with-cluster-selectors-compiled-json/cluster-dev/.")
+}
+
+func testSyncFromNomosHydrateOutputFlat(t *testing.T, format string) {
+	tmpDir := nomostest.TestDir(t)
+	tw := nomostesting.New(t)
+
+	configPath := "../../examples/hierarchical-repo-with-cluster-selectors"
+	compiledConfigFile := fmt.Sprintf("%s/compiled.%s", tmpDir, format)
+
+	out, err := exec.Command("nomos", "hydrate", "--no-api-server-check", "--flat",
+		fmt.Sprintf("--path=%s", configPath),
+		fmt.Sprintf("--format=%s", format),
+		"--clusters=cluster-dev",
+		fmt.Sprintf("--output=%s", compiledConfigFile)).CombinedOutput()
+	if err != nil {
+		tw.Log(string(out))
+		tw.Error(err)
+	}
+
+	testSyncFromNomosHydrateOutput(t, compiledConfigFile)
+}
+
+func TestSyncFromNomosHydrateOutputJSONFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, "json")
+}
+
+func TestSyncFromNomosHydrateOutputYAMLFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, "yaml")
 }
