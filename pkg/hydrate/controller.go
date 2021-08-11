@@ -109,10 +109,6 @@ func (h *Hydrator) hydrate(sourceCommit, syncDir string) error {
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
 		return errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath())
 	}
-	// The Helm inflator might pull remote charts locally, so remove the local charts to make the source directory clean.
-	if err := git.ForceClean(syncDir); err != nil {
-		return err
-	}
 	glog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
 	return nil
 }
@@ -247,12 +243,13 @@ func SourceCommitAndDir(sourceRoot cmpath.Absolute, syncDir cmpath.Relative, rec
 		return "", cmpath.Absolute{}, status.SourceError.Wrap(e).Sprintf("unable to parse commit hash from source path: %s", gitDir.OSPath()).Build()
 	}
 
-	err = git.CheckClean(gitDir.OSPath())
-	if err != nil {
-		return commit, cmpath.Absolute{}, status.PathWrapError(
-			errors.Wrap(err, "checking that the git repository has no changes"), sourceRoot.OSPath())
-	}
-
+	// The hydration controller might pull remote Helm charts locally, which makes the source directory dirty.
+	// Hence, we don't check if the source directory is clean before the hydration.
+	// The assumption is that customers should have limited access to manually modify the source configs.
+	// For the local Helm charts pulled by the Helm inflator, the entire hydrated directory
+	// will blow away when new commits come in.
+	// If the commit hash is not changed, the hydration will be skipped.
+	// Therefore, it is relatively safe to keep the Helm charts local in the source directory.
 	relSyncDir := gitDir.Join(syncDir)
 	sourceDir, err := relSyncDir.EvalSymlinks()
 	if err != nil {
