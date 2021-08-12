@@ -133,6 +133,12 @@ func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gi
 	// If we weren't able to get the commit hash, this replaces the value with
 	// empty string.
 	rs.Status.Source.Commit = newStatus.commit
+	rs.Status.Source.Git = v1alpha1.GitStatus{
+		Repo:     p.GitRepo,
+		Revision: p.GitRev,
+		Branch:   p.GitBranch,
+		Dir:      p.PolicyDir.SlashPath(),
+	}
 	// Replace the previous set of errors getting the git state with the current set.
 	rs.Status.Source.Errors = cse
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
@@ -156,6 +162,12 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Rendering.Commit = newStatus.commit
+	rs.Status.Rendering.Git = v1alpha1.GitStatus{
+		Repo:     p.GitRepo,
+		Revision: p.GitRev,
+		Branch:   p.GitBranch,
+		Dir:      p.PolicyDir.SlashPath(),
+	}
 	rs.Status.Rendering.Phase = newStatus.phase
 	rs.Status.Rendering.Errors = cse
 
@@ -183,12 +195,24 @@ func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus,
 
 	sourceErrs := status.ToCSE(newSourceStatus.errs)
 	rs.Status.Source.Commit = newSourceStatus.commit
+	rs.Status.Source.Git = v1alpha1.GitStatus{
+		Repo:     p.GitRepo,
+		Revision: p.GitRev,
+		Branch:   p.GitBranch,
+		Dir:      p.PolicyDir.SlashPath(),
+	}
 	rs.Status.Source.Errors = sourceErrs
 	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
 
 	now := metav1.Now()
 	syncErrs := status.ToCSE(newSyncStatus.errs)
 	rs.Status.Sync.Commit = newSyncStatus.commit
+	rs.Status.Sync.Git = v1alpha1.GitStatus{
+		Repo:     p.GitRepo,
+		Revision: p.GitRev,
+		Branch:   p.GitBranch,
+		Dir:      p.PolicyDir.SlashPath(),
+	}
 	rs.Status.Sync.Errors = syncErrs
 	rs.Status.Sync.LastUpdate = now
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))

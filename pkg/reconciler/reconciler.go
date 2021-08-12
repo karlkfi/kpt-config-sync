@@ -1,7 +1,6 @@
 package reconciler
 
 import (
-	"context"
 	"time"
 
 	"github.com/golang/glog"
@@ -16,12 +15,9 @@ import (
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/remediator"
 	"github.com/google/nomos/pkg/remediator/watch"
-	"github.com/google/nomos/pkg/reposync"
-	"github.com/google/nomos/pkg/rootsync"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"github.com/google/nomos/pkg/syncer/reconcile"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -178,14 +174,6 @@ func Run(opts Options) {
 
 	ctx := signals.SetupSignalHandler()
 
-	// Right before we start everything, mark the RootSync or RepoSync as no longer
-	// Reconciling.
-	if opts.ReconcilerScope == declared.RootReconciler {
-		updateRootSyncStatus(ctx, cl, opts)
-	} else {
-		updateRepoSyncStatus(ctx, cl, opts.ReconcilerScope, opts)
-	}
-
 	// Start the Remediator (non-blocking).
 	rem.Start(ctx)
 	// Start the Parser (blocking).
@@ -193,56 +181,4 @@ func Run(opts Options) {
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
 	parse.Run(ctx, parser)
-}
-
-// updateRepoSyncStatus loops (with exponential backoff) until it is able to
-// update the status of the RepoSync.
-func updateRepoSyncStatus(ctx context.Context, cl client.Client, namespace declared.Scope, opts Options) {
-	childCtx, cancel := context.WithCancel(ctx)
-	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
-		var rs v1alpha1.RepoSync
-		if err := cl.Get(childCtx, reposync.ObjectKey(namespace), &rs); err != nil {
-			glog.Errorf("Failed to get RepoSync for %s reconciler: %v", namespace, err)
-			return
-		}
-
-		rs.Status.Source.Git = v1alpha1.GitStatus{
-			Repo:     opts.GitRepo,
-			Revision: opts.GitRev,
-			Branch:   opts.GitBranch,
-			Dir:      opts.PolicyDir.SlashPath(),
-		}
-
-		if err := cl.Status().Update(childCtx, &rs); err != nil {
-			glog.Errorf("Failed to update RepoSync status from %s reconciler: %v", namespace, err)
-		} else {
-			cancel()
-		}
-	}, time.Second)
-}
-
-// updateRootSyncStatus loops (with exponential backoff) until it is able to
-// update the status of the RootSync.
-func updateRootSyncStatus(ctx context.Context, cl client.Client, opts Options) {
-	childCtx, cancel := context.WithCancel(ctx)
-	wait.UntilWithContext(childCtx, func(childCtx context.Context) {
-		var rs v1alpha1.RootSync
-		if err := cl.Get(childCtx, rootsync.ObjectKey(), &rs); err != nil {
-			glog.Errorf("Failed to get RootSync: %v", err)
-			return
-		}
-
-		rs.Status.Source.Git = v1alpha1.GitStatus{
-			Repo:     opts.GitRepo,
-			Revision: opts.GitRev,
-			Branch:   opts.GitBranch,
-			Dir:      opts.PolicyDir.SlashPath(),
-		}
-
-		if err := cl.Status().Update(childCtx, &rs); err != nil {
-			glog.Errorf("Failed to update RootSync status: %v", err)
-		} else {
-			cancel()
-		}
-	}, time.Second)
 }

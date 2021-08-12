@@ -89,6 +89,9 @@ type GitSourceStatus struct {
 
 // RenderingStatus describes the status of rendering the source DRY configs to the WET format.
 type RenderingStatus struct {
+	// Git contains fields describing the status of a Git source of truth.
+	// +optional
+	Git GitStatus `json:"gitStatus,omitempty"`
 
 	// Commit is the hash of the commit in the source of truth that is rendered.
 	// +optional
@@ -104,6 +107,9 @@ type RenderingStatus struct {
 
 // GitSyncStatus provides the status of the syncing of resources from a git source-of-truth on to the cluster
 type GitSyncStatus struct {
+	// Git contains fields describing the status of a Git source of truth.
+	// +optional
+	Git GitStatus `json:"gitStatus,omitempty"`
 	// Commit is the hash of the most recent commit that was synced to the
 	// cluster. This value is updated even when a commit is only partially synced
 	// due to an  error.
