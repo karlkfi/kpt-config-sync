@@ -141,6 +141,8 @@ func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gi
 	}
 	// Replace the previous set of errors getting the git state with the current set.
 	rs.Status.Source.Errors = cse
+	rs.Status.Source.LastUpdate = metav1.Now()
+
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -170,6 +172,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 	}
 	rs.Status.Rendering.Phase = newStatus.phase
 	rs.Status.Rendering.Errors = cse
+	rs.Status.Rendering.LastUpdate = metav1.Now()
 
 	metrics.RecordRenderingErrors(ctx, "rendering", len(cse))
 
@@ -188,6 +191,7 @@ func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus,
 		return nil
 	}
 
+	now := metav1.Now()
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
@@ -202,9 +206,10 @@ func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus,
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Source.Errors = sourceErrs
+	rs.Status.Source.LastUpdate = now
+
 	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
 
-	now := metav1.Now()
 	syncErrs := status.ToCSE(newSyncStatus.errs)
 	rs.Status.Sync.Commit = newSyncStatus.commit
 	rs.Status.Sync.Git = v1alpha1.GitStatus{

@@ -59,6 +59,11 @@ type GitSourceStatus struct {
 	// +optional
 	Commit string `json:"commit,omitempty"`
 
+	// LastUpdate is the timestamp of when this status was last updated by a
+	// reconciler.
+	// +optional
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
+
 	// Errors is a list of any errors that occurred while reading from the source of truth.
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
@@ -73,6 +78,11 @@ type RenderingStatus struct {
 	// Commit is the hash of the commit in the source of truth that is rendered.
 	// +optional
 	Commit string `json:"commit,omitempty"`
+
+	// LastUpdate is the timestamp of when this status was last updated by a
+	// reconciler.
+	// +optional
+	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
 	// Phase describes the rendering status.
 	Phase RenderingPhase `json:"phase,omitempty"`

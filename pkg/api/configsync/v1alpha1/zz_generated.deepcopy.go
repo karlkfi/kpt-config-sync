@@ -66,6 +66,7 @@ func (in *Git) DeepCopy() *Git {
 func (in *GitSourceStatus) DeepCopyInto(out *GitSourceStatus) {
 	*out = *in
 	out.Git = in.Git
+	in.LastUpdate.DeepCopyInto(&out.LastUpdate)
 	if in.Errors != nil {
 		in, out := &in.Errors, &out.Errors
 		*out = make([]ConfigSyncError, len(*in))
@@ -155,6 +156,7 @@ func (in *OverrideSpec) DeepCopy() *OverrideSpec {
 func (in *RenderingStatus) DeepCopyInto(out *RenderingStatus) {
 	*out = *in
 	out.Git = in.Git
+	in.LastUpdate.DeepCopyInto(&out.LastUpdate)
 	if in.Errors != nil {
 		in, out := &in.Errors, &out.Errors
 		*out = make([]ConfigSyncError, len(*in))

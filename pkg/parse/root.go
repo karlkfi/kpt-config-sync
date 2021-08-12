@@ -145,6 +145,7 @@ func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStat
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Source.Errors = cse
+	rs.Status.Source.LastUpdate = metav1.Now()
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
@@ -175,6 +176,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	}
 	rs.Status.Rendering.Phase = newStatus.phase
 	rs.Status.Rendering.Errors = cse
+	rs.Status.Rendering.LastUpdate = metav1.Now()
 
 	metrics.RecordRenderingErrors(ctx, "rendering", len(cse))
 
@@ -190,6 +192,7 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 		return nil
 	}
 
+	now := metav1.Now()
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
@@ -204,9 +207,10 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Source.Errors = sourceErrs
+	rs.Status.Source.LastUpdate = now
+
 	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
 
-	now := metav1.Now()
 	syncErrs := status.ToCSE(newSyncStatus.errs)
 	rs.Status.Sync.Commit = newSyncStatus.commit
 	rs.Status.Sync.Git = v1alpha1.GitStatus{
