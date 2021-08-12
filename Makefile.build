@@ -158,11 +158,14 @@ config-sync-manifest: $(OUTPUT_DIR) push-to-gcr-nomos generate-deployments
 .PHONY: config-sync-manifest-e2e
 config-sync-manifest-e2e: config-sync-manifest
 	@echo "+++ Preparing config-sync-manifest-e2e.yaml"
+	sed -e "s|GIT_REPO_URL|git@test-git-server.config-management-system-test:/git-server/repos/sot.git|g" \
+		e2e/raw-nomos/manifests/mono-repo-configmaps.yaml > mono-repo-configmaps.copy.yaml
 	env GO111MODULE=on go run -mod=vendor ./scripts/append_manifests/append_manifests.go \
 		--destination=${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest-e2e.yaml \
 		manifests/test-resources/00-namespace.yaml \
 		${NOMOS_MANIFEST_STAGING_DIR}/config-sync-manifest.yaml \
-		e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
+		mono-repo-configmaps.copy.yaml
+	rm mono-repo-configmaps.copy.yaml
 
 ###################################
 # E2E Git Server
