@@ -19,9 +19,11 @@ func resetFlags() {
 	flags.Clusters = nil
 	flags.Path = flags.PathDefault
 	flags.SkipAPIServer = true
-
-	sourceFormatValue = string(filesystem.SourceFormatHierarchy)
+	flags.SourceFormat = string(filesystem.SourceFormatHierarchy)
 	namespaceValue = ""
+	keepOutput = false
+	outPath = flags.DefaultHydrationOutput
+	flags.OutputFormat = flags.OutputYAML
 }
 
 var examplesDir = cmpath.RelativeSlash("../../../examples")

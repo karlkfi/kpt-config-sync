@@ -29,6 +29,9 @@ const (
 
 	// OutputJSON specifies exporting the output in JSON format.
 	OutputJSON = "json"
+
+	// DefaultHydrationOutput specifies the default location to write the hydrated output.
+	DefaultHydrationOutput = "compiled"
 )
 
 var (

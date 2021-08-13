@@ -29,7 +29,7 @@ func init() {
 	flags.AddOutputFormat(Cmd)
 	Cmd.Flags().BoolVar(&flat, "flat", false,
 		`If enabled, print all output to a single file`)
-	Cmd.Flags().StringVar(&outPath, "output", "compiled",
+	Cmd.Flags().StringVar(&outPath, "output", flags.DefaultHydrationOutput,
 		`Location to write hydrated configuration to.
 
 If --flat is not enabled, writes each resource manifest as a
