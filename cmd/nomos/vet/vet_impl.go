@@ -124,7 +124,7 @@ func runVet(ctx context.Context, root string, namespace string, sourceFormat fil
 
 	// Track per-cluster vet errors.
 	var vetErrs []string
-	hydrate.ForEachCluster(parser, options, filePaths, vetCluster(&vetErrs, allClusters, clusters))
+	hydrate.ForEachCluster(parser, options, sourceFormat, filePaths, vetCluster(&vetErrs, allClusters, clusters))
 	if len(vetErrs) > 0 {
 		return errors.New(strings.Join(vetErrs, "\n\n"))
 	}

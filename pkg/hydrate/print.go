@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
+
+// GenerateFileObjects returns a set of file objects with unique file names and
+// invalid fields removed from objects.
+func GenerateFileObjects(multiCluster bool, objects ...ast.FileObject) []ast.FileObject {
+	fileObjects := generateUniqueFileNames(flags.OutputFormat, multiCluster, objects...)
+	Clean(fileObjects)
+	return fileObjects
+}
 
 // PrintFlatOutput prints the hydrated output to a single file.
 func PrintFlatOutput(output, extension string, fileObjects []ast.FileObject) error {

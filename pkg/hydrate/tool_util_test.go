@@ -1,53 +1,38 @@
 package hydrate
 
 import (
-	"errors"
 	"testing"
 )
 
 func TestValidateTool(t *testing.T) {
 	testCases := []struct {
-		name             string
-		toolVersion      string
-		toolVersionError error
-		requiredVersion  string
-		expectedErr      error
+		name        string
+		version     string
+		expectedErr string
 	}{
 		{
-			name:             "tool not installed",
-			toolVersionError: errors.New("command not found"),
-			requiredVersion:  KustomizeVersion,
-			expectedErr:      errors.New("command not found"),
+			name:        "tool version is too old",
+			version:     "{kustomize/v3.6.5  2021-05-20T20:52:40Z  }",
+			expectedErr: `The current kustomize version is "3.6.5". The recommended version is v4.1.3. Please upgrade to the v4.1.3+ for compatibility.`,
 		},
 		{
-			name:            "tool version is too old",
-			toolVersion:     "v3.6.5",
-			requiredVersion: KustomizeVersion,
-			expectedErr:     errors.New(`the current kustomize version is "3.6.5". Please upgrade to version v4.1.3+`),
+			name:    "tool version is the same as required",
+			version: "{kustomize/v4.1.3  2021-05-20T20:52:40Z  }",
 		},
 		{
-			name:            "tool version is the same as required",
-			toolVersion:     KustomizeVersion,
-			requiredVersion: KustomizeVersion,
-		},
-		{
-			name:            "tool version is newer than required",
-			toolVersion:     "v4.4.4",
-			requiredVersion: KustomizeVersion,
+			name:    "tool version is newer than required",
+			version: "{kustomize/v4.4.4  2021-05-20T20:52:40Z  }",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			toolVersion = func(string) (string, error) {
-				return tc.toolVersion, tc.toolVersionError
-			}
-			err := ValidateTool(Kustomize, tc.requiredVersion)
-			if err != nil && tc.expectedErr == nil {
+			err := validateTool(Kustomize, tc.version, KustomizeVersion)
+			if err != nil && tc.expectedErr == "" {
 				t.Errorf("%s: expected no error, but got error: %v", tc.name, err)
-			} else if err == nil && tc.expectedErr != nil {
+			} else if err == nil && tc.expectedErr != "" {
 				t.Errorf("%s: got no error, but expected error: %v", tc.name, tc.expectedErr)
-			} else if err != nil && tc.expectedErr != nil && err.Error() != tc.expectedErr.Error() {
+			} else if err != nil && tc.expectedErr != "" && err.Error() != tc.expectedErr {
 				t.Errorf("%s: got error: %v, but expected: %v", tc.name, err, tc.expectedErr)
 			}
 		})
@@ -84,7 +69,7 @@ func TestNeedsKustomize(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			needs, err := NeedsKustomize(tc.dir)
+			needs, err := needsKustomize(tc.dir)
 			if err != nil {
 				t.Errorf("%s: expected no error, but got error: %v", tc.name, err)
 			} else if needs != tc.result {

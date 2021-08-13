@@ -1,6 +1,10 @@
 package flags
 
 import (
+	"fmt"
+
+	"github.com/google/nomos/pkg/importer/filesystem"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +23,12 @@ const (
 
 	// SkipAPIServerFlag is the flag name for SkipAPIServer below.
 	SkipAPIServerFlag = "no-api-server-check"
+
+	// OutputYAML specifies exporting the output in YAML format.
+	OutputYAML = "yaml"
+
+	// OutputJSON specifies exporting the output in JSON format.
+	OutputJSON = "json"
 )
 
 var (
@@ -34,6 +44,12 @@ var (
 
 	// SkipAPIServer directs whether to try to contact the API Server for checks.
 	SkipAPIServer bool
+
+	// SourceFormat indicates the format of the Git repository.
+	SourceFormat string
+
+	// OutputFormat is the format of output.
+	OutputFormat string
 )
 
 // AddContexts adds the --contexts flag.
@@ -51,7 +67,7 @@ func AddClusters(cmd *cobra.Command) {
 // AddPath adds the --path flag.
 func AddPath(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&Path, pathFlag, PathDefault,
-		`Root directory to use as a Anthos Configuration Management repository.`)
+		`Root directory to use as an Anthos Configuration Management repository.`)
 }
 
 // AddSkipAPIServerCheck adds the --no-api-server-check flag.
@@ -63,4 +79,17 @@ func AddSkipAPIServerCheck(cmd *cobra.Command) {
 // AllClusters returns true if all clusters should be processed.
 func AllClusters() bool {
 	return Clusters == nil
+}
+
+// AddSourceFormat adds the --source-format flag.
+func AddSourceFormat(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&SourceFormat, reconcilermanager.SourceFormat, string(filesystem.SourceFormatHierarchy),
+		fmt.Sprintf("Format of the Git repository. Defaults to %s. Use %s for unstructured repos.",
+			filesystem.SourceFormatHierarchy, filesystem.SourceFormatUnstructured))
+}
+
+// AddOutputFormat adds the --format flag.
+func AddOutputFormat(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&OutputFormat, "format", "yaml",
+		`Output format. Accepts 'yaml' and 'json'.`)
 }

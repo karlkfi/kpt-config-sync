@@ -71,7 +71,7 @@ func (h *Hydrator) Run(ctx context.Context) {
 
 // hydrate renders the source git repo to hydrated configs.
 func (h *Hydrator) hydrate(ctx context.Context, sourceCommit, syncDir string) error {
-	hydrate, err := NeedsKustomize(syncDir)
+	hydrate, err := needsKustomize(syncDir)
 	if err != nil {
 		return errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir)
 	}
@@ -105,7 +105,7 @@ func (h *Hydrator) hydrate(ctx context.Context, sourceCommit, syncDir string) er
 	newHydratedDir := h.HydratedRoot.Join(cmpath.RelativeOS(sourceCommit))
 	dest := newHydratedDir.Join(h.SyncDir).OSPath()
 
-	if err := KustomizeBuild(syncDir, dest); err != nil {
+	if err := kustomizeBuild(syncDir, dest); err != nil {
 		return errors.Wrapf(err, "unable to render the source configs in %s", syncDir)
 	}
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {

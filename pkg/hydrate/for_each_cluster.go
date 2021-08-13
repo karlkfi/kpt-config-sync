@@ -30,8 +30,9 @@ const (
 //    err, the MultiError which Parser.Parse returned, if there was one.
 //
 // Per standard ForEach conventions, ForEachCluster has no return value.
-func ForEachCluster(parser filesystem.ConfigParser, options validate.Options, filePaths reader.FilePaths, f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
-	isHierarchical := options.DefaultNamespace == "" && !options.IsNamespaceReconciler
+func ForEachCluster(parser filesystem.ConfigParser, options validate.Options,
+	sourceFormat filesystem.SourceFormat, filePaths reader.FilePaths,
+	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
 	clusterRegistry, errs := parser.ReadClusterRegistryResources(filePaths)
 	clusters, err2 := selectors.FilterClusters(clusterRegistry)
 	errs = status.Append(errs, err2)
@@ -41,7 +42,7 @@ func ForEachCluster(parser filesystem.ConfigParser, options validate.Options, fi
 	defaultFileObjects, err2 := parser.Parse(filePaths)
 	errs = status.Append(errs, err2)
 
-	if isHierarchical {
+	if sourceFormat == filesystem.SourceFormatHierarchy {
 		defaultFileObjects, err2 = validate.Hierarchical(defaultFileObjects, options)
 	} else {
 		defaultFileObjects, err2 = validate.Unstructured(defaultFileObjects, options)
@@ -54,7 +55,7 @@ func ForEachCluster(parser filesystem.ConfigParser, options validate.Options, fi
 		options.ClusterName = cluster.Name
 		fileObjects, errs := parser.Parse(filePaths)
 
-		if isHierarchical {
+		if sourceFormat == filesystem.SourceFormatHierarchy {
 			fileObjects, err2 = validate.Hierarchical(fileObjects, options)
 		} else {
 			fileObjects, err2 = validate.Unstructured(fileObjects, options)

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
@@ -69,7 +70,8 @@ func TestNomosInitHydrate(t *testing.T) {
 		tw.Error(err)
 	}
 
-	err = hydrate.PrintFile(fmt.Sprintf("%s/namespaces/foo/ns.yaml", tmpDir), "yaml",
+	err = hydrate.PrintFile(fmt.Sprintf("%s/namespaces/foo/ns.yaml", tmpDir),
+		flags.OutputYAML,
 		[]*unstructured.Unstructured{
 			fake.UnstructuredObject(kinds.Namespace(), core.Name("foo")),
 			fake.UnstructuredObject(kinds.ConfigMap(), core.Name("cm1"), core.Namespace("foo")),

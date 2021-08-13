@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GenerateUniqueFileNames sets a default file path for each object, guaranteed to be unique for a collection
+// generateUniqueFileNames sets a default file path for each object, guaranteed to be unique for a collection
 // of ast.FileObjects which do not collide (group/kind/namespace/name duplication)
-func GenerateUniqueFileNames(extension string, multiCluster bool, objects ...ast.FileObject) []ast.FileObject {
+func generateUniqueFileNames(extension string, multiCluster bool, objects ...ast.FileObject) []ast.FileObject {
 	duplicates := make(map[string]int, len(objects))
 	for i := range objects {
 		p := cmpath.RelativeSlash(filename(extension, objects[i], multiCluster, false))
