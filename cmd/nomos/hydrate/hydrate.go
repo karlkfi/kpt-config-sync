@@ -1,10 +1,8 @@
 package hydrate
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/parse"
@@ -22,20 +20,12 @@ import (
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
 	flat      bool
 	outPath   string
 	extension string
-
-	converter = runtime.DefaultUnstructuredConverter
 )
 
 func init() {
@@ -165,9 +155,9 @@ which you could kubectl apply -fR to the cluster, or have Config Sync sync to th
 		fileObjects := hydrate.GenerateUniqueFileNames(extension, multiCluster, allObjects...)
 		hydrate.Clean(fileObjects)
 		if flat {
-			err = printFlatOutput(fileObjects)
+			err = hydrate.PrintFlatOutput(outPath, extension, fileObjects)
 		} else {
-			err = printDirectoryOutput(fileObjects)
+			err = hydrate.PrintDirectoryOutput(outPath, extension, fileObjects)
 		}
 		if err != nil {
 			return err
@@ -179,123 +169,4 @@ which you could kubectl apply -fR to the cluster, or have Config Sync sync to th
 
 		return nil
 	},
-}
-
-func printFlatOutput(fileObjects []ast.FileObject) error {
-	objects := make([]*unstructured.Unstructured, len(fileObjects))
-	for i, o := range fileObjects {
-		objects[i] = o.Unstructured
-	}
-
-	return PrintFile(outPath, objects)
-}
-
-func printDirectoryOutput(fileObjects []ast.FileObject) error {
-	files := make(map[string][]*unstructured.Unstructured)
-	for _, obj := range fileObjects {
-		u, err := toUnstructured(obj.Unstructured)
-		if err != nil {
-			return err
-		}
-		files[obj.SlashPath()] = append(files[obj.SlashPath()], u)
-	}
-
-	for file, objects := range files {
-		err := PrintFile(filepath.Join(outPath, file), objects)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func toUnstructured(o client.Object) (*unstructured.Unstructured, error) {
-	// Must convert or else fields like status automatically get written.
-	unstructuredObject, err2 := converter.ToUnstructured(o)
-	if err2 != nil {
-		return nil, err2
-	}
-	u := &unstructured.Unstructured{Object: unstructuredObject}
-	rmBadFields(u)
-	return u, nil
-}
-
-// PrintFile prints the passed objects to file.
-func PrintFile(file string, objects []*unstructured.Unstructured) (err error) {
-	err = os.MkdirAll(filepath.Dir(file), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	outFile, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err2 := outFile.Close()
-		if err2 != nil && err == nil {
-			// Assign the named parameter since there's no other way to ensure we get
-			// the error from the deferred Close.
-			err = err2
-		}
-	}()
-
-	var content string
-	switch extension {
-	case "yaml":
-		content, err = toYAML(objects)
-	case "json":
-		content, err = toJSON(objects)
-	}
-	if err != nil {
-		return err
-	}
-	_, err = outFile.WriteString(content)
-	return err
-}
-
-func toYAML(objects []*unstructured.Unstructured) (string, error) {
-	content := strings.Builder{}
-	for _, o := range objects {
-		content.WriteString("---\n")
-		bytes, err := yaml.Marshal(o.Object)
-		if err != nil {
-			return "", err
-		}
-		content.Write(bytes)
-	}
-	return content.String(), nil
-}
-
-func toJSON(objects []*unstructured.Unstructured) (string, error) {
-	list := &corev1.List{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "List",
-			APIVersion: "v1",
-		},
-	}
-	for _, obj := range objects {
-		u, err := toUnstructured(obj)
-		if err != nil {
-			return "", err
-		}
-		raw := runtime.RawExtension{Object: u}
-		list.Items = append(list.Items, raw)
-	}
-	unstructuredList, err := converter.ToUnstructured(list)
-	if err != nil {
-		return "", err
-	}
-	content, err := json.MarshalIndent(unstructuredList, "", "\t")
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
-}
-
-func rmBadFields(u *unstructured.Unstructured) {
-	// The conversion to unstructured automatically fills these in.
-	delete(u.Object, "status")
-	delete(u.Object["metadata"].(map[string]interface{}), "creationTimestamp")
 }

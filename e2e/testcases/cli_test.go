@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/cmd/nomos/hydrate"
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -68,7 +68,7 @@ func TestNomosInitHydrate(t *testing.T) {
 		tw.Error(err)
 	}
 
-	err = hydrate.PrintFile(fmt.Sprintf("%s/namespaces/foo/ns.yaml", tmpDir),
+	err = hydrate.PrintFile(fmt.Sprintf("%s/namespaces/foo/ns.yaml", tmpDir), "yaml",
 		[]*unstructured.Unstructured{
 			fake.UnstructuredObject(kinds.Namespace(), core.Name("foo")),
 			fake.UnstructuredObject(kinds.ConfigMap(), core.Name("cm1"), core.Namespace("foo")),
