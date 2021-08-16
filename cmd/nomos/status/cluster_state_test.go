@@ -284,19 +284,30 @@ func withGitRepoSync(git v1alpha1.Git) core.MetaMutator {
 	}
 }
 
-func withCommitsRepoSync(source, sync string) core.MetaMutator {
+func withCommitsRepoSync(rendering, source, sync string) core.MetaMutator {
 	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
+		rs.Status.Rendering.Commit = rendering
 		rs.Status.Source.Commit = source
 		rs.Status.Sync.Commit = sync
 	}
 }
 
-func withErrorsRepoSync(errs ...string) core.MetaMutator {
+func withErrorsRepoSync(renderingErrs, sourceErrs, syncErrs []string) core.MetaMutator {
 	return func(o client.Object) {
 		rs := o.(*v1alpha1.RepoSync)
-		for _, err := range errs {
+		for _, err := range renderingErrs {
+			rs.Status.Rendering.Errors = append(rs.Status.Rendering.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+		for _, err := range sourceErrs {
 			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+		for _, err := range syncErrs {
+			rs.Status.Sync.Errors = append(rs.Status.Sync.Errors, v1alpha1.ConfigSyncError{
 				ErrorMessage: err,
 			})
 		}
@@ -328,8 +339,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			},
 		},
 		{
-			"repo is synced",
-			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc123"), withGitRepoSync(git)),
+			"repo is synced before automated-hydration is supported",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("", "abc123", "abc123"), withGitRepoSync(git)),
 			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
 			&repoState{
 				scope:     "bookstore",
@@ -340,15 +351,75 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			},
 		},
 		{
-			"repo has errors",
-			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123"), withErrorsRepoSync("KNV2010: I am unhappy"), withGitRepoSync(git)),
+			"repo is synced",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc123", "abc123"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
+			&repoState{
+				scope:     "bookstore",
+				git:       git,
+				status:    "SYNCED",
+				commit:    "abc123",
+				resources: exampleResources(),
+			},
+		},
+		{
+			"repo is rendering new commit",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123", "abc123"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
+			&repoState{
+				scope:     "bookstore",
+				git:       git,
+				status:    "PENDING",
+				commit:    "abc123",
+				resources: exampleResources(),
+			},
+		},
+		{
+			"repo has import errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "def456", "abc123"), withErrorsRepoSync([]string{}, []string{"KNV2004: import error"}, []string{}), withGitRepoSync(git)),
 			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
 			&repoState{
 				scope:  "bookstore",
 				git:    git,
 				status: "ERROR",
 				commit: "abc123",
-				errors: []string{"KNV2010: I am unhappy"},
+				errors: []string{"KNV2004: import error"},
+			},
+		},
+		{
+			"repo has rendering errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123", "abc123"), withErrorsRepoSync([]string{"KNV2015: rendering error"}, []string{}, []string{}), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2015: rendering error"},
+			},
+		},
+		{
+			"repo has parsing errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "def456", "abc123"), withErrorsRepoSync([]string{}, []string{"KNV2004: parsing error"}, []string{}), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2004: parsing error"},
+			},
+		},
+		{
+			"repo has sync errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc123", "abc123"), withErrorsRepoSync([]string{}, []string{}, []string{"KNV2009: apply error"}), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2009: apply error"},
 			},
 		},
 	}
@@ -369,19 +440,30 @@ func withGitRootSync(git v1alpha1.Git) core.MetaMutator {
 	}
 }
 
-func withCommitsRootSync(source, sync string) core.MetaMutator {
+func withCommitsRootSync(rendering, source, sync string) core.MetaMutator {
 	return func(o client.Object) {
 		rs := o.(*v1alpha1.RootSync)
+		rs.Status.Rendering.Commit = rendering
 		rs.Status.Source.Commit = source
 		rs.Status.Sync.Commit = sync
 	}
 }
 
-func withErrorsRootSync(errs ...string) core.MetaMutator {
+func withErrorsRootSync(renderingErrs, sourceErrs, syncErrs []string) core.MetaMutator {
 	return func(o client.Object) {
 		rs := o.(*v1alpha1.RootSync)
-		for _, err := range errs {
+		for _, err := range renderingErrs {
+			rs.Status.Rendering.Errors = append(rs.Status.Rendering.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+		for _, err := range sourceErrs {
 			rs.Status.Source.Errors = append(rs.Status.Source.Errors, v1alpha1.ConfigSyncError{
+				ErrorMessage: err,
+			})
+		}
+		for _, err := range syncErrs {
+			rs.Status.Sync.Errors = append(rs.Status.Sync.Errors, v1alpha1.ConfigSyncError{
 				ErrorMessage: err,
 			})
 		}
@@ -411,8 +493,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			},
 		},
 		{
-			"repo is synced",
-			fake.RootSyncObject(withCommitsRootSync("abc123", "abc123"), withGitRootSync(git)),
+			"repo is synced before automated-hydration is supported",
+			fake.RootSyncObject(withCommitsRootSync("", "abc123", "abc123"), withGitRootSync(git)),
 			&repoState{
 				scope:  "<root>",
 				git:    git,
@@ -421,14 +503,67 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			},
 		},
 		{
-			"repo has errors",
-			fake.RootSyncObject(withCommitsRootSync("def456", "abc123"), withErrorsRootSync("KNV2010: I am unhappy"), withGitRootSync(git)),
+			"repo is synced",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "abc123", "abc123"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "SYNCED",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo is rendering a new commit",
+			fake.RootSyncObject(withCommitsRootSync("def456", "abc123", "abc123"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "PENDING",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo has import errors",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "def456", "abc123"), withErrorsRootSync([]string{}, []string{"KNV2004: import error"}, []string{}), withGitRootSync(git)),
 			&repoState{
 				scope:  "<root>",
 				git:    git,
 				status: "ERROR",
 				commit: "abc123",
-				errors: []string{"KNV2010: I am unhappy"},
+				errors: []string{"KNV2004: import error"},
+			},
+		},
+		{
+			"repo has rendering errors",
+			fake.RootSyncObject(withCommitsRootSync("def456", "abc123", "abc123"), withErrorsRootSync([]string{"KNV2015: rendering error"}, []string{}, []string{}), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2015: rendering error"},
+			},
+		},
+		{
+			"repo has parsing errors",
+			fake.RootSyncObject(withCommitsRootSync("def456", "def456", "abc123"), withErrorsRootSync([]string{}, []string{"KNV2004: parse error"}, []string{}), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2004: parse error"},
+			},
+		},
+		{
+			"repo has sync errors",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "abc123", "abc123"), withErrorsRootSync([]string{}, []string{}, []string{"KNV2009: apply error"}), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "ERROR",
+				commit: "abc123",
+				errors: []string{"KNV2009: apply error"},
 			},
 		},
 	}
