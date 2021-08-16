@@ -22,6 +22,18 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s 
 RUN chmod +x ./kubectl
 RUN mv ./kubectl /bin
 
+# Install Helm v3.6.1
+RUN wget https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -O /tmp/helm-v3.6.1-linux-amd64.tar.gz && \
+  tar -zxvf /tmp/helm-v3.6.1-linux-amd64.tar.gz -C /tmp && \
+  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
+  rm -rf /tmp/linux-amd64 /tmp/helm-v3.6.1-linux-amd64.tar.gz
+
+# Install Kustomize v4.1.3
+RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.3/kustomize_v4.1.3_linux_amd64.tar.gz -O /tmp/kustomize_v4.1.3_linux_amd64.tar.gz && \
+  tar -zxvf /tmp/kustomize_v4.1.3_linux_amd64.tar.gz -C /tmp && \
+  mv /tmp/kustomize /usr/local/bin/kustomize && \
+  rm /tmp/kustomize_v4.1.3_linux_amd64.tar.gz
+
 # Get go-junit-report.
 RUN go get -u github.com/jstemmer/go-junit-report
 

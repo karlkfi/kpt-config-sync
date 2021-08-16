@@ -2,7 +2,9 @@ package e2e
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,7 +15,9 @@ import (
 	nomostesting "github.com/google/nomos/e2e/nomostest/testing"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/hydrate"
+	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -478,5 +482,162 @@ func TestNomosHydrateWithUnknownScopedObject(t *testing.T) {
 		if !strings.Contains(string(out), "Error: 1 error(s)") || !strings.Contains(string(out), "KNV1021") {
 			tw.Error(fmt.Errorf("`nomos vet --path=%s` expects only one KNV1021 error, got %v", compiledDirWithoutAPIServerCheck, string(out)))
 		}
+	}
+}
+
+func TestNomosHydrateAndVetDryRepos(t *testing.T) {
+	tmpDir := nomostest.TestDir(t)
+	tw := nomostesting.New(t)
+
+	testCases := []struct {
+		name            string
+		path            string
+		outPath         string
+		sourceFormat    string
+		outFormat       string
+		expectedOutPath string
+		expectedErrMsg  string
+	}{
+		{
+			name:           "invalid output format",
+			outFormat:      "invalid",
+			expectedErrMsg: fmt.Sprintf("format argument must be %q or %q", flags.OutputYAML, flags.OutputJSON),
+		},
+		{
+			name:           "must use 'unstructured' format for DRY repos",
+			path:           "../testdata/hydration/helm-components",
+			sourceFormat:   string(filesystem.SourceFormatHierarchy),
+			expectedErrMsg: fmt.Sprintf("%s must be %s when Kustmization is needed", reconcilermanager.SourceFormat, filesystem.SourceFormatUnstructured),
+		},
+		{
+			name:           "hydrate error: deprecated Group and Kind",
+			path:           "../testdata/hydration/invalid-dry-repo",
+			sourceFormat:   string(filesystem.SourceFormatUnstructured),
+			expectedErrMsg: "The config is using a deprecated Group and Kind. To fix, set the Group and Kind to \"Deployment.apps\"",
+		},
+		{
+			name:           "hydrate error: duplicate resources",
+			path:           "../testdata/hydration/resource-duplicate",
+			sourceFormat:   string(filesystem.SourceFormatUnstructured),
+			expectedErrMsg: "may not add resource with an already registered id",
+		},
+		{
+			name:            "hydrate a DRY repo with helm components",
+			path:            "../testdata/hydration/helm-components",
+			outPath:         "helm-components/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/compiled/helm-components",
+		},
+		{
+			name:            "hydrate a DRY repo with kustomize components",
+			path:            "../testdata/hydration/kustomize-components",
+			outPath:         "kustomize-components/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/compiled/kustomize-components",
+		},
+		{
+			name:            "hydrate a DRY repo with helm overlay",
+			path:            "../testdata/hydration/helm-overlay",
+			outPath:         "helm-overlay/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/compiled/helm-overlay",
+		},
+		{
+			name:            "hydrate a DRY repo with remote base",
+			path:            "../testdata/hydration/remote-base",
+			outPath:         "remote-base/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/compiled/remote-base",
+		},
+		{
+			name:            "hydrate a WET repo",
+			path:            "../testdata/hydration/wet-repo",
+			outPath:         "wet-repo/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/wet-repo",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			outputPath := filepath.Join(tmpDir, flags.DefaultHydrationOutput)
+			args := []string{"--no-api-server-check"}
+			if len(tc.sourceFormat) > 0 {
+				args = append(args, "--source-format", tc.sourceFormat)
+			}
+			if len(tc.path) > 0 {
+				args = append(args, "--path", tc.path)
+			}
+			if len(tc.outFormat) > 0 {
+				args = append(args, "--format", tc.outFormat)
+			}
+			if len(tc.outPath) > 0 {
+				outputPath = filepath.Join(tmpDir, tc.outPath)
+				args = append(args, "--output", outputPath)
+			}
+			if err := os.MkdirAll(outputPath, 0755); err != nil {
+				t.Fatal(err)
+			}
+			// test 'nomos hydrate'
+			hydrateArgs := []string{"hydrate"}
+			hydrateArgs = append(hydrateArgs, args...)
+			out, err := exec.Command("nomos", hydrateArgs...).CombinedOutput()
+			if len(tc.expectedErrMsg) != 0 && err == nil {
+				tw.Errorf("%s: expected error '%s', but got no error", tc.name, tc.expectedErrMsg)
+			}
+			if len(tc.expectedErrMsg) == 0 && err != nil {
+				tw.Errorf("%s: expected no error, but got '%s'", tc.name, string(out))
+			}
+			if len(tc.expectedErrMsg) != 0 && !strings.Contains(string(out), tc.expectedErrMsg) {
+				tw.Errorf("%s: expected error '%s', but got '%s'", tc.name, tc.expectedErrMsg, string(out))
+			}
+
+			if len(tc.expectedErrMsg) == 0 {
+				out, err = exec.Command("diff", "-r", outputPath, tc.expectedOutPath).CombinedOutput()
+				if err != nil {
+					tw.Log(string(out))
+					tw.Errorf("%s: %v", tc.name, err)
+				}
+			}
+
+			// test 'nomos vet'
+			args = append(args, "--keep-output")
+			// test JSON output format
+			if tc.outFormat == "" || tc.outFormat == flags.OutputYAML {
+				args = append(args, "--format", flags.OutputJSON)
+			}
+			// use a different output folder
+			outputPath = strings.ReplaceAll(outputPath, "compiled", "compiled-json")
+			if err := os.MkdirAll(outputPath, 0755); err != nil {
+				t.Fatal(err)
+			}
+			args = append(args, "--output", outputPath)
+
+			vetArgs := []string{"vet"}
+			vetArgs = append(vetArgs, args...)
+			out, err = exec.Command("nomos", vetArgs...).CombinedOutput()
+			if len(tc.expectedErrMsg) != 0 && err == nil {
+				tw.Errorf("%s: expected error '%s', but got no error", tc.name, tc.expectedErrMsg)
+			}
+			if len(tc.expectedErrMsg) == 0 && err != nil {
+				tw.Errorf("%s: expected no error, but got '%s'", tc.name, string(out))
+			}
+			if len(tc.expectedErrMsg) != 0 && !strings.Contains(string(out), tc.expectedErrMsg) {
+				tw.Errorf("%s: expected error '%s', but got '%s'", tc.name, tc.expectedErrMsg, string(out))
+			}
+
+			if len(tc.expectedErrMsg) == 0 {
+				// update the expected output folder
+				tc.expectedOutPath = strings.ReplaceAll(tc.expectedOutPath, "compiled", "compiled-json")
+				if strings.Contains(outputPath, "wet-repo") {
+					tc.expectedOutPath = "../testdata/hydration/compiled-json/wet-repo"
+				}
+				out, err = exec.Command("diff", "-r", outputPath, tc.expectedOutPath).CombinedOutput()
+				if err != nil {
+					tw.Log(string(out))
+					tw.Errorf("%s: %v", tc.name, err)
+				}
+			}
+		})
 	}
 }

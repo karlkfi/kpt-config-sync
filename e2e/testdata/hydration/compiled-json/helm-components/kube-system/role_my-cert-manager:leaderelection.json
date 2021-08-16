@@ -1,0 +1,53 @@
+{
+	"apiVersion": "v1",
+	"items": [
+		{
+			"apiVersion": "rbac.authorization.k8s.io/v1",
+			"kind": "Role",
+			"metadata": {
+				"labels": {
+					"app": "cert-manager",
+					"app.kubernetes.io/component": "controller",
+					"app.kubernetes.io/instance": "my-cert-manager",
+					"app.kubernetes.io/managed-by": "Helm",
+					"app.kubernetes.io/name": "cert-manager",
+					"helm.sh/chart": "cert-manager-v1.3.0",
+					"test-case": "hydration"
+				},
+				"name": "my-cert-manager:leaderelection",
+				"namespace": "kube-system"
+			},
+			"rules": [
+				{
+					"apiGroups": [
+						""
+					],
+					"resourceNames": [
+						"cert-manager-controller"
+					],
+					"resources": [
+						"configmaps"
+					],
+					"verbs": [
+						"get",
+						"update",
+						"patch"
+					]
+				},
+				{
+					"apiGroups": [
+						""
+					],
+					"resources": [
+						"configmaps"
+					],
+					"verbs": [
+						"create"
+					]
+				}
+			]
+		}
+	],
+	"kind": "List",
+	"metadata": {}
+}

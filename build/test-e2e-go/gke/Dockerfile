@@ -16,6 +16,18 @@ ENV KUBERNETES_ENV=GKE
 
 RUN apk add bash curl docker gcc git jq make openssh-client python
 
+# Install Helm v3.6.1
+RUN wget https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -O /tmp/helm-v3.6.1-linux-amd64.tar.gz && \
+  tar -zxvf /tmp/helm-v3.6.1-linux-amd64.tar.gz -C /tmp && \
+  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
+  rm -rf /tmp/linux-amd64 /tmp/helm-v3.6.1-linux-amd64.tar.gz
+
+# Install Kustomize v4.1.3
+RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.3/kustomize_v4.1.3_linux_amd64.tar.gz -O /tmp/kustomize_v4.1.3_linux_amd64.tar.gz && \
+  tar -zxvf /tmp/kustomize_v4.1.3_linux_amd64.tar.gz -C /tmp && \
+  mv /tmp/kustomize /usr/local/bin/kustomize && \
+  rm /tmp/kustomize_v4.1.3_linux_amd64.tar.gz
+
 # Copy installed gcloud and kubectl into image
 COPY --from=gcloud-install /usr/lib/google-cloud-sdk /opt/gcloud/google-cloud-sdk
 COPY --from=gcloud-install /usr/bin/kubectl /opt/gcloud/google-cloud-sdk/bin/kubectl

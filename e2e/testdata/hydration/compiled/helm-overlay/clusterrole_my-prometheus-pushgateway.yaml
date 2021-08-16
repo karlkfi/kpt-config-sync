@@ -1,0 +1,16 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    hydration-tool: kustomize
+  labels:
+    app: prometheus
+    chart: prometheus-14.3.0
+    component: pushgateway
+    heritage: Helm
+    release: my-prometheus
+    team: monitoring
+    test-case: hydration
+  name: my-prometheus-pushgateway
+rules: []

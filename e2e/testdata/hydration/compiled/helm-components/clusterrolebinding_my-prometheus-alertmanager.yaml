@@ -1,0 +1,20 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: prometheus
+    chart: prometheus-14.3.0
+    component: alertmanager
+    heritage: Helm
+    release: my-prometheus
+    test-case: hydration
+  name: my-prometheus-alertmanager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: my-prometheus-alertmanager
+subjects:
+- kind: ServiceAccount
+  name: my-prometheus-alertmanager
+  namespace: monitoring
