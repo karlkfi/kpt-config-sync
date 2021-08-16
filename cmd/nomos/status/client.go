@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	"github.com/google/nomos/cmd/nomos/util"
+	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/client/restconfig"
@@ -27,17 +28,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 type statusClient struct {
-	// TODO(b/170849447): Replace RepoInterface and PodInterface with runtime client usage.
 	client           client.Client
 	repos            typedv1.RepoInterface
-	pods             corev1.PodInterface
+	k8sClient        *kubernetes.Clientset
 	configManagement *util.ConfigManagementClient
 }
 
@@ -239,24 +238,36 @@ func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clust
 // Config Sync is installed. Updates the given clusterState with status info if
 // Config Sync is not installed.
 func (c *statusClient) isInstalled(ctx context.Context, cs *clusterState) bool {
-	podList, err := c.pods.List(ctx, metav1.ListOptions{LabelSelector: "k8s-app=config-management-operator"})
+	labelSelector := "k8s-app=config-management-operator"
+	podListKubeSystem, errKubeSystem := c.k8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	podListConfigManagementSystem, errConfigManagementSystem := c.k8sClient.CoreV1().Pods(configmanagement.ControllerNamespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			cs.status = util.NotInstalledMsg
-		} else {
-			cs.status = util.ErrorMsg
-			cs.error = err.Error()
-		}
+	switch {
+	case errKubeSystem != nil && errConfigManagementSystem != nil:
+		cs.status = util.ErrorMsg
+		cs.error = fmt.Sprintf("Failed to list pods with the %q LabelSelector in the %q namespace (err: %v) and the %q namespace (err: %v)", labelSelector, metav1.NamespaceSystem, configmanagement.ControllerNamespace, errKubeSystem.Error(), errConfigManagementSystem.Error())
 		return false
-	}
-
-	if len(podList.Items) == 0 {
+	case errConfigManagementSystem != nil && len(podListKubeSystem.Items) == 0:
+		// The ACM operator is installed in the kube-system namespace
 		cs.status = util.NotInstalledMsg
+		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", metav1.NamespaceSystem, configmanagement.ControllerNamespace, errConfigManagementSystem.Error())
 		return false
+	case errKubeSystem != nil && len(podListConfigManagementSystem.Items) == 0:
+		// The ACM operator is installed in the config-management-system namespace
+		cs.status = util.NotInstalledMsg
+		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", configmanagement.ControllerNamespace, metav1.NamespaceSystem, errKubeSystem.Error())
+		return false
+	case len(podListKubeSystem.Items) == 0 && len(podListConfigManagementSystem.Items) == 0:
+		cs.status = util.NotInstalledMsg
+		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and %q namespace", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
+		return false
+	case len(podListKubeSystem.Items) > 0 && len(podListConfigManagementSystem.Items) > 0:
+		cs.status = util.ErrorMsg
+		cs.error = fmt.Sprintf("Found two ACM operators: one from the %q namespace, and the other from the %q namespace. Please remove one of them.", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
+		return false
+	default:
+		return true
 	}
-
-	return true
 }
 
 // isConfigured returns true if the statusClient is connected to a cluster where
@@ -351,7 +362,7 @@ func statusClients(ctx context.Context, contexts []string) (map[string]*statusCl
 				clientMap[cfgName] = &statusClient{
 					cl,
 					pcs.ConfigmanagementV1().Repos(),
-					kcs.CoreV1().Pods(metav1.NamespaceSystem),
+					kcs,
 					cmc,
 				}
 				mapMutex.Unlock()
