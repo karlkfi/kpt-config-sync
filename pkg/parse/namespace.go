@@ -170,7 +170,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		Branch:   p.GitBranch,
 		Dir:      p.PolicyDir.SlashPath(),
 	}
-	rs.Status.Rendering.Phase = newStatus.phase
+	rs.Status.Rendering.Message = newStatus.message
 	rs.Status.Rendering.Errors = cse
 	rs.Status.Rendering.LastUpdate = metav1.Now()
 

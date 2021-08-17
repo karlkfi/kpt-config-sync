@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -24,13 +23,13 @@ func (gs gitStatus) equal(other gitStatus) bool {
 }
 
 type renderingStatus struct {
-	commit string
-	phase  v1alpha1.RenderingPhase
-	errs   status.MultiError
+	commit  string
+	message string
+	errs    status.MultiError
 }
 
 func (rs renderingStatus) equal(other renderingStatus) bool {
-	return rs.commit == other.commit && rs.phase == other.phase && status.DeepEqual(rs.errs, other.errs)
+	return rs.commit == other.commit && rs.message == other.message && status.DeepEqual(rs.errs, other.errs)
 }
 
 type reconcilerState struct {

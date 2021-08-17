@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
@@ -58,10 +57,10 @@ type gitState struct {
 }
 
 // readConfigFiles reads all the files under state.policyDir and sets state.files.
-// - if renderingPhase is 'skipped', state.policyDir contains the source files.
-// - if renderingPhase is 'succeeded', state.policyDir contains the hydrated files.
+// - if rendered is true, state.policyDir contains the hydrated files.
+// - if rendered is false, state.policyDir contains the source files.
 // readConfigFiles should be called after gitState is populated.
-func (o *files) readConfigFiles(state *gitState, renderingPhase v1alpha1.RenderingPhase) status.Error {
+func (o *files) readConfigFiles(state *gitState, rendered bool) status.Error {
 	if state == nil || state.commit == "" || state.policyDir.OSPath() == "" {
 		return status.InternalError("gitState is not populated yet")
 	}
@@ -75,13 +74,10 @@ func (o *files) readConfigFiles(state *gitState, renderingPhase v1alpha1.Renderi
 
 	var fileList []cmpath.Absolute
 	var err error
-	switch renderingPhase {
-	case v1alpha1.RenderingSkipped:
-		fileList, err = git.ListFiles(policyDir)
-	case v1alpha1.RenderingSucceeded:
+	if rendered {
 		fileList, err = listFiles(policyDir)
-	default:
-		return status.InternalErrorf("rendering should have completed, but the phase is %s", renderingPhase)
+	} else {
+		fileList, err = git.ListFiles(policyDir)
 	}
 	if err != nil {
 		return status.PathWrapError(errors.Wrap(err, "listing files in the configs directory"), policyDir.OSPath())

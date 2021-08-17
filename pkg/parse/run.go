@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/metrics"
@@ -20,6 +19,20 @@ const (
 	triggerRetry              = "retry"
 	triggerManagementConflict = "managementConflict"
 	triggerWatchUpdate        = "watchUpdate"
+)
+
+const (
+	// RenderingInProgress means that the configs are still being rendered by Config Sync.
+	RenderingInProgress string = "Rendering is still in progress"
+
+	// RenderingSucceeded means that the configs have been rendered successfully.
+	RenderingSucceeded string = "Rendering succeeded"
+
+	// RenderingFailed means that the configs have failed to be rendered.
+	RenderingFailed string = "Rendering failed"
+
+	// RenderingSkipped means that the configs don't need to be rendered.
+	RenderingSkipped string = "Rendering skipped"
 )
 
 // Run keeps checking whether a parse-apply-watch loop is necessary and starts a loop if needed.
@@ -95,10 +108,10 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	if _, err := os.Stat(doneFilePath); err != nil {
 		var readErrs status.MultiError
 		if os.IsNotExist(err) {
-			rs.phase = v1alpha1.RenderingInProgress
+			rs.message = RenderingInProgress
 			readErrs = status.HydrationInProgress(gs.commit)
 		} else {
-			rs.phase = v1alpha1.RenderingFailed
+			rs.message = RenderingFailed
 			rs.errs = status.HydrationError.Wrap(err).
 				Sprintf("unable to read the done file: %s", doneFilePath).
 				Build()
@@ -191,28 +204,30 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	// If exists, read the hydrated directory. Otherwise, read the source directory.
 	absHydratedRoot, err := cmpath.AbsoluteOS(opts.HydratedRoot)
 	if err != nil {
-		hydrationStatus.phase = v1alpha1.RenderingFailed
+		hydrationStatus.message = RenderingFailed
 		hydrationStatus.errs = status.HydrationError.Wrap(err).
 			Sprint("hydrated-dir must be an absolute path").Build()
 		return hydrationStatus, sourceStatus
 	}
 
 	var hydrationErr error
+	rendered := false
 	if _, err := os.Stat(absHydratedRoot.OSPath()); err == nil {
 		sourceState, hydrationErr = opts.readHydratedDir(absHydratedRoot, opts.HydratedLink, opts.reconcilerName)
 		if hydrationErr != nil {
-			hydrationStatus.phase = v1alpha1.RenderingFailed
+			hydrationStatus.message = RenderingFailed
 			hydrationStatus.errs = status.HydrationError.Wrap(hydrationErr).Build()
 			return hydrationStatus, sourceStatus
 		}
-		hydrationStatus.phase = v1alpha1.RenderingSucceeded
+		hydrationStatus.message = RenderingSucceeded
+		rendered = true
 	} else if !os.IsNotExist(err) {
-		hydrationStatus.phase = v1alpha1.RenderingFailed
+		hydrationStatus.message = RenderingFailed
 		hydrationStatus.errs = status.HydrationError.Wrap(err).
 			Sprintf("unable to evaluate the hydrated path %s", absHydratedRoot.OSPath()).Build()
 		return hydrationStatus, sourceStatus
 	} else {
-		hydrationStatus.phase = v1alpha1.RenderingSkipped
+		hydrationStatus.message = RenderingSkipped
 	}
 
 	if sourceState.policyDir == state.cache.git.policyDir {
@@ -225,7 +240,7 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	state.resetCache()
 
 	// Read all the files under state.policyDir
-	sourceStatus.errs = opts.readConfigFiles(&sourceState, hydrationStatus.phase)
+	sourceStatus.errs = opts.readConfigFiles(&sourceState, rendered)
 	if sourceStatus.errs == nil {
 		// Set `state.cache.git` after `readConfigFiles` succeeded
 		state.cache.git = sourceState

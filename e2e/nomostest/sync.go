@@ -6,6 +6,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/parse"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -131,8 +132,8 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		if commit := rs.Status.Rendering.Commit; commit != sha1 {
 			return fmt.Errorf("status.rendering.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if phase := rs.Status.Rendering.Phase; phase != v1alpha1.RenderingSucceeded && phase != v1alpha1.RenderingSkipped {
-			return fmt.Errorf("status.rendering.phase %q does not indicate a successful state:\n%s", phase, string(jsn))
+		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
+			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
 		}
 		return nil
 	}
@@ -178,8 +179,8 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		if commit := rs.Status.Rendering.Commit; commit != sha1 {
 			return fmt.Errorf("status.rendering.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if phase := rs.Status.Rendering.Phase; phase != v1alpha1.RenderingSucceeded && phase != v1alpha1.RenderingSkipped {
-			return fmt.Errorf("status.rendering.phase %q does not indicate a successful state:\n%s", phase, string(jsn))
+		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
+			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
 		}
 		return nil
 	}

@@ -4,23 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RenderingPhase is an enum of rendering phases.
-type RenderingPhase string
-
-const (
-	// RenderingInProgress means that the configs are still being rendered by Config Sync.
-	RenderingInProgress RenderingPhase = "InProgress"
-
-	// RenderingSucceeded means that the configs have been rendered successfully.
-	RenderingSucceeded RenderingPhase = "Succeeded"
-
-	// RenderingFailed means that the configs have failed to be rendered.
-	RenderingFailed RenderingPhase = "Failed"
-
-	// RenderingSkipped means that the configs don't need to be rendered.
-	RenderingSkipped RenderingPhase = "Skipped"
-)
-
 // SyncStatus provides a common type that is embedded in RepoSyncStatus and RootSyncStatus.
 type SyncStatus struct {
 	// ObservedGeneration is the most recent generation observed for the sync resource.
@@ -84,8 +67,8 @@ type RenderingStatus struct {
 	// +optional
 	LastUpdate metav1.Time `json:"lastUpdate,omitempty"`
 
-	// Phase describes the rendering status.
-	Phase RenderingPhase `json:"phase,omitempty"`
+	// Human-readable message describes details about the rendering status.
+	Message string `json:"message,omitempty"`
 
 	// Errors is a list of any errors that occurred while rendering the source of truth.
 	// +optional
