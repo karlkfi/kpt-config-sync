@@ -166,7 +166,18 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv
 	r.log.Info("The Deployment needs to be patched", "name", obj.Name)
 
 	if err := r.client.Patch(ctx, obj, patch); err != nil {
-		return controllerutil.OperationResultNone, err
+		// Let the next reconciliation retry the patch operation for valid request.
+		if !apierrors.IsInvalid(err) {
+			return controllerutil.OperationResultNone, err
+		}
+		// The provided data is invalid (e.g. http://b/196922619), so delete and re-create the resource.
+		r.log.Error(err, "Failed to patch resource, deleting and re-creating the resource", "Resource", obj.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
+		if err := r.client.Delete(ctx, obj); err != nil {
+			return controllerutil.OperationResultNone, err
+		}
+		if err := r.client.Create(ctx, obj); err != nil {
+			return controllerutil.OperationResultNone, err
+		}
 	}
 
 	return controllerutil.OperationResultUpdated, nil
