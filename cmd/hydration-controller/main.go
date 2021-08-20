@@ -40,6 +40,14 @@ var (
 	hydrationPollingPeriodStr = flag.String("polling-period", os.Getenv(reconcilermanager.HydrationPollingPeriod),
 		"Period of time between checking the filesystem for rendering the DRY configs.")
 
+	// rehydratePeriod sets the hydration-controller to re-run the hydration process
+	// periodically when errors happen. It retries on both transient errors and permanent errors.
+	// Other ways to trigger the hydration process are:
+	// - push a new commit
+	// - delete the done file from the hydration-controller.
+	rehydratePeriod = flag.Duration("rehydrate-period", 30*time.Minute,
+		"Period of time between rehydrating on errors.")
+
 	scope = flag.String("scope", os.Getenv("SCOPE"),
 		"Scope of the hydration controller, either a namespace or ':root'.")
 )
@@ -77,14 +85,15 @@ func main() {
 	}
 
 	hydrator := &hydrate.Hydrator{
-		DonePath:         absDonePath,
-		SourceRoot:       absSourceRootDir,
-		HydratedRoot:     absHydratedRootDir,
-		SourceLink:       *sourceLinkDir,
-		HydratedLink:     *hydratedLinkDir,
-		SyncDir:          relSyncDir,
-		PollingFrequency: hydrationPollingPeriod,
-		ReconcilerName:   reconcilerName,
+		DonePath:           absDonePath,
+		SourceRoot:         absSourceRootDir,
+		HydratedRoot:       absHydratedRootDir,
+		SourceLink:         *sourceLinkDir,
+		HydratedLink:       *hydratedLinkDir,
+		SyncDir:            relSyncDir,
+		PollingFrequency:   hydrationPollingPeriod,
+		RehydrateFrequency: *rehydratePeriod,
+		ReconcilerName:     reconcilerName,
 	}
 
 	hydrator.Run(context.Background())

@@ -132,8 +132,8 @@ func RecordInternalError(ctx context.Context, source string) {
 	stats.Record(tagCtx, measurement)
 }
 
-// RecordRenderingRepoCount produces measurements for the RenderingCount view.
-func RecordRenderingRepoCount(ctx context.Context) {
+// RecordRenderingCount produces measurements for the RenderingCount view.
+func RecordRenderingCount(ctx context.Context) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()))
 	measurement := RenderingCount.M(1)
 	stats.Record(tagCtx, measurement)

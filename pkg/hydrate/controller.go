@@ -13,7 +13,6 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/git"
 	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 )
@@ -43,6 +42,8 @@ type Hydrator struct {
 	SyncDir cmpath.Relative
 	// PollingFrequency is the period of time between checking the filesystem for rendering the DRY configs.
 	PollingFrequency time.Duration
+	// RehydrateFrequency is the period of time between rehydrating on errors.
+	RehydrateFrequency time.Duration
 	// ReconcilerName is the name of the reconciler.
 	ReconcilerName string
 }
@@ -50,17 +51,28 @@ type Hydrator struct {
 // Run runs the hydration process periodically.
 func (h *Hydrator) Run(ctx context.Context) {
 	tickerPoll := time.NewTicker(h.PollingFrequency)
+	tickerRehydrate := time.NewTicker(h.RehydrateFrequency)
 	absSourceDir := h.SourceRoot.Join(cmpath.RelativeSlash(h.SourceLink))
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tickerPoll.C:
+		case <-tickerRehydrate.C:
 			commit, syncDir, err := SourceCommitAndDir(absSourceDir, h.SyncDir, h.ReconcilerName)
 			if err != nil {
 				glog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
 			} else {
-				hydrateErr := h.hydrate(ctx, commit, syncDir.OSPath())
+				h.rehydrateOnError(commit, syncDir.OSPath())
+			}
+		case <-tickerPoll.C:
+			commit, syncDir, err := SourceCommitAndDir(absSourceDir, h.SyncDir, h.ReconcilerName)
+			if err != nil {
+				glog.Errorf("failed to get the commit hash and sync directory from the source directory %s: %v", absSourceDir.OSPath(), err)
+			} else if DoneCommit(h.DonePath.OSPath()) != commit {
+				// If the commit has been processed before, regardless of success or failure,
+				// skip the hydration to avoid repeated execution.
+				// The rehydrate ticker will retry on the failed commit.
+				hydrateErr := h.hydrate(commit, syncDir.OSPath())
 				if err := h.complete(commit, hydrateErr); err != nil {
 					glog.Errorf("failed to complete the rendering execution for commit %q: %v", commit, err)
 				}
@@ -69,39 +81,8 @@ func (h *Hydrator) Run(ctx context.Context) {
 	}
 }
 
-// hydrate renders the source git repo to hydrated configs.
-func (h *Hydrator) hydrate(ctx context.Context, sourceCommit, syncDir string) error {
-	hydrate, err := needsKustomize(syncDir)
-	if err != nil {
-		return errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir)
-	}
-	if !hydrate {
-		metrics.RecordSkipRenderingCount(ctx)
-		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
-		return os.RemoveAll(h.HydratedRoot.OSPath())
-	}
-	hydratedCommit := ""
-	absHydratedDir := h.HydratedRoot.Join(cmpath.RelativeSlash(h.HydratedLink))
-	hydratedDir, err := absHydratedDir.EvalSymlinks()
-	if err == nil {
-		hydratedCommit, err = git.CommitHash(hydratedDir.OSPath())
-		if err != nil {
-			return errors.Wrapf(err, "unable to parse commit hash from the hydrated directory: %s", hydratedDir.OSPath())
-		}
-	} else if !os.IsNotExist(err) {
-		return errors.Wrapf(err, "unable to evaluate the hydrated directory: %s", absHydratedDir.OSPath())
-	}
-
-	// no hydration is needed because there is no change from the source.
-	if hydratedCommit == sourceCommit {
-		return nil
-	}
-
-	// Remove the done file because a new hydration is in progress.
-	if err := os.RemoveAll(h.DonePath.OSPath()); err != nil {
-		return errors.Wrapf(err, "unable to remove the done file: %s", h.DonePath.OSPath())
-	}
-
+// runHydrate runs `kustomize build` on the source configs.
+func (h *Hydrator) runHydrate(sourceCommit, syncDir string) error {
 	newHydratedDir := h.HydratedRoot.Join(cmpath.RelativeOS(sourceCommit))
 	dest := newHydratedDir.Join(h.SyncDir).OSPath()
 
@@ -111,15 +92,51 @@ func (h *Hydrator) hydrate(ctx context.Context, sourceCommit, syncDir string) er
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
 		return errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath())
 	}
-	metrics.RecordRenderingRepoCount(ctx)
 	glog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
 	return nil
+}
+
+// hydrate renders the source git repo to hydrated configs.
+func (h *Hydrator) hydrate(sourceCommit, syncDir string) error {
+	hydrate, err := needsKustomize(syncDir)
+	if err != nil {
+		return errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir)
+	}
+	if !hydrate {
+		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
+		return os.RemoveAll(h.HydratedRoot.OSPath())
+	}
+
+	// Remove the done file because a new hydration is in progress.
+	if err := os.RemoveAll(h.DonePath.OSPath()); err != nil {
+		return errors.Wrapf(err, "unable to remove the done file: %s", h.DonePath.OSPath())
+	}
+	return h.runHydrate(sourceCommit, syncDir)
+}
+
+// rehydrateOnError retries the hydration on errors.
+func (h *Hydrator) rehydrateOnError(sourceCommit, syncDir string) {
+	errorFile := h.HydratedRoot.Join(cmpath.RelativeSlash(ErrorFile))
+	if _, err := os.Stat(errorFile.OSPath()); err != nil {
+		if !os.IsNotExist(err) {
+			glog.Warningf("unable to check the error file %s: %v", errorFile, err)
+		}
+		return
+	}
+	glog.Infof("retry rendering commit %s", sourceCommit)
+	hydrationErr := h.runHydrate(sourceCommit, syncDir)
+	if err := h.complete(sourceCommit, hydrationErr); err != nil {
+		glog.Errorf("failed to complete the re-rendering execution for commit %q: %v", sourceCommit, err)
+	}
 }
 
 // updateSymlink updates the symbolic link to the hydrated directory.
 func updateSymlink(hydratedRoot, link, newDir string) error {
 	linkPath := filepath.Join(hydratedRoot, link)
 	oldDir, err := filepath.EvalSymlinks(linkPath)
+	if oldDir == newDir {
+		return nil
+	}
 	deleteOldDir := true
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -168,11 +185,31 @@ func (h *Hydrator) complete(commit string, hydrationErr error) error {
 	if err != nil {
 		return errors.Wrapf(err, "unable to create done file: %s", h.DonePath.OSPath())
 	}
+	if _, err = done.WriteString(commit); err != nil {
+		return errors.Wrapf(err, "unable to write to commit hash to the done file: %s", h.DonePath)
+	}
 	if err := done.Close(); err != nil {
 		glog.Warningf("unable to close the done file %s: %v", h.DonePath.OSPath(), err)
 	}
-	glog.Infof("Successfully completed rendering execution for commit %s", commit)
 	return nil
+}
+
+// DoneCommit extracts the commit hash from the done file if exists.
+// It returns the commit hash if exists, otherwise, returns an empty string.
+// If it fails to extract the commit hash for various errors, we only log a warning,
+// and wait for the next hydration loop to retry the hydration.
+func DoneCommit(donePath string) string {
+	if _, err := os.Stat(donePath); err == nil {
+		commit, err := ioutil.ReadFile(donePath)
+		if err != nil {
+			glog.Warningf("unable to read the done file %s: %v", donePath, err)
+			return ""
+		}
+		return string(commit)
+	} else if !os.IsNotExist(err) {
+		glog.Warningf("unable to check the status of the done file %s: %v", donePath, err)
+	}
+	return ""
 }
 
 // exportError writes the error content to the error file.

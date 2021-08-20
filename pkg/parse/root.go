@@ -166,6 +166,14 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
+	if rs.Status.Rendering.Commit != newStatus.commit {
+		if newStatus.message == RenderingSkipped {
+			metrics.RecordSkipRenderingCount(ctx)
+		} else {
+			metrics.RecordRenderingCount(ctx)
+		}
+	}
+
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Rendering.Commit = newStatus.commit
 	rs.Status.Rendering.Git = v1alpha1.GitStatus{
