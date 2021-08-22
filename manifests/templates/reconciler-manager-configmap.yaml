@@ -61,7 +61,7 @@ data:
                cpu: "1"
                memory: "300Mi"
              requests:
-               cpu: "150m"
+               cpu: "10m"
                memory: "100Mi"
          - name: reconciler
            image: RECONCILER_IMAGE_NAME
@@ -93,7 +93,7 @@ data:
                cpu: "1"
                memory: "300Mi"
              requests:
-               cpu: "150m"
+               cpu: "50m"
                memory: "100Mi"
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.3.3-gke.0__linux_amd64
@@ -127,7 +127,7 @@ data:
                cpu: 500m
                memory: 500Mi
              requests:
-               cpu: 100m
+               cpu: 10m
                memory: 100Mi
            ports:
            - containerPort: 55678 # Default OpenCensus receiver port.

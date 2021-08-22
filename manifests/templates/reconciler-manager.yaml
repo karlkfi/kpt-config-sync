@@ -28,7 +28,7 @@ spec:
         name: reconciler-manager
         resources:
           requests:
-            cpu: 100m
+            cpu: 10m
             memory: 20Mi
           limits:
             cpu: 200m
@@ -52,7 +52,7 @@ spec:
             cpu: 500m
             memory: 500Mi
           requests:
-            cpu: 100m
+            cpu: 10m
             memory: 100Mi
         ports:
         - containerPort: 55678 # Default OpenCensus receiver port.
