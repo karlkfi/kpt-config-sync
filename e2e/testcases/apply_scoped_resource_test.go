@@ -28,6 +28,10 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+
+	nt.Root.Remove("acme/namespaces/kubevirt/kubevirt-cr.yaml")
+	nt.Root.CommitAndPush("Remove kubevirt custom resource")
+	nt.WaitForRepoSyncs()
 }
 
 func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
@@ -49,4 +53,8 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+
+	nt.Root.Remove("acme/kubevirt/kubevirt_kubevirt.yaml")
+	nt.Root.CommitAndPush("Remove kubevirt custom resource")
+	nt.WaitForRepoSyncs()
 }
