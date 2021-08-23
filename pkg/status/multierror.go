@@ -18,7 +18,8 @@ type MultiError interface {
 }
 
 var nonActionableErrorCodes = map[string]struct{}{
-	UnknownKindErrorCode: {},
+	UnknownKindErrorCode:         {},
+	EncodeDeclaredFieldErrorCode: {},
 }
 
 // HasActionableErrors return whether `errs` include any actionable errors.

@@ -30,7 +30,6 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/clusterconfig"
-	"github.com/google/nomos/pkg/validate/raw/hydrate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -302,7 +301,7 @@ func Generate() AllExamples {
 	result.add(selectors.ClusterSelectorAnnotationConflictError(fake.NamespaceObject("my-namespace")))
 
 	// 1067
-	result.add(hydrate.EncodeDeclaredFieldError(fake.NamespaceObject("my-namespace"),
+	result.add(status.EncodeDeclaredFieldError(fake.NamespaceObject("my-namespace"),
 		fmt.Errorf(".spec.version not defined")))
 
 	// 2001
