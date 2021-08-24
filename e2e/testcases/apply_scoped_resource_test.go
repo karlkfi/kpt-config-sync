@@ -16,9 +16,11 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.CommitAndPush("Add kubevirt configs")
 	nt.WaitForRepoSyncs()
 
+	nt.T.Cleanup(removeKubeVirtCR(nt, "acme/namespaces/kubevirt/kubevirt-cr.yaml"))
+
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	_, err = nomostest.Retry(60*time.Second, func() error {
@@ -28,10 +30,6 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
-
-	nt.Root.Remove("acme/namespaces/kubevirt/kubevirt-cr.yaml")
-	nt.Root.CommitAndPush("Remove kubevirt custom resource")
-	nt.WaitForRepoSyncs()
 }
 
 func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
@@ -41,9 +39,11 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	nt.Root.CommitAndPush("Add kubevirt configs")
 	nt.WaitForRepoSyncs()
 
+	nt.T.Cleanup(removeKubeVirtCR(nt, "acme/kubevirt/kubevirt_kubevirt.yaml"))
+
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
-		t.Fatal(err)
+		nt.T.Fatal(err)
 	}
 
 	_, err = nomostest.Retry(60*time.Second, func() error {
@@ -53,8 +53,12 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+}
 
-	nt.Root.Remove("acme/kubevirt/kubevirt_kubevirt.yaml")
-	nt.Root.CommitAndPush("Remove kubevirt custom resource")
-	nt.WaitForRepoSyncs()
+func removeKubeVirtCR(nt *nomostest.NT, path string) func() {
+	return func() {
+		nt.Root.Remove(path)
+		nt.Root.CommitAndPush("Remove kubevirt custom resource")
+		nt.WaitForRepoSyncs(nomostest.WithTimeout(4 * time.Minute))
+	}
 }
