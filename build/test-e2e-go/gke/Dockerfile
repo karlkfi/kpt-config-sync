@@ -3,7 +3,7 @@ FROM gcr.io/google.com/cloudsdktool/cloud-sdk:slim as gcloud-install
 RUN apt-get install -y kubectl
 
 # Build e2e image
-FROM golang:1.14.2-alpine
+FROM golang:1.16.1-alpine
 
 WORKDIR /repo
 
@@ -16,17 +16,25 @@ ENV KUBERNETES_ENV=GKE
 
 RUN apk add bash curl docker gcc git jq make openssh-client python
 
-# Install Helm v3.6.1
-RUN wget https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -O /tmp/helm-v3.6.1-linux-amd64.tar.gz && \
-  tar -zxvf /tmp/helm-v3.6.1-linux-amd64.tar.gz -C /tmp && \
-  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
-  rm -rf /tmp/linux-amd64 /tmp/helm-v3.6.1-linux-amd64.tar.gz
+ARG HELM_VERSION=v3.6.3
+ARG KUSTOMIZE_VERSION=v4.3.0
+ARG HELM_INFLATOR_FUNCTIOPN_VERSION=v0.1.0
 
-# Install Kustomize v4.1.3
-RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.3/kustomize_v4.1.3_linux_amd64.tar.gz -O /tmp/kustomize_v4.1.3_linux_amd64.tar.gz && \
-  tar -zxvf /tmp/kustomize_v4.1.3_linux_amd64.tar.gz -C /tmp && \
+# Install the render-helm-chart function.
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+  go install github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/render-helm-chart@${HELM_INFLATOR_FUNCTIOPN_VERSION}
+
+# Install Helm
+RUN wget https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -O /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz && \
+  tar -zxvf /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz -C /tmp && \
+  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
+  rm -rf /tmp/linux-amd64 /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz
+
+# Install Kustomize
+RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -O /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz && \
+  tar -zxvf /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -C /tmp && \
   mv /tmp/kustomize /usr/local/bin/kustomize && \
-  rm /tmp/kustomize_v4.1.3_linux_amd64.tar.gz
+  rm /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
 
 # Copy installed gcloud and kubectl into image
 COPY --from=gcloud-install /usr/lib/google-cloud-sdk /opt/gcloud/google-cloud-sdk

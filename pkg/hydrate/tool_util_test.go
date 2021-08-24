@@ -1,6 +1,7 @@
 package hydrate
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -13,15 +14,15 @@ func TestValidateTool(t *testing.T) {
 		{
 			name:        "tool version is too old",
 			version:     "{kustomize/v3.6.5  2021-05-20T20:52:40Z  }",
-			expectedErr: `The current kustomize version is "3.6.5". The recommended version is v4.1.3. Please upgrade to the v4.1.3+ for compatibility.`,
+			expectedErr: fmt.Sprintf(`The current kustomize version is "3.6.5". The recommended version is %s. Please upgrade to the %s+ for compatibility.`, KustomizeVersion, KustomizeVersion),
 		},
 		{
 			name:    "tool version is the same as required",
-			version: "{kustomize/v4.1.3  2021-05-20T20:52:40Z  }",
+			version: fmt.Sprintf("{kustomize/%s  2021-08-24T20:52:40Z  }", KustomizeVersion),
 		},
 		{
 			name:    "tool version is newer than required",
-			version: "{kustomize/v4.4.4  2021-05-20T20:52:40Z  }",
+			version: "{kustomize/v8.4.4  2025-05-20T20:52:40Z  }",
 		},
 	}
 

@@ -1,5 +1,5 @@
 # Build all nomos go binaries
-FROM golang:1.14 as bins
+FROM golang:1.16 as bins
 
 WORKDIR /workspace
 
@@ -7,6 +7,11 @@ COPY . .
 
 # Version string to embed in built binary.
 ARG VERSION
+ARG HELM_INFLATOR_FUNCTIOPN_VERSION=v0.1.0
+
+# Install the render-helm-chart function.
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
+  go install github.com/GoogleContainerTools/kpt-functions-catalog/functions/go/render-helm-chart@${HELM_INFLATOR_FUNCTIOPN_VERSION}
 
 # Build all our stuff.
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
@@ -25,19 +30,23 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on \
 FROM k8s.gcr.io/build-image/debian-base-amd64:buster-v1.8.0 as hydration-controller
 WORKDIR /
 COPY --from=bins /go/bin/hydration-controller .
+COPY --from=bins /go/bin/render-helm-chart /usr/local/bin/render-helm-chart
 RUN apt-get update && apt-get install -y git wget
 
-# Install Helm v3.6.1
-RUN wget https://get.helm.sh/helm-v3.6.1-linux-amd64.tar.gz -O /tmp/helm-v3.6.1-linux-amd64.tar.gz && \
-  tar -zxvf /tmp/helm-v3.6.1-linux-amd64.tar.gz -C /tmp && \
-  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
-  rm -rf /tmp/linux-amd64 /tmp/helm-v3.6.1-linux-amd64.tar.gz
+ARG HELM_VERSION=v3.6.3
+ARG KUSTOMIZE_VERSION=v4.3.0
 
-# Install Kustomize v4.1.3
-RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.1.3/kustomize_v4.1.3_linux_amd64.tar.gz -O /tmp/kustomize_v4.1.3_linux_amd64.tar.gz && \
-  tar -zxvf /tmp/kustomize_v4.1.3_linux_amd64.tar.gz -C /tmp && \
+# Install Helm
+RUN wget https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz -O /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz && \
+  tar -zxvf /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz -C /tmp && \
+  mv /tmp/linux-amd64/helm /usr/local/bin/helm && \
+  rm -rf /tmp/linux-amd64 /tmp/helm-${HELM_VERSION}-linux-amd64.tar.gz
+
+# Install Kustomize
+RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -O /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz && \
+  tar -zxvf /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz -C /tmp && \
   mv /tmp/kustomize /usr/local/bin/kustomize && \
-  rm /tmp/kustomize_v4.1.3_linux_amd64.tar.gz
+  rm /tmp/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
