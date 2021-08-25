@@ -256,18 +256,19 @@ func multiRepoSyncStatus(status v1alpha1.SyncStatus) string {
 	if len(status.Source.Errors) > 0 || len(status.Sync.Errors) > 0 || len(status.Rendering.Errors) > 0 {
 		return util.ErrorMsg
 	}
-	if len(status.Sync.Commit) == 0 {
+	if status.Sync.Commit == "" {
 		return pendingMsg
 	}
-	// if status.Rendering.commit is empty, it is mostly likely a pre-1.9 ACM cluster.
-	// In this case, check the sync commit and the source commit.
-	// Otherwise, check the sync commit and the rendering commit
-	if len(status.Rendering.Commit) == 0 {
-		if status.Sync.Commit == status.Source.Commit {
+	if status.Sync.Commit == status.Source.Commit {
+		// if status.Rendering.commit is empty, it is mostly likely a pre-1.9 ACM cluster.
+		// In this case, check the sync commit and the source commit.
+		if status.Rendering.Commit == "" {
 			return syncedMsg
 		}
-	} else if status.Sync.Commit == status.Rendering.Commit {
-		return syncedMsg
+		// Otherwise, check the sync commit and the rendering commit
+		if status.Sync.Commit == status.Rendering.Commit {
+			return syncedMsg
+		}
 	}
 	return pendingMsg
 }

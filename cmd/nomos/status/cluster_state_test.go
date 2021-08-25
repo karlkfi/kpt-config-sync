@@ -422,6 +422,28 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				errors: []string{"KNV2009: apply error"},
 			},
 		},
+		{
+			"repo is in a weird state: rendering.commit != source.commit, but rendering.commit == sync.commit without any errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc456", "abc123"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "PENDING",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo is in a weird state: rendering.commit != source.commit, and rendering.commit != sync.commit without any errors",
+			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("abc123", "abc456", "abc000"), withGitRepoSync(git)),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync")),
+			&repoState{
+				scope:  "bookstore",
+				git:    git,
+				status: "PENDING",
+				commit: "abc000",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -564,6 +586,26 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				status: "ERROR",
 				commit: "abc123",
 				errors: []string{"KNV2009: apply error"},
+			},
+		},
+		{
+			"repo is in a weird state: rendering.commit != source.commit, but rendering.commit == sync.commit without any errors",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "abc456", "abc123"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "PENDING",
+				commit: "abc123",
+			},
+		},
+		{
+			"repo is in a weird state: rendering.commit != source.commit, and rendering.commit != sync.commit without any errors",
+			fake.RootSyncObject(withCommitsRootSync("abc123", "abc456", "abc000"), withGitRootSync(git)),
+			&repoState{
+				scope:  "<root>",
+				git:    git,
+				status: "PENDING",
+				commit: "abc000",
 			},
 		},
 	}
