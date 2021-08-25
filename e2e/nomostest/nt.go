@@ -873,6 +873,21 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 	)
 }
 
+// WaitForRootSyncRenderingError waits until the given error (code and message) is present on the RootSync resource
+func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
+	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code),
+		func() error {
+			rs := fake.RootSyncObject()
+			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
+			if err != nil {
+				return err
+			}
+			return validateError(rs.Status.Rendering.Errors, code)
+		},
+		opts...,
+	)
+}
+
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
 func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code),

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
@@ -95,6 +96,22 @@ func TestHydrateHelmComponents(t *testing.T) {
 	}
 
 	// TODO: use a remote values.yaml file from a private repo
+
+	nt.T.Log("Use the builtin helm plugin to render the charts")
+	nt.Root.Copy("../testdata/hydration/plugin-helm-components-kustomization.yaml", "./helm-components/kustomization.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Log("Use the builtin helm plugin to render the charts with a remote values.yaml file")
+	nt.Root.Copy("../testdata/hydration/plugin-helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin with a remote values.yaml file from a public repo")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("Always")); err != nil {
+		nt.T.Fatal(err)
+	}
 }
 
 func TestHydrateHelmOverlay(t *testing.T) {
@@ -121,6 +138,28 @@ func TestHydrateHelmOverlay(t *testing.T) {
 		nomostest.HasLabel("test-case", "hydration")); err != nil {
 		nt.T.Fatal(err)
 	}
+
+	nt.T.Log("Make the hydration fail by checking in an invalid kustomization.yaml")
+	nt.Root.Copy("../testdata/hydration/resource-duplicate/kustomization.yaml", "./helm-overlay/kustomization.yaml")
+	nt.Root.Copy("../testdata/hydration/resource-duplicate/namespace_tenant-a.yaml", "./helm-overlay/namespace_tenant-a.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml with duplicated resources")
+	nt.WaitForRootSyncRenderingError(status.HydrationErrorCode)
+
+	nt.T.Log("Make the parsing fail by checking in a deprecated group and kind")
+	nt.Root.Copy("../testdata/hydration/deprecated-GK/kustomization.yaml", "./helm-overlay/kustomization.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind")
+	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
+
+	nt.T.Log("Use the builtin helm plugin to render the charts")
+	nt.Root.Copy("../testdata/hydration/helm-overlay/kustomization.yaml", "./helm-overlay/kustomization.yaml")
+	nt.Root.Copy("../testdata/hydration/plugin-helm-overlay-kustomization.yaml", "./helm-overlay/base/kustomization.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin")
+	nt.WaitForRepoSyncs()
+
+	nt.T.Log("Make the parsing fail again by checking in a deprecated group and kind with the plugin")
+	nt.Root.Copy("../testdata/hydration/plugin-deprecated-GK-kustomization.yaml", "./helm-overlay/kustomization.yaml")
+	nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind with the plugin")
+	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
 }
 
 func TestHydrateRemoteResources(t *testing.T) {

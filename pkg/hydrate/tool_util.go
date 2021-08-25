@@ -278,7 +278,7 @@ func ValidateHydrateFlags(sourceFormat filesystem.SourceFormat) (cmpath.Absolute
 	}
 
 	if needsKustomize && sourceFormat == filesystem.SourceFormatHierarchy {
-		return cmpath.Absolute{}, false, fmt.Errorf("%s must be %s when Kustmization is needed", reconcilermanager.SourceFormat, filesystem.SourceFormatUnstructured)
+		return cmpath.Absolute{}, false, fmt.Errorf("%s must be %s when Kustomization is needed", reconcilermanager.SourceFormat, filesystem.SourceFormatUnstructured)
 	}
 
 	return rootDir, needsKustomize, nil

@@ -9,14 +9,10 @@ generators:
         exec:
           path: render-helm-chart
 helmCharts:
-- name: prometheus
-  repo: https://prometheus-community.github.io/helm-charts
-  version: 14.3.0
-  releaseName: my-prometheus
-  namespace: monitoring
-
-commonAnnotations:
-  hydration-tool: kustomize
+- name: prometheus-operator
+  repo: https://charts.cloudposse.com/incubator
+  version: 0.2.0
+  releaseName: my-prometheus-operator
 
 commonLabels:
-  team: monitoring
+  test-case: hydration
