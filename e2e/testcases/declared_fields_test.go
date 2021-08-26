@@ -2,14 +2,12 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
-	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/kinds"
-	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -37,36 +35,19 @@ spec:
 	nt.Root.CommitAndPush("add pod missing protocol from port")
 	nt.WaitForRepoSyncs()
 
-	pod := &corev1.Pod{}
-	err := nt.Validate("nginx", namespace.Name, pod)
+	err := nt.Validate("nginx", namespace.Name, &corev1.Pod{})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
 
-	// TODO(b/184764581): This should be deleted once b/184764581 is fixed.
-	cleanup(nt, namespace, pod)
-}
-
-// cleanup gracefully deletes the test resources (namespace and pod).
-// Due to b/184764581, the pod and the namespace are stuck in the terminating state.
-// To delete them gracefully, we unmanage them from the repo and manually delete them.
-func cleanup(nt *nomostest.NT, ns *corev1.Namespace, pod *corev1.Pod) {
-	ns.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
-	nt.Root.Add("acme/ns.yaml", ns)
-	pod = fake.PodObject(pod.Name, pod.Spec.Containers, core.Namespace(pod.Namespace),
-		core.Annotation(metadata.ResourceManagementKey, metadata.ResourceManagementDisabled))
-	nt.Root.Add("acme/pod.yaml", pod)
-	nt.Root.CommitAndPush("unmanage the pod and the namespace")
+	nt.Root.Remove("acme/pod.yaml")
+	nt.Root.CommitAndPush("Remove the pod")
 	nt.WaitForRepoSyncs()
 
-	if err := nt.Delete(ns); err != nil {
-		nt.T.Fatal(err)
-	}
-	if err := nt.Validate(pod.Namespace, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata()); err != nil {
-		nt.T.Fatal(err)
-	}
-	nomostest.WaitToTerminate(nt, kinds.Namespace(), ns.Name, "")
-	if err := nt.ValidateNotFound(pod.Name, pod.Namespace, &corev1.Pod{}); err != nil {
+	_, err = nomostest.Retry(60*time.Second, func() error {
+		return nt.ValidateNotFound("nginx", namespace.Name, &corev1.Pod{})
+	})
+	if err != nil {
 		nt.T.Fatal(err)
 	}
 }

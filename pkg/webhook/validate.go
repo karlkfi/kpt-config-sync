@@ -84,6 +84,7 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 		if canManage(username, mgr) {
 			return allow()
 		}
+		glog.Errorf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr)
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s can not manage object %q which is already managed by %s", username, core.GKNN(oldObj), mgr))
 	}
 
@@ -114,13 +115,20 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 
 func (v *Validator) handleCreate(newObj client.Object, username string) admission.Response {
 	if differ.ManagedByConfigSync(newObj) {
+		glog.Errorf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj))
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to create managed resource %q", username, core.GKNN(newObj)))
 	}
 	return allow()
 }
 
 func (v *Validator) handleDelete(oldObj client.Object, username string) admission.Response {
+	// This means a delete request was previously made and accepted, but removal of the API object is not yet complete.
+	// See http://b/199235728#comment16 for more details.
+	if oldObj.GetDeletionTimestamp() != nil {
+		return allow()
+	}
 	if differ.ManagedByConfigSync(oldObj) {
+		glog.Errorf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj))
 		return deny(metav1.StatusReasonUnauthorized, fmt.Sprintf("%s is not authorized to delete managed resource %q", username, core.GKNN(oldObj)))
 	}
 	return allow()
@@ -145,6 +153,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 	// If the diff set includes any ConfigSync labels or annotations, reject the
 	// request immediately.
 	if csSet := ConfigSyncMetadata(diffSet); !csSet.Empty() {
+		glog.Errorf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String())
 		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify Config Sync metadata of object %q: %s", username, core.GKNN(oldObj), csSet.String()))
 	}
 
@@ -166,6 +175,7 @@ func (v *Validator) handleUpdate(oldObj, newObj client.Object, username string) 
 	// request. Otherwise allow it.
 	invalidSet := diffSet.Intersection(declaredSet)
 	if !invalidSet.Empty() {
+		glog.Errorf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String())
 		return deny(metav1.StatusReasonForbidden, fmt.Sprintf("%s cannot modify fields of object %q managed by Config Sync: %s", username, core.GKNN(oldObj), invalidSet.String()))
 	}
 	return allow()
