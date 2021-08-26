@@ -8,12 +8,12 @@ generators:
       config.kubernetes.io/function: |
         exec:
           path: render-helm-chart
-helmCharts:
-- name: prometheus
-  repo: https://prometheus-community.github.io/helm-charts
-  version: 14.3.0
-  releaseName: my-prometheus
-  namespace: monitoring
+  helmCharts:
+  - name: prometheus
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 14.3.0
+    releaseName: my-prometheus
+    namespace: monitoring
 
 commonAnnotations:
   hydration-tool: kustomize
