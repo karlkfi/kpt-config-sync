@@ -76,8 +76,14 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 		Converter:         opts.Converter,
 		AllowUnknownKinds: opts.AllowUnknownKinds,
 	}
+
+	// nonBlockingErrs tracks the errors which do not block the apply stage
+	var nonBlockingErrs status.MultiError
 	if errs := raw.Hierarchical(rawObjects); errs != nil {
-		return nil, errs
+		if status.HasActionableErrors(errs) {
+			return nil, errs
+		}
+		nonBlockingErrs = status.Append(nonBlockingErrs, errs)
 	}
 
 	// Next we group the objects based upon their scope (cluster vs namespaced)
@@ -86,10 +92,12 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for namespace selectors on cluster-scoped objects
 	scopedObjects, scopeErrs := rawObjects.Scoped()
 	if status.HasActionableErrors(scopeErrs) {
-		return nil, scopeErrs
+		return nil, status.Append(nonBlockingErrs, scopeErrs)
 	}
+	nonBlockingErrs = status.Append(nonBlockingErrs, scopeErrs)
+
 	if errs := scoped.Hierarchical(scopedObjects); errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 
 	// Now we arrange the namespace-scoped objects into a hierarchical tree based
@@ -102,10 +110,10 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//     based upon their namespace selector
 	treeObjects, errs := objects.BuildTree(scopedObjects)
 	if errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 	if errs = tree.Hierarchical(treeObjects); errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 
 	// We perform a final round of validation on the flattened collection of
@@ -115,17 +123,17 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for managed resources in unmanaged namespaces
 	finalObjects := treeObjects.Objects()
 	if errs = final.Validation(finalObjects); errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 
 	for _, visitor := range opts.Visitors {
 		finalObjects, errs = visitor(finalObjects)
 		if errs != nil {
-			return nil, status.Append(scopeErrs, errs)
+			return nil, status.Append(nonBlockingErrs, errs)
 		}
 	}
 
-	return finalObjects, scopeErrs
+	return finalObjects, nonBlockingErrs
 }
 
 // Unstructured validates and hydrates the given FileObjects from an
@@ -147,8 +155,14 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 		Converter:         opts.Converter,
 		AllowUnknownKinds: opts.AllowUnknownKinds,
 	}
+
+	// nonBlockingErrs tracks the errors which do not block the apply stage
+	var nonBlockingErrs status.MultiError
 	if errs := raw.Unstructured(rawObjects); errs != nil {
-		return nil, errs
+		if status.HasActionableErrors(errs) {
+			return nil, errs
+		}
+		nonBlockingErrs = status.Append(nonBlockingErrs, errs)
 	}
 
 	// Next we group the objects based upon their scope (cluster vs namespaced)
@@ -160,12 +174,14 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//     namespace selector
 	scopedObjects, scopeErrs := rawObjects.Scoped()
 	if status.HasActionableErrors(scopeErrs) {
-		return nil, scopeErrs
+		return nil, status.Append(nonBlockingErrs, scopeErrs)
 	}
+	nonBlockingErrs = status.Append(nonBlockingErrs, scopeErrs)
+
 	scopedObjects.DefaultNamespace = opts.DefaultNamespace
 	scopedObjects.IsNamespaceReconciler = opts.IsNamespaceReconciler
 	if errs := scoped.Unstructured(scopedObjects); errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 
 	// We perform a final round of validation on the flattened collection of
@@ -175,16 +191,16 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for managed resources in unmanaged namespaces
 	finalObjects := scopedObjects.Objects()
 	if errs := final.Validation(finalObjects); errs != nil {
-		return nil, status.Append(scopeErrs, errs)
+		return nil, status.Append(nonBlockingErrs, errs)
 	}
 
 	for _, visitor := range opts.Visitors {
 		var errs status.MultiError
 		finalObjects, errs = visitor(finalObjects)
 		if errs != nil {
-			return nil, status.Append(scopeErrs, errs)
+			return nil, status.Append(nonBlockingErrs, errs)
 		}
 	}
 
-	return finalObjects, scopeErrs
+	return finalObjects, nonBlockingErrs
 }

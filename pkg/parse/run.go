@@ -300,6 +300,14 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 	syncErrs := p.options().update(ctx, &state.cache)
 	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
 
+	// Image the case where we add a new field into a CRD and a CR managed by Config Sync, sourceErrs includes EncodeDeclaredFieldError.
+	// Since EncodeDeclaredFieldError is a non-blocking error, Config Sync sends both the CRD and CR to the applier to apply.
+	// The applier applies both the CRD and CR successfully, and syncErrs is nil.
+	// Therefore, whenever syncErrs is nil, we should set sourceErrs to nil.
+	if syncErrs == nil {
+		sourceErrs = nil
+	}
+
 	newSourceStatus := gitStatus{
 		commit: state.cache.git.commit,
 		errs:   sourceErrs,
