@@ -65,10 +65,10 @@ func (c *statusClient) resourceGroup(ctx context.Context, objectKey client.Objec
 	return rg, nil
 }
 
-func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, []*unstructured.Unstructured, error) {
+func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
 	rsl := &v1alpha1.RepoSyncList{}
 	if err := c.client.List(ctx, rsl); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	var repoSyncs []*v1alpha1.RepoSync
 	for _, rs := range rsl.Items {
@@ -77,20 +77,23 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, []*
 		localRS := rs
 		repoSyncs = append(repoSyncs, &localRS)
 	}
+	return repoSyncs, nil
+}
+
+func (c *statusClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha1.RepoSync) ([]*unstructured.Unstructured, error) {
 	rgl := &unstructured.UnstructuredList{}
 	rgGVK := live.ResourceGroupGVK
 	rgGVK.Kind += "List"
 	rgl.SetGroupVersionKind(rgGVK)
 	if err := c.client.List(ctx, rgl); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	var resourceGroups []*unstructured.Unstructured
 	for _, rg := range rgl.Items {
 		localRG := rg
 		resourceGroups = append(resourceGroups, &localRG)
 	}
-	repoSyncs, resourceGroups = consistentOrder(repoSyncs, resourceGroups)
-	return repoSyncs, resourceGroups, nil
+	return consistentOrder(repoSyncs, resourceGroups), nil
 }
 
 // clusterStatus returns the clusterState for the cluster this client is connected to.
@@ -187,15 +190,22 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 		rg, err := c.resourceGroup(ctx, rootsync.ObjectKey())
 		if err != nil {
 			errs = append(errs, err.Error())
-		} else {
-			cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg))
 		}
+		cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg))
 	}
 
-	syncs, rgs, err := c.repoSyncs(ctx)
+	var rgs []*unstructured.Unstructured
+	syncs, err := c.repoSyncs(ctx)
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
+		rgs, err = c.resourceGroups(ctx, syncs)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+
+	if len(syncs) != 0 {
 		var repos []*repoState
 		for i, rs := range syncs {
 			rg := rgs[i]
@@ -430,7 +440,7 @@ func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string)
 // from config-management-system; The reposyncs only contains RepoSync CRs.
 // For a RepoSync CR, the corresponding ResourceGroup CR may not exist in the cluster.
 // We assign it to nil in this case.
-func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) ([]*v1alpha1.RepoSync, []*unstructured.Unstructured) {
+func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) []*unstructured.Unstructured {
 	indexMap := map[string]int{}
 	for i, r := range resourcegroups {
 		indexMap[r.GetNamespace()] = i
@@ -445,5 +455,5 @@ func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructu
 			rgs[i] = resourcegroups[idx]
 		}
 	}
-	return reposyncs, rgs
+	return rgs
 }
