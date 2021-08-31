@@ -6,6 +6,9 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
@@ -14,7 +17,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.Remove("acme/namespaces")
 	nt.Root.Copy("../../examples/kubevirt/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
-	nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(3 * time.Minute))
 
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
@@ -29,13 +32,10 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 		nt.Root.CommitAndPush("Remove kubevirt custom resource")
 		nt.WaitForRepoSyncs()
 
-		// Prevents the kubevirt custom resource from being stuck in 'Deleting' phase which can
-		// occur if the cluster scoped resources are removed prior to the custom resource being
-		// deleted. This cannot be combined with the same commit as removing the custom resource
-		// since the custom resource has a finalizer that depends on the operator existing.
-		nt.Root.Remove("acme/namespaces/kubevirt/kubevirt-operator.yaml")
-		nt.Root.CommitAndPush("Remove kubevirt operator")
-		nt.WaitForRepoSyncs()
+		// Wait for the kubevirt custom resource to be deleted to prevent the custom resource from
+		// being stuck in the Terminating state which can occur if the operator is deleted prior
+		// to the resource.
+		waitForKubeVirtDeletion(nt)
 
 		// Avoids KNV2006 since the repo contains a number of cluster scoped resources
 		// https://cloud.google.com/anthos-config-management/docs/reference/errors#knv2006
@@ -65,7 +65,7 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 
 	nt.Root.Copy("../../examples/kubevirt-compiled/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
-	nt.WaitForRepoSyncs()
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(3 * time.Minute))
 
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
@@ -81,16 +81,10 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 		nt.Root.CommitAndPush("Remove kubevirt custom resource")
 		nt.WaitForRepoSyncs()
 
-		// Prevents the kubevirt custom resource from being stuck in 'Deleting' phase which can
-		// occur if the cluster scoped resources are removed prior to the custom resource being
-		// deleted. This cannot be combined with the same commit as removing the custom resource
-		// since the custom resource has a finalizer that depends on the operator existing.
-		nt.Root.Remove("acme/kubevirt/deployment_virt-operator.yaml")
-		nt.Root.Remove("acme/kubevirt/role_kubevirt-operator.yaml")
-		nt.Root.Remove("acme/kubevirt/rolebinding_kubevirt-operator-rolebinding.yaml")
-		nt.Root.Remove("acme/kubevirt/serviceaccount_kubevirt-operator.yaml")
-		nt.Root.CommitAndPush("Remove kubevirt operator")
-		nt.WaitForRepoSyncs()
+		// Wait for the kubevirt custom resource to be deleted to prevent the custom resource from
+		// being stuck in the Terminating state which can occur if the operator is deleted prior
+		// to the resource.
+		waitForKubeVirtDeletion(nt)
 
 		// Avoids KNV2006 since the repo contains a number of cluster scoped resources
 		// https://cloud.google.com/anthos-config-management/docs/reference/errors#knv2006
@@ -114,4 +108,24 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+}
+
+func waitForKubeVirtDeletion(nt *nomostest.NT) {
+	_, err := nomostest.Retry(30*time.Second, func() error {
+		return nt.ValidateNotFound("kubevirt", "kubevirt", kubeVirtObject())
+	})
+	if err != nil {
+		nt.T.Error(err)
+	}
+}
+
+func kubeVirtObject() client.Object {
+	kubeVirtObj := &unstructured.Unstructured{}
+	kubeVirtObj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "kubevirt.io",
+		Version: "v1",
+		Kind:    "kubevirt",
+	})
+
+	return kubeVirtObj
 }
