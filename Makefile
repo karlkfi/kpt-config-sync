@@ -70,7 +70,7 @@ GCP_PROJECT ?= stolos-dev
 GCR_PREFIX ?= $(GCP_PROJECT)/$(USER)/$(DATE)
 
 # Docker image used for build and test. This image does not support CGO.
-BUILDENV_IMAGE ?= gcr.io/stolos-dev/buildenv:v0.2.7
+BUILDENV_IMAGE ?= gcr.io/stolos-dev/buildenv:v0.2.9
 
 # All Nomos K8S deployments.
 ALL_K8S_DEPLOYMENTS := git-importer monitor

@@ -5,7 +5,7 @@
 ARG KUBEKINS="v20200813-1642133-1.19"
 
 
-FROM golang:1.14.2-alpine AS build-base
+FROM golang:1.16.1-alpine AS build-base
 RUN apk add bash coreutils git gcc g++ libc-dev unzip
 
 ENV GO111MODULE=on

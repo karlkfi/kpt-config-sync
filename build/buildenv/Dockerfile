@@ -9,7 +9,7 @@
 #    will fail if you have not uploaded your new image.
 #
 
-ARG GOLANG_CONTAINER=gcr.io/gcp-runtimes/go1-builder:1.14
+ARG GOLANG_CONTAINER=gcr.io/gae-runtimes/go116_app_builder:go116_20210829_1_16_7_RC00
 
 # Environment to build the helper binaries from.
 FROM ${GOLANG_CONTAINER} AS tools-base

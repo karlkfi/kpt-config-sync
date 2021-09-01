@@ -1,6 +1,6 @@
 module github.com/google/nomos
 
-go 1.15
+go 1.16
 
 // This should match the tag variable in generate-clientset.sh, and many of the
 // k8s.io library versions below.

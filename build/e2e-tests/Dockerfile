@@ -21,7 +21,7 @@
 # When adding helper binaries, ensure to build from a specific commit ID, rather
 # than a tag or a branch, so that rebuilds are reproducible. See examples below
 # on how.
-FROM golang:1.14.2-alpine AS build-base
+FROM golang:1.16.1-alpine AS build-base
 RUN apk add bash coreutils git gcc g++ libc-dev unzip
 
 ENV GO111MODULE=on
