@@ -2,7 +2,7 @@
 
 # We'd use the kubekins-e2e straight away, but it's missing the 'kind' binary.
 # Ensure versions in this file match those in Makefile.prow.
-ARG KUBEKINS="v20200813-1642133-1.19"
+ARG KUBEKINS="v20210813-aac8152bd-1.22"
 
 
 FROM golang:1.16.1-alpine AS build-base
