@@ -43,7 +43,6 @@ require (
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/api v0.36.0 // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
@@ -59,7 +58,7 @@ require (
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
 	sigs.k8s.io/cli-utils v0.24.0
 	sigs.k8s.io/controller-runtime v0.8.3
-	sigs.k8s.io/kind v0.10.0
+	sigs.k8s.io/kind v0.11.1
 	sigs.k8s.io/kustomize/kyaml v0.10.15
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2
 	sigs.k8s.io/yaml v1.2.0

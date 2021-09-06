@@ -7,7 +7,7 @@
 # Note: nothing builds this, if you update the version, you will need to rebuild manually.
 # For the version tag, concatenate the kubekins version and KIND version
 E2E_TEST_IMAGE_PROW_KUBEKINS := v20210813-aac8152bd-1.22
-E2E_TEST_IMAGE_PROW_KIND := v0.10.0
+E2E_TEST_IMAGE_PROW_KIND := v0.11.1
 E2E_TEST_IMAGE_PROW_TAG := kubekins-e2e-$(E2E_TEST_IMAGE_PROW_KUBEKINS)-kind-$(E2E_TEST_IMAGE_PROW_KIND)
 E2E_TEST_IMAGE_PROW := gcr.io/stolos-dev/e2e-prow:$(E2E_TEST_IMAGE_PROW_TAG)
 # Builds the container used by prow to test Nomos setup.  Based on kubekins-e2e,

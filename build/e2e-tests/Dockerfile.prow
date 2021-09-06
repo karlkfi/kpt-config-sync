@@ -1,23 +1,17 @@
 # Dockerfile for the prow test environment
 
 # We'd use the kubekins-e2e straight away, but it's missing the 'kind' binary.
-# Ensure versions in this file match those in Makefile.prow.
+
+# Ensure versions in this file match those in Makefile.prow. This is not
+# neccessarily a strict requirement since the versions passed in the Makefile
+# will override any defaults set here, however having the same versions set
+# between these two files will eliminate any confusion on what versions are
+# actually being used.
+
 ARG KUBEKINS="v20210813-aac8152bd-1.22"
 
-
-FROM golang:1.16.1-alpine AS build-base
-RUN apk add bash coreutils git gcc g++ libc-dev unzip
-
-ENV GO111MODULE=on
-# Build static binaries only.
-ENV CGO_ENABLED=0
-
-# kind can run kubernetes clusters in docker
-# v0.10.0
-ARG KIND_RELEASE="v0.10.0"
-# go get automatically installs targets
-RUN go get -u sigs.k8s.io/kind@${KIND_RELEASE}
-
-ARG KUBEKINS
 FROM gcr.io/gke-test-infra/kubekins-e2e:${KUBEKINS}
-COPY --from=build-base /go/bin/ /bin/
+
+ARG KIND_RELEASE="v0.11.1"
+RUN wget -q -O /bin/kind https://kind.sigs.k8s.io/dl/${KIND_RELEASE}/kind-linux-amd64
+RUN chmod +x /bin/kind

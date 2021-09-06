@@ -9,10 +9,10 @@ ENV CGO_ENABLED=0
 # Set Kubernetes environment.
 ENV KUBERNETES_ENV=KIND
 
-# We're running tests within kind v0.10.0 clusters.
+# We're running tests within kind v0.11.1 clusters.
 # If you upgrade the version, you also need to update the special kubekins-with-Kind
 # images we use in the test-infra repository. See Makefile.prow.
-RUN go get sigs.k8s.io/kind@v0.10.0
+RUN go get sigs.k8s.io/kind@v0.11.1
 
 RUN apk add --no-cache \
   bash curl docker gcc git jq make openssh-client
