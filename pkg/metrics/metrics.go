@@ -15,6 +15,12 @@ var (
 		"The number of errors in the reconciler",
 		stats.UnitDimensionless)
 
+	// ReconcilerNonBlockingErrors metric measures the number of non-blocking errors in the reconciler.
+	ReconcilerNonBlockingErrors = stats.Int64(
+		"reconciler_non_blocking_errors",
+		"The number of non-blocking errors in the reconciler",
+		stats.UnitDimensionless)
+
 	// RenderingErrors metric measures the number of errors in the rendering process.
 	RenderingErrors = stats.Int64(
 		"rendering_errors",

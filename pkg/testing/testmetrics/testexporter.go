@@ -34,8 +34,8 @@ func (e *TestExporter) ValidateMetrics(v *view.View, want []*view.Row) string {
 }
 
 // RegisterMetrics collects data for the given views and reports data to the TestExporter.
-func RegisterMetrics(v *view.View) *TestExporter {
-	_ = view.Register(v)
+func RegisterMetrics(views ...*view.View) *TestExporter {
+	_ = view.Register(views...)
 	var e TestExporter
 	view.RegisterExporter(&e)
 	return &e
@@ -48,7 +48,7 @@ func diff(r []*view.Row, other []*view.Row) string {
 		if r[i] == other[i] {
 			continue
 		}
-		if !reflect.DeepEqual(r[i].Tags, other[i].Tags) {
+		if len(r[i].Tags) > 0 && len(other[i].Tags) > 0 && !reflect.DeepEqual(r[i].Tags, other[i].Tags) {
 			return fmt.Sprintf("Unexpected metric tags, -got, +want: -%v\n+%v", r[i].Tags, other[i].Tags)
 		}
 		if !cmp.Equal(r[i].Data, other[i].Data, cmpopts.IgnoreTypes(time.Time{})) {

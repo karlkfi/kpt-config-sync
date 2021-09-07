@@ -97,7 +97,10 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	options = OptionsForScope(options, p.scope)
 
 	objs, err = validate.Unstructured(objs, options)
-	if status.HasActionableErrors(err) {
+
+	metrics.RecordReconcilerNonBlockingErrors(ctx, status.NonBlockingErrors(err))
+
+	if status.HasBlockingErrors(err) {
 		return nil, err
 	}
 

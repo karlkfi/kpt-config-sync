@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/nomos/pkg/metrics"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
 	"go.opencensus.io/tag"
 )
@@ -207,6 +209,22 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 	return nil
 }
 
+// ValidateReconcilerNonBlockingErrors checks that the `reconciler_non_blocking_errors` metric is recorded
+// for the correct reconciler and error code, and checks the metric value is correct.
+func (csm ConfigSyncMetrics) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
+	if _, ok := csm[ocmetrics.ReconcilerNonBlockingErrorsView.Name]; ok {
+		validations := []Validation{
+			hasTags([]tag.Tag{
+				{Key: metrics.KeyReconciler, Value: reconciler},
+				{Key: metrics.KeyErrorCode, Value: errorCode},
+			}),
+			valueEquals(errorCount),
+		}
+		return csm.validateMetric(ocmetrics.ReconcilerNonBlockingErrorsView.Name, validations...)
+	}
+	return nil
+}
+
 // validateSuccessTag checks that the metric is recorded for the correct reconciler
 // and has a "success" tag value.
 func (csm ConfigSyncMetrics) validateSuccessTag(reconciler, metric string) error {
@@ -294,9 +312,12 @@ func (csm ConfigSyncMetrics) validateRemediateDuration(reconciler, gvk string) e
 
 // validateMetric checks that at least one measurement from the metric passes all the validations.
 func (csm ConfigSyncMetrics) validateMetric(name string, validations ...Validation) error {
+	var errs status.MultiError
 	allValidated := func(entry Measurement, vs []Validation) bool {
 		for _, v := range vs {
-			if v(entry) != nil {
+			err := v(entry)
+			if err != nil {
+				errs = status.Append(errs, err)
 				return false
 			}
 		}
@@ -309,7 +330,7 @@ func (csm ConfigSyncMetrics) validateMetric(name string, validations ...Validati
 				return nil
 			}
 		}
-		return errors.Errorf("metric validations failed for metric %s", name)
+		return errors.Errorf("metric validations failed for metric %s: %v", name, errs)
 	}
 	return errors.Errorf("validating metric: metric %s not recorded", name)
 }

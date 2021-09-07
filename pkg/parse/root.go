@@ -112,7 +112,10 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 	} else {
 		objs, err = validate.Hierarchical(objs, options)
 	}
-	if status.HasActionableErrors(err) {
+
+	metrics.RecordReconcilerNonBlockingErrors(ctx, status.NonBlockingErrors(err))
+
+	if status.HasBlockingErrors(err) {
 		return nil, err
 	}
 

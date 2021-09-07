@@ -433,6 +433,25 @@ func (nt *NT) ValidateParseErrors(reconciler, errorCode string) error {
 	return nil
 }
 
+// ValidateReconcilerNonBlockingErrors validates that the `reconciler_non_blocking_errors` metric exists
+// for the correct reconciler.
+func (nt *NT) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateReconcilerNonBlockingErrors(reconciler, errorCode, errorCount)
+	}
+	return nil
+}
+
+// ValidateMetricNotFound validates that a metric does not exist.
+func (nt *NT) ValidateMetricNotFound(metricName string) error {
+	if nt.MultiRepo {
+		if _, ok := nt.ReconcilerMetrics[metricName]; ok {
+			return errors.Errorf("Found an unexpected metric: %s", metricName)
+		}
+	}
+	return nil
+}
+
 // ValidateReconcilerErrors validates that the `reconciler_error` metric exists
 // for the correct reconciler and the tagged component has the correct value.
 func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {

@@ -290,7 +290,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		glog.Warningf("Failed to validate: %v", status.FormatSingleLine(validationErrs))
 		importer.Metrics.CycleDuration.WithLabelValues("error").Observe(time.Since(startTime).Seconds())
 		c.updateImportStatus(ctx, repoObj, token, startTime, status.ToCME(validationErrs))
-		if status.HasActionableErrors(validationErrs) {
+		if status.HasBlockingErrors(validationErrs) {
 			return reconcile.Result{}, nil
 		}
 	}

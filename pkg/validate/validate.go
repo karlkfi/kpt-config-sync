@@ -80,7 +80,7 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	// nonBlockingErrs tracks the errors which do not block the apply stage
 	var nonBlockingErrs status.MultiError
 	if errs := raw.Hierarchical(rawObjects); errs != nil {
-		if status.HasActionableErrors(errs) {
+		if status.HasBlockingErrors(errs) {
 			return nil, errs
 		}
 		nonBlockingErrs = status.Append(nonBlockingErrs, errs)
@@ -91,7 +91,7 @@ func Hierarchical(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - checking for namespaces being specified on cluster-scoped objects
 	//   - checking for namespace selectors on cluster-scoped objects
 	scopedObjects, scopeErrs := rawObjects.Scoped()
-	if status.HasActionableErrors(scopeErrs) {
+	if status.HasBlockingErrors(scopeErrs) {
 		return nil, status.Append(nonBlockingErrs, scopeErrs)
 	}
 	nonBlockingErrs = status.Append(nonBlockingErrs, scopeErrs)
@@ -159,7 +159,7 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	// nonBlockingErrs tracks the errors which do not block the apply stage
 	var nonBlockingErrs status.MultiError
 	if errs := raw.Unstructured(rawObjects); errs != nil {
-		if status.HasActionableErrors(errs) {
+		if status.HasBlockingErrors(errs) {
 			return nil, errs
 		}
 		nonBlockingErrs = status.Append(nonBlockingErrs, errs)
@@ -173,7 +173,7 @@ func Unstructured(objs []ast.FileObject, opts Options) ([]ast.FileObject, status
 	//   - copy "abstract" resources into zero or more namespaces based upon their
 	//     namespace selector
 	scopedObjects, scopeErrs := rawObjects.Scoped()
-	if status.HasActionableErrors(scopeErrs) {
+	if status.HasBlockingErrors(scopeErrs) {
 		return nil, status.Append(nonBlockingErrs, scopeErrs)
 	}
 	nonBlockingErrs = status.Append(nonBlockingErrs, scopeErrs)

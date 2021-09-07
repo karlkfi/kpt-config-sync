@@ -260,7 +260,7 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 	metrics.RecordParserDuration(ctx, trigger, "parse", metrics.StatusTagKey(sourceErrs), start)
 	state.cache.setParserResult(objs, sourceErrs)
 
-	if !status.HasActionableErrors(sourceErrs) {
+	if !status.HasBlockingErrors(sourceErrs) {
 		err := webhookconfiguration.Update(ctx, p.options().k8sClient(), p.options().discoveryClient(), objs)
 		if err != nil {
 			// Don't block if updating the admission webhook fails.
@@ -279,7 +279,7 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 
 func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
 	sourceErrs := parseSource(ctx, p, trigger, state)
-	if status.HasActionableErrors(sourceErrs) {
+	if status.HasBlockingErrors(sourceErrs) {
 		newSourceStatus := gitStatus{
 			commit: state.cache.git.commit,
 			errs:   sourceErrs,

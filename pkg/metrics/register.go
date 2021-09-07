@@ -28,6 +28,7 @@ func RegisterReconcilerMetricsViews() error {
 	return view.Register(
 		APICallDurationView,
 		ReconcilerErrorsView,
+		ReconcilerNonBlockingErrorsView,
 		RenderingErrorsView,
 		ParserDurationView,
 		LastSyncTimestampView,

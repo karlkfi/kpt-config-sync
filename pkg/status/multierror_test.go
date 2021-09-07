@@ -62,7 +62,7 @@ func TestHasActionableErrors(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := HasActionableErrors(tc.err)
+			got := HasBlockingErrors(tc.err)
 			if got != tc.want {
 				t.Errorf(" HasActionableErrors() got %v; want %v", got, tc.want)
 			}

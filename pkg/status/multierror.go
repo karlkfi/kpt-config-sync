@@ -17,26 +17,41 @@ type MultiError interface {
 	Errors() []Error
 }
 
-var nonActionableErrorCodes = map[string]struct{}{
+var nonBlockingErrorCodes = map[string]struct{}{
 	UnknownKindErrorCode:         {},
 	EncodeDeclaredFieldErrorCode: {},
 }
 
-// HasActionableErrors return whether `errs` include any actionable errors.
+// HasBlockingErrors return whether `errs` include any blocking errors.
 //
-// An error is actionable if it requires the users to do something so that
+// An error is blocking if it requires the users to do something so that
 // Config Sync can sync successfully.
-func HasActionableErrors(errs MultiError) bool {
+func HasBlockingErrors(errs MultiError) bool {
 	if errs == nil {
 		return false
 	}
 
 	for _, err := range errs.Errors() {
-		if _, ok := nonActionableErrorCodes[err.Code()]; !ok {
+		if _, ok := nonBlockingErrorCodes[err.Code()]; !ok {
 			return true
 		}
 	}
 	return false
+}
+
+// NonBlockingErrors return the non-blocking errors.
+func NonBlockingErrors(errs MultiError) MultiError {
+	var nonBlockingErrs MultiError
+	if errs == nil {
+		return nonBlockingErrs
+	}
+
+	for _, err := range errs.Errors() {
+		if _, ok := nonBlockingErrorCodes[err.Code()]; !ok {
+			nonBlockingErrs = Append(nonBlockingErrs, err)
+		}
+	}
+	return nonBlockingErrs
 }
 
 // Append adds one or more errors to an existing MultiError.

@@ -26,6 +26,15 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// ReconcilerNonBlockingErrorsView aggregates the ReconcilerNonBlockingErrors metric measurements.
+	ReconcilerNonBlockingErrorsView = &view.View{
+		Name:        ReconcilerNonBlockingErrors.Name(),
+		Measure:     ReconcilerNonBlockingErrors,
+		Description: "The current number of non-blocking errors in the RootSync and RepoSync reconcilers",
+		TagKeys:     []tag.Key{KeyReconciler, KeyErrorCode},
+		Aggregation: view.LastValue(),
+	}
+
 	// RenderingErrorsView aggregates the RenderingErrors metric measurements.
 	RenderingErrorsView = &view.View{
 		Name:        RenderingErrors.Name(),

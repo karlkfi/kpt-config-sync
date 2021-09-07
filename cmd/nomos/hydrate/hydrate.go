@@ -118,7 +118,7 @@ which you could kubectl apply -fR to the cluster, or have Config Sync sync to th
 
 				encounteredError = true
 
-				if status.HasActionableErrors(err) {
+				if status.HasBlockingErrors(err) {
 					return
 				}
 			}
