@@ -186,7 +186,10 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	rs.Status.Rendering.Errors = cse
 	rs.Status.Rendering.LastUpdate = metav1.Now()
 
-	metrics.RecordRenderingErrors(ctx, "rendering", len(cse))
+	if len(cse) > 0 {
+		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
+		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
+	}
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync rendering status from parser")

@@ -25,8 +25,8 @@ func RecordReconcilerErrors(ctx context.Context, component string, numErrors int
 }
 
 // RecordRenderingErrors produces a measurement for the RenderingErrors view.
-func RecordRenderingErrors(ctx context.Context, component string, numErrors int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyComponent, component))
+func RecordRenderingErrors(ctx context.Context, component string, numErrors int, errCode string) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconciler, ReconcilerTagKey()), tag.Upsert(KeyComponent, component), tag.Upsert(KeyErrorCode, errCode))
 	measurement := RenderingErrors.M(int64(numErrors))
 	stats.Record(tagCtx, measurement)
 }
