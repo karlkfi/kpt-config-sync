@@ -104,6 +104,15 @@ func (h *Hydrator) hydrate(sourceCommit, syncDir string) HydrationError {
 		return NewInternalError(errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir))
 	}
 	if !hydrate {
+		found, err := hasKustomizeSubdir(syncDir)
+		if err != nil {
+			return NewInternalError(err)
+		}
+		if found {
+			return NewActionableError(errors.Errorf("Kustomization config file is missing from the sync directory %s. "+
+				"To fix, either add kustomization.yaml in the sync directory to trigger the rendering process, "+
+				"or remove kustomizaiton.yaml from all sub directories to skip rendering.", syncDir))
+		}
 		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
 		if err := os.RemoveAll(h.HydratedRoot.OSPath()); err != nil {
 			return NewInternalError(err)

@@ -68,6 +68,29 @@ func hasKustomization(filename string) bool {
 	return false
 }
 
+// hasKustomizeSubdir checks if there exists a kustomization config file in any
+// of the subdirectory under dir.
+func hasKustomizeSubdir(dir string) (bool, error) {
+	found := false
+	err := filepath.Walk(dir,
+		func(path string, fi os.FileInfo, err error) error {
+			if found {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			if fi.IsDir() {
+				return nil
+			}
+			if hasKustomization(fi.Name()) {
+				found = true
+			}
+			return nil
+		})
+	return found, err
+}
+
 // mustDeleteOutput deletes the hydrated output directory with retries.
 // It will exit if all attempts failed.
 func mustDeleteOutput(err error, output string) {

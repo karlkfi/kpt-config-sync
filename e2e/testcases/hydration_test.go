@@ -54,7 +54,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.Root.Remove("./kustomize-components/kustomization.yml")
 	nt.Root.CommitAndPush("remove the Kustomize configuration to make the sync fail")
 
-	nt.WaitForRootSyncSourceError(status.PathErrorCode)
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
 
 	nt.T.Log("Add kustomization.yaml back")
 	nt.Root.Copy("../testdata/hydration/kustomize-components/kustomization.yml", "./kustomize-components/kustomization.yml")
