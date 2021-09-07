@@ -1,10 +1,13 @@
 package status
 
-// HydrationErrorCode is the error code for a status Error related to the hydration process.
-const HydrationErrorCode = "2015"
+// InternalHydrationErrorCode is the error code for an internal Error related to the hydration process.
+const InternalHydrationErrorCode = "2015"
 
-// HydrationError is an ErrorBuilder for errors related to the hydration process.
-var HydrationError = NewErrorBuilder(HydrationErrorCode)
+// ActionableHydrationErrorCode is the error code for a user actionable Error related to the hydration process.
+const ActionableHydrationErrorCode = "1068"
+
+// InternalHydrationError is an ErrorBuilder for internal errors related to the hydration process.
+var InternalHydrationError = NewErrorBuilder(InternalHydrationErrorCode)
 
 // HydrationInProgressCode is the code for a status related to the hydration process.
 // Technically, it is not an error. It indicates the configs are not available for

@@ -143,7 +143,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/resource-duplicate/kustomization.yaml", "./helm-overlay/kustomization.yaml")
 	nt.Root.Copy("../testdata/hydration/resource-duplicate/namespace_tenant-a.yaml", "./helm-overlay/namespace_tenant-a.yaml")
 	nt.Root.CommitAndPush("Update kustomization.yaml with duplicated resources")
-	nt.WaitForRootSyncRenderingError(status.HydrationErrorCode)
+	nt.WaitForRootSyncRenderingError(status.ActionableHydrationErrorCode)
 
 	nt.T.Log("Make the parsing fail by checking in a deprecated group and kind")
 	nt.Root.Copy("../testdata/hydration/deprecated-GK/kustomization.yaml", "./helm-overlay/kustomization.yaml")

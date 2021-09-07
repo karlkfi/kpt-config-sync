@@ -87,7 +87,7 @@ func mustDeleteOutput(err error, output string) {
 }
 
 // kustomizeBuild runs the 'kustomize build' command to render the configs.
-func kustomizeBuild(input, output string) error {
+func kustomizeBuild(input, output string) HydrationError {
 	// The `--enable-alpha-plugins` and `--enable-exec` flags are to support rendering
 	// Helm charts using the Helm inflation function, see go/kust-helm-for-config-sync.
 	// The `--enable-helm` flag is to enable use of the Helm chart inflator generator.
@@ -103,14 +103,14 @@ func kustomizeBuild(input, output string) error {
 
 	fileMode := os.FileMode(0755)
 	if err := os.MkdirAll(output, fileMode); err != nil {
-		return errors.Wrapf(err, "unable to make directory: %s", output)
+		return NewInternalError(errors.Wrapf(err, "unable to make directory: %s", output))
 	}
 
 	out, err := runCommand("", Kustomize, args...)
 	if err != nil {
-		kustomizeErr := errors.Wrapf(err, "failed to run kustomize build, stdout: %s", out)
+		kustomizeErr := errors.Wrapf(err, "failed to run kustomize build in %s, stdout: %s", input, out)
 		mustDeleteOutput(kustomizeErr, output)
-		return kustomizeErr
+		return NewActionableError(kustomizeErr)
 	}
 	return nil
 }

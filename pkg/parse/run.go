@@ -112,7 +112,7 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 		doneFileNotReadyErr = status.HydrationInProgress(gs.commit)
 	} else if err != nil {
 		rs.message = RenderingFailed
-		rs.errs = status.HydrationError.Wrap(err).
+		rs.errs = status.InternalHydrationError.Wrap(err).
 			Sprintf("unable to read the done file: %s", doneFilePath).
 			Build()
 		doneFileNotReadyErr = rs.errs
@@ -206,25 +206,25 @@ func readFromSource(ctx context.Context, p Parser, trigger string, state *reconc
 	absHydratedRoot, err := cmpath.AbsoluteOS(opts.HydratedRoot)
 	if err != nil {
 		hydrationStatus.message = RenderingFailed
-		hydrationStatus.errs = status.HydrationError.Wrap(err).
+		hydrationStatus.errs = status.InternalHydrationError.Wrap(err).
 			Sprint("hydrated-dir must be an absolute path").Build()
 		return hydrationStatus, sourceStatus
 	}
 
-	var hydrationErr error
+	var hydrationErr hydrate.HydrationError
 	rendered := false
 	if _, err := os.Stat(absHydratedRoot.OSPath()); err == nil {
 		sourceState, hydrationErr = opts.readHydratedDir(absHydratedRoot, opts.HydratedLink, opts.reconcilerName)
 		if hydrationErr != nil {
 			hydrationStatus.message = RenderingFailed
-			hydrationStatus.errs = status.HydrationError.Wrap(hydrationErr).Build()
+			hydrationStatus.errs = status.NewErrorBuilder(hydrationErr.Code()).Wrap(hydrationErr).Build()
 			return hydrationStatus, sourceStatus
 		}
 		hydrationStatus.message = RenderingSucceeded
 		rendered = true
 	} else if !os.IsNotExist(err) {
 		hydrationStatus.message = RenderingFailed
-		hydrationStatus.errs = status.HydrationError.Wrap(err).
+		hydrationStatus.errs = status.InternalHydrationError.Wrap(err).
 			Sprintf("unable to evaluate the hydrated path %s", absHydratedRoot.OSPath()).Build()
 		return hydrationStatus, sourceStatus
 	} else {

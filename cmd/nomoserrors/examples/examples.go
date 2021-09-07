@@ -304,6 +304,9 @@ func Generate() AllExamples {
 	result.add(status.EncodeDeclaredFieldError(fake.NamespaceObject("my-namespace"),
 		fmt.Errorf(".spec.version not defined")))
 
+	// 1068
+	result.add(status.NewErrorBuilder(status.ActionableHydrationErrorCode).Sprint("user actionable rendering error").Build())
+
 	// 2001
 	result.add(status.PathWrapError(errors.New("error creating directory"), "namespaces/foo"))
 
@@ -352,7 +355,7 @@ func Generate() AllExamples {
 	result.add(configuration.InvalidWebhookWarning("invalid webhook"))
 
 	// 2015
-	result.add(status.HydrationError.Sprint("Rendering error").Build())
+	result.add(status.InternalHydrationError.Sprint("internal rendering error").Build())
 
 	// 9997
 	result.add(status.HydrationInProgress("abcd123"))

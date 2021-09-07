@@ -2,6 +2,7 @@ package hydrate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -23,7 +24,7 @@ const (
 	// DoneFile is the file name that indicates the hydration is done.
 	DoneFile = "done"
 	// ErrorFile is the file name of the hydration errors.
-	ErrorFile = "error.txt"
+	ErrorFile = "error.json"
 )
 
 // Hydrator runs the hydration process.
@@ -82,34 +83,37 @@ func (h *Hydrator) Run(ctx context.Context) {
 }
 
 // runHydrate runs `kustomize build` on the source configs.
-func (h *Hydrator) runHydrate(sourceCommit, syncDir string) error {
+func (h *Hydrator) runHydrate(sourceCommit, syncDir string) HydrationError {
 	newHydratedDir := h.HydratedRoot.Join(cmpath.RelativeOS(sourceCommit))
 	dest := newHydratedDir.Join(h.SyncDir).OSPath()
 
 	if err := kustomizeBuild(syncDir, dest); err != nil {
-		return errors.Wrapf(err, "unable to render the source configs in %s", syncDir)
+		return err
 	}
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
-		return errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath())
+		return NewInternalError(errors.Wrapf(err, "unable to update the symbolic link to %s", newHydratedDir.OSPath()))
 	}
 	glog.Infof("Successfully rendered %s for commit %s", syncDir, sourceCommit)
 	return nil
 }
 
 // hydrate renders the source git repo to hydrated configs.
-func (h *Hydrator) hydrate(sourceCommit, syncDir string) error {
+func (h *Hydrator) hydrate(sourceCommit, syncDir string) HydrationError {
 	hydrate, err := needsKustomize(syncDir)
 	if err != nil {
-		return errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir)
+		return NewInternalError(errors.Wrapf(err, "unable to check if rendering is needed for the source directory: %s", syncDir))
 	}
 	if !hydrate {
 		glog.V(5).Infof("no rendering is needed because of no Kustomization config file in the source configs with commit %s", sourceCommit)
-		return os.RemoveAll(h.HydratedRoot.OSPath())
+		if err := os.RemoveAll(h.HydratedRoot.OSPath()); err != nil {
+			return NewInternalError(err)
+		}
+		return nil
 	}
 
 	// Remove the done file because a new hydration is in progress.
 	if err := os.RemoveAll(h.DonePath.OSPath()); err != nil {
-		return errors.Wrapf(err, "unable to remove the done file: %s", h.DonePath.OSPath())
+		return NewInternalError(errors.Wrapf(err, "unable to remove the done file: %s", h.DonePath.OSPath()))
 	}
 	return h.runHydrate(sourceCommit, syncDir)
 }
@@ -170,7 +174,7 @@ func updateSymlink(hydratedRoot, link, newDir string) error {
 
 // complete marks the hydration process is done with a done file under the /repo directory
 // and reset the error file (create, update or delete).
-func (h *Hydrator) complete(commit string, hydrationErr error) error {
+func (h *Hydrator) complete(commit string, hydrationErr HydrationError) error {
 	errorPath := h.HydratedRoot.Join(cmpath.RelativeSlash(ErrorFile)).OSPath()
 	var err error
 	if hydrationErr == nil {
@@ -213,7 +217,7 @@ func DoneCommit(donePath string) string {
 }
 
 // exportError writes the error content to the error file.
-func exportError(commit, root, errorFile string, hydrationError error) error {
+func exportError(commit, root, errorFile string, hydrationError HydrationError) error {
 	glog.Errorf("rendering error for commit %s: %v", commit, hydrationError)
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		fileMode := os.FileMode(0755)
@@ -232,7 +236,18 @@ func exportError(commit, root, errorFile string, hydrationError error) error {
 		}
 	}()
 
-	if _, err = tmpFile.WriteString(hydrationError.Error()); err != nil {
+	payload := HydrationErrorPayload{
+		Code:  hydrationError.Code(),
+		Error: hydrationError.Error(),
+	}
+
+	jb, err := json.Marshal(payload)
+	if err != nil {
+		glog.Errorf("can't encode hydration error payload: %v", err)
+		return err
+	}
+
+	if _, err = tmpFile.Write(jb); err != nil {
 		return errors.Wrapf(err, "unable to write to temporary error-file: %s", tmpFile.Name())
 	}
 	if err := os.Rename(tmpFile.Name(), errorFile); err != nil {
