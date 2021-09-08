@@ -33,20 +33,6 @@ kind &> /dev/null || (
   exit 1
 )
 
-# Temporary.
-# This allows the testing of kind v0.11.1 in CI without needing to update the
-# prow kubekins-e2e image to use the new version of kind. Updating this image
-# and setting this image in prow will cause all CI kind jobs to fail until this
-# CL is merged in since the current ci kind jobs require kind v0.10.0.
-if [ -n "$CI" ] && [ -n "$IMAGE" ] && [ "$IMAGE" == "gcr.io/k8s-testimages/kubekins-e2e:v20210808-1eaeec7-1.22" ]; then
-  # Removes installed kind v0.10.0 from container
-  rm -rf /bin/kind
-
-  # Installs kind v0.11.1 at the same path as the kubekins-e2e dockerfile
-  wget -q -O /bin/kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
-  chmod +x /bin/kind
-fi
-
 kind version | grep v0.11.1 || (
   echo "Using unsupported kind version. Install v0.11.1."
   echo "https://kind.sigs.k8s.io/docs/user/quick-start/"
