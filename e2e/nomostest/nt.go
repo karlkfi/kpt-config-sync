@@ -442,6 +442,39 @@ func (nt *NT) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, 
 	return nil
 }
 
+// ValidateResourceOverrideCount validates that the `resource_override_count` metric exists
+// for the correct reconciler.
+func (nt *NT) ValidateResourceOverrideCount(reconciler, containerName, resourceType string, count int) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateResourceOverrideCount(reconciler, containerName, resourceType, count)
+	}
+	return nil
+}
+
+// ValidateResourceOverrideCountMissingTags checks that the `resource_override_count` metric misses the specific the tags.
+func (nt *NT) ValidateResourceOverrideCountMissingTags(tags []tag.Tag) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateResourceOverrideCountMissingTags(tags)
+	}
+	return nil
+}
+
+// ValidateGitSyncDepthOverrideCount validates the `git_sync_depth_override_count` metric.
+func (nt *NT) ValidateGitSyncDepthOverrideCount(count int) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateGitSyncDepthOverrideCount(count)
+	}
+	return nil
+}
+
+// ValidateNoSSLVerifyCount checks that the `no_ssl_verify_count` metric has the correct value.
+func (nt *NT) ValidateNoSSLVerifyCount(count int) error {
+	if nt.MultiRepo {
+		return nt.ReconcilerMetrics.ValidateNoSSLVerifyCount(count)
+	}
+	return nil
+}
+
 // ValidateMetricNotFound validates that a metric does not exist.
 func (nt *NT) ValidateMetricNotFound(metricName string) error {
 	if nt.MultiRepo {

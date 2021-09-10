@@ -34,6 +34,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// ReconcilerType defines the type of a reconciler
+type ReconcilerType string
+
+const (
+	// RootReconcilerType defines the type for a root reconciler
+	RootReconcilerType = ReconcilerType("root")
+	// NamespaceReconcilerType defines the type for a namespace reconciler
+	NamespaceReconcilerType = ReconcilerType("namespace")
+)
+
 // RootSyncReconciler reconciles a RootSync object
 type RootSyncReconciler struct {
 	reconcilerBase
@@ -99,7 +109,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	log.V(2).Info("secret found, proceeding with installation")
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.rootConfigMapMutations(&rs), owRefs)
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.rootConfigMapMutations(ctx, &rs), owRefs)
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		rootsync.SetStalled(&rs, "ConfigMap", err)
@@ -194,7 +204,7 @@ func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []configMapMutation {
+func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1alpha1.RootSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: RootSyncResourceName(reconcilermanager.SourceFormat),
@@ -202,7 +212,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(rs *v1alpha1.RootSync) []con
 		},
 		{
 			cmName: RootSyncResourceName(reconcilermanager.GitSync),
-			data: gitSyncData(options{
+			data: gitSyncData(ctx, options{
 				ref:         rs.Spec.Git.Revision,
 				branch:      rs.Spec.Git.Branch,
 				repo:        rs.Spec.Git.Repo,
@@ -334,12 +344,12 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 				configmapRef[RootSyncResourceName(reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				configmapRef[RootSyncResourceName(reconcilermanager.SourceFormat)] = pointer.BoolPtr(true)
 				container.EnvFrom = envFromSources(configmapRef)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(RootReconcilerType))
 			case reconcilermanager.HydrationController:
 				configmapRef := make(map[string]*bool)
 				configmapRef[RootSyncResourceName(reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(RootReconcilerType))
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
 				configmapRef[RootSyncResourceName(reconcilermanager.GitSync)] = pointer.BoolPtr(false)
@@ -355,7 +365,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 				}
 				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(RootReconcilerType))
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.

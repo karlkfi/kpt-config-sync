@@ -9,6 +9,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metrics"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -201,14 +202,16 @@ func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.Object
 	return checkDeploymentConditions(&depObj)
 }
 
-func mutateContainerResource(c *corev1.Container, override v1alpha1.OverrideSpec) {
+func mutateContainerResource(ctx context.Context, c *corev1.Container, override v1alpha1.OverrideSpec, reconcilerType string) {
 	for _, override := range override.Resources {
 		if override.ContainerName == c.Name {
 			if !override.CPULimit.IsZero() {
 				c.Resources.Limits[corev1.ResourceCPU] = override.CPULimit
+				metrics.RecordResourceOverrideCount(ctx, reconcilerType, c.Name, "cpu")
 			}
 			if !override.MemoryLimit.IsZero() {
 				c.Resources.Limits[corev1.ResourceMemory] = override.MemoryLimit
+				metrics.RecordResourceOverrideCount(ctx, reconcilerType, c.Name, "memory")
 			}
 		}
 	}

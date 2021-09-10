@@ -117,7 +117,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(&rs))
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(ctx, &rs))
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -216,11 +216,11 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RepoSyncReconciler) repoConfigMapMutations(rs *v1alpha1.RepoSync) []configMapMutation {
+func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1alpha1.RepoSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
-			data: gitSyncData(options{
+			data: gitSyncData(ctx, options{
 				ref:         rs.Spec.Git.Revision,
 				branch:      rs.Spec.Git.Branch,
 				repo:        rs.Spec.Git.Repo,
@@ -326,12 +326,12 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 				configmapRef := make(map[string]*bool)
 				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.HydrationController:
 				configmapRef := make(map[string]*bool)
 				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
 				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
@@ -346,7 +346,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 				}
 				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
-				mutateContainerResource(&container, rs.Spec.Override)
+				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.

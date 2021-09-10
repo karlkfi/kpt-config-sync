@@ -225,6 +225,56 @@ func (csm ConfigSyncMetrics) ValidateReconcilerNonBlockingErrors(reconciler, err
 	return nil
 }
 
+// ValidateResourceOverrideCount checks that the `resource_override_count` metric is recorded
+// for the correct reconciler, container name, and resource type, and checks the metric value is correct.
+func (csm ConfigSyncMetrics) ValidateResourceOverrideCount(reconciler, containerName, resourceType string, count int) error {
+	if _, ok := csm[ocmetrics.ResourceOverrideCountView.Name]; ok {
+		validations := []Validation{
+			hasTags([]tag.Tag{
+				{Key: metrics.KeyReconcilerType, Value: reconciler},
+				{Key: metrics.KeyContainer, Value: containerName},
+				{Key: metrics.KeyResourceType, Value: resourceType},
+			}),
+			valueEquals(count),
+		}
+		return csm.validateMetric(ocmetrics.ResourceOverrideCountView.Name, validations...)
+	}
+	return nil
+}
+
+// ValidateResourceOverrideCountMissingTags checks that the `resource_override_count` metric misses the specific the tags.
+func (csm ConfigSyncMetrics) ValidateResourceOverrideCountMissingTags(tags []tag.Tag) error {
+	if _, ok := csm[ocmetrics.ResourceOverrideCountView.Name]; ok {
+		validations := []Validation{
+			missingTags(tags),
+		}
+		return csm.validateMetric(ocmetrics.ResourceOverrideCountView.Name, validations...)
+	}
+	return nil
+}
+
+// ValidateGitSyncDepthOverrideCount checks that the `git_sync_depth_override_count` metric has the correct value.
+func (csm ConfigSyncMetrics) ValidateGitSyncDepthOverrideCount(count int) error {
+	if _, ok := csm[ocmetrics.GitSyncDepthOverrideCountView.Name]; ok {
+		validations := []Validation{
+			valueEquals(count),
+		}
+		return csm.validateMetric(ocmetrics.GitSyncDepthOverrideCountView.Name, validations...)
+	}
+	return nil
+}
+
+// ValidateNoSSLVerifyCount checks that the `no_ssl_verify_count` metric has the correct value.
+func (csm ConfigSyncMetrics) ValidateNoSSLVerifyCount(count int) error {
+	if _, ok := csm[ocmetrics.NoSSLVerifyCountView.Name]; ok {
+		validations := []Validation{
+			valueEquals(count),
+		}
+		return csm.validateMetric(ocmetrics.NoSSLVerifyCountView.Name, validations...)
+	}
+	return nil
+}
+
 // validateSuccessTag checks that the metric is recorded for the correct reconciler
 // and has a "success" tag value.
 func (csm ConfigSyncMetrics) validateSuccessTag(reconciler, metric string) error {
@@ -350,6 +400,27 @@ func hasTags(tags []tag.Tag) Validation {
 		for _, t := range tags {
 			if !contains(metric.Tags, t) {
 				return errors.Errorf("expected tag %v but not found in measurement", t)
+			}
+		}
+		return nil
+	}
+}
+
+// missingTags checks that the measurement misses all the specific tags.
+func missingTags(tags []tag.Tag) Validation {
+	return func(metric Measurement) error {
+		contains := func(tts []tag.Tag, t tag.Tag) bool {
+			for _, tt := range tts {
+				if tt == t {
+					return true
+				}
+			}
+			return false
+		}
+
+		for _, t := range tags {
+			if contains(metric.Tags, t) {
+				return errors.Errorf("unexpected tag %v is found in measurement", t)
 			}
 		}
 		return nil

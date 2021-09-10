@@ -262,7 +262,7 @@ func TestRepoSyncReconcilerCreateAndUpdateRepoSyncWithOverride(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -397,7 +397,7 @@ func TestRepoSyncReconcilerUpdateRepoSyncWithOverride(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -608,7 +608,7 @@ func TestRepoSyncCreateWithNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        reposyncRepo,
@@ -665,7 +665,7 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        reposyncRepo,
@@ -739,7 +739,7 @@ func TestRepoSyncUpdateNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        reposyncRepo,
@@ -818,7 +818,7 @@ func TestRepoSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -875,7 +875,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -927,7 +927,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -979,7 +979,7 @@ func TestRepoSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1089,7 +1089,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1166,7 +1166,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1299,7 +1299,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1367,7 +1367,7 @@ func TestRepoSyncAuthGCPServiceAccount(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1449,7 +1449,7 @@ func TestRepoSyncSwitchAuthTypes(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,
@@ -1629,7 +1629,7 @@ func TestRepoSyncWithProxy(t *testing.T) {
 		configMapWithData(
 			v1.NSConfigManagementSystem,
 			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       reposyncRepo,

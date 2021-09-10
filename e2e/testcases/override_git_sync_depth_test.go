@@ -9,6 +9,7 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
+	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -42,6 +43,13 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
 		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -121,6 +129,13 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateGitSyncDepthOverrideCount(2)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
 	// Clear `spec.override` from the RootSync
 	nt.MustMergePatch(rootSync, `{"spec": {"override": null}}`)
 
@@ -191,6 +206,13 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
 }
 
 func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
@@ -220,6 +242,13 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
 		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -299,6 +328,13 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateGitSyncDepthOverrideCount(2)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
 	// Clear `spec.override` from the RootSync
 	nt.MustMergePatch(rootSync, `{"spec": {"override": null}}`)
 
@@ -366,6 +402,13 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{},
 		nomostest.HasKeyValuePairInConfigMapData(key, defaultDepth))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.GitSyncDepthOverrideCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}

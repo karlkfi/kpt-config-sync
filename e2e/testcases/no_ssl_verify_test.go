@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -37,6 +38,13 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap does not have the key.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -94,6 +102,13 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateNoSSLVerifyCount(2)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
 	// Set noSSLVerify to false for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": false}}}`)
 
@@ -130,6 +145,13 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
 }
 
 func TestNoSSLVerifyV1Beta1(t *testing.T) {
@@ -156,6 +178,13 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap does not have the key.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -214,6 +243,13 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateNoSSLVerifyCount(2)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
 	// Set noSSLVerify to false for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": false}}}`)
 
@@ -247,6 +283,13 @@ func TestNoSSLVerifyV1Beta1(t *testing.T) {
 
 	// Verify the ns-reconciler-frontend-git-sync ConfigMap has the correct git sync depth setting.
 	err = nt.Validate(nsReconcilerFrontendGitSyncCM, v1.NSConfigManagementSystem, &corev1.ConfigMap{}, nomostest.MissingKeyInConfigMapData(key))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+		return nt.ValidateMetricNotFound(ocmetrics.NoSSLVerifyCountView.Name)
+	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}

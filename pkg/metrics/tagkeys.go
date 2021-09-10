@@ -19,6 +19,9 @@ var (
 	// https://github.com/open-telemetry/opentelemetry-collector/issues/1076.
 	KeyReconciler, _ = tag.NewKey(strings.ReplaceAll(ReconcilerTagKey(), "-", "_"))
 
+	// KeyReconcilerType groups metrics by the reconciler type. Possible values: root, namespace.
+	KeyReconcilerType, _ = tag.NewKey("reconciler")
+
 	// KeyOperation groups metrics by their operation. Possible values: create, patch, update, delete.
 	KeyOperation, _ = tag.NewKey("operation")
 
@@ -48,6 +51,12 @@ var (
 	// These are both aggregated as LastValue metrics so the number of recorded values will always be
 	// at most 1 per git commit.
 	KeyCommit, _ = tag.NewKey("commit")
+
+	// KeyContainer groups metrics by their container names. Possible values: reconciler, git-sync.
+	KeyContainer, _ = tag.NewKey("container")
+
+	// KeyResourceType groups metris by their resource types. Possible values: cpu, memory.
+	KeyResourceType, _ = tag.NewKey("resource")
 )
 
 // StatusTagKey returns a string representation of the error, if it exists, otherwise success.

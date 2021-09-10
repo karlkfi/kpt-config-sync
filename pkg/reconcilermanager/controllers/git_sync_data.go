@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
+	"github.com/google/nomos/pkg/metrics"
 )
 
 // GitConfig constants.
@@ -39,17 +41,19 @@ type options struct {
 	noSSLVerify bool
 }
 
-func gitSyncData(opts options) map[string]string {
+func gitSyncData(ctx context.Context, opts options) map[string]string {
 	result := make(map[string]string)
 	result["GIT_SYNC_REPO"] = opts.repo
 	result["GIT_KNOWN_HOSTS"] = "false" // disable known_hosts checking because it provides no benefit for our use case.
 	if opts.noSSLVerify {
 		result["GIT_SSL_NO_VERIFY"] = "true"
+		metrics.RecordNoSSLVerifyCount(ctx)
 	}
 	if opts.depth != nil && *opts.depth >= 0 {
 		// git-sync would do a shallow clone if *opts.depth > 0;
 		// git-sync would do a full clone if *opts.depth == 0.
 		result["GIT_SYNC_DEPTH"] = strconv.FormatInt(*opts.depth, 10)
+		metrics.RecordGitSyncDepthOverrideCount(ctx)
 	} else {
 		// git-sync would do a shallow clone.
 		//

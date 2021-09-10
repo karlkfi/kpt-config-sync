@@ -248,7 +248,7 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -397,7 +397,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -620,7 +620,7 @@ func TestRootSyncCreateWithNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        rootsyncRepo,
@@ -689,7 +689,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        rootsyncRepo,
@@ -776,7 +776,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:         gitRevision,
 				branch:      branch,
 				repo:        rootsyncRepo,
@@ -867,7 +867,7 @@ func TestRootSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -936,7 +936,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1001,7 +1001,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1066,7 +1066,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1179,7 +1179,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1276,7 +1276,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitUpdatedRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1403,7 +1403,7 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1518,7 +1518,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,
@@ -1703,7 +1703,7 @@ func TestRootSyncWithProxy(t *testing.T) {
 		configMapWithData(
 			rootsyncReqNamespace,
 			RootSyncResourceName(reconcilermanager.GitSync),
-			gitSyncData(options{
+			gitSyncData(ctx, options{
 				ref:        gitRevision,
 				branch:     branch,
 				repo:       rootsyncRepo,

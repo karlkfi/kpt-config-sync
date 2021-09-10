@@ -45,5 +45,9 @@ func RegisterReconcilerMetricsViews() error {
 		ResourceConflictsView,
 		InternalErrorsView,
 		RenderingCountView,
-		SkipRenderingCountView)
+		SkipRenderingCountView,
+		ResourceOverrideCountView,
+		GitSyncDepthOverrideCountView,
+		NoSSLVerifyCountView,
+	)
 }

@@ -154,3 +154,22 @@ func RecordSkipRenderingCount(ctx context.Context) {
 	measurement := SkipRenderingCount.M(1)
 	stats.Record(tagCtx, measurement)
 }
+
+// RecordResourceOverrideCount produces measurements for the ResourceOverrideCount view.
+func RecordResourceOverrideCount(ctx context.Context, reconcilerType, containerName, resourceType string) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType), tag.Upsert(KeyContainer, containerName), tag.Upsert(KeyContainer, containerName))
+	measurement := ResourceOverrideCount.M(1)
+	stats.Record(tagCtx, measurement)
+}
+
+// RecordGitSyncDepthOverrideCount produces measurements for the GitSyncDepthOverrideCount view.
+func RecordGitSyncDepthOverrideCount(ctx context.Context) {
+	measurement := GitSyncDepthOverrideCount.M(1)
+	stats.Record(ctx, measurement)
+}
+
+// RecordNoSSLVerifyCount produces measurements for the NoSSLVerifyCount view.
+func RecordNoSSLVerifyCount(ctx context.Context) {
+	measurement := NoSSLVerifyCount.M(1)
+	stats.Record(ctx, measurement)
+}

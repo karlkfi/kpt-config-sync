@@ -196,4 +196,29 @@ var (
 		TagKeys:     []tag.Key{KeyReconciler},
 		Aggregation: view.Count(),
 	}
+
+	// ResourceOverrideCountView aggregates the ResourceOverrideCount metric measurements.
+	ResourceOverrideCountView = &view.View{
+		Name:        ResourceOverrideCount.Name() + "_total",
+		Measure:     ResourceOverrideCount,
+		Description: "The total number of RootSync/RepoSync objects including the `spec.override.resources` field",
+		TagKeys:     []tag.Key{KeyReconciler, KeyContainer, KeyResourceType},
+		Aggregation: view.Count(),
+	}
+
+	// GitSyncDepthOverrideCountView aggregates the GitSyncDepthOverrideCount metric measurements.
+	GitSyncDepthOverrideCountView = &view.View{
+		Name:        GitSyncDepthOverrideCount.Name() + "_total",
+		Measure:     GitSyncDepthOverrideCount,
+		Description: "The total number of RootSync/RepoSync objects including the `spec.override.gitSyncDepth` field",
+		Aggregation: view.Count(),
+	}
+
+	// NoSSLVerifyCountView aggregates the NoSSLVerifyCount metric measurements.
+	NoSSLVerifyCountView = &view.View{
+		Name:        NoSSLVerifyCount.Name() + "_total",
+		Measure:     NoSSLVerifyCount,
+		Description: "The number of RootSync/RepoSync objects whose `spec.git.noSSLVerify` field is set to `true`",
+		Aggregation: view.Count(),
+	}
 )
