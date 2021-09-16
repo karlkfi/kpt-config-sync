@@ -138,55 +138,103 @@ metadata:
 	}
 }
 
-func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
+func TestNomosHydrateHierarchyRepoWithClusterSelectors(t *testing.T) {
+	testNomosHydrateWithClusterSelectors(t, filesystem.SourceFormatHierarchy, "cluster-selectors")
+}
+
+func TestNomosHydrateUnstructuredRepoWithClusterSelectors(t *testing.T) {
+	testNomosHydrateWithClusterSelectors(t, filesystem.SourceFormatUnstructured, "cluster-selectors")
+}
+
+func TestNomosHydrateHierarchyRepoWithClusterNameSelectors(t *testing.T) {
+	testNomosHydrateWithClusterSelectors(t, filesystem.SourceFormatHierarchy, "cluster-name-selectors")
+}
+
+func TestNomosHydrateUnstructuredRepoWithClusterNameSelectors(t *testing.T) {
+	testNomosHydrateWithClusterSelectors(t, filesystem.SourceFormatUnstructured, "cluster-name-selectors")
+}
+
+func testNomosHydrateWithClusterSelectors(t *testing.T, sourceFormat filesystem.SourceFormat, selectorType string) {
 	tmpDir := nomostest.TestDir(t)
 	tw := nomostesting.New(t)
 
 	_ = nomostest.NewOptStruct(nomostest.TestClusterName(tw), tmpDir, tw)
 
-	configPath := "../../examples/hierarchy-repo-with-cluster-selectors"
+	configPath := fmt.Sprintf("../../examples/%s-repo-with-%s", sourceFormat, selectorType)
 	expectedCompiledDir := "../../examples/repo-with-cluster-selectors-compiled"
-	compiledDir := fmt.Sprintf("%s/compiled", tmpDir)
+	compiledDir := fmt.Sprintf("%s/%s/compiled", tmpDir, sourceFormat)
 	clusterDevCompiledDir := fmt.Sprintf("%s/cluster-dev", compiledDir)
 	clusterStagingCompiledDir := fmt.Sprintf("%s/cluster-staging", compiledDir)
 	clusterProdCompiledDir := fmt.Sprintf("%s/cluster-prod", compiledDir)
 
-	compiledWithAPIServerCheckDir := fmt.Sprintf("%s/compiled-with-api-server-check", tmpDir)
+	compiledWithAPIServerCheckDir := fmt.Sprintf("%s/%s/compiled-with-api-server-check", tmpDir, sourceFormat)
 
-	compiledDirWithoutClustersFlag := fmt.Sprintf("%s/compiled-without-clusters-flag", tmpDir)
+	compiledDirWithoutClustersFlag := fmt.Sprintf("%s/%s/compiled-without-clusters-flag", tmpDir, sourceFormat)
 	expectedCompiledWithoutClustersFlagDir := "../../examples/repo-with-cluster-selectors-compiled-without-clusters-flag"
 
-	compiledJSONDir := fmt.Sprintf("%s/compiled-json", tmpDir)
-	compiledJSONWithoutClustersFlagDir := fmt.Sprintf("%s/compiled-json-without-clusters-flag", tmpDir)
+	compiledJSONDir := fmt.Sprintf("%s/%s/compiled-json", tmpDir, sourceFormat)
+	compiledJSONWithoutClustersFlagDir := fmt.Sprintf("%s/%s/compiled-json-without-clusters-flag", tmpDir, sourceFormat)
 	expectedCompiledJSONDir := "../../examples/repo-with-cluster-selectors-compiled-json"
 	expectedCompiledWithoutClustersFlagJSONDir := "../../examples/repo-with-cluster-selectors-compiled-json-without-clusters-flag"
 
-	// Test `nomos vet --no-api-server-check`
-	out, err := exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", configPath)).CombinedOutput()
+	// Test `nomos vet --no-api-server-check --source-format=sourceFormat`
+	args := []string{
+		"vet",
+		"--no-api-server-check",
+		"--path", configPath,
+	}
+
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err := exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	// Test `nomos vet --no-api-server-check --clusters=cluster-dev`
-	out, err = exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", configPath), "--clusters=cluster-dev").CombinedOutput()
+	// Test `nomos vet --no-api-server-check --source-format=sourceFormat --clusters=cluster-dev`
+	args = []string{
+		"vet",
+		"--no-api-server-check",
+		"--path", configPath,
+		"--clusters=cluster-dev",
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	// Test `nomos vet`
-	out, err = exec.Command("nomos", "vet", fmt.Sprintf("--path=%s", configPath)).CombinedOutput()
+	// Test `nomos vet --source-format=sourceFormat`
+	args = []string{
+		"vet",
+		"--path", configPath,
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	// Test `nomos hydrate --no-api-server-check --clusters=cluster-dev,cluster-prod,cluster-staging`
-	out, err = exec.Command("nomos", "hydrate", "--no-api-server-check",
-		fmt.Sprintf("--path=%s", configPath),
-		"--clusters=cluster-dev,cluster-prod,cluster-staging",
-		fmt.Sprintf("--output=%s", compiledDir)).CombinedOutput()
+	// Test `nomos hydrate --no-api-server-check --source-format=sourceFormat --clusters=cluster-dev,cluster-prod,cluster-staging`
+	args = []string{
+		"hydrate",
+		"--no-api-server-check",
+		"--path", configPath,
+		"--clusters", "cluster-dev,cluster-prod,cluster-staging",
+		"--output", compiledDir,
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -198,11 +246,18 @@ func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 		tw.Error(err)
 	}
 
-	// Test `nomos hydrate --clusters=cluster-dev,cluster-prod,cluster-staging`
-	out, err = exec.Command("nomos", "hydrate",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
-		"--clusters=cluster-dev,cluster-prod,cluster-staging",
-		fmt.Sprintf("--output=%s", compiledWithAPIServerCheckDir)).CombinedOutput()
+	// Test `nomos hydrate --source-format=sourceFormat --clusters=cluster-dev,cluster-prod,cluster-staging`
+	args = []string{
+		"hydrate",
+		"--path", configPath,
+		"--clusters", "cluster-dev,cluster-prod,cluster-staging",
+		"--output", compiledWithAPIServerCheckDir,
+	}
+
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -215,9 +270,15 @@ func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 	}
 
 	// Test `nomos hydrate`
-	out, err = exec.Command("nomos", "hydrate",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
-		fmt.Sprintf("--output=%s", compiledDirWithoutClustersFlag)).CombinedOutput()
+	args = []string{
+		"hydrate",
+		"--path", configPath,
+		"--output", compiledDirWithoutClustersFlag,
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -248,10 +309,17 @@ func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 	}
 
 	// Test `nomos hydrate --format=json --clusters=cluster-dev,cluster-prod,cluster-staging`
-	out, err = exec.Command("nomos", "hydrate", "--format=json",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
-		"--clusters=cluster-dev,cluster-prod,cluster-staging",
-		fmt.Sprintf("--output=%s", compiledJSONDir)).CombinedOutput()
+	args = []string{
+		"hydrate",
+		"--format=json",
+		"--path", configPath,
+		"--clusters", "cluster-dev,cluster-prod,cluster-staging",
+		"--output", compiledJSONDir,
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -264,9 +332,16 @@ func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 	}
 
 	// Test `nomos hydrate --format=json`
-	out, err = exec.Command("nomos", "hydrate", "--format=json",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
-		fmt.Sprintf("--output=%s", compiledJSONWithoutClustersFlagDir)).CombinedOutput()
+	args = []string{
+		"hydrate",
+		"--format=json",
+		"--path", configPath,
+		"--output", compiledJSONWithoutClustersFlagDir,
+	}
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+	out, err = exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -279,38 +354,38 @@ func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 	}
 
 	// Test `nomos vet --no-api-server-check --source-format=unstructured` on the hydrated configs
-	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterDevCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", "--path", clusterDevCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterStagingCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", "--path", clusterStagingCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterProdCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--no-api-server-check", "--source-format=unstructured", "--path", clusterProdCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
 	// Test `nomos vet --source-format=unstructured` on the hydrated configs
-	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterDevCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", "--path", clusterDevCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterStagingCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", "--path", clusterStagingCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
 	}
 
-	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", fmt.Sprintf("--path=%s", clusterProdCompiledDir)).CombinedOutput()
+	out, err = exec.Command("nomos", "vet", "--source-format=unstructured", "--path", clusterProdCompiledDir).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -381,18 +456,28 @@ func TestSyncFromNomosHydrateOutputJSONDir(t *testing.T) {
 	testSyncFromNomosHydrateOutput(t, "../../examples/repo-with-cluster-selectors-compiled-json/cluster-dev/.")
 }
 
-func testSyncFromNomosHydrateOutputFlat(t *testing.T, format string) {
+func testSyncFromNomosHydrateOutputFlat(t *testing.T, sourceFormat filesystem.SourceFormat, outputFormat, selectorType string) {
 	tmpDir := nomostest.TestDir(t)
 	tw := nomostesting.New(t)
 
-	configPath := "../../examples/hierarchy-repo-with-cluster-selectors"
-	compiledConfigFile := fmt.Sprintf("%s/compiled.%s", tmpDir, format)
+	configPath := fmt.Sprintf("../../examples/%s-repo-with-%s", sourceFormat, selectorType)
+	compiledConfigFile := fmt.Sprintf("%s/compiled.%s", tmpDir, outputFormat)
 
-	out, err := exec.Command("nomos", "hydrate", "--no-api-server-check", "--flat",
-		fmt.Sprintf("--path=%s", configPath),
-		fmt.Sprintf("--format=%s", format),
+	args := []string{
+		"hydrate",
+		"--no-api-server-check",
+		"--flat",
+		"--path", configPath,
+		"--format", outputFormat,
 		"--clusters=cluster-dev",
-		fmt.Sprintf("--output=%s", compiledConfigFile)).CombinedOutput()
+		"--output", compiledConfigFile,
+	}
+
+	if sourceFormat == filesystem.SourceFormatUnstructured {
+		args = append(args, "--source-format", string(sourceFormat))
+	}
+
+	out, err := exec.Command("nomos", args...).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
 		tw.Error(err)
@@ -401,12 +486,36 @@ func testSyncFromNomosHydrateOutputFlat(t *testing.T, format string) {
 	testSyncFromNomosHydrateOutput(t, compiledConfigFile)
 }
 
-func TestSyncFromNomosHydrateOutputJSONFlat(t *testing.T) {
-	testSyncFromNomosHydrateOutputFlat(t, "json")
+func TestSyncFromNomosHydrateHierarchicalOutputWithClusterSelectorJSONFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatHierarchy, "json", "cluster-selectors")
 }
 
-func TestSyncFromNomosHydrateOutputYAMLFlat(t *testing.T) {
-	testSyncFromNomosHydrateOutputFlat(t, "yaml")
+func TestSyncFromNomosHydrateUnstructuredOutputWithClusterSelectorJSONFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatUnstructured, "json", "cluster-selectors")
+}
+
+func TestSyncFromNomosHydrateHierarchicalOutputWithClusterNameSelectorJSONFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatHierarchy, "json", "cluster-name-selectors")
+}
+
+func TestSyncFromNomosHydrateUnstructuredOutputWithClusterNameSelectorJSONFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatUnstructured, "json", "cluster-name-selectors")
+}
+
+func TestSyncFromNomosHydrateHierarchicalOutputWithClusterSelectorYAMLFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatHierarchy, "yaml", "cluster-selectors")
+}
+
+func TestSyncFromNomosHydrateUnstructuredOutputWithClusterSelectorYAMLFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatUnstructured, "yaml", "cluster-selectors")
+}
+
+func TestSyncFromNomosHydrateHierarchicalOutputWithClusterNameSelectorYAMLFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatHierarchy, "yaml", "cluster-name-selectors")
+}
+
+func TestSyncFromNomosHydrateUnstructuredOutputWithClusterNameSelectorYAMLFlat(t *testing.T) {
+	testSyncFromNomosHydrateOutputFlat(t, filesystem.SourceFormatUnstructured, "yaml", "cluster-name-selectors")
 }
 
 func TestNomosHydrateWithUnknownScopedObject(t *testing.T) {

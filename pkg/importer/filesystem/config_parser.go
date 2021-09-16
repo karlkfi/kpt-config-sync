@@ -13,7 +13,11 @@ type ConfigParser interface {
 	Parse(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
 
 	// ReadClusterRegistryResources returns the list of Clusters contained in the repo.
-	ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError)
+	ReadClusterRegistryResources(filePaths reader.FilePaths, sourceFormat SourceFormat) ([]ast.FileObject, status.MultiError)
+
+	// ReadClusterNamesFromSelector returns the list of cluster names specified in
+	// the `cluster-name-selector` annotation.
+	ReadClusterNamesFromSelector(filePaths reader.FilePaths) ([]string, status.MultiError)
 }
 
 // AsCoreObjects converts a slice of FileObjects to a slice of client.Objects.

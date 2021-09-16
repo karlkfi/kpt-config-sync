@@ -1,0 +1,12 @@
+kind: ResourceQuota
+apiVersion: v1
+metadata:
+  name: quota
+  annotations:
+    configmanagement.gke.io/namespace-selector: namespace-selector-bookstore2
+    client.lifecycle.config.k8s.io/mutation: ignore
+spec:
+  hard:
+    pods: "1"
+    cpu: "200m"
+    memory: 200Mi

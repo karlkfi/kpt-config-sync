@@ -318,7 +318,11 @@ func (p *fakeParser) Parse(_ reader.FilePaths) ([]ast.FileObject, status.MultiEr
 	return nil, errs
 }
 
-func (p *fakeParser) ReadClusterRegistryResources(_ reader.FilePaths) ([]ast.FileObject, status.MultiError) {
+func (p *fakeParser) ReadClusterRegistryResources(_ reader.FilePaths, _ filesystem.SourceFormat) ([]ast.FileObject, status.MultiError) {
+	return nil, nil
+}
+
+func (p *fakeParser) ReadClusterNamesFromSelector(_ reader.FilePaths) ([]string, status.MultiError) {
 	return nil, nil
 }
 

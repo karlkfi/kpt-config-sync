@@ -1,0 +1,8 @@
+kind: NamespaceSelector
+apiVersion: configmanagement.gke.io/v1
+metadata:
+  name: namespace-selector-bookstore2
+spec:
+  selector:
+    matchLabels:
+      app: bookstore2

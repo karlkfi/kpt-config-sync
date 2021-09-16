@@ -3,10 +3,13 @@
 package filesystem
 
 import (
+	"strings"
+
 	"github.com/google/nomos/pkg/api/configmanagement/v1/repo"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/importer/reader"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -57,7 +60,30 @@ func filterTopDir(filePaths reader.FilePaths, topDir string) reader.FilePaths {
 	}
 }
 
-// ReadClusterRegistryResources reads the manifests declared in clusterregistry/.
-func (p *Parser) ReadClusterRegistryResources(filePaths reader.FilePaths) ([]ast.FileObject, status.MultiError) {
-	return p.reader.Read(filterTopDir(filePaths, repo.ClusterRegistryDir))
+// ReadClusterRegistryResources reads the manifests declared in clusterregistry/ for hierarchical format.
+// For unstructured format, it reads all files.
+func (p *Parser) ReadClusterRegistryResources(filePaths reader.FilePaths, format SourceFormat) ([]ast.FileObject, status.MultiError) {
+	if format == SourceFormatHierarchy {
+		return p.reader.Read(filterTopDir(filePaths, repo.ClusterRegistryDir))
+	}
+	return p.reader.Read(filePaths)
+}
+
+// ReadClusterNamesFromSelector returns the list of cluster names specified in the `cluster-name-selector` annotation.
+func (p *Parser) ReadClusterNamesFromSelector(filePaths reader.FilePaths) ([]string, status.MultiError) {
+	var clusters []string
+	objs, err := p.Parse(filePaths)
+	if err != nil {
+		return clusters, err
+	}
+
+	for _, obj := range objs {
+		if annotation, found := obj.GetAnnotations()[metadata.ClusterNameSelectorAnnotationKey]; found {
+			names := strings.Split(annotation, ",")
+			for _, name := range names {
+				clusters = append(clusters, strings.TrimSpace(name))
+			}
+		}
+	}
+	return clusters, nil
 }

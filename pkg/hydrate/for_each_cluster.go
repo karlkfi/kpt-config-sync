@@ -33,9 +33,10 @@ const (
 func ForEachCluster(parser filesystem.ConfigParser, options validate.Options,
 	sourceFormat filesystem.SourceFormat, filePaths reader.FilePaths,
 	f func(clusterName string, fileObjects []ast.FileObject, err status.MultiError)) {
-	clusterRegistry, errs := parser.ReadClusterRegistryResources(filePaths)
-	clusters, err2 := selectors.FilterClusters(clusterRegistry)
-	errs = status.Append(errs, err2)
+	clusterRegistry, errs := parser.ReadClusterRegistryResources(filePaths, sourceFormat)
+	clustersObjects, err2 := selectors.FilterClusters(clusterRegistry)
+	clusterNames, err3 := parser.ReadClusterNamesFromSelector(filePaths)
+	errs = status.Append(errs, err2, err3)
 
 	// Hydrate for empty string cluster name. This is the default configuration.
 	options.ClusterName = defaultCluster
@@ -51,8 +52,21 @@ func ForEachCluster(parser filesystem.ConfigParser, options validate.Options,
 
 	f(defaultCluster, defaultFileObjects, errs)
 
-	for _, cluster := range clusters {
-		options.ClusterName = cluster.Name
+	// Hydrate for clusters selected by the cluster selectors.
+	clusters := map[string]bool{}
+	for _, cluster := range clustersObjects {
+		if _, found := clusters[cluster.Name]; !found {
+			clusters[cluster.Name] = true
+		}
+	}
+	for _, cluster := range clusterNames {
+		if _, found := clusters[cluster]; !found {
+			clusters[cluster] = true
+		}
+	}
+
+	for cluster := range clusters {
+		options.ClusterName = cluster
 		fileObjects, errs := parser.Parse(filePaths)
 
 		if sourceFormat == filesystem.SourceFormatHierarchy {
@@ -62,6 +76,6 @@ func ForEachCluster(parser filesystem.ConfigParser, options validate.Options,
 		}
 
 		errs = status.Append(errs, err2)
-		f(cluster.Name, fileObjects, errs)
+		f(cluster, fileObjects, errs)
 	}
 }
