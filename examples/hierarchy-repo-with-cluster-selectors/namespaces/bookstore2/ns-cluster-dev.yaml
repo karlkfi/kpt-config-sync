@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bookstore2
+  annotations:
+    configmanagement.gke.io/cluster-selector: cluster-selector-dev
+  labels:
+    app: bookstore2
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-bookstore2
+  annotations:
+    configsync.gke.io/cluster-name-selector: cluster-dev

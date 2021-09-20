@@ -42,6 +42,12 @@ func ClusterSelectors(objs *objects.Raw) status.MultiError {
 			filtered = append(filtered, ns)
 			activeNamespaces[ns.GetName()] = true
 		} else {
+			// The Git repo may define a namespace multiple times.
+			// If the namespace is already marked as active in `activeNamespaces`,
+			// we should not change its status to inactive.
+			if active, ok := activeNamespaces[ns.GetName()]; ok && active {
+				continue
+			}
 			activeNamespaces[ns.GetName()] = false
 		}
 	}

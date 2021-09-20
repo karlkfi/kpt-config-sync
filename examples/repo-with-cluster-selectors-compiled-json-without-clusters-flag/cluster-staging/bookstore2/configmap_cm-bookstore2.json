@@ -3,12 +3,10 @@
 	"items": [
 		{
 			"apiVersion": "v1",
-			"kind": "Namespace",
+			"kind": "ConfigMap",
 			"metadata": {
-				"labels": {
-					"app": "bookstore1"
-				},
-				"name": "bookstore1"
+				"name": "cm-bookstore2",
+				"namespace": "bookstore2"
 			}
 		}
 	],
