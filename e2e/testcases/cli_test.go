@@ -17,6 +17,7 @@ import (
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -77,7 +78,7 @@ func TestNomosInitHydrate(t *testing.T) {
 	err = hydrate.PrintFile(fmt.Sprintf("%s/namespaces/foo/ns.yaml", tmpDir),
 		flags.OutputYAML,
 		[]*unstructured.Unstructured{
-			fake.UnstructuredObject(kinds.Namespace(), core.Name("foo")),
+			fake.UnstructuredObject(kinds.Namespace(), core.Name("foo"), core.Annotation(metadata.HNCManagedBy, "controller1")),
 			fake.UnstructuredObject(kinds.ConfigMap(), core.Name("cm1"), core.Namespace("foo")),
 		})
 	if err != nil {
@@ -120,6 +121,8 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    hnc.x-k8s.io/managed-by: controller1
   name: foo
 `)
 
@@ -135,14 +138,14 @@ metadata:
 	}
 }
 
-func TestNomosHydrateWithClusterSelectors(t *testing.T) {
+func TestNomosHydrateWithClusterSelectorsHierarchical(t *testing.T) {
 	tmpDir := nomostest.TestDir(t)
 	tw := nomostesting.New(t)
 
 	_ = nomostest.NewOptStruct(nomostest.TestClusterName(tw), tmpDir, tw)
 
-	configPath := "../../examples/hierarchical-repo-with-cluster-selectors"
-	expectedCompiledDir := "../../examples/hierarchical-repo-with-cluster-selectors-compiled"
+	configPath := "../../examples/hierarchy-repo-with-cluster-selectors"
+	expectedCompiledDir := "../../examples/repo-with-cluster-selectors-compiled"
 	compiledDir := fmt.Sprintf("%s/compiled", tmpDir)
 	clusterDevCompiledDir := fmt.Sprintf("%s/cluster-dev", compiledDir)
 	clusterStagingCompiledDir := fmt.Sprintf("%s/cluster-staging", compiledDir)
@@ -151,12 +154,12 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 	compiledWithAPIServerCheckDir := fmt.Sprintf("%s/compiled-with-api-server-check", tmpDir)
 
 	compiledDirWithoutClustersFlag := fmt.Sprintf("%s/compiled-without-clusters-flag", tmpDir)
-	expectedCompiledWithoutClustersFlagDir := "../../examples/hierarchical-repo-with-cluster-selectors-compiled-without-clusters-flag"
+	expectedCompiledWithoutClustersFlagDir := "../../examples/repo-with-cluster-selectors-compiled-without-clusters-flag"
 
 	compiledJSONDir := fmt.Sprintf("%s/compiled-json", tmpDir)
 	compiledJSONWithoutClustersFlagDir := fmt.Sprintf("%s/compiled-json-without-clusters-flag", tmpDir)
-	expectedCompiledJSONDir := "../../examples/hierarchical-repo-with-cluster-selectors-compiled-json"
-	expectedCompiledWithoutClustersFlagJSONDir := "../../examples/hierarchical-repo-with-cluster-selectors-compiled-json-without-clusters-flag"
+	expectedCompiledJSONDir := "../../examples/repo-with-cluster-selectors-compiled-json"
+	expectedCompiledWithoutClustersFlagJSONDir := "../../examples/repo-with-cluster-selectors-compiled-json-without-clusters-flag"
 
 	// Test `nomos vet --no-api-server-check`
 	out, err := exec.Command("nomos", "vet", "--no-api-server-check", fmt.Sprintf("--path=%s", configPath)).CombinedOutput()
@@ -197,7 +200,7 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 
 	// Test `nomos hydrate --clusters=cluster-dev,cluster-prod,cluster-staging`
 	out, err = exec.Command("nomos", "hydrate",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors"),
+		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
 		"--clusters=cluster-dev,cluster-prod,cluster-staging",
 		fmt.Sprintf("--output=%s", compiledWithAPIServerCheckDir)).CombinedOutput()
 	if err != nil {
@@ -213,7 +216,7 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 
 	// Test `nomos hydrate`
 	out, err = exec.Command("nomos", "hydrate",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors"),
+		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
 		fmt.Sprintf("--output=%s", compiledDirWithoutClustersFlag)).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
@@ -246,7 +249,7 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 
 	// Test `nomos hydrate --format=json --clusters=cluster-dev,cluster-prod,cluster-staging`
 	out, err = exec.Command("nomos", "hydrate", "--format=json",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors"),
+		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
 		"--clusters=cluster-dev,cluster-prod,cluster-staging",
 		fmt.Sprintf("--output=%s", compiledJSONDir)).CombinedOutput()
 	if err != nil {
@@ -262,7 +265,7 @@ func TestNomosHydrateWithClusterSelectors(t *testing.T) {
 
 	// Test `nomos hydrate --format=json`
 	out, err = exec.Command("nomos", "hydrate", "--format=json",
-		fmt.Sprintf("--path=%s", "../../examples/hierarchical-repo-with-cluster-selectors"),
+		fmt.Sprintf("--path=%s", "../../examples/hierarchy-repo-with-cluster-selectors"),
 		fmt.Sprintf("--output=%s", compiledJSONWithoutClustersFlagDir)).CombinedOutput()
 	if err != nil {
 		tw.Log(string(out))
@@ -371,18 +374,18 @@ func testSyncFromNomosHydrateOutput(t *testing.T, config string) {
 }
 
 func TestSyncFromNomosHydrateOutputYAMLDir(t *testing.T) {
-	testSyncFromNomosHydrateOutput(t, "../../examples/hierarchical-repo-with-cluster-selectors-compiled/cluster-dev/.")
+	testSyncFromNomosHydrateOutput(t, "../../examples/repo-with-cluster-selectors-compiled/cluster-dev/.")
 }
 
 func TestSyncFromNomosHydrateOutputJSONDir(t *testing.T) {
-	testSyncFromNomosHydrateOutput(t, "../../examples/hierarchical-repo-with-cluster-selectors-compiled-json/cluster-dev/.")
+	testSyncFromNomosHydrateOutput(t, "../../examples/repo-with-cluster-selectors-compiled-json/cluster-dev/.")
 }
 
 func testSyncFromNomosHydrateOutputFlat(t *testing.T, format string) {
 	tmpDir := nomostest.TestDir(t)
 	tw := nomostesting.New(t)
 
-	configPath := "../../examples/hierarchical-repo-with-cluster-selectors"
+	configPath := "../../examples/hierarchy-repo-with-cluster-selectors"
 	compiledConfigFile := fmt.Sprintf("%s/compiled.%s", tmpDir, format)
 
 	out, err := exec.Command("nomos", "hydrate", "--no-api-server-check", "--flat",

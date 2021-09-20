@@ -1,0 +1,7 @@
+kind: Cluster
+apiVersion: clusterregistry.k8s.io/v1alpha1
+metadata:
+  name: cluster-prod
+  labels:
+    cluster: cluster-prod
+    environment: prod
