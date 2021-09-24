@@ -15,6 +15,7 @@ type resourceState struct {
 	Group      string      `json:"group,omitempty"`
 	Kind       string      `json:"kind"`
 	Status     string      `json:"status"`
+	SourceHash string      `json:"sourceHash,omitempty"`
 	Conditions []Condition `json:"conditions,omitempty"`
 }
 

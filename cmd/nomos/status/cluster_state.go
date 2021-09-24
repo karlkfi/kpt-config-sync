@@ -73,9 +73,18 @@ func (r *repoState) printRows(writer io.Writer) {
 	if resourceStatus && len(r.resources) > 0 {
 		sort.Sort(byNamespaceAndType(r.resources))
 		fmt.Fprintf(writer, "%sManaged resources:\n", indent)
-		fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\n", indent)
+		hasSourceHash := r.resources[0].SourceHash != ""
+		if !hasSourceHash {
+			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\n", indent)
+		} else {
+			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n", indent)
+		}
 		for _, r := range r.resources {
-			fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status)
+			if !hasSourceHash {
+				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status)
+			} else {
+				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status, r.SourceHash)
+			}
 		}
 	}
 }

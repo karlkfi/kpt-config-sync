@@ -28,9 +28,9 @@ func TestRepoState_PrintRows(t *testing.T) {
 				},
 				status:    "SYNCED",
 				commit:    "abc123",
-				resources: exampleResources(),
+				resources: exampleResources("abc123"),
 			},
-			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\n  \tbookstore\tdeployment.apps/test\tCurrent\n  \tbookstore\tservice/test\tCurrent\n  \tbookstore\tservice/test2\tConflict\n",
+			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n  \tbookstore\tdeployment.apps/test\tCurrent\tabc123\n  \tbookstore\tservice/test\tCurrent\tabc123\n  \tbookstore\tservice/test2\tConflict\tabc123\n",
 		},
 		{
 			"optional git subdirectory specified",
@@ -347,7 +347,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				git:       git,
 				status:    "SYNCED",
 				commit:    "abc123",
-				resources: exampleResources(),
+				resources: exampleResources(""),
 			},
 		},
 		{
@@ -359,19 +359,19 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				git:       git,
 				status:    "SYNCED",
 				commit:    "abc123",
-				resources: exampleResources(),
+				resources: exampleResources(""),
 			},
 		},
 		{
 			"repo is rendering new commit",
 			fake.RepoSyncObject(core.Namespace("bookstore"), withCommitsRepoSync("def456", "abc123", "abc123"), withGitRepoSync(git)),
-			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
+			fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResourcesAndCommit("abc123")),
 			&repoState{
 				scope:     "bookstore",
 				git:       git,
 				status:    "PENDING",
 				commit:    "abc123",
-				resources: exampleResources(),
+				resources: exampleResources("abc123"),
 			},
 		},
 		{
@@ -738,14 +738,61 @@ func withResources() core.MetaMutator {
 		unstructured.SetNestedField(u.Object, status, "status") //nolint
 	}
 }
-func exampleResources() []resourceState {
+
+func withResourcesAndCommit(commit string) core.MetaMutator {
+	status := map[string]interface{}{
+		"resourceStatuses": []interface{}{
+			map[string]interface{}{
+				"group":      "apps",
+				"kind":       "Deployment",
+				"namespace":  "bookstore",
+				"name":       "test",
+				"status":     "Current",
+				"sourceHash": commit,
+			},
+			map[string]interface{}{
+				"kind":       "Service",
+				"namespace":  "bookstore",
+				"name":       "test",
+				"status":     "Current",
+				"sourceHash": commit,
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":   "Stalled",
+						"status": "False",
+					},
+				},
+			},
+			map[string]interface{}{
+				"kind":       "Service",
+				"namespace":  "bookstore",
+				"name":       "test2",
+				"status":     "Current",
+				"sourceHash": commit,
+				"conditions": []interface{}{
+					map[string]interface{}{
+						"type":   "OwnershipOverlap",
+						"status": "True",
+					},
+				},
+			},
+		},
+	}
+	return func(o client.Object) {
+		u := o.(*unstructured.Unstructured)
+		unstructured.SetNestedField(u.Object, status, "status") //nolint
+	}
+}
+
+func exampleResources(commit string) []resourceState {
 	return []resourceState{
 		{
-			Group:     "apps",
-			Kind:      "Deployment",
-			Namespace: "bookstore",
-			Name:      "test",
-			Status:    "Current",
+			Group:      "apps",
+			Kind:       "Deployment",
+			Namespace:  "bookstore",
+			Name:       "test",
+			Status:     "Current",
+			SourceHash: commit,
 		},
 		{
 			Group:      "",
@@ -753,6 +800,7 @@ func exampleResources() []resourceState {
 			Namespace:  "bookstore",
 			Name:       "test",
 			Status:     "Current",
+			SourceHash: commit,
 			Conditions: []Condition{{Type: "Stalled", Status: "False"}},
 		},
 		{
@@ -761,6 +809,7 @@ func exampleResources() []resourceState {
 			Namespace:  "bookstore",
 			Name:       "test2",
 			Status:     "Conflict",
+			SourceHash: commit,
 			Conditions: []Condition{{Type: "OwnershipOverlap", Status: "True"}},
 		},
 	}
