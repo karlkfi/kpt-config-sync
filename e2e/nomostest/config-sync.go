@@ -106,9 +106,21 @@ var (
 		"rootsyncs.configsync.gke.io":                true,
 		metrics.OtelAgentName:                        true,
 		metrics.OtelCollectorName:                    true,
-		"resourcegroups.kpt.dev":                     true,
 		"acm-psp":                                    true,
 		"configmanagement.gke.io:otel-collector-psp": true,
+		// resources for resource-group controller
+		"resourcegroups.kpt.dev":                            true,
+		"resource-group-system":                             true,
+		"resource-group-sa":                                 true,
+		"resource-group-leader-election-role":               true,
+		"resource-group-manager-role":                       true,
+		"resource-group-metrics-reader":                     true,
+		"resource-group-proxy-role":                         true,
+		"resource-group-leader-election-rolebinding":        true,
+		"resource-group-manager-rolebinding":                true,
+		"resource-group-proxy-rolebinding":                  true,
+		"resource-group-controller-manager-metrics-service": true,
+		"resource-group-controller-manager":                 true,
 	}
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.

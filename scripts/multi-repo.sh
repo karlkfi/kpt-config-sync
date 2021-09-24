@@ -37,7 +37,7 @@ kubectl apply -f manifests/cluster-selector-crd.yaml
 kubectl apply -f manifests/cluster-registry-crd.yaml
 kubectl apply -f manifests/reconciler-manager-service-account.yaml
 kubectl apply -f manifests/otel-agent-cm.yaml
-kubectl apply -f manifests/test-resources/kpt-resourcegroup-crd.yaml
+kubectl apply -f manifests/test-resources/resourcegroup-manifest.yaml
 
 # Fill in configmap template
 sed -e "s|RECONCILER_IMAGE_NAME|$REC_TAG|" -e "s|HYDRATION_CONTROLLER_IMAGE_NAME|$HC_TAG|" \
