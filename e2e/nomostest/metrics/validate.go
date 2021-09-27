@@ -106,7 +106,7 @@ func (csm ConfigSyncMetrics) ValidateReconcilerMetrics(reconciler string, numRes
 			return err
 		}
 	}
-	return csm.validateDeclaredResources(reconciler, numResources)
+	return csm.ValidateDeclaredResources(reconciler, numResources)
 }
 
 // ValidateGVKMetrics validates all the metrics that have a GVK "type" tag key.
@@ -299,9 +299,9 @@ func (csm ConfigSyncMetrics) validateAPICallDuration(reconciler, operation, gvk 
 	return errors.Wrapf(csm.validateMetric(ocmetrics.APICallDurationView.Name, validation), "%s %s operation", gvk, operation)
 }
 
-// validateDeclaredResources checks that the declared_resources metric is recorded
+// ValidateDeclaredResources checks that the declared_resources metric is recorded
 // and has the expected value.
-func (csm ConfigSyncMetrics) validateDeclaredResources(reconciler string, value int) error {
+func (csm ConfigSyncMetrics) ValidateDeclaredResources(reconciler string, value int) error {
 	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
 		hasTags([]tag.Tag{{Key: reconcilerKey, Value: reconciler}}),

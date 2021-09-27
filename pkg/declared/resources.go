@@ -28,9 +28,10 @@ type Resources struct {
 }
 
 // Update performs an atomic update on the resource declaration set.
-func (r *Resources) Update(ctx context.Context, objects []client.Object) status.Error {
+func (r *Resources) Update(ctx context.Context, objects []client.Object) ([]client.Object, status.Error) {
 	// First build up the new map using a local pointer/reference.
 	newSet := make(map[core.ID]*unstructured.Unstructured)
+	newObjects := []client.Object{}
 	for _, obj := range objects {
 		if obj == nil {
 			glog.Warning("Resources received nil declared resource")
@@ -41,21 +42,22 @@ func (r *Resources) Update(ctx context.Context, objects []client.Object) status.
 		u, err := reconcile.AsUnstructuredSanitized(obj)
 		if err != nil {
 			// This should never happen.
-			return status.InternalErrorBuilder.Wrap(err).
+			return nil, status.InternalErrorBuilder.Wrap(err).
 				Sprintf("converting %v to unstructured.Unstructured", id).Build()
 		}
 		newSet[id] = u
+		newObjects = append(newObjects, obj)
 	}
 
 	previousSet := r.getObjectSet()
 	if err := deletesAllNamespaces(previousSet, newSet); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Now assign the pointer for the new map to the struct reference in a
 	// threadsafe context. From now on, this map is read-only.
 	r.setObjectSet(newSet)
-	return nil
+	return newObjects, nil
 }
 
 // Get returns a copy of the resource declaration as read from Git

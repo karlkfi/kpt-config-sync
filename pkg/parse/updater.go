@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -58,14 +59,15 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 	// Update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.
 	if !cache.resourceDeclSetUpdated {
-		err := u.resources.Update(ctx, objs)
+		objs, err := u.resources.Update(ctx, objs)
+		metrics.RecordDeclaredResources(ctx, len(objs))
 		if err != nil {
-			errs = status.Append(errs, err)
-		} else {
-			if cache.parserErrs == nil {
-				cache.resourceDeclSetUpdated = true
-			}
-			metrics.RecordDeclaredResources(ctx, len(objs))
+			glog.Infof("Terminate the reconciliation (failed to update the declared resources): %v", err)
+			return err
+		}
+
+		if cache.parserErrs == nil {
+			cache.resourceDeclSetUpdated = true
 		}
 	}
 

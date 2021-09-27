@@ -1127,6 +1127,13 @@ func SyncMetricsToReconcilerSourceError(reconciler string) MetricsSyncOption {
 	}
 }
 
+// SyncMetricsToReconcilerSyncError syncs metrics to a reconciler sync error
+func SyncMetricsToReconcilerSyncError(reconciler string) MetricsSyncOption {
+	return func(metrics *testmetrics.ConfigSyncMetrics) error {
+		return metrics.ValidateReconcilerErrors(reconciler, 0, 1)
+	}
+}
+
 type waitForRepoSyncsOptions struct {
 	timeout            time.Duration
 	syncNamespaceRepos bool

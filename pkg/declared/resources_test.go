@@ -31,7 +31,7 @@ func TestUpdate(t *testing.T) {
 	objects := testSet
 	expectedIDs := getIDs(objects)
 
-	err := dr.Update(context.Background(), objects)
+	newObjects, err := dr.Update(context.Background(), objects)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -40,6 +40,11 @@ func TestUpdate(t *testing.T) {
 		if _, ok := dr.objectSet[id]; !ok {
 			t.Errorf("ID %v not found in the declared resource", id)
 		}
+	}
+
+	gotIDs := getIDs(newObjects)
+	if diff := cmp.Diff(expectedIDs, gotIDs); diff != "" {
+		t.Error(diff)
 	}
 }
 
@@ -51,7 +56,7 @@ func TestMutateImpossible(t *testing.T) {
 	o1.SetResourceVersion(wantResourceVersion)
 	o2 := asUnstructured(t, fake.RoleObject(core.Name("baz"), core.Namespace("bar")))
 	o2.SetResourceVersion(wantResourceVersion)
-	err := dr.Update(context.Background(), []client.Object{o1, o2})
+	_, err := dr.Update(context.Background(), []client.Object{o1, o2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +111,7 @@ func asUnstructured(t *testing.T, o client.Object) *unstructured.Unstructured {
 
 func TestDeclarations(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(context.Background(), testSet)
+	objects, err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,11 +129,20 @@ func TestDeclarations(t *testing.T) {
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Error(diff)
 	}
+
+	gotIDs := getIDs(objects)
+	wantIDs := []core.ID{}
+	for _, obj := range got {
+		wantIDs = append(wantIDs, core.IDOf(obj))
+	}
+	if diff := cmp.Diff(wantIDs, gotIDs); diff != "" {
+		t.Error(diff)
+	}
 }
 
 func TestGet(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(context.Background(), testSet)
+	_, err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +158,7 @@ func TestGet(t *testing.T) {
 
 func TestGVKSet(t *testing.T) {
 	dr := Resources{}
-	err := dr.Update(context.Background(), testSet)
+	_, err := dr.Update(context.Background(), testSet)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +176,7 @@ func TestGVKSet(t *testing.T) {
 func TestResources_InternalErrorMetricValidation(t *testing.T) {
 	m := testmetrics.RegisterMetrics(metrics.InternalErrorsView)
 	dr := Resources{}
-	if err := dr.Update(context.Background(), nilSet); err != nil {
+	if _, err := dr.Update(context.Background(), nilSet); err != nil {
 		t.Fatal(err)
 	}
 	wantMetrics := []*view.Row{

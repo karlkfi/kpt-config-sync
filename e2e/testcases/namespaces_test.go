@@ -567,6 +567,11 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
+	// Wait 10 seconds before checking the namespaces.
+	// Checking the namespaces immediately may not catch the case where
+	// Config Sync deletes the namespaces even if EmptySourceError is detected.
+	time.Sleep(10 * time.Second)
+
 	err = nt.Validate("foo", "", &corev1.Namespace{})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -576,14 +581,8 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		// Validate parse error metric is emitted.
-		err := nt.ValidateParseErrors(reconciler.RootSyncName, "2006")
-		if err != nil {
-			nt.T.Errorf("validating parse_errors_total metric: %v", err)
-		}
-		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "sync")
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSyncError(reconciler.RootSyncName), func() error {
+		return nt.ReconcilerMetrics.ValidateDeclaredResources(reconciler.RootSyncName, 0)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)

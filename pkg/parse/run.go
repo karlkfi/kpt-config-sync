@@ -292,7 +292,7 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		return sourceErrs
 	}
 
-	// If `status.HasActionableErrors` returns false, we will not call `setSourceStatus` immediately.
+	// If `status.HasBlockingErrors` returns false, we will not call `setSourceStatus` immediately.
 	// Instead, we will call `p.options().update` first, and then update both the `Status.Source` and `Status.Sync` fields together in a single request.
 	// Updating the `Status.Source` and `Status.Sync` fields in two requests may cause the second one to fail if these two requests are too close to each other.
 
