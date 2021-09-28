@@ -40,7 +40,7 @@ build-cli: pull-buildenv buildenv-dirs
 # Creates a docker image for the specified nomos component.
 image-nomos:
 	# workaround for b/201113561
-	iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+	iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
 	@gcloud $(GCLOUD_QUIET) auth configure-docker
 	@echo "+++ Building the nomos image"
 	@docker build $(DOCKER_BUILD_QUIET) \
