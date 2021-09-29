@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
@@ -642,7 +643,10 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an unselected cluster-name-selector annotation")
 	nt.WaitForRepoSyncs()
-	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+	_, err := nomostest.Retry(10*time.Second, func() error {
+		return nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{})
+	})
+	if err != nil {
 		nt.T.Fatal(err)
 	}
 
@@ -670,7 +674,10 @@ func TestClusterSelectorForCRD(t *testing.T) {
 	nt.Root.Add("acme/cluster/anvil-crd.yaml", crd)
 	nt.Root.CommitAndPush("Add a custom resource definition with an unselected ClusterSelector")
 	nt.WaitForRepoSyncs()
-	if err := nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{}); err != nil {
+	_, err = nomostest.Retry(10*time.Second, func() error {
+		return nt.ValidateNotFound(crd.Name, "", &apiextensionsv1.CustomResourceDefinition{})
+	})
+	if err != nil {
 		nt.T.Fatal(err)
 	}
 
