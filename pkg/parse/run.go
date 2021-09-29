@@ -304,7 +304,7 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 	// Since EncodeDeclaredFieldError is a non-blocking error, Config Sync sends both the CRD and CR to the applier to apply.
 	// The applier applies both the CRD and CR successfully, and syncErrs is nil.
 	// Therefore, whenever syncErrs is nil, we should set sourceErrs to nil.
-	if syncErrs == nil {
+	if syncErrs == nil && len(state.cache.objsSkipped) == 0 {
 		sourceErrs = nil
 	}
 
@@ -323,5 +323,5 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		state.syncStatus = newSyncStatus
 	}
 
-	return syncErrs
+	return status.Append(sourceErrs, syncErrs)
 }

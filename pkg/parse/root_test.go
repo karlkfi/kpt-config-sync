@@ -122,7 +122,7 @@ func TestRoot_Parse(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, state.cache.parserResult, cmpopts.EquateEmpty(), ast.CompareFileObject, cmpopts.SortSlices(sortObjects)); diff != "" {
+			if diff := cmp.Diff(tc.want, state.cache.objsToApply, cmpopts.EquateEmpty(), ast.CompareFileObject, cmpopts.SortSlices(sortObjects)); diff != "" {
 				t.Error(diff)
 			}
 		})

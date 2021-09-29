@@ -1,9 +1,13 @@
 package parse
 
 import (
+	"sort"
 	"time"
 
+	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -21,14 +25,15 @@ type cacheForCommit struct {
 	git gitState
 
 	// hasParserResult indicates whether the cache includes the parser result.
-	//
-	// An alternative is to determining whether the cache includes the parser result by
-	// checking whether the `parserResult` field is empty. However, an empty `parserResult`
-	// field may also indicate that the git repo is empty.
 	hasParserResult bool
 
-	// parserResult contains the parser result.
-	parserResult []ast.FileObject
+	// objsSkipped contains the objects which will not be sent to the applier to apply.
+	// For example, the objects whose scope is unknown will not be sent to the applier since
+	// the kpt applier cannot handle unknown-scoped objects.
+	objsSkipped []ast.FileObject
+
+	// objsToApply contains the objects which will be sent to the applier to apply.
+	objsToApply []ast.FileObject
 
 	// parserErrs includes the parser errors.
 	parserErrs status.MultiError
@@ -60,10 +65,12 @@ type cacheForCommit struct {
 	errs status.MultiError
 }
 
-func (c *cacheForCommit) setParserResult(result []ast.FileObject, parserErrs status.MultiError) {
-	c.hasParserResult = true
-	c.parserResult = result
+func (c *cacheForCommit) setParserResult(objs []ast.FileObject, parserErrs status.MultiError) {
+	knownScopeObjs, unknownScopeObjs := splitObjects(objs)
+	c.objsSkipped = unknownScopeObjs
+	c.objsToApply = knownScopeObjs
 	c.parserErrs = parserErrs
+	c.hasParserResult = true
 }
 
 func (c *cacheForCommit) setApplierResult(result map[schema.GroupVersionKind]struct{}) {
@@ -76,5 +83,28 @@ func (c *cacheForCommit) readyToRetry() bool {
 }
 
 func (c *cacheForCommit) parserResultUpToDate() bool {
-	return c.hasParserResult && c.parserErrs == nil
+	// If len(c.objsSkipped) > 0, it mean that some objects were skipped to be sent to
+	// the kpt applier. For example, the objects whose scope is unknown will not be sent
+	// to the applier since the kpt applier cannot handle unknown-scoped objects.
+	// Therefore, if len(c.objsSkipped) > 0, we would parse the configs from scratch.
+	return c.hasParserResult && len(c.objsSkipped) == 0 && c.parserErrs == nil
+}
+
+// splitObjects splits `objs` into two groups: the objects whose scope is known, and the objects whose scope is unknown.
+func splitObjects(objs []ast.FileObject) ([]ast.FileObject, []ast.FileObject) {
+	var knownScopeObjs, unknownScopeObjs []ast.FileObject
+	var unknownScopeIDs []string
+	for _, obj := range objs {
+		if core.GetAnnotation(obj, metadata.UnknownScopeAnnotationKey) == metadata.UnknownScopeAnnotationValue {
+			unknownScopeObjs = append(unknownScopeObjs, obj)
+			unknownScopeIDs = append(unknownScopeIDs, core.GKNN(obj.Unstructured))
+		} else {
+			knownScopeObjs = append(knownScopeObjs, obj)
+		}
+	}
+	if len(unknownScopeIDs) > 0 {
+		sort.Strings(unknownScopeIDs)
+		glog.Infof("Skip sending %v unknown-scoped objects to the applier: %v", len(unknownScopeIDs), unknownScopeIDs)
+	}
+	return knownScopeObjs, unknownScopeObjs
 }

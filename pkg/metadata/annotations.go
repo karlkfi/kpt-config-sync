@@ -110,6 +110,14 @@ const (
 	// WebhookConfigurationUpdateDisabled is the value for WebhookConfigurationKey
 	// to disable updating the webhook configuration.
 	WebhookConfigurationUpdateDisabled = "disabled"
+
+	// UnknownScopeAnnotationKey is the annotation that indicates the scope of a resource is unknown.
+	// This annotation is set by Config Sync on a managed resource whose scope is unknown.
+	UnknownScopeAnnotationKey = configsync.ConfigSyncPrefix + "unknown-scope"
+
+	// UnknownScopeAnnotationValue is the value for UnknownScopeAnnotationKey
+	// to indicate that the scope of a resource is unknown.
+	UnknownScopeAnnotationValue = "true"
 )
 
 // Lifecycle annotations

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -41,4 +42,15 @@ func GKNN(o client.Object) string {
 		return fmt.Sprintf("%s_%s_%s", group, strings.ToLower(kind), o.GetName())
 	}
 	return fmt.Sprintf("%s_%s_%s_%s", group, strings.ToLower(kind), o.GetNamespace(), o.GetName())
+}
+
+// GKNNs returns the `configsync.gke.io/resource-id` annotations of th given objects as
+// a string slice in increasing order.
+func GKNNs(objs []client.Object) []string {
+	var result []string
+	for _, obj := range objs {
+		result = append(result, GKNN(obj))
+	}
+	sort.Strings(result)
+	return result
 }

@@ -162,6 +162,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	// through annotation.
 	enabledObjs, disabledObjs := partitionObjs(objs)
 	if len(disabledObjs) > 0 {
+		glog.Infof("%v objects to be disabled: %v", len(disabledObjs), core.GKNNs(disabledObjs))
 		disabledCount, err := cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
 		if err != nil {
 			return nil, status.Append(errs, err)
@@ -171,7 +172,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			succeeded: disabledCount,
 		}
 	}
-
+	glog.Infof("%v objects to be applied: %v", len(enabledObjs), core.GKNNs(enabledObjs))
 	resources, toUnsErrs := toUnstructured(enabledObjs)
 	if toUnsErrs != nil {
 		return nil, toUnsErrs

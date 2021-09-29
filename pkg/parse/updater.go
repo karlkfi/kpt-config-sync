@@ -54,7 +54,7 @@ func (u *updater) declaredCRDs() ([]*v1beta1.CustomResourceDefinition, status.Mu
 // up the watches.
 func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.MultiError {
 	var errs status.MultiError
-	objs := filesystem.AsCoreObjects(cache.parserResult)
+	objs := filesystem.AsCoreObjects(cache.objsToApply)
 
 	// Update the declared resources so that the Remediator immediately
 	// starts enforcing the updated state.
