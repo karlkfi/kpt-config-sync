@@ -14,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
@@ -84,6 +85,7 @@ var flags = struct {
 func main() {
 	flag.Parse()
 	log.Setup()
+	profiler.Service()
 	ctrl.SetLogger(glogr.New())
 
 	if *debug {

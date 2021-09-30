@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/glogr"
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/configsync"
+	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/service"
 	"github.com/google/nomos/pkg/util/log"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,6 +38,7 @@ func getEnvDuration(key string, defaultDuration time.Duration) time.Duration {
 func main() {
 	flag.Parse()
 	log.Setup()
+	profiler.Service()
 	ctrl.SetLogger(glogr.New())
 	if *watchDirectory != "" {
 		configsync.DirWatcher(*watchDirectory, *watchPeriod)

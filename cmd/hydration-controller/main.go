@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/log"
@@ -55,6 +56,7 @@ var (
 func main() {
 	flag.Parse()
 	log.Setup()
+	profiler.Service()
 	ctrl.SetLogger(glogr.New())
 
 	absRepoRootDir, err := cmpath.AbsoluteOS(*repoRootDir)
