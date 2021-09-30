@@ -146,6 +146,12 @@ func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gi
 	rs.Status.Source.Errors = cse
 	rs.Status.Source.LastUpdate = metav1.Now()
 
+	continueSyncing := true
+	if len(cse) > 0 {
+		continueSyncing = false
+	}
+	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse)
+
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -165,6 +171,14 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
+	if rs.Status.Rendering.Commit != newStatus.commit {
+		if newStatus.message == RenderingSkipped {
+			metrics.RecordSkipRenderingCount(ctx)
+		} else {
+			metrics.RecordRenderingCount(ctx)
+		}
+	}
+
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Rendering.Commit = newStatus.commit
 	rs.Status.Rendering.Git = v1alpha1.GitStatus{
@@ -177,11 +191,14 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 	rs.Status.Rendering.Errors = cse
 	rs.Status.Rendering.LastUpdate = metav1.Now()
 
+	continueSyncing := true
 	if len(cse) > 0 {
 		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
 		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
+		continueSyncing = false
 	}
 
+	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse)
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RepoSync rendering status from parser")
 	}
@@ -228,6 +245,11 @@ func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus,
 	rs.Status.Sync.LastUpdate = now
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
+
+	var allErrs []v1alpha1.ConfigSyncError
+	allErrs = append(allErrs, sourceErrs...)
+	allErrs = append(allErrs, syncErrs...)
+	reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", newSyncStatus.commit, allErrs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RepoSync sync status from parser")

@@ -11,7 +11,10 @@ import (
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest/gitproviders"
+	"github.com/google/nomos/pkg/reposync"
+	"github.com/google/nomos/pkg/rootsync"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/e2e"
@@ -896,6 +899,44 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) (int, error) {
 	return localPort, nil
 }
 
+func validateRootSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingCondition *v1alpha1.RootSyncCondition, code string) error {
+	if err := validateError(statusErrs, code); err != nil {
+		return err
+	}
+	if syncingCondition == nil {
+		return nil
+	}
+	if syncingCondition.Status == metav1.ConditionTrue {
+		return fmt.Errorf("status.conditions['Syncing'].status is True, expected false")
+	}
+	if err := validateError(syncingCondition.Errors, code); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(statusErrs, syncingCondition.Errors) {
+		return fmt.Errorf("status.conditions['Syncing'].errors don't match the status errors, status.conditions['Syncing'].errors = %v, status errors = %v", syncingCondition.Errors, statusErrs)
+	}
+	return nil
+}
+
+func validateRepoSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingCondition *v1alpha1.RepoSyncCondition, code string) error {
+	if err := validateError(statusErrs, code); err != nil {
+		return err
+	}
+	if syncingCondition == nil {
+		return nil
+	}
+	if syncingCondition.Status == metav1.ConditionTrue {
+		return fmt.Errorf("status.conditions['Syncing'].status is True, expected false")
+	}
+	if err := validateError(syncingCondition.Errors, code); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(statusErrs, syncingCondition.Errors) {
+		return fmt.Errorf("status.conditions['Syncing'].errors don't match the status errors, status.conditions['Syncing'].errors = %v, status errors = %v", syncingCondition.Errors, statusErrs)
+	}
+	return nil
+}
+
 func validateError(errs []v1alpha1.ConfigSyncError, code string) error {
 	if len(errs) == 0 {
 		return errors.Errorf("no errors present")
@@ -915,11 +956,11 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code),
 		func() error {
 			rs := fake.RootSyncObject()
-			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
-			if err != nil {
+			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
 				return err
 			}
-			return validateError(rs.Status.Source.Errors, code)
+			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code)
 		},
 		opts...,
 	)
@@ -934,7 +975,8 @@ func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
 			if err != nil {
 				return err
 			}
-			return validateError(rs.Status.Rendering.Errors, code)
+			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code)
 		},
 		opts...,
 	)
@@ -951,7 +993,8 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 			if err != nil {
 				return err
 			}
-			return validateError(rs.Status.Source.Errors, code)
+			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code)
 		},
 		opts...,
 	)

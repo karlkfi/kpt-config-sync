@@ -52,6 +52,8 @@ const (
 	// RepoSyncStalled means that the RepoSync controller has not been able to
 	// make progress towards reconciling the RepoSync.
 	RepoSyncStalled RepoSyncConditionType = "Stalled"
+	// RepoSyncSyncing means that the namespace reconciler is processing a commit.
+	RepoSyncSyncing RepoSyncConditionType = "Syncing"
 )
 
 // RepoSyncCondition describes the state of a RepoSync at a certain point.
@@ -74,6 +76,12 @@ type RepoSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
+	// Commit is the hash of the commit in the source of truth.
+	// +optional
+	Commit string `json:"commit,omitempty"`
+	// Errors is a list of any errors that occurred.
+	// +optional
+	Errors []ConfigSyncError `json:"errors,omitempty"`
 }
 
 // +kubebuilder:object:root=true

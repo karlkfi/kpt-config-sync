@@ -52,6 +52,8 @@ const (
 	// RootSyncStalled means that the RootSync controller has not been able to
 	// make progress towards reconciling the RootSync.
 	RootSyncStalled RootSyncConditionType = "Stalled"
+	// RootSyncSyncing means that the root reconciler is processing a commit.
+	RootSyncSyncing RootSyncConditionType = "Syncing"
 )
 
 // RootSyncCondition describes the state of a RootSync at a certain point.
@@ -74,6 +76,12 @@ type RootSyncCondition struct {
 	// A human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
+	// Commit is the hash of the commit in the source of truth.
+	// +optional
+	Commit string `json:"commit,omitempty"`
+	// Errors is a list of errors that occurred in the process.
+	// +optional
+	Errors []ConfigSyncError `json:"errors,omitempty"`
 }
 
 // +kubebuilder:object:root=true

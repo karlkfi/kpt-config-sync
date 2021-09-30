@@ -7,6 +7,8 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/parse"
+	"github.com/google/nomos/pkg/reposync"
+	"github.com/google/nomos/pkg/rootsync"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -106,11 +108,15 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 			return err
 		}
 
-		// Ensure the reconciler is ready (no true condition).
+		// Ensure the reconciler is ready (no true or error condition).
 		for i, condition := range rs.Status.Conditions {
 			if condition.Status == metav1.ConditionTrue {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, string(jsn))
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			}
+			if len(condition.Errors) > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
 			}
 		}
 
@@ -134,6 +140,10 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		}
 		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
 			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
+		}
+		syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+		if syncingCondition != nil && syncingCondition.Commit != sha1 {
+			return fmt.Errorf("status.conditions['Syncing'].commit %q does not match git revision %q:\n%s", syncingCondition.Commit, sha1, string(jsn))
 		}
 		return nil
 	}
@@ -156,8 +166,12 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		// Ensure the reconciler is ready (no true condition).
 		for i, condition := range rs.Status.Conditions {
 			if condition.Status == metav1.ConditionTrue {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, string(jsn))
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			}
+			if len(condition.Errors) > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
 			}
 		}
 
@@ -181,6 +195,10 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		}
 		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
 			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
+		}
+		syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+		if syncingCondition != nil && syncingCondition.Commit != sha1 {
+			return fmt.Errorf("status.conditions['Syncing'].commit %q does not match git revision %q:\n%s", syncingCondition.Commit, sha1, string(jsn))
 		}
 		return nil
 	}

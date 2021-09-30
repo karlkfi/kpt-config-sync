@@ -150,6 +150,12 @@ func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStat
 	rs.Status.Source.Errors = cse
 	rs.Status.Source.LastUpdate = metav1.Now()
 
+	continueSyncing := true
+	if len(cse) > 0 {
+		continueSyncing = false
+	}
+	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse)
+
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -189,10 +195,14 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	rs.Status.Rendering.Errors = cse
 	rs.Status.Rendering.LastUpdate = metav1.Now()
 
+	continueSyncing := true
 	if len(cse) > 0 {
 		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
 		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
+		continueSyncing = false
 	}
+
+	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync rendering status from parser")
@@ -237,6 +247,11 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 	rs.Status.Sync.LastUpdate = now
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
+
+	var allErrs []v1alpha1.ConfigSyncError
+	allErrs = append(allErrs, sourceErrs...)
+	allErrs = append(allErrs, syncErrs...)
+	rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", newSyncStatus.commit, allErrs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync sync status from parser")
