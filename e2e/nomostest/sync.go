@@ -141,6 +141,9 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
 			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
 		}
+		if commit := rs.Status.LastSyncedCommit; commit != sha1 {
+			return fmt.Errorf("status.lastSyncedCommit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
+		}
 		syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
 		if syncingCondition != nil && syncingCondition.Commit != sha1 {
 			return fmt.Errorf("status.conditions['Syncing'].commit %q does not match git revision %q:\n%s", syncingCondition.Commit, sha1, string(jsn))
@@ -195,6 +198,9 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		}
 		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
 			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
+		}
+		if commit := rs.Status.LastSyncedCommit; commit != sha1 {
+			return fmt.Errorf("status.lastSyncedCommit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
 		syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
 		if syncingCondition != nil && syncingCondition.Commit != sha1 {

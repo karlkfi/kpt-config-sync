@@ -16,6 +16,10 @@ type SyncStatus struct {
 	// +optional
 	Reconciler string `json:"reconciler,omitempty"`
 
+	// LastSyncedCommit describes the most recent commit hash that is successfully synced.
+	// +optional
+	LastSyncedCommit string `json:"lastSyncedCommit,omitempty"`
+
 	// Source contains fields describing the status of a *Sync's source of
 	// truth.
 	// +optional

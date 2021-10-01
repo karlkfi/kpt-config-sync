@@ -267,6 +267,10 @@ spec:
                   - type
                   type: object
                 type: array
+              lastSyncedCommit:
+                description: LastSyncedCommit describes the most recent commit hash
+                  that is successfully synced.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for the sync resource. It corresponds to the it's generation, which
@@ -839,6 +843,10 @@ spec:
                   - type
                   type: object
                 type: array
+              lastSyncedCommit:
+                description: LastSyncedCommit describes the most recent commit hash
+                  that is successfully synced.
+                type: string
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed
                   for the sync resource. It corresponds to the it's generation, which

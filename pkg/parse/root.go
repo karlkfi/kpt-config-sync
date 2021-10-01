@@ -251,6 +251,9 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 	var allErrs []v1alpha1.ConfigSyncError
 	allErrs = append(allErrs, sourceErrs...)
 	allErrs = append(allErrs, syncErrs...)
+	if len(allErrs) == 0 {
+		rs.Status.LastSyncedCommit = newSyncStatus.commit
+	}
 	rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", newSyncStatus.commit, allErrs)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
