@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/GoogleContainerTools/kpt/pkg/live"
+	"github.com/Masterminds/semver"
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
@@ -32,6 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
+
+const syncingConditionSupportedVersion = "v1.9.2-rc.1"
 
 type statusClient struct {
 	client           client.Client
@@ -179,10 +182,27 @@ func (c *statusClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
 	}, nil
 }
 
+// syncingConditionSupported checks if the ACM version is v1.9.2 or later, which
+// has the high-level syncing condition.
+func (c *statusClient) syncingConditionSupported(ctx context.Context) bool {
+	v, err := c.configManagement.Version(ctx)
+	if err != nil {
+		return false
+	}
+	supportedVersion := semver.MustParse(syncingConditionSupportedVersion)
+	version, err := semver.NewVersion(v)
+	if err != nil {
+		return false
+	}
+	return !version.LessThan(supportedVersion)
+}
+
 // multiRepoClusterStatus populates the given clusterState with the sync status of
 // the multi repos on the statusClient's cluster.
 func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterState) {
 	var errs []string
+	syncingConditionSupported := c.syncingConditionSupported(ctx)
+
 	rootSync, err := c.rootSync(ctx)
 	if err != nil {
 		errs = append(errs, err.Error())
@@ -191,7 +211,7 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
-		cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg))
+		cs.repos = append(cs.repos, rootRepoStatus(rootSync, rg, syncingConditionSupported))
 	}
 
 	var rgs []*unstructured.Unstructured
@@ -209,7 +229,7 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 		var repos []*repoState
 		for i, rs := range syncs {
 			rg := rgs[i]
-			repos = append(repos, namespaceRepoStatus(rs, rg))
+			repos = append(repos, namespaceRepoStatus(rs, rg, syncingConditionSupported))
 		}
 		sort.Slice(repos, func(i, j int) bool {
 			return repos[i].scope < repos[j].scope
@@ -241,7 +261,7 @@ func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clust
 		cs.error = err.Error()
 		return
 	}
-	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync, rg))
+	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync, rg, c.syncingConditionSupported(ctx)))
 }
 
 // isInstalled returns true if the statusClient is connected to a cluster where

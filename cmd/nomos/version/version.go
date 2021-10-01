@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 
 	"github.com/google/nomos/cmd/nomos/flags"
@@ -21,8 +20,6 @@ import (
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/version"
 )
-
-const configManagementVersionName = "configManagementVersion"
 
 func init() {
 	flags.AddContexts(Cmd)
@@ -137,17 +134,7 @@ func lookupVersion(ctx context.Context, cfg *rest.Config) (string, error) {
 	//     ...
 	//   }
 	// }
-	cmVersion, err := cmClient.NestedString(ctx, "status", configManagementVersionName)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return util.NotInstalledMsg, nil
-		}
-		return util.ErrorMsg, err
-	}
-	if cmVersion == "" {
-		cmVersion = util.UnknownMsg
-	}
-	return cmVersion, nil
+	return cmClient.Version(ctx)
 }
 
 // vErr is either a version or an error.

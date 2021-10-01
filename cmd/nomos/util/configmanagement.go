@@ -5,6 +5,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -16,6 +17,8 @@ const (
 	ConfigManagementName = "config-management"
 	// ConfigManagementResource is the config management resource
 	ConfigManagementResource = "configmanagements"
+	// ConfigManagementVersionName is the field name that indicates the ConfigManagement version.
+	ConfigManagementVersionName = "configManagementVersion"
 )
 
 // DynamicClient obtains a client based on the supplied REST config.  Can be overridden in tests.
@@ -82,4 +85,19 @@ func (c *ConfigManagementClient) NestedStringSlice(ctx context.Context, fields .
 	}
 
 	return vals, nil
+}
+
+// Version returns the version of the ConfigManagement objects.
+func (c *ConfigManagementClient) Version(ctx context.Context) (string, error) {
+	cmVersion, err := c.NestedString(ctx, "status", ConfigManagementVersionName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return NotInstalledMsg, nil
+		}
+		return ErrorMsg, err
+	}
+	if cmVersion == "" {
+		cmVersion = UnknownMsg
+	}
+	return cmVersion, nil
 }

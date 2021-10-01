@@ -21,8 +21,10 @@ import (
 )
 
 const (
-	pendingMsg = "PENDING"
-	syncedMsg  = "SYNCED"
+	pendingMsg     = "PENDING"
+	syncedMsg      = "SYNCED"
+	stalledMsg     = "STALLED"
+	reconcilingMsg = "RECONCILING"
 )
 
 var (

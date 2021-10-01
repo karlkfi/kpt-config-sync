@@ -12,6 +12,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -19,6 +20,7 @@ const (
 	commitHashLength = 8
 	indent           = "  "
 	separator        = "--------------------"
+	emptyCommit      = "N/A"
 )
 
 // clusterState represents the sync status of all repos on a cluster.
@@ -205,60 +207,101 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 }
 
 // namespaceRepoStatus converts the given RepoSync into a repoState.
-func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured) *repoState {
-	resources, _ := resourceLevelStatus(rg)
-	return &repoState{
-		scope:     rs.Namespace,
-		git:       rs.Spec.Git,
-		status:    getRepoStatus(rs),
-		commit:    commitHash(rs.Status.Sync.Commit),
-		errors:    repoSyncErrors(rs),
-		resources: resources,
+func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
+	repostate := &repoState{
+		scope:  rs.Namespace,
+		git:    rs.Spec.Git,
+		commit: emptyCommit,
 	}
+
+	stalledCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncStalled)
+	reconcilingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncReconciling)
+	syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+	switch {
+	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
+		repostate.status = stalledMsg
+		repostate.errors = []string{stalledCondition.Message}
+	case reconcilingCondition != nil && reconcilingCondition.Status == metav1.ConditionTrue:
+		repostate.status = reconcilingMsg
+	case syncingCondition == nil:
+		if syncingConditionSupported {
+			repostate.status = pendingMsg
+		} else {
+			// The new status condition is not available in older versions, use the
+			// existing logic to compute the status.
+			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
+			repostate.commit = commitHash(rs.Status.Sync.Commit)
+			repostate.errors = repoSyncErrors(rs)
+			resources, _ := resourceLevelStatus(rg)
+			repostate.resources = resources
+		}
+	case syncingCondition.Status == metav1.ConditionTrue:
+		repostate.status = pendingMsg
+		repostate.commit = syncingCondition.Commit
+	case len(syncingCondition.Errors) == 0:
+		repostate.status = syncedMsg
+		repostate.commit = syncingCondition.Commit
+		resources, _ := resourceLevelStatus(rg)
+		repostate.resources = resources
+	default:
+		repostate.status = util.ErrorMsg
+		repostate.commit = syncingCondition.Commit
+		repostate.errors = toErrorMessage(syncingCondition.Errors)
+	}
+	return repostate
 }
 
 // rootRepoStatus converts the given RootSync into a repoState.
-func rootRepoStatus(rs *v1alpha1.RootSync, rg *unstructured.Unstructured) *repoState {
-	resources, _ := resourceLevelStatus(rg)
-	return &repoState{
-		scope:     "<root>",
-		git:       rs.Spec.Git,
-		status:    getRootStatus(rs),
-		commit:    commitHash(rs.Status.Sync.Commit),
-		errors:    rootSyncErrors(rs),
-		resources: resources,
+func rootRepoStatus(rs *v1alpha1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
+	repostate := &repoState{
+		scope:  "<root>",
+		git:    rs.Spec.Git,
+		commit: emptyCommit,
 	}
+	stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+	reconcilingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
+	syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+	switch {
+	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
+		repostate.status = stalledMsg
+		repostate.errors = []string{stalledCondition.Message}
+	case reconcilingCondition != nil && reconcilingCondition.Status == metav1.ConditionTrue:
+		repostate.status = reconcilingMsg
+	case syncingCondition == nil:
+		if syncingConditionSupported {
+			repostate.status = pendingMsg
+		} else {
+			// The new status condition is not available in older versions, use the
+			// existing logic to compute the status.
+			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
+			repostate.commit = commitHash(rs.Status.Sync.Commit)
+			repostate.errors = rootSyncErrors(rs)
+			resources, _ := resourceLevelStatus(rg)
+			repostate.resources = resources
+		}
+	case syncingCondition.Status == metav1.ConditionTrue:
+		repostate.status = pendingMsg
+		repostate.commit = syncingCondition.Commit
+	case len(syncingCondition.Errors) == 0:
+		repostate.status = syncedMsg
+		repostate.commit = syncingCondition.Commit
+		resources, _ := resourceLevelStatus(rg)
+		repostate.resources = resources
+	default:
+		repostate.status = util.ErrorMsg
+		repostate.commit = syncingCondition.Commit
+		repostate.errors = toErrorMessage(syncingCondition.Errors)
+	}
+	return repostate
 }
 
 func commitHash(commit string) string {
 	if len(commit) == 0 {
-		return "N/A"
+		return emptyCommit
 	} else if len(commit) > commitHashLength {
 		commit = commit[:commitHashLength]
 	}
 	return commit
-}
-
-func getRepoStatus(rs *v1alpha1.RepoSync) string {
-	if reposync.IsStalled(rs) {
-		return util.ErrorMsg
-	}
-	// TODO(b/168529857): Report reconciling once it is no longer sticky.
-	//if reposync.IsReconciling(rs) {
-	//	return "DEPLOYING"
-	//}
-	return multiRepoSyncStatus(rs.Status.SyncStatus)
-}
-
-func getRootStatus(rs *v1alpha1.RootSync) string {
-	if rootsync.IsStalled(rs) {
-		return util.ErrorMsg
-	}
-	// TODO(b/168529857): Report reconciling once it is no longer sticky.
-	//if rootsync.IsReconciling(rs) {
-	//	return "DEPLOYING"
-	//}
-	return multiRepoSyncStatus(rs.Status.SyncStatus)
 }
 
 func multiRepoSyncStatus(status v1alpha1.SyncStatus) string {
@@ -310,4 +353,12 @@ func multiRepoSyncStatusErrors(status v1alpha1.SyncStatus) []string {
 		errs = append(errs, err.ErrorMessage)
 	}
 	return errs
+}
+
+func toErrorMessage(errs []v1alpha1.ConfigSyncError) []string {
+	var msg []string
+	for _, err := range errs {
+		msg = append(msg, err.ErrorMessage)
+	}
+	return msg
 }
