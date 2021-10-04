@@ -357,9 +357,6 @@ func Generate() AllExamples {
 	// 2015
 	result.add(status.InternalHydrationError.Sprint("internal rendering error").Build())
 
-	// 9997
-	result.add(status.HydrationInProgress("abcd123"))
-
 	// 9998
 	result.add(status.InternalError("we made a mistake"))
 

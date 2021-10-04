@@ -105,24 +105,29 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	}
 	// set the rendering status by checking the done file.
 	doneFilePath := p.options().RepoRoot.Join(cmpath.RelativeSlash(hydrate.DoneFile)).OSPath()
-	var doneFileNotReadyErr status.MultiError
 	_, err := os.Stat(doneFilePath)
 	if os.IsNotExist(err) || (err == nil && hydrate.DoneCommit(doneFilePath) != gs.commit) {
 		rs.message = RenderingInProgress
-		doneFileNotReadyErr = status.HydrationInProgress(gs.commit)
-	} else if err != nil {
+		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
+		if setRenderingStatusErr == nil {
+			state.reset()
+			state.renderingStatus = rs
+		} else {
+			var m status.MultiError
+			state.invalidate(status.Append(m, setRenderingStatusErr))
+		}
+		return
+	}
+	if err != nil {
 		rs.message = RenderingFailed
 		rs.errs = status.InternalHydrationError.Wrap(err).
 			Sprintf("unable to read the done file: %s", doneFilePath).
 			Build()
-		doneFileNotReadyErr = rs.errs
-	}
-	if doneFileNotReadyErr != nil {
 		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
 		if setRenderingStatusErr == nil {
 			state.renderingStatus = rs
 		}
-		state.invalidate(status.Append(doneFileNotReadyErr, setRenderingStatusErr))
+		state.invalidate(status.Append(rs.errs, setRenderingStatusErr))
 		return
 	}
 

@@ -63,6 +63,16 @@ func (s *reconcilerState) checkpoint() {
 	s.cache.errs = nil
 }
 
+// reset sets the reconciler to retry in the next second because the rendering
+// status is not available
+func (s *reconcilerState) reset() {
+	glog.Infof("Resetting reconciler checkpoint because the rendering status is not available yet")
+	s.resetCache()
+	s.lastApplied = ""
+	s.cache.needToRetry = true
+	s.cache.nextRetryTime = time.Now().Add(time.Second)
+}
+
 // invalidate logs the errors, clears the state tracking information.
 // invalidate does not clean up the `s.cache`.
 func (s *reconcilerState) invalidate(errs status.MultiError) {
