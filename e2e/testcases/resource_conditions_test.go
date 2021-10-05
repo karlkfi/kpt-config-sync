@@ -10,8 +10,9 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/importer/filesystem/gatekeeper"
 	"github.com/google/nomos/pkg/metadata"
+	"github.com/google/nomos/pkg/policycontroller/constraint"
+	"github.com/google/nomos/pkg/policycontroller/constrainttemplate"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -217,7 +218,7 @@ func TestConstraintTemplateStatusAnnotations(t *testing.T) {
 	// Create and apply a ConstraintTemplate.
 	ctName := "k8sname"
 	ctGVK := schema.GroupVersionKind{
-		Group:   gatekeeper.TemplatesGroup,
+		Group:   constrainttemplate.TemplatesGroup,
 		Version: "v1beta1",
 		Kind:    "ConstraintTemplate",
 	}
@@ -280,7 +281,7 @@ func TestConstraintStatusAnnotations(t *testing.T) {
 	}
 
 	constraintGVK := schema.GroupVersionKind{
-		Group:   gatekeeper.ConstraintsGroup,
+		Group:   constraint.ConstraintsGroup,
 		Version: "v1beta1",
 		Kind:    "K8sAllowedRepos",
 	}

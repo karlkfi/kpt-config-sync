@@ -14,11 +14,12 @@ import (
 
 const (
 	controllerPrefix = "policycontroller-constraint-controller-"
-	constraintsGroup = "constraints.gatekeeper.sh"
+	// ConstraintsGroup is the api group for gatekeeper constraints
+	ConstraintsGroup = "constraints.gatekeeper.sh"
 )
 
 var constraintGV = schema.GroupVersion{
-	Group:   constraintsGroup,
+	Group:   ConstraintsGroup,
 	Version: "v1beta1",
 }
 
@@ -29,7 +30,7 @@ func GVK(kind string) schema.GroupVersionKind {
 
 // MatchesGroup returns true if the given CRD seems to be in the constraints group.
 func MatchesGroup(crd *apiextensionsv1.CustomResourceDefinition) bool {
-	return crd.Spec.Group == constraintsGroup
+	return crd.Spec.Group == ConstraintsGroup
 }
 
 // AddController adds a controller for the specified constraint kind to the given Manager.

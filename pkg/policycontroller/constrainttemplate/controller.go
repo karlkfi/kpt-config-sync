@@ -14,12 +14,13 @@ import (
 
 const (
 	controllerName = "policycontroller-constrainttemplate-controller"
-	templatesGroup = "templates.gatekeeper.sh"
+	// TemplatesGroup is the api group for gatekeeper constraint templates
+	TemplatesGroup = "templates.gatekeeper.sh"
 )
 
 var (
 	gk = schema.GroupKind{
-		Group: templatesGroup,
+		Group: TemplatesGroup,
 		Kind:  "ConstraintTemplate",
 	}
 
@@ -29,7 +30,7 @@ var (
 
 // MatchesGK returns true if the given CRD defines the gatekeeper ConstraintTemplate.
 func MatchesGK(crd *apiextensionsv1.CustomResourceDefinition) bool {
-	return crd.Spec.Group == templatesGroup && crd.Spec.Names.Kind == gk.Kind
+	return crd.Spec.Group == TemplatesGroup && crd.Spec.Names.Kind == gk.Kind
 }
 
 // AddController adds the ConstraintTemplate controller to the given Manager.
