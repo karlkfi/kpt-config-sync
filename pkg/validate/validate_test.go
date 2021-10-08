@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/common"
 )
 
 const dir = "acme"
@@ -492,12 +493,14 @@ func TestHierarchical(t *testing.T) {
 					core.Annotation(csmetadata.DeclaredFieldsKey, `{}`),
 					core.Annotation(csmetadata.SourcePathAnnotationKey, dir+"/namespaces/default/namespace.yaml"),
 					core.Annotation(csmetadata.HNCManagedBy, csmetadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 					core.Label("default.tree.hnc.x-k8s.io/depth", "0")),
 				fake.Namespace("namespaces/kube-system",
 					core.Label(csmetadata.DeclaredVersionLabel, "v1"),
 					core.Annotation(csmetadata.DeclaredFieldsKey, `{}`),
 					core.Annotation(csmetadata.SourcePathAnnotationKey, dir+"/namespaces/kube-system/namespace.yaml"),
 					core.Annotation(csmetadata.HNCManagedBy, csmetadata.ManagedByValue),
+					core.Annotation(common.LifecycleDeleteAnnotation, common.PreventDeletion),
 					core.Label("kube-system.tree.hnc.x-k8s.io/depth", "0")),
 			},
 		},

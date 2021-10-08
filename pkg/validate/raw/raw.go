@@ -60,6 +60,7 @@ func Hierarchical(objs *objects.Raw) status.MultiError {
 		hydrate.ClusterName,
 		hydrate.Filepath,
 		hydrate.HNCDepth,
+		hydrate.PreventDeletion,
 	}
 	for _, hydrator := range hydrators {
 		errs = status.Append(errs, hydrator(objs))
@@ -105,6 +106,7 @@ func Unstructured(objs *objects.Raw) status.MultiError {
 		hydrate.ClusterSelectors,
 		hydrate.ClusterName,
 		hydrate.Filepath,
+		hydrate.PreventDeletion,
 	}
 	for _, hydrator := range hydrators {
 		errs = status.Append(errs, hydrator(objs))

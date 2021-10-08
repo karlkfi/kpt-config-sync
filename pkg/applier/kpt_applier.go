@@ -2,6 +2,7 @@ package applier
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,9 +12,11 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
+	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	m "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/syncer/metrics"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -118,7 +121,7 @@ func processApplyEvent(ctx context.Context, e event.ApplyEvent, stats *applyEven
 	return nil
 }
 
-func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats) status.Error {
+func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEventStats, cs *clientSet) status.Error {
 	if e.Error != nil {
 		id := idFrom(e.Identifier)
 		stats.errCount++
@@ -130,8 +133,17 @@ func processPruneEvent(ctx context.Context, e event.PruneEvent, stats *pruneEven
 	}
 	id := idFrom(e.Identifier)
 	if e.Operation == event.PruneSkipped {
-		// A PruneSkipped event indicates no change on any cluster object.
 		glog.V(4).Infof("skipped pruning resource %v", id)
+		if e.Object != nil && e.Object.GetObjectKind().GroupVersionKind().GroupKind() == kinds.Namespace().GroupKind() && differ.SpecialNamespaces[e.Object.GetName()] {
+			// the `client.lifecycle.config.k8s.io/deletion: detach` annotation is not a part of the Config Sync metadata, and will not be removed here.
+			err := cs.disableObject(ctx, e.Object)
+			if err != nil {
+				errorMsg := "failed to remove the Config Sync metadata from %v (which is a special namespace): %v"
+				glog.Errorf(errorMsg, id, err)
+				return applierErrorBuilder.Wrap(fmt.Errorf(errorMsg, id, err)).Build()
+			}
+			glog.V(4).Infof("removed the Config Sync metadata from %v (which is a special namespace)", id)
+		}
 	} else {
 		glog.V(4).Infof("pruned resource %v", id)
 		handleMetrics(ctx, "delete", e.Error, id.WithVersion(""))
@@ -197,7 +209,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		case event.ApplyType:
 			errs = status.Append(errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
-			errs = status.Append(errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent))
+			errs = status.Append(errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, cs))
 		default:
 			glog.V(4).Infof("skipped %v event", e.Type)
 		}

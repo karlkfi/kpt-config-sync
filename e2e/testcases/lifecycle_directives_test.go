@@ -1,13 +1,16 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -243,4 +246,55 @@ func TestPreventDeletionImplicitNamespace(t *testing.T) {
 	nt.Root.Add("acme/ns.yaml", fake.NamespaceObject(implicitNamespace))
 	nt.Root.CommitAndPush("remove the lifecycle annotation from the implicit namespace")
 	nt.WaitForRepoSyncs()
+}
+
+func TestPreventDeletionSpecialNamespaces(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured)
+
+	for ns := range differ.SpecialNamespaces {
+		nt.Root.Add(fmt.Sprintf("acme/ns-%s.yaml", ns), fake.NamespaceObject(ns))
+	}
+	nt.Root.Add("acme/ns-bookstore.yaml", fake.NamespaceObject("bookstore"))
+	nt.Root.CommitAndPush("Add five special namespaces and one non-special namespace")
+	nt.WaitForRepoSyncs()
+
+	// Verify that the speical namespaces have the `client.lifecycle.config.k8s.io/deletion: detach` annotation.
+	for ns := range differ.SpecialNamespaces {
+		err := nt.Validate(ns, "", &corev1.Namespace{}, nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+	}
+
+	// Verify that the bookstore namespace does not have the `client.lifecycle.config.k8s.io/deletion: detach` annotation.
+	err := nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.MissingAnnotation(common.LifecycleDeleteAnnotation))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	for ns := range differ.SpecialNamespaces {
+		nt.Root.Remove(fmt.Sprintf("acme/ns-%s.yaml", ns))
+	}
+	nt.Root.Remove("acme/ns-bookstore.yaml")
+	nt.Root.CommitAndPush("Remove namespaces")
+	nt.WaitForRepoSyncs()
+
+	// Verify that the speical namespaces still exist and have the `client.lifecycle.config.k8s.io/deletion: detach` annotation.
+	for ns := range differ.SpecialNamespaces {
+		err := nt.Validate(ns, "", &corev1.Namespace{}, nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+	}
+
+	// Verify that the bookstore namespace is removed.
+	// Use `nomostest.Retry` here because sometimes some resources have not been applied/pruned successfully
+	// when Config Sync reports that a commit is synced successfully. go/cs-sync-status-accuracy proposes a
+	// solution to fix this.
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.ValidateNotFound("bookstore", "", &corev1.Namespace{})
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
 }
