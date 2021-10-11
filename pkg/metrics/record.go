@@ -40,6 +40,17 @@ func RecordRenderingErrors(ctx context.Context, component string, numErrors int,
 	stats.Record(tagCtx, measurement)
 }
 
+// RecordPipelineError produces a measurement for the PipelineError view
+func RecordPipelineError(ctx context.Context, namespace, reconcilerType, component string, errLen int) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType), tag.Upsert(KeyNamespace, namespace),
+		tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyComponent, component))
+	if errLen > 0 {
+		stats.Record(tagCtx, PipelineError.M(1))
+	} else {
+		stats.Record(tagCtx, PipelineError.M(0))
+	}
+}
+
 // RecordReconcileDuration produces a measurement for the ReconcileDuration view.
 func RecordReconcileDuration(ctx context.Context, status string, startTime time.Time) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))

@@ -44,6 +44,15 @@ var (
 		Aggregation: view.LastValue(),
 	}
 
+	// PipelineErrorView aggregates the PipelineError metric measurements
+	PipelineErrorView = &view.View{
+		Name:        "last_" + PipelineError.Name(),
+		Measure:     PipelineError,
+		Description: "A boolean indicates if any error happens from different stages when syncing a commit",
+		TagKeys:     []tag.Key{KeyName, KeyNamespace, KeyReconcilerType, KeyComponent},
+		Aggregation: view.LastValue(),
+	}
+
 	// ReconcileDurationView aggregates the ReconcileDuration metric measurements.
 	ReconcileDurationView = &view.View{
 		Name:        ReconcileDuration.Name(),

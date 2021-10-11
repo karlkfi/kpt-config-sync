@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/metrics"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	"github.com/pkg/errors"
@@ -213,10 +212,11 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 // for the correct reconciler and error code, and checks the metric value is correct.
 func (csm ConfigSyncMetrics) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
 	if _, ok := csm[ocmetrics.ReconcilerNonBlockingErrorsView.Name]; ok {
+		reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 		validations := []Validation{
 			hasTags([]tag.Tag{
-				{Key: metrics.KeyReconciler, Value: reconciler},
-				{Key: metrics.KeyErrorCode, Value: errorCode},
+				{Key: reconcilerKey, Value: reconciler},
+				{Key: ocmetrics.KeyErrorCode, Value: errorCode},
 			}),
 			valueEquals(errorCount),
 		}
@@ -231,9 +231,9 @@ func (csm ConfigSyncMetrics) ValidateResourceOverrideCount(reconciler, container
 	if _, ok := csm[ocmetrics.ResourceOverrideCountView.Name]; ok {
 		validations := []Validation{
 			hasTags([]tag.Tag{
-				{Key: metrics.KeyReconcilerType, Value: reconciler},
-				{Key: metrics.KeyContainer, Value: containerName},
-				{Key: metrics.KeyResourceType, Value: resourceType},
+				{Key: ocmetrics.KeyReconcilerType, Value: reconciler},
+				{Key: ocmetrics.KeyContainer, Value: containerName},
+				{Key: ocmetrics.KeyResourceType, Value: resourceType},
 			}),
 			valueEquals(count),
 		}
@@ -331,11 +331,11 @@ func (csm ConfigSyncMetrics) validateApplyOperations(reconciler, operation, gvk 
 // validateWatches checks that the `watches` metric is recorded with
 // the correct gvk type tag and has the expected value.
 func (csm ConfigSyncMetrics) validateWatches(reconciler, gvk, value string) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	mv, err := strconv.Atoi(value)
 	if err != nil {
 		return err
 	}
+	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
 		hasTags([]tag.Tag{
 			{Key: reconcilerKey, Value: reconciler},

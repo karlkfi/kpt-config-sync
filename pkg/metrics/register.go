@@ -49,5 +49,6 @@ func RegisterReconcilerMetricsViews() error {
 		ResourceOverrideCountView,
 		GitSyncDepthOverrideCountView,
 		NoSSLVerifyCountView,
+		PipelineErrorView,
 	)
 }

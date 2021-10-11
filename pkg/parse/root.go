@@ -154,6 +154,7 @@ func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStat
 	if len(cse) > 0 {
 		continueSyncing = false
 	}
+	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "source", len(cse))
 	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse)
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
@@ -201,6 +202,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
 		continueSyncing = false
 	}
+	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "rendering", len(cse))
 
 	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse)
 
@@ -234,6 +236,7 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 	rs.Status.Source.LastUpdate = now
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
+	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "source", len(sourceErrs))
 
 	syncErrs := status.ToCSE(newSyncStatus.errs)
 	rs.Status.Sync.Commit = newSyncStatus.commit
@@ -246,6 +249,7 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 	rs.Status.Sync.Errors = syncErrs
 	rs.Status.Sync.LastUpdate = now
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
+	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
 
 	var allErrs []v1alpha1.ConfigSyncError

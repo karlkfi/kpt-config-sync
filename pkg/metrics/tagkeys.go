@@ -17,7 +17,16 @@ var (
 	// differentiate between the metrics emitted by the different reconcilers.
 	// Otherwise, metrics will be randomly sampled:
 	// https://github.com/open-telemetry/opentelemetry-collector/issues/1076.
+	//
+	// TODO b/195486045 Upgrade Otel image to latest to include fix for this issue
+	// TODO b/199790294 Consolidate this key to KeyName when change to fixed label
 	KeyReconciler, _ = tag.NewKey(strings.ReplaceAll(ReconcilerTagKey(), "-", "_"))
+
+	// KeyName groups metrics by the reconciler name. Possible values: root-reconciler, ns-reconciler-<namespace>
+	KeyName, _ = tag.NewKey("name")
+
+	// KeyNamespace groups metrics by the namespace
+	KeyNamespace, _ = tag.NewKey("namespace")
 
 	// KeyReconcilerType groups metrics by the reconciler type. Possible values: root, namespace.
 	KeyReconcilerType, _ = tag.NewKey("reconciler")
@@ -25,7 +34,7 @@ var (
 	// KeyOperation groups metrics by their operation. Possible values: create, patch, update, delete.
 	KeyOperation, _ = tag.NewKey("operation")
 
-	// KeyComponent groups metrics by their component. Possible values: source, sync.
+	// KeyComponent groups metrics by their component. Possible values: source, sync, rendering, readiness(from Resource Group Controller).
 	KeyComponent, _ = tag.NewKey("component")
 
 	// KeyErrorCode groups metrics by their error code.

@@ -27,6 +27,12 @@ var (
 		"The number of errors in the rendering process",
 		stats.UnitDimensionless)
 
+	// PipelineError metric measures the error by components when syncing a commit
+	PipelineError = stats.Int64(
+		"pipeline_error_observed",
+		"A boolean indicates if any error happens from different stages when syncing a commit",
+		stats.UnitDimensionless)
+
 	// ReconcileDuration metric measures the latency of reconcile events.
 	ReconcileDuration = stats.Float64(
 		"reconcile_duration_seconds",
