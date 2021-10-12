@@ -39,6 +39,8 @@ import (
 	corev1Client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type coreClient interface {
@@ -343,6 +345,21 @@ func (b *BugReporter) fetchConfigMaps(ctx context.Context) (rd []Readable) {
 	return rd
 }
 
+// fetchConfigSyncWebhookConfig provides a set of Readables for the ValidatingWebhookConfiguration object with the name of admission-webhook.configsync.gke.io
+func (b *BugReporter) fetchConfigSyncWebhookConfig(ctx context.Context) (rd []Readable) {
+	name := "admission-webhook.configsync.gke.io"
+	webhook, err := b.clientSet.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to get the %q ValidatingWebhookConfiguration object: %v", name, err))
+		}
+	} else {
+		filePath := pathToClusterCmList("config-sync-validating-webhhook-configuration")
+		rd = b.appendPrettyJSON(rd, filePath, webhook)
+	}
+	return rd
+}
+
 // FetchResources provides a set of Readables for configsync, configmanagement and resourcegroup resources.
 func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 	var rd []Readable
@@ -372,6 +389,9 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 	}
 
 	readables := b.fetchConfigMaps(ctx)
+	rd = append(rd, readables...)
+
+	readables = b.fetchConfigSyncWebhookConfig(ctx)
 	rd = append(rd, readables...)
 	return rd
 }
