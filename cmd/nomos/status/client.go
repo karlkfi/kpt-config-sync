@@ -293,7 +293,8 @@ func (c *statusClient) isInstalled(ctx context.Context, cs *clusterState) bool {
 		return false
 	case len(podListKubeSystem.Items) > 0 && len(podListConfigManagementSystem.Items) > 0:
 		cs.status = util.ErrorMsg
-		cs.error = fmt.Sprintf("Found two ACM operators: one from the %q namespace, and the other from the %q namespace. Please remove one of them.", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
+		cmd := fmt.Sprintf("kubectl delete -n %s serviceaccounts config-management-operator && kubectl delete -n %s deployments config-management-operator", metav1.NamespaceSystem, metav1.NamespaceSystem)
+		cs.error = fmt.Sprintf("Found two ACM operators: one from the %q namespace, and the other from the %q namespace. Please remove the one from the %q namespace: %s", metav1.NamespaceSystem, configmanagement.ControllerNamespace, metav1.NamespaceSystem, cmd)
 		return false
 	default:
 		return true
