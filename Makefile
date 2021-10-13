@@ -196,9 +196,7 @@ fmt-go: pull-buildenv buildenv-dirs
 lint: lint-go lint-bash lint-yaml lint-license
 
 lint-go: pull-buildenv buildenv-dirs
-	# workaround for b/201113561
-	iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
-	docker run $(DOCKER_RUN_ARGS) ./scripts/lint-go.sh $(NOMOS_GO_PKG)
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-go.sh $(NOMOS_GO_PKG)
 
 lint-bash:
 	@./scripts/lint-bash.sh
@@ -207,7 +205,7 @@ license:
 	@./scripts/prepare-licenses.sh
 
 lint-license: pull-buildenv buildenv-dirs
-	docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
+	@docker run $(DOCKER_RUN_ARGS) ./scripts/lint-license.sh
 
 lint-yaml:
 	@./scripts/lint-yaml.sh

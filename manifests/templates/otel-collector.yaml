@@ -13,11 +13,47 @@ data:
     receivers:
       opencensus:
     exporters:
+      stackdriver:
+        metric:
+          prefix: "custom.googleapis.com/opencensus/config_sync/"
+          skip_create_descriptor: true
+        retry_on_failure:
+          enabled: true
+        sending_queue:
+          enabled: true
       prometheus:
         endpoint: :8675
         namespace: config_sync
     processors:
       batch:
+      metricstransform:
+        transforms:
+          - include: declared_resources
+            action: update
+            new_name: current_declared_resources
+          - include: reconciler_errors
+            action: update
+            new_name: last_reconciler_errors
+          - include: apply_operations_total
+            action: update
+            operations:
+            - action: delete_label_value
+              label: root_reconciler
+              label_value: root_reconciler
+          - include: apply_operations_total
+            action: update
+            operations:
+            - action: delete_label_value
+              label: root_reconciler
+              label_value: root_reconciler
+          # for all metrics, add cluster label
+          - include: .*
+            match_type: regexp
+            action: update
+            operations:
+              - action: add_label
+                new_label: cluster
+                new_value: {{.ClusterName}}
     extensions:
       health_check:
     service:
@@ -25,8 +61,8 @@ data:
       pipelines:
         metrics:
           receivers: [opencensus]
-          processors: [batch]
-          exporters: [prometheus]
+          processors: [batch, metricstransform]
+          exporters: [ stackdriver, prometheus]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
