@@ -47,30 +47,35 @@ image-nomos:
 		--target $(NOMOS_IMAGE) \
 		-t $(NOMOS_TAG) \
 		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
 		.
 	@echo "+++ Building the Reconciler image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target $(RECONCILER_IMAGE) \
 		-t $(RECONCILER_TAG) \
 		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
 		.
 	@echo "+++ Building the Reconciler Manager image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target $(RECONCILER_MANAGER_IMAGE) \
 		-t $(RECONCILER_MANAGER_TAG) \
 		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
 		.
 	@echo "+++ Building the Admission Webhook image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target $(ADMISSION_WEBHOOK_IMAGE) \
 		-t $(ADMISSION_WEBHOOK_TAG) \
 		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
 		.
 	@echo "+++ Building the Hydration Controller image"
 	@docker build $(DOCKER_BUILD_QUIET) \
 		--target $(HYDRATION_CONTROLLER_IMAGE) \
 		-t $(HYDRATION_CONTROLLER_TAG) \
 		-f build/all/Dockerfile \
+		--build-arg VERSION=${VERSION} \
 		.
 
 # Pushes the specified component's docker image to gcr.io.
