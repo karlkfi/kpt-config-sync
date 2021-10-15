@@ -62,7 +62,7 @@ func StalledMessage(rs *v1alpha1.RootSync) string {
 
 // SetReconciling sets the Reconciling condition to True.
 func SetReconciling(rs *v1alpha1.RootSync, reason, message string) {
-	if setCondition(rs, v1alpha1.RootSyncReconciling, metav1.ConditionTrue, reason, message, "", nil) {
+	if setCondition(rs, v1alpha1.RootSyncReconciling, metav1.ConditionTrue, reason, message, "", nil, now()) {
 		// Only remove the Syncing condition when the Reconciling condition status is updated from false to true.
 		removeCondition(rs, v1alpha1.RootSyncSyncing)
 	}
@@ -70,26 +70,26 @@ func SetReconciling(rs *v1alpha1.RootSync, reason, message string) {
 
 // SetStalled sets the Stalled condition to True.
 func SetStalled(rs *v1alpha1.RootSync, reason string, err error) {
-	if setCondition(rs, v1alpha1.RootSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil) {
+	if setCondition(rs, v1alpha1.RootSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil, now()) {
 		// Only remove the Syncing condition when the Stalled condition status is updated from false to true.
 		removeCondition(rs, v1alpha1.RootSyncSyncing)
 	}
 }
 
 // SetSyncing sets the Syncing condition.
-func SetSyncing(rs *v1alpha1.RootSync, status bool, reason, message, commit string, errs []v1alpha1.ConfigSyncError) {
+func SetSyncing(rs *v1alpha1.RootSync, status bool, reason, message, commit string, errs []v1alpha1.ConfigSyncError, lastUpdate metav1.Time) {
 	var conditionStatus metav1.ConditionStatus
 	if status {
 		conditionStatus = metav1.ConditionTrue
 	} else {
 		conditionStatus = metav1.ConditionFalse
 	}
-	setCondition(rs, v1alpha1.RootSyncSyncing, conditionStatus, reason, message, commit, errs)
+	setCondition(rs, v1alpha1.RootSyncSyncing, conditionStatus, reason, message, commit, errs, lastUpdate)
 }
 
 // setCondition adds or updates the specified condition.
 // It returns a boolean indicating if the condition status is transited.
-func setCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errs []v1alpha1.ConfigSyncError) bool {
+func setCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errs []v1alpha1.ConfigSyncError, lastUpdate metav1.Time) bool {
 	conditionTransited := false
 	condition := GetCondition(rs.Status.Conditions, condType)
 	if condition == nil {
@@ -98,17 +98,16 @@ func setCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType
 		condition = &rs.Status.Conditions[i]
 	}
 
-	time := now()
 	if condition.Status != status {
 		condition.Status = status
-		condition.LastTransitionTime = time
+		condition.LastTransitionTime = lastUpdate
 		conditionTransited = true
 	}
 	condition.Reason = reason
 	condition.Message = message
 	condition.Commit = commit
 	condition.Errors = errs
-	condition.LastUpdateTime = time
+	condition.LastUpdateTime = lastUpdate
 	return conditionTransited
 }
 

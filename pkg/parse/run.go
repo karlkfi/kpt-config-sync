@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/status"
 	webhookconfiguration "github.com/google/nomos/pkg/webhook/configuration"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -92,9 +93,14 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	// Otherwise, set `.status.rendering` before `.status.source` because the parser needs to
 	// read and parse the configs after rendering is done and there might have errors.
 	if gs.errs != nil {
-		setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, gs)
-		if setSourceStatusErr == nil {
-			state.sourceStatus = gs
+		gs.lastUpdate = metav1.Now()
+		var setSourceStatusErr error
+		if state.needToSetSourceStatus(gs) {
+			setSourceStatusErr = p.setSourceStatus(ctx, gs)
+			if setSourceStatusErr == nil {
+				state.sourceStatus = gs
+				state.syncingConditionLastUpdate = gs.lastUpdate
+			}
 		}
 		state.invalidate(status.Append(gs.errs, setSourceStatusErr))
 		return
@@ -108,10 +114,12 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	_, err := os.Stat(doneFilePath)
 	if os.IsNotExist(err) || (err == nil && hydrate.DoneCommit(doneFilePath) != gs.commit) {
 		rs.message = RenderingInProgress
+		rs.lastUpdate = metav1.Now()
 		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
 		if setRenderingStatusErr == nil {
 			state.reset()
 			state.renderingStatus = rs
+			state.syncingConditionLastUpdate = rs.lastUpdate
 		} else {
 			var m status.MultiError
 			state.invalidate(status.Append(m, setRenderingStatusErr))
@@ -120,12 +128,14 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 	}
 	if err != nil {
 		rs.message = RenderingFailed
+		rs.lastUpdate = metav1.Now()
 		rs.errs = status.InternalHydrationError.Wrap(err).
 			Sprintf("unable to read the done file: %s", doneFilePath).
 			Build()
 		setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, rs)
 		if setRenderingStatusErr == nil {
 			state.renderingStatus = rs
+			state.syncingConditionLastUpdate = rs.lastUpdate
 		}
 		state.invalidate(status.Append(rs.errs, setRenderingStatusErr))
 		return
@@ -168,11 +178,13 @@ func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) 
 // It also updates the .status.rendering and .status.source fields.
 func read(ctx context.Context, p Parser, trigger string, state *reconcilerState, sourceState gitState) status.MultiError {
 	hydrationStatus, sourceStatus := readFromSource(ctx, p, trigger, state, sourceState)
+	hydrationStatus.lastUpdate = metav1.Now()
 	// update the rendering status before source status because the parser needs to
 	// read and parse the configs after rendering is done and there might have errors.
 	setRenderingStatusErr := p.setRenderingStatus(ctx, state.renderingStatus, hydrationStatus)
 	if setRenderingStatusErr == nil {
 		state.renderingStatus = hydrationStatus
+		state.syncingConditionLastUpdate = hydrationStatus.lastUpdate
 	}
 	renderingErrs := status.Append(hydrationStatus.errs, setRenderingStatusErr)
 	if renderingErrs != nil {
@@ -185,10 +197,16 @@ func read(ctx context.Context, p Parser, trigger string, state *reconcilerState,
 
 	// Only call `setSourceStatus` if `readFromSource` fails.
 	// If `readFromSource` succeeds, `parse` may still fail.
-	setSourceStatusErr := p.setSourceStatus(ctx, state.sourceStatus, sourceStatus)
-	if setSourceStatusErr == nil {
-		state.sourceStatus = sourceStatus
+	sourceStatus.lastUpdate = metav1.Now()
+	var setSourceStatusErr error
+	if state.needToSetSourceStatus(sourceStatus) {
+		setSourceStatusErr := p.setSourceStatus(ctx, sourceStatus)
+		if setSourceStatusErr == nil {
+			state.sourceStatus = sourceStatus
+			state.syncingConditionLastUpdate = sourceStatus.lastUpdate
+		}
 	}
+
 	return status.Append(sourceStatus.errs, setSourceStatusErr)
 }
 
@@ -284,48 +302,42 @@ func parseSource(ctx context.Context, p Parser, trigger string, state *reconcile
 
 func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconcilerState) status.MultiError {
 	sourceErrs := parseSource(ctx, p, trigger, state)
-	if status.HasBlockingErrors(sourceErrs) {
-		newSourceStatus := gitStatus{
-			commit: state.cache.git.commit,
-			errs:   sourceErrs,
+	newSourceStatus := gitStatus{
+		commit:     state.cache.git.commit,
+		errs:       sourceErrs,
+		lastUpdate: metav1.Now(),
+	}
+	if state.needToSetSourceStatus(newSourceStatus) {
+		if err := p.setSourceStatus(ctx, newSourceStatus); err != nil {
+			// If `p.setSourceStatus` fails, we terminate the reconciliation.
+			// If we call `update` in this case and `update` succeeds, `Status.Source.Commit` would end up be older
+			// than `Status.Sync.Commit`.
+			return status.Append(sourceErrs, err)
 		}
-		if err := p.setSourceStatus(ctx, state.sourceStatus, newSourceStatus); err != nil {
-			sourceErrs = status.Append(sourceErrs, err)
-		} else {
-			state.sourceStatus = newSourceStatus
-		}
-		return sourceErrs
+		state.sourceStatus = newSourceStatus
+		state.syncingConditionLastUpdate = newSourceStatus.lastUpdate
 	}
 
-	// If `status.HasBlockingErrors` returns false, we will not call `setSourceStatus` immediately.
-	// Instead, we will call `p.options().update` first, and then update both the `Status.Source` and `Status.Sync` fields together in a single request.
-	// Updating the `Status.Source` and `Status.Sync` fields in two requests may cause the second one to fail if these two requests are too close to each other.
+	if status.HasBlockingErrors(sourceErrs) {
+		return sourceErrs
+	}
 
 	start := time.Now()
 	syncErrs := p.options().update(ctx, &state.cache)
 	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
 
-	// Image the case where we add a new field into a CRD and a CR managed by Config Sync, sourceErrs includes EncodeDeclaredFieldError.
-	// Since EncodeDeclaredFieldError is a non-blocking error, Config Sync sends both the CRD and CR to the applier to apply.
-	// The applier applies both the CRD and CR successfully, and syncErrs is nil.
-	// Therefore, whenever syncErrs is nil, we should set sourceErrs to nil.
-	if syncErrs == nil && len(state.cache.objsSkipped) == 0 {
-		sourceErrs = nil
-	}
-
-	newSourceStatus := gitStatus{
-		commit: state.cache.git.commit,
-		errs:   sourceErrs,
-	}
 	newSyncStatus := gitStatus{
-		commit: state.cache.git.commit,
-		errs:   syncErrs,
+		commit:     state.cache.git.commit,
+		errs:       syncErrs,
+		lastUpdate: metav1.Now(),
 	}
-	if err := p.setSourceAndSyncStatus(ctx, state.sourceStatus, newSourceStatus, state.syncStatus, newSyncStatus); err != nil {
-		syncErrs = status.Append(syncErrs, err)
-	} else {
-		state.sourceStatus = newSourceStatus
-		state.syncStatus = newSyncStatus
+	if state.needToSetSyncStatus(newSyncStatus) {
+		if err := p.setSyncStatus(ctx, newSyncStatus); err != nil {
+			syncErrs = status.Append(syncErrs, err)
+		} else {
+			state.syncStatus = newSyncStatus
+			state.syncingConditionLastUpdate = newSyncStatus.lastUpdate
+		}
 	}
 
 	return status.Append(sourceErrs, syncErrs)

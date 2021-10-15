@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -14,8 +15,9 @@ const (
 )
 
 type gitStatus struct {
-	commit string
-	errs   status.MultiError
+	commit     string
+	errs       status.MultiError
+	lastUpdate metav1.Time
 }
 
 func (gs gitStatus) equal(other gitStatus) bool {
@@ -23,9 +25,10 @@ func (gs gitStatus) equal(other gitStatus) bool {
 }
 
 type renderingStatus struct {
-	commit  string
-	message string
-	errs    status.MultiError
+	commit     string
+	message    string
+	errs       status.MultiError
+	lastUpdate metav1.Time
 }
 
 func (rs renderingStatus) equal(other renderingStatus) bool {
@@ -44,6 +47,9 @@ type reconcilerState struct {
 
 	// syncStatus tracks info from the `Status.Sync` field of a RepoSync/RootSync.
 	syncStatus gitStatus
+
+	// syncingConditionLastUpdate tracks when the `Syncing` condition was updated most recently.
+	syncingConditionLastUpdate metav1.Time
 
 	// cache tracks the progress made by the reconciler for a git commit.
 	cache cacheForCommit
@@ -124,4 +130,14 @@ func (s *reconcilerState) resetAllButGitState() {
 	git := s.cache.git
 	s.cache = cacheForCommit{}
 	s.cache.git = git
+}
+
+// needToSetSourceStatus returns true if `p.setSourceStatus` should be called.
+func (s *reconcilerState) needToSetSourceStatus(newStatus gitStatus) bool {
+	return !newStatus.equal(s.sourceStatus) || s.sourceStatus.lastUpdate.IsZero() || s.sourceStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
+}
+
+// needToSetSyncStatus returns true if `p.setSyncStatus` should be called.
+func (s *reconcilerState) needToSetSyncStatus(newStatus gitStatus) bool {
+	return !newStatus.equal(s.syncStatus) || s.syncStatus.lastUpdate.IsZero() || s.syncStatus.lastUpdate.Before(&s.syncingConditionLastUpdate)
 }

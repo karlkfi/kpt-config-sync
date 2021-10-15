@@ -17,7 +17,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -117,11 +116,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 //
 // setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
-func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error {
-	if oldStatus.equal(newStatus) {
-		return nil
-	}
-
+func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
 	// The main idea here is an error-robust way of surfacing to the user that
 	// we're having problems reading from our local clone of their git repository.
 	// This can happen when Kubernetes does weird things with mounted filesystems,
@@ -144,14 +139,14 @@ func (p *namespace) setSourceStatus(ctx context.Context, oldStatus, newStatus gi
 	}
 	// Replace the previous set of errors getting the git state with the current set.
 	rs.Status.Source.Errors = cse
-	rs.Status.Source.LastUpdate = metav1.Now()
+	rs.Status.Source.LastUpdate = newStatus.lastUpdate
 
 	continueSyncing := true
 	if len(cse) > 0 {
 		continueSyncing = false
 	}
 	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "source", len(cse))
-	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse)
+	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
@@ -190,7 +185,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 	}
 	rs.Status.Rendering.Message = newStatus.message
 	rs.Status.Rendering.Errors = cse
-	rs.Status.Rendering.LastUpdate = metav1.Now()
+	rs.Status.Rendering.LastUpdate = newStatus.lastUpdate
 
 	continueSyncing := true
 	if len(cse) > 0 {
@@ -200,44 +195,22 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 	}
 	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "rendering", len(cse))
 
-	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse)
+	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RepoSync rendering status from parser")
 	}
 	return nil
 }
 
-// setSourceAndSyncStatus implements the Parser interface
-//
-// setSourceAndSyncStatus sets the source and sync status with a given git state and set of errors.  If errs is empty, all errors
-// will be removed from the status.
-func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newSourceStatus, oldSyncStatus, newSyncStatus gitStatus) error {
-	if oldSourceStatus.equal(newSourceStatus) && oldSyncStatus.equal(newSyncStatus) {
-		return nil
-	}
-
-	now := metav1.Now()
+// setSyncStatus implements the Parser interface
+func (p *namespace) setSyncStatus(ctx context.Context, newStatus gitStatus) error {
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	sourceErrs := status.ToCSE(newSourceStatus.errs)
-	rs.Status.Source.Commit = newSourceStatus.commit
-	rs.Status.Source.Git = v1alpha1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	rs.Status.Source.Errors = sourceErrs
-	rs.Status.Source.LastUpdate = now
-
-	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
-	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "source", len(sourceErrs))
-
-	syncErrs := status.ToCSE(newSyncStatus.errs)
-	rs.Status.Sync.Commit = newSyncStatus.commit
+	syncErrs := status.ToCSE(newStatus.errs)
+	rs.Status.Sync.Commit = newStatus.commit
 	rs.Status.Sync.Git = v1alpha1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
@@ -245,18 +218,18 @@ func (p *namespace) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus,
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Sync.Errors = syncErrs
-	rs.Status.Sync.LastUpdate = now
+	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
 	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "sync", len(syncErrs))
-	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
+	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
 
 	var allErrs []v1alpha1.ConfigSyncError
-	allErrs = append(allErrs, sourceErrs...)
+	allErrs = append(allErrs, rs.Status.Source.Errors...)
 	allErrs = append(allErrs, syncErrs...)
 	if len(allErrs) == 0 {
-		rs.Status.LastSyncedCommit = newSyncStatus.commit
+		rs.Status.LastSyncedCommit = newStatus.commit
 	}
-	reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", newSyncStatus.commit, allErrs)
+	reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", newStatus.commit, allErrs, newStatus.lastUpdate)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RepoSync sync status from parser")

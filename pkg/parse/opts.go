@@ -50,9 +50,9 @@ type opts struct {
 // a git repository.
 type Parser interface {
 	parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError)
-	setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error
+	setSourceStatus(ctx context.Context, newStatus gitStatus) error
 	setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error
-	setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newSourceStatus, oldSyncStatus, newSyncStatus gitStatus) error
+	setSyncStatus(ctx context.Context, newStatus gitStatus) error
 	options() *opts
 }
 

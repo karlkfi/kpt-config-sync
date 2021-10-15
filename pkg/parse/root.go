@@ -19,7 +19,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/cli-utils/pkg/common"
@@ -129,11 +128,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 }
 
 // setSourceStatus implements the Parser interface
-func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStatus) error {
-	if oldStatus.equal(newStatus) {
-		return nil
-	}
-
+func (p *root) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
@@ -148,14 +143,14 @@ func (p *root) setSourceStatus(ctx context.Context, oldStatus, newStatus gitStat
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Source.Errors = cse
-	rs.Status.Source.LastUpdate = metav1.Now()
+	rs.Status.Source.LastUpdate = newStatus.lastUpdate
 
 	continueSyncing := true
 	if len(cse) > 0 {
 		continueSyncing = false
 	}
 	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "source", len(cse))
-	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse)
+	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
 
@@ -194,7 +189,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	}
 	rs.Status.Rendering.Message = newStatus.message
 	rs.Status.Rendering.Errors = cse
-	rs.Status.Rendering.LastUpdate = metav1.Now()
+	rs.Status.Rendering.LastUpdate = newStatus.lastUpdate
 
 	continueSyncing := true
 	if len(cse) > 0 {
@@ -204,7 +199,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	}
 	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "rendering", len(cse))
 
-	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse)
+	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync rendering status from parser")
@@ -212,34 +207,15 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 	return nil
 }
 
-// setSourceAndSyncStatus implements the Parser interface
-func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newSourceStatus, oldSyncStatus, newSyncStatus gitStatus) error {
-	if oldSourceStatus.equal(newSourceStatus) && oldSyncStatus.equal(newSyncStatus) {
-		return nil
-	}
-
-	now := metav1.Now()
+// setSyncStatus implements the Parser interface
+func (p *root) setSyncStatus(ctx context.Context, newStatus gitStatus) error {
 	var rs v1alpha1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
-	sourceErrs := status.ToCSE(newSourceStatus.errs)
-	rs.Status.Source.Commit = newSourceStatus.commit
-	rs.Status.Source.Git = v1alpha1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	rs.Status.Source.Errors = sourceErrs
-	rs.Status.Source.LastUpdate = now
-
-	metrics.RecordReconcilerErrors(ctx, "source", len(sourceErrs))
-	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "source", len(sourceErrs))
-
-	syncErrs := status.ToCSE(newSyncStatus.errs)
-	rs.Status.Sync.Commit = newSyncStatus.commit
+	syncErrs := status.ToCSE(newStatus.errs)
+	rs.Status.Sync.Commit = newStatus.commit
 	rs.Status.Sync.Git = v1alpha1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
@@ -247,18 +223,18 @@ func (p *root) setSourceAndSyncStatus(ctx context.Context, oldSourceStatus, newS
 		Dir:      p.PolicyDir.SlashPath(),
 	}
 	rs.Status.Sync.Errors = syncErrs
-	rs.Status.Sync.LastUpdate = now
+	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
 	metrics.RecordPipelineError(ctx, string(p.scope), "rootsync", "sync", len(syncErrs))
-	metrics.RecordLastSync(ctx, newSyncStatus.commit, now.Time)
+	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
 
 	var allErrs []v1alpha1.ConfigSyncError
-	allErrs = append(allErrs, sourceErrs...)
+	allErrs = append(allErrs, rs.Status.Source.Errors...)
 	allErrs = append(allErrs, syncErrs...)
 	if len(allErrs) == 0 {
-		rs.Status.LastSyncedCommit = newSyncStatus.commit
+		rs.Status.LastSyncedCommit = newStatus.commit
 	}
-	rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", newSyncStatus.commit, allErrs)
+	rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", newStatus.commit, allErrs, newStatus.lastUpdate)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync sync status from parser")
