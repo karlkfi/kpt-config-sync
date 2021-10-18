@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	traceapi "cloud.google.com/go/trace/apiv2"
 	"github.com/go-logr/logr"
@@ -28,17 +29,22 @@ var _ reconcile.Reconciler = &OtelReconciler{}
 
 // OtelReconciler reconciles OpenTelemetry ConfigMaps.
 type OtelReconciler struct {
-	client client.Client
-	log    logr.Logger
-	scheme *runtime.Scheme
+	clusterName string
+	client      client.Client
+	log         logr.Logger
+	scheme      *runtime.Scheme
 }
 
 // NewOtelReconciler returns a new OtelReconciler.
-func NewOtelReconciler(client client.Client, log logr.Logger, scheme *runtime.Scheme) *OtelReconciler {
+func NewOtelReconciler(clusterName string, client client.Client, log logr.Logger, scheme *runtime.Scheme) *OtelReconciler {
+	if clusterName == "" {
+		clusterName = "unknown_cluster"
+	}
 	return &OtelReconciler{
-		client: client,
-		log:    log,
-		scheme: scheme,
+		clusterName: clusterName,
+		client:      client,
+		log:         log,
+		scheme:      scheme,
 	}
 }
 
@@ -85,6 +91,10 @@ func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.R
 	return hash(cm)
 }
 
+func (r *OtelReconciler) stackDriverConfig() string {
+	return strings.Replace(metrics.CollectorConfigStackdriver, "{{.ClusterName}}", r.clusterName, -1)
+}
+
 // configureStackdriverConfigMap creates or updates a map with a config that
 // enables Stackdriver if Application Default Credentials are present.
 func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]byte, error) {
@@ -102,7 +112,7 @@ func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]b
 				metadata.ArchLabel:   "csmr",
 			}
 			cm.Data = map[string]string{
-				"otel-collector-config.yaml": metrics.CollectorConfigStackdriver,
+				"otel-collector-config.yaml": r.stackDriverConfig(),
 			}
 			return nil
 		})

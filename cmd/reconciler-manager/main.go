@@ -80,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	otel := controllers.NewOtelReconciler(mgr.GetClient(),
+	otel := controllers.NewOtelReconciler(*clusterName, mgr.GetClient(),
 		ctrl.Log.WithName("controllers").WithName("Otel"),
 		mgr.GetScheme())
 	if err := otel.SetupWithManager(mgr); err != nil {

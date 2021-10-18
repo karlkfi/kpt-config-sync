@@ -29,13 +29,33 @@ exporters:
     namespace: config_sync
   stackdriver:
     metric:
-      prefix: config_sync
+      prefix: "custom.googleapis.com/opencensus/config_sync/"
+      skip_create_descriptor: true
     retry_on_failure:
       enabled: true
     sending_queue:
       enabled: true
 processors:
   batch:
+  metricstransform:
+    transforms:
+    # These transforms are needed as part of fleet metrics mapping.
+    # We would need to adjust testcases: ValidateDeclaredResources()
+    # b/204120800
+    #
+    #  - include: declared_resources
+    #    action: update
+    #    new_name: current_declared_resources
+    #  - include: reconciler_errors
+    #    action: update
+    #    new_name: last_reconciler_errors
+      - include: .*
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: cluster
+            new_value: {{.ClusterName}}
 extensions:
   health_check:
 service:
@@ -43,7 +63,7 @@ service:
   pipelines:
     metrics:
       receivers: [opencensus]
-      processors: [batch]
+      processors: [batch, metricstransform]
       exporters: [prometheus, stackdriver]
 `
 )

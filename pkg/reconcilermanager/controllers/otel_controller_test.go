@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -21,7 +22,7 @@ import (
 )
 
 const (
-	depAnnotationStackdriver = "fcc36ecaa85e342c14b2c744b90360c5"
+	depAnnotationStackdriver = "862ce0a7ad53d7f9ad53b8a70634ba13"
 	depAnnotationCustom      = "a5b98e40aa7ae6bd2326dca598900f83"
 )
 
@@ -36,7 +37,7 @@ func setupOtelReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Clien
 	}
 
 	fakeClient := syncerFake.NewClient(t, s, objs...)
-	testReconciler := NewOtelReconciler(
+	testReconciler := NewOtelReconciler("",
 		fakeClient,
 		controllerruntime.Log.WithName("controllers").WithName("Otel"),
 		s,
@@ -107,7 +108,7 @@ func TestOtelReconcilerStackdriver(t *testing.T) {
 	wantConfigMap := configMapWithData(
 		metrics.MonitoringNamespace,
 		metrics.OtelCollectorStackdriver,
-		map[string]string{"otel-collector-config.yaml": metrics.CollectorConfigStackdriver},
+		map[string]string{"otel-collector-config.yaml": strings.Replace(metrics.CollectorConfigStackdriver, "{{.ClusterName}}", "unknown_cluster", -1)},
 		core.Labels(map[string]string{
 			"app":                metrics.OpenTelemetry,
 			"component":          metrics.OtelCollectorName,
