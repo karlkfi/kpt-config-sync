@@ -7,8 +7,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
-	"github.com/google/nomos/pkg/reconciler"
-	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,20 +19,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.Copy("../../examples/kubevirt/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
-	_, err := nomostest.Retry(120*time.Second, func() error {
-		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateReconcilerNonBlockingErrors(reconciler.RootSyncName, status.UnknownKindErrorCode, 1)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(3 * time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
 
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
@@ -63,7 +48,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 		nt.WaitForRepoSyncs()
 	})
 
-	err = nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
+	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
@@ -96,20 +81,7 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	nt.Root.Copy("../../examples/kubevirt-compiled/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
-	_, err := nomostest.Retry(60*time.Second, func() error {
-		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateReconcilerNonBlockingErrors(reconciler.RootSyncName, status.UnknownKindErrorCode, 1)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(3 * time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
 
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
@@ -140,7 +112,7 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 		nt.WaitForRepoSyncs()
 	})
 
-	err = nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
+	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
 		nt.T.Fatal(err)
 	}
