@@ -317,6 +317,12 @@ rules:
   - events
   verbs:
   - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -455,6 +461,36 @@ subjects:
   namespace: resource-group-system
 ---
 apiVersion: v1
+data:
+  otel-agent-config.yaml: |
+    receivers:
+      opencensus:
+    exporters:
+      opencensus:
+        endpoint: otel-collector.config-management-monitoring:55678
+        insecure: true
+    processors:
+      batch:
+    extensions:
+      health_check:
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [opencensus]
+          processors: [batch]
+          exporters: [opencensus]
+kind: ConfigMap
+metadata:
+  labels:
+    app: opentelemetry
+    component: otel-agent
+    configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
+  name: resource-group-otel-agent
+  namespace: resource-group-system
+---
+apiVersion: v1
 kind: Service
 metadata:
   labels:
@@ -493,24 +529,11 @@ spec:
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: gcr.io/config-management-release/kube-rbac-proxy:v0.5.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 1000
-      - args:
         - --metrics-addr=127.0.0.1:8080
         - --enable-leader-election
         command:
         - /manager
-        image: gcr.io/config-management-release/resource-group-controller:v0.9.0
+        image: gcr.io/config-management-release/resource-group-controller:v0.10.1
         imagePullPolicy: Always
         name: manager
         resources:
@@ -523,5 +546,52 @@ spec:
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
+      - args:
+        - --config=/conf/otel-agent-config.yaml
+        command:
+        - /otelcol
+        image: gcr.io/config-management-release/otelcol:v0.22.0
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+        name: otel-agent
+        ports:
+        - containerPort: 55678
+        - containerPort: 8888
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /conf
+          name: otel-agent-config-vol
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: gcr.io/config-management-release/kube-rbac-proxy:v0.5.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
       serviceAccountName: resource-group-sa
       terminationGracePeriodSeconds: 10
+      volumes:
+      - configMap:
+          name: resource-group-otel-agent
+        name: otel-agent-config-vol

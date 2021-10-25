@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -252,6 +253,41 @@ func NoConfigSyncMetadata() Predicate {
 	return func(o client.Object) error {
 		if metadata.HasConfigSyncMetadata(o) {
 			return fmt.Errorf("object %q shouldn't have configsync metadta %v, %v", o.GetName(), o.GetLabels(), o.GetAnnotations())
+		}
+		return nil
+	}
+}
+
+// AllResourcesAreCurrent ensures that the managed resources
+// are all Current in the ResourceGroup CR.
+func AllResourcesAreCurrent() Predicate {
+	return func(o client.Object) error {
+		u, ok := o.(*unstructured.Unstructured)
+		if !ok {
+			return WrongTypeErr(u, &unstructured.Unstructured{})
+		}
+		resourceStatuses, found, err := unstructured.NestedSlice(u.Object, "status", "resourceStatuses")
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("resource status not found in %v", u)
+		}
+		for _, resource := range resourceStatuses {
+			s, ok := resource.(map[string]interface{})
+			if !ok {
+				return WrongTypeErr(s, map[string]interface{}{})
+			}
+			status, found, err := unstructured.NestedString(s, "status")
+			if err != nil {
+				return err
+			}
+			if !found {
+				return fmt.Errorf("status field not found for resource %v", resource)
+			}
+			if status != "Current" {
+				return fmt.Errorf("status %v is not Current", status)
+			}
 		}
 		return nil
 	}

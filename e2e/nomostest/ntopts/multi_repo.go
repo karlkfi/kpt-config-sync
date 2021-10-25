@@ -30,6 +30,9 @@ type MultiRepo struct {
 
 	// SkipMonoRepo will skip the test if run in mono repo mode.
 	SkipMonoRepo bool
+
+	// ResourceGroup indicates that NT should also install the resource-group controller
+	ResourceGroup bool
 }
 
 // NamespaceRepo tells the test case that a Namespace Repo should be configured
@@ -68,6 +71,11 @@ func MultiRepoIncompatible(opt *New) {
 // SkipMonoRepo will skip the test in mono repo mode.
 func SkipMonoRepo(opt *New) {
 	opt.SkipMonoRepo = true
+}
+
+// InstallResourceGroupController installs the resource-group controller.
+func InstallResourceGroupController(opts *New) {
+	opts.ResourceGroup = true
 }
 
 // WithDelegatedControl will specify the Delegated Control Pattern.

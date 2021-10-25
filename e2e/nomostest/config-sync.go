@@ -108,19 +108,8 @@ var (
 		metrics.OtelCollectorName:                    true,
 		"acm-psp":                                    true,
 		"configmanagement.gke.io:otel-collector-psp": true,
-		// resources for resource-group controller
-		"resourcegroups.kpt.dev":                            true,
-		"resource-group-system":                             true,
-		"resource-group-sa":                                 true,
-		"resource-group-leader-election-role":               true,
-		"resource-group-manager-role":                       true,
-		"resource-group-metrics-reader":                     true,
-		"resource-group-proxy-role":                         true,
-		"resource-group-leader-election-rolebinding":        true,
-		"resource-group-manager-rolebinding":                true,
-		"resource-group-proxy-rolebinding":                  true,
-		"resource-group-controller-manager-metrics-service": true,
-		"resource-group-controller-manager":                 true,
+		// ResourceGroup CRD
+		"resourcegroups.kpt.dev": true,
 	}
 	// sharedObjects contains the names of all objects that are needed by both
 	// mono-repo and multi-repo Config Sync.
@@ -133,6 +122,20 @@ var (
 	}
 	// ignoredObjects:
 	// config-management-system, this namespace gets created elsewhere
+	resourcegroupObjects = map[string]bool{
+		"resource-group-system":                             true,
+		"resource-group-sa":                                 true,
+		"resource-group-leader-election-role":               true,
+		"resource-group-manager-role":                       true,
+		"resource-group-metrics-reader":                     true,
+		"resource-group-proxy-role":                         true,
+		"resource-group-leader-election-rolebinding":        true,
+		"resource-group-manager-rolebinding":                true,
+		"resource-group-proxy-rolebinding":                  true,
+		"resource-group-otel-agent":                         true,
+		"resource-group-controller-manager-metrics-service": true,
+		"resource-group-controller-manager":                 true,
+	}
 )
 
 var (
@@ -161,7 +164,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	if nomos.MultiRepo {
 		reconcilerPollingPeriod = nt.ReconcilerPollingPeriod
 		hydrationPollingPeriod = nt.HydrationPollingPeriod
-		objs = multiRepoObjects(nt.T, objs, setReconcilerDebugMode, setPollingPeriods)
+		objs = multiRepoObjects(nt.T, nt.MultiRepo, objs, setReconcilerDebugMode, setPollingPeriods)
 	} else {
 		objs = monoRepoObjects(objs)
 	}
@@ -383,7 +386,7 @@ func monoRepoObjects(objects []client.Object) []client.Object {
 	return filtered
 }
 
-func multiRepoObjects(t testing.NTB, objects []client.Object, opts ...func(t testing.NTB, obj client.Object)) []client.Object {
+func multiRepoObjects(t testing.NTB, resourcegroup bool, objects []client.Object, opts ...func(t testing.NTB, obj client.Object)) []client.Object {
 	var filtered []client.Object
 	found := false
 	for _, obj := range objects {
@@ -396,6 +399,9 @@ func multiRepoObjects(t testing.NTB, objects []client.Object, opts ...func(t tes
 			opt(t, obj)
 		}
 		if multiObjects[obj.GetName()] || sharedObjects[obj.GetName()] {
+			filtered = append(filtered, obj)
+		}
+		if resourcegroup && resourcegroupObjects[obj.GetName()] {
 			filtered = append(filtered, obj)
 		}
 	}

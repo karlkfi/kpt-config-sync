@@ -55,6 +55,9 @@ func Clean(nt *NT, failOnError FailOnError) {
 	// The admission-webhook prevents deleting test resources. Hence we delete it before cleaning other resources.
 	removeAdmissionWebhook(nt, failOnError)
 
+	// Remove the resource-group-system namespace
+	removeResourceGroupController(nt, failOnError)
+
 	// Reset any modified system namespaces.
 	resetSystemNamespaces(nt, failOnError)
 
@@ -257,6 +260,20 @@ func removeAdmissionWebhook(nt *NT, failOnError FailOnError) {
 			nt.T.Fatal("error deleting admission-webhook")
 		} else {
 			nt.T.Log("error deleting admission-webhook")
+		}
+	}
+}
+
+// removeResourceGroupController deletes namespace `resource-group-system`.
+func removeResourceGroupController(nt *NT, failOnError FailOnError) {
+	if nt.MultiRepo {
+		_, err := nt.Kubectl("delete", "namespace", "resource-group-system", "--ignore-not-found")
+		if err != nil {
+			if failOnError {
+				nt.T.Fatal("error deleting namespace resource-group-system")
+			} else {
+				nt.T.Log("error deleting namespace resource-group-system")
+			}
 		}
 	}
 }
