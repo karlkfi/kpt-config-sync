@@ -207,6 +207,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		switch e.Type {
 		case event.ErrorType:
 			if _, ok := taskrunner.IsTimeoutError(e.ErrorEvent.Err); ok {
+				glog.Info(e.ErrorEvent.Err)
 				continue
 			}
 			errs = status.Append(errs, Error(e.ErrorEvent.Err))
