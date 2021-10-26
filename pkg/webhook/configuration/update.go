@@ -43,10 +43,10 @@ func Update(ctx context.Context, c client.Client, dc discovery.ServerResourcer, 
 	err = c.Get(ctx, client.ObjectKey{Name: Name}, oldCfg)
 	switch {
 	case apierrors.IsNotFound(err):
-		// There is no Configuration yet, so nothing to merge.
-		if err = c.Create(ctx, newCfg); err != nil {
-			return status.APIServerError(err, "creating admission webhook")
-		}
+		// The ACM operator is responsible to create the Config Sync ValidatingWebhookConfiguration object.
+		// Two possibilities may cause the object not to be found:
+		// 1) the ACM operator has not finished creating the object. In this case, as soon as the ValidatingWebhookConfiguration object is created successfully, a future reconciliation would update it.
+		// 2) `ConfigManagement.Spec.PreventDrifts` is set to `false` in ACM 1.10.0+. In this case, the Config Sync reconciler does not need to update the ValidatingWebhookConfiguration object.
 		return nil
 	case err != nil:
 		// Should be rare, but most likely will be a permission error.
