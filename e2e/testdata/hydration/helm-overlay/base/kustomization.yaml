@@ -8,6 +8,8 @@ generators:
       config.kubernetes.io/function: |
         exec:
           path: render-helm-chart
+  helmGlobals:
+   chartHome: ./charts
   helmCharts:
   - name: prometheus
     repo: https://prometheus-community.github.io/helm-charts

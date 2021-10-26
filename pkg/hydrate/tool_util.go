@@ -236,41 +236,20 @@ func ValidateAndRunKustomize(sourcePath string) (cmpath.Absolute, error) {
 		return output, err
 	}
 
-	// Copy the source configs to a temp directory in case 'kustomize build' pulls
-	// remote configs (e.g. Helm charts) to the source directory.
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "source-")
-	if err != nil {
-		return output, err
-	}
-	defer func() {
-		_ = os.RemoveAll(tmpDir)
-	}()
-	if err := copyDir(sourcePath, tmpDir); err != nil {
-		return output, err
-	}
-
-	// Save the 'kustomize build' output to another temp directory for further
+	// Save the 'kustomize build' output to a temp directory for further
 	// parsing or validation.
-	tmpSrcDir := filepath.Join(tmpDir, filepath.Base(sourcePath))
 	tmpHydratedDir, err := ioutil.TempDir(os.TempDir(), "hydrated-")
 	if err != nil {
 		return output, err
 	}
 
-	if err := kustomizeBuild(tmpSrcDir, tmpHydratedDir); err != nil {
+	if err := kustomizeBuild(sourcePath, tmpHydratedDir); err != nil {
 		return output, errors.Wrapf(err, "unable to render the source configs in %s", sourcePath)
 	}
 
+	fmt.Println("NOTICE: The command will save the remote Helm charts to a local directory defined in the `helmGlobals.chartHome` field if the Kustomization file references remote Helm charts. " +
+		"The default value is `charts`, which is relative to the Kustomization root. Please delete or ignore the directory in your Git repository.")
 	return cmpath.AbsoluteOS(tmpHydratedDir)
-}
-
-func copyDir(source, dest string) error {
-	cmd := exec.Command("cp", "-RL", source, dest)
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "unable to copy from source directory %q to destination directory %q ", source, dest)
-	}
-	return nil
 }
 
 // ValidateHydrateFlags validates the hydrate and vet flags.

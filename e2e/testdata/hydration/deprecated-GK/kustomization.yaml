@@ -8,6 +8,8 @@ generators:
       config.kubernetes.io/function: |
         exec:
           path: render-helm-chart
+  helmGlobals:
+    chartHome: ./charts
   helmCharts:
   - name: prometheus-operator
     repo: https://charts.cloudposse.com/incubator

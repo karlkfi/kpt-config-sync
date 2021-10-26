@@ -29,7 +29,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/kustomize-components", ".")
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
-	nt.T.Log("Update RootSync to sync from the kustomize-components branch")
+	nt.T.Log("Update RootSync to sync from the kustomize-components directory")
 	rs := fake.RootSyncObject()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kustomize-components"}}}`)
 
@@ -73,7 +73,7 @@ func TestHydrateHelmComponents(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/helm-components", ".")
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
-	nt.T.Log("Update RootSync to sync from the helm-components branch")
+	nt.T.Log("Update RootSync to sync from the helm-components directory")
 	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "helm-components"}}}`)
 
@@ -124,7 +124,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/helm-overlay", ".")
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
-	nt.T.Log("Update RootSync to sync from the helm-overlay branch")
+	nt.T.Log("Update RootSync to sync from the helm-overlay directory")
 	rs := fake.RootSyncObject()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "helm-overlay"}}}`)
 
@@ -172,7 +172,7 @@ func TestHydrateRemoteResources(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/remote-base", ".")
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
-	nt.T.Log("Update RootSync to sync from the remote-base branch")
+	nt.T.Log("Update RootSync to sync from the remote-base directory")
 	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "remote-base"}}}`)
 
@@ -199,6 +199,37 @@ func TestHydrateRemoteResources(t *testing.T) {
 	nt.T.Log("Validate resources are synced")
 	expectedNamespaces = []string{"tenant-a", "tenant-b", "tenant-c"}
 	validateNamespaces(nt, expectedNamespaces)
+}
+
+func TestHydrateResourcesInRelativePath(t *testing.T) {
+	nt := nomostest.New(t,
+		ntopts.SkipMonoRepo,
+		ntopts.Unstructured,
+	)
+
+	nt.T.Log("Add the root directory")
+	nt.Root.Copy("../testdata/hydration/relative-path", ".")
+	nt.Root.CommitAndPush("add DRY configs to the repository")
+
+	nt.T.Log("Update RootSync to sync from the relative-path directory")
+	rs := fake.RootSyncObjectV1Beta1()
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "relative-path/overlays/dev"}}}`)
+
+	nt.WaitForRepoSyncs()
+
+	nt.T.Log("Validating resources are synced")
+	if err := nt.Validate("foo", "", &corev1.Namespace{}); err != nil {
+		nt.T.Error(err)
+	}
+	if err := nt.Validate("pod-creators", "foo", &rbacv1.RoleBinding{}); err != nil {
+		nt.T.Error(err)
+	}
+	if err := nt.Validate("foo-ksa-dev", "foo", &corev1.ServiceAccount{}); err != nil {
+		nt.T.Error(err)
+	}
+	if err := nt.Validate("pod-creator", "", &rbacv1.ClusterRole{}); err != nil {
+		nt.T.Error(err)
+	}
 }
 
 func validateNamespaces(nt *nomostest.NT, expectedNamespaces []string) {

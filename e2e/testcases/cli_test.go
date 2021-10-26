@@ -650,6 +650,13 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 			expectedOutPath: "../testdata/hydration/compiled/remote-base",
 		},
 		{
+			name:            "hydrate a DRY repo with relative path",
+			path:            "../testdata/hydration/relative-path/overlays/dev",
+			outPath:         "relative-path/compiled",
+			sourceFormat:    string(filesystem.SourceFormatUnstructured),
+			expectedOutPath: "../testdata/hydration/compiled/relative-path",
+		},
+		{
 			name:            "hydrate a WET repo",
 			path:            "../testdata/hydration/wet-repo",
 			outPath:         "wet-repo/compiled",
@@ -682,6 +689,15 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 			hydrateArgs := []string{"hydrate"}
 			hydrateArgs = append(hydrateArgs, args...)
 			out, err := exec.Command("nomos", hydrateArgs...).CombinedOutput()
+
+			// 'nomos hydrate' and 'nomos vet' might pull remote Helm charts locally.
+			// Below deletes the generated charts after the test.
+			chartsDir := filepath.Join(tc.path, "charts")
+			if _, err := os.Stat(chartsDir); os.IsNotExist(err) {
+				defer func() {
+					_ = os.RemoveAll(chartsDir)
+				}()
+			}
 			if len(tc.expectedErrMsg) != 0 && err == nil {
 				tw.Errorf("%s: expected error '%s', but got no error", tc.name, tc.expectedErrMsg)
 			}
