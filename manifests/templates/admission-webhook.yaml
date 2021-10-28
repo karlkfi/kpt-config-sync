@@ -52,6 +52,7 @@ metadata:
   name: admission-webhook
   namespace: config-management-system
   labels:
+    app: admission-webhook
     monitored: "true"
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
@@ -69,6 +70,7 @@ metadata:
   name: admission-webhook
   namespace: config-management-system
   labels:
+    app: admission-webhook
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
 ---
@@ -77,6 +79,7 @@ kind: ClusterRoleBinding
 metadata:
   name: configsync.gke.io:admission-webhook
   labels:
+    app: admission-webhook
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
 roleRef:
@@ -96,6 +99,7 @@ metadata:
   name: admission-webhook-cert
   namespace: config-management-system
   labels:
+    app: admission-webhook
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"
 ---
@@ -104,5 +108,6 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: admission-webhook.configsync.gke.io
   labels:
+    app: admission-webhook
     configmanagement.gke.io/system: "true"
     configmanagement.gke.io/arch: "csmr"

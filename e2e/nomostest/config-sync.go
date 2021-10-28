@@ -171,6 +171,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	} else {
 		objs = monoRepoObjects(objs)
 	}
+	nt.configSyncObjs = objs
 
 	for _, o := range objs {
 		if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
@@ -178,6 +179,22 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 			cm.Data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
 		}
 
+		err := nt.Create(o)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				continue
+			}
+			nt.T.Fatal(err)
+		}
+	}
+}
+
+func installWebhook(nt *NT) {
+	for _, o := range nt.configSyncObjs {
+		labels := o.GetLabels()
+		if labels == nil || labels["app"] != "admission-webhook" {
+			continue
+		}
 		err := nt.Create(o)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
