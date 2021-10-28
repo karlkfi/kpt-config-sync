@@ -8,9 +8,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // This file includes tests for drift correction and drift prevention.
@@ -121,47 +119,6 @@ metadata:
 	out, err = nt.Kubectl("delete", "-f", filepath.Join(nt.TmpDir, "test-ns.yaml"))
 	if err != nil {
 		nt.T.Fatalf("got `kubectl delete -f test-ns.yaml` error %v %s, want return nil", err, out)
-	}
-}
-
-func TestIgnoreMutations(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo)
-
-	nt.Root.Add("acme/namespaces/hello/ns.yaml",
-		fake.NamespaceObject("hello",
-			core.Annotation("goodbye", "moon"),
-			core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation)))
-	nt.Root.CommitAndPush("add Namespace")
-	nt.WaitForRepoSyncs()
-
-	// Ensure we properly forbid changing declared information.
-
-	// Prevent deleting declared objects.
-	_, err := nt.Kubectl("delete", "ns", "hello")
-	if err == nil {
-		nt.T.Fatal("got `kubectl delete ns hello` success, want return err")
-	}
-
-	// Allow changing declared data.
-	out, err := nt.Kubectl("annotate", "--overwrite", "ns", "hello", "goodbye=world")
-	if err != nil {
-		nt.T.Fatalf("got `kubectl annotate --overwrite ns hello goodbye=world` error %v %s, want success", err, out)
-	}
-	err = nt.Validate("hello", "", &corev1.Namespace{},
-		nomostest.HasAnnotation("goodbye", "world"))
-	if err != nil {
-		nt.T.Fatalf("got annotation 'goodbye' != 'world', want == 'world'")
-	}
-
-	// Allow removing declared data from declared objects.
-	out, err = nt.Kubectl("annotate", "ns", "hello", "goodbye-")
-	if err != nil {
-		nt.T.Fatalf("got `kubectl annotate ns hello goodbye-` error %v %s, want success", err, out)
-	}
-	err = nt.Validate("hello", "", &corev1.Namespace{},
-		nomostest.MissingAnnotation("goodbye"))
-	if err != nil {
-		nt.T.Fatalf("got annotation 'goodbye' present, want missing")
 	}
 }
 

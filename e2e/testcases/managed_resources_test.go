@@ -446,6 +446,67 @@ func TestDeleteManagedResources(t *testing.T) {
 			nt.T.Fatalf("got `kubectl delete ns bookstore` success, want err")
 		}
 
+		// Stop the Config Sync webhook to test the drift correction functionality
+		stopWebhook(nt)
+	}
+
+	// Delete the configmap
+	out, err := nt.Kubectl("delete", "configmap", "cm-1", "-n", "bookstore")
+	if err != nil {
+		nt.T.Fatalf("got `kubectl delete configmap cm-1` error %v %s, want return nil", err, out)
+	}
+
+	// Verify Config Sync recreates the configmap
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate("cm-1", "bookstore", &corev1.ConfigMap{})
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	// Delete the namespace
+	out, err = nt.Kubectl("delete", "ns", "bookstore")
+	if err != nil {
+		nt.T.Fatalf("got `kubectl delete ns bookstore` error %v %s, want return nil", err, out)
+	}
+
+	// Verify Config Sync recreates the namespace
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate("bookstore", "", &corev1.Namespace{})
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+}
+
+// TestDeleteManagedResourcesWithIgnoreMutationAnnotation deletes an object managed by Config Sync
+// and having the `client.lifecycle.config.k8s.io/mutation` annotation,
+// and verifies that Config Sync recreates the deleted object.
+func TestDeleteManagedResourcesWithIgnoreMutationAnnotation(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured)
+
+	namespace := fake.NamespaceObject("bookstore", core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
+	nt.Root.Add("acme/ns.yaml", namespace)
+	nt.Root.CommitAndPush("add a namespace")
+	nt.WaitForRepoSyncs()
+
+	nt.Root.Add("acme/cm.yaml", fake.ConfigMapObject(core.Name("cm-1"), core.Namespace("bookstore")))
+	nt.Root.CommitAndPush("add a configmap")
+	nt.WaitForRepoSyncs()
+
+	if nt.MultiRepo {
+		// At this point, the Config Sync webhook is on, and should prevent kubectl from deleting a resource managed by Config Sync.
+		_, err := nt.Kubectl("delete", "configmap", "cm-1", "-n", "bookstore")
+		if err == nil {
+			nt.T.Fatalf("got `kubectl delete configmap cm-1` successs, want err")
+		}
+
+		_, err = nt.Kubectl("delete", "ns", "bookstore")
+		if err == nil {
+			nt.T.Fatalf("got `kubectl delete ns bookstore` success, want err")
+		}
+
+		// Stop the Config Sync webhook to test the drift correction functionality
 		stopWebhook(nt)
 	}
 
@@ -509,6 +570,8 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 		if err == nil {
 			nt.T.Fatalf("got `kubectl annotate namespace bookstore %s` success, want err", ignoreMutation)
 		}
+
+		// Stop the Config Sync webhook to test the drift correction functionality
 		stopWebhook(nt)
 	}
 
@@ -522,6 +585,32 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 	// Verify Config Sync does not remove this field
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+}
+
+// TestAddFieldsIntoManagedResourcesWithIgnoreMutationAnnotation adds a new field with kubectl into a resource
+// managed by Config Sync and having the `client.lifecycle.config.k8s.io/mutation` annotation,
+// and verifies that Config Sync does not remove this field.
+func TestAddFieldsIntoManagedResourcesWithIgnoreMutationAnnotation(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured)
+
+	namespace := fake.NamespaceObject("bookstore", core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
+	nt.Root.Add("acme/ns.yaml", namespace)
+	nt.Root.CommitAndPush("add a namespace")
+	nt.WaitForRepoSyncs()
+
+	// Add a new annotation into the namespace object
+	out, err := nt.Kubectl("annotate", "namespace", "bookstore", "season=summer")
+	if err != nil {
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore season=summer` error %v %s, want return nil", err, out)
+	}
+
+	// Verify Config Sync does not remove this field
+	_, err = nomostest.Retry(30*time.Second, func() error {
+		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation("season", "summer"))
 	})
 	if err != nil {
 		nt.T.Fatal(err)
@@ -549,6 +638,8 @@ func TestModifyManagedFields(t *testing.T) {
 		if err == nil {
 			nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` success, want err", metadata.ResourceManagementKey)
 		}
+
+		// Stop the Config Sync webhook to test the drift correction functionality
 		stopWebhook(nt)
 	}
 
@@ -581,6 +672,53 @@ func TestModifyManagedFields(t *testing.T) {
 	}
 }
 
+// TestModifyManagedFieldsWithIgnoreMutationAnnotation modifies a managed field of a resource having
+// the `client.lifecycle.config.k8s.io/mutation` annotation, and verifies that Config Sync does not correct it.
+func TestModifyManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo)
+
+	namespace := fake.NamespaceObject("bookstore",
+		core.Annotation("season", "summer"),
+		core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
+	nt.Root.Add("acme/ns.yaml", namespace)
+	nt.Root.CommitAndPush("add a namespace")
+	nt.WaitForRepoSyncs()
+
+	// Modify a managed field
+	out, err := nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", "season=winter")
+	if err != nil {
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore --overrite season=winter` error %v %s, want return nil", err, out)
+	}
+
+	time.Sleep(10 * time.Second)
+
+	// Verify Config Sync does not correct it
+	err = nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation("season", "winter"))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	if nt.MultiRepo {
+		// The reason we need to stop the webhook here is that the webhook denies a request to modify Config Sync metadata
+		// even if the resource has the `client.lifecycle.config.k8s.io/mutation` annotation.
+		stopWebhook(nt)
+	}
+
+	// Modify a Config Sync annotation
+	out, err = nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", fmt.Sprintf("%s=winter", metadata.ResourceManagementKey))
+	if err != nil {
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore --overwrite %s=winter` error %v %s, want return nil", metadata.ResourceManagementKey, err, out)
+	}
+
+	time.Sleep(10 * time.Second)
+
+	// Verify Config Sync does not correct it
+	err = nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.ResourceManagementKey, "winter"))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+}
+
 // TestDeleteManagedFields deletes a managed field, and verifies that Config Sync corrects it.
 func TestDeleteManagedFields(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
@@ -603,6 +741,8 @@ func TestDeleteManagedFields(t *testing.T) {
 		if err == nil {
 			nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` success, want err", metadata.ResourceManagementKey)
 		}
+
+		// Stop the Config Sync webhook to test the drift correction functionality
 		stopWebhook(nt)
 	}
 
@@ -628,6 +768,51 @@ func TestDeleteManagedFields(t *testing.T) {
 	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.HasAnnotation(metadata.ResourceManagementKey, metadata.ResourceManagementEnabled))
 	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+}
+
+// TestDeleteManagedFieldsWithIgnoreMutationAnnotation deletes a managed field of a resource having
+// the `client.lifecycle.config.k8s.io/mutation` annotation, and verifies that Config Sync does not correct it.
+func TestDeleteManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo)
+
+	namespace := fake.NamespaceObject("bookstore",
+		core.Annotation("season", "summer"),
+		core.Annotation(metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation))
+	nt.Root.Add("acme/ns.yaml", namespace)
+	nt.Root.CommitAndPush("add a namespace")
+	nt.WaitForRepoSyncs()
+
+	// Delete a managed field
+	out, err := nt.Kubectl("annotate", "namespace", "bookstore", "season-")
+	if err != nil {
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore season-` error %v %s, want return nil", err, out)
+	}
+
+	time.Sleep(10 * time.Second)
+	// Verify Config Sync does not correct it
+	err = nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.MissingAnnotation("season"))
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	if nt.MultiRepo {
+		// The reason we need to stop the webhook here is that the webhook denies a request to modify Config Sync metadata
+		// even if the resource has the `client.lifecycle.config.k8s.io/mutation` annotation.
+		stopWebhook(nt)
+	}
+
+	// Delete a Config Sync annotation
+	out, err = nt.Kubectl("annotate", "namespace", "bookstore", fmt.Sprintf("%s-", metadata.ResourceManagementKey))
+	if err != nil {
+		nt.T.Fatalf("got `kubectl annotate namespace bookstore %s-` error %v %s, want return nil", metadata.ResourceManagementKey, err, out)
+	}
+
+	time.Sleep(10 * time.Second)
+	// Verify Config Sync does not correct it
+	err = nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.MissingAnnotation(metadata.ResourceManagementKey))
 	if err != nil {
 		nt.T.Fatal(err)
 	}
