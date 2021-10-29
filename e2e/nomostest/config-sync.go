@@ -174,6 +174,7 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	nt.configSyncObjs = objs
 
 	for _, o := range objs {
+		nt.T.Logf("installConfigSync obj: %v", core.GKNN(o))
 		if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
 			cm := o.(*corev1.ConfigMap)
 			cm.Data[filesystem.SourceFormatKey] = string(nomos.SourceFormat)
@@ -195,6 +196,7 @@ func installWebhook(nt *NT) {
 		if labels == nil || labels["app"] != "admission-webhook" {
 			continue
 		}
+		nt.T.Logf("installWebhook obj: %v", core.GKNN(o))
 		err := nt.Create(o)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
