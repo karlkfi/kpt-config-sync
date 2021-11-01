@@ -119,9 +119,6 @@ type NT struct {
 	// It includes both root repo and namespace repos and can be shared among test cases.
 	// It is used to reuse existing repositories instead of creating new ones.
 	RemoteRepositories map[string]*Repository
-
-	// configSyncObjs tracks the objs required for installing Config Sync.
-	configSyncObjs []client.Object
 }
 
 const (

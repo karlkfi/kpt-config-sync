@@ -156,9 +156,7 @@ var IsReconcilerManagerConfigMap = func(obj client.Object) bool {
 		obj.GetObjectKind().GroupVersionKind() == kinds.ConfigMap()
 }
 
-// installConfigSync installs ConfigSync on the test cluster, and returns a
-// callback for checking that the installation succeeded.
-func installConfigSync(nt *NT, nomos ntopts.Nomos) {
+func parseManifests(nt *NT, nomos ntopts.Nomos) []client.Object {
 	nt.T.Helper()
 	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
 
@@ -171,8 +169,14 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	} else {
 		objs = monoRepoObjects(objs)
 	}
-	nt.configSyncObjs = objs
+	return objs
+}
 
+// installConfigSync installs ConfigSync on the test cluster, and returns a
+// callback for checking that the installation succeeded.
+func installConfigSync(nt *NT, nomos ntopts.Nomos) {
+	nt.T.Helper()
+	objs := parseManifests(nt, nomos)
 	for _, o := range objs {
 		nt.T.Logf("installConfigSync obj: %v", core.GKNN(o))
 		if o.GetObjectKind().GroupVersionKind().GroupKind() == kinds.ConfigMap().GroupKind() && o.GetName() == reconcilermanager.SourceFormat {
@@ -190,8 +194,10 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	}
 }
 
-func installWebhook(nt *NT) {
-	for _, o := range nt.configSyncObjs {
+func installWebhook(nt *NT, nomos ntopts.Nomos) {
+	nt.T.Helper()
+	objs := parseManifests(nt, nomos)
+	for _, o := range objs {
 		labels := o.GetLabels()
 		if labels == nil || labels["app"] != "admission-webhook" {
 			continue
