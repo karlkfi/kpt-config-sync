@@ -772,7 +772,7 @@ k8s.io/utils/exec
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# sigs.k8s.io/cli-utils v0.26.0
+# sigs.k8s.io/cli-utils v0.26.1
 ## explicit
 sigs.k8s.io/cli-utils/pkg/apply
 sigs.k8s.io/cli-utils/pkg/apply/cache

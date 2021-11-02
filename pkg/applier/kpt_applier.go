@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply"
 	applyerror "sigs.k8s.io/cli-utils/pkg/apply/error"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
-	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -206,12 +205,10 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
-			if _, ok := taskrunner.IsTimeoutError(e.ErrorEvent.Err); ok {
-				glog.Info(e.ErrorEvent.Err)
-				continue
-			}
 			errs = status.Append(errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
+		case event.WaitType:
+			glog.Info(e.WaitEvent.Error)
 		case event.ApplyType:
 			errs = status.Append(errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:

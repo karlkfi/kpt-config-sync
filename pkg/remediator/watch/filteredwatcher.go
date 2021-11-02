@@ -188,7 +188,7 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 
 		eventCount := 0
 		ignoredEventCount := 0
-		glog.Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
+		glog.V(2).Infof("(Re)starting watch for %s at resource version %q", w.gvk, resourceVersion)
 		for event := range w.base.ResultChan() {
 			w.pruneErrors()
 			newVersion, ignoreEvent, err := w.handle(ctx, event)
@@ -217,7 +217,7 @@ func (w *filteredWatcher) Run(ctx context.Context) status.Error {
 				resourceVersion = newVersion
 			}
 		}
-		glog.Infof("Ending watch for %s at resource version %q (total events: %d, ignored events: %d)",
+		glog.V(2).Infof("Ending watch for %s at resource version %q (total events: %d, ignored events: %d)",
 			w.gvk, resourceVersion, eventCount, ignoredEventCount)
 	}
 	glog.Infof("Watch stopped for %s", w.gvk)
