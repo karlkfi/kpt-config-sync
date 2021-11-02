@@ -9,8 +9,9 @@ import (
 const (
 	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
 	// Keep the image tag consistent with https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/pkg/controller/configsync/constants.go#34.
-	gceNodeAskpassImageTag    = "20210831174857"
-	gceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
+	gceNodeAskpassImageTag = "20210831174857"
+	// GceNodeAskpassSidecarName is the container name of gcenode-askpass-sidecar.
+	GceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
 	gceNodeAskpassPort        = 9102
 )
 
@@ -19,10 +20,13 @@ func gceNodeAskPassContainerImage(name, tag string) string {
 }
 
 func configureGceNodeAskPass(cr *corev1.Container) {
-	cr.Name = gceNodeAskpassSidecarName
-	cr.Image = gceNodeAskPassContainerImage(gceNodeAskpassSidecarName, gceNodeAskpassImageTag)
+	cr.Name = GceNodeAskpassSidecarName
+	cr.Image = gceNodeAskPassContainerImage(GceNodeAskpassSidecarName, gceNodeAskpassImageTag)
 	cr.Args = addPort(gceNodeAskpassPort)
 	cr.SecurityContext = setSecurityContext()
+	cr.TerminationMessagePolicy = corev1.TerminationMessageReadFile
+	cr.TerminationMessagePath = corev1.TerminationMessagePathDefault
+	cr.ImagePullPolicy = corev1.PullIfNotPresent
 }
 
 func gceNodeAskPassSidecar() corev1.Container {
@@ -53,7 +57,7 @@ func setSecurityContext() *corev1.SecurityContext {
 // already present in templateSpec.Containers
 func containsGCENodeAskPassSidecar(cs []corev1.Container) bool {
 	for _, c := range cs {
-		if c.Name == gceNodeAskpassSidecarName {
+		if c.Name == GceNodeAskpassSidecarName {
 			return true
 		}
 	}

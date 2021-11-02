@@ -40,8 +40,9 @@ import (
 )
 
 const (
-	acmeDir       = "acme"
-	manifests     = "manifests"
+	acmeDir = "acme"
+	// Manifests is the folder of the test manifests
+	Manifests     = "manifests"
 	testResources = "test-resources"
 
 	// e2e/raw-nomos/manifests/mono-repo-configmaps.yaml
@@ -56,12 +57,12 @@ var (
 	// All paths must be relative to the test file that is running. There is probably
 	// a more elegant way to do this.
 	baseDir          = filepath.FromSlash("../..")
-	manifestsDir     = filepath.Join(baseDir, manifests)
+	manifestsDir     = filepath.Join(baseDir, Manifests)
 	testResourcesDir = filepath.Join(manifestsDir, testResources)
 	templateDir      = filepath.Join(manifestsDir, "templates")
 
-	monoConfigMaps  = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, monoConfigMapsName)
-	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", manifests, multiConfigMapsName)
+	monoConfigMaps  = filepath.Join(baseDir, "e2e", "raw-nomos", Manifests, monoConfigMapsName)
+	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", Manifests, multiConfigMapsName)
 
 	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
 	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
@@ -157,7 +158,7 @@ var IsReconcilerManagerConfigMap = func(obj client.Object) bool {
 
 func parseManifests(nt *NT, nomos ntopts.Nomos) []client.Object {
 	nt.T.Helper()
-	tmpManifestsDir := filepath.Join(nt.TmpDir, manifests)
+	tmpManifestsDir := filepath.Join(nt.TmpDir, Manifests)
 
 	objs := installationManifests(nt, tmpManifestsDir, nomos)
 	objs = convertObjects(nt, objs)

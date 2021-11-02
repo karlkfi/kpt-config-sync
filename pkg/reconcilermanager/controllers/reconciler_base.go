@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -9,7 +10,9 @@ import (
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/util"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +36,7 @@ type reconcilerBase struct {
 	client                  client.Client
 	log                     logr.Logger
 	scheme                  *runtime.Scheme
+	isAutopilotCluster      *bool
 	reconcilerPollingPeriod time.Duration
 	hydrationPollingPeriod  time.Duration
 }
@@ -114,21 +118,24 @@ func (r *reconcilerBase) upsertServiceAccount(ctx context.Context, name, auth, e
 
 type mutateFn func(client.Object) error
 
-func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, f mutateFn) (controllerutil.OperationResult, error) {
-	var childDep appsv1.Deployment
-	if err := parseDeployment(&childDep); err != nil {
-		return controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse Deployment manifest from ConfigMap")
+func (r *reconcilerBase) upsertDeployment(ctx context.Context, name, namespace string, mutateObject mutateFn) (controllerutil.OperationResult, error) {
+	reconcilerDeployment := &appsv1.Deployment{}
+	if err := parseDeployment(reconcilerDeployment); err != nil {
+		return controllerutil.OperationResultNone, errors.Wrap(err, "failed to parse reconciler Deployment manifest from ConfigMap")
 	}
 
-	childDep.Name = name
-	childDep.Namespace = namespace
-	return r.createOrPatchDeployment(ctx, &childDep, f)
+	reconcilerDeployment.Name = name
+	reconcilerDeployment.Namespace = namespace
+	if err := mutateObject(reconcilerDeployment); err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+	return r.createOrPatchDeployment(ctx, reconcilerDeployment)
 }
 
 // createOrPatchDeployment() first call Get() on the object. If the
 // object does not exist, Create() will be called. If it does exist, Patch()
 // will be called.
-func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv1.Deployment, mutateObject mutateFn) (controllerutil.OperationResult, error) {
+func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv1.Deployment) (controllerutil.OperationResult, error) {
 	key := client.ObjectKeyFromObject(obj)
 
 	existing := &appsv1.Deployment{}
@@ -138,35 +145,49 @@ func (r *reconcilerBase) createOrPatchDeployment(ctx context.Context, obj *appsv
 			return controllerutil.OperationResultNone, err
 		}
 		r.log.Info("Resource not found, creating one", "Resource", obj.GetObjectKind().GroupVersionKind().Kind, "namespace/name", key.String())
-		if err := mutateObject(obj); err != nil {
-			return controllerutil.OperationResultNone, err
-		}
-
 		if err := r.client.Create(ctx, obj); err != nil {
 			return controllerutil.OperationResultNone, err
 		}
 		return controllerutil.OperationResultCreated, nil
 	}
 
-	patch := client.MergeFrom(existing)
-
-	if err := mutateObject(obj); err != nil {
-		return controllerutil.OperationResultNone, err
+	// If Autopilot adjusts the resource requirements, use the current resource requirements.
+	// Otherwise, use the resource requirements in the mutated deployment template.
+	resourceRequirementChanged := false
+	if r.isAutopilotCluster == nil {
+		isAutopilot, err := util.IsGKEAutopilotCluster(r.client)
+		if err != nil {
+			r.log.Error(err, "unable to check if it is an Autopilot cluster")
+			return controllerutil.OperationResultNone, err
+		}
+		r.isAutopilotCluster = &isAutopilot
+	}
+	if *r.isAutopilotCluster {
+		for _, existingContainer := range existing.Spec.Template.Spec.Containers {
+			for i, desiredContainer := range obj.Spec.Template.Spec.Containers {
+				if existingContainer.Name == desiredContainer.Name &&
+					!reflect.DeepEqual(obj.Spec.Template.Spec.Containers[i].Resources, existingContainer.Resources) {
+					obj.Spec.Template.Spec.Containers[i].Resources = existingContainer.Resources
+					resourceRequirementChanged = true
+				}
+			}
+		}
+		// Keep the autopilot annotation
+		if obj.Annotations == nil {
+			obj.Annotations = map[string]string{}
+		}
+		obj.Annotations[metadata.AutoPilotAnnotation] = core.GetAnnotation(existing, metadata.AutoPilotAnnotation)
+	}
+	if resourceRequirementChanged {
+		r.log.V(3).Info("Container resource requirements diverged from the Deployment template because of the mutation made by the AutoPilot. The resource requirement override will be ignored.")
 	}
 
-	// We can skip patching the Deployment only when both `deploymentConfigChecksumAnnotation`
-	// and `spec.replicas` remain the same.
-	// The `deploymentConfigChecksumAnnotation` is computed after the mutation.
-	// Otherwise, it will be always set to the checksum of the original template.
-	if core.GetAnnotation(existing, deploymentConfigChecksumAnnotationKey) ==
-		core.GetAnnotation(obj, deploymentConfigChecksumAnnotationKey) &&
-		*existing.Spec.Replicas == *obj.Spec.Replicas {
+	if reflect.DeepEqual(existing.Labels, obj.Labels) && reflect.DeepEqual(existing.Spec, obj.Spec) {
 		return controllerutil.OperationResultNone, nil
 	}
 
-	r.log.Info("The Deployment needs to be patched", "name", obj.Name)
-
-	if err := r.client.Patch(ctx, obj, patch); err != nil {
+	r.log.Info("The Deployment needs to be updated", "name", obj.Name)
+	if err := r.client.Update(ctx, obj); err != nil {
 		// Let the next reconciliation retry the patch operation for valid request.
 		if !apierrors.IsInvalid(err) {
 			return controllerutil.OperationResultNone, err

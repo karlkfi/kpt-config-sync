@@ -44,8 +44,11 @@ data:
            - "--source-link=rev"
            - "--hydrated-link=rev"
            volumeMounts:
-             - name: repo
-               mountPath: /repo
+           - name: repo
+             mountPath: /repo
+           terminationMessagePath: "/dev/termination-log"
+           terminationMessagePolicy: File
+           imagePullPolicy: IfNotPresent
            securityContext:
              allowPrivilegeEscalation: false
              readOnlyRootFilesystem: false
@@ -54,17 +57,19 @@ data:
                - NET_RAW
              runAsUser: 65533
            env:
-             - name: RECONCILER_NAME
-               valueFrom:
-                 fieldRef:
-                   fieldPath: metadata.name
-             - name: NAMESPACE_NAME
-               valueFrom:
-                 fieldRef:
-                   fieldPath: metadata.namespace
+           - name: RECONCILER_NAME
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: metadata.name
+           - name: NAMESPACE_NAME
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: metadata.namespace
            envFrom:
-             - configMapRef:
-                 name: hydration-controller
+           - configMapRef:
+               name: hydration-controller
            resources:
              limits:
                cpu: "1"
@@ -83,24 +88,26 @@ data:
            - "--hydrated-root=/repo/hydrated"
            - "--hydrated-link=rev"
            volumeMounts:
-             - name: repo
-               mountPath: /repo
-               readOnly: true
+           - name: repo
+             mountPath: /repo
+             readOnly: true
            env:
-             - name: RECONCILER_NAME
-               valueFrom:
-                 fieldRef:
-                   fieldPath: metadata.name
-             - name: NAMESPACE_NAME
-               valueFrom:
-                 fieldRef:
-                   fieldPath: metadata.namespace
+           - name: RECONCILER_NAME
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: metadata.name
+           - name: NAMESPACE_NAME
+             valueFrom:
+               fieldRef:
+                 apiVersion: v1
+                 fieldPath: metadata.namespace
            envFrom:
-             - configMapRef:
-                 name: reconciler
-             - configMapRef:
-                 name: source-format
-                 optional: true
+           - configMapRef:
+               name: reconciler
+           - configMapRef:
+               name: source-format
+               optional: true
            resources:
              limits:
                cpu: "1"
@@ -114,6 +121,9 @@ data:
              capabilities:
                drop:
                - NET_RAW
+           terminationMessagePath: "/dev/termination-log"
+           terminationMessagePolicy: File
+           imagePullPolicy: IfNotPresent
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.3.3-gke.0__linux_amd64
            args: ["--root=/repo/source", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
@@ -123,6 +133,9 @@ data:
            - name: git-creds
              mountPath: /etc/git-secret
              readOnly: true
+           terminationMessagePath: "/dev/termination-log"
+           terminationMessagePolicy: File
+           imagePullPolicy: IfNotPresent
            securityContext:
              allowPrivilegeEscalation: false
              readOnlyRootFilesystem: false
@@ -161,7 +174,9 @@ data:
                - NET_RAW
            ports:
            - containerPort: 55678 # Default OpenCensus receiver port.
+             protocol: TCP
            - containerPort: 8888  # Metrics.
+             protocol: TCP
            volumeMounts:
            - name: otel-agent-config-vol
              mountPath: /conf
@@ -169,12 +184,30 @@ data:
              httpGet:
                path: /
                port: 13133 # Health Check extension default port.
+               scheme: HTTP
+             timeoutSeconds: 1
+             periodSeconds: 10
+             successThreshold: 1
+             failureThreshold: 3
            readinessProbe:
              httpGet:
                path: /
                port: 13133 # Health Check extension default port.
+               scheme: HTTP
+             timeoutSeconds: 1
+             periodSeconds: 10
+             successThreshold: 1
+             failureThreshold: 3
+           terminationMessagePath: "/dev/termination-log"
+           terminationMessagePolicy: File
+           imagePullPolicy: IfNotPresent
+         restartPolicy: Always
+         terminationGracePeriodSeconds: 30
+         dnsPolicy: ClusterFirst
+         schedulerName: default-scheduler
          volumes:
          - name: repo
+           emptyDir: {}
          - name: git-creds
            secret:
              secretName: git-creds
@@ -182,7 +215,10 @@ data:
          - name: otel-agent-config-vol
            configMap:
              name: otel-agent
+             defaultMode: 420
          securityContext:
            fsGroup: 65533
            seccompProfile:
              type: RuntimeDefault
+     revisionHistoryLimit: 10
+     progressDeadlineSeconds: 600

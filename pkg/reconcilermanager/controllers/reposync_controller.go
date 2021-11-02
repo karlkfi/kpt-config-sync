@@ -312,6 +312,9 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 		templateSpec := &d.Spec.Template.Spec
 		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
 		templateSpec.ServiceAccountName = reconciler.RepoSyncName(rs.Namespace)
+		// The Deployment object fetched from the API server has the field defined.
+		// Update DeprecatedServiceAccount to avoid discrepancy in equality check.
+		templateSpec.DeprecatedServiceAccount = reconciler.RepoSyncName(rs.Namespace)
 		// Mutate secret.secretname to secret reference specified in RepoSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
 		// authenticate with the git repository using the authorization method specified
@@ -350,7 +353,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.
-			case gceNodeAskpassSidecarName:
+			case GceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
 				// deployment when auth: gcenode or auth: gcpserveraccount.
 				configureGceNodeAskPass(&container)
@@ -371,11 +374,6 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoS
 			}
 		}
 		templateSpec.Containers = updatedContainers
-		deploymentHash, err := hash(d)
-		if err != nil {
-			return errors.Errorf("failed to compute deployment hash: %v", err)
-		}
-		core.SetAnnotation(d, deploymentConfigChecksumAnnotationKey, fmt.Sprintf("%x", deploymentHash))
 		return nil
 	}
 }

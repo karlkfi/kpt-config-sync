@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	"github.com/google/nomos/pkg/testing/fake"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -54,25 +55,6 @@ const (
 	rsAnnotationNone           = "836c0021b1532c9c6f2f4d11f661c12e"
 
 	rootsyncSSHKey = "root-ssh-key"
-
-	deploymentGCENodeChecksum         = "3aab015d27919aded3b8cbef80e8acdb"
-	deploymentSecretChecksum          = "bf642e8754657fdd8b808701045a66b4"
-	deploymentProxyCookiefileChecksum = "50429932edd585a028d4eb65a763978e"
-	deploymentProxyTokenChecksum      = "9248818f399f7208a58c831ea008a7a7"
-	deploymentSecretUpdatedChecksum   = "9788d38a8155aee817d8300c2809389e"
-	deploymentGCENodeUpdatedChecksum  = "eed1ac5e4936d763aa4751cf6e1e1159"
-	deploymentNoneChecksum            = "1dfe0ad848df07553cb36efa2cde7f44"
-
-	// Checksums of the Deployment whose container resource limits are updated
-	deploymentResourceLimitsChecksum                         = "3eb139bd47e5d3176d960bee1e3bb191"
-	deploymentReconcilerLimitsChecksum                       = "4308d19d32ef68c29939159c3f021bc3"
-	deploymentGitSyncMemLimitsChecksum                       = "a77249892e77d1bc72f5297fd461ac6e"
-	deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum = "eec8fd9816f06a1d673e20289b8788b0"
-
-	rsDeploymentSecretOverrideGitSyncDepthChecksum     = "0cc33d5906b8d128eae663cb5c43c8ef"
-	rsDeploymentSecretOverrideGitSyncDepthZeroChecksum = "c9a8d788642aee80acc1b6a10e18c8c1"
-
-	rsDeploymentSecretNoSSLVerifyChecksum = "2b0d71b390447edeaacfac5770edee32"
 )
 
 func clusterrolebinding(name string, opts ...core.MetaMutator) *rbacv1.ClusterRoleBinding {
@@ -139,6 +121,9 @@ func setupRootReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Clien
 		t.Fatal(err)
 	}
 	if err := rbacv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
+	if err := admissionregistrationv1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,7 +199,7 @@ func rootSync(opts ...func(*v1alpha1.RootSync)) *v1alpha1.RootSync {
 	return rs
 }
 
-func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
+func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
@@ -293,7 +278,7 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentResourceLimitsChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
 		),
 	}
@@ -341,7 +326,7 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentReconcilerCPULimitsAndGitSyncMemLimitsChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 			containerResourceLimitsMutator(overrideReconcilerCPULimitsAndGitSyncMemLimits),
 		),
 	}
@@ -372,7 +357,7 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -382,7 +367,7 @@ func TestRootSyncReconcilerCreateAndUpdateRootSyncWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
-func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
+func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
@@ -442,7 +427,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -492,7 +477,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentResourceLimitsChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
 		),
 	}
@@ -537,7 +522,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentReconcilerLimitsChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 			containerResourceLimitsMutator(overrideReconcilerResourceLimits),
 		),
 	}
@@ -570,7 +555,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentGitSyncMemLimitsChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 			containerResourceLimitsMutator(overrideGitSyncMemLimits),
 		),
 	}
@@ -595,7 +580,7 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -603,6 +588,297 @@ func TestRootSyncReconcilerUpdateRootSyncWithOverride(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
+}
+
+func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: reconcilermanager.Reconciler,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+	}
+
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH),
+		rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
+	isAutopilotCluster := true
+	testReconciler.isAutopilotCluster = &isAutopilotCluster
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.GitSync),
+			gitSyncData(ctx, options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.Reconciler),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsAnnotation)),
+			setServiceAccountName(reconciler.RootSyncName),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
+			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Test Autopilot ignores the resource requirements override.
+	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: reconcilermanager.Reconciler,
+			CPULimit:      resource.MustParse("1.5"),
+		},
+		{
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("0.7"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
+			MemoryLimit:   resource.MustParse("222Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployment successfully remained unchanged")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1alpha1.OverrideSpec{}
+
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("Deployment successfully remained unchanged")
+}
+
+func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH), rootsyncSecretRef(rootsyncSSHKey))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
+	isAutopilotCluster := true
+	testReconciler.isAutopilotCluster = &isAutopilotCluster
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.GitSync),
+			gitSyncData(ctx, options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: "ssh",
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.Reconciler),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsAnnotation)),
+			setServiceAccountName(reconciler.RootSyncName),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+
+	// Test Autopilot ignores resource requirements override.
+	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+		{
+			ContainerName: reconcilermanager.Reconciler,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.HydrationController,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+		{
+			ContainerName: reconcilermanager.GitSync,
+			CPULimit:      resource.MustParse("1"),
+			MemoryLimit:   resource.MustParse("1Gi"),
+		},
+	}
+
+	rs.Spec.Override = v1alpha1.OverrideSpec{
+		Resources: overrideReconcilerAndGitSyncResourceLimits,
+	}
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully remain unchanged")
+
+	// Clear rs.Spec.Override
+	rs.Spec.Override = v1alpha1.OverrideSpec{}
+
+	if err := fakeClient.Update(ctx, rs); err != nil {
+		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	wantDeployments = []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsAnnotation)),
+			setServiceAccountName(reconciler.RootSyncName),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
+		),
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully remained unchanged")
 }
 
 func TestRootSyncCreateWithNoSSLVerify(t *testing.T) {
@@ -658,7 +934,7 @@ func TestRootSyncCreateWithNoSSLVerify(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationNoSSLVerify)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(rsDeploymentSecretNoSSLVerifyChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -727,7 +1003,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -814,7 +1090,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationNoSSLVerify)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(rsDeploymentSecretNoSSLVerifyChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -905,7 +1181,7 @@ func TestRootSyncCreateWithOverrideGitSyncDepth(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationOverrideGitSyncDepth)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(rsDeploymentSecretOverrideGitSyncDepthChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -973,7 +1249,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1039,7 +1315,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationOverrideGitSyncDepth)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(rsDeploymentSecretOverrideGitSyncDepthChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1104,7 +1380,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationOverrideGitSyncDepthZero)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(rsDeploymentSecretOverrideGitSyncDepthZeroChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1239,7 +1515,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1321,7 +1597,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretUpdatedChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1355,7 +1631,7 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotationGCENode)),
 			setServiceAccountName(reconciler.RootSyncName),
-			gceNodeMutator(deploymentGCENodeChecksum, reconciler.RootSyncName),
+			gceNodeMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1378,7 +1654,7 @@ func TestRootSyncAuthGCENode(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationGCENode)),
 			setServiceAccountName(reconciler.RootSyncName),
-			gceNodeMutator(deploymentGCENodeUpdatedChecksum, reconciler.RootSyncName),
+			gceNodeMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1457,7 +1733,7 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotationGCENode)),
 			setServiceAccountName(reconciler.RootSyncName),
-			gceNodeMutator(deploymentGCENodeChecksum, reconciler.RootSyncName),
+			gceNodeMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1493,7 +1769,7 @@ func TestRootSyncAuthGCPServiceAccount(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsUpdatedAnnotationGCENode)),
 			setServiceAccountName(reconciler.RootSyncName),
-			gceNodeMutator(deploymentGCENodeUpdatedChecksum, reconciler.RootSyncName),
+			gceNodeMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1572,7 +1848,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotationGCENode)),
 			setServiceAccountName(reconciler.RootSyncName),
-			gceNodeMutator(deploymentGCENodeChecksum, reconciler.RootSyncName),
+			gceNodeMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1609,7 +1885,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1633,7 +1909,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotationNone)),
 			setServiceAccountName(reconciler.RootSyncName),
-			noneMutator(deploymentNoneChecksum, reconciler.RootSyncName),
+			noneMutator(reconciler.RootSyncName),
 		),
 	}
 
@@ -1661,7 +1937,7 @@ func TestRootSyncReconcilerRestart(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentSecretChecksum, reconciler.RootSyncName, rootsyncSSHKey),
+			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
 		),
 	}
 
@@ -1748,7 +2024,7 @@ func TestRootSyncCookiefileWithProxy(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsProxyCookiefileAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentProxyCookiefileChecksum, reconciler.RootSyncName, reposyncCookie),
+			secretMutator(reconciler.RootSyncName, reposyncCookie),
 			envVarMutator("HTTPS_PROXY", reposyncCookie, "https_proxy"),
 		),
 	}
@@ -1827,7 +2103,7 @@ func TestRootSyncTokenWithProxy(t *testing.T) {
 		rootSyncDeployment(
 			setAnnotations(deploymentAnnotation(rsProxyTokenAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentProxyTokenChecksum, reconciler.RootSyncName, secretName),
+			secretMutator(reconciler.RootSyncName, secretName),
 			envVarMutator("HTTPS_PROXY", secretName, "https_proxy"),
 			envVarMutator(gitSyncName, secretName, GitSecretConfigKeyTokenUsername),
 			envVarMutator(gitSyncPassword, secretName, GitSecretConfigKeyToken),
@@ -1856,6 +2132,7 @@ func rootSyncDeployment(muts ...depMutator) *appsv1.Deployment {
 	)
 	var replicas int32 = 1
 	dep.Spec.Replicas = &replicas
+	dep.Annotations = nil
 	for _, mut := range muts {
 		mut(dep)
 	}
@@ -1868,9 +2145,8 @@ func setServiceAccountName(name string) depMutator {
 	}
 }
 
-func secretMutator(deploymentConfigChecksum, reconcilerName, secretName string) depMutator {
+func secretMutator(reconcilerName, secretName string) depMutator {
 	return func(dep *appsv1.Deployment) {
-		dep.Annotations[deploymentConfigChecksumAnnotationKey] = deploymentConfigChecksum
 		dep.Spec.Template.Spec.Volumes = deploymentSecretVolumes(secretName)
 		dep.Spec.Template.Spec.Containers = secretMountContainers(reconcilerName)
 	}
@@ -1896,17 +2172,15 @@ func envVarMutator(envName, secretName, key string) depMutator {
 	}
 }
 
-func gceNodeMutator(deploymentConfigChecksum, reconcilerName string) depMutator {
+func gceNodeMutator(reconcilerName string) depMutator {
 	return func(dep *appsv1.Deployment) {
-		dep.Annotations[deploymentConfigChecksumAnnotationKey] = deploymentConfigChecksum
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "repo"}}
 		dep.Spec.Template.Spec.Containers = gceNodeContainers(reconcilerName)
 	}
 }
 
-func noneMutator(deploymentConfigChecksum, reconcilerName string) depMutator {
+func noneMutator(reconcilerName string) depMutator {
 	return func(dep *appsv1.Deployment) {
-		dep.Annotations[deploymentConfigChecksumAnnotationKey] = deploymentConfigChecksum
 		dep.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "repo"}}
 		dep.Spec.Template.Spec.Containers = noneContainers(reconcilerName)
 	}
@@ -2028,7 +2302,7 @@ func noneContainers(reconcilerName string) []corev1.Container {
 
 func gceNodeContainers(reconcilerName string) []corev1.Container {
 	containers := noneContainers(reconcilerName)
-	containers = append(containers, corev1.Container{Name: gceNodeAskpassSidecarName})
+	containers = append(containers, corev1.Container{Name: GceNodeAskpassSidecarName})
 	return containers
 }
 

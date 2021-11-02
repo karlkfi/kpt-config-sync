@@ -326,6 +326,9 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 
 		// Update ServiceAccountName.
 		templateSpec.ServiceAccountName = reconciler.RootSyncName
+		// The Deployment object fetched from the API server has the field defined.
+		// Update DeprecatedServiceAccount to avoid discrepancy in equality check.
+		templateSpec.DeprecatedServiceAccount = reconciler.RootSyncName
 
 		// Mutate secret.secretname to secret reference specified in RootSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
@@ -369,7 +372,7 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 			case metrics.OtelAgentName:
 				// The no-op case to avoid unknown container error after
 				// first-ever reconcile.
-			case gceNodeAskpassSidecarName:
+			case GceNodeAskpassSidecarName:
 				// container gcenode-askpass-sidecar is added to the reconciler
 				// deployment when auth: gcenode or auth: gcpserveraccount.
 				configureGceNodeAskPass(&container)
@@ -390,11 +393,6 @@ func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootS
 			}
 		}
 		templateSpec.Containers = updatedContainers
-		deploymentHash, err := hash(d)
-		if err != nil {
-			return errors.Errorf("failed to compute deployment hash: %v", err)
-		}
-		core.SetAnnotation(d, deploymentConfigChecksumAnnotationKey, fmt.Sprintf("%x", deploymentHash))
 		return nil
 	}
 }
