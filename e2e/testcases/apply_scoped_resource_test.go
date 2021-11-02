@@ -19,8 +19,6 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.Copy("../../examples/kubevirt/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
-
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
 		// KNV2010: unable to apply resource: the server could not find the requested resource (patch virtualmachines.kubevirt.io testvm)
@@ -47,6 +45,8 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 		nt.Root.CommitAndPush("Remove cluster roles and priority class")
 		nt.WaitForRepoSyncs()
 	})
+
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
 
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
@@ -81,8 +81,6 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	nt.Root.Copy("../../examples/kubevirt-compiled/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
-
 	nt.T.Cleanup(func() {
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
 		// KNV2010: unable to apply resource: the server could not find the requested resource (patch virtualmachines.kubevirt.io testvm)
@@ -111,6 +109,8 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 		nt.Root.CommitAndPush("Remove cluster roles and priority class")
 		nt.WaitForRepoSyncs()
 	})
+
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
 
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
