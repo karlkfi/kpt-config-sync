@@ -2300,13 +2300,13 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 func TestClusterState_PrintRows(t *testing.T) {
 	testCases := []struct {
 		name    string
-		cluster *clusterState
+		cluster *ClusterState
 		want    string
 	}{
 		{
 			"cluster without config sync",
-			&clusterState{
-				ref:    "gke_sample-project_europe-west1-b_cluster-1",
+			&ClusterState{
+				Ref:    "gke_sample-project_europe-west1-b_cluster-1",
 				status: "UNINSTALLED",
 			},
 			`
@@ -2317,10 +2317,10 @@ gke_sample-project_europe-west1-b_cluster-1
 		},
 		{
 			"cluster without repos",
-			&clusterState{
-				ref:    "gke_sample-project_europe-west1-b_cluster-1",
+			&ClusterState{
+				Ref:    "gke_sample-project_europe-west1-b_cluster-1",
 				status: "UNCONFIGURED",
-				error:  "Missing git-creds secret",
+				Error:  "Missing git-creds secret",
 			},
 			`
 gke_sample-project_europe-west1-b_cluster-1
@@ -2330,8 +2330,8 @@ gke_sample-project_europe-west1-b_cluster-1
 		},
 		{
 			"cluster with repos",
-			&clusterState{
-				ref: "gke_sample-project_europe-west1-b_cluster-2",
+			&ClusterState{
+				Ref: "gke_sample-project_europe-west1-b_cluster-2",
 				repos: []*repoState{
 					{
 						scope: "<root>",

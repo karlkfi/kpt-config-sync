@@ -8,6 +8,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/bugreport"
 	"github.com/google/nomos/cmd/nomos/hydrate"
 	"github.com/google/nomos/cmd/nomos/initialize"
+	"github.com/google/nomos/cmd/nomos/migrate"
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/version"
 	"github.com/google/nomos/cmd/nomos/vet"
@@ -31,6 +32,7 @@ func init() {
 	rootCmd.AddCommand(version.Cmd)
 	rootCmd.AddCommand(status.Cmd)
 	rootCmd.AddCommand(bugreport.Cmd)
+	rootCmd.AddCommand(migrate.Cmd)
 }
 
 func main() {

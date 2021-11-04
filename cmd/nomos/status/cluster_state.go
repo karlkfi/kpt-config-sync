@@ -18,39 +18,39 @@ import (
 
 const (
 	commitHashLength = 8
-	indent           = "  "
-	separator        = "--------------------"
 	emptyCommit      = "N/A"
 )
 
-// clusterState represents the sync status of all repos on a cluster.
-type clusterState struct {
-	ref    string
+// ClusterState represents the sync status of all repos on a cluster.
+type ClusterState struct {
+	// Ref is the current cluster context
+	Ref    string
 	status string
-	error  string
-	repos  []*repoState
+	// Error represents the sync errors
+	Error string
+	repos []*repoState
 }
 
-func (c *clusterState) printRows(writer io.Writer) {
+func (c *ClusterState) printRows(writer io.Writer) {
 	fmt.Fprintln(writer, "")
-	fmt.Fprintf(writer, "%s\n", c.ref)
-	if c.status != "" || c.error != "" {
-		fmt.Fprintf(writer, "%s%s\n", indent, separator)
-		fmt.Fprintf(writer, "%s%s\t%s\n", indent, c.status, c.error)
+	fmt.Fprintf(writer, "%s\n", c.Ref)
+	if c.status != "" || c.Error != "" {
+		fmt.Fprintf(writer, "%s%s\n", util.Indent, util.Separator)
+		fmt.Fprintf(writer, "%s%s\t%s\n", util.Indent, c.status, c.Error)
 	}
 	for _, repo := range c.repos {
-		fmt.Fprintf(writer, "%s%s\n", indent, separator)
+		fmt.Fprintf(writer, "%s%s\n", util.Indent, util.Separator)
 		repo.printRows(writer)
 	}
 }
 
-// unavailableCluster returns a clusterState for a cluster that could not be
+// unavailableCluster returns a ClusterState for a cluster that could not be
 // reached by a client connection.
-func unavailableCluster(ref string) *clusterState {
-	return &clusterState{
-		ref:    ref,
+func unavailableCluster(ref string) *ClusterState {
+	return &ClusterState{
+		Ref:    ref,
 		status: "N/A",
-		error:  "Failed to connect to cluster",
+		Error:  "Failed to connect to cluster",
 	}
 }
 
@@ -65,31 +65,31 @@ type repoState struct {
 }
 
 func (r *repoState) printRows(writer io.Writer) {
-	fmt.Fprintf(writer, "%s%s\t%s\t\n", indent, r.scope, gitString(r.git))
-	fmt.Fprintf(writer, "%s%s\t%s\t\n", indent, r.status, r.commit)
+	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.scope, gitString(r.git))
+	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.status, r.commit)
 
 	for _, err := range r.errors {
-		fmt.Fprintf(writer, "%sError:\t%s\t\n", indent, err)
+		fmt.Fprintf(writer, "%sError:\t%s\t\n", util.Indent, err)
 	}
 
 	if resourceStatus && len(r.resources) > 0 {
 		sort.Sort(byNamespaceAndType(r.resources))
-		fmt.Fprintf(writer, "%sManaged resources:\n", indent)
+		fmt.Fprintf(writer, "%sManaged resources:\n", util.Indent)
 		hasSourceHash := r.resources[0].SourceHash != ""
 		if !hasSourceHash {
-			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\n", indent)
+			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\n", util.Indent)
 		} else {
-			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n", indent)
+			fmt.Fprintf(writer, "%s\tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n", util.Indent)
 		}
 		for _, r := range r.resources {
 			if !hasSourceHash {
-				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status)
+				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", util.Indent, r.Namespace, r.String(), r.Status)
 			} else {
-				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status, r.SourceHash)
+				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", util.Indent, r.Namespace, r.String(), r.Status, r.SourceHash)
 			}
 			if len(r.Conditions) > 0 {
 				for _, condition := range r.Conditions {
-					fmt.Fprintf(writer, "%s%s%s%s%s\n", indent, indent, indent, indent, condition.Message)
+					fmt.Fprintf(writer, "%s%s%s%s%s\n", util.Indent, util.Indent, util.Indent, util.Indent, condition.Message)
 				}
 			}
 		}

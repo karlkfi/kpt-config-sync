@@ -8,7 +8,6 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -23,7 +22,7 @@ import (
 
 func init() {
 	flags.AddContexts(Cmd)
-	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
+	Cmd.Flags().DurationVar(&flags.ClientTimeout, "timeout", flags.DefaultClusterClientTimeout, "Timeout for connecting to each cluster")
 }
 
 // GetVersionReadCloser returns a ReadCloser with the output produced by running the "nomos version" command as a string
@@ -45,9 +44,6 @@ func GetVersionReadCloser(ctx context.Context, contexts []string) (io.ReadCloser
 }
 
 var (
-	// clientTimeout is a flag value to specify how long to wait before timeout of client connection.
-	clientTimeout time.Duration
-
 	// clientVersion is a function that obtains the local client version.
 	clientVersion = func() string {
 		return version.VERSION
@@ -77,7 +73,7 @@ of the "nomos" client binary for debugging purposes.`,
 
 // allKubectlConfigs gets all kubectl configs, with error handling
 func allKubectlConfigs() (map[string]*rest.Config, error) {
-	allCfgs, err := restconfig.AllKubectlConfigs(clientTimeout)
+	allCfgs, err := restconfig.AllKubectlConfigs(flags.ClientTimeout)
 	if err != nil {
 		// Unwrap the "no such file or directory" error for better readability
 		if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {

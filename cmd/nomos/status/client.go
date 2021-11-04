@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/nomos/clientgen/apis"
 	typedv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
+	"github.com/google/nomos/cmd/nomos/flags"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
@@ -24,6 +25,8 @@ import (
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,43 +37,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
-const syncingConditionSupportedVersion = "v1.9.2-rc.1"
+const (
+	// ACMOperatorLabelSelector is the label selector for the ACM operator Pod.
+	ACMOperatorLabelSelector         = "k8s-app=config-management-operator"
+	syncingConditionSupportedVersion = "v1.9.2-rc.1"
+)
 
-type statusClient struct {
-	client           client.Client
-	repos            typedv1.RepoInterface
-	k8sClient        *kubernetes.Clientset
-	configManagement *util.ConfigManagementClient
+// ClusterClient is the client that talks to the cluster.
+type ClusterClient struct {
+	// Client performs CRUD operations on Kubernetes objects.
+	Client client.Client
+	repos  typedv1.RepoInterface
+	// K8sClient contains the clients for groups.
+	K8sClient        *kubernetes.Clientset
+	ConfigManagement *util.ConfigManagementClient
 }
 
-func (c *statusClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
+func (c *ClusterClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
 	rs := &v1alpha1.RootSync{}
-	if err := c.client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
+	if err := c.Client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
 		return nil, err
 	}
 	return rs, nil
 }
 
-func (c *statusClient) repoSync(ctx context.Context, ns string) (*v1alpha1.RepoSync, error) {
+func (c *ClusterClient) repoSync(ctx context.Context, ns string) (*v1alpha1.RepoSync, error) {
 	rs := &v1alpha1.RepoSync{}
-	if err := c.client.Get(ctx, reposync.ObjectKey(declared.Scope(ns)), rs); err != nil {
+	if err := c.Client.Get(ctx, reposync.ObjectKey(declared.Scope(ns)), rs); err != nil {
 		return nil, err
 	}
 	return rs, nil
 }
 
-func (c *statusClient) resourceGroup(ctx context.Context, objectKey client.ObjectKey) (*unstructured.Unstructured, error) {
+func (c *ClusterClient) resourceGroup(ctx context.Context, objectKey client.ObjectKey) (*unstructured.Unstructured, error) {
 	rg := &unstructured.Unstructured{}
 	rg.SetGroupVersionKind(live.ResourceGroupGVK)
-	if err := c.client.Get(ctx, objectKey, rg); err != nil {
+	if err := c.Client.Get(ctx, objectKey, rg); err != nil {
 		return nil, err
 	}
 	return rg, nil
 }
 
-func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
+func (c *ClusterClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
 	rsl := &v1alpha1.RepoSyncList{}
-	if err := c.client.List(ctx, rsl); err != nil {
+	if err := c.Client.List(ctx, rsl); err != nil {
 		return nil, err
 	}
 	var repoSyncs []*v1alpha1.RepoSync
@@ -83,12 +93,12 @@ func (c *statusClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, err
 	return repoSyncs, nil
 }
 
-func (c *statusClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha1.RepoSync) ([]*unstructured.Unstructured, error) {
+func (c *ClusterClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha1.RepoSync) ([]*unstructured.Unstructured, error) {
 	rgl := &unstructured.UnstructuredList{}
 	rgGVK := live.ResourceGroupGVK
 	rgGVK.Kind += "List"
 	rgl.SetGroupVersionKind(rgGVK)
-	if err := c.client.List(ctx, rgl); err != nil {
+	if err := c.Client.List(ctx, rgl); err != nil {
 		return nil, err
 	}
 	var resourceGroups []*unstructured.Unstructured
@@ -99,21 +109,21 @@ func (c *statusClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha1
 	return consistentOrder(repoSyncs, resourceGroups), nil
 }
 
-// clusterStatus returns the clusterState for the cluster this client is connected to.
-func (c *statusClient) clusterStatus(ctx context.Context, cluster, namespace string) *clusterState {
-	cs := &clusterState{ref: cluster}
+// clusterStatus returns the ClusterState for the cluster this client is connected to.
+func (c *ClusterClient) clusterStatus(ctx context.Context, cluster, namespace string) *ClusterState {
+	cs := &ClusterState{Ref: cluster}
 
-	if !c.isInstalled(ctx, cs) {
+	if !c.IsInstalled(ctx, cs) {
 		return cs
 	}
-	if !c.isConfigured(ctx, cs) {
+	if !c.IsConfigured(ctx, cs) {
 		return cs
 	}
 
-	isMulti, err := c.configManagement.NestedBool(ctx, "spec", "enableMultiRepo")
+	isMulti, err := c.ConfigManagement.NestedBool(ctx, "spec", "enableMultiRepo")
 	if err != nil {
 		cs.status = util.ErrorMsg
-		cs.error = err.Error()
+		cs.Error = err.Error()
 		return cs
 	}
 
@@ -127,26 +137,26 @@ func (c *statusClient) clusterStatus(ctx context.Context, cluster, namespace str
 	return cs
 }
 
-// monoRepoClusterStatus populates the given clusterState with the sync status of
-// the mono repo on the statusClient's cluster.
-func (c *statusClient) monoRepoClusterStatus(ctx context.Context, cs *clusterState) {
+// monoRepoClusterStatus populates the given ClusterState with the sync status of
+// the mono repo on the ClusterClient's cluster.
+func (c *ClusterClient) monoRepoClusterStatus(ctx context.Context, cs *ClusterState) {
 	git, err := c.monoRepoGit(ctx)
 	if err != nil {
 		cs.status = util.ErrorMsg
-		cs.error = err.Error()
+		cs.Error = err.Error()
 		return
 	}
 
 	repoList, err := c.repos.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		cs.status = util.ErrorMsg
-		cs.error = err.Error()
+		cs.Error = err.Error()
 		return
 	}
 
 	if len(repoList.Items) == 0 {
 		cs.status = util.UnknownMsg
-		cs.error = "Repo resource is missing"
+		cs.Error = "Repo resource is missing"
 		return
 	}
 
@@ -156,20 +166,20 @@ func (c *statusClient) monoRepoClusterStatus(ctx context.Context, cs *clusterSta
 
 // monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
 // and builds a Git config out of it.
-func (c *statusClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
-	syncRepo, err := c.configManagement.NestedString(ctx, "spec", "git", "syncRepo")
+func (c *ClusterClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
+	syncRepo, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRepo")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	syncBranch, err := c.configManagement.NestedString(ctx, "spec", "git", "syncBranch")
+	syncBranch, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncBranch")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	syncRev, err := c.configManagement.NestedString(ctx, "spec", "git", "syncRev")
+	syncRev, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRev")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
-	policyDir, err := c.configManagement.NestedString(ctx, "spec", "git", "policyDir")
+	policyDir, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "policyDir")
 	if err != nil {
 		return v1alpha1.Git{}, err
 	}
@@ -184,8 +194,8 @@ func (c *statusClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
 
 // syncingConditionSupported checks if the ACM version is v1.9.2 or later, which
 // has the high-level syncing condition.
-func (c *statusClient) syncingConditionSupported(ctx context.Context) bool {
-	v, err := c.configManagement.Version(ctx)
+func (c *ClusterClient) syncingConditionSupported(ctx context.Context) bool {
+	v, err := c.ConfigManagement.Version(ctx)
 	if err != nil {
 		return false
 	}
@@ -197,9 +207,9 @@ func (c *statusClient) syncingConditionSupported(ctx context.Context) bool {
 	return !version.LessThan(supportedVersion)
 }
 
-// multiRepoClusterStatus populates the given clusterState with the sync status of
-// the multi repos on the statusClient's cluster.
-func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterState) {
+// multiRepoClusterStatus populates the given ClusterState with the sync status of
+// the multi repos on the ClusterClient's cluster.
+func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterState) {
 	var errs []string
 	syncingConditionSupported := c.syncingConditionSupported(ctx)
 
@@ -239,98 +249,115 @@ func (c *statusClient) multiRepoClusterStatus(ctx context.Context, cs *clusterSt
 
 	if len(errs) > 0 {
 		cs.status = util.ErrorMsg
-		cs.error = strings.Join(errs, ", ")
+		cs.Error = strings.Join(errs, ", ")
 	} else if len(cs.repos) == 0 {
 		cs.status = util.UnknownMsg
-		cs.error = "No RootSync or RepoSync resources found"
+		cs.Error = "No RootSync or RepoSync resources found"
 	}
 }
 
-// namespaceRepoClusterStatus populates the given clusterState with the sync status of
-// the specified namespace repo on the statusClient's cluster.
-func (c *statusClient) namespaceRepoClusterStatus(ctx context.Context, cs *clusterState, ns string) {
+// namespaceRepoClusterStatus populates the given ClusterState with the sync status of
+// the specified namespace repo on the ClusterClient's cluster.
+func (c *ClusterClient) namespaceRepoClusterStatus(ctx context.Context, cs *ClusterState, ns string) {
 	repoSync, err := c.repoSync(ctx, ns)
 	if err != nil {
 		cs.status = util.ErrorMsg
-		cs.error = err.Error()
+		cs.Error = err.Error()
 		return
 	}
 
 	rg, err := c.resourceGroup(ctx, reposync.ObjectKey(declared.Scope(ns)))
 	if err != nil {
-		cs.error = err.Error()
+		cs.Error = err.Error()
 		return
 	}
 	cs.repos = append(cs.repos, namespaceRepoStatus(repoSync, rg, c.syncingConditionSupported(ctx)))
 }
 
-// isInstalled returns true if the statusClient is connected to a cluster where
-// Config Sync is installed. Updates the given clusterState with status info if
+// IsInstalled returns true if the ClusterClient is connected to a cluster where
+// Config Sync is installed. Updates the given ClusterState with status info if
 // Config Sync is not installed.
-func (c *statusClient) isInstalled(ctx context.Context, cs *clusterState) bool {
-	labelSelector := "k8s-app=config-management-operator"
-	podListKubeSystem, errKubeSystem := c.k8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
-	podListConfigManagementSystem, errConfigManagementSystem := c.k8sClient.CoreV1().Pods(configmanagement.ControllerNamespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+func (c *ClusterClient) IsInstalled(ctx context.Context, cs *ClusterState) bool {
+	podListKubeSystem, errKubeSystem := c.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(ctx, metav1.ListOptions{LabelSelector: ACMOperatorLabelSelector})
+	podListConfigManagementSystem, errConfigManagementSystem := c.K8sClient.CoreV1().Pods(configmanagement.ControllerNamespace).List(ctx, metav1.ListOptions{LabelSelector: ACMOperatorLabelSelector})
 
 	switch {
 	case errKubeSystem != nil && errConfigManagementSystem != nil:
 		cs.status = util.ErrorMsg
-		cs.error = fmt.Sprintf("Failed to list pods with the %q LabelSelector in the %q namespace (err: %v) and the %q namespace (err: %v)", labelSelector, metav1.NamespaceSystem, configmanagement.ControllerNamespace, errKubeSystem.Error(), errConfigManagementSystem.Error())
+		cs.Error = fmt.Sprintf("Failed to list pods with the %q LabelSelector in the %q namespace (err: %v) and the %q namespace (err: %v)", ACMOperatorLabelSelector, metav1.NamespaceSystem, configmanagement.ControllerNamespace, errKubeSystem.Error(), errConfigManagementSystem.Error())
 		return false
 	case errConfigManagementSystem != nil && len(podListKubeSystem.Items) == 0:
 		// The ACM operator is installed in the kube-system namespace
 		cs.status = util.NotInstalledMsg
-		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", metav1.NamespaceSystem, configmanagement.ControllerNamespace, errConfigManagementSystem.Error())
+		cs.Error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", metav1.NamespaceSystem, configmanagement.ControllerNamespace, errConfigManagementSystem.Error())
 		return false
 	case errKubeSystem != nil && len(podListConfigManagementSystem.Items) == 0:
 		// The ACM operator is installed in the config-management-system namespace
 		cs.status = util.NotInstalledMsg
-		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", configmanagement.ControllerNamespace, metav1.NamespaceSystem, errKubeSystem.Error())
+		cs.Error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and failed to list pods in the %q namespace (err: %v)", configmanagement.ControllerNamespace, metav1.NamespaceSystem, errKubeSystem.Error())
 		return false
 	case len(podListKubeSystem.Items) == 0 && len(podListConfigManagementSystem.Items) == 0:
 		cs.status = util.NotInstalledMsg
-		cs.error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and %q namespace", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
+		cs.Error = fmt.Sprintf("Failed to find the ACM operator in the %q namespace and %q namespace", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
 		return false
 	case len(podListKubeSystem.Items) > 0 && len(podListConfigManagementSystem.Items) > 0:
 		cs.status = util.ErrorMsg
 		cmd := fmt.Sprintf("kubectl delete -n %s serviceaccounts config-management-operator && kubectl delete -n %s deployments config-management-operator", metav1.NamespaceSystem, metav1.NamespaceSystem)
-		cs.error = fmt.Sprintf("Found two ACM operators: one from the %q namespace, and the other from the %q namespace. Please remove the one from the %q namespace: %s", metav1.NamespaceSystem, configmanagement.ControllerNamespace, metav1.NamespaceSystem, cmd)
+		cs.Error = fmt.Sprintf("Found two ACM operators: one from the %q namespace, and the other from the %q namespace. Please remove the one from the %q namespace: %s", metav1.NamespaceSystem, configmanagement.ControllerNamespace, metav1.NamespaceSystem, cmd)
+		return false
+	case len(podListKubeSystem.Items) == 0 && !HasRunningPod(podListConfigManagementSystem.Items):
+		cs.status = util.ErrorMsg
+		cs.Error = fmt.Sprintf("The ACM operator Pod is not running in the %q namespace", configmanagement.ControllerNamespace)
+		return false
+	case len(podListConfigManagementSystem.Items) == 0 && !HasRunningPod(podListKubeSystem.Items):
+		cs.status = util.ErrorMsg
+		cs.Error = fmt.Sprintf("The ACM operator Pod is not running in the %q namespace", metav1.NamespaceSystem)
 		return false
 	default:
 		return true
 	}
 }
 
-// isConfigured returns true if the statusClient is connected to a cluster where
-// Config Sync is configured. Updates the given clusterState with status info if
+// HasRunningPod returns true if there is a Pod whose phase is running.
+func HasRunningPod(pods []corev1.Pod) bool {
+	for _, p := range pods {
+		if p.Status.Phase == corev1.PodRunning {
+			return true
+		}
+	}
+	return false
+}
+
+// IsConfigured returns true if the ClusterClient is connected to a cluster where
+// Config Sync is configured. Updates the given ClusterState with status info if
 // Config Sync is not configured.
-func (c *statusClient) isConfigured(ctx context.Context, cs *clusterState) bool {
-	errs, err := c.configManagement.NestedStringSlice(ctx, "status", "errors")
+func (c *ClusterClient) IsConfigured(ctx context.Context, cs *ClusterState) bool {
+	errs, err := c.ConfigManagement.NestedStringSlice(ctx, "status", "errors")
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			cs.status = util.NotConfiguredMsg
-			cs.error = "ConfigManagement resource is missing"
+			cs.Error = "ConfigManagement resource is missing"
 		} else {
 			cs.status = util.ErrorMsg
-			cs.error = err.Error()
+			cs.Error = err.Error()
 		}
 		return false
 	}
 
 	if len(errs) > 0 {
 		cs.status = util.NotConfiguredMsg
-		cs.error = strings.Join(errs, ", ")
+		cs.Error = strings.Join(errs, ", ")
 		return false
 	}
 
 	return true
 }
 
-// statusClients returns a map of of typed clients keyed by the name of the kubeconfig context they
+// ClusterClients returns a map of of typed clients keyed by the name of the kubeconfig context they
 // are initialized from.
-func statusClients(ctx context.Context, contexts []string) (map[string]*statusClient, error) {
-	configs, err := restconfig.AllKubectlConfigs(clientTimeout)
+func ClusterClients(ctx context.Context, contexts []string) (map[string]*ClusterClient, error) {
+	configs, err := restconfig.AllKubectlConfigs(flags.DefaultClusterClientTimeout)
 	if configs == nil {
 		return nil, errors.Wrap(err, "failed to create client configs")
 	}
@@ -341,7 +368,7 @@ func statusClients(ctx context.Context, contexts []string) (map[string]*statusCl
 
 	var mapMutex sync.Mutex
 	var wg sync.WaitGroup
-	clientMap := make(map[string]*statusClient)
+	clientMap := make(map[string]*ClusterClient)
 	unreachableClusters := false
 
 	s := runtime.NewScheme()
@@ -349,6 +376,9 @@ func statusClients(ctx context.Context, contexts []string) (map[string]*statusCl
 		return nil, err
 	}
 	if sErr := v1alpha1.AddToScheme(s); sErr != nil {
+		return nil, err
+	}
+	if sErr := apiextensionsv1.AddToScheme(s); sErr != nil {
 		return nil, err
 	}
 
@@ -390,7 +420,7 @@ func statusClients(ctx context.Context, contexts []string) (map[string]*statusCl
 			// on-cluster since the reachability check fails in that case.
 			if isOnCluster() || isReachable(ctx, pcs, cfgName) {
 				mapMutex.Lock()
-				clientMap[cfgName] = &statusClient{
+				clientMap[cfgName] = &ClusterClient{
 					cl,
 					pcs.ConfigmanagementV1().Repos(),
 					kcs,

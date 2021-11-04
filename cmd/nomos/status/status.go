@@ -28,7 +28,6 @@ const (
 )
 
 var (
-	clientTimeout   time.Duration
 	pollingInterval time.Duration
 	namespace       string
 	resourceStatus  bool
@@ -36,7 +35,7 @@ var (
 
 func init() {
 	flags.AddContexts(Cmd)
-	Cmd.Flags().DurationVar(&clientTimeout, "timeout", 3*time.Second, "Timeout for connecting to each cluster")
+	Cmd.Flags().DurationVar(&flags.ClientTimeout, "timeout", flags.DefaultClusterClientTimeout, "Timeout for connecting to each cluster")
 	Cmd.Flags().DurationVar(&pollingInterval, "poll", 0*time.Second, "Polling interval (leave unset to run once)")
 	Cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace repo to get status for (multi-repo only, leave unset to get all repos)")
 	Cmd.Flags().BoolVar(&resourceStatus, "resources", true, "show resource level status for Namespace repo (multi-repo only)")
@@ -47,7 +46,7 @@ func GetStatusReadCloser(ctx context.Context, contexts []string) (io.ReadCloser,
 	r, w, _ := os.Pipe()
 	writer := util.NewWriter(w)
 
-	clientMap, err := statusClients(ctx, contexts)
+	clientMap, err := ClusterClients(ctx, contexts)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +73,7 @@ var Cmd = &cobra.Command{
 
 		fmt.Println("Connecting to clusters...")
 
-		clientMap, err := statusClients(cmd.Context(), flags.Contexts)
+		clientMap, err := ClusterClients(cmd.Context(), flags.Contexts)
 		if err != nil {
 			// If "no such file or directory" error, unwrap and display before exiting
 			if unWrapped := errors.Cause(err); os.IsNotExist(unWrapped) {
@@ -104,7 +103,7 @@ var Cmd = &cobra.Command{
 }
 
 // clusterNames returns a sorted list of names from the given clientMap.
-func clusterNames(clientMap map[string]*statusClient) []string {
+func clusterNames(clientMap map[string]*ClusterClient) []string {
 	var names []string
 	for name := range clientMap {
 		names = append(names, name)
@@ -114,8 +113,8 @@ func clusterNames(clientMap map[string]*statusClient) []string {
 }
 
 // clusterStates returns a map of clusterStates calculated from the given map of clients.
-func clusterStates(ctx context.Context, clientMap map[string]*statusClient) map[string]*clusterState {
-	stateMap := make(map[string]*clusterState)
+func clusterStates(ctx context.Context, clientMap map[string]*ClusterClient) map[string]*ClusterState {
+	stateMap := make(map[string]*ClusterState)
 	for name, client := range clientMap {
 		if client == nil {
 			stateMap[name] = unavailableCluster(name)
@@ -130,7 +129,7 @@ func clusterStates(ctx context.Context, clientMap map[string]*statusClient) map[
 // and then prints a formatted status row for each one. If there are any errors reported by either
 // object, those are printed in a second table under the status table.
 // nolint:errcheck
-func printStatus(ctx context.Context, writer *tabwriter.Writer, clientMap map[string]*statusClient, names []string) {
+func printStatus(ctx context.Context, writer *tabwriter.Writer, clientMap map[string]*ClusterClient, names []string) {
 	// First build up a map of all the states to display.
 	stateMap := clusterStates(ctx, clientMap)
 
@@ -152,7 +151,7 @@ func printStatus(ctx context.Context, writer *tabwriter.Writer, clientMap map[st
 		state := stateMap[name]
 		if name == currentContext {
 			// Prepend an asterisk for the users' current context
-			state.ref = "*" + name
+			state.Ref = "*" + name
 		}
 		state.printRows(writer)
 	}

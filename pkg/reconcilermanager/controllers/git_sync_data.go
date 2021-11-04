@@ -14,6 +14,12 @@ import (
 const (
 	// DefaultSyncRev is the default git revision.
 	DefaultSyncRev = "HEAD"
+	// DefaultSyncBranch is the default git branch.
+	DefaultSyncBranch = "master"
+	// DefaultSyncDir is the default sync directory.
+	DefaultSyncDir = "."
+	// DefaultSyncWaitSecs is the default wait seconds.
+	DefaultSyncWaitSecs = 15
 	// SyncDepthNoRev is the default git depth if syncing with default sync revision (`HEAD`).
 	SyncDepthNoRev = "1"
 	// SyncDepthRev is the default git depth if syncing with a specific sync revision (tag or hash).

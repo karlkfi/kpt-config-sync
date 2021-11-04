@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -32,6 +33,9 @@ const (
 
 	// DefaultHydrationOutput specifies the default location to write the hydrated output.
 	DefaultHydrationOutput = "compiled"
+
+	// DefaultClusterClientTimeout specifies the timeout for connecting to each cluster.
+	DefaultClusterClientTimeout = 3 * time.Second
 )
 
 var (
@@ -53,6 +57,9 @@ var (
 
 	// OutputFormat is the format of output.
 	OutputFormat string
+
+	// ClientTimeout is a flag value to specify how long to wait before timeout of client connection.
+	ClientTimeout time.Duration
 )
 
 // AddContexts adds the --contexts flag.

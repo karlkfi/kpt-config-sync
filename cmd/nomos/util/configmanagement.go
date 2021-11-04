@@ -39,6 +39,43 @@ func NewConfigManagementClient(cfg *rest.Config) (*ConfigManagementClient, error
 	return &ConfigManagementClient{cl.Resource(gvr).Namespace("")}, nil
 }
 
+// NestedInt returns the integer value specified by the given path of field names.
+// Returns false if a value is not found and an error if value is not a bool.
+func (c *ConfigManagementClient) NestedInt(ctx context.Context, fields ...string) (int, error) {
+	unstr, err := c.resInt.Get(ctx, ConfigManagementName, metav1.GetOptions{}, "")
+	if err != nil {
+		return 0, err
+	}
+
+	val, _, err := unstructured.NestedInt64(unstr.UnstructuredContent(), fields...)
+	if err != nil {
+		return 0, errors.Wrap(err, "internal error parsing ConfigManagement")
+	}
+
+	return int(val), nil
+}
+
+// EnableMultiRepo removes the spec.git field and sets spec.enableMultiRepo to true.
+// It returns both the original and the updated ConfigManagement objects.
+func (c *ConfigManagementClient) EnableMultiRepo(ctx context.Context) (*unstructured.Unstructured, *unstructured.Unstructured, error) {
+	unstr, err := c.resInt.Get(ctx, ConfigManagementName, metav1.GetOptions{}, "")
+	if err != nil {
+		return nil, nil, err
+	}
+	orig := unstr.DeepCopy()
+	if err := unstructured.SetNestedField(unstr.UnstructuredContent(), true, "spec", "enableMultiRepo"); err != nil {
+		return orig, nil, err
+	}
+	unstructured.RemoveNestedField(unstr.UnstructuredContent(), "spec", "git")
+	return orig, unstr, nil
+}
+
+// UpdateConfigManagement updates the ConfigManagement object in the API server.
+func (c *ConfigManagementClient) UpdateConfigManagement(ctx context.Context, obj *unstructured.Unstructured) error {
+	_, err := c.resInt.Update(ctx, obj, metav1.UpdateOptions{}, "")
+	return err
+}
+
 // NestedBool returns the boolean value specified by the given path of field names.
 // Returns false if a value is not found and an error if value is not a bool.
 func (c *ConfigManagementClient) NestedBool(ctx context.Context, fields ...string) (bool, error) {
