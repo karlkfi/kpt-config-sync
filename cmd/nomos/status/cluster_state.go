@@ -87,6 +87,11 @@ func (r *repoState) printRows(writer io.Writer) {
 			} else {
 				fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\n", indent, r.Namespace, r.String(), r.Status, r.SourceHash)
 			}
+			if len(r.Conditions) > 0 {
+				for _, condition := range r.Conditions {
+					fmt.Fprintf(writer, "%s%s%s%s%s\n", indent, indent, indent, indent, condition.Message)
+				}
+			}
 		}
 	}
 }

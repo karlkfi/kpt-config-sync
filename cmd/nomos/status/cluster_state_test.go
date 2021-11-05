@@ -46,7 +46,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 				commit:    "abc123",
 				resources: exampleResources("abc123"),
 			},
-			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n  \tbookstore\tdeployment.apps/test\tCurrent\tabc123\n  \tbookstore\tservice/test\tCurrent\tabc123\n  \tbookstore\tservice/test2\tConflict\tabc123\n",
+			"  <root>\thttps://github.com/tester/sample@master\t\n  SYNCED\tabc123\t\n  Managed resources:\n  \tNAMESPACE\tNAME\tSTATUS\tSOURCEHASH\n  \tbookstore\tdeployment.apps/test\tCurrent\tabc123\n  \tbookstore\tservice/test\tFailed\tabc123\n        A detailed message explaining the current condition.\n  \tbookstore\tservice/test2\tConflict\tabc123\n        A detailed message explaining why it is in the status ownership overlap.\n",
 		},
 		{
 			"optional git subdirectory specified",
@@ -2389,11 +2389,12 @@ func withResources() core.MetaMutator {
 				"kind":      "Service",
 				"namespace": "bookstore",
 				"name":      "test",
-				"status":    "Current",
+				"status":    "Failed",
 				"conditions": []interface{}{
 					map[string]interface{}{
-						"type":   "Stalled",
-						"status": "False",
+						"type":    "Stalled",
+						"status":  "True",
+						"message": "A detailed message explaining the current condition.",
 					},
 				},
 			},
@@ -2404,8 +2405,9 @@ func withResources() core.MetaMutator {
 				"status":    "Current",
 				"conditions": []interface{}{
 					map[string]interface{}{
-						"type":   "OwnershipOverlap",
-						"status": "True",
+						"type":    "OwnershipOverlap",
+						"status":  "True",
+						"message": "A detailed message explaining why it is in the status ownership overlap.",
 					},
 				},
 			},
@@ -2432,12 +2434,13 @@ func withResourcesAndCommit(commit string) core.MetaMutator {
 				"kind":       "Service",
 				"namespace":  "bookstore",
 				"name":       "test",
-				"status":     "Current",
+				"status":     "Failed",
 				"sourceHash": commit,
 				"conditions": []interface{}{
 					map[string]interface{}{
-						"type":   "Stalled",
-						"status": "False",
+						"type":    "Stalled",
+						"status":  "True",
+						"message": "A detailed message explaining the current condition.",
 					},
 				},
 			},
@@ -2449,8 +2452,9 @@ func withResourcesAndCommit(commit string) core.MetaMutator {
 				"sourceHash": commit,
 				"conditions": []interface{}{
 					map[string]interface{}{
-						"type":   "OwnershipOverlap",
-						"status": "True",
+						"type":    "OwnershipOverlap",
+						"status":  "True",
+						"message": "A detailed message explaining why it is in the status ownership overlap.",
 					},
 				},
 			},
@@ -2477,9 +2481,13 @@ func exampleResources(commit string) []resourceState {
 			Kind:       "Service",
 			Namespace:  "bookstore",
 			Name:       "test",
-			Status:     "Current",
+			Status:     "Failed",
 			SourceHash: commit,
-			Conditions: []Condition{{Type: "Stalled", Status: "False"}},
+			Conditions: []Condition{{
+				Type:    "Stalled",
+				Status:  "True",
+				Message: "A detailed message explaining the current condition.",
+			}},
 		},
 		{
 			Group:      "",
@@ -2488,7 +2496,11 @@ func exampleResources(commit string) []resourceState {
 			Name:       "test2",
 			Status:     "Conflict",
 			SourceHash: commit,
-			Conditions: []Condition{{Type: "OwnershipOverlap", Status: "True"}},
+			Conditions: []Condition{{
+				Type:    "OwnershipOverlap",
+				Status:  "True",
+				Message: "A detailed message explaining why it is in the status ownership overlap.",
+			}},
 		},
 	}
 }
