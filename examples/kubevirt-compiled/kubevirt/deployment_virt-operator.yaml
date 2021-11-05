@@ -43,12 +43,12 @@ spec:
         - "2"
         env:
         - name: OPERATOR_IMAGE
-          value: quay.io/kubevirt/virt-operator:v0.40.0
+          value: quay.io/kubevirt/virt-operator:v0.46.1
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.annotations['olm.targetNamespaces']
-        image: quay.io/kubevirt/virt-operator:v0.40.0
+        image: quay.io/kubevirt/virt-operator:v0.46.1
         imagePullPolicy: IfNotPresent
         name: virt-operator
         ports:
@@ -65,11 +65,16 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 5
           timeoutSeconds: 10
-        resources: {}
+        resources:
+          requests:
+            cpu: 10m
+            memory: 150Mi
         volumeMounts:
         - mountPath: /etc/virt-operator/certificates
           name: kubevirt-operator-certs
           readOnly: true
+        - mountPath: /profile-data
+          name: profile-data
       priorityClassName: kubevirt-cluster-critical
       securityContext:
         runAsNonRoot: true
@@ -82,3 +87,5 @@ spec:
         secret:
           optional: true
           secretName: kubevirt-operator-certs
+      - emptyDir: {}
+        name: profile-data

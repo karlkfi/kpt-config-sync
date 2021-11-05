@@ -48,17 +48,110 @@ spec:
                 properties:
                   selfSigned:
                     properties:
+                      ca:
+                        description: CA configuration CA certs are kept in the CA
+                          bundle as long as they are valid
+                        properties:
+                          duration:
+                            description: The requested 'duration' (i.e. lifetime)
+                              of the Certificate.
+                            type: string
+                          renewBefore:
+                            description: The amount of time before the currently issued
+                              certificate's "notAfter" time that we will begin to
+                              attempt to renew the certificate.
+                            type: string
+                        type: object
                       caOverlapInterval:
+                        description: Deprecated. Use CA.Duration and CA.RenewBefore
+                          instead
                         type: string
                       caRotateInterval:
+                        description: Deprecated. Use CA.Duration instead
                         type: string
                       certRotateInterval:
+                        description: Deprecated. Use Server.Duration instead
                         type: string
+                      server:
+                        description: Server configuration Certs are rotated and discarded
+                        properties:
+                          duration:
+                            description: The requested 'duration' (i.e. lifetime)
+                              of the Certificate.
+                            type: string
+                          renewBefore:
+                            description: The amount of time before the currently issued
+                              certificate's "notAfter" time that we will begin to
+                              attempt to renew the certificate.
+                            type: string
+                        type: object
                     type: object
                 type: object
               configuration:
                 description: holds kubevirt configurations. same as the virt-configMap
                 properties:
+                  apiConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
+                  controllerConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                   cpuModel:
                     type: string
                   cpuRequest:
@@ -67,11 +160,26 @@ spec:
                     - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
+                  defaultRuntimeClass:
+                    type: string
                   developerConfiguration:
                     description: DeveloperConfiguration holds developer options
                     properties:
                       cpuAllocationRatio:
                         type: integer
+                      diskVerification:
+                        description: DiskVerification holds container disks verification
+                          limits
+                        properties:
+                          memoryLimit:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - memoryLimit
+                        type: object
                       featureGates:
                         items:
                           type: string
@@ -99,6 +207,15 @@ spec:
                         type: object
                       memoryOvercommit:
                         type: integer
+                      minimumClusterTSCFrequency:
+                        description: Allow overriding the automatically determined
+                          minimum TSC frequency of the cluster and fixate the minimum
+                          to this frequency.
+                        format: int64
+                        type: integer
+                      minimumReservePVCBytes:
+                        format: int64
+                        type: integer
                       nodeSelectors:
                         additionalProperties:
                           type: string
@@ -106,18 +223,62 @@ spec:
                       pvcTolerateLessSpaceUpToPercent:
                         type: integer
                       useEmulation:
+                        description: UseEmulation can be set to true to allow fallback
+                          to software emulation in case hardware-assisted emulation
+                          is not available.
                         type: boolean
                     type: object
                   emulatedMachines:
                     items:
                       type: string
                     type: array
+                  handlerConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                   imagePullPolicy:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
                   machineType:
                     type: string
+                  mediatedDevicesConfiguration:
+                    description: MediatedDevicesConfiguration holds inforamtion about
+                      MDEV types to be defined, if available
+                    properties:
+                      mediatedDevicesTypes:
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: atomic
+                    type: object
                   memBalloonStatsPeriod:
                     format: int32
                     type: integer
@@ -137,6 +298,8 @@ spec:
                       completionTimeoutPerGiB:
                         format: int64
                         type: integer
+                      disableTLS:
+                        type: boolean
                       nodeDrainTaintKey:
                         type: string
                       parallelMigrationsPerCluster:
@@ -196,10 +359,20 @@ spec:
                             allowed for passthrough
                           properties:
                             externalResourceProvider:
+                              description: If true, KubeVirt will leave the allocation
+                                and monitoring to an external device plugin
                               type: boolean
                             pciVendorSelector:
+                              description: The vendor_id:product_id tuple of the PCI
+                                device
                               type: string
                             resourceName:
+                              description: The name of the resource that is representing
+                                the device. Exposed by a device plugin and requested
+                                by VMs. Typically of the form vendor.com/product_nameThe
+                                name of the resource that is representing the device.
+                                Exposed by a device plugin and requested by VMs. Typically
+                                of the form vendor.com/product_name
                               type: string
                           required:
                           - pciVendorSelector
@@ -224,12 +397,63 @@ spec:
                         type: string
                     type: object
                   supportedGuestAgentVersions:
+                    description: deprecated
                     items:
                       type: string
                     type: array
+                  virtualMachineInstancesPerNode:
+                    type: integer
+                  webhookConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                 type: object
               customizeComponents:
                 properties:
+                  flags:
+                    description: Configure the value used for deployment and daemonset
+                      resources
+                    properties:
+                      api:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      controller:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      handler:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                   patches:
                     items:
                       properties:
@@ -1790,6 +2014,11 @@ spec:
                       description: resource is the resource type of the thing you're
                         tracking
                       type: string
+                  required:
+                  - group
+                  - lastGeneration
+                  - name
+                  - resource
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
@@ -1855,17 +2084,110 @@ spec:
                 properties:
                   selfSigned:
                     properties:
+                      ca:
+                        description: CA configuration CA certs are kept in the CA
+                          bundle as long as they are valid
+                        properties:
+                          duration:
+                            description: The requested 'duration' (i.e. lifetime)
+                              of the Certificate.
+                            type: string
+                          renewBefore:
+                            description: The amount of time before the currently issued
+                              certificate's "notAfter" time that we will begin to
+                              attempt to renew the certificate.
+                            type: string
+                        type: object
                       caOverlapInterval:
+                        description: Deprecated. Use CA.Duration and CA.RenewBefore
+                          instead
                         type: string
                       caRotateInterval:
+                        description: Deprecated. Use CA.Duration instead
                         type: string
                       certRotateInterval:
+                        description: Deprecated. Use Server.Duration instead
                         type: string
+                      server:
+                        description: Server configuration Certs are rotated and discarded
+                        properties:
+                          duration:
+                            description: The requested 'duration' (i.e. lifetime)
+                              of the Certificate.
+                            type: string
+                          renewBefore:
+                            description: The amount of time before the currently issued
+                              certificate's "notAfter" time that we will begin to
+                              attempt to renew the certificate.
+                            type: string
+                        type: object
                     type: object
                 type: object
               configuration:
                 description: holds kubevirt configurations. same as the virt-configMap
                 properties:
+                  apiConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
+                  controllerConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                   cpuModel:
                     type: string
                   cpuRequest:
@@ -1874,11 +2196,26 @@ spec:
                     - type: string
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
+                  defaultRuntimeClass:
+                    type: string
                   developerConfiguration:
                     description: DeveloperConfiguration holds developer options
                     properties:
                       cpuAllocationRatio:
                         type: integer
+                      diskVerification:
+                        description: DiskVerification holds container disks verification
+                          limits
+                        properties:
+                          memoryLimit:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - memoryLimit
+                        type: object
                       featureGates:
                         items:
                           type: string
@@ -1906,6 +2243,15 @@ spec:
                         type: object
                       memoryOvercommit:
                         type: integer
+                      minimumClusterTSCFrequency:
+                        description: Allow overriding the automatically determined
+                          minimum TSC frequency of the cluster and fixate the minimum
+                          to this frequency.
+                        format: int64
+                        type: integer
+                      minimumReservePVCBytes:
+                        format: int64
+                        type: integer
                       nodeSelectors:
                         additionalProperties:
                           type: string
@@ -1913,18 +2259,62 @@ spec:
                       pvcTolerateLessSpaceUpToPercent:
                         type: integer
                       useEmulation:
+                        description: UseEmulation can be set to true to allow fallback
+                          to software emulation in case hardware-assisted emulation
+                          is not available.
                         type: boolean
                     type: object
                   emulatedMachines:
                     items:
                       type: string
                     type: array
+                  handlerConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                   imagePullPolicy:
                     description: PullPolicy describes a policy for if/when to pull
                       a container image
                     type: string
                   machineType:
                     type: string
+                  mediatedDevicesConfiguration:
+                    description: MediatedDevicesConfiguration holds inforamtion about
+                      MDEV types to be defined, if available
+                    properties:
+                      mediatedDevicesTypes:
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: atomic
+                    type: object
                   memBalloonStatsPeriod:
                     format: int32
                     type: integer
@@ -1944,6 +2334,8 @@ spec:
                       completionTimeoutPerGiB:
                         format: int64
                         type: integer
+                      disableTLS:
+                        type: boolean
                       nodeDrainTaintKey:
                         type: string
                       parallelMigrationsPerCluster:
@@ -2003,10 +2395,20 @@ spec:
                             allowed for passthrough
                           properties:
                             externalResourceProvider:
+                              description: If true, KubeVirt will leave the allocation
+                                and monitoring to an external device plugin
                               type: boolean
                             pciVendorSelector:
+                              description: The vendor_id:product_id tuple of the PCI
+                                device
                               type: string
                             resourceName:
+                              description: The name of the resource that is representing
+                                the device. Exposed by a device plugin and requested
+                                by VMs. Typically of the form vendor.com/product_nameThe
+                                name of the resource that is representing the device.
+                                Exposed by a device plugin and requested by VMs. Typically
+                                of the form vendor.com/product_name
                               type: string
                           required:
                           - pciVendorSelector
@@ -2031,12 +2433,63 @@ spec:
                         type: string
                     type: object
                   supportedGuestAgentVersions:
+                    description: deprecated
                     items:
                       type: string
                     type: array
+                  virtualMachineInstancesPerNode:
+                    type: integer
+                  webhookConfiguration:
+                    description: ReloadableComponentConfiguration holds all generic
+                      k8s configuration options which can be reloaded by components
+                      without requiring a restart.
+                    properties:
+                      restClient:
+                        description: RestClient can be used to tune certain aspects
+                          of the k8s client in use.
+                        properties:
+                          rateLimiter:
+                            description: RateLimiter allows selecting and configuring
+                              different rate limiters for the k8s client.
+                            properties:
+                              tokenBucketRateLimiter:
+                                properties:
+                                  burst:
+                                    description: Maximum burst for throttle. If it's
+                                      zero, the component default will be used
+                                    type: integer
+                                  qps:
+                                    description: QPS indicates the maximum QPS to
+                                      the apiserver from this client. If it's zero,
+                                      the component default will be used
+                                    type: number
+                                required:
+                                - burst
+                                - qps
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                 type: object
               customizeComponents:
                 properties:
+                  flags:
+                    description: Configure the value used for deployment and daemonset
+                      resources
+                    properties:
+                      api:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      controller:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      handler:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                   patches:
                     items:
                       properties:
@@ -3597,6 +4050,11 @@ spec:
                       description: resource is the resource type of the thing you're
                         tracking
                       type: string
+                  required:
+                  - group
+                  - lastGeneration
+                  - name
+                  - resource
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
