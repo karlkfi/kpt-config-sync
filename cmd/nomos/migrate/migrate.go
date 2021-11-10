@@ -92,12 +92,12 @@ var Cmd = &cobra.Command{
 				printError(cs.Error)
 				continue
 			}
-			isMulti, err := c.ConfigManagement.NestedBool(cmd.Context(), "spec", "enableMultiRepo")
+			isMulti, err := c.ConfigManagement.IsMultiRepo(cmd.Context())
 			if err != nil {
 				printError(err)
 				continue
 			}
-			if isMulti {
+			if isMulti != nil && *isMulti {
 				printNotice("The cluster is already running in the multi-repo mode. No migration is needed")
 				continue
 			}
@@ -115,7 +115,7 @@ var Cmd = &cobra.Command{
 
 			printHint(`Resources for the multi-repo mode have been saved in a temp folder. If the migration process is terminated, it can be recovered manually by running the following commands:
   kubectl apply -f %s && \
-  kubectl wait –for condition=established crd rootsyncs.configsync.gke.io && \
+  kubectl wait --for condition=established crd rootsyncs.configsync.gke.io && \
   kubectl apply -f %s`, cmYamlFile, rsYamlFile)
 
 			if dryRun {

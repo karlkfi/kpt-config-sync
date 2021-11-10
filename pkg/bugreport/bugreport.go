@@ -39,8 +39,6 @@ import (
 	corev1Client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type coreClient interface {
@@ -112,6 +110,14 @@ func New(ctx context.Context, cfg *rest.Config) (*BugReporter, error) {
 		} else {
 			errorList = append(errorList, err)
 		}
+	}
+
+	isMulti, _, err := unstructured.NestedBool(cm.UnstructuredContent(), "spec", "enableMultiRepo")
+	if err != nil {
+		fmt.Println("ConfigManagement parsing error", err)
+	}
+	if !isMulti {
+		util.MonoRepoNotice(os.Stdout, currentk8sContext)
 	}
 
 	return &BugReporter{
@@ -350,7 +356,7 @@ func (b *BugReporter) fetchConfigSyncWebhookConfig(ctx context.Context) (rd []Re
 	name := "admission-webhook.configsync.gke.io"
 	webhook, err := b.clientSet.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if !apierrors.IsNotFound(err) {
+		if !errors.IsNotFound(err) {
 			b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to get the %q ValidatingWebhookConfiguration object: %v", name, err))
 		}
 	} else {

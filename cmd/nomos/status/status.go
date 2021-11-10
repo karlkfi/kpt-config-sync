@@ -112,17 +112,23 @@ func clusterNames(clientMap map[string]*ClusterClient) []string {
 	return names
 }
 
-// clusterStates returns a map of clusterStates calculated from the given map of clients.
-func clusterStates(ctx context.Context, clientMap map[string]*ClusterClient) map[string]*ClusterState {
+// clusterStates returns a map of clusterStates calculated from the given map of
+// clients, and a list of clusters running in the mono-repo mode.
+func clusterStates(ctx context.Context, clientMap map[string]*ClusterClient) (map[string]*ClusterState, []string) {
 	stateMap := make(map[string]*ClusterState)
+	var monoRepoClusters []string
 	for name, client := range clientMap {
 		if client == nil {
 			stateMap[name] = unavailableCluster(name)
 		} else {
-			stateMap[name] = client.clusterStatus(ctx, name, namespace)
+			cs := client.clusterStatus(ctx, name, namespace)
+			stateMap[name] = cs
+			if cs.isMulti != nil && !*cs.isMulti {
+				monoRepoClusters = append(monoRepoClusters, name)
+			}
 		}
 	}
-	return stateMap
+	return stateMap, monoRepoClusters
 }
 
 // printStatus fetches ConfigManagementStatus and/or RepoStatus from each cluster in the given map
@@ -131,7 +137,10 @@ func clusterStates(ctx context.Context, clientMap map[string]*ClusterClient) map
 // nolint:errcheck
 func printStatus(ctx context.Context, writer *tabwriter.Writer, clientMap map[string]*ClusterClient, names []string) {
 	// First build up a map of all the states to display.
-	stateMap := clusterStates(ctx, clientMap)
+	stateMap, monoRepoClusters := clusterStates(ctx, clientMap)
+
+	// Log a notice for the detected clusters that are running in the mono-repo mode.
+	util.MonoRepoNotice(writer, monoRepoClusters...)
 
 	currentContext, err := restconfig.CurrentContextName()
 	if err != nil {

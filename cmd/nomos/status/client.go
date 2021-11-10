@@ -112,6 +112,8 @@ func (c *ClusterClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha
 // clusterStatus returns the ClusterState for the cluster this client is connected to.
 func (c *ClusterClient) clusterStatus(ctx context.Context, cluster, namespace string) *ClusterState {
 	cs := &ClusterState{Ref: cluster}
+	var err error
+	cs.isMulti, err = c.ConfigManagement.IsMultiRepo(ctx)
 
 	if !c.IsInstalled(ctx, cs) {
 		return cs
@@ -120,7 +122,6 @@ func (c *ClusterClient) clusterStatus(ctx context.Context, cluster, namespace st
 		return cs
 	}
 
-	isMulti, err := c.ConfigManagement.NestedBool(ctx, "spec", "enableMultiRepo")
 	if err != nil {
 		cs.status = util.ErrorMsg
 		cs.Error = err.Error()
@@ -129,7 +130,7 @@ func (c *ClusterClient) clusterStatus(ctx context.Context, cluster, namespace st
 
 	if namespace != "" {
 		c.namespaceRepoClusterStatus(ctx, cs, namespace)
-	} else if isMulti {
+	} else if cs.isMulti != nil && *cs.isMulti {
 		c.multiRepoClusterStatus(ctx, cs)
 	} else {
 		c.monoRepoClusterStatus(ctx, cs)

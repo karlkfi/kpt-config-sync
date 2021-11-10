@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/client-go/rest"
 
@@ -98,7 +99,9 @@ func versionInternal(ctx context.Context, configs map[string]*rest.Config, w io.
 		}
 	}
 
-	vs := versions(ctx, configs)
+	vs, monoRepoClusters := versions(ctx, configs)
+	// Log a notice for the detected clusters that are running in the mono-repo mode.
+	util.MonoRepoNotice(w, monoRepoClusters...)
 	es := entries(vs)
 	tabulate(es, w)
 }
@@ -117,20 +120,20 @@ func filterConfigs(contexts []string, all map[string]*rest.Config) map[string]*r
 	return cfgs
 }
 
-func lookupVersion(ctx context.Context, cfg *rest.Config) (string, error) {
+func lookupVersionAndMode(ctx context.Context, cfg *rest.Config) (string, *bool, error) {
 	cmClient, err := util.NewConfigManagementClient(cfg)
 	if err != nil {
-		return util.ErrorMsg, err
+		return util.ErrorMsg, nil, err
 	}
-	// {
-	//   ...
-	//   "status": {
-	//     ...
-	//     "configManagementVersion": "some_string",
-	//     ...
-	//   }
-	// }
-	return cmClient.Version(ctx)
+	v, err := cmClient.Version(ctx)
+	if err != nil {
+		return util.ErrorMsg, nil, err
+	}
+	isMulti, err := cmClient.IsMultiRepo(ctx)
+	if apierrors.IsNotFound(err) {
+		return v, isMulti, nil
+	}
+	return v, isMulti, err
 }
 
 // vErr is either a version or an error.
@@ -140,10 +143,11 @@ type vErr struct {
 }
 
 // versions obtains the versions of all configmanagements from the contexts
-// supplied in the named configs.
-func versions(ctx context.Context, cfgs map[string]*rest.Config) map[string]vErr {
+// supplied in the named configs, and a list of clusters running in the mono-repo mode.
+func versions(ctx context.Context, cfgs map[string]*rest.Config) (map[string]vErr, []string) {
+	var monoRepoClusters []string
 	if len(cfgs) == 0 {
-		return nil
+		return nil, nil
 	}
 	vs := make(map[string]vErr, len(cfgs))
 	var (
@@ -155,14 +159,18 @@ func versions(ctx context.Context, cfgs map[string]*rest.Config) map[string]vErr
 		go func(n string, c *rest.Config) {
 			defer g.Done()
 			var ve vErr
-			ve.version, ve.err = lookupVersion(ctx, c)
+			var isMulti *bool
+			ve.version, isMulti, ve.err = lookupVersionAndMode(ctx, c)
+			if isMulti != nil && !*isMulti {
+				monoRepoClusters = append(monoRepoClusters, n)
+			}
 			m.Lock()
 			vs[n] = ve
 			m.Unlock()
 		}(n, c)
 	}
 	g.Wait()
-	return vs
+	return vs, monoRepoClusters
 }
 
 // entry is one entry of the output

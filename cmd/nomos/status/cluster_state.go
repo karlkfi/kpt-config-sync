@@ -27,8 +27,9 @@ type ClusterState struct {
 	Ref    string
 	status string
 	// Error represents the sync errors
-	Error string
-	repos []*repoState
+	Error   string
+	repos   []*repoState
+	isMulti *bool
 }
 
 func (c *ClusterState) printRows(writer io.Writer) {

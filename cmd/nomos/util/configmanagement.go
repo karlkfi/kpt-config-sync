@@ -138,3 +138,12 @@ func (c *ConfigManagementClient) Version(ctx context.Context) (string, error) {
 	}
 	return cmVersion, nil
 }
+
+// IsMultiRepo returns if the enableMultiRepoMode is true in the ConfigManagement objects.
+func (c *ConfigManagementClient) IsMultiRepo(ctx context.Context) (*bool, error) {
+	isMulti, err := c.NestedBool(ctx, "spec", "enableMultiRepo")
+	if err != nil {
+		return nil, err
+	}
+	return &isMulti, nil
+}
