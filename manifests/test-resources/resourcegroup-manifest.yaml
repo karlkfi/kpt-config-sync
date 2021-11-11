@@ -549,8 +549,8 @@ spec:
       - args:
         - --config=/conf/otel-agent-config.yaml
         command:
-        - /otelcol
-        image: gcr.io/config-management-release/otelcol:v0.22.0
+        - /otelcontribcol
+        image: gcr.io/config-management-release/otelcontribcol:v0.38.0
         livenessProbe:
           httpGet:
             path: /

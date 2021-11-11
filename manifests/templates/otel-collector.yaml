@@ -114,7 +114,7 @@ spec:
     spec:
       containers:
       - name: otel-collector
-        image: gcr.io/config-management-release/otelcontribcol:v0.22.0
+        image: gcr.io/config-management-release/otelcontribcol:v0.38.0
         command:
         - /otelcontribcol
         args:

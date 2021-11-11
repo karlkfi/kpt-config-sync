@@ -44,9 +44,9 @@ spec:
               name: reconciler-manager
               optional: true  # Currently nothing mandatory in the ConfigMap
       - name: otel-agent
-        image: gcr.io/config-management-release/otelcol:v0.22.0
+        image: gcr.io/config-management-release/otelcontribcol:v0.38.0
         command:
-        - /otelcol
+        - /otelcontribcol
         args:
         - "--config=/conf/otel-agent-config.yaml"
         resources:
