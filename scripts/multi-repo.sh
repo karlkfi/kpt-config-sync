@@ -56,6 +56,9 @@ sed -e "s|IMAGE_NAME|$MGR_TAG|g" ./manifests/templates/reconciler-manager.yaml \
   | kubectl apply -f -
 kubectl apply -f ./manifests/templates/reconciler-manager/dev.yaml
 
+# Apply the otel-collector
+kubectl apply -f ./manifests/templates/otel-collector.yaml
+
 # Apply the admission-webhook.yaml manifest.
 sed -e "s|IMAGE_NAME|$WEBHOOK_TAG|g" ./manifests/templates/admission-webhook.yaml \
   | tee admission-webhook.generated.yaml \

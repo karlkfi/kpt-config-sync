@@ -79,9 +79,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 	builder := utildiscovery.ScoperBuilder(p.discoveryInterface)
 
 	glog.Infof("Parsing files from git dir: %s", state.policyDir.OSPath())
-	start := time.Now()
 	objs, err := p.parser.Parse(filePaths)
-	metrics.RecordParseErrorAndDuration(ctx, err, start)
 	if err != nil {
 		return nil, err
 	}

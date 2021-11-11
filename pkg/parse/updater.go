@@ -82,7 +82,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 		//  retry without updating the respective status field as this is an expected
 		//  path.
 		gvks, applyErrs = u.applier.Apply(ctx, objs)
-		metrics.RecordLastApplyAndDuration(ctx, metrics.StatusTagKey(applyErrs), cache.git.commit, applyStart)
+		metrics.RecordApplyDuration(ctx, metrics.StatusTagKey(applyErrs), cache.git.commit, applyStart)
 		if applyErrs == nil && cache.parserErrs == nil {
 			cache.setApplierResult(gvks)
 		}
@@ -90,9 +90,7 @@ func (u *updater) update(ctx context.Context, cache *cacheForCommit) status.Mult
 	}
 
 	// Update the Remediator's watches to start new ones and stop old ones.
-	remediatorStart := time.Now()
 	watchErrs := u.remediator.UpdateWatches(ctx, gvks)
-	metrics.RecordWatchManagerUpdatesDuration(ctx, metrics.StatusTagKey(watchErrs), remediatorStart)
 	errs = status.Append(errs, watchErrs)
 
 	return errs

@@ -1,0 +1,12 @@
+apiVersion: configsync.gke.io/v1beta1
+kind: RootSync
+metadata:
+  name: root-sync
+  namespace: config-management-system
+spec:
+  git:
+    auth: none
+    branch: main
+    dir: .
+    repo: https://github.com/config-sync-examples/2.5k-namespaces-test
+  sourceFormat: unstructured

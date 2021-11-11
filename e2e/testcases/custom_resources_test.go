@@ -96,11 +96,6 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	}
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		// Validate parse error metric is emitted.
-		err = nt.ValidateParseErrors(reconciler.RootSyncName, status.UnknownKindErrorCode)
-		if err != nil {
-			return err
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
 	})
@@ -185,11 +180,6 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 	}
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		// Validate parse error metric is emitted.
-		err = nt.ValidateParseErrors(reconciler.RootSyncName, status.UnknownKindErrorCode)
-		if err != nil {
-			return err
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
 	})

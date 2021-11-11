@@ -6,7 +6,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/remediator/queue"
 	"github.com/google/nomos/pkg/status"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -135,7 +134,6 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			// It is safe to stop the watcher.
 			m.stopWatcher(gvk)
 			stoppedWatches++
-			metrics.RecordWatches(ctx, gvk, -1)
 
 		}
 	}
@@ -147,8 +145,6 @@ func (m *Manager) UpdateWatches(ctx context.Context, gvkMap map[schema.GroupVers
 			// We don't have a watcher for this type, so add a watcher for it.
 			if err := m.startWatcher(ctx, gvk); err != nil {
 				errs = status.Append(errs, err)
-			} else {
-				metrics.RecordWatches(ctx, gvk, 1)
 			}
 			startedWatches++
 		}
@@ -204,7 +200,6 @@ func (m *Manager) runWatcher(ctx context.Context, r Runnable, gvk schema.GroupVe
 		glog.Warningf("Error running watcher for %s: %v", gvk.String(), status.FormatSingleLine(err))
 		m.mux.Lock()
 		delete(m.watcherMap, gvk)
-		metrics.RecordWatches(ctx, gvk, -1)
 		m.needsUpdate = true
 		m.mux.Unlock()
 	}

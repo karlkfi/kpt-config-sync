@@ -23,11 +23,6 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
-		// Validate parse error metric is emitted.
-		err := nt.ValidateParseErrors(reconciler.RootSyncName, status.SourceErrorCode)
-		if err != nil {
-			return err
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})
@@ -66,11 +61,6 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	nt.WaitForRepoSyncSourceError(namespaceRepo, status.SourceErrorCode)
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		// Validate parse error metric is emitted.
-		err := nt.ValidateParseErrors(reconciler.RootSyncName, status.SourceErrorCode)
-		if err != nil {
-			nt.T.Errorf("validating parse_errors_total metric: %v", err)
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})

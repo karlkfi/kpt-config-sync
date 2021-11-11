@@ -293,11 +293,6 @@ func TestForceRevert(t *testing.T) {
 	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
-		// Validate parse error metric is emitted.
-		err := nt.ValidateParseErrors(reconciler.RootSyncName, "1017")
-		if err != nil {
-			return err
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})

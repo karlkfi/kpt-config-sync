@@ -276,14 +276,11 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 	// if their measurements haven't changed.
 	validatedMetrics := []string{
 		ocmetrics.APICallDurationView.Name,
-		ocmetrics.ParseDurationView.Name,
 		ocmetrics.ApplyDurationView.Name,
 		ocmetrics.ApplyOperationsView.Name,
-		ocmetrics.WatchManagerUpdatesDurationView.Name,
 		ocmetrics.ReconcileDurationView.Name,
 		ocmetrics.RemediateDurationView.Name,
 		ocmetrics.DeclaredResourcesView.Name,
-		ocmetrics.WatchesView.Name,
 	}
 
 	// Diff the metrics if previous metrics exist
@@ -307,7 +304,6 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 			}
 		}
 		newCsm[ocmetrics.DeclaredResourcesView.Name] = append(newCsm[ocmetrics.DeclaredResourcesView.Name], prev[ocmetrics.DeclaredResourcesView.Name]...)
-		newCsm[ocmetrics.WatchesView.Name] = append(newCsm[ocmetrics.WatchesView.Name], prev[ocmetrics.WatchesView.Name]...)
 	} else {
 		newCsm = parsedMetrics
 	}
@@ -423,15 +419,6 @@ func (nt *NT) ValidateErrorMetricsNotFound() error {
 				return err
 			}
 		}
-	}
-	return nil
-}
-
-// ValidateParseErrors validates that the `parse_error_total` metric exists
-// for the correct reconciler and has the correct error code tag.
-func (nt *NT) ValidateParseErrors(reconciler, errorCode string) error {
-	if nt.MultiRepo {
-		return nt.ReconcilerMetrics.ValidateParseError(reconciler, errorCode)
 	}
 	return nil
 }

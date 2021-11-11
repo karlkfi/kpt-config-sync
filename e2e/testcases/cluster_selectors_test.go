@@ -612,11 +612,6 @@ func TestClusterSelectorAnnotationConflicts(t *testing.T) {
 	}
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
-		// Validate parse error metric is emitted.
-		err := nt.ValidateParseErrors(reconciler.RootSyncName, selectors.ClusterSelectorAnnotationConflictErrorCode)
-		if err != nil {
-			return err
-		}
 		// Validate reconciler error metric is emitted.
 		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
 	})

@@ -160,7 +160,6 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := testmetrics.RegisterMetrics(metrics.ParseErrorsView)
 			parser := &root{
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
@@ -176,9 +175,6 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
 			if err == nil {
 				t.Errorf("parse() should return errors")
-			}
-			if diff := m.ValidateMetrics(metrics.ParseErrorsView, tc.wantMetrics); diff != "" {
-				t.Errorf(diff)
 			}
 		})
 	}

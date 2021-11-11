@@ -12,7 +12,11 @@ import (
 
 // RecordAPICallDuration produces a measurement for the APICallDuration view.
 func RecordAPICallDuration(ctx context.Context, operation, status string, gvk schema.GroupVersionKind, startTime time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyOperation, operation), tag.Upsert(KeyType, gvk.Kind), tag.Upsert(KeyStatus, status))
+	tagCtx, _ := tag.New(ctx,
+		//tag.Upsert(KeyName, ReconcilerTagKey()),
+		tag.Upsert(KeyOperation, operation),
+		//tag.Upsert(KeyType, gvk.Kind),
+		tag.Upsert(KeyStatus, status))
 	measurement := APICallDuration.M(time.Since(startTime).Seconds())
 	stats.Record(tagCtx, measurement)
 }
@@ -67,22 +71,12 @@ func RecordParserDuration(ctx context.Context, trigger, source, status string, s
 
 // RecordLastSync produces a measurement for the LastSync view.
 func RecordLastSync(ctx context.Context, commit string, timestamp time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyCommit, commit))
+	tagCtx, _ := tag.New(ctx,
+		tag.Upsert(KeyName, ReconcilerTagKey()),
+		//tag.Upsert(KeyCommit, commit),
+	)
 	measurement := LastSync.M(timestamp.Unix())
 	stats.Record(tagCtx, measurement)
-}
-
-// RecordParseErrorAndDuration produces measurements for the ParseDuration and ParseErrors views.
-func RecordParseErrorAndDuration(ctx context.Context, errs status.MultiError, startTime time.Time) {
-	durationTagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyStatus, StatusTagKey(errs)))
-	durationMeasurement := ParseDuration.M(time.Since(startTime).Seconds())
-	stats.Record(durationTagCtx, durationMeasurement)
-
-	errsMeasurement := ParseErrors.M(1)
-	for _, err := range status.ToCSE(errs) {
-		tagContext, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyErrorCode, err.Code))
-		stats.Record(tagContext, errsMeasurement)
-	}
 }
 
 // RecordDeclaredResources produces a measurement for the DeclaredResources view.
@@ -94,53 +88,60 @@ func RecordDeclaredResources(ctx context.Context, numResources int) {
 
 // RecordApplyOperation produces a measurement for the ApplyOperations view.
 func RecordApplyOperation(ctx context.Context, operation, status string, gvk schema.GroupVersionKind) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyOperation, operation), tag.Upsert(KeyType, gvk.Kind), tag.Upsert(KeyStatus, status))
+	tagCtx, _ := tag.New(ctx,
+		//tag.Upsert(KeyName, ReconcilerTagKey()),
+		tag.Upsert(KeyOperation, operation),
+		//tag.Upsert(KeyType, gvk.Kind),
+		tag.Upsert(KeyStatus, status))
 	measurement := ApplyOperations.M(1)
 	stats.Record(tagCtx, measurement)
 }
 
-// RecordLastApplyAndDuration produces measurements for the ApplyDuration and LastApplyTimestamp views.
-func RecordLastApplyAndDuration(ctx context.Context, status, commit string, startTime time.Time) {
+// RecordApplyDuration produces measurements for the ApplyDuration and LastApplyTimestamp views.
+func RecordApplyDuration(ctx context.Context, status, commit string, startTime time.Time) {
 	now := time.Now()
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyStatus, status), tag.Upsert(KeyCommit, commit))
+	lastApplyTagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyStatus, status), tag.Upsert(KeyCommit, commit))
+	tagCtx, _ := tag.New(ctx,
+		//tag.Upsert(KeyName, ReconcilerTagKey()),
+		tag.Upsert(KeyStatus, status),
+		//tag.Upsert(KeyCommit, commit),
+	)
 
 	durationMeasurement := ApplyDuration.M(now.Sub(startTime).Seconds())
 	lastApplyMeasurement := LastApply.M(now.Unix())
 
-	stats.Record(tagCtx, durationMeasurement, lastApplyMeasurement)
+	stats.Record(lastApplyTagCtx, durationMeasurement, lastApplyMeasurement)
+	stats.Record(tagCtx, durationMeasurement)
 }
 
 // RecordResourceFight produces measurements for the ResourceFights view.
 func RecordResourceFight(ctx context.Context, operation string, gvk schema.GroupVersionKind) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyOperation, operation), tag.Upsert(KeyType, gvk.Kind))
+	tagCtx, _ := tag.New(ctx,
+		tag.Upsert(KeyName, ReconcilerTagKey()),
+		//tag.Upsert(KeyOperation, operation),
+		//tag.Upsert(KeyType, gvk.Kind),
+	)
 	measurement := ResourceFights.M(1)
-	stats.Record(tagCtx, measurement)
-}
-
-// RecordWatches produces measurements for the Watches view.
-func RecordWatches(ctx context.Context, gvk schema.GroupVersionKind, count int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyType, gvk.Kind))
-	measurement := Watches.M(int64(count))
-	stats.Record(tagCtx, measurement)
-}
-
-// RecordWatchManagerUpdatesDuration produces measurements for the WatchManagerUpdatesDuration view.
-func RecordWatchManagerUpdatesDuration(ctx context.Context, status string, startTime time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyStatus, status))
-	measurement := WatchManagerUpdatesDuration.M(time.Since(startTime).Seconds())
 	stats.Record(tagCtx, measurement)
 }
 
 // RecordRemediateDuration produces measurements for the RemediateDuration view.
 func RecordRemediateDuration(ctx context.Context, status string, gvk schema.GroupVersionKind, startTime time.Time) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyStatus, status), tag.Upsert(KeyType, gvk.Kind))
+	tagCtx, _ := tag.New(ctx,
+		//tag.Upsert(KeyName, ReconcilerTagKey()),
+		tag.Upsert(KeyStatus, status),
+	//tag.Upsert(KeyType, gvk.Kind),
+	)
 	measurement := RemediateDuration.M(time.Since(startTime).Seconds())
 	stats.Record(tagCtx, measurement)
 }
 
 // RecordResourceConflict produces measurements for the ResourceConflicts view.
 func RecordResourceConflict(ctx context.Context, gvk schema.GroupVersionKind) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyType, gvk.Kind))
+	tagCtx, _ := tag.New(ctx,
+		tag.Upsert(KeyName, ReconcilerTagKey()),
+		//tag.Upsert(KeyType, gvk.Kind),
+	)
 	measurement := ResourceConflicts.M(1)
 	stats.Record(tagCtx, measurement)
 }
@@ -168,7 +169,7 @@ func RecordSkipRenderingCount(ctx context.Context) {
 
 // RecordResourceOverrideCount produces measurements for the ResourceOverrideCount view.
 func RecordResourceOverrideCount(ctx context.Context, reconcilerType, containerName, resourceType string) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType), tag.Upsert(KeyContainer, containerName), tag.Upsert(KeyContainer, containerName))
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType), tag.Upsert(KeyContainer, containerName), tag.Upsert(KeyResourceType, resourceType))
 	measurement := ResourceOverrideCount.M(1)
 	stats.Record(tagCtx, measurement)
 }
