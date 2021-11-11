@@ -46,7 +46,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 		nt.WaitForRepoSyncs()
 	})
 
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(7 * time.Minute))
 
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
@@ -110,7 +110,7 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 		nt.WaitForRepoSyncs()
 	})
 
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(5 * time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(7 * time.Minute))
 
 	err := nomostest.WaitForCRDs(nt, []string{"virtualmachines.kubevirt.io"})
 	if err != nil {
