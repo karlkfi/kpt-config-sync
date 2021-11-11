@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
@@ -166,10 +165,9 @@ func (csm ConfigSyncMetrics) ValidateErrorMetrics(reconciler string) error {
 // the correct error code tag and a value of at least 1.
 func (csm ConfigSyncMetrics) ValidateParseError(reconciler, errorCode string) error {
 	if _, ok := csm[ocmetrics.ParseErrorsView.Name]; ok {
-		reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 		validations := []Validation{
 			hasTags([]tag.Tag{
-				{Key: reconcilerKey, Value: reconciler},
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyErrorCode, Value: errorCode},
 			}),
 			valueGTE(1),
@@ -183,11 +181,10 @@ func (csm ConfigSyncMetrics) ValidateParseError(reconciler, errorCode string) er
 // for the correct reconciler with the expected values for each of its component tags.
 func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceValue, syncValue int) error {
 	if _, ok := csm[ocmetrics.ReconcilerErrorsView.Name]; ok {
-		reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 		for _, measurement := range csm[ocmetrics.ReconcilerErrorsView.Name] {
 			// If the measurement has a "source" tag, validate the values match.
 			if hasTags([]tag.Tag{
-				{Key: reconcilerKey, Value: reconciler},
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyComponent, Value: "source"},
 			})(measurement) == nil {
 				if err := valueEquals(sourceValue)(measurement); err != nil {
@@ -196,7 +193,7 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 			}
 			// If the measurement has a "sync" tag, validate the values match.
 			if hasTags([]tag.Tag{
-				{Key: reconcilerKey, Value: reconciler},
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyComponent, Value: "sync"},
 			})(measurement) == nil {
 				if err := valueEquals(syncValue)(measurement); err != nil {
@@ -212,10 +209,9 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 // for the correct reconciler and error code, and checks the metric value is correct.
 func (csm ConfigSyncMetrics) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
 	if _, ok := csm[ocmetrics.ReconcilerNonBlockingErrorsView.Name]; ok {
-		reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 		validations := []Validation{
 			hasTags([]tag.Tag{
-				{Key: reconcilerKey, Value: reconciler},
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyErrorCode, Value: errorCode},
 			}),
 			valueEquals(errorCount),
@@ -278,9 +274,8 @@ func (csm ConfigSyncMetrics) ValidateNoSSLVerifyCount(count int) error {
 // validateSuccessTag checks that the metric is recorded for the correct reconciler
 // and has a "success" tag value.
 func (csm ConfigSyncMetrics) validateSuccessTag(reconciler, metric string) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validation := hasTags([]tag.Tag{
-		{Key: reconcilerKey, Value: reconciler},
+		{Key: ocmetrics.KeyName, Value: reconciler},
 		{Key: ocmetrics.KeyStatus, Value: "success"},
 	})
 	return csm.validateMetric(metric, validation)
@@ -289,9 +284,8 @@ func (csm ConfigSyncMetrics) validateSuccessTag(reconciler, metric string) error
 // validateAPICallDuration checks that the `api_duration_seconds` metric is recorded
 // and has the correct reconciler, operation, status, and type tags.
 func (csm ConfigSyncMetrics) validateAPICallDuration(reconciler, operation, gvk string) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validation := hasTags([]tag.Tag{
-		{Key: reconcilerKey, Value: reconciler},
+		{Key: ocmetrics.KeyName, Value: reconciler},
 		{Key: ocmetrics.KeyOperation, Value: operation},
 		{Key: ocmetrics.KeyStatus, Value: "success"},
 		{Key: ocmetrics.KeyType, Value: gvk},
@@ -302,9 +296,8 @@ func (csm ConfigSyncMetrics) validateAPICallDuration(reconciler, operation, gvk 
 // ValidateDeclaredResources checks that the declared_resources metric is recorded
 // and has the expected value.
 func (csm ConfigSyncMetrics) ValidateDeclaredResources(reconciler string, value int) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
-		hasTags([]tag.Tag{{Key: reconcilerKey, Value: reconciler}}),
+		hasTags([]tag.Tag{{Key: ocmetrics.KeyName, Value: reconciler}}),
 		valueEquals(value),
 	}
 	return csm.validateMetric(ocmetrics.DeclaredResourcesView.Name, validations...)
@@ -315,10 +308,9 @@ func (csm ConfigSyncMetrics) ValidateDeclaredResources(reconciler string, value 
 // controllers may fail and retry successfully, the recorded value of this metric may
 // fluctuate, so we check that it is greater than or equal to the expected value.
 func (csm ConfigSyncMetrics) validateApplyOperations(reconciler, operation, gvk string, value int) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
 		hasTags([]tag.Tag{
-			{Key: reconcilerKey, Value: reconciler},
+			{Key: ocmetrics.KeyName, Value: reconciler},
 			{Key: ocmetrics.KeyOperation, Value: operation},
 			{Key: ocmetrics.KeyStatus, Value: "success"},
 			{Key: ocmetrics.KeyType, Value: gvk},
@@ -335,10 +327,9 @@ func (csm ConfigSyncMetrics) validateWatches(reconciler, gvk, value string) erro
 	if err != nil {
 		return err
 	}
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
 		hasTags([]tag.Tag{
-			{Key: reconcilerKey, Value: reconciler},
+			{Key: ocmetrics.KeyName, Value: reconciler},
 			{Key: ocmetrics.KeyType, Value: gvk},
 		}),
 		valueEquals(mv),
@@ -349,10 +340,9 @@ func (csm ConfigSyncMetrics) validateWatches(reconciler, gvk, value string) erro
 // validateRemediateDuration checks that the `remediate_duration_seconds` metric
 // is recorded and has the correct status and type tags.
 func (csm ConfigSyncMetrics) validateRemediateDuration(reconciler, gvk string) error {
-	reconcilerKey, _ := tag.NewKey(strings.ReplaceAll(reconciler, "-", "_"))
 	validations := []Validation{
 		hasTags([]tag.Tag{
-			{Key: reconcilerKey, Value: reconciler},
+			{Key: ocmetrics.KeyName, Value: reconciler},
 			{Key: ocmetrics.KeyStatus, Value: "success"},
 			{Key: ocmetrics.KeyType, Value: gvk},
 		}),

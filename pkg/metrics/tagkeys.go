@@ -3,25 +3,11 @@ package metrics
 import (
 	"os"
 	"regexp"
-	"strings"
 
 	"go.opencensus.io/tag"
 )
 
 var (
-	// KeyReconciler is a dynamic key where both the key and value are set to
-	// the name of the reconciler the metric is emitted from.
-	// Possible values: root_reconciler, ns_reconciler_<namespace>
-	//
-	// We need to use a dynamic label so that the OpenTelemetry Collector can
-	// differentiate between the metrics emitted by the different reconcilers.
-	// Otherwise, metrics will be randomly sampled:
-	// https://github.com/open-telemetry/opentelemetry-collector/issues/1076.
-	//
-	// TODO b/195486045 Upgrade Otel image to latest to include fix for this issue
-	// TODO b/199790294 Consolidate this key to KeyName when change to fixed label
-	KeyReconciler, _ = tag.NewKey(strings.ReplaceAll(ReconcilerTagKey(), "-", "_"))
-
 	// KeyName groups metrics by the reconciler name. Possible values: root-reconciler, ns-reconciler-<namespace>
 	KeyName, _ = tag.NewKey("name")
 
