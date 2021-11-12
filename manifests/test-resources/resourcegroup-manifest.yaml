@@ -469,7 +469,7 @@ data:
       opencensus:
         endpoint: otel-collector.config-management-monitoring:55678
         tls:
-           insecure: true
+          insecure: true
     processors:
       batch:
     extensions:
@@ -534,7 +534,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: gcr.io/config-management-release/resource-group-controller:v0.10.1
+        image: gcr.io/config-management-release/resource-group-controller:v0.10.3
         imagePullPolicy: Always
         name: manager
         resources:
@@ -571,12 +571,12 @@ spec:
           requests:
             cpu: 10m
             memory: 100Mi
-        volumeMounts:
-        - mountPath: /conf
-          name: otel-agent-config-vol
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
+        volumeMounts:
+        - mountPath: /conf
+          name: otel-agent-config-vol
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
