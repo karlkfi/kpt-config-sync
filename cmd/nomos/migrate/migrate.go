@@ -60,8 +60,8 @@ func init() {
 // Cmd performs the migration from mono-repo to multi-repo for all the provided contexts.
 var Cmd = &cobra.Command{
 	Use:   "migrate",
-	Short: "Migrates from the legacy Config Sync architecture to the multi-repo mode.",
-	Long:  "Tears down the legacy Config Sync architecture and creates new resources to support syncing from multiple Git repositories.",
+	Short: "Migrates to the new Config Sync architecture by enabling the multi-repo mode.",
+	Long:  "Migrates to the new Config Sync architecture by enabling the multi-repo mode. It provides you with additional features and gives you the flexibility to sync to a single repository, or multiple repositories.",
 	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Don't show usage on error, as argument validation passed.
@@ -86,7 +86,7 @@ var Cmd = &cobra.Command{
 		for context, c := range clientMap {
 			fmt.Println()
 			fmt.Println(util.Separator)
-			fmt.Printf("Migrating to the multi-repo mode on cluster %q ...\n", context)
+			fmt.Printf("Enabling the multi-repo mode on cluster %q ...\n", context)
 			cs := &status.ClusterState{Ref: context}
 			if !c.IsInstalled(cmd.Context(), cs) || !c.IsConfigured(cmd.Context(), cs) {
 				printError(cs.Error)
