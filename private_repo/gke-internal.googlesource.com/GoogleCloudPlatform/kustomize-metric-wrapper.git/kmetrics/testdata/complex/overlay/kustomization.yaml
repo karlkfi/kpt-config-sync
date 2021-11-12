@@ -1,0 +1,8 @@
+resources:
+- ../base
+- github.com/kubernetes-sigs/kustomize/examples/multibases/dev/?ref=v1.0.6
+namePrefix: overlay-
+patches:
+  - path: patch.yaml
+    target:
+      kind: Deployment

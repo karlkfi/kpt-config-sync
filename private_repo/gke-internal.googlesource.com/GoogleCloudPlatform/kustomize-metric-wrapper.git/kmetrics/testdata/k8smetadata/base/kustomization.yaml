@@ -1,0 +1,9 @@
+resources:
+- deployment.yaml
+
+namespace: foo
+nameSuffix: -bar
+
+labels:
+- pairs:
+    foo: bar

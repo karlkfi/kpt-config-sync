@@ -1,0 +1,28 @@
+bases:
+  - ./base-1
+  - ./base-2
+
+vars:
+  - name: SOME_SECRET_NAME
+    objref:
+      kind: Secret
+      name: my-secret
+      apiVersion: v1
+  - name: MY_SERVICE_NAME
+    objref:
+      kind: Service
+      name: my-service
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.name
+  - name: ANOTHER_DEPLOYMENTS_POD_RESTART_POLICY
+    objref:
+      kind: Deployment
+      name: my-deployment
+      apiVersion: apps/v1
+    fieldref:
+      fieldpath: spec.template.spec.restartPolicy
+
+crds:
+  - crds/typeA.yaml
+  - crds/typeB.yaml

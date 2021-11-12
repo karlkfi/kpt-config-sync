@@ -1,0 +1,9 @@
+resources:
+- deployment.yaml
+
+generators:
+- generator1.yaml
+- generator2.yaml
+
+components:
+  - ./components

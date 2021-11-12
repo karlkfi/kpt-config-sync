@@ -24,6 +24,7 @@ import (
 	"github.com/google/nomos/pkg/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/pkg/errors"
+	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
 )
 
 const (
@@ -110,7 +111,7 @@ func mustDeleteOutput(err error, output string) {
 }
 
 // kustomizeBuild runs the 'kustomize build' command to render the configs.
-func kustomizeBuild(input, output string) HydrationError {
+func kustomizeBuild(input, output string, sendMetrics bool) HydrationError {
 	// The `--enable-alpha-plugins` and `--enable-exec` flags are to support rendering
 	// Helm charts using the Helm inflation function, see go/kust-helm-for-config-sync.
 	// The `--enable-helm` flag is to enable use of the Helm chart inflator generator.
@@ -118,7 +119,7 @@ func kustomizeBuild(input, output string) HydrationError {
 	// inflation function are supported. This provides us with a fallback plan
 	// if the new Helm inflation function is having issues.
 	// It has no side-effect if no Helm chart in the DRY configs.
-	args := []string{"build", input, "--enable-alpha-plugins", "--enable-exec", "--enable-helm", "--output", output}
+	args := []string{"--enable-alpha-plugins", "--enable-exec", "--enable-helm", "--output", output}
 
 	if _, err := os.Stat(output); err == nil {
 		mustDeleteOutput(err, output)
@@ -129,12 +130,14 @@ func kustomizeBuild(input, output string) HydrationError {
 		return NewInternalError(errors.Wrapf(err, "unable to make directory: %s", output))
 	}
 
-	out, err := runCommand("", Kustomize, args...)
+	// run kustomize build with the wrapper library
+	out, err := kmetrics.RunKustomizeBuild(context.Background(), sendMetrics, input, args...)
 	if err != nil {
 		kustomizeErr := errors.Wrapf(err, "failed to run kustomize build in %s, stdout: %s", input, out)
 		mustDeleteOutput(kustomizeErr, output)
 		return NewActionableError(kustomizeErr)
 	}
+
 	return nil
 }
 
@@ -243,7 +246,7 @@ func ValidateAndRunKustomize(sourcePath string) (cmpath.Absolute, error) {
 		return output, err
 	}
 
-	if err := kustomizeBuild(sourcePath, tmpHydratedDir); err != nil {
+	if err := kustomizeBuild(sourcePath, tmpHydratedDir, false); err != nil {
 		return output, errors.Wrapf(err, "unable to render the source configs in %s", sourcePath)
 	}
 

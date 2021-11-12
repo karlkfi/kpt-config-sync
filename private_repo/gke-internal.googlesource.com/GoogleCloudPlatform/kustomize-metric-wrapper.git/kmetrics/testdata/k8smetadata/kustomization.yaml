@@ -1,0 +1,12 @@
+resources:
+- ./base
+
+commonLabels:
+  a: b
+  c: d
+  e: f
+
+labels:
+- pairs:
+    g: h
+    i: j

@@ -1,0 +1,11 @@
+resources:
+- deployment.yaml
+namePrefix: base-
+patches:
+  - path: patch.yaml
+    target:
+      kind: Deployment
+patchesStrategicMerge:
+  - patchSM1.yaml
+  - patchSM2.yaml
+  - patchSM3.yaml

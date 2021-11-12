@@ -12,10 +12,12 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
+	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/log"
+	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -58,6 +60,23 @@ func main() {
 	log.Setup()
 	profiler.Service()
 	ctrl.SetLogger(glogr.New())
+
+	// Register the kustomize usage metric views.
+	if err := kmetrics.RegisterKustomizeMetricsViews(); err != nil {
+		glog.Fatalf("Failed to register OpenCensus views: %v", err)
+	}
+
+	// Register the OC Agent exporter
+	oce, err := ocmetrics.RegisterOCAgentExporter()
+	if err != nil {
+		glog.Fatalf("Failed to register the OC Agent exporter: %v", err)
+	}
+
+	defer func() {
+		if err := oce.Stop(); err != nil {
+			glog.Fatalf("Unable to stop the OC Agent exporter: %v", err)
+		}
+	}()
 
 	absRepoRootDir, err := cmpath.AbsoluteOS(*repoRootDir)
 	if err != nil {

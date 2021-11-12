@@ -1,0 +1,5 @@
+resources:
+- ./overlay
+namePrefix: foo-
+transformers:
+  - transformer.yaml

@@ -87,7 +87,7 @@ func (h *Hydrator) runHydrate(sourceCommit, syncDir string) HydrationError {
 	newHydratedDir := h.HydratedRoot.Join(cmpath.RelativeOS(sourceCommit))
 	dest := newHydratedDir.Join(h.SyncDir).OSPath()
 
-	if err := kustomizeBuild(syncDir, dest); err != nil {
+	if err := kustomizeBuild(syncDir, dest, true); err != nil {
 		return err
 	}
 	if err := updateSymlink(h.HydratedRoot.OSPath(), h.HydratedLink, newHydratedDir.OSPath()); err != nil {
