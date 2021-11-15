@@ -11,6 +11,8 @@ const (
 	ErrorMsg = "ERROR"
 	// NotInstalledMsg indicates that ACM is not installed on a cluster.
 	NotInstalledMsg = "NOT INSTALLED"
+	// NotRunningMsg indicates that ACM is installed but not running on a cluster.
+	NotRunningMsg = "NOT RUNNING"
 	// NotConfiguredMsg indicates that ACM is installed but not configured for a cluster.
 	NotConfiguredMsg = "NOT CONFIGURED"
 	// UnknownMsg indicates that a field's value is unknown or unavailable.
