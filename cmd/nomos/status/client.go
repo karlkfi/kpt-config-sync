@@ -42,7 +42,7 @@ const (
 	ACMOperatorLabelSelector = "k8s-app=config-management-operator"
 	// ACMOperatorDeployment is the name of the ACM operator Deployment.
 	ACMOperatorDeployment            = "config-management-operator"
-	syncingConditionSupportedVersion = "v1.9.2-rc.1"
+	syncingConditionSupportedVersion = "v1.10.0-rc.1"
 )
 
 // ClusterClient is the client that talks to the cluster.
