@@ -757,3 +757,56 @@ func TestNomosHydrateAndVetDryRepos(t *testing.T) {
 		})
 	}
 }
+
+func TestNomosVetNamespaceRepo(t *testing.T) {
+	tw := nomostesting.New(t)
+
+	testCases := []struct {
+		name           string
+		path           string
+		sourceFormat   string
+		expectedErrMsg string
+	}{
+		{
+			name:           "nomos vet a namespace repo should fail when source-format is set to hierarchy",
+			sourceFormat:   string(filesystem.SourceFormatHierarchy),
+			expectedErrMsg: "Error: if --namespace is provided, --source-format must be omitted or set to unstructured",
+		},
+		{
+			name: "nomos vet should automatically validate a namespace repo with the unstructured mode if source-format is not set",
+			path: "../testdata/hydration/compiled/remote-base/tenant-a",
+		},
+		{
+			name:         "nomos vet should automatically validate a namespace repo with the unstructured mode if source-format is set to unstructured",
+			path:         "../testdata/hydration/compiled/remote-base/tenant-a",
+			sourceFormat: string(filesystem.SourceFormatUnstructured),
+		},
+		{
+			name: "nomos vet should validate a DRY namespace repo",
+			path: "../testdata/hydration/namespace-repo",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			args := []string{"vet", "--no-api-server-check", "--namespace", "tenant-a"}
+			if tc.sourceFormat != "" {
+				args = append(args, "--source-format", tc.sourceFormat)
+			}
+			if tc.path != "" {
+				args = append(args, "--path", tc.path)
+			}
+
+			out, err := exec.Command("nomos", args...).CombinedOutput()
+			if len(tc.expectedErrMsg) != 0 && err == nil {
+				tw.Errorf("%s: expected error '%s', but got no error", tc.name, tc.expectedErrMsg)
+			}
+			if len(tc.expectedErrMsg) == 0 && err != nil {
+				tw.Errorf("%s: expected no error, but got '%s'", tc.name, string(out))
+			}
+			if len(tc.expectedErrMsg) != 0 && !strings.Contains(string(out), tc.expectedErrMsg) {
+				tw.Errorf("%s: expected error '%s', but got '%s'", tc.name, tc.expectedErrMsg, string(out))
+			}
+		})
+	}
+}

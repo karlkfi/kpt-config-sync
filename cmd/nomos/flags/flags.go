@@ -93,8 +93,8 @@ func AllClusters() bool {
 
 // AddSourceFormat adds the --source-format flag.
 func AddSourceFormat(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&SourceFormat, reconcilermanager.SourceFormat, string(filesystem.SourceFormatHierarchy),
-		fmt.Sprintf("Format of the Git repository. Defaults to %s. Use %s for unstructured repos.",
+	cmd.Flags().StringVar(&SourceFormat, reconcilermanager.SourceFormat, "",
+		fmt.Sprintf("Source format of the Git repository. Defaults to %s if not set. Use %s for unstructured repos.",
 			filesystem.SourceFormatHierarchy, filesystem.SourceFormatUnstructured))
 }
 

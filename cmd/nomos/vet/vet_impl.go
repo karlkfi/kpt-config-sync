@@ -33,7 +33,7 @@ import (
 // allClusters is whether we are implicitly vetting every cluster.
 // clusters is the set of clusters we are checking.
 //   Only used if allClusters is false.
-func runVet(ctx context.Context, namespace string, sourceFormat filesystem.SourceFormat, skipAPIServer bool, allClusters bool, clusters []string) error {
+func runVet(ctx context.Context, namespace string, sourceFormat filesystem.SourceFormat) error {
 	if sourceFormat == "" {
 		if namespace == "" {
 			// Default to hierarchical if --namespace is not provided.
@@ -77,8 +77,8 @@ func runVet(ctx context.Context, namespace string, sourceFormat filesystem.Sourc
 		if namespace != "" {
 			// The user could technically provide --source-format=unstructured.
 			// This nuance isn't necessary to communicate nor confusing to omit.
-			return errors.Errorf("if --namespace is provided, --%s must be omitted",
-				reconcilermanager.SourceFormat)
+			return errors.Errorf("if --namespace is provided, --%s must be omitted or set to %s",
+				reconcilermanager.SourceFormat, filesystem.SourceFormatUnstructured)
 		}
 
 		files = filesystem.FilterHierarchyFiles(rootDir, files)

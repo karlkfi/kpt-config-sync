@@ -1,0 +1,7 @@
+resources:
+- rolebinding.yaml
+- role.yaml
+- networkpolicy.yaml
+
+commonLabels:
+  test-case: hydration

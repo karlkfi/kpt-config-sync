@@ -57,6 +57,9 @@ which you could kubectl apply -fR to the cluster, or have Config Sync sync to th
 		cmd.SilenceUsage = true
 
 		sourceFormat := filesystem.SourceFormat(flags.SourceFormat)
+		if sourceFormat == "" {
+			sourceFormat = filesystem.SourceFormatHierarchy
+		}
 		rootDir, needsHydrate, err := hydrate.ValidateHydrateFlags(sourceFormat)
 		if err != nil {
 			return err
