@@ -281,25 +281,30 @@ func (c *ClusterClient) namespaceRepoClusterStatus(ctx context.Context, cs *Clus
 // Config Sync is installed (ACM operator Pod is running). Updates the given ClusterState with status info if
 // Config Sync is not installed.
 func (c *ClusterClient) IsInstalled(ctx context.Context, cs *ClusterState) bool {
+	if _, err := c.K8sClient.CoreV1().Namespaces().Get(ctx, configmanagement.ControllerNamespace, metav1.GetOptions{}); err != nil && apierrors.IsNotFound(err) {
+		cs.status = util.NotInstalledMsg
+		cs.Error = fmt.Sprintf("The %q namespace is not found", configmanagement.ControllerNamespace)
+		return false
+	}
 	_, errDeploymentKubeSystem := c.K8sClient.AppsV1().Deployments(metav1.NamespaceSystem).Get(ctx, ACMOperatorDeployment, metav1.GetOptions{})
 	_, errDeploymentCMSystem := c.K8sClient.AppsV1().Deployments(configmanagement.ControllerNamespace).Get(ctx, ACMOperatorDeployment, metav1.GetOptions{})
 	podListKubeSystem, errPodsKubeSystem := c.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(ctx, metav1.ListOptions{LabelSelector: ACMOperatorLabelSelector})
 	podListCMSystem, errPodsCMSystem := c.K8sClient.CoreV1().Pods(configmanagement.ControllerNamespace).List(ctx, metav1.ListOptions{LabelSelector: ACMOperatorLabelSelector})
 
 	switch {
-	case errDeploymentKubeSystem != nil && apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && apierrors.IsNotFound(errPodsCMSystem):
+	case errDeploymentKubeSystem != nil && apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && apierrors.IsNotFound(errDeploymentCMSystem):
 		cs.status = util.NotInstalledMsg
 		cs.Error = fmt.Sprintf("The ACM operator is neither installed in the %q namespace nor the %q namespace", metav1.NamespaceSystem, configmanagement.ControllerNamespace)
 		return false
-	case errDeploymentKubeSystem != nil && apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && !apierrors.IsNotFound(errPodsCMSystem):
+	case errDeploymentKubeSystem != nil && apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && !apierrors.IsNotFound(errDeploymentCMSystem):
 		cs.status = util.ErrorMsg
 		cs.Error = fmt.Sprintf("The ACM operator is not installed in the %q namespace, and failed to get the ACM operator Deployment in the %q namespace: %v", metav1.NamespaceSystem, configmanagement.ControllerNamespace, errDeploymentCMSystem)
 		return false
-	case errDeploymentKubeSystem != nil && !apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && apierrors.IsNotFound(errPodsCMSystem):
+	case errDeploymentKubeSystem != nil && !apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && apierrors.IsNotFound(errDeploymentCMSystem):
 		cs.status = util.ErrorMsg
 		cs.Error = fmt.Sprintf("The ACM operator is not installed in the %q namespace, and failed to get the ACM operator Deployment in the %q namespace: %v", configmanagement.ControllerNamespace, metav1.NamespaceSystem, errDeploymentKubeSystem)
 		return false
-	case errDeploymentKubeSystem != nil && !apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && !apierrors.IsNotFound(errPodsCMSystem):
+	case errDeploymentKubeSystem != nil && !apierrors.IsNotFound(errDeploymentKubeSystem) && errDeploymentCMSystem != nil && !apierrors.IsNotFound(errDeploymentCMSystem):
 		cs.status = util.ErrorMsg
 		cs.Error = fmt.Sprintf("Failed to get the ACM operator Deployment in the %q namespace (error: %v), and in the %q namespace (error: %v)", configmanagement.ControllerNamespace, errDeploymentCMSystem, metav1.NamespaceSystem, errDeploymentKubeSystem)
 		return false
