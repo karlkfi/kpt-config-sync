@@ -41,8 +41,8 @@ func RecordRenderingErrors(ctx context.Context, component string, numErrors int,
 }
 
 // RecordPipelineError produces a measurement for the PipelineError view
-func RecordPipelineError(ctx context.Context, namespace, reconcilerType, component string, errLen int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType), tag.Upsert(KeyNamespace, namespace),
+func RecordPipelineError(ctx context.Context, reconcilerType, component string, errLen int) {
+	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyReconcilerType, reconcilerType),
 		tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyComponent, component))
 	if errLen > 0 {
 		stats.Record(tagCtx, PipelineError.M(1))

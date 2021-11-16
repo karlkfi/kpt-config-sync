@@ -11,9 +11,6 @@ var (
 	// KeyName groups metrics by the reconciler name. Possible values: root-reconciler, ns-reconciler-<namespace>
 	KeyName, _ = tag.NewKey("name")
 
-	// KeyNamespace groups metrics by the namespace
-	KeyNamespace, _ = tag.NewKey("namespace")
-
 	// KeyReconcilerType groups metrics by the reconciler type. Possible values: root, namespace.
 	KeyReconcilerType, _ = tag.NewKey("reconciler")
 

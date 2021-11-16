@@ -46,10 +46,10 @@ var (
 
 	// PipelineErrorView aggregates the PipelineError metric measurements
 	PipelineErrorView = &view.View{
-		Name:        "last_" + PipelineError.Name(),
+		Name:        PipelineError.Name(),
 		Measure:     PipelineError,
 		Description: "A boolean indicates if any error happens from different stages when syncing a commit",
-		TagKeys:     []tag.Key{KeyName, KeyNamespace, KeyReconcilerType, KeyComponent},
+		TagKeys:     []tag.Key{KeyName, KeyReconcilerType, KeyComponent},
 		Aggregation: view.LastValue(),
 	}
 

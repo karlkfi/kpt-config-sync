@@ -145,7 +145,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 	if len(cse) > 0 {
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "source", len(cse))
+	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "source", len(cse))
 	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
 	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
@@ -193,7 +193,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "rendering", len(cse))
+	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "rendering", len(cse))
 
 	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -220,7 +220,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, newStatus gitStatus) erro
 	rs.Status.Sync.Errors = syncErrs
 	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
 	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
-	metrics.RecordPipelineError(ctx, string(p.scope), "reposync", "sync", len(syncErrs))
+	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
 
 	var allErrs []v1alpha1.ConfigSyncError
