@@ -52,6 +52,11 @@ type FailOnError bool
 func Clean(nt *NT, failOnError FailOnError) {
 	nt.T.Helper()
 
+	// Delete remote repos that were created 24 hours ago on the Git provider.
+	if err := nt.GitProvider.DeleteRepositories(); err != nil {
+		nt.T.Log(err)
+	}
+
 	// The admission-webhook prevents deleting test resources. Hence we delete it before cleaning other resources.
 	removeAdmissionWebhook(nt, failOnError)
 

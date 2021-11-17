@@ -36,3 +36,9 @@ func (l *LocalProvider) CreateRepository(name string) (string, error) {
 func (l *LocalProvider) DeleteRepositories(...string) error {
 	return nil
 }
+
+// DeleteObsoleteRepos is a no-op for the test git-server because the git-server
+// will be deleted after the test.
+func (l *LocalProvider) DeleteObsoleteRepos() error {
+	return nil
+}

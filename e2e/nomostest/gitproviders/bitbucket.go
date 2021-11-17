@@ -3,7 +3,11 @@ package gitproviders
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os/exec"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/uuid"
@@ -96,6 +100,10 @@ func (b *BitbucketClient) DeleteRepositories(names ...string) error {
 		return err
 	}
 
+	return deleteRepos(accessToken, names...)
+}
+
+func deleteRepos(accessToken string, names ...string) error {
 	var errs error
 	for _, name := range names {
 		out, err := exec.Command("curl", "-sX", "DELETE",
@@ -111,6 +119,23 @@ func (b *BitbucketClient) DeleteRepositories(names ...string) error {
 		}
 	}
 	return errs
+}
+
+// DeleteObsoleteRepos deletes all repos that were created more than 24 hours ago.
+func (b *BitbucketClient) DeleteObsoleteRepos() error {
+	accessToken, err := b.refreshAccessToken()
+	if err != nil {
+		return err
+	}
+
+	page := 1
+	for page != -1 {
+		page, err = deleteObsoleteReposByPage(accessToken, page)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (b *BitbucketClient) refreshAccessToken() (string, error) {
@@ -146,4 +171,74 @@ func FetchCloudSecret(name string) (string, error) {
 		return "", errors.Wrap(err, string(out))
 	}
 	return string(out), nil
+}
+
+func deleteObsoleteReposByPage(accessToken string, page int) (int, error) {
+	out, err := exec.Command("curl", "-sX", "GET",
+		"-H", fmt.Sprintf("Authorization:Bearer %s", accessToken),
+		fmt.Sprintf("https://api.bitbucket.org/2.0/repositories/%s?page=%d",
+			GitUser, page)).CombinedOutput()
+	if err != nil {
+		return -1, errors.Wrap(err, string(out))
+	}
+	repos, page, err := filterObsoleteRepos(out)
+	if err != nil {
+		return -1, err
+	}
+
+	fmt.Println("Deleting the following repos: ", strings.Join(repos, ", "))
+	err = deleteRepos(accessToken, repos...)
+	return page, err
+}
+
+// filterObsoleteRepos extracts the names of the repos that were created more than 24 hours ago.
+func filterObsoleteRepos(bytes []byte) ([]string, int, error) {
+	nextPage := -1
+	var response interface{}
+	if err := json.Unmarshal(bytes, &response); err != nil {
+		return nil, nextPage, err
+	}
+
+	m := response.(map[string]interface{})
+	next, found := m["next"]
+	if found {
+		u, err := url.Parse(next.(string))
+		if err != nil {
+			return nil, nextPage, err
+		}
+		query, err := url.ParseQuery(u.RawQuery)
+		if err != nil {
+			return nil, nextPage, err
+		}
+		nextPage, err = strconv.Atoi(query.Get("page"))
+		if err != nil {
+			return nil, nextPage, err
+		}
+	}
+
+	values, found := m["values"]
+	if !found {
+		return nil, nextPage, errors.New("no repos returned")
+	}
+	var result []string
+	for _, r := range values.([]interface{}) {
+		repo := r.(map[string]interface{})
+		name, found := repo["name"]
+		if !found {
+			return nil, nextPage, errors.New("no name returned")
+		}
+		updatedOn, found := repo["updated_on"]
+		if !found {
+			return nil, nextPage, errors.New("no updated_on returned")
+		}
+		updatedTime, err := time.Parse(time.RFC3339, updatedOn.(string))
+		if err != nil {
+			return nil, nextPage, err
+		}
+		// Only list those repos that were created more than 24 hours ago
+		if time.Now().After(updatedTime.Add(24 * time.Hour)) {
+			result = append(result, name.(string))
+		}
+	}
+	return result, nextPage, nil
 }

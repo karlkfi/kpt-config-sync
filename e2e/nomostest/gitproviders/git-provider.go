@@ -17,6 +17,7 @@ type GitProvider interface {
 	SyncURL(name string) string
 	CreateRepository(name string) (string, error)
 	DeleteRepositories(names ...string) error
+	DeleteObsoleteRepos() error
 }
 
 // NewGitProvider creates a GitProvider for the specific provider type.
