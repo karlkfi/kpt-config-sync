@@ -2,85 +2,160 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
+	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	label = "stress-test"
-	value = "enabled"
-)
-
-func Test_10000_Objects(t *testing.T) {
-	// Expect this test to take ~1 hour to complete (i.e. run with --timeout=1h).
-	// We only add about 5 objects per second. Lower n if you're just sanity testing.
-	n := 10000
-	nt := nomostest.New(t, ntopts.RequireManual(t), ntopts.GKECluster(t), ntopts.Unstructured)
-
-	nt.Root.Add("acme/ns.yaml", fake.NamespaceObject(namespace(1)))
-	for i := 0; i < n; i++ {
-		nt.Root.Add(path(i), configMap(1, i))
-	}
-	nt.Root.CommitAndPush("add ConfigMaps")
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(1 * time.Hour))
+var crontabGVK = schema.GroupVersionKind{
+	Group:   "stable.example.com",
+	Kind:    "CronTab",
+	Version: "v1",
 }
 
-func Test_100_x_100_Objects(t *testing.T) {
-	// Expect this test to take ~30 minutes to complete (i.e. run with --timeout=30m).
-	// Fails (after a long time) if run on a cluster which is unable to support
-	// 100 Namespace repos.
-	nNamespaces := 100
-	nConfigMaps := 100
+func crontabCR(namespace, name string) (*unstructured.Unstructured, error) {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(crontabGVK)
+	u.SetName(name)
+	u.SetNamespace(namespace)
+	err := unstructured.SetNestedField(u.Object, "* * * * */5", "spec", "cronSpec")
+	return u, err
+}
 
-	opts := []ntopts.Opt{ntopts.Unstructured, ntopts.RequireManual(t), ntopts.GKECluster(t), ntopts.WithDelegatedControl}
-	for i := 0; i < nNamespaces; i++ {
-		opts = append(opts, ntopts.NamespaceRepo(namespace(i)))
-	}
-	nt := nomostest.New(t, opts...)
+// TestStressCRD tests Config Sync can sync one CRD and 1000 namespaces successfully.
+// Every namespace includes a ConfigMap and a CR.
+func TestStressCRD(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo, ntopts.StressTest)
+	nt.T.Log("Stop the CS webhook by removing the webhook configuration")
+	stopWebhook(nt)
+	nt.WaitForRepoSyncs()
 
-	for i := 0; i < nNamespaces; i++ {
-		repo := nt.NonRootRepos[namespace(i)]
-		for j := 0; j < nConfigMaps; j++ {
-			repo.Add(path(j), configMap(i, j))
-		}
-		repo.CommitAndPush("Add ConfigMaps")
-	}
-	nt.WaitForRepoSyncs(nomostest.WithTimeout(30 * time.Minute))
+	crdName := "crontabs.stable.example.com"
+	nt.T.Logf("Delete the %q CRD if needed", crdName)
+	nt.MustKubectl("delete", "crd", crdName, "--ignore-not-found")
 
-	list := &corev1.ConfigMapList{}
-	err := nt.List(list, client.MatchingLabels{label: value})
+	crdContent, err := ioutil.ReadFile("../testdata/customresources/changed_schema_crds/old_schema_crd.yaml")
 	if err != nil {
 		nt.T.Fatal(err)
 	}
+	nt.Root.AddFile("acme/crontab-crd.yaml", crdContent)
 
-	if len(list.Items) != nNamespaces*nConfigMaps {
-		nt.T.Errorf("got %d ConfigMaps, want %d", len(list.Items), nNamespaces*nConfigMaps)
+	labelKey := "StressTestName"
+	labelValue := "TestStressCRD"
+	for i := 1; i <= 1000; i++ {
+		nt.Root.Add(fmt.Sprintf("acme/ns-%d.yaml", i), fake.NamespaceObject(fmt.Sprintf("foo%d", i)))
+		nt.Root.Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
+			core.Name("cm1"), core.Namespace(fmt.Sprintf("foo%d", i)), core.Label(labelKey, labelValue)))
+
+		cr, err := crontabCR(fmt.Sprintf("foo%d", i), "cr1")
+		if err != nil {
+			nt.T.Fatal(err)
+		}
+		nt.Root.Add(fmt.Sprintf("acme/crontab-cr-%d.yaml", i), cr)
+	}
+	nt.Root.CommitAndPush("Add configs (one CRD and 1000 Namespaces (every namespace has one ConfigMap and one CR)")
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
+
+	nt.T.Logf("Verify that the CronTab CRD is installed on the cluster")
+	if err := nt.Validate(crdName, "", fake.CustomResourceDefinitionV1Object()); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Logf("Verify that there are exactly 1000 ConfigMaps managed by Config Sync on the cluster")
+	cmList := &corev1.ConfigMapList{}
+
+	if err := nt.Client.List(nt.Context, cmList, client.MatchingLabels{metadata.ManagedByKey: metadata.ManagedByValue, labelKey: labelValue}); err != nil {
+		nt.T.Error(err)
+	}
+	if len(cmList.Items) != 1000 {
+		nt.T.Errorf("The cluster should include 1000 ConfigMaps managed by Config Sync and having the `%s: %s` label exactly, found %v instead", labelKey, labelValue, len(cmList.Items))
+	}
+
+	nt.T.Logf("Verify that there are exactly 1000 CronTab CRs managed by Config Sync on the cluster")
+	crList := &unstructured.UnstructuredList{}
+	crList.SetGroupVersionKind(crontabGVK)
+	if err := nt.Client.List(nt.Context, crList, client.MatchingLabels{metadata.ManagedByKey: metadata.ManagedByValue}); err != nil {
+		nt.T.Error(err)
+	}
+	if len(crList.Items) != 1000 {
+		nt.T.Errorf("The cluster should include 1000 ConfigMaps managed by Config Sync exactly, found %v instead", len(crList.Items))
 	}
 }
 
-func namespace(i int) string {
-	return fmt.Sprintf("foo-%d", i)
-}
+// TestStressLargeNamespace tests that Config Sync can sync a namespace including 5000 resources successfully.
+func TestStressLargeNamespace(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo, ntopts.StressTest)
+	nt.T.Log("Stop the CS webhook by removing the webhook configuration")
+	stopWebhook(nt)
 
-func name(j int) string {
-	return fmt.Sprintf("configmap-%d", j)
-}
+	nt.T.Log("Override the memory limit of the reconciler container of root-reconciler to 800MiB")
+	rootSync := fake.RootSyncObject()
+	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "memoryLimit": "800Mi"}]}}}`)
+	nt.WaitForRepoSyncs()
 
-func path(j int) string {
-	return fmt.Sprintf("acme/%s.yaml", name(j))
-}
+	ns := "my-ns-1"
+	nt.Root.Add("acme/ns.yaml", fake.NamespaceObject(ns))
 
-func configMap(i, j int) *corev1.ConfigMap {
-	cm := fake.ConfigMapObject(core.Name(name(j)), core.Namespace(namespace(i)), core.Label(label, value))
-	cm.Data = map[string]string{
-		fmt.Sprintf("foo-%d", i): fmt.Sprintf("bar-%d", j),
+	labelKey := "StressTestName"
+	labelValue := "TestStressLargeNamespace"
+	for i := 1; i <= 5000; i++ {
+		nt.Root.Add(fmt.Sprintf("acme/cm-%d.yaml", i), fake.ConfigMapObject(
+			core.Name(fmt.Sprintf("cm-%d", i)), core.Namespace(ns), core.Label(labelKey, labelValue)))
 	}
-	return cm
+	nt.Root.CommitAndPush("Add configs (5000 ConfigMaps and 1 Namespace")
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
+
+	nt.T.Log("Verify there are 5000 ConfigMaps in the namespace")
+	cmList := &corev1.ConfigMapList{}
+
+	if err := nt.Client.List(nt.Context, cmList, &client.ListOptions{Namespace: ns}, client.MatchingLabels{labelKey: labelValue}); err != nil {
+		nt.T.Error(err)
+	}
+	if len(cmList.Items) != 5000 {
+		nt.T.Errorf("The %s namespace should include 5000 ConfigMaps having the `%s: %s` label exactly, found %v instead", ns, labelKey, labelValue, len(cmList.Items))
+	}
+}
+
+// TestStressFrequentGitCommits adds 100 Git commits, and verifies that Config Sync can sync the changes in these commits successfully.
+func TestStressFrequentGitCommits(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.StressTest)
+	if nt.MultiRepo {
+		nt.T.Log("Stop the CS webhook by removing the webhook configuration")
+		stopWebhook(nt)
+	}
+
+	ns := "bookstore"
+	namespace := fake.NamespaceObject(ns)
+	nt.Root.Add("acme/ns.yaml", namespace)
+	nt.Root.CommitAndPush(fmt.Sprintf("add a namespace: %s", ns))
+	nt.WaitForRepoSyncs()
+
+	nt.T.Logf("Add 100 commits (every commit adds a new ConfigMap object into the %s namespace)", ns)
+	labelKey := "StressTestName"
+	labelValue := "TestStressFrequentGitCommits"
+	for i := 0; i < 100; i++ {
+		cmName := fmt.Sprintf("cm-%v", i)
+		nt.Root.Add(fmt.Sprintf("acme/%s.yaml", cmName), fake.ConfigMapObject(core.Name(cmName), core.Namespace(ns), core.Label(labelKey, labelValue)))
+		nt.Root.CommitAndPush(fmt.Sprintf("add %s", cmName))
+	}
+	nt.WaitForRepoSyncs(nomostest.WithTimeout(10 * time.Minute))
+
+	nt.T.Logf("Verify that there are exactly 100 ConfigMaps under the %s namespace", ns)
+	cmList := &corev1.ConfigMapList{}
+	if err := nt.Client.List(nt.Context, cmList, &client.ListOptions{Namespace: ns}, client.MatchingLabels{labelKey: labelValue}); err != nil {
+		nt.T.Error(err)
+	}
+	if len(cmList.Items) != 100 {
+		nt.T.Errorf("The %s namespace should include 100 ConfigMaps having the `%s: %s` label exactly, found %v instead", ns, labelKey, labelValue, len(cmList.Items))
+	}
 }

@@ -35,28 +35,6 @@ test-e2e-ci-local:
 	 " \
      test-e2e
 
-### Stress tests targets
-
-# The CI target for running stress tests.  Stress tests measure the long-term
-# performance of Nomos.
-test-e2e-stresstest-ci:
-	$(MAKE) $(E2E_PARAMS) \
-      E2E_FLAGS="\
-	    --timing \
-		--testcases-dir=stresstests \
-		$(E2E_FLAGS) \
-     " \
-     TEST_E2E_RUN_FLAGS="$(TEST_E2E_RUN_FLAGS)" \
-	 test-e2e-ci
-
-# Same target as above, except it can be ran from a local machine.
-test-e2e-stresstest-ci-local:
-	$(MAKE) $(E2E_PARAMS) \
-			E2E_FLAGS="\
-			  --testcases-dir=stresstests \
-			" \
-			test-e2e-ci-local
-
 ### Golang e2e tests targets running against a GKE cluster
 
 # Build a test docker container with gcloud and kubectl installed.
@@ -100,22 +78,23 @@ __docker-run-e2e-go-gke: push-to-gcr-nomos __build-e2e-go-container
 			--parallel 1 \
 			--p 1 \
 			--test-cluster=gke \
-			--share-test-env=true \
 			--image-prefix=gcr.io/$(GCR_PREFIX) \
 			--image-tag=$(LATEST_IMAGE_TAG)
 
 # The CI target that runs the golang e2e test on a GKE cluster in prow with various E2E_ARGS.
 # Examples:
 # 1. Run tests in mono-repo mode:
-#    make test-e2e-go-gke-ci
+#    make E2E_ARGS="--share-test-env" test-e2e-go-gke-ci
 # 2. Run tests in multi-repo mode:
-#    make E2E_ARGS="--multirepo" test-e2e-go-gke-ci
+#    make E2E_ARGS="--share-test-env --multirepo" test-e2e-go-gke-ci
 # 3. Run tests in multi-repo mode with Bitbucket:
-#    make E2E_ARGS="--multirepo --git-provider=bitbucket" test-e2e-go-gke-ci
+#    make E2E_ARGS="--share-test-env --multirepo --git-provider=bitbucket" test-e2e-go-gke-ci
 # 4. Run tests in mono-repo mode with Bitbucket:
-#    make E2E_ARGS="--git-provider=bitbucket" test-e2e-go-gke-ci
+#    make E2E_ARGS="--share-test-env --git-provider=bitbucket" test-e2e-go-gke-ci
 # 5. Run tests in multi-repo mode with KCC resources:
-#    make E2E_ARGS="--multirepo --kcc -run=TestKCC*" test-e2e-go-gke-ci"
+#    make E2E_ARGS="--share-test-env --multirepo --kcc -run=TestKCC*" test-e2e-go-gke-ci
+# 6. Run the stress tests in multi-repo mode:
+#    make E2E_ARGS="--multirepo --stress -run=TestStress*" test-e2e-go-gke-ci
 test-e2e-go-gke-ci:
 	$(MAKE) E2E_ARGS="$(E2E_ARGS)" PROBER_CREDS="/etc/prober-gcp-service-account/prober_runner_client_key.json" \
 		__docker-run-e2e-go-gke
@@ -123,14 +102,16 @@ test-e2e-go-gke-ci:
 # The CI target that runs the golang e2e test for mono repo on a GKE cluster from a local machine with various E2E_ARGS.
 # Examples:
 # 1. Run tests in mono-repo mode:
-#    make test-e2e-go-gke-local
+#    make E2E_ARGS="--share-test-env" test-e2e-go-gke-local
 # 2. Run tests in multi-repo mode:
-#    make E2E_ARGS="--multirepo" test-e2e-go-gke-local
+#    make E2E_ARGS="--share-test-env --multirepo" test-e2e-go-gke-local
 # 3. Run tests in multi-repo mode with Bitbucket:
-#    make E2E_ARGS="--multirepo --git-provider=bitbucket" test-e2e-go-gke-local
+#    make E2E_ARGS="--share-test-env --multirepo --git-provider=bitbucket" test-e2e-go-gke-local
 # 4. Run tests in mono-repo mode with Bitbucket:
-#    make E2E_ARGS="--git-provider=bitbucket" test-e2e-go-gke-local
+#    make E2E_ARGS="--share-test-env --git-provider=bitbucket" test-e2e-go-gke-local
 # 5. Run tests in multi-repo mode with KCC resources:
-#    make E2E_ARGS="--multirepo --kcc -run=TestKCC*" test-e2e-go-gke-local"
+#    make E2E_ARGS="--share-test-env --multirepo --kcc -run=TestKCC*" test-e2e-go-gke-local
+# 6. Run the stress tests in multi-repo mode:
+#    make E2E_ARGS="--multirepo --stress -run=TestStress*" test-e2e-go-gke-local
 test-e2e-go-gke-local: __download_prober_creds
 	$(MAKE) E2E_ARGS="$(E2E_ARGS)" PROBER_CREDS="/tmp/prober_runner_client_key.json" __docker-run-e2e-go-gke

@@ -148,6 +148,7 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 	t.Cleanup(func() {
 		// Reset the otel-collector pod name to get a new forwarding port because the current process is killed.
 		nt.otelCollectorPodName = ""
+		nt.T.Log("`resetSyncedRepos` after a test as a part of `Cleanup` on SharedTestEnv")
 		resetSyncedRepos(nt, opts)
 		if t.Failed() {
 			// Print the logs for the current container instances.
@@ -158,6 +159,7 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		}
 	})
 
+	nt.T.Log("`resetSyncedRepos` before a test on SharedTestEnv")
 	resetSyncedRepos(nt, opts)
 	// a previous e2e test may stop the Config Sync webhook, so always call `installWebhook` here to make sure the test starts
 	// with the webhook enabled.
@@ -242,9 +244,11 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 	if *e2e.TestCluster != e2e.Kind {
 		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
 		// clean before and after running the test.
+		t.Log("`Clean` before running the test on FreshTestEnv")
 		Clean(nt, true)
 		t.Cleanup(func() {
 			// Clean the cluster now that the test is over.
+			t.Log("`Clean` after running the test on FreshTestEnv")
 			Clean(nt, false)
 		})
 	}
