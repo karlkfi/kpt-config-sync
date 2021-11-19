@@ -94,7 +94,7 @@ data:
                memory: "300Mi"
              requests:
                cpu: "50m"
-               memory: "100Mi"
+               memory: "200Mi"
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.3.3-gke.0__linux_amd64
            args: ["--root=/repo/source", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
