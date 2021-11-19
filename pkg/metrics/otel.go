@@ -37,6 +37,13 @@ exporters:
       enabled: true
 processors:
   batch:
+  # b/204120800: removing last_apply_timestamp from code is intractable since a lot of test code depends on it. Hence filtering it here
+  filter/cloudmonitoring:
+    metrics:
+      exclude:
+        match_type: strict
+        metric_names:
+          - last_apply_timestamp
   metricstransform:
     transforms:
     # These transforms are needed as part of fleet metrics mapping.
@@ -61,9 +68,13 @@ extensions:
 service:
   extensions: [health_check]
   pipelines:
-    metrics:
+    metrics/cloudmonitoring:
+      receivers: [opencensus]
+      processors: [batch, filter/cloudmonitoring, metricstransform]
+      exporters: [stackdriver]
+    metrics/prometheus:
       receivers: [opencensus]
       processors: [batch, metricstransform]
-      exporters: [prometheus, stackdriver]
+      exporters: [prometheus]
 `
 )
