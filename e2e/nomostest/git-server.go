@@ -3,7 +3,6 @@ package nomostest
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/google/nomos/e2e"
 	"github.com/google/nomos/pkg/metrics"
@@ -52,7 +51,7 @@ func installGitServer(nt *NT) func() error {
 	return func() error {
 		// In CI, 2% of the time this takes longer than 60 seconds, so 120 seconds
 		// seems like a reasonable amount of time to wait before erroring out.
-		took, err := Retry(120*time.Second, func() error {
+		took, err := Retry(nt.DefaultWaitTimeout, func() error {
 			return nt.Validate(testGitServer, testGitNamespace,
 				&appsv1.Deployment{}, isAvailableDeployment)
 		})

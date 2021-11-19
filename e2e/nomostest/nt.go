@@ -69,6 +69,12 @@ type NT struct {
 	// direct interactions with the API Server.
 	Client client.Client
 
+	// IsGKEAutopilot indicates if the test cluster is a GKE Autopilot cluster.
+	IsGKEAutopilot bool
+
+	// DefaultWaitTimeout is the default wait duration.
+	DefaultWaitTimeout time.Duration
+
 	// Root is the root repository the cluster is syncing to.
 	Root *Repository
 
@@ -500,7 +506,7 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	nt.T.Helper()
 
-	waitForRepoSyncsOptions := newWaitForRepoSyncsOptions()
+	waitForRepoSyncsOptions := newWaitForRepoSyncsOptions(nt.DefaultWaitTimeout)
 	for _, option := range options {
 		option(&waitForRepoSyncsOptions)
 	}
@@ -931,7 +937,7 @@ func validateError(errs []v1alpha1.ConfigSyncError, code string) error {
 
 // WaitForRootSyncSourceError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code),
+	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObject()
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
@@ -946,7 +952,7 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 
 // WaitForRootSyncRenderingError waits until the given error (code and message) is present on the RootSync resource
 func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code),
+	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			rs := fake.RootSyncObject()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
@@ -962,7 +968,7 @@ func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
 
 // WaitForRepoSyncSourceError waits until the given error (code and message) is present on the RepoSync resource
 func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code),
+	Wait(nt.T, fmt.Sprintf("RepoSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			nt.T.Helper()
 
@@ -980,7 +986,7 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 
 // WaitForRepoSourceError waits until the given error (code and message) is present on the Repo resource
 func (nt *NT) WaitForRepoSourceError(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("Repo source error code %s", code),
+	Wait(nt.T, fmt.Sprintf("Repo source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			repo := &v1.Repo{}
 			err := nt.Get("repo", "", repo)
@@ -1006,7 +1012,7 @@ func (nt *NT) WaitForRepoSourceError(code string, opts ...WaitOption) {
 
 // WaitForRepoSourceErrorClear waits until the given error code disappears from the Repo resource
 func (nt *NT) WaitForRepoSourceErrorClear(opts ...WaitOption) {
-	Wait(nt.T, "Repo source errors cleared",
+	Wait(nt.T, "Repo source errors cleared", nt.DefaultWaitTimeout,
 		func() error {
 			repo := &v1.Repo{}
 			err := nt.Get("repo", "", repo)
@@ -1029,7 +1035,7 @@ func (nt *NT) WaitForRepoSourceErrorClear(opts ...WaitOption) {
 
 // WaitForRepoImportErrorCode waits until the given error code is present on the Repo resource.
 func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
-	Wait(nt.T, fmt.Sprintf("Repo import error code %s", code),
+	Wait(nt.T, fmt.Sprintf("Repo import error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
 			r := &v1.Repo{}
 			err := nt.Get("repo", "", r)
@@ -1097,11 +1103,11 @@ func WaitNoFail() WaitOption {
 
 // Wait provides a logged wait for condition to return nil with options for timeout.
 // It fails the test on errors.
-func Wait(t testing.NTB, opName string, condition func() error, opts ...WaitOption) {
+func Wait(t testing.NTB, opName string, timeout time.Duration, condition func() error, opts ...WaitOption) {
 	t.Helper()
 
 	wait := waitSpec{
-		timeout:     time.Second * 120,
+		timeout:     timeout,
 		failOnError: true,
 	}
 	for _, opt := range opts {
@@ -1160,9 +1166,9 @@ type waitForRepoSyncsOptions struct {
 	syncNamespaceRepos bool
 }
 
-func newWaitForRepoSyncsOptions() waitForRepoSyncsOptions {
+func newWaitForRepoSyncsOptions(timeout time.Duration) waitForRepoSyncsOptions {
 	options := waitForRepoSyncsOptions{}
-	options.timeout = 120 * time.Second
+	options.timeout = timeout
 	options.syncNamespaceRepos = true
 
 	return options

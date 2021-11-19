@@ -210,7 +210,7 @@ func checkResource(nt *nomostest.NT, obj client.Object, namespace, name string, 
 }
 
 func checkNamespaceExists(nt *nomostest.NT, name string, labels, annotations map[string]string) {
-	nomostest.Wait(nt.T, "namespace exists", func() error {
+	nomostest.Wait(nt.T, "namespace exists", nt.DefaultWaitTimeout, func() error {
 		return checkResource(nt, &corev1.Namespace{}, "", name, labels, annotations)
 	})
 }

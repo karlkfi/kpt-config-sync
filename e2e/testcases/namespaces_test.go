@@ -301,7 +301,7 @@ func TestNamespaceManagementDisabledCleanup(t *testing.T) {
 }
 
 func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipAutopilotCluster)
 
 	// Update kube-system namespace to be managed.
 	kubeSystemNamespace := fake.NamespaceObject("kube-system")

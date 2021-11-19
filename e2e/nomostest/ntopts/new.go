@@ -22,6 +22,9 @@ type New struct {
 	// RESTConfig is the config for creating a Client connection to a K8s cluster.
 	RESTConfig *rest.Config
 
+	// SkipAutopilot will skip the test if running on an Autopilot cluster.
+	SkipAutopilot bool
+
 	Nomos
 	MultiRepo
 	TestType
@@ -34,4 +37,9 @@ func RequireManual(t testing.NTB) Opt {
 		t.Skip("Must pass --manual so this isn't accidentally run against a test cluster automatically.")
 	}
 	return func(opt *New) {}
+}
+
+// SkipAutopilotCluster will skip the test on the autopilot cluster.
+func SkipAutopilotCluster(opt *New) {
+	opt.SkipAutopilot = true
 }

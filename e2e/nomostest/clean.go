@@ -2,6 +2,7 @@ package nomostest
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/syncer/differ"
+	"github.com/google/nomos/pkg/util"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +71,8 @@ func Clean(nt *NT, failOnError FailOnError) {
 
 	// errDeleting ensures we delete everything possible to delete before failing.
 	errDeleting := false
-	for gvk := range nt.scheme.AllKnownTypes() {
+	types := filterMutableListTypes(nt)
+	for gvk := range types {
 		if !isListable(gvk.Kind) {
 			continue
 		}
@@ -109,7 +112,7 @@ func Clean(nt *NT, failOnError FailOnError) {
 	// 2) Some objects won't be deleted unless their dependencies are deleted
 	//    first, and we can get stuck in a situation where finalizers haven't
 	//    been removed.
-	for gvk := range nt.scheme.AllKnownTypes() {
+	for gvk := range types {
 		if !isListable(gvk.Kind) {
 			continue
 		}
@@ -147,6 +150,16 @@ func DeleteManagedNamespaces(nt *NT) {
 	nt.T.Logf("Started deleting managed namespaces at %v", time.Now())
 	nt.MustKubectl("delete", "ns", "-l", fmt.Sprintf("%s=%s", metadata.ManagedByKey, metadata.ManagedByValue))
 	nt.T.Logf("Finished deleting managed namespaces at %v", time.Now())
+}
+
+func filterMutableListTypes(nt *NT) map[schema.GroupVersionKind]reflect.Type {
+	allTypes := nt.scheme.AllKnownTypes()
+	if nt.IsGKEAutopilot {
+		for _, t := range util.AutopilotManagedKinds {
+			delete(allTypes, t)
+		}
+	}
+	return allTypes
 }
 
 func isConfigSyncAnnotation(annotation string) bool {
@@ -220,6 +233,10 @@ func resetSystemNamespaces(nt *NT, failOnError FailOnError) {
 	}
 	for _, ns := range nsList.Items {
 		ns.SetGroupVersionKind(kinds.Namespace())
+		// Skip mutating the GKE Autopilot cluster managed namespaces.
+		if nt.IsGKEAutopilot && util.IsAutopilotManagedNamespace(&ns) {
+			continue
+		}
 		if differ.IsManageableSystemNamespace(&ns) {
 			if err := deleteConfigSyncAndTestAnnotationsAndLabels(nt, &ns); err != nil {
 				nt.T.Log(err)
@@ -337,7 +354,7 @@ func FailIfUnknown(t testing.NTB, scheme *runtime.Scheme, o client.Object) {
 func WaitToTerminate(nt *NT, gvk schema.GroupVersionKind, name, namespace string, opts ...WaitOption) {
 	nt.T.Helper()
 
-	Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, gvk), func() error {
+	Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, gvk), nt.DefaultWaitTimeout, func() error {
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		return nt.ValidateNotFound(name, namespace, u)

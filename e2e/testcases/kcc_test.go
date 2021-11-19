@@ -149,11 +149,12 @@ spec:
 }
 
 func validateKCCResourceReady(nt *nomostest.NT, gvk schema.GroupVersionKind, name, namespace string) {
-	nomostest.Wait(nt.T, fmt.Sprintf("wait for kcc resources %q %v to be ready", name, gvk), func() error {
-		u := &unstructured.Unstructured{}
-		u.SetGroupVersionKind(gvk)
-		return nt.Validate(name, namespace, u, kccResourceReady)
-	})
+	nomostest.Wait(nt.T, fmt.Sprintf("wait for kcc resources %q %v to be ready", name, gvk),
+		nt.DefaultWaitTimeout, func() error {
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(gvk)
+			return nt.Validate(name, namespace, u, kccResourceReady)
+		})
 }
 
 func kccResourceReady(o client.Object) error {
@@ -170,9 +171,10 @@ func kccResourceReady(o client.Object) error {
 }
 
 func validateKCCResourceNotFound(nt *nomostest.NT, gvk schema.GroupVersionKind, name, namespace string) {
-	nomostest.Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, gvk), func() error {
-		u := &unstructured.Unstructured{}
-		u.SetGroupVersionKind(gvk)
-		return nt.ValidateNotFound(name, namespace, u)
-	})
+	nomostest.Wait(nt.T, fmt.Sprintf("wait for %q %v to terminate", name, gvk),
+		nt.DefaultWaitTimeout, func() error {
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(gvk)
+			return nt.ValidateNotFound(name, namespace, u)
+		})
 }

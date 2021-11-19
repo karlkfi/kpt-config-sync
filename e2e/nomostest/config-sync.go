@@ -473,7 +473,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 		}
 	}
 
-	took, err := Retry(120*time.Second, func() error {
+	took, err := Retry(nt.DefaultWaitTimeout, func() error {
 		err := nt.Validate(reconcilermanager.ManagerName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
@@ -937,12 +937,12 @@ func DeletePodByLabel(nt *NT, label, value string) {
 	if err := nt.DeleteAllOf(&corev1.Pod{}, client.InNamespace(configmanagement.ControllerNamespace), client.MatchingLabels{label: value}); err != nil {
 		nt.T.Fatalf("Pod delete failed: %v", err)
 	}
-	Wait(nt.T, "new pods come up", func() error {
+	Wait(nt.T, "new pods come up", nt.DefaultWaitTimeout, func() error {
 		if value == reconcilermanager.ManagerName {
 			return NewPodReady(nt, label, value, reconcilermanager.Reconciler, oldPods.Items, oldReconcilers.Items)
 		}
 		return NewPodReady(nt, label, value, "", oldPods.Items, nil)
-	}, WaitTimeout(2*time.Minute))
+	}, WaitTimeout(nt.DefaultWaitTimeout))
 }
 
 // resetMonoRepoSpec sets the mono repo's SOURCE_FORMAT and POLICY_DIR. It might cause the git-importer to restart.

@@ -23,6 +23,7 @@ type BatsTest struct {
 	nomosDir              string
 	skipMultiRepo         func(int) bool
 	multiRepoIncompatible func(int) bool
+	skipAutopilotCluster  func(int) bool
 }
 
 func (bt *BatsTest) batsPath() string {
@@ -57,6 +58,9 @@ func (bt *BatsTest) runTest(testNum int) func(t *testing.T) {
 		}
 		if bt.multiRepoIncompatible != nil && bt.multiRepoIncompatible(testNum) {
 			opts = append(opts, ntopts.MultiRepoIncompatible)
+		}
+		if bt.skipAutopilotCluster != nil && bt.skipAutopilotCluster(testNum) {
+			opts = append(opts, ntopts.SkipAutopilotCluster)
 		}
 		nt := nomostest.New(t, opts...)
 
@@ -190,6 +194,7 @@ func TestBats(t *testing.T) {
 				2, // tests internals of syncs
 				3, // tests internals of clusterconfigs
 			),
+			skipAutopilotCluster: testNums(10), // ignore the test that mutates the kube-system namespace
 		},
 		{
 			fileName:      "cli.bats",

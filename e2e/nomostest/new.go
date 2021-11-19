@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/google/nomos/pkg/util"
 )
 
 // fileMode is the file mode to use for all operations.
@@ -65,6 +66,10 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 
 	if !*e2e.Kcc && optsStruct.KccTest {
 		t.Skip("Test skipped since it is a KCC test")
+	}
+
+	if optsStruct.SkipAutopilot {
+		t.Skip("Test skipped when running on Autopilot clusters")
 	}
 
 	switch {
@@ -129,6 +134,8 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		TmpDir:                  opts.TmpDir,
 		Config:                  opts.RESTConfig,
 		Client:                  sharedNt.Client,
+		IsGKEAutopilot:          sharedNt.IsGKEAutopilot,
+		DefaultWaitTimeout:      sharedNt.DefaultWaitTimeout,
 		kubeconfigPath:          sharedNt.kubeconfigPath,
 		MultiRepo:               sharedNt.MultiRepo,
 		ReconcilerPollingPeriod: sharedNT.ReconcilerPollingPeriod,
@@ -241,6 +248,19 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		connectToLocalRegistry(nt)
 		docker.CheckImages(nt.T)
 	}
+
+	isGKEAutopilot, err := util.IsGKEAutopilotCluster(nt.Client)
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	nt.IsGKEAutopilot = isGKEAutopilot
+
+	if isGKEAutopilot {
+		nt.DefaultWaitTimeout = 6 * time.Minute
+	} else {
+		nt.DefaultWaitTimeout = 2 * time.Minute
+	}
+
 	if *e2e.TestCluster != e2e.Kind {
 		// We aren't using an ephemeral Kind cluster, so make sure the cluster is
 		// clean before and after running the test.
