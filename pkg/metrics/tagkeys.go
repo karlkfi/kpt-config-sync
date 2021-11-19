@@ -17,11 +17,11 @@ var (
 	// KeyOperation groups metrics by their operation. Possible values: create, patch, update, delete.
 	KeyOperation, _ = tag.NewKey("operation")
 
-	// KeyComponent groups metrics by their component. Possible values: source, sync, rendering, readiness(from Resource Group Controller).
+	// KeyComponent groups metrics by their component. Possible values: parsing, source, sync, rendering, readiness(from Resource Group Controller).
 	KeyComponent, _ = tag.NewKey("component")
 
-	// KeyErrorCode groups metrics by their error code.
-	KeyErrorCode, _ = tag.NewKey("errorcode")
+	// KeyErrorClass groups metrics by their error code.
+	KeyErrorClass, _ = tag.NewKey("errorclass")
 
 	// KeyStatus groups metrics by their status. Possible values: success, error.
 	KeyStatus, _ = tag.NewKey("status")

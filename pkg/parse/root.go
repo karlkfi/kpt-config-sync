@@ -110,7 +110,7 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 		objs, err = validate.Hierarchical(objs, options)
 	}
 
-	metrics.RecordReconcilerNonBlockingErrors(ctx, status.NonBlockingErrors(err))
+	metrics.RecordReconcilerErrors(ctx, "parsing", status.NonBlockingErrors(err))
 
 	if status.HasBlockingErrors(err) {
 		return nil, err
@@ -150,7 +150,7 @@ func (p *root) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
 	metrics.RecordPipelineError(ctx, RootSyncReconcilerType, "source", len(cse))
 	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
-	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
+	metrics.RecordReconcilerErrors(ctx, "source", cse)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RootSync source status from parser")
@@ -191,8 +191,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 
 	continueSyncing := true
 	if len(cse) > 0 {
-		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
-		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
+		metrics.RecordReconcilerErrors(ctx, "rendering", cse)
 		continueSyncing = false
 	}
 	metrics.RecordPipelineError(ctx, RootSyncReconcilerType, "rendering", len(cse))
@@ -222,7 +221,7 @@ func (p *root) setSyncStatus(ctx context.Context, newStatus gitStatus) error {
 	}
 	rs.Status.Sync.Errors = syncErrs
 	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
-	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
+	metrics.RecordReconcilerErrors(ctx, "sync", syncErrs)
 	metrics.RecordPipelineError(ctx, RootSyncReconcilerType, "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
 

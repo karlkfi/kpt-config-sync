@@ -181,22 +181,6 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 	return nil
 }
 
-// ValidateReconcilerNonBlockingErrors checks that the `reconciler_non_blocking_errors` metric is recorded
-// for the correct reconciler and error code, and checks the metric value is correct.
-func (csm ConfigSyncMetrics) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
-	if _, ok := csm[ocmetrics.ReconcilerNonBlockingErrorsView.Name]; ok {
-		validations := []Validation{
-			hasTags([]tag.Tag{
-				{Key: ocmetrics.KeyName, Value: reconciler},
-				{Key: ocmetrics.KeyErrorCode, Value: errorCode},
-			}),
-			valueEquals(errorCount),
-		}
-		return csm.validateMetric(ocmetrics.ReconcilerNonBlockingErrorsView.Name, validations...)
-	}
-	return nil
-}
-
 // ValidateResourceOverrideCount checks that the `resource_override_count` metric is recorded
 // for the correct reconciler, container name, and resource type, and checks the metric value is correct.
 func (csm ConfigSyncMetrics) ValidateResourceOverrideCount(reconciler, containerName, resourceType string, count int) error {

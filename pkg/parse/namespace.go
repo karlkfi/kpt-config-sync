@@ -95,7 +95,7 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 
 	objs, err = validate.Unstructured(objs, options)
 
-	metrics.RecordReconcilerNonBlockingErrors(ctx, status.NonBlockingErrors(err))
+	metrics.RecordReconcilerErrors(ctx, "parsing", status.NonBlockingErrors(err))
 
 	if status.HasBlockingErrors(err) {
 		return nil, err
@@ -146,7 +146,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "source", len(cse))
 	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
-	metrics.RecordReconcilerErrors(ctx, "source", len(cse))
+	metrics.RecordReconcilerErrors(ctx, "source", cse)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
 		return status.APIServerError(err, "failed to update RepoSync source status from parser")
@@ -188,7 +188,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 	continueSyncing := true
 	if len(cse) > 0 {
 		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
-		metrics.RecordRenderingErrors(ctx, "rendering", len(cse), cse[0].Code)
+		metrics.RecordReconcilerErrors(ctx, "rendering", cse)
 		continueSyncing = false
 	}
 	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "rendering", len(cse))
@@ -217,7 +217,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, newStatus gitStatus) erro
 	}
 	rs.Status.Sync.Errors = syncErrs
 	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
-	metrics.RecordReconcilerErrors(ctx, "sync", len(syncErrs))
+	metrics.RecordReconcilerErrors(ctx, "sync", syncErrs)
 	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "sync", len(syncErrs))
 	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
 

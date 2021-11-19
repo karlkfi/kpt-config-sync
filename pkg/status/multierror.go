@@ -40,10 +40,10 @@ func HasBlockingErrors(errs MultiError) bool {
 }
 
 // NonBlockingErrors return the non-blocking errors.
-func NonBlockingErrors(errs MultiError) MultiError {
+func NonBlockingErrors(errs MultiError) []v1alpha1.ConfigSyncError {
 	var nonBlockingErrs MultiError
 	if errs == nil {
-		return nonBlockingErrs
+		return []v1alpha1.ConfigSyncError{}
 	}
 
 	for _, err := range errs.Errors() {
@@ -51,7 +51,7 @@ func NonBlockingErrors(errs MultiError) MultiError {
 			nonBlockingErrs = Append(nonBlockingErrs, err)
 		}
 	}
-	return nonBlockingErrs
+	return ToCSE(nonBlockingErrs)
 }
 
 // Append adds one or more errors to an existing MultiError.

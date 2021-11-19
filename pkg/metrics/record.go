@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -22,25 +22,14 @@ func RecordAPICallDuration(ctx context.Context, operation, status string, gvk sc
 }
 
 // RecordReconcilerErrors produces a measurement for the ReconcilerErrors view.
-func RecordReconcilerErrors(ctx context.Context, component string, numErrors int) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyComponent, component))
-	measurement := ReconcilerErrors.M(int64(numErrors))
-	stats.Record(tagCtx, measurement)
-}
-
-// RecordReconcilerNonBlockingErrors produces a measurement for the ReconcilerNonBlockingErrors view.
-func RecordReconcilerNonBlockingErrors(ctx context.Context, errs status.MultiError) {
-	errMeasurement := ReconcilerNonBlockingErrors.M(1)
-	for _, err := range status.ToCSE(errs) {
-		tagContext, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyErrorCode, err.Code))
-		stats.Record(tagContext, errMeasurement)
-	}
-}
-
-// RecordRenderingErrors produces a measurement for the RenderingErrors view.
-func RecordRenderingErrors(ctx context.Context, component string, numErrors int, errCode string) {
-	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyName, ReconcilerTagKey()), tag.Upsert(KeyComponent, component), tag.Upsert(KeyErrorCode, errCode))
-	measurement := RenderingErrors.M(int64(numErrors))
+func RecordReconcilerErrors(ctx context.Context, component string, errs []v1alpha1.ConfigSyncError) {
+	class := ""
+	tagCtx, _ := tag.New(ctx,
+		tag.Upsert(KeyName, ReconcilerTagKey()),
+		tag.Upsert(KeyComponent, component),
+		tag.Upsert(KeyErrorClass, class),
+	)
+	measurement := ReconcilerErrors.M(int64(len(errs)))
 	stats.Record(tagCtx, measurement)
 }
 

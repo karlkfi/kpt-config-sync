@@ -63,7 +63,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 
 	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMetricNotFound(ocmetrics.ReconcilerNonBlockingErrorsView.Name)
+			err := nt.ValidateMetricNotFound(ocmetrics.ReconcilerErrorsView.Name)
 			if err != nil {
 				return err
 			}
@@ -127,7 +127,7 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 
 	_, err = nomostest.Retry(60*time.Second, func() error {
 		return nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMetricNotFound(ocmetrics.ReconcilerNonBlockingErrorsView.Name)
+			err := nt.ValidateMetricNotFound(ocmetrics.ReconcilerErrorsView.Name)
 			if err != nil {
 				return err
 			}

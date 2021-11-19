@@ -26,25 +26,7 @@ var (
 		Name:        ReconcilerErrors.Name(),
 		Measure:     ReconcilerErrors,
 		Description: "The current number of errors in the RootSync and RepoSync reconcilers",
-		TagKeys:     []tag.Key{KeyName, KeyComponent},
-		Aggregation: view.LastValue(),
-	}
-
-	// ReconcilerNonBlockingErrorsView aggregates the ReconcilerNonBlockingErrors metric measurements.
-	ReconcilerNonBlockingErrorsView = &view.View{
-		Name:        ReconcilerNonBlockingErrors.Name(),
-		Measure:     ReconcilerNonBlockingErrors,
-		Description: "The current number of non-blocking errors in the RootSync and RepoSync reconcilers",
-		TagKeys:     []tag.Key{KeyName, KeyErrorCode},
-		Aggregation: view.LastValue(),
-	}
-
-	// RenderingErrorsView aggregates the RenderingErrors metric measurements.
-	RenderingErrorsView = &view.View{
-		Name:        RenderingErrors.Name(),
-		Measure:     RenderingErrors,
-		Description: "The current number of errors in the RootSync and RepoSync rendering process",
-		TagKeys:     []tag.Key{KeyName, KeyComponent},
+		TagKeys:     []tag.Key{KeyName, KeyComponent, KeyErrorClass},
 		Aggregation: view.LastValue(),
 	}
 

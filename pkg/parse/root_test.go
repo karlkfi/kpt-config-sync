@@ -141,7 +141,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 				status.InternalError("internal error"),
 			},
 			wantMetrics: []*view.Row{
-				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.InternalErrorCode}}},
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{}}},
 			},
 		},
 		{
@@ -152,8 +152,8 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 				status.InternalError("another internal error"),
 			},
 			wantMetrics: []*view.Row{
-				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.InternalErrorCode}}},
-				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyErrorCode, Value: status.SourceErrorCode}}},
+				{Data: &view.CountData{Value: 2}, Tags: []tag.Tag{{}}},
+				{Data: &view.CountData{Value: 1}, Tags: []tag.Tag{{}}},
 			},
 		},
 	}
@@ -246,6 +246,7 @@ func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 				applier.Error(errors.New("sync error")),
 			},
 			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "parsing"}}},
 				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
 				{Data: &view.LastValueData{Value: 1}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
 			},
@@ -257,6 +258,7 @@ func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 				status.InternalError("internal error"),
 			},
 			wantMetrics: []*view.Row{
+				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "parsing"}}},
 				{Data: &view.LastValueData{Value: 0}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "source"}}},
 				{Data: &view.LastValueData{Value: 2}, Tags: []tag.Tag{{Key: metrics.KeyComponent, Value: "sync"}}},
 			},

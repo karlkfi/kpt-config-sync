@@ -15,18 +15,6 @@ var (
 		"The number of errors in the reconciler",
 		stats.UnitDimensionless)
 
-	// ReconcilerNonBlockingErrors metric measures the number of non-blocking errors in the reconciler.
-	ReconcilerNonBlockingErrors = stats.Int64(
-		"reconciler_non_blocking_errors",
-		"The number of non-blocking errors in the reconciler",
-		stats.UnitDimensionless)
-
-	// RenderingErrors metric measures the number of errors in the rendering process.
-	RenderingErrors = stats.Int64(
-		"rendering_errors",
-		"The number of errors in the rendering process",
-		stats.UnitDimensionless)
-
 	// PipelineError metric measures the error by components when syncing a commit
 	PipelineError = stats.Int64(
 		"pipeline_error_observed",

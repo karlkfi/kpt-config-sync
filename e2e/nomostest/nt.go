@@ -423,15 +423,6 @@ func (nt *NT) ValidateErrorMetricsNotFound() error {
 	return nil
 }
 
-// ValidateReconcilerNonBlockingErrors validates that the `reconciler_non_blocking_errors` metric exists
-// for the correct reconciler.
-func (nt *NT) ValidateReconcilerNonBlockingErrors(reconciler, errorCode string, errorCount int) error {
-	if nt.MultiRepo {
-		return nt.ReconcilerMetrics.ValidateReconcilerNonBlockingErrors(reconciler, errorCode, errorCount)
-	}
-	return nil
-}
-
 // ValidateResourceOverrideCount validates that the `resource_override_count` metric exists
 // for the correct reconciler.
 func (nt *NT) ValidateResourceOverrideCount(reconciler, containerName, resourceType string, count int) error {
