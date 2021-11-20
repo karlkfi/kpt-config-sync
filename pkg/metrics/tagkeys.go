@@ -1,14 +1,12 @@
 package metrics
 
 import (
-	"os"
-	"regexp"
-
 	"go.opencensus.io/tag"
 )
 
 var (
 	// KeyName groups metrics by the reconciler name. Possible values: root-reconciler, ns-reconciler-<namespace>
+	// TODO b/208316928 remove this key from pipeline_error_observed metric once same metric in Resource Group Controller has this tag removed
 	KeyName, _ = tag.NewKey("name")
 
 	// KeyReconcilerType groups metrics by the reconciler type. Possible values: root, namespace.
@@ -57,17 +55,4 @@ func StatusTagKey(err error) string {
 		return "success"
 	}
 	return "error"
-}
-
-// ReconcilerTagKey filters the reconciler name from the pod name that is exposed via the Downward API
-// (https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#the-downward-api).
-// If the regex filter fails, the entire pod name is returned.
-func ReconcilerTagKey() string {
-	podName := os.Getenv("RECONCILER_NAME")
-	regex := regexp.MustCompile(`(?:([a-z0-9]+(?:-[a-z0-9]+)*))-[a-z0-9]+-(?:[a-z0-9]+)`)
-	ss := regex.FindStringSubmatch(podName)
-	if ss != nil {
-		return ss[1]
-	}
-	return podName
 }

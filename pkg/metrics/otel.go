@@ -27,7 +27,7 @@ exporters:
   prometheus:
     endpoint: :8675
     namespace: config_sync
-  stackdriver:
+  googlecloud:
     metric:
       prefix: "custom.googleapis.com/opencensus/config_sync/"
       skip_create_descriptor: true
@@ -56,13 +56,13 @@ processors:
     #  - include: reconciler_errors
     #    action: update
     #    new_name: last_reconciler_errors
-      - include: .*
-        match_type: regexp
-        action: update
-        operations:
-          - action: add_label
-            new_label: cluster
-            new_value: {{.ClusterName}}
+    #  - include: .*
+    #    match_type: regexp
+    #    action: update
+    #    operations:
+    #      - action: add_label
+    #        new_label: cluster
+    #        new_value: {{.ClusterName}}
 extensions:
   health_check:
 service:
@@ -71,7 +71,7 @@ service:
     metrics/cloudmonitoring:
       receivers: [opencensus]
       processors: [batch, filter/cloudmonitoring, metricstransform]
-      exporters: [stackdriver]
+      exporters: [googlecloud]
     metrics/prometheus:
       receivers: [opencensus]
       processors: [batch, metricstransform]
