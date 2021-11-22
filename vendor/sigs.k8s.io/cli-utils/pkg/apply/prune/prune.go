@@ -30,18 +30,17 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
-// PruneOptions encapsulates the necessary information to
-// implement the prune functionality.
-type PruneOptions struct {
+// Pruner implements GetPruneObjs to calculate which objects to prune and Prune
+// to delete them.
+type Pruner struct {
 	InvClient inventory.InventoryClient
 	Client    dynamic.Interface
 	Mapper    meta.RESTMapper
 }
 
-// NewPruneOptions returns a struct (PruneOptions) encapsulating the necessary
-// information to run the prune. Returns an error if an error occurs
-// gathering this information.
-func NewPruneOptions(factory util.Factory, invClient inventory.InventoryClient) (*PruneOptions, error) {
+// NewPruner returns a new Pruner.
+// Returns an error if dependency injection fails using the factory.
+func NewPruner(factory util.Factory, invClient inventory.InventoryClient) (*Pruner, error) {
 	// Client/Builder fields from the Factory.
 	client, err := factory.DynamicClient()
 	if err != nil {
@@ -51,7 +50,7 @@ func NewPruneOptions(factory util.Factory, invClient inventory.InventoryClient) 
 	if err != nil {
 		return nil, err
 	}
-	return &PruneOptions{
+	return &Pruner{
 		InvClient: invClient,
 		Client:    client,
 		Mapper:    mapper,
@@ -72,7 +71,7 @@ type Options struct {
 	Destroy bool
 }
 
-// Prune deletes the set of passed pruneObjs. A prune skip/failure is
+// Prune deletes the set of passed objects. A prune skip/failure is
 // captured in the TaskContext, so we do not lose track of these
 // objects from the inventory. The passed prune filters are used to
 // determine if permission exists to delete the object. An example
@@ -82,42 +81,61 @@ type Options struct {
 // automatically prune/delete).
 //
 // Parameters:
-//   pruneObjs - objects to prune (delete)
+//   objs - objects to prune (delete)
 //   pruneFilters - list of filters for deletion permission
 //   taskContext - task for apply/prune
 //   taskName - name of the parent task group, for events
-//   o - options for dry-run
-func (po *PruneOptions) Prune(pruneObjs object.UnstructuredSet,
+//   opts - options for dry-run
+func (p *Pruner) Prune(
+	objs object.UnstructuredSet,
 	pruneFilters []filter.ValidationFilter,
 	taskContext *taskrunner.TaskContext,
 	taskName string,
-	o Options,
+	opts Options,
 ) error {
-	eventFactory := CreateEventFactory(o.Destroy, taskName)
+	eventFactory := CreateEventFactory(opts.Destroy, taskName)
 	// Iterate through objects to prune (delete). If an object is not pruned
 	// and we need to keep it in the inventory, we must capture the prune failure.
-	for _, pruneObj := range pruneObjs {
-		pruneID := object.UnstructuredToObjMetaOrDie(pruneObj)
-		klog.V(5).Infof("attempting prune: %s", pruneID)
+	for _, obj := range objs {
+		id := object.UnstructuredToObjMetadata(obj)
+		klog.V(5).Infof("evaluating prune filters (object: %q)", id)
 		// Check filters to see if we're prevented from pruning/deleting object.
 		var filtered bool
 		var reason string
 		var err error
-		for _, filter := range pruneFilters {
-			klog.V(6).Infof("prune filter %s: %s", filter.Name(), pruneID)
-			filtered, reason, err = filter.Filter(pruneObj)
+		for _, pruneFilter := range pruneFilters {
+			klog.V(6).Infof("evaluating prune filter (object: %q, filter: %q)", id, pruneFilter.Name())
+			filtered, reason, err = pruneFilter.Filter(obj)
 			if err != nil {
 				if klog.V(5).Enabled() {
-					klog.Errorf("error during %s, (%s): %s", filter.Name(), pruneID, err)
+					klog.Errorf("error during %s, (%s): %v", pruneFilter.Name(), id, err)
 				}
-				taskContext.EventChannel() <- eventFactory.CreateFailedEvent(pruneID, err)
-				taskContext.CapturePruneFailure(pruneID)
+				taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
+				taskContext.AddFailedDelete(id)
 				break
 			}
 			if filtered {
-				klog.V(4).Infof("prune filtered (filter: %q, resource: %q, reason: %q)", filter.Name(), pruneID, reason)
-				taskContext.EventChannel() <- eventFactory.CreateSkippedEvent(pruneObj, reason)
-				taskContext.CapturePruneFailure(pruneID)
+				klog.V(4).Infof("prune skipped (object: %q, filter: %q): %v", id, pruneFilter.Name(), reason)
+				// If deletion was prevented, remove the inventory annotation.
+				if pruneFilter.Name() == filter.PreventRemoveFilterName {
+					if !opts.DryRunStrategy.ClientOrServerDryRun() {
+						obj, err = p.removeInventoryAnnotation(obj)
+						if err != nil {
+							if klog.V(4).Enabled() {
+								klog.Errorf("error removing annotation (object: %q, annotation: %q): %v", id, inventory.OwningInventoryKey, err)
+							}
+							taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
+							taskContext.AddFailedDelete(id)
+							break
+						} else {
+							// Inventory annotation was successfully removed from the object.
+							// Register for removal from the inventory.
+							taskContext.AddAbandonedObject(id)
+						}
+					}
+				}
+				taskContext.SendEvent(eventFactory.CreateSkippedEvent(obj, reason))
+				taskContext.AddSkippedDelete(id)
 				break
 			}
 		}
@@ -125,82 +143,104 @@ func (po *PruneOptions) Prune(pruneObjs object.UnstructuredSet,
 			continue
 		}
 		// Filters passed--actually delete object if not dry run.
-		if !o.DryRunStrategy.ClientOrServerDryRun() {
-			klog.V(4).Infof("prune object delete: %s", pruneID)
-			namespacedClient, err := po.namespacedClient(pruneID)
-			if err != nil {
-				if klog.V(4).Enabled() {
-					klog.Errorf("prune failed for %s (%s)", pruneID, err)
-				}
-				taskContext.EventChannel() <- eventFactory.CreateFailedEvent(pruneID, err)
-				taskContext.CapturePruneFailure(pruneID)
-				continue
-			}
-			err = namespacedClient.Delete(context.TODO(), pruneID.Name, metav1.DeleteOptions{
-				PropagationPolicy: &o.PropagationPolicy,
+		if !opts.DryRunStrategy.ClientOrServerDryRun() {
+			klog.V(4).Infof("deleting object (object: %q)", id)
+			err := p.deleteObject(id, metav1.DeleteOptions{
+				PropagationPolicy: &opts.PropagationPolicy,
 			})
 			if err != nil {
 				if klog.V(4).Enabled() {
-					klog.Errorf("prune failed for %s (%s)", pruneID, err)
+					klog.Errorf("error deleting object (object: %q): %v", id, err)
 				}
-				taskContext.EventChannel() <- eventFactory.CreateFailedEvent(pruneID, err)
-				taskContext.CapturePruneFailure(pruneID)
+				taskContext.SendEvent(eventFactory.CreateFailedEvent(id, err))
+				taskContext.AddFailedDelete(id)
 				continue
 			}
 		}
-		taskContext.EventChannel() <- eventFactory.CreateSuccessEvent(pruneObj)
+		taskContext.SendEvent(eventFactory.CreateSuccessEvent(obj))
 	}
 	return nil
+}
+
+// removeInventoryAnnotation removes the `config.k8s.io/owning-inventory` annotation from pruneObj.
+func (p *Pruner) removeInventoryAnnotation(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	// Make a copy of the input object to avoid modifying the input.
+	// This prevents race conditions when writing to the underlying map.
+	obj = obj.DeepCopy()
+	id := object.UnstructuredToObjMetadata(obj)
+	annotations := obj.GetAnnotations()
+	if annotations != nil {
+		if _, ok := annotations[inventory.OwningInventoryKey]; ok {
+			klog.V(4).Infof("removing annotation (object: %q, annotation: %q)", id, inventory.OwningInventoryKey)
+			delete(annotations, inventory.OwningInventoryKey)
+			obj.SetAnnotations(annotations)
+			namespacedClient, err := p.namespacedClient(id)
+			if err != nil {
+				return obj, err
+			}
+			_, err = namespacedClient.Update(context.TODO(), obj, metav1.UpdateOptions{})
+			return obj, err
+		}
+	}
+	return obj, nil
 }
 
 // GetPruneObjs calculates the set of prune objects, and retrieves them
 // from the cluster. Set of prune objects equals the set of inventory
 // objects minus the set of currently applied objects. Returns an error
 // if one occurs.
-func (po *PruneOptions) GetPruneObjs(inv inventory.InventoryInfo,
-	localObjs object.UnstructuredSet, o Options) (object.UnstructuredSet, error) {
-	localIds := object.UnstructuredsToObjMetasOrDie(localObjs)
-	prevInvIds, err := po.InvClient.GetClusterObjs(inv, o.DryRunStrategy)
+func (p *Pruner) GetPruneObjs(
+	inv inventory.InventoryInfo,
+	objs object.UnstructuredSet,
+	opts Options,
+) (object.UnstructuredSet, error) {
+	ids := object.UnstructuredSetToObjMetadataSet(objs)
+	invIDs, err := p.InvClient.GetClusterObjs(inv, opts.DryRunStrategy)
 	if err != nil {
 		return nil, err
 	}
-	pruneIds := prevInvIds.Diff(localIds)
-	pruneObjs := object.UnstructuredSet{}
-	for _, pruneID := range pruneIds {
-		pruneObj, err := po.GetObject(pruneID)
+	// only return objects that were in the inventory but not in the object set
+	ids = invIDs.Diff(ids)
+	objs = object.UnstructuredSet{}
+	for _, id := range ids {
+		pruneObj, err := p.getObject(id)
 		if err != nil {
 			if meta.IsNoMatchError(err) {
-				klog.V(4).Infof("skip pruning obj %s/%s: the resource type is unrecognized by the cluster (kind: %s, group %s)",
-					pruneID.Namespace, pruneID.Name, pruneID.GroupKind.Kind, pruneID.GroupKind.Group)
+				klog.V(4).Infof("skip pruning (object: %q): resource type not registered", id)
 				continue
-			} else if apierrors.IsNotFound(err) {
-				// If prune object is not in cluster, no need to prune it--skip.
-				klog.V(4).Infof("skip pruning obj %s/%s: not found in the cluster",
-					pruneID.Namespace, pruneID.Name)
+			}
+			if apierrors.IsNotFound(err) {
+				klog.V(4).Infof("skip pruning (object: %q): resource not found", id)
 				continue
 			}
 			return nil, err
 		}
-		pruneObjs = append(pruneObjs, pruneObj)
+		objs = append(objs, pruneObj)
 	}
-	sort.Sort(sort.Reverse(ordering.SortableUnstructureds(pruneObjs)))
-	return pruneObjs, nil
+	sort.Sort(sort.Reverse(ordering.SortableUnstructureds(objs)))
+	return objs, nil
 }
 
-// GetObject uses the passed object data to retrieve the object
-// from the cluster (or an error if one occurs).
-func (po *PruneOptions) GetObject(obj object.ObjMetadata) (*unstructured.Unstructured, error) {
-	namespacedClient, err := po.namespacedClient(obj)
+func (p *Pruner) getObject(id object.ObjMetadata) (*unstructured.Unstructured, error) {
+	namespacedClient, err := p.namespacedClient(id)
 	if err != nil {
 		return nil, err
 	}
-	return namespacedClient.Get(context.TODO(), obj.Name, metav1.GetOptions{})
+	return namespacedClient.Get(context.TODO(), id.Name, metav1.GetOptions{})
 }
 
-func (po *PruneOptions) namespacedClient(obj object.ObjMetadata) (dynamic.ResourceInterface, error) {
-	mapping, err := po.Mapper.RESTMapping(obj.GroupKind)
+func (p *Pruner) deleteObject(id object.ObjMetadata, opts metav1.DeleteOptions) error {
+	namespacedClient, err := p.namespacedClient(id)
+	if err != nil {
+		return err
+	}
+	return namespacedClient.Delete(context.TODO(), id.Name, opts)
+}
+
+func (p *Pruner) namespacedClient(id object.ObjMetadata) (dynamic.ResourceInterface, error) {
+	mapping, err := p.Mapper.RESTMapping(id.GroupKind)
 	if err != nil {
 		return nil, err
 	}
-	return po.Client.Resource(mapping.Resource).Namespace(obj.Namespace), nil
+	return p.Client.Resource(mapping.Resource).Namespace(id.Namespace), nil
 }

@@ -35,14 +35,12 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object/graph"
 )
 
-const defaultWaitTimeout = 1 * time.Minute
-
 type TaskQueueBuilder struct {
-	PruneOptions *prune.PruneOptions
-	InfoHelper   info.InfoHelper
-	Factory      util.Factory
-	Mapper       meta.RESTMapper
-	InvClient    inventory.InventoryClient
+	Pruner     *prune.Pruner
+	InfoHelper info.InfoHelper
+	Factory    util.Factory
+	Mapper     meta.RESTMapper
+	InvClient  inventory.InventoryClient
 	// True if we are destroying, which deletes the inventory object
 	// as well (possibly) the inventory namespace.
 	Destroy bool
@@ -125,15 +123,11 @@ func (t *TaskQueueBuilder) AppendInvAddTask(inv inventory.InventoryInfo, applyOb
 func (t *TaskQueueBuilder) AppendInvSetTask(inv inventory.InventoryInfo, dryRun common.DryRunStrategy) *TaskQueueBuilder {
 	klog.V(2).Infoln("adding inventory set task")
 	prevInvIds, _ := t.InvClient.GetClusterObjs(inv, dryRun)
-	prevInventory := make(map[object.ObjMetadata]bool, len(prevInvIds))
-	for _, prevInvID := range prevInvIds {
-		prevInventory[prevInvID] = true
-	}
 	t.tasks = append(t.tasks, &task.InvSetTask{
 		TaskName:      fmt.Sprintf("inventory-set-%d", t.invSetCounter),
 		InvClient:     t.InvClient,
 		InvInfo:       inv,
-		PrevInventory: prevInventory,
+		PrevInventory: prevInvIds,
 		DryRun:        dryRun,
 	})
 	t.invSetCounter += 1
@@ -200,7 +194,7 @@ func (t *TaskQueueBuilder) AppendPruneTask(pruneObjs object.UnstructuredSet,
 			TaskName:          fmt.Sprintf("prune-%d", t.pruneCounter),
 			Objects:           pruneObjs,
 			Filters:           pruneFilters,
-			PruneOptions:      t.PruneOptions,
+			Pruner:            t.Pruner,
 			PropagationPolicy: o.PrunePropagationPolicy,
 			DryRunStrategy:    o.DryRunStrategy,
 			Destroy:           t.Destroy,
@@ -221,13 +215,12 @@ func (t *TaskQueueBuilder) AppendApplyWaitTasks(applyObjs object.UnstructuredSet
 	if err != nil {
 		t.err = err
 	}
-	addWaitTask, waitTimeout := waitTaskTimeout(o.DryRunStrategy.ClientOrServerDryRun(),
-		len(applySets), o.ReconcileTimeout)
 	for _, applySet := range applySets {
 		t.AppendApplyTask(applySet, applyFilters, applyMutators, o)
-		if addWaitTask {
-			applyIds := object.UnstructuredsToObjMetasOrDie(applySet)
-			t.AppendWaitTask(applyIds, taskrunner.AllCurrent, waitTimeout)
+		// dry-run skips wait tasks
+		if !o.DryRunStrategy.ClientOrServerDryRun() {
+			applyIds := object.UnstructuredSetToObjMetadataSet(applySet)
+			t.AppendWaitTask(applyIds, taskrunner.AllCurrent, o.ReconcileTimeout)
 		}
 	}
 	return t
@@ -245,31 +238,14 @@ func (t *TaskQueueBuilder) AppendPruneWaitTasks(pruneObjs object.UnstructuredSet
 		if err != nil {
 			t.err = err
 		}
-		addWaitTask, waitTimeout := waitTaskTimeout(o.DryRunStrategy.ClientOrServerDryRun(),
-			len(pruneSets), o.PruneTimeout)
 		for _, pruneSet := range pruneSets {
 			t.AppendPruneTask(pruneSet, pruneFilters, o)
-			if addWaitTask {
-				pruneIds := object.UnstructuredsToObjMetasOrDie(pruneSet)
-				t.AppendWaitTask(pruneIds, taskrunner.AllNotFound, waitTimeout)
+			// dry-run skips wait tasks
+			if !o.DryRunStrategy.ClientOrServerDryRun() {
+				pruneIds := object.UnstructuredSetToObjMetadataSet(pruneSet)
+				t.AppendWaitTask(pruneIds, taskrunner.AllNotFound, o.PruneTimeout)
 			}
 		}
 	}
 	return t
-}
-
-// waitTaskTimeout returns true if the wait task should be added to the task queue;
-// false otherwise. If true, also returns the duration within wait task before timeout.
-func waitTaskTimeout(dryRun bool, numObjSets int, waitTimeout time.Duration) (bool, time.Duration) {
-	var zeroTimeout = time.Duration(0)
-	if dryRun {
-		return false, zeroTimeout
-	}
-	if waitTimeout != zeroTimeout {
-		return true, waitTimeout
-	}
-	if numObjSets > 1 {
-		return true, defaultWaitTimeout
-	}
-	return false, zeroTimeout
 }

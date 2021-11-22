@@ -6,7 +6,6 @@ package taskrunner
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"sigs.k8s.io/cli-utils/pkg/apply/cache"
@@ -14,7 +13,6 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/poller"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	pollevent "sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
@@ -50,6 +48,9 @@ type Options struct {
 // that does most of the work.
 func (tsr *taskStatusRunner) Run(ctx context.Context, taskQueue chan Task,
 	eventChannel chan event.Event, options Options) error {
+	// Give the poller its own context and run it in the background.
+	// If taskStatusRunner.Run is cancelled, baseRunner.run will exit early,
+	// causing the poller to be cancelled.
 	statusCtx, cancelFunc := context.WithCancel(context.Background())
 	statusChannel := tsr.statusPoller.Poll(statusCtx, tsr.identifiers, polling.Options{
 		PollInterval: options.PollInterval,
@@ -180,15 +181,13 @@ func (b *baseRunner) run(ctx context.Context, taskQueue chan Task,
 				abort = true
 				abortReason = fmt.Errorf("polling for status failed: %v",
 					statusEvent.Error)
-				// If the current task is a wait task, we just set it
-				// to complete so we can exit the loop as soon as possible.
-				completeIfWaitTask(currentTask, taskContext)
+				currentTask.Cancel(taskContext)
 				continue
 			}
 
 			if o.emitStatusEvents {
 				// Forward all normal events to the eventChannel
-				eventChannel <- event.Event{
+				taskContext.SendEvent(event.Event{
 					Type: event.StatusType,
 					StatusEvent: event.StatusEvent{
 						Identifier:       statusEvent.Resource.Identifier,
@@ -196,27 +195,24 @@ func (b *baseRunner) run(ctx context.Context, taskQueue chan Task,
 						Resource:         statusEvent.Resource.Resource,
 						Error:            statusEvent.Error,
 					},
-				}
+				})
 			}
+
+			id := statusEvent.Resource.Identifier
 
 			// Update the cache to track the latest resource spec & status.
 			// Status is computed from the resource on-demand.
 			// Warning: Resource may be nil!
-			taskContext.ResourceCache().Put(
-				statusEvent.Resource.Identifier,
-				cache.ResourceStatus{
-					Resource:      statusEvent.Resource.Resource,
-					Status:        statusEvent.Resource.Status,
-					StatusMessage: statusEvent.Resource.Message,
-				},
-			)
+			taskContext.ResourceCache().Put(id, cache.ResourceStatus{
+				Resource:      statusEvent.Resource.Resource,
+				Status:        statusEvent.Resource.Status,
+				StatusMessage: statusEvent.Resource.Message,
+			})
 
-			// If the current task is a wait task, we check whether
-			// the condition has been met. If so, we complete the task.
-			if wt, ok := currentTask.(*WaitTask); ok {
-				if wt.checkCondition(taskContext) {
-					completeIfWaitTask(currentTask, taskContext)
-				}
+			// send a status update to the running task, but only if the status
+			// has changed and the task is tracking the object.
+			if currentTask.Identifiers().Contains(id) {
+				currentTask.StatusUpdate(taskContext, id)
 			}
 		// A message on the taskChannel means that the current task
 		// has either completed or failed.
@@ -226,15 +222,14 @@ func (b *baseRunner) run(ctx context.Context, taskQueue chan Task,
 		// finish, we exit.
 		// If everything is ok, we fetch and start the next task.
 		case msg := <-taskContext.TaskChannel():
-			currentTask.ClearTimeout()
-			taskContext.EventChannel() <- event.Event{
+			taskContext.SendEvent(event.Event{
 				Type: event.ActionGroupType,
 				ActionGroupEvent: event.ActionGroupEvent{
 					GroupName: currentTask.Name(),
 					Action:    currentTask.Action(),
 					Type:      event.Finished,
 				},
-			}
+			})
 			if msg.Err != nil {
 				return msg.Err
 			}
@@ -253,16 +248,9 @@ func (b *baseRunner) run(ctx context.Context, taskQueue chan Task,
 		case <-doneCh:
 			doneCh = nil // Set doneCh to nil so we don't enter a busy loop.
 			abort = true
-			completeIfWaitTask(currentTask, taskContext)
+			abortReason = ctx.Err() // always non-nil when doneCh is closed
+			currentTask.Cancel(taskContext)
 		}
-	}
-}
-
-// completeIfWaitTask checks if the current task is a wait task. If so,
-// we invoke the complete function to complete it.
-func completeIfWaitTask(currentTask Task, taskContext *TaskContext) {
-	if wt, ok := currentTask.(*WaitTask); ok {
-		wt.complete(taskContext)
 	}
 }
 
@@ -282,29 +270,17 @@ func (b *baseRunner) nextTask(taskQueue chan Task,
 		return nil, true
 	}
 
-	taskContext.EventChannel() <- event.Event{
+	taskContext.SendEvent(event.Event{
 		Type: event.ActionGroupType,
 		ActionGroupEvent: event.ActionGroupEvent{
 			GroupName: tsk.Name(),
 			Action:    tsk.Action(),
 			Type:      event.Started,
 		},
-	}
+	})
 
-	switch st := tsk.(type) {
-	case *WaitTask:
-		// The wait tasks need to be handled specifically here. Before
-		// starting a new wait task, we check if the condition is already
-		// met. Without this check, a task might end up waiting for
-		// status events when the condition is in fact already met.
-		if st.checkCondition(taskContext) {
-			st.startAndComplete(taskContext)
-		} else {
-			st.Start(taskContext)
-		}
-	default:
-		tsk.Start(taskContext)
-	}
+	tsk.Start(taskContext)
+
 	return tsk, false
 }
 
@@ -313,47 +289,4 @@ func (b *baseRunner) nextTask(taskQueue chan Task,
 // set.
 type TaskResult struct {
 	Err error
-}
-
-// TimeoutError is a special error used by tasks when they have
-// timed out.
-type TimeoutError struct {
-	// Identifiers contains the identifiers of all resources that the
-	// WaitTask was waiting for.
-	Identifiers object.ObjMetadataSet
-
-	// Timeout is the amount of time it took before it timed out.
-	Timeout time.Duration
-
-	// Condition defines the criteria for which the task was waiting.
-	Condition Condition
-
-	TimedOutResources []TimedOutResource
-}
-
-type TimedOutResource struct {
-	Identifier object.ObjMetadata
-
-	Status status.Status
-
-	Message string
-}
-
-func (te TimeoutError) Error() string {
-	ids := []string{}
-	for _, id := range te.Identifiers {
-		ids = append(ids, id.String())
-	}
-	sort.Strings(ids)
-	return fmt.Sprintf("timeout after %.0f seconds waiting for %d resources (%v) to reach condition %s",
-		te.Timeout.Seconds(), len(te.Identifiers), ids, te.Condition)
-}
-
-// IsTimeoutError checks whether a given error is
-// a TimeoutError.
-func IsTimeoutError(err error) (*TimeoutError, bool) {
-	if e, ok := err.(*TimeoutError); ok {
-		return e, true
-	}
-	return &TimeoutError{}, false
 }

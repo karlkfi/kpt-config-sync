@@ -18,7 +18,7 @@ import (
 
 const (
 	ResourceListKind       = "ResourceList"
-	ResourceListAPIVersion = "config.kubernetes.io/v1alpha1"
+	ResourceListAPIVersion = "config.kubernetes.io/v1"
 )
 
 // ByteReadWriter reads from an input and writes to an output.
@@ -67,12 +67,12 @@ func (rw *ByteReadWriter) Read() ([]*yaml.RNode, error) {
 		WrapBareSeqNode:       rw.WrapBareSeqNode,
 	}
 	val, err := b.Read()
+	rw.Results = b.Results
+
 	if rw.FunctionConfig == nil {
 		rw.FunctionConfig = b.FunctionConfig
 	}
-	rw.Results = b.Results
-
-	if !rw.NoWrap {
+	if !rw.NoWrap && rw.WrappingKind == "" {
 		rw.WrappingAPIVersion = b.WrappingAPIVersion
 		rw.WrappingKind = b.WrappingKind
 	}
@@ -80,15 +80,18 @@ func (rw *ByteReadWriter) Read() ([]*yaml.RNode, error) {
 }
 
 func (rw *ByteReadWriter) Write(nodes []*yaml.RNode) error {
-	return ByteWriter{
+	w := ByteWriter{
 		Writer:                rw.Writer,
 		KeepReaderAnnotations: rw.KeepReaderAnnotations,
 		Style:                 rw.Style,
 		FunctionConfig:        rw.FunctionConfig,
 		Results:               rw.Results,
-		WrappingAPIVersion:    rw.WrappingAPIVersion,
-		WrappingKind:          rw.WrappingKind,
-	}.Write(nodes)
+	}
+	if !rw.NoWrap {
+		w.WrappingAPIVersion = rw.WrappingAPIVersion
+		w.WrappingKind = rw.WrappingKind
+	}
+	return w.Write(nodes)
 }
 
 // ParseAll reads all of the inputs into resources
@@ -102,6 +105,7 @@ func ParseAll(inputs ...string) ([]*yaml.RNode, error) {
 func FromBytes(bs []byte) ([]*yaml.RNode, error) {
 	return (&ByteReader{
 		OmitReaderAnnotations: true,
+		AnchorsAweigh:         true,
 		Reader:                bytes.NewBuffer(bs),
 	}).Read()
 }
@@ -152,6 +156,10 @@ type ByteReader struct {
 	// sequence nodes into map node with key yaml.BareSeqNodeWrappingKey
 	// note that this wrapping is different and not related to ResourceList wrapping
 	WrapBareSeqNode bool
+
+	// AnchorsAweigh set to true attempts to replace all YAML anchor aliases
+	// with their definitions (anchor values) immediately after the read.
+	AnchorsAweigh bool
 }
 
 var _ Reader = &ByteReader{}
@@ -269,6 +277,13 @@ func (r *ByteReader) Read() ([]*yaml.RNode, error) {
 		// increment the index annotation value
 		index++
 	}
+	if r.AnchorsAweigh {
+		for _, n := range output {
+			if err = n.DeAnchor(); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return output, nil
 }
 
@@ -304,7 +319,12 @@ func (r *ByteReader) decode(originalYAML string, index int, decoder *yaml.Decode
 		r.SetAnnotations = map[string]string{}
 	}
 	if !r.OmitReaderAnnotations {
+		err := kioutil.CopyLegacyAnnotations(n)
+		if err != nil {
+			return nil, err
+		}
 		r.SetAnnotations[kioutil.IndexAnnotation] = fmt.Sprintf("%d", index)
+		r.SetAnnotations[kioutil.LegacyIndexAnnotation] = fmt.Sprintf("%d", index)
 
 		if r.PreserveSeqIndent {
 			// derive and add the seqindent annotation

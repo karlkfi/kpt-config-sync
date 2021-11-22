@@ -51,9 +51,6 @@ RUN wget https://github.com/kubernetes-sigs/kustomize/releases/download/kustomiz
 # License file required for on-prem release.
 COPY LICENSE LICENSE
 
-# Copy in golang-lru source (MPL licensed dependency)
-COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
-
 # Switch to non-root user
 USER 1000
 
@@ -67,9 +64,6 @@ RUN apt-get update && apt-get install -y git
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
-
-# Copy in golang-lru source (MPL licensed dependency)
-COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 
 # Set up a HOME directory for non-root user
 RUN mkdir -p /nomos
@@ -90,9 +84,6 @@ USER nonroot:nonroot
 # License file required for on-prem release.
 COPY LICENSE LICENSE
 
-# Copy in golang-lru source (MPL licensed dependency)
-COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
-
 ENTRYPOINT ["/reconciler-manager"]
 
 # Admission Webhook image
@@ -103,9 +94,6 @@ USER nonroot:nonroot
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
-
-# Copy in golang-lru source (MPL licensed dependency)
-COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 
 ENTRYPOINT ["/admission-webhook"]
 
@@ -127,9 +115,6 @@ COPY --from=bins /go/bin/nomos nomos
 
 # License file required for on-prem release.
 COPY LICENSE LICENSE
-
-# Copy in golang-lru source (MPL licensed dependency)
-COPY vendor/github.com/hashicorp/golang-lru/ golang-lru/
 
 # Set up a HOME directory for non-root user
 RUN mkdir -p /nomos

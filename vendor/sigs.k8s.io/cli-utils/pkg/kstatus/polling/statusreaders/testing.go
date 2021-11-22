@@ -43,12 +43,16 @@ func (f *fakeClusterReader) ListNamespaceScoped(_ context.Context, list *unstruc
 
 type fakeStatusReader struct{}
 
-func (f *fakeStatusReader) ReadStatus(_ context.Context, _ object.ObjMetadata) *event.ResourceStatus {
+func (f *fakeStatusReader) Supports(schema.GroupKind) bool {
+	return true
+}
+
+func (f *fakeStatusReader) ReadStatus(_ context.Context, _ engine.ClusterReader, _ object.ObjMetadata) *event.ResourceStatus {
 	return nil
 }
 
-func (f *fakeStatusReader) ReadStatusForObject(_ context.Context, obj *unstructured.Unstructured) *event.ResourceStatus {
-	identifier := object.UnstructuredToObjMetaOrDie(obj)
+func (f *fakeStatusReader) ReadStatusForObject(_ context.Context, _ engine.ClusterReader, obj *unstructured.Unstructured) *event.ResourceStatus {
+	identifier := object.UnstructuredToObjMetadata(obj)
 	return &event.ResourceStatus{
 		Identifier: identifier,
 	}

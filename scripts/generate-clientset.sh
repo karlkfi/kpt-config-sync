@@ -50,7 +50,7 @@ for tool in client-gen deepcopy-gen informer-gen lister-gen; do
 done
 
 # This should match the k8s.io/code-generator version in go.mod.
-tag="v0.21.1"
+tag="v0.22.2"
 echo "Checking out k8s.io/code-generator at tag ${tag}"
   # As of go 1.16, go install is the recommended way to build/install modules
   # https://go.dev/doc/go1.16#go-command

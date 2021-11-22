@@ -69,7 +69,7 @@ func (a *ApplyTask) Action() event.ResourceAction {
 }
 
 func (a *ApplyTask) Identifiers() object.ObjMetadataSet {
-	return object.UnstructuredsToObjMetasOrDie(a.Objects)
+	return object.UnstructuredSetToObjMetadataSet(a.Objects)
 }
 
 // Start creates a new goroutine that will invoke
@@ -85,7 +85,8 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 		// TODO: pipe Context through TaskContext
 		ctx := context.TODO()
 		objects := a.Objects
-		klog.V(2).Infof("apply task starting (objects: %d, name: %q)", len(objects), a.Name())
+		klog.V(2).Infof("apply task starting (name: %q, objects: %d)",
+			a.Name(), len(objects))
 		// Create a new instance of the applyOptions interface and use it
 		// to apply the objects.
 		ao, err := applyOptionsFactoryFunc(a.Name(), taskContext.EventChannel(),
@@ -102,17 +103,20 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 			// Set the client and mapping fields on the provided
 			// info so they can be applied to the cluster.
 			info, err := a.InfoHelper.BuildInfo(obj)
-			id := object.UnstructuredToObjMetaOrDie(obj)
+			// BuildInfo strips path annotations.
+			// Use modified object for filters, mutations, and events.
+			obj = info.Object.(*unstructured.Unstructured)
+			id := object.UnstructuredToObjMetadata(obj)
 			if err != nil {
 				if klog.V(4).Enabled() {
 					klog.Errorf("unable to convert obj to info for %s/%s (%s)--continue",
 						obj.GetNamespace(), obj.GetName(), err)
 				}
-				taskContext.EventChannel() <- a.createApplyFailedEvent(
+				taskContext.SendEvent(a.createApplyFailedEvent(
 					id,
 					applyerror.NewUnknownTypeError(err),
-				)
-				taskContext.CaptureResourceFailure(id)
+				))
+				taskContext.AddFailedApply(id)
 				continue
 			}
 
@@ -127,14 +131,14 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 					if klog.V(5).Enabled() {
 						klog.Errorf("error during %s, (%s): %s", filter.Name(), id, filterErr)
 					}
-					taskContext.EventChannel() <- a.createApplyFailedEvent(id, filterErr)
-					taskContext.CaptureResourceFailure(id)
+					taskContext.SendEvent(a.createApplyFailedEvent(id, filterErr))
+					taskContext.AddFailedApply(id)
 					break
 				}
 				if filtered {
 					klog.V(4).Infof("apply filtered (filter: %q, resource: %q, reason: %q)", filter.Name(), id, reason)
-					taskContext.EventChannel() <- a.createApplyEvent(id, event.Unchanged, obj)
-					taskContext.CaptureResourceFailure(id)
+					taskContext.SendEvent(a.createApplyEvent(id, event.Unchanged, obj))
+					taskContext.AddSkippedApply(id)
 					break
 				}
 			}
@@ -148,8 +152,8 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 				if klog.V(5).Enabled() {
 					klog.Errorf("error mutating: %w", err)
 				}
-				taskContext.EventChannel() <- a.createApplyFailedEvent(id, err)
-				taskContext.CaptureResourceFailure(id)
+				taskContext.SendEvent(a.createApplyFailedEvent(id, err))
+				taskContext.AddFailedApply(id)
 				continue
 			}
 
@@ -167,17 +171,17 @@ func (a *ApplyTask) Start(taskContext *taskrunner.TaskContext) {
 				if klog.V(4).Enabled() {
 					klog.Errorf("error applying (%s/%s) %s", info.Namespace, info.Name, err)
 				}
-				taskContext.EventChannel() <- a.createApplyFailedEvent(
+				taskContext.SendEvent(a.createApplyFailedEvent(
 					id,
 					applyerror.NewApplyRunError(err),
-				)
-				taskContext.CaptureResourceFailure(id)
+				))
+				taskContext.AddFailedApply(id)
 			} else if info.Object != nil {
 				acc, err := meta.Accessor(info.Object)
 				if err == nil {
 					uid := acc.GetUID()
 					gen := acc.GetGeneration()
-					taskContext.ResourceApplied(id, uid, gen)
+					taskContext.AddSuccessfulApply(id, uid, gen)
 				}
 			}
 		}
@@ -229,15 +233,19 @@ func newApplyOptions(taskName string, eventChannel chan event.Event, serverSideO
 }
 
 func (a *ApplyTask) sendTaskResult(taskContext *taskrunner.TaskContext) {
+	klog.V(2).Infof("apply task completing (name: %q)", a.Name())
 	taskContext.TaskChannel() <- taskrunner.TaskResult{}
 }
 
-// ClearTimeout is not supported by the ApplyTask.
-func (a *ApplyTask) ClearTimeout() {}
+// Cancel is not supported by the ApplyTask.
+func (a *ApplyTask) Cancel(_ *taskrunner.TaskContext) {}
+
+// StatusUpdate is not supported by the ApplyTask.
+func (a *ApplyTask) StatusUpdate(_ *taskrunner.TaskContext, _ object.ObjMetadata) {}
 
 // mutate loops through the mutator list and executes them on the object.
 func (a *ApplyTask) mutate(ctx context.Context, obj *unstructured.Unstructured) error {
-	id := object.UnstructuredToObjMetaOrDie(obj)
+	id := object.UnstructuredToObjMetadata(obj)
 	for _, mutator := range a.Mutators {
 		klog.V(6).Infof("apply mutator %s: %s", mutator.Name(), id)
 		mutated, reason, err := mutator.Mutate(ctx, obj)
@@ -283,12 +291,12 @@ func (a *ApplyTask) sendBatchApplyEvents(
 	err error,
 ) {
 	for _, obj := range objects {
-		id := object.UnstructuredToObjMetaOrDie(obj)
-		taskContext.EventChannel() <- a.createApplyFailedEvent(
+		id := object.UnstructuredToObjMetadata(obj)
+		taskContext.SendEvent(a.createApplyFailedEvent(
 			id,
 			applyerror.NewInitializeApplyOptionError(err),
-		)
-		taskContext.CaptureResourceFailure(id)
+		))
+		taskContext.AddFailedApply(id)
 	}
 }
 

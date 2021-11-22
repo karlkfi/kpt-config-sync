@@ -5,12 +5,17 @@ package task
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cli-utils/pkg/apply/event"
 	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
 	"sigs.k8s.io/cli-utils/pkg/object"
+)
+
+var (
+	namespaceGVKv1 = schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
 )
 
 // InvAddTask encapsulates structures necessary to add/merge inventory
@@ -33,35 +38,38 @@ func (i *InvAddTask) Action() event.ResourceAction {
 }
 
 func (i *InvAddTask) Identifiers() object.ObjMetadataSet {
-	return object.UnstructuredsToObjMetasOrDie(i.Objects)
+	return object.UnstructuredSetToObjMetadataSet(i.Objects)
 }
 
 // Start updates the inventory by merging the locally applied objects
 // into the current inventory.
 func (i *InvAddTask) Start(taskContext *taskrunner.TaskContext) {
 	go func() {
-		klog.V(2).Infoln("starting inventory add task")
+		klog.V(2).Infof("inventory add task starting (name: %q)", i.Name())
 		if err := inventory.ValidateNoInventory(i.Objects); err != nil {
-			taskContext.TaskChannel() <- taskrunner.TaskResult{Err: err}
+			i.sendTaskResult(taskContext, err)
 			return
 		}
 		// Ensures the namespace exists before applying the inventory object into it.
 		if invNamespace := inventoryNamespaceInSet(i.InvInfo, i.Objects); invNamespace != nil {
 			klog.V(4).Infof("applying inventory namespace %s", invNamespace.GetName())
 			if err := i.InvClient.ApplyInventoryNamespace(invNamespace, i.DryRun); err != nil {
-				taskContext.TaskChannel() <- taskrunner.TaskResult{Err: err}
+				i.sendTaskResult(taskContext, err)
 				return
 			}
 		}
 		klog.V(4).Infof("merging %d local objects into inventory", len(i.Objects))
-		currentObjs := object.UnstructuredsToObjMetasOrDie(i.Objects)
+		currentObjs := object.UnstructuredSetToObjMetadataSet(i.Objects)
 		_, err := i.InvClient.Merge(i.InvInfo, currentObjs, i.DryRun)
-		taskContext.TaskChannel() <- taskrunner.TaskResult{Err: err}
+		i.sendTaskResult(taskContext, err)
 	}()
 }
 
-// ClearTimeout is not supported by the InvAddTask.
-func (i *InvAddTask) ClearTimeout() {}
+// Cancel is not supported by the InvAddTask.
+func (i *InvAddTask) Cancel(_ *taskrunner.TaskContext) {}
+
+// StatusUpdate is not supported by the InvAddTask.
+func (i *InvAddTask) StatusUpdate(_ *taskrunner.TaskContext, _ object.ObjMetadata) {}
 
 // inventoryNamespaceInSet returns the the namespace the passed inventory
 // object will be applied to, or nil if this namespace object does not exist
@@ -74,10 +82,17 @@ func inventoryNamespaceInSet(inv inventory.InventoryInfo, objs object.Unstructur
 
 	for _, obj := range objs {
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk == object.CoreV1Namespace && obj.GetName() == invNamespace {
+		if gvk == namespaceGVKv1 && obj.GetName() == invNamespace {
 			inventory.AddInventoryIDAnnotation(obj, inv)
 			return obj
 		}
 	}
 	return nil
+}
+
+func (i *InvAddTask) sendTaskResult(taskContext *taskrunner.TaskContext, err error) {
+	klog.V(2).Infof("inventory add task completing (name: %q)", i.Name())
+	taskContext.TaskChannel() <- taskrunner.TaskResult{
+		Err: err,
+	}
 }

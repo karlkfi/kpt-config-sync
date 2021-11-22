@@ -21,15 +21,16 @@ import (
 
 // UnknownTypesError captures information about unknown types encountered.
 type UnknownTypesError struct {
-	GroupKinds []schema.GroupKind
+	GroupVersionKinds []schema.GroupVersionKind
 }
 
 func (e *UnknownTypesError) Error() string {
-	var gks []string
-	for _, gk := range e.GroupKinds {
-		gks = append(gks, gk.String())
+	var gvks []string
+	for _, gvk := range e.GroupVersionKinds {
+		gvks = append(gvks, fmt.Sprintf("%s/%s/%s",
+			gvk.Group, gvk.Version, gvk.Kind))
 	}
-	return fmt.Sprintf("unknown resource types: %s", strings.Join(gks, ","))
+	return fmt.Sprintf("unknown resource types: %s", strings.Join(gvks, ","))
 }
 
 // NamespaceMismatchError is returned if all resources must be in a specific
@@ -62,7 +63,7 @@ func SetNamespaces(mapper meta.RESTMapper, objs []*unstructured.Unstructured,
 		}
 	}
 
-	var unknownGKs []schema.GroupKind
+	var unknownGVKs []schema.GroupVersionKind
 	for _, obj := range objs {
 		// Exclude any inventory objects here since we don't want to change
 		// their namespace.
@@ -78,7 +79,7 @@ func SetNamespaces(mapper meta.RESTMapper, objs []*unstructured.Unstructured,
 			if errors.As(err, &unknownTypeError) {
 				// If no scope was found, just add the resource type to the list
 				// of unknown types.
-				unknownGKs = append(unknownGKs, unknownTypeError.GroupKind)
+				unknownGVKs = append(unknownGVKs, unknownTypeError.GroupVersionKind)
 				continue
 			} else {
 				// If something went wrong when looking up the scope, just
@@ -108,9 +109,9 @@ func SetNamespaces(mapper meta.RESTMapper, objs []*unstructured.Unstructured,
 			return fmt.Errorf("unknown RESTScope %q", scope.Name())
 		}
 	}
-	if len(unknownGKs) > 0 {
+	if len(unknownGVKs) > 0 {
 		return &UnknownTypesError{
-			GroupKinds: unknownGKs,
+			GroupVersionKinds: unknownGVKs,
 		}
 	}
 	return nil

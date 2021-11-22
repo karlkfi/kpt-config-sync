@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,13 +24,19 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/apply/taskrunner"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/cli-utils/pkg/inventory"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/cli-utils/pkg/ordering"
 )
 
 // NewApplier returns a new Applier.
-func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient, statusPoller poller.Poller) (*Applier, error) {
-	pruneOpts, err := prune.NewPruneOptions(factory, invClient)
+func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient) (*Applier, error) {
+	pruner, err := prune.NewPruner(factory, invClient)
+	if err != nil {
+		return nil, err
+	}
+	statusPoller, err := polling.NewStatusPollerFromFactory(factory, []engine.StatusReader{})
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +45,8 @@ func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient, st
 		return nil, err
 	}
 	return &Applier{
-		pruneOptions: pruneOpts,
-		statusPoller: statusPoller,
+		pruner:       pruner,
+		StatusPoller: statusPoller,
 		factory:      factory,
 		invClient:    invClient,
 		infoHelper:   info.NewInfoHelper(mapper, factory),
@@ -59,8 +64,8 @@ func NewApplier(factory cmdutil.Factory, invClient inventory.InventoryClient, st
 // parameters and/or the set of resources that needs to be applied to the
 // cluster, different sets of tasks might be needed.
 type Applier struct {
-	pruneOptions *prune.PruneOptions
-	statusPoller poller.Poller
+	pruner       *prune.Pruner
+	StatusPoller poller.Poller
 	factory      cmdutil.Factory
 	invClient    inventory.InventoryClient
 	infoHelper   info.InfoHelper
@@ -100,7 +105,7 @@ func (a *Applier) prepareObjects(localInv inventory.InventoryInfo, localObjs obj
 			}
 		}
 	}
-	pruneObjs, err := a.pruneOptions.GetPruneObjs(localInv, localObjs, prune.Options{
+	pruneObjs, err := a.pruner.GetPruneObjs(localInv, localObjs, prune.Options{
 		DryRunStrategy: o.DryRunStrategy,
 	})
 	if err != nil {
@@ -155,12 +160,12 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 		// Fetch the queue (channel) of tasks that should be executed.
 		klog.V(4).Infoln("applier building task queue...")
 		taskBuilder := &solver.TaskQueueBuilder{
-			PruneOptions: a.pruneOptions,
-			Factory:      a.factory,
-			InfoHelper:   a.infoHelper,
-			Mapper:       mapper,
-			InvClient:    a.invClient,
-			Destroy:      false,
+			Pruner:     a.pruner,
+			Factory:    a.factory,
+			InfoHelper: a.infoHelper,
+			Mapper:     mapper,
+			InvClient:  a.invClient,
+			Destroy:    false,
 		}
 		opts := solver.Options{
 			ServerSideOptions:      options.ServerSideOptions,
@@ -190,7 +195,7 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 				InvPolicy: options.InventoryPolicy,
 			},
 			filter.LocalNamespacesFilter{
-				LocalNamespaces: localNamespaces(invInfo, object.UnstructuredsToObjMetasOrDie(objects)),
+				LocalNamespaces: localNamespaces(invInfo, object.UnstructuredSetToObjMetadataSet(objects)),
 			},
 		}
 		// Build list of apply mutators.
@@ -212,6 +217,7 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 			Build()
 		if err != nil {
 			handleError(eventChannel, err)
+			return
 		}
 		// Send event to inform the caller about the resources that
 		// will be applied/pruned.
@@ -223,8 +229,8 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 		}
 		// Create a new TaskStatusRunner to execute the taskQueue.
 		klog.V(4).Infoln("applier building TaskStatusRunner...")
-		allIds := object.UnstructuredsToObjMetasOrDie(append(applyObjs, pruneObjs...))
-		runner := taskrunner.NewTaskStatusRunner(allIds, a.statusPoller, resourceCache)
+		allIds := object.UnstructuredSetToObjMetadataSet(append(applyObjs, pruneObjs...))
+		runner := taskrunner.NewTaskStatusRunner(allIds, a.StatusPoller, resourceCache)
 		klog.V(4).Infoln("applier running TaskStatusRunner...")
 		err = runner.Run(ctx, taskQueue.ToChannel(), eventChannel, taskrunner.Options{
 			PollInterval:     options.PollInterval,
@@ -233,6 +239,7 @@ func (a *Applier) Run(ctx context.Context, invInfo inventory.InventoryInfo, obje
 		})
 		if err != nil {
 			handleError(eventChannel, err)
+			return
 		}
 	}()
 	return eventChannel
@@ -304,12 +311,11 @@ func handleError(eventChannel chan event.Event, err error) {
 func localNamespaces(localInv inventory.InventoryInfo, localObjs []object.ObjMetadata) sets.String {
 	namespaces := sets.NewString()
 	for _, obj := range localObjs {
-		namespace := strings.ToLower(obj.Namespace)
-		if namespace != "" {
-			namespaces.Insert(namespace)
+		if obj.Namespace != "" {
+			namespaces.Insert(obj.Namespace)
 		}
 	}
-	invNamespace := strings.ToLower(localInv.Namespace())
+	invNamespace := localInv.Namespace()
 	if invNamespace != "" {
 		namespaces.Insert(invNamespace)
 	}

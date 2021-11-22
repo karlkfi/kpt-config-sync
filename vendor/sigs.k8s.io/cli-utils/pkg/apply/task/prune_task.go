@@ -20,7 +20,7 @@ import (
 type PruneTask struct {
 	TaskName string
 
-	PruneOptions      *prune.PruneOptions
+	Pruner            *prune.Pruner
 	Objects           object.UnstructuredSet
 	Filters           []filter.ValidationFilter
 	DryRunStrategy    common.DryRunStrategy
@@ -43,7 +43,7 @@ func (p *PruneTask) Action() event.ResourceAction {
 }
 
 func (p *PruneTask) Identifiers() object.ObjMetadataSet {
-	return object.UnstructuredsToObjMetasOrDie(p.Objects)
+	return object.UnstructuredSetToObjMetadataSet(p.Objects)
 }
 
 // Start creates a new goroutine that will invoke
@@ -52,14 +52,15 @@ func (p *PruneTask) Identifiers() object.ObjMetadataSet {
 // to signal to the taskrunner that the task has completed (or failed).
 func (p *PruneTask) Start(taskContext *taskrunner.TaskContext) {
 	go func() {
-		klog.V(2).Infof("prune task starting (objects: %d, name: %q)", len(p.Objects), p.Name())
+		klog.V(2).Infof("prune task starting (name: %q, objects: %d)",
+			p.Name(), len(p.Objects))
 		// Create filter to prevent deletion of currently applied
 		// objects. Must be done here to wait for applied UIDs.
 		uidFilter := filter.CurrentUIDFilter{
 			CurrentUIDs: taskContext.AppliedResourceUIDs(),
 		}
 		p.Filters = append(p.Filters, uidFilter)
-		err := p.PruneOptions.Prune(
+		err := p.Pruner.Prune(
 			p.Objects,
 			p.Filters,
 			taskContext,
@@ -70,11 +71,15 @@ func (p *PruneTask) Start(taskContext *taskrunner.TaskContext) {
 				Destroy:           p.Destroy,
 			},
 		)
+		klog.V(2).Infof("prune task completing (name: %q)", p.Name())
 		taskContext.TaskChannel() <- taskrunner.TaskResult{
 			Err: err,
 		}
 	}()
 }
 
-// ClearTimeout is not supported by the PruneTask.
-func (p *PruneTask) ClearTimeout() {}
+// Cancel is not supported by the PruneTask.
+func (p *PruneTask) Cancel(_ *taskrunner.TaskContext) {}
+
+// StatusUpdate is not supported by the PruneTask.
+func (p *PruneTask) StatusUpdate(_ *taskrunner.TaskContext, _ object.ObjMetadata) {}

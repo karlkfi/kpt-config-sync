@@ -43,15 +43,11 @@ func newClientSet(c client.Client) (*clientSet, error) {
 	})
 	f := util.NewFactory(matchVersionKubeConfigFlags)
 
-	poller, err := factory.NewStatusPoller(f)
-	if err != nil {
-		return nil, err
-	}
 	invClient, err := inventory.NewInventoryClient(f, live.WrapInventoryObj, live.InvToUnstructuredFunc)
 	if err != nil {
 		return nil, err
 	}
-	applier, err := apply.NewApplier(f, invClient, poller)
+	applier, err := apply.NewApplier(f, invClient)
 	if err != nil {
 		return nil, err
 	}

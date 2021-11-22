@@ -9,18 +9,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/engine"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
-func NewDeploymentResourceReader(reader engine.ClusterReader, mapper meta.RESTMapper, rsStatusReader resourceTypeStatusReader) engine.StatusReader {
+func NewDeploymentResourceReader(mapper meta.RESTMapper, rsStatusReader resourceTypeStatusReader) engine.StatusReader {
 	return &baseStatusReader{
-		reader: reader,
 		mapper: mapper,
 		resourceStatusReader: &deploymentResourceReader{
-			reader:         reader,
 			mapper:         mapper,
 			rsStatusReader: rsStatusReader,
 		},
@@ -31,7 +30,6 @@ func NewDeploymentResourceReader(reader engine.ClusterReader, mapper meta.RESTMa
 // resources from the cluster, knows how to find any ReplicaSets belonging to the
 // Deployment, and compute status for the deployment.
 type deploymentResourceReader struct {
-	reader engine.ClusterReader
 	mapper meta.RESTMapper
 
 	// rsStatusReader is the implementation of the resourceTypeStatusReader
@@ -41,10 +39,14 @@ type deploymentResourceReader struct {
 
 var _ resourceTypeStatusReader = &deploymentResourceReader{}
 
-func (d *deploymentResourceReader) ReadStatusForObject(ctx context.Context, deployment *unstructured.Unstructured) *event.ResourceStatus {
-	identifier := object.UnstructuredToObjMetaOrDie(deployment)
+func (d *deploymentResourceReader) Supports(gk schema.GroupKind) bool {
+	return gk == appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind()
+}
 
-	replicaSetStatuses, err := statusForGeneratedResources(ctx, d.mapper, d.reader, d.rsStatusReader, deployment,
+func (d *deploymentResourceReader) ReadStatusForObject(ctx context.Context, reader engine.ClusterReader, deployment *unstructured.Unstructured) *event.ResourceStatus {
+	identifier := object.UnstructuredToObjMetadata(deployment)
+
+	replicaSetStatuses, err := statusForGeneratedResources(ctx, d.mapper, reader, d.rsStatusReader, deployment,
 		appsv1.SchemeGroupVersion.WithKind("ReplicaSet").GroupKind(), "spec", "selector")
 	if err != nil {
 		return &event.ResourceStatus{

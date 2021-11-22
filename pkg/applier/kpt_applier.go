@@ -208,16 +208,34 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 			FieldManager:    configsync.FieldManager,
 		},
 		InventoryPolicy: a.policy,
+		// Leaving ReconcileTimeout and PruneTimeout unset may cause a WaitTask to wait forever.
+		// ReconcileTimeout defines the timeout for a wait task after an apply task.
+		// ReconcileTimeout is a task-level setting instead of an object-level setting.
+		ReconcileTimeout: time.Minute,
+		// PruneTimeout defines the timeout for a wait task after a prune task.
+		// PruneTimeout is a task-level setting instead of an object-level setting.
+		PruneTimeout: time.Minute,
 	}
 
 	events := cs.apply(ctx, a.inventory, resources, options)
 	for e := range events {
 		switch e.Type {
+		case event.InitType:
+			for _, ag := range e.InitEvent.ActionGroups {
+				klog.Info("InitEvent", ag)
+			}
+		case event.ActionGroupType:
+			klog.Info(e.ActionGroupEvent)
 		case event.ErrorType:
 			a.errs = status.Append(a.errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.WaitType:
-			klog.Info(e.WaitEvent.Error)
+			// Log WaitEvent at the verbose level of 4 due to the number of WaitEvent.
+			// For every object which is skipped to apply/prune, there will be one ReconcileSkipped WaitEvent.
+			// For every object which is not skipped to apply/prune, there will be at least two WaitEvent:
+			// one ReconcilePending WaitEvent and one Reconciled/ReconcileFailed/ReconcileTimeout WaitEvent. In addition,
+			// a reconciled object may become pending before a wait task times out.
+			klog.V(4).Info(e.WaitEvent)
 		case event.ApplyType:
 			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
