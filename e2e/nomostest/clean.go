@@ -63,6 +63,9 @@ func Clean(nt *NT, failOnError FailOnError) {
 	// The admission-webhook prevents deleting test resources. Hence we delete it before cleaning other resources.
 	removeAdmissionWebhook(nt, failOnError)
 
+	// Remove the Kubevirt resources
+	removeKubevirt(nt, failOnError)
+
 	// Remove the resource-group-system namespace
 	removeResourceGroupController(nt, failOnError)
 
@@ -254,6 +257,46 @@ func resetSystemNamespaces(nt *NT, failOnError FailOnError) {
 	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error resetting the system namespaces")
 	}
+}
+
+// removeKubevirt cleans up the Kubevirt resources when the kubevirt namespace is stuck
+// in the `Terminating` phase.
+func removeKubevirt(nt *NT, failOnError FailOnError) {
+	kubevirtNS := corev1.Namespace{}
+	if err := nt.Get("kubevirt", "", &kubevirtNS); err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		if failOnError {
+			nt.T.Fatalf("failed to get the Kubevirt namespace", err)
+		} else {
+			nt.T.Logf("failed to get the Kubevirt namespace", err)
+		}
+		return
+	}
+
+	if kubevirtNS.Status.Phase == corev1.NamespaceActive {
+		return
+	}
+
+	nt.T.Log("The kubevirt namespace is in the 'Terminating' phase")
+	start := time.Now()
+	nt.T.Log("Clean up Kubevirt resources")
+	nt.MustKubectl("delete", "apiservice", "v1.subresources.kubevirt.io", "v1alpha3.subresources.kubevirt.io", "--ignore-not-found")
+	nt.MustKubectl("delete", "mutatingwebhookconfigurations", "virt-api-mutator", "--ignore-not-found")
+	nt.MustKubectl("delete", "validatingwebhookconfigurations", "virt-api-mutator", "virt-operator-validator", "--ignore-not-found")
+	nt.MustKubectl("patch", "kubevirt", "kubevirt", "-n=kubevirt", "--type=merge", "-p={\"metadata\":{\"finalizers\":null}}")
+
+	if _, err := Retry(120*time.Second, func() error {
+		return nt.ValidateNotFound("kubevirt", "", &corev1.Namespace{})
+	}); err != nil {
+		if failOnError {
+			nt.T.Fatalf("failed to clean up the Kubevirt resources", err)
+		} else {
+			nt.T.Logf("failed to clean up the Kubevirt resources", err)
+		}
+	}
+	nt.T.Logf("Cleaning up kubevirt resources takes %v seconds", time.Since(start).Seconds())
 }
 
 // removeAdmissionWebhook deletes the `admission-webhook.configsync.gke.io` ValidatingWebhookConfiguration.
