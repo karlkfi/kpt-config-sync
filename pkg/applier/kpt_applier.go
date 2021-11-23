@@ -44,6 +44,11 @@ type Applier struct {
 	client client.Client
 	// scope is the scope of the applier (eg root or a namespace).
 	scope declared.Scope
+	// errs tracks all the errors the applier encounters.
+	// This field is cleared at the start of the `Applier.Apply` method
+	errs status.MultiError
+	// syncing indicates whether the applier is syncing.
+	syncing bool
 	// mux is an Applier-level mutext to prevent concurrent Apply() and Refresh()
 	mux sync.Mutex
 }
@@ -56,6 +61,10 @@ type Interface interface {
 	// This is called when a new change in the git resource is detected. It also
 	// returns a map of the GVKs which were successfully applied by the Applier.
 	Apply(ctx context.Context, desiredResources []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError)
+	// Errors returns the errors encountered during apply.
+	Errors() status.MultiError
+	// Syncing indicates whether the applier is syncing.
+	Syncing() bool
 }
 
 var _ Interface = &Applier{}
@@ -164,7 +173,6 @@ func handleMetrics(ctx context.Context, operation string, err error, gvk schema.
 
 // sync triggers a kpt live apply library call to apply a set of resources.
 func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core.ID]client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
-	var errs status.MultiError
 	cs, err := a.clientSetFunc(a.client)
 	if err != nil {
 		return nil, Error(err)
@@ -178,7 +186,8 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		glog.Infof("%v objects to be disabled: %v", len(disabledObjs), core.GKNNs(disabledObjs))
 		disabledCount, err := cs.handleDisabledObjects(ctx, a.inventory, disabledObjs)
 		if err != nil {
-			return nil, status.Append(errs, err)
+			a.errs = status.Append(a.errs, err)
+			return nil, a.errs
 		}
 		stats.disableObjs = disabledObjStats{
 			total:     uint64(len(disabledObjs)),
@@ -205,14 +214,14 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	for e := range events {
 		switch e.Type {
 		case event.ErrorType:
-			errs = status.Append(errs, Error(e.ErrorEvent.Err))
+			a.errs = status.Append(a.errs, Error(e.ErrorEvent.Err))
 			stats.errorTypeEvents++
 		case event.WaitType:
 			glog.Info(e.WaitEvent.Error)
 		case event.ApplyType:
-			errs = status.Append(errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
+			a.errs = status.Append(a.errs, processApplyEvent(ctx, e.ApplyEvent, &stats.applyEvent, cache, unknownTypeResources))
 		case event.PruneType:
-			errs = status.Append(errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, cs))
+			a.errs = status.Append(a.errs, processPruneEvent(ctx, e.PruneEvent, &stats.pruneEvent, cs))
 		default:
 			glog.V(4).Infof("skipped %v event", e.Type)
 		}
@@ -226,7 +235,7 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 		}
 		gvks[resource.GetObjectKind().GroupVersionKind()] = struct{}{}
 	}
-	if errs == nil {
+	if a.errs == nil {
 		glog.V(4).Infof("all resources are up to date.")
 	}
 
@@ -235,11 +244,33 @@ func (a *Applier) sync(ctx context.Context, objs []client.Object, cache map[core
 	} else {
 		glog.Infof("The applier made new progress: %s.", stats.string())
 	}
-	return gvks, errs
+	return gvks, a.errs
+}
+
+// Errors implements Interface.
+// Errors returns the errors encountered during apply.
+func (a *Applier) Errors() status.MultiError {
+	return a.errs
+}
+
+// Syncing implements Interface.
+// Syncing returns whether the applier is syncing.
+func (a *Applier) Syncing() bool {
+	return a.syncing
 }
 
 // Apply implements Interface.
 func (a *Applier) Apply(ctx context.Context, desiredResource []client.Object) (map[schema.GroupVersionKind]struct{}, status.MultiError) {
+	// Clear the `errs` field at the start.
+	a.errs = nil
+	// Set the `syncing` field to `true` at the start.
+	a.syncing = true
+
+	defer func() {
+		// Make sure to clear the `syncing` field before `Apply` returns.
+		a.syncing = false
+	}()
+
 	// Create the new cache showing the new declared resource.
 	newCache := make(map[core.ID]client.Object)
 	for _, desired := range desiredResource {

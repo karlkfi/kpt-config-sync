@@ -2,9 +2,12 @@ package parse
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
@@ -17,6 +20,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,6 +49,7 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 			},
 			discoveryInterface: dc,
 			converter:          converter,
+			mux:                &sync.Mutex{},
 		},
 		scope: scope,
 	}, nil
@@ -67,6 +72,9 @@ func (p *namespace) options() *opts {
 
 // parseSource implements the Parser interface
 func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.FileObject, status.MultiError) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
 	filePaths := reader.FilePaths{
 		RootDir:   state.policyDir,
 		PolicyDir: p.PolicyDir,
@@ -143,7 +151,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 	if len(cse) > 0 {
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "source", len(cse))
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "source", len(cse))
 	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
 
 	metrics.RecordReconcilerErrors(ctx, "source", cse)
@@ -156,6 +164,9 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 
 // setRenderingStatus implements the Parser interface
 func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
 	if oldStatus.equal(newStatus) {
 		return nil
 	}
@@ -191,7 +202,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		metrics.RecordReconcilerErrors(ctx, "rendering", cse)
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "rendering", len(cse))
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "rendering", len(cse))
 
 	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
@@ -201,36 +212,46 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 }
 
 // setSyncStatus implements the Parser interface
-func (p *namespace) setSyncStatus(ctx context.Context, newStatus gitStatus) error {
+// setSyncStatus sets the RepoSync sync status.
+// errs inclucdes the errors encountered during the apply step;
+func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) error {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
 	var rs v1alpha1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
-		return status.APIServerError(err, "failed to get RepoSync for parser")
+		return status.APIServerError(err, fmt.Sprintf("failed to get the RepoSync object for the %v namespace", p.scope))
 	}
 
-	syncErrs := status.ToCSE(newStatus.errs)
-	rs.Status.Sync.Commit = newStatus.commit
-	rs.Status.Sync.Git = v1alpha1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
+	// syncing indicates whether the applier is syncing.
+	syncing := p.applier.Syncing()
+
+	syncErrs := status.ToCSE(errs)
+	rs.Status.Sync.Commit = rs.Status.Source.Commit
+	rs.Status.Sync.Git = rs.Status.Source.Git
 	rs.Status.Sync.Errors = syncErrs
-	rs.Status.Sync.LastUpdate = newStatus.lastUpdate
+	lastUpdate := metav1.Now()
+	rs.Status.Sync.LastUpdate = lastUpdate
 	metrics.RecordReconcilerErrors(ctx, "sync", syncErrs)
-	metrics.RecordPipelineError(ctx, RepoSyncReconcilerType, "sync", len(syncErrs))
-	metrics.RecordLastSync(ctx, newStatus.commit, newStatus.lastUpdate.Time)
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "sync", len(syncErrs))
+	if !syncing {
+		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, lastUpdate.Time)
+	}
 
 	var allErrs []v1alpha1.ConfigSyncError
 	allErrs = append(allErrs, rs.Status.Source.Errors...)
 	allErrs = append(allErrs, syncErrs...)
-	if len(allErrs) == 0 {
-		rs.Status.LastSyncedCommit = newStatus.commit
+	if syncing {
+		reposync.SetSyncing(&rs, true, "Sync", "Syncing", rs.Status.Sync.Commit, allErrs, lastUpdate)
+	} else {
+		if len(allErrs) == 0 {
+			rs.Status.LastSyncedCommit = rs.Status.Sync.Commit
+		}
+		reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", rs.Status.Sync.Commit, allErrs, lastUpdate)
 	}
-	reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", newStatus.commit, allErrs, newStatus.lastUpdate)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
-		return status.APIServerError(err, "failed to update RepoSync sync status from parser")
+		return status.APIServerError(err, fmt.Sprintf("failed to update the RepoSync sync status for the %v namespace", p.scope))
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package reconciler
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/glog"
@@ -179,9 +180,37 @@ func Run(opts Options) {
 
 	// Start the Remediator (non-blocking).
 	rem.Start(ctx)
+
+	// Create a new context with its cancellation function.
+	ctxForUpdateStatus, cancel := context.WithCancel(context.Background())
+
+	go updateStatus(ctxForUpdateStatus, parser)
+
 	// Start the Parser (blocking).
 	// This will not return until:
 	// - the Context is cancelled, or
 	// - its Done channel is closed.
 	parse.Run(ctx, parser)
+
+	// This is to terminate `updateSyncStatus`.
+	cancel()
+}
+
+// updateStatus update the status periodically until the cancellation function of the context is called.
+func updateStatus(ctx context.Context, p parse.Parser) {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			// ctx.Done() is closed when the cancellation function of the context is called.
+			return
+
+		case <-ticker.C:
+			if !p.Reconciling() {
+				// TODO (b/209689848): update the status to reflect the remediator errors
+				continue
+			}
+			// if `p.Reconciling` is true, `parse.Run` would update the status periodically.
+		}
+	}
 }

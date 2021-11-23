@@ -24,6 +24,8 @@ type Remediator struct {
 	watchMgr *watch.Manager
 	workers  []*reconcile.Worker
 	started  bool
+	// errs tracks all the errors the remediator encounters.
+	errs status.MultiError
 }
 
 // Interface is a fake-able subset of the interface Remediator implements that
@@ -39,6 +41,8 @@ type Interface interface {
 	UpdateWatches(context.Context, map[schema.GroupVersionKind]struct{}) status.MultiError
 	// ManagementConflict returns true if one of the watchers noticed a management conflict.
 	ManagementConflict() bool
+	// Errors returns the errors the remediator encounters.
+	Errors() status.MultiError
 }
 
 var _ Interface = &Remediator{}
@@ -90,4 +94,9 @@ func (r *Remediator) UpdateWatches(ctx context.Context, gvks map[schema.GroupVer
 // ManagementConflict implements Interface.
 func (r *Remediator) ManagementConflict() bool {
 	return r.watchMgr.ManagementConflict()
+}
+
+// Errors implements Interface.
+func (r *Remediator) Errors() status.MultiError {
+	return r.errs
 }

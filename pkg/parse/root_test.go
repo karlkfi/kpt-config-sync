@@ -2,6 +2,7 @@ package parse
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -46,6 +47,10 @@ func (r *noOpRemediator) ManagementConflict() bool {
 
 func (r *noOpRemediator) UpdateWatches(_ context.Context, _ map[schema.GroupVersionKind]struct{}) status.MultiError {
 	r.needsUpdate = false
+	return nil
+}
+
+func (r *noOpRemediator) Errors() status.MultiError {
 	return nil
 }
 
@@ -115,6 +120,7 @@ func TestRoot_Parse(t *testing.T) {
 						remediator: &noOpRemediator{},
 						applier:    &fakeApplier{},
 					},
+					mux: &sync.Mutex{},
 				},
 			}
 			state := reconcilerState{}
@@ -170,6 +176,7 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 						scope:     declared.RootReconciler,
 						resources: &declared.Resources{},
 					},
+					mux: &sync.Mutex{},
 				},
 			}
 			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
@@ -221,6 +228,7 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 						scope:     declared.RootReconciler,
 						resources: &declared.Resources{},
 					},
+					mux: &sync.Mutex{},
 				},
 			}
 			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
@@ -281,6 +289,7 @@ func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 					},
 					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObject()),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
+					mux:                &sync.Mutex{},
 				},
 			}
 			err := parseAndUpdate(context.Background(), parser, triggerReimport, &reconcilerState{})
@@ -343,4 +352,16 @@ func (a *fakeApplier) Apply(_ context.Context, objs []client.Object) (map[schema
 		errs = status.Append(errs, e)
 	}
 	return nil, errs
+}
+
+func (a *fakeApplier) Errors() status.MultiError {
+	var errs status.MultiError
+	for _, e := range a.errors {
+		errs = status.Append(errs, e)
+	}
+	return errs
+}
+
+func (a *fakeApplier) Syncing() bool {
+	return false
 }

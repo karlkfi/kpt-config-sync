@@ -85,6 +85,11 @@ func Run(ctx context.Context, p Parser) {
 }
 
 func run(ctx context.Context, p Parser, trigger string, state *reconcilerState) {
+	p.SetReconciling(true)
+	defer func() {
+		p.SetReconciling(false)
+	}()
+
 	var syncDir cmpath.Absolute
 	gs := gitStatus{}
 	gs.commit, syncDir, gs.errs = hydrate.SourceCommitAndDir(p.options().GitDir, p.options().PolicyDir, p.options().reconcilerName)
@@ -322,9 +327,17 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		return sourceErrs
 	}
 
+	// Create a new context with its cancellation function.
+	ctxForUpdateSyncStatus, cancel := context.WithCancel(context.Background())
+
+	go updateSyncStatus(ctxForUpdateSyncStatus, p)
+
 	start := time.Now()
 	syncErrs := p.options().update(ctx, &state.cache)
 	metrics.RecordParserDuration(ctx, trigger, "update", metrics.StatusTagKey(syncErrs), start)
+
+	// This is to terminate `updateSyncStatus`.
+	cancel()
 
 	newSyncStatus := gitStatus{
 		commit:     state.cache.git.commit,
@@ -332,7 +345,8 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 		lastUpdate: metav1.Now(),
 	}
 	if state.needToSetSyncStatus(newSyncStatus) {
-		if err := p.setSyncStatus(ctx, newSyncStatus); err != nil {
+		// TODO (b/209689848): update the status to reflect the remediator errors
+		if err := p.setSyncStatus(ctx, syncErrs); err != nil {
 			syncErrs = status.Append(syncErrs, err)
 		} else {
 			state.syncStatus = newSyncStatus
@@ -341,4 +355,23 @@ func parseAndUpdate(ctx context.Context, p Parser, trigger string, state *reconc
 	}
 
 	return status.Append(sourceErrs, syncErrs)
+}
+
+// updateSyncStatus update the sync status periodically until the cancellation function of the context is called.
+func updateSyncStatus(ctx context.Context, p Parser) {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			// ctx.Done() is closed when the cancellation function of the context is called.
+			return
+
+		case <-ticker.C:
+			// TODO (b/209689848): update the status to reflect the remediator errors
+			if err := p.setSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
+				glog.Infof("failed to update sync status")
+				continue
+			}
+		}
+	}
 }
