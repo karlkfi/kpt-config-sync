@@ -146,6 +146,7 @@ func Clean(nt *NT, failOnError FailOnError) {
 	}
 
 	DeleteManagedNamespaces(nt)
+	deleteImplicitNamespaces(nt, failOnError)
 }
 
 // DeleteManagedNamespaces deletes all the namespaces managed by Config Sync.
@@ -256,6 +257,32 @@ func resetSystemNamespaces(nt *NT, failOnError FailOnError) {
 	}
 	if errDeleting && bool(failOnError) {
 		nt.T.Fatal("error resetting the system namespaces")
+	}
+}
+
+// deleteImplicitNamespaces deletes the namespaces with the PreventDeletion annotation.
+func deleteImplicitNamespaces(nt *NT, failOnError FailOnError) {
+	errDeleting := false
+	nsList := &corev1.NamespaceList{}
+	if err := nt.Client.List(nt.Context, nsList); err != nil {
+		nt.T.Log(err)
+		errDeleting = true
+	}
+	for _, ns := range nsList.Items {
+		if annotation, ok := ns.Annotations[common.LifecycleDeleteAnnotation]; ok && annotation == common.PreventDeletion {
+			if err := nt.Client.Delete(nt.Context, &ns); err != nil {
+				nt.T.Log(err)
+				errDeleting = true
+			}
+			if failOnError {
+				WaitToTerminate(nt, kinds.Namespace(), ns.Name, "")
+			} else {
+				WaitToTerminate(nt, kinds.Namespace(), ns.Name, "", WaitNoFail())
+			}
+		}
+	}
+	if errDeleting && bool(failOnError) {
+		nt.T.Fatal("error deleting implicit namespaces")
 	}
 }
 
