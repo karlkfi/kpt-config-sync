@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"path/filepath"
 	"sort"
 	"testing"
@@ -20,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -431,7 +433,8 @@ func TestDoNotRemoveManagedByLabelExceptForConfigManagement(t *testing.T) {
 func TestDeclareImplicitNamespace(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured)
 
-	const implicitNamespace = "shipping"
+	var unixMilliseconds = time.Now().UnixNano() / 1000000
+	var implicitNamespace = "shipping-" + fmt.Sprint(unixMilliseconds)
 
 	err := nt.ValidateNotFound(implicitNamespace, "", &corev1.Namespace{})
 	if err != nil {
@@ -441,12 +444,11 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 
 	// Phase 1: Declare a Role in a Namespace that doesn't exist, and ensure it
 	// gets created.
-	nt.Root.Add("acme/role.yaml", fake.RoleObject(core.Name("admin"),
-		core.Namespace(implicitNamespace)))
-	nt.Root.CommitAndPush("add Role in implicit Namespace")
+	nt.Root.Add("acme/role.yaml", fake.RoleObject(core.Name("admin"), core.Namespace(implicitNamespace)))
+	nt.Root.CommitAndPush("add Role in implicit Namespace " + implicitNamespace)
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
+	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{}, nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
 	if err != nil {
 		// No need to continue test since Namespace was never created.
 		nt.T.Fatal(err)
@@ -477,7 +479,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 	nt.Root.CommitAndPush("remove Role")
 	nt.WaitForRepoSyncs()
 
-	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{})
+	err = nt.Validate(implicitNamespace, "", &corev1.Namespace{}, nomostest.HasAnnotation(common.LifecycleDeleteAnnotation, common.PreventDeletion))
 	if err != nil {
 		nt.T.Error(err)
 	}
