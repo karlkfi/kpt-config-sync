@@ -80,12 +80,20 @@ func TestRepoSyncObject(t *testing.T) {
 		},
 		{
 			name:    "no op proxy",
-			obj:     repoSync(auth(authNone), proxy("no-op proxy")),
+			obj:     repoSync(auth(authGCENode), proxy("no-op proxy")),
 			wantErr: fake.Error(nonhierarchical.InvalidSyncCode),
 		},
 		{
-			name: "valid proxy",
-			obj:  repoSync(auth(authGCENode), proxy("ok proxy")),
+			name: "valid proxy with none auth type",
+			obj:  repoSync(auth(authNone), proxy("ok proxy")),
+		},
+		{
+			name: "valid proxy with cookiefile",
+			obj:  repoSync(auth(authCookiefile), secret("cookiefile"), proxy("ok proxy")),
+		},
+		{
+			name: "valid proxy with token",
+			obj:  repoSync(auth(authToken), secret("token"), proxy("ok proxy")),
 		},
 		{
 			name:    "illegal secret",

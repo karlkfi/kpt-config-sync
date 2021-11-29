@@ -47,7 +47,7 @@ type Git struct {
 	GCPServiceAccountEmail string `json:"gcpServiceAccountEmail,omitempty"`
 
 	// Proxy is a struct that contains options for configuring access to the Git repo via a proxy.
-	// Only has an effect when secretType is one of ("cookiefile", "none"). Optional.
+	// Only has an effect when secretType is one of ("cookiefile", "none", "token"). Optional.
 	// +optional
 	Proxy string `json:"proxy,omitempty"`
 

@@ -79,12 +79,20 @@ func TestValidateRootSync(t *testing.T) {
 		},
 		{
 			name:    "no op proxy",
-			obj:     rootSync(rsAuth(authNone), rsProxy("no-op proxy")),
+			obj:     rootSync(rsAuth(authGCENode), rsProxy("no-op proxy")),
 			wantErr: fake.Error(InvalidSyncCode),
 		},
 		{
-			name: "valid proxy",
-			obj:  rootSync(rsAuth(authGCENode), rsProxy("ok proxy")),
+			name: "valid proxy with none auth type",
+			obj:  rootSync(rsAuth(authNone), rsProxy("ok proxy")),
+		},
+		{
+			name: "valid proxy with cookiefile",
+			obj:  rootSync(rsAuth(authCookiefile), rsSecret("cookiefile"), rsProxy("ok proxy")),
+		},
+		{
+			name: "valid proxy with token",
+			obj:  rootSync(rsAuth(authToken), rsSecret("token"), rsProxy("ok proxy")),
 		},
 		{
 			name:    "illegal secret",

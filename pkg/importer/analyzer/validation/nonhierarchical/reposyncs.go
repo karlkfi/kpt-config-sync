@@ -54,11 +54,8 @@ func validateGitSpec(git v1alpha1.Git, rs client.Object) status.Error {
 	}
 
 	// Check that proxy isn't unnecessarily declared.
-	switch git.Auth {
-	case authNone, authCookiefile:
-		if git.Proxy != "" {
-			return NoOpProxy(rs)
-		}
+	if git.Proxy != "" && git.Auth != authNone && git.Auth != authCookiefile && git.Auth != authToken {
+		return NoOpProxy(rs)
 	}
 
 	// Check the secret ref is specified if and only if it is required.
@@ -117,8 +114,8 @@ func InvalidAuthType(o client.Object) status.Error {
 func NoOpProxy(o client.Object) status.Error {
 	kind := o.GetObjectKind().GroupVersionKind().Kind
 	return invalidSyncBuilder.
-		Sprintf("%ss which declare spec.git.proxy must declare spec.git.auth=%q or %q",
-			kind, authNone, authCookiefile).
+		Sprintf("%ss which declare spec.git.proxy must declare spec.git.auth=%q, %q or %q",
+			kind, authNone, authCookiefile, authToken).
 		BuildWithResources(o)
 }
 

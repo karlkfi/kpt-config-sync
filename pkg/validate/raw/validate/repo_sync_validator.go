@@ -72,11 +72,8 @@ func RepoSyncObject(rs *v1beta1.RepoSync) status.Error {
 	}
 
 	// Check that proxy isn't unnecessarily declared.
-	switch git.Auth {
-	case authNone, authCookiefile:
-		if git.Proxy != "" {
-			return nonhierarchical.NoOpProxy(rs)
-		}
+	if git.Proxy != "" && git.Auth != authNone && git.Auth != authCookiefile && git.Auth != authToken {
+		return nonhierarchical.NoOpProxy(rs)
 	}
 
 	// Check the secret ref is specified if and only if it is required.
