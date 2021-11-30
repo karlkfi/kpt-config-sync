@@ -56,7 +56,7 @@ func Clean(nt *NT, failOnError FailOnError) {
 	nt.T.Helper()
 
 	// Delete remote repos that were created 24 hours ago on the Git provider.
-	if err := nt.GitProvider.DeleteRepositories(); err != nil {
+	if err := nt.GitProvider.DeleteObsoleteRepos(); err != nil {
 		nt.T.Log(err)
 	}
 
