@@ -1,0 +1,15 @@
+apiVersion: configsync.gke.io/v1alpha1
+kind: RootSync
+metadata:
+  name: root-sync
+  namespace: config-management-system
+spec:
+  sourceFormat: "hierarchy"
+  git:
+    repo: https://github.com/GoogleCloudPlatform/csp-config-management/
+    branch: 1.0.0
+    dir: "foo-corp"
+    auth: ssh
+    secretRef:
+      name: git-creds
+    proxy: tinyproxy-service.proxy-test:443

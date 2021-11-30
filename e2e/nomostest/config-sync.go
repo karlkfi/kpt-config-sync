@@ -991,8 +991,8 @@ func resetNamespaceRepos(nt *NT) {
 		// This prevents from resetting an existing namespace repo from a remote git provider.
 		if r, found := nt.NonRootRepos[nr.Namespace]; found {
 			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
-			nt.WaitForRepoSync(nr.Namespace, kinds.RepoSync(),
-				configsync.RepoSyncName, nr.Namespace, 120*time.Second, RepoSyncHasStatusSyncCommit)
+			nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, nr.Namespace,
+				120*time.Second, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit)
 		}
 	}
 }

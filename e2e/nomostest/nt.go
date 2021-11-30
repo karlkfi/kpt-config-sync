@@ -495,6 +495,24 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 	return nil
 }
 
+// DefaultRootSha1Fn is the default function to retrieve the commit hash of the root repo.
+func DefaultRootSha1Fn(nt *NT) (string, error) {
+	return nt.Root.Hash(), nil
+}
+
+// DefaultRepoSha1Fn is the default function to retrieve the commit hash of the namespace repo.
+func DefaultRepoSha1Fn(repoName string) Sha1Func {
+	return func(nt *NT) (string, error) {
+		// Get the repository this RepoSync is syncing to, and ensure it is synced
+		// to HEAD.
+		repo, exists := nt.NonRootRepos[repoName]
+		if !exists {
+			return "", fmt.Errorf("checked if nonexistent repo is synced")
+		}
+		return repo.Hash(), nil
+	}
+}
+
 // WaitForRepoSyncs is a convenience method that waits for all repositories
 // to sync.
 //
@@ -506,7 +524,7 @@ func (nt *NT) ValidateReconcilerErrors(reconciler, component string) error {
 func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	nt.T.Helper()
 
-	waitForRepoSyncsOptions := newWaitForRepoSyncsOptions(nt.DefaultWaitTimeout)
+	waitForRepoSyncsOptions := newWaitForRepoSyncsOptions(nt.DefaultWaitTimeout, DefaultRootSha1Fn)
 	for _, option := range options {
 		option(&waitForRepoSyncsOptions)
 	}
@@ -514,19 +532,20 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	syncTimeout := waitForRepoSyncsOptions.timeout
 
 	if nt.MultiRepo {
-		nt.WaitForRootSync(kinds.RootSync(),
-			"root-sync", configmanagement.ControllerNamespace, syncTimeout, RootSyncHasStatusSyncCommit)
+		nt.WaitForSync(kinds.RootSync(), "root-sync",
+			configmanagement.ControllerNamespace, syncTimeout,
+			waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit)
 
 		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
 		if syncNamespaceRepos {
 			for ns, repo := range nt.NamespaceRepos {
-				nt.WaitForRepoSync(repo, kinds.RepoSync(),
-					configsync.RepoSyncName, ns, syncTimeout, RepoSyncHasStatusSyncCommit)
+				nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, ns,
+					syncTimeout, DefaultRepoSha1Fn(repo), RepoSyncHasStatusSyncCommit)
 			}
 		}
 	} else {
-		nt.WaitForRootSync(kinds.Repo(),
-			"repo", "", syncTimeout, RepoHasStatusSyncLatestToken)
+		nt.WaitForSync(kinds.Repo(), "repo", "", syncTimeout,
+			waitForRepoSyncsOptions.rootSha1Fn, RepoHasStatusSyncLatestToken)
 	}
 }
 
@@ -567,23 +586,7 @@ func (nt *NT) GetCurrentMetrics(syncOptions ...MetricsSyncOption) (time.Duration
 	return 0, nil
 }
 
-// WaitForRepoSync waits for the specified RepoSync to be synced to HEAD
-// of the specified repository.
-func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
-	name, namespace string, timeout time.Duration, syncedTo func(sha1 string) Predicate) {
-	nt.T.Helper()
-
-	// Get the repository this RepoSync is syncing to, and ensure it is synced
-	// to HEAD.
-	repo, exists := nt.NonRootRepos[repoName]
-	if !exists {
-		nt.T.Fatal("checked if nonexistent repo is synced")
-	}
-	sha1 := repo.Hash()
-	nt.waitForSync(gvk, name, namespace, timeout, syncedTo(sha1))
-}
-
-// waitForSync waits for the specified object to be synced.
+// WaitForSync waits for the specified object to be synced.
 //
 // o returns a new object of the type to check is synced. It can't just be a
 // struct pointer as calling .Get on the same struct pointer multiple times
@@ -595,7 +598,7 @@ func (nt *NT) WaitForRepoSync(repoName string, gvk schema.GroupVersionKind,
 //
 // predicates is a list of Predicates to use to tell whether the object is
 // synced as desired.
-func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, predicates ...Predicate) {
+func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, sha1Func Sha1Func, syncedTo ...func(sha1 string) Predicate) {
 	nt.T.Helper()
 
 	// Wait for the repository to report it is synced.
@@ -612,7 +615,16 @@ func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, t
 			return errors.Wrapf(ErrWrongType, "trying to wait for List type to sync: %T", o)
 		}
 
-		return nt.Validate(name, namespace, o, predicates...)
+		sha1, err := sha1Func(nt)
+		if err != nil {
+			return errors.Wrapf(err, "failed to retrieve sha1")
+		}
+		isSynced := make([]Predicate, len(syncedTo))
+		for i, s := range syncedTo {
+			isSynced[i] = s(sha1)
+		}
+
+		return nt.Validate(name, namespace, o, isSynced...)
 	})
 	if err != nil {
 		nt.T.Logf("failed after %v to wait for %s/%s %v to be synced", took, namespace, name, gvk)
@@ -627,29 +639,6 @@ func (nt *NT) waitForSync(gvk schema.GroupVersionKind, name, namespace string, t
 	if gvk == kinds.Repo() || gvk == kinds.RepoSync() {
 		nt.RenewClient()
 	}
-}
-
-// WaitForRootSync waits for the specified object to be synced to the root
-// repository.
-//
-// o returns a new struct pointer to the desired object type each time it is
-// called.
-//
-// name and namespace uniquely specify an object of the desired type.
-//
-// timeout specifies the maximum duration allowed for the object to sync.
-//
-// syncedTo specify how to check that the object is synced to HEAD. This function
-// automatically checks for HEAD of the root repository.
-func (nt *NT) WaitForRootSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, syncedTo ...func(sha1 string) Predicate) {
-	nt.T.Helper()
-
-	sha1 := nt.Root.Hash()
-	isSynced := make([]Predicate, len(syncedTo))
-	for i, s := range syncedTo {
-		isSynced[i] = s(sha1)
-	}
-	nt.waitForSync(gvk, name, namespace, timeout, isSynced...)
 }
 
 // RenewClient gets a new Client for talking to the cluster.
@@ -1060,6 +1049,31 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 	)
 }
 
+// WaitForStalledError waits until the given Stalled error is present on the RootSync resource.
+func (nt *NT) WaitForStalledError(reason, message string) {
+	Wait(nt.T, "RootSync stalled error", nt.DefaultWaitTimeout,
+		func() error {
+			rs := fake.RootSyncObject()
+			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
+				return err
+			}
+			stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+			if stalledCondition == nil {
+				return fmt.Errorf("stalled condition not found")
+			}
+			if stalledCondition.Status != metav1.ConditionTrue {
+				return fmt.Errorf("expected status.conditions['Stalled'].status is True, got %s", stalledCondition.Status)
+			}
+			if stalledCondition.Reason != reason {
+				return fmt.Errorf("expected status.conditions['Stalled'].reason is %s, got %s", reason, stalledCondition.Reason)
+			}
+			if !strings.Contains(stalledCondition.Message, message) {
+				return fmt.Errorf("expected status.conditions['Stalled'].message to contain %s, got %s", message, stalledCondition.Message)
+			}
+			return nil
+		})
+}
+
 // SupportV1Beta1CRD checks if v1beta1 CRD is supported
 // in the current testing cluster.
 func (nt *NT) SupportV1Beta1CRD() (bool, error) {
@@ -1164,12 +1178,14 @@ func SyncMetricsToReconcilerSyncError(reconciler string) MetricsSyncOption {
 type waitForRepoSyncsOptions struct {
 	timeout            time.Duration
 	syncNamespaceRepos bool
+	rootSha1Fn         Sha1Func
 }
 
-func newWaitForRepoSyncsOptions(timeout time.Duration) waitForRepoSyncsOptions {
+func newWaitForRepoSyncsOptions(timeout time.Duration, fn Sha1Func) waitForRepoSyncsOptions {
 	options := waitForRepoSyncsOptions{}
 	options.timeout = timeout
 	options.syncNamespaceRepos = true
+	options.rootSha1Fn = fn
 
 	return options
 }
@@ -1181,6 +1197,16 @@ type WaitForRepoSyncsOption func(*waitForRepoSyncsOptions)
 func WithTimeout(timeout time.Duration) WaitForRepoSyncsOption {
 	return func(options *waitForRepoSyncsOptions) {
 		options.timeout = timeout
+	}
+}
+
+// Sha1Func is the function type that retrieves the commit sha1.
+type Sha1Func func(nt *NT) (string, error)
+
+// WithRootSha1Func provides the function to get commit sha1 to WaitForRepoSyncs.
+func WithRootSha1Func(fn Sha1Func) WaitForRepoSyncsOption {
+	return func(options *waitForRepoSyncsOptions) {
+		options.rootSha1Fn = fn
 	}
 }
 
