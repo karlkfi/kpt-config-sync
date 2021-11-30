@@ -49,7 +49,7 @@ func RecordPipelineError(ctx context.Context, reconcilerType, component string, 
 // RecordReconcileDuration produces a measurement for the ReconcileDuration view.
 func RecordReconcileDuration(ctx context.Context, status string, startTime time.Time) {
 	tagCtx, _ := tag.New(ctx, tag.Upsert(KeyStatus, status))
-	measurement := ReconcileDuration.M(time.Since(startTime).Seconds())
+	measurement := ReconcileDuration.M(time.Since(startTime).Milliseconds())
 	stats.Record(tagCtx, measurement)
 }
 

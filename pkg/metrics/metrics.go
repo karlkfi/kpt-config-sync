@@ -22,7 +22,7 @@ var (
 		stats.UnitDimensionless)
 
 	// ReconcileDuration metric measures the latency of reconcile events.
-	ReconcileDuration = stats.Float64(
+	ReconcileDuration = stats.Int64(
 		"reconcile_duration_seconds",
 		"The duration of reconcile events in seconds",
 		stats.UnitMilliseconds)
