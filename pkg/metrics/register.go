@@ -1,24 +1,12 @@
 package metrics
 
 import (
-	"os"
-	"regexp"
-
 	"contrib.go.opencensus.io/exporter/ocagent"
 	"go.opencensus.io/stats/view"
 )
 
 // RegisterOCAgentExporter creates the OC Agent metrics exporter.
 func RegisterOCAgentExporter() (*ocagent.Exporter, error) {
-	// Update OC_RESOURCE_LABELS defined in go.opencensus.io/resource/resource.go
-	// So that each OC agent will have corresponding resource labels
-	// Adding pod name and namespace name can have metrics identified as container_pod
-	// Cluster name & cluster location & project name are attached automatically
-	podName, namespace := GetResourceLabels()
-	err := os.Setenv("OC_RESOURCE_LABELS", "k8s.namespace.name=\""+namespace+"\",k8s.pod.name=\""+podName+"\"")
-	if err != nil {
-		return nil, err
-	}
 	oce, err := ocagent.NewExporter(
 		ocagent.WithInsecure(),
 	)
@@ -28,20 +16,6 @@ func RegisterOCAgentExporter() (*ocagent.Exporter, error) {
 
 	view.RegisterExporter(oce)
 	return oce, nil
-}
-
-// GetResourceLabels gets the namespace and filters the reconciler name from the pod name that are exposed via the Downward API
-// (https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#the-downward-api).
-// If the regex filter fails, the entire pod name is returned.
-func GetResourceLabels() (string, string) {
-	podName := os.Getenv("RECONCILER_NAME")
-	namespace := os.Getenv("NAMESPACE_NAME")
-	regex := regexp.MustCompile(`(?:([a-z0-9]+(?:-[a-z0-9]+)*))-[a-z0-9]+-(?:[a-z0-9]+)`)
-	ss := regex.FindStringSubmatch(podName)
-	if ss != nil {
-		return ss[1], namespace
-	}
-	return podName, namespace
 }
 
 // RegisterReconcilerManagerMetricsViews registers the views so that recorded metrics can be exported in the reconciler manager.

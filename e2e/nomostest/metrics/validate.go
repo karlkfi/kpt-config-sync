@@ -160,6 +160,7 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 		for _, measurement := range csm[ocmetrics.ReconcilerErrorsView.Name] {
 			// If the measurement has a "source" tag, validate the values match.
 			if hasTags([]tag.Tag{
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyComponent, Value: "source"},
 			})(measurement) == nil {
 				if err := valueEquals(sourceValue)(measurement); err != nil {
@@ -168,6 +169,7 @@ func (csm ConfigSyncMetrics) ValidateReconcilerErrors(reconciler string, sourceV
 			}
 			// If the measurement has a "sync" tag, validate the values match.
 			if hasTags([]tag.Tag{
+				{Key: ocmetrics.KeyName, Value: reconciler},
 				{Key: ocmetrics.KeyComponent, Value: "sync"},
 			})(measurement) == nil {
 				if err := valueEquals(syncValue)(measurement); err != nil {
@@ -252,6 +254,7 @@ func (csm ConfigSyncMetrics) validateAPICallDuration(reconciler, operation, gvk 
 // and has the expected value.
 func (csm ConfigSyncMetrics) ValidateDeclaredResources(reconciler string, value int) error {
 	validations := []Validation{
+		hasTags([]tag.Tag{{Key: ocmetrics.KeyName, Value: reconciler}}),
 		valueEquals(value),
 	}
 	return csm.validateMetric(ocmetrics.DeclaredResourcesView.Name, validations...)
