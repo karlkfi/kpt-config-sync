@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/nomos/e2e/nomostest"
@@ -16,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
-	"github.com/google/nomos/pkg/webhook/configuration"
 )
 
 // This file includes tests for drift correction and drift prevention.
@@ -435,6 +433,8 @@ func TestDeleteManagedResources(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
+		nomostest.WaitForWebhookReadiness(nt)
+
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from deleting a resource managed by Config Sync.
 		_, err := nt.Kubectl("delete", "configmap", "cm-1", "-n", "bookstore")
 		if err == nil {
@@ -447,7 +447,7 @@ func TestDeleteManagedResources(t *testing.T) {
 		}
 
 		// Stop the Config Sync webhook to test the drift correction functionality
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Delete the configmap
@@ -495,6 +495,8 @@ func TestDeleteManagedResourcesWithIgnoreMutationAnnotation(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
+		nomostest.WaitForWebhookReadiness(nt)
+
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from deleting a resource managed by Config Sync.
 		_, err := nt.Kubectl("delete", "configmap", "cm-1", "-n", "bookstore")
 		if err == nil {
@@ -507,7 +509,7 @@ func TestDeleteManagedResourcesWithIgnoreMutationAnnotation(t *testing.T) {
 		}
 
 		// Stop the Config Sync webhook to test the drift correction functionality
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Delete the configmap
@@ -563,6 +565,8 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 	if nt.MultiRepo {
+		nomostest.WaitForWebhookReadiness(nt)
+
 		// Add the `client.lifecycle.config.k8s.io/mutation` annotation into the namespace object
 		// The webhook should deny the requests since this annotation is a part of the Config Sync metadata.
 		ignoreMutation := fmt.Sprintf("%s=%s", metadata.LifecycleMutationAnnotation, metadata.IgnoreMutation)
@@ -572,7 +576,7 @@ func TestAddFieldsIntoManagedResources(t *testing.T) {
 		}
 
 		// Stop the Config Sync webhook to test the drift correction functionality
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Add the `client.lifecycle.config.k8s.io/mutation` annotation into the namespace object
@@ -627,6 +631,8 @@ func TestModifyManagedFields(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
+		nomostest.WaitForWebhookReadiness(nt)
+
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from modifying a managed field.
 		_, err := nt.Kubectl("annotate", "namespace", "bookstore", "--overwrite", "season=winter")
 		if err == nil {
@@ -640,7 +646,7 @@ func TestModifyManagedFields(t *testing.T) {
 		}
 
 		// Stop the Config Sync webhook to test the drift correction functionality
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Modify a managed field
@@ -701,7 +707,7 @@ func TestModifyManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
 	if nt.MultiRepo {
 		// The reason we need to stop the webhook here is that the webhook denies a request to modify Config Sync metadata
 		// even if the resource has the `client.lifecycle.config.k8s.io/mutation` annotation.
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Modify a Config Sync annotation
@@ -729,6 +735,7 @@ func TestDeleteManagedFields(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	if nt.MultiRepo {
+		nomostest.WaitForWebhookReadiness(nt)
 
 		// At this point, the Config Sync webhook is on, and should prevent kubectl from deleting a managed field.
 		_, err := nt.Kubectl("annotate", "namespace", "bookstore", "season-")
@@ -743,7 +750,7 @@ func TestDeleteManagedFields(t *testing.T) {
 		}
 
 		// Stop the Config Sync webhook to test the drift correction functionality
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Delete a managed field
@@ -801,7 +808,7 @@ func TestDeleteManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
 	if nt.MultiRepo {
 		// The reason we need to stop the webhook here is that the webhook denies a request to modify Config Sync metadata
 		// even if the resource has the `client.lifecycle.config.k8s.io/mutation` annotation.
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	// Delete a Config Sync annotation
@@ -813,37 +820,6 @@ func TestDeleteManagedFieldsWithIgnoreMutationAnnotation(t *testing.T) {
 	time.Sleep(10 * time.Second)
 	// Verify Config Sync does not correct it
 	err = nt.Validate("bookstore", "", &corev1.Namespace{}, nomostest.MissingAnnotation(metadata.ResourceManagementKey))
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-}
-
-func stopWebhook(nt *nomostest.NT) {
-	webhookName := configuration.Name
-	webhookGK := "validatingwebhookconfigurations.admissionregistration.k8s.io"
-
-	out, err := nt.Kubectl("annotate", webhookGK, webhookName, fmt.Sprintf("%s=%s", metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled))
-	if err != nil {
-		nt.T.Fatalf("got `kubectl annotate %s %s %s=%s` error %v %s, want return nil",
-			webhookGK, webhookName, metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled, err, out)
-	}
-
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(webhookName, "", &admissionv1.ValidatingWebhookConfiguration{},
-			nomostest.HasAnnotation(metadata.WebhookconfigurationKey, metadata.WebhookConfigurationUpdateDisabled))
-	})
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-
-	out, err = nt.Kubectl("delete", webhookGK, webhookName)
-	if err != nil {
-		nt.T.Fatalf("got `kubectl delete %s %s` error %v %s, want return nil", webhookGK, webhookName, err, out)
-	}
-
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.ValidateNotFound(webhookName, "", &admissionv1.ValidatingWebhookConfiguration{})
-	})
 	if err != nil {
 		nt.T.Fatal(err)
 	}

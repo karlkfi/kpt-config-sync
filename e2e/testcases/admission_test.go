@@ -29,6 +29,8 @@ func TestAdmission(t *testing.T) {
 
 	// Ensure we properly forbid changing declared information.
 
+	nomostest.WaitForWebhookReadiness(nt)
+
 	// Prevent deleting declared objects.
 	_, err := nt.Kubectl("delete", "ns", "hello")
 	if err == nil {
@@ -163,6 +165,8 @@ metadata:
 	nt.Root.Add("acme/namespaces/test/ns.yaml", fake.NamespaceObject("test"))
 	nt.Root.CommitAndPush("add another Namespace")
 	nt.WaitForRepoSyncs()
+
+	nomostest.WaitForWebhookReadiness(nt)
 
 	// Verify that the webhook is now enabled
 	if _, err := nt.Kubectl("delete", "ns", "test"); err == nil {

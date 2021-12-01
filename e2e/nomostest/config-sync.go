@@ -194,25 +194,6 @@ func installConfigSync(nt *NT, nomos ntopts.Nomos) {
 	}
 }
 
-func installWebhook(nt *NT, nomos ntopts.Nomos) {
-	nt.T.Helper()
-	objs := parseManifests(nt, nomos)
-	for _, o := range objs {
-		labels := o.GetLabels()
-		if labels == nil || labels["app"] != "admission-webhook" {
-			continue
-		}
-		nt.T.Logf("installWebhook obj: %v", core.GKNN(o))
-		err := nt.Create(o)
-		if err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				continue
-			}
-			nt.T.Fatal(err)
-		}
-	}
-}
-
 // waitForConfigSync validates if the config sync deployment is ready.
 func waitForConfigSync(nt *NT, nomos ntopts.Nomos) error {
 	if nomos.MultiRepo {

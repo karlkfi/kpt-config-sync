@@ -37,7 +37,7 @@ func crontabCR(namespace, name string) (*unstructured.Unstructured, error) {
 func TestStressCRD(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo, ntopts.StressTest)
 	nt.T.Log("Stop the CS webhook by removing the webhook configuration")
-	stopWebhook(nt)
+	nomostest.StopWebhook(nt)
 	nt.WaitForRepoSyncs()
 
 	crdName := "crontabs.stable.example.com"
@@ -96,7 +96,7 @@ func TestStressCRD(t *testing.T) {
 func TestStressLargeNamespace(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipMonoRepo, ntopts.StressTest)
 	nt.T.Log("Stop the CS webhook by removing the webhook configuration")
-	stopWebhook(nt)
+	nomostest.StopWebhook(nt)
 
 	nt.T.Log("Override the memory limit of the reconciler container of root-reconciler to 800MiB")
 	rootSync := fake.RootSyncObject()
@@ -131,7 +131,7 @@ func TestStressFrequentGitCommits(t *testing.T) {
 	nt := nomostest.New(t, ntopts.Unstructured, ntopts.StressTest)
 	if nt.MultiRepo {
 		nt.T.Log("Stop the CS webhook by removing the webhook configuration")
-		stopWebhook(nt)
+		nomostest.StopWebhook(nt)
 	}
 
 	ns := "bookstore"
