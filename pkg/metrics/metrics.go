@@ -7,7 +7,7 @@ var (
 	APICallDuration = stats.Float64(
 		"api_duration_seconds",
 		"The duration of API server calls in seconds",
-		stats.UnitMilliseconds)
+		stats.UnitSeconds)
 
 	// ReconcilerErrors metric measures the number of errors in the reconciler.
 	ReconcilerErrors = stats.Int64(
@@ -22,16 +22,16 @@ var (
 		stats.UnitDimensionless)
 
 	// ReconcileDuration metric measures the latency of reconcile events.
-	ReconcileDuration = stats.Int64(
+	ReconcileDuration = stats.Float64(
 		"reconcile_duration_seconds",
 		"The duration of reconcile events in seconds",
-		stats.UnitMilliseconds)
+		stats.UnitSeconds)
 
 	// ParserDuration metric measures the latency of the parse-apply-watch loop.
 	ParserDuration = stats.Float64(
 		"parser_duration_seconds",
 		"The duration of the parse-apply-watch loop in seconds",
-		stats.UnitMilliseconds)
+		stats.UnitSeconds)
 
 	// LastSync metric measures the timestamp of the latest Git sync.
 	LastSync = stats.Int64(
@@ -55,7 +55,7 @@ var (
 	ApplyDuration = stats.Float64(
 		"apply_duration_seconds",
 		"The duration of applier events in seconds",
-		stats.UnitMilliseconds)
+		stats.UnitSeconds)
 
 	// ResourceFights metric measures the number of resource fights.
 	ResourceFights = stats.Int64(
@@ -67,7 +67,7 @@ var (
 	RemediateDuration = stats.Float64(
 		"remediate_duration_seconds",
 		"The duration of remediator reconciliation events",
-		stats.UnitMilliseconds)
+		stats.UnitSeconds)
 
 	// LastApply metric measures the timestamp of the most recent applier apply event.
 	LastApply = stats.Int64(

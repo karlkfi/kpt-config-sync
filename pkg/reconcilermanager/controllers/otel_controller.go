@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	traceapi "cloud.google.com/go/trace/apiv2"
 	"github.com/go-logr/logr"
@@ -91,10 +90,6 @@ func (r *OtelReconciler) reconcileConfigMap(ctx context.Context, req reconcile.R
 	return hash(cm)
 }
 
-func (r *OtelReconciler) stackDriverConfig() string {
-	return strings.Replace(metrics.CollectorConfigStackdriver, "{{.ClusterName}}", r.clusterName, -1)
-}
-
 // configureStackdriverConfigMap creates or updates a map with a config that
 // enables Stackdriver if Application Default Credentials are present.
 func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]byte, error) {
@@ -112,7 +107,7 @@ func (r *OtelReconciler) configureStackdriverConfigMap(ctx context.Context) ([]b
 				metadata.ArchLabel:   "csmr",
 			}
 			cm.Data = map[string]string{
-				"otel-collector-config.yaml": r.stackDriverConfig(),
+				"otel-collector-config.yaml": metrics.CollectorConfigStackdriver,
 			}
 			return nil
 		})

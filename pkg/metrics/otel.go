@@ -35,6 +35,14 @@ exporters:
       enabled: true
     sending_queue:
       enabled: true
+  stackdriver/kubernetes:
+    metric:
+      prefix: "kubernetes.io/internal/addons/config_sync/"
+      skip_create_descriptor: false
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
 processors:
   batch:
   # b/204120800: removing last_apply_timestamp from code is intractable since a lot of test code depends on it. Hence filtering it here
@@ -44,25 +52,67 @@ processors:
         match_type: strict
         metric_names:
           - last_apply_timestamp
-  metricstransform:
-    transforms:
-    # These transforms are needed as part of fleet metrics mapping.
-    # We would need to adjust testcases: ValidateDeclaredResources()
-    # b/204120800
-    #
-    #  - include: declared_resources
-    #    action: update
-    #    new_name: current_declared_resources
-    #  - include: reconciler_errors
-    #    action: update
-    #    new_name: last_reconciler_errors
-      - include: .*
+  filter/kubernetes:
+    metrics:
+      include:
         match_type: regexp
+        metric_names:
+          - kustomize.*
+          - api_duration_seconds
+          - reconciler_errors
+          - pipeline_error_observed
+          - reconcile_duration_seconds
+          - parser_duration_seconds
+          - declared_resources
+          - apply_operations_total
+          - apply_duration_seconds
+          - resource_fights_total
+          - remediate_duration_seconds
+          - resource_conflicts_total
+          - internal_errors_total
+          - rendering_count_total
+          - skip_rendering_count_total
+          - resource_override_count_total
+          - git_sync_depth_override_count_total
+          - no_ssl_verify_count_total
+  metricstransform/kubernetes:
+    transforms:
+      - include: declared_resources
         action: update
-        operations:
-          - action: add_label
-            new_label: cluster
-            new_value: {{.ClusterName}}
+        new_name: current_declared_resources
+      - include: reconciler_errors
+        action: update
+        new_name: last_reconciler_errors
+      - include: pipeline_error_observed
+        action: update
+        new_name: last_pipeline_error_observed
+      - include: apply_operations_total
+        action: update
+        new_name: apply_operations_count
+      - include: resource_fights_total
+        action: update
+        new_name: resource_fights_count
+      - include: resource_conflicts_total
+        action: update
+        new_name: resource_conflicts_count
+      - include: internal_errors_total
+        action: update
+        new_name: internal_errors_count
+      - include: rendering_count_total
+        action: update
+        new_name: rendering_count
+      - include: skip_rendering_count_total
+        action: update
+        new_name: skip_rendering_count
+      - include: resource_override_count_total
+        action: update
+        new_name: resource_override_count
+      - include: git_sync_depth_override_count_total
+        action: update
+        new_name: git_sync_depth_override_count
+      - include: no_ssl_verify_count_total
+        action: update
+        new_name: no_ssl_verify_count
 extensions:
   health_check:
 service:
@@ -70,11 +120,14 @@ service:
   pipelines:
     metrics/cloudmonitoring:
       receivers: [opencensus]
-      processors: [batch, filter/cloudmonitoring, metricstransform]
+      processors: [batch, filter/cloudmonitoring]
       exporters: [stackdriver]
     metrics/prometheus:
       receivers: [opencensus]
-      processors: [batch, metricstransform]
+      processors: [batch]
       exporters: [prometheus]
-`
+    metrics/kubernetes:
+      receivers: [opencensus]
+      processors: [batch, filter/kubernetes, metricstransform/kubernetes]
+      exporters: [stackdriver/kubernetes]`
 )
