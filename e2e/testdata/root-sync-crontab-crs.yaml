@@ -1,0 +1,17 @@
+# root-sync.yaml
+apiVersion: configsync.gke.io/v1alpha1
+kind: RootSync
+metadata:
+  name: root-sync
+  namespace: config-management-system
+spec:
+  sourceFormat: unstructured
+  override:
+    resources:
+    - containerName: "reconciler"
+      memoryLimit: 1500Mi
+  git:
+    repo: https://github.com/config-sync-examples/crontab-crs
+    branch: main
+    dir: configs
+    auth: none

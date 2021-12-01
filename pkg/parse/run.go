@@ -369,7 +369,7 @@ func updateSyncStatus(ctx context.Context, p Parser) {
 		case <-ticker.C:
 			// TODO (b/209689848): update the status to reflect the remediator errors
 			if err := p.setSyncStatus(ctx, p.options().updater.applier.Errors()); err != nil {
-				glog.Infof("failed to update sync status")
+				glog.Infof("failed to update sync status: %v", err)
 				continue
 			}
 		}

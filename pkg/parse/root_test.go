@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -364,4 +365,244 @@ func (a *fakeApplier) Errors() status.MultiError {
 
 func (a *fakeApplier) Syncing() bool {
 	return false
+}
+
+func TestSummarizeErrors(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		sourceStatus         v1beta1.GitSourceStatus
+		syncStatus           v1beta1.GitSyncStatus
+		expectedErrorSources []v1beta1.ErrorSource
+		expectedErrorSummary v1beta1.ErrorSummary
+	}{
+		{
+			name:                 "both sourceStatus and syncStatus are empty",
+			sourceStatus:         v1beta1.GitSourceStatus{},
+			syncStatus:           v1beta1.GitSyncStatus{},
+			expectedErrorSources: []v1beta1.ErrorSource{},
+			expectedErrorSummary: v1beta1.ErrorSummary{},
+		},
+		{
+			name: "sourceStatus is not empty (no trucation), syncStatus is empty",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus:           v1beta1.GitSyncStatus{},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                2,
+				Truncated:                 false,
+				ErrorCountAfterTruncation: 2,
+			},
+		},
+		{
+			name: "sourceStatus is not empty and trucates errors, syncStatus is empty",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus:           v1beta1.GitSyncStatus{},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                100,
+				Truncated:                 true,
+				ErrorCountAfterTruncation: 2,
+			},
+		},
+		{
+			name:         "sourceStatus is empty, syncStatus is not empty (no trucation)",
+			sourceStatus: v1beta1.GitSourceStatus{},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                2,
+				Truncated:                 false,
+				ErrorCountAfterTruncation: 2,
+			},
+		},
+		{
+			name:         "sourceStatus is empty, syncStatus is not empty and trucates errors",
+			sourceStatus: v1beta1.GitSourceStatus{},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                100,
+				Truncated:                 true,
+				ErrorCountAfterTruncation: 2,
+			},
+		},
+		{
+			name: "neither sourceStatus nor syncStatus is empty or trucates errors",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                4,
+				Truncated:                 false,
+				ErrorCountAfterTruncation: 4,
+			},
+		},
+		{
+			name: "neither sourceStatus nor syncStatus is empty, sourceStatus trucates errors",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                102,
+				Truncated:                 true,
+				ErrorCountAfterTruncation: 4,
+			},
+		},
+		{
+			name: "neither sourceStatus nor syncStatus is empty, syncStatus trucates errors",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                2,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                102,
+				Truncated:                 true,
+				ErrorCountAfterTruncation: 4,
+			},
+		},
+		{
+			name: "neither sourceStatus nor syncStatus is empty, both trucates errors",
+			sourceStatus: v1beta1.GitSourceStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1021", ErrorMessage: "1021-error-message"},
+					{Code: "1022", ErrorMessage: "1022-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			syncStatus: v1beta1.GitSyncStatus{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "2009", ErrorMessage: "apiserver error"},
+					{Code: "2009", ErrorMessage: "webhook error"},
+				},
+
+				ErrorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                100,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
+			},
+			expectedErrorSources: []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError},
+			expectedErrorSummary: v1beta1.ErrorSummary{
+				TotalCount:                200,
+				Truncated:                 true,
+				ErrorCountAfterTruncation: 4,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotErrorSources, gotErrorSummary := summarizeErrors(tc.sourceStatus, tc.syncStatus)
+			if diff := cmp.Diff(tc.expectedErrorSources, gotErrorSources); diff != "" {
+				t.Errorf("summarizeErrors() got %v, expected %v", gotErrorSources, tc.expectedErrorSources)
+			}
+			if diff := cmp.Diff(tc.expectedErrorSummary, gotErrorSummary); diff != "" {
+				t.Errorf("summarizeErrors() got %v, expected %v", gotErrorSummary, tc.expectedErrorSummary)
+			}
+		})
+	}
 }

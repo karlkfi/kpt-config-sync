@@ -58,36 +58,46 @@ func ClearCondition(rs *v1beta1.RepoSync, condType v1beta1.RepoSyncConditionType
 	condition.Message = ""
 	condition.LastTransitionTime = time
 	condition.LastUpdateTime = time
+	condition.Errors = nil
+	condition.ErrorSourceRefs = nil
+	condition.ErrorSummary = nil
+}
+
+var singleErrorSummary = &v1beta1.ErrorSummary{
+	TotalCount:                1,
+	Truncated:                 false,
+	ErrorCountAfterTruncation: 1,
 }
 
 // SetReconciling sets the Reconciling condition to True.
 func SetReconciling(rs *v1beta1.RepoSync, reason, message string) {
-	if setCondition(rs, v1beta1.RepoSyncReconciling, metav1.ConditionTrue, reason, message, "", nil, now()) {
+	if setCondition(rs, v1beta1.RepoSyncReconciling, metav1.ConditionTrue, reason, message, "", nil, &v1beta1.ErrorSummary{}, now()) {
 		removeCondition(rs, v1beta1.RepoSyncSyncing)
 	}
 }
 
 // SetStalled sets the Stalled condition to True.
 func SetStalled(rs *v1beta1.RepoSync, reason string, err error) {
-	if setCondition(rs, v1beta1.RepoSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil, now()) {
+	if setCondition(rs, v1beta1.RepoSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil, singleErrorSummary, now()) {
 		removeCondition(rs, v1beta1.RepoSyncSyncing)
 	}
 }
 
 // SetSyncing sets the Syncing condition.
-func SetSyncing(rs *v1beta1.RepoSync, status bool, reason, message, commit string, errs []v1beta1.ConfigSyncError, lastUpdate metav1.Time) {
+func SetSyncing(rs *v1beta1.RepoSync, status bool, reason, message, commit string, errorSources []v1beta1.ErrorSource, errorSummary *v1beta1.ErrorSummary, lastUpdate metav1.Time) {
 	var conditionStatus metav1.ConditionStatus
 	if status {
 		conditionStatus = metav1.ConditionTrue
 	} else {
 		conditionStatus = metav1.ConditionFalse
 	}
-	setCondition(rs, v1beta1.RepoSyncSyncing, conditionStatus, reason, message, commit, errs, lastUpdate)
+
+	setCondition(rs, v1beta1.RepoSyncSyncing, conditionStatus, reason, message, commit, errorSources, errorSummary, lastUpdate)
 }
 
 // setCondition adds or updates the specified condition with a True status.
 // It returns a boolean indicating if the condition status is transited.
-func setCondition(rs *v1beta1.RepoSync, condType v1beta1.RepoSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errs []v1beta1.ConfigSyncError, lastUpdate metav1.Time) bool {
+func setCondition(rs *v1beta1.RepoSync, condType v1beta1.RepoSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errorSources []v1beta1.ErrorSource, errorSummary *v1beta1.ErrorSummary, lastUpdate metav1.Time) bool {
 	conditionTransited := false
 	condition := GetCondition(rs.Status.Conditions, condType)
 	if condition == nil {
@@ -104,7 +114,8 @@ func setCondition(rs *v1beta1.RepoSync, condType v1beta1.RepoSyncConditionType, 
 	condition.Reason = reason
 	condition.Message = message
 	condition.Commit = commit
-	condition.Errors = errs
+	condition.ErrorSourceRefs = errorSources
+	condition.ErrorSummary = errorSummary
 	condition.LastUpdateTime = lastUpdate
 
 	return conditionTransited
@@ -135,4 +146,12 @@ func filterOutCondition(conditions []v1beta1.RepoSyncCondition, condType v1beta1
 		newConditions = append(newConditions, c)
 	}
 	return newConditions
+}
+
+// ConditionHasNoErrors returns true when `cond` has no errors, and returns false when `cond` has errors.
+func ConditionHasNoErrors(cond v1beta1.RepoSyncCondition) bool {
+	if cond.ErrorSummary == nil {
+		return len(cond.Errors) == 0
+	}
+	return cond.ErrorSummary.TotalCount == 0
 }

@@ -27,6 +27,18 @@ var (
 		Revision: "v2",
 		Dir:      "admin",
 	}
+
+	errorSummayWithOneError = &v1beta1.ErrorSummary{
+		TotalCount:                1,
+		Truncated:                 false,
+		ErrorCountAfterTruncation: 1,
+	}
+
+	errorSummayWithTwoErrors = &v1beta1.ErrorSummary{
+		TotalCount:                2,
+		Truncated:                 false,
+		ErrorCountAfterTruncation: 2,
+	}
 )
 
 func TestRepoState_PrintRows(t *testing.T) {
@@ -177,11 +189,32 @@ func TestRepoState_PrintRows(t *testing.T) {
 					Dir:      "books",
 					Revision: "v1",
 				},
+				status:       "ERROR",
+				commit:       "abc123",
+				errors:       []string{"error1", "error2"},
+				errorSummary: errorSummayWithTwoErrors,
+			},
+			"  bookstore\tgit@github.com:tester/sample/books@v1\t\n  ERROR\tabc123\t\n  TotalErrorCount: 2\n  Error:\terror1\t\n  Error:\terror2\t\n",
+		},
+		{
+			"repo with errors (truncated)",
+			&repoState{
+				scope: "bookstore",
+				git: v1beta1.Git{
+					Repo:     "git@github.com:tester/sample",
+					Dir:      "books",
+					Revision: "v1",
+				},
 				status: "ERROR",
 				commit: "abc123",
 				errors: []string{"error1", "error2"},
+				errorSummary: &v1beta1.ErrorSummary{
+					TotalCount:                20,
+					Truncated:                 true,
+					ErrorCountAfterTruncation: 2,
+				},
 			},
-			"  bookstore\tgit@github.com:tester/sample/books@v1\t\n  ERROR\tabc123\t\n  Error:\terror1\t\n  Error:\terror2\t\n",
+			"  bookstore\tgit@github.com:tester/sample/books@v1\t\n  ERROR\tabc123\t\n  TotalErrorCount: 20, ErrorTruncated: true, ErrorCountAfterTruncation: 2\n  Error:\terror1\t\n  Error:\terror2\t\n",
 		},
 		{
 			"unsynced repo",
@@ -269,11 +302,12 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 				},
 			},
 			&repoState{
-				scope:  "<root>",
-				git:    git,
-				status: "ERROR",
-				commit: "abc123",
-				errors: []string{"KNV2010: I am unhappy"},
+				scope:        "<root>",
+				git:          git,
+				status:       "ERROR",
+				commit:       "abc123",
+				errors:       []string{"KNV2010: I am unhappy"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 	}
@@ -325,12 +359,13 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		}
 	}
 
-	syncingFalseCondition := func(commit string, errs []v1beta1.ConfigSyncError) v1beta1.RepoSyncCondition {
+	syncingFalseCondition := func(commit string, errorSources []v1beta1.ErrorSource, errorSummary *v1beta1.ErrorSummary) v1beta1.RepoSyncCondition {
 		return v1beta1.RepoSyncCondition{
-			Type:   v1beta1.RepoSyncSyncing,
-			Status: metav1.ConditionFalse,
-			Commit: commit,
-			Errors: errs,
+			Type:            v1beta1.RepoSyncSyncing,
+			Status:          metav1.ConditionFalse,
+			Commit:          commit,
+			ErrorSourceRefs: errorSources,
+			ErrorSummary:    errorSummary,
 		}
 	}
 
@@ -350,11 +385,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			gitSpec:    git,
 			conditions: []v1beta1.RepoSyncCondition{stalledCondition},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: stalledMsg,
-				commit: emptyCommit,
-				errors: []string{"deployment failure"},
+				scope:        "bookstore",
+				git:          git,
+				status:       stalledMsg,
+				commit:       emptyCommit,
+				errors:       []string{"deployment failure"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -376,11 +412,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: stalledMsg,
-				commit: emptyCommit,
-				errors: []string{"deployment failure"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       stalledMsg,
+				commit:       emptyCommit,
+				errors:       []string{"deployment failure"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -465,9 +502,10 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				git:   gitUpdated,
 				// This mistakenly reports an error because `nomos status` checks all errors first.
 				// The following test case shows how the status is reported correctly with the syncing condition.
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2009: apply error"},
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -512,8 +550,9 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// This mistakenly reports the commit as empty because "nomos status" used
 				// to read the commit from .status.sync.commit, which is not available at this point.
 				// The test case below shows how the commit is reported successfully via the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2004: import error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -522,7 +561,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -530,11 +569,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2004: import error"},
+				scope:        "bookstore",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -564,7 +604,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The test case below shows how it is fixed.
 				commit: "abc123",
 				// The errors are also wrong because it included a sync error from a previous commit.
-				errors: []string{"KNV2004: import error", "KNV2009: apply error"},
+				errors:       []string{"KNV2004: import error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -573,7 +614,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -591,11 +632,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2004: import error"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -663,7 +705,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The commit is wrong because it still reports an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an old error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -710,8 +753,9 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				status: util.ErrorMsg,
 				// This mistakenly reports an empty commit because `nomos status` sets the commit to `.status.sync.commit`.
 				// The test case below shows how it is fixed with the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2015: rendering error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -720,7 +764,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.RenderingError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
@@ -728,11 +772,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2015: rendering error"},
+				scope:        "bookstore",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -762,7 +807,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The test case below shows how it is fixed with the syncing condition.
 				commit: "abc123",
 				// The errors are wrong because it includes an apply error from a previous commit.
-				errors: []string{"KNV2015: rendering error", "KNV2009: apply error"},
+				errors:       []string{"KNV2015: rendering error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -771,7 +817,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.RenderingError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -789,11 +835,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2015: rendering error"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -861,7 +908,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The commit is wrong because it reports to an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an apply error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -913,8 +961,9 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				status: util.ErrorMsg,
 				// This mistakenly reports the commit as empty because `nomos status` used to set the commit to `.status.sync.commit`.
 				// The test case below shows how the commit is correctly reported with the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2004: parsing error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -923,7 +972,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -936,11 +985,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2004: parsing error"},
+				scope:        "bookstore",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -970,7 +1020,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The test case below shows how the commit is correctly reported with the syncing condition.
 				commit: "abc123",
 				// The errors are wrong because it includes an apply error from a previous commit.
-				errors: []string{"KNV2004: parsing error", "KNV2009: apply error"},
+				errors:       []string{"KNV2004: parsing error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -979,7 +1030,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -997,11 +1048,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2004: parsing error"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1078,7 +1130,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				// The commit is wrong because it reports an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an apply error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1130,11 +1183,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "bookstore",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1143,7 +1197,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError}, errorSummayWithTwoErrors),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -1161,11 +1215,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "bookstore",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1188,11 +1243,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1201,7 +1257,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError}, errorSummayWithTwoErrors),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -1219,11 +1275,12 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "bookstore",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "bookstore",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1259,7 +1316,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", nil),
+				syncingFalseCondition("abc123", nil, &v1beta1.ErrorSummary{}),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -1328,12 +1385,13 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		}
 	}
 
-	syncingFalseCondition := func(commit string, errs []v1beta1.ConfigSyncError) v1beta1.RootSyncCondition {
+	syncingFalseCondition := func(commit string, errorSources []v1beta1.ErrorSource, errorSummary *v1beta1.ErrorSummary) v1beta1.RootSyncCondition {
 		return v1beta1.RootSyncCondition{
-			Type:   v1beta1.RootSyncSyncing,
-			Status: metav1.ConditionFalse,
-			Commit: commit,
-			Errors: errs,
+			Type:            v1beta1.RootSyncSyncing,
+			Status:          metav1.ConditionFalse,
+			Commit:          commit,
+			ErrorSourceRefs: errorSources,
+			ErrorSummary:    errorSummary,
 		}
 	}
 
@@ -1352,11 +1410,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			gitSpec:    git,
 			conditions: []v1beta1.RootSyncCondition{stalledCondition},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: stalledMsg,
-				commit: emptyCommit,
-				errors: []string{"deployment failure"},
+				scope:        "<root>",
+				git:          git,
+				status:       stalledMsg,
+				commit:       emptyCommit,
+				errors:       []string{"deployment failure"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1378,11 +1437,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: stalledMsg,
-				commit: emptyCommit,
-				errors: []string{"deployment failure"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       stalledMsg,
+				commit:       emptyCommit,
+				errors:       []string{"deployment failure"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1467,9 +1527,10 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				git:   gitUpdated,
 				// This mistakenly reports an error because `nomos status` checks all errors first.
 				// The following test case shows how the status is reported correctly with the syncing condition.
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2009: apply error"},
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1514,8 +1575,9 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// This mistakenly reports the commit as empty because "nomos status" used
 				// to read the commit from .status.sync.commit, which is not available at this point.
 				// The test case below shows how the commit is reported successfully via the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2004: import error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1524,7 +1586,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
@@ -1532,11 +1594,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2004: import error"},
+				scope:        "<root>",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1566,7 +1629,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The test case below shows how it is fixed.
 				commit: "abc123",
 				// The errors are also wrong because it included a sync error from a previous commit.
-				errors: []string{"KNV2004: import error", "KNV2009: apply error"},
+				errors:       []string{"KNV2004: import error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1575,7 +1639,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -1593,11 +1657,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2004: import error"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2004: import error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1665,7 +1730,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The commit is wrong because it still reports an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an old error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1712,8 +1778,9 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				status: util.ErrorMsg,
 				// This mistakenly reports an empty commit because `nomos status` sets the commit to `.status.sync.commit`.
 				// The test case below shows how it is fixed with the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2015: rendering error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1722,7 +1789,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.RenderingError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
@@ -1730,11 +1797,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2015: rendering error"},
+				scope:        "<root>",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1764,7 +1832,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The test case below shows how it is fixed with the syncing condition.
 				commit: "abc123",
 				// The errors are wrong because it includes an apply error from a previous commit.
-				errors: []string{"KNV2015: rendering error", "KNV2009: apply error"},
+				errors:       []string{"KNV2015: rendering error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1773,7 +1842,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.RenderingError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -1791,11 +1860,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2015: rendering error"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2015: rendering error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1863,7 +1933,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The commit is wrong because it reports to an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an apply error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1915,8 +1986,9 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				status: util.ErrorMsg,
 				// This mistakenly reports the commit as empty because `nomos status` used to set the commit to `.status.sync.commit`.
 				// The test case below shows how the commit is correctly reported with the syncing condition.
-				commit: emptyCommit,
-				errors: []string{"KNV2004: parsing error"},
+				commit:       emptyCommit,
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1925,7 +1997,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -1938,11 +2010,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV2004: parsing error"},
+				scope:        "<root>",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -1972,7 +2045,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The test case below shows how the commit is correctly reported with the syncing condition.
 				commit: "abc123",
 				// The errors are wrong because it includes an apply error from a previous commit.
-				errors: []string{"KNV2004: parsing error", "KNV2009: apply error"},
+				errors:       []string{"KNV2004: parsing error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -1981,7 +2055,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError}, errorSummayWithOneError),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -1999,11 +2073,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV2004: parsing error"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV2004: parsing error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -2080,7 +2155,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				// The commit is wrong because it reports an old commit.
 				commit: "abc123",
 				// The errors are wrong because it reports an apply error from a previous commit.
-				errors: []string{"KNV2009: apply error"},
+				errors:       []string{"KNV2009: apply error"},
+				errorSummary: errorSummayWithOneError,
 			},
 		},
 		{
@@ -2132,11 +2208,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "<root>",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -2145,7 +2222,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError}, errorSummayWithTwoErrors),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
@@ -2163,11 +2240,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    git,
-				status: util.ErrorMsg,
-				commit: "abc123",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "<root>",
+				git:          git,
+				status:       util.ErrorMsg,
+				commit:       "abc123",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -2190,11 +2268,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -2203,7 +2282,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("def456", []v1beta1.ErrorSource{v1beta1.SourceError, v1beta1.SyncError}, errorSummayWithTwoErrors),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
@@ -2221,11 +2300,12 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
-				scope:  "<root>",
-				git:    gitUpdated,
-				status: util.ErrorMsg,
-				commit: "def456",
-				errors: []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				scope:        "<root>",
+				git:          gitUpdated,
+				status:       util.ErrorMsg,
+				commit:       "def456",
+				errors:       []string{"KNV1021: non-blocking parse error", "KNV2009: apply error"},
+				errorSummary: errorSummayWithTwoErrors,
 			},
 		},
 		{
@@ -2258,7 +2338,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			syncingConditionSupported: true,
 			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", nil),
+				syncingFalseCondition("abc123", nil, &v1beta1.ErrorSummary{}),
 			},
 			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),

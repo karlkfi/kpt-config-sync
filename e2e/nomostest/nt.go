@@ -878,40 +878,34 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) (int, error) {
 	return localPort, nil
 }
 
-func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RootSyncCondition, code string) error {
+func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RootSyncCondition, code string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
 	if err := validateError(statusErrs, code); err != nil {
 		return err
 	}
 	if syncingCondition == nil {
-		return nil
+		return fmt.Errorf("syncingCondition is nil")
 	}
 	if syncingCondition.Status == metav1.ConditionTrue {
 		return fmt.Errorf("status.conditions['Syncing'].status is True, expected false")
 	}
-	if err := validateError(syncingCondition.Errors, code); err != nil {
-		return err
-	}
-	if !reflect.DeepEqual(statusErrs, syncingCondition.Errors) {
-		return fmt.Errorf("status.conditions['Syncing'].errors don't match the status errors, status.conditions['Syncing'].errors = %v, status errors = %v", syncingCondition.Errors, statusErrs)
+	if !reflect.DeepEqual(syncingCondition.ErrorSourceRefs, expectedErrorSourceRefs) {
+		return fmt.Errorf("status.conditions['Syncing'].errorSourceRefs is %v, expected %v", syncingCondition.ErrorSourceRefs, expectedErrorSourceRefs)
 	}
 	return nil
 }
 
-func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RepoSyncCondition, code string) error {
+func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RepoSyncCondition, code string, expectedErrorSourceRefs []v1beta1.ErrorSource) error {
 	if err := validateError(statusErrs, code); err != nil {
 		return err
 	}
 	if syncingCondition == nil {
-		return nil
+		return fmt.Errorf("syncingCondition is nil")
 	}
 	if syncingCondition.Status == metav1.ConditionTrue {
 		return fmt.Errorf("status.conditions['Syncing'].status is True, expected false")
 	}
-	if err := validateError(syncingCondition.Errors, code); err != nil {
-		return err
-	}
-	if !reflect.DeepEqual(statusErrs, syncingCondition.Errors) {
-		return fmt.Errorf("status.conditions['Syncing'].errors don't match the status errors, status.conditions['Syncing'].errors = %v, status errors = %v", syncingCondition.Errors, statusErrs)
+	if !reflect.DeepEqual(syncingCondition.ErrorSourceRefs, expectedErrorSourceRefs) {
+		return fmt.Errorf("status.conditions['Syncing'].errorSourceRefs is %v, expected %v", syncingCondition.ErrorSourceRefs, expectedErrorSourceRefs)
 	}
 	return nil
 }
@@ -939,7 +933,7 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 				return err
 			}
 			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
-			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code)
+			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.SourceError})
 		},
 		opts...,
 	)
@@ -955,7 +949,7 @@ func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
 				return err
 			}
 			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
-			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code)
+			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.RenderingError})
 		},
 		opts...,
 	)
@@ -973,7 +967,7 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 				return err
 			}
 			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
-			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code)
+			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code, []v1beta1.ErrorSource{v1beta1.SourceError})
 		},
 		opts...,
 	)

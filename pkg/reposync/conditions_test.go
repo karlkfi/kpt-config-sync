@@ -33,6 +33,12 @@ func fakeCondition(condType v1beta1.RepoSyncConditionType, status metav1.Conditi
 		LastUpdateTime:     testNow,
 		LastTransitionTime: testNow,
 	}
+	if condType == v1beta1.RepoSyncReconciling && status == metav1.ConditionTrue {
+		rsc.ErrorSummary = &v1beta1.ErrorSummary{}
+	}
+	if condType == v1beta1.RepoSyncStalled && status == metav1.ConditionTrue {
+		rsc.ErrorSummary = singleErrorSummary
+	}
 	if len(strs) > 0 {
 		rsc.Reason = strs[0]
 	}
@@ -289,6 +295,76 @@ func TestSetStalled(t *testing.T) {
 			SetStalled(tc.rs, tc.reason, tc.err)
 			if diff := cmp.Diff(tc.want, tc.rs.Status.Conditions); diff != "" {
 				t.Error(diff)
+			}
+		})
+	}
+}
+
+func TestConditionHasNoErrors(t *testing.T) {
+	testCases := []struct {
+		name string
+		cond v1beta1.RepoSyncCondition
+		want bool
+	}{
+		{
+			"Errors is nil, ErrorSummary is nil",
+			v1beta1.RepoSyncCondition{},
+			true,
+		},
+		{
+			"Errors is not nil but empty, ErrorSummary is nil",
+			v1beta1.RepoSyncCondition{
+				Errors: []v1beta1.ConfigSyncError{},
+			},
+			true,
+		},
+		{
+			"Errors is not nil and not empty, ErrorSummary is nil",
+			v1beta1.RepoSyncCondition{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1061", ErrorMessage: "rendering-error-message"},
+				},
+			},
+			false,
+		},
+		{
+			"Errors is nil, ErrorSummary is not nil but empty",
+			v1beta1.RepoSyncCondition{
+				ErrorSummary: &v1beta1.ErrorSummary{},
+			},
+			true,
+		},
+		{
+			"Errors is nil, ErrorSummary is not nil and not empty",
+			v1beta1.RepoSyncCondition{
+				ErrorSummary: &v1beta1.ErrorSummary{TotalCount: 1},
+			},
+			false,
+		},
+		{
+			"Errors is not nil but empty, ErrorSummary is not nil but empty",
+			v1beta1.RepoSyncCondition{
+				Errors:       []v1beta1.ConfigSyncError{},
+				ErrorSummary: &v1beta1.ErrorSummary{},
+			},
+			true,
+		},
+		{
+			"Errors is not nil and not empty, ErrorSummary is not nil and not empty",
+			v1beta1.RepoSyncCondition{
+				Errors: []v1beta1.ConfigSyncError{
+					{Code: "1061", ErrorMessage: "rendering-error-message"},
+				},
+				ErrorSummary: &v1beta1.ErrorSummary{TotalCount: 1},
+			},
+			false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ConditionHasNoErrors(tc.cond)
+			if got != tc.want {
+				t.Errorf("ConditionHasNoErrors() got %v, want %v", got, tc.want)
 			}
 		})
 	}

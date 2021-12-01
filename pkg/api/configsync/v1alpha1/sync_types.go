@@ -78,6 +78,10 @@ type GitSourceStatus struct {
 	// Errors is a list of any errors that occurred while reading from the source of truth.
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
+
+	// errorSummary summarizes the errors encountered during the process of reading from the source of truth.
+	// +optional
+	ErrorSummary *ErrorSummary `json:"errorSummary,omitempty"`
 }
 
 // RenderingStatus describes the status of rendering the source DRY configs to the WET format.
@@ -102,6 +106,10 @@ type RenderingStatus struct {
 	// Errors is a list of any errors that occurred while rendering the source of truth.
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
+
+	// errorSummary summarizes the errors encountered during the process of rendering the source of truth.
+	// +optional
+	ErrorSummary *ErrorSummary `json:"errorSummary,omitempty"`
 }
 
 // GitSyncStatus provides the status of the syncing of resources from a git source-of-truth on to the cluster
@@ -125,6 +133,10 @@ type GitSyncStatus struct {
 	// from the change indicated by Commit.
 	// +optional
 	Errors []ConfigSyncError `json:"errors,omitempty"`
+
+	// errorSummary summarizes the errors encountered during the process of syncing the resources.
+	// +optional
+	ErrorSummary *ErrorSummary `json:"errorSummary,omitempty"`
 }
 
 // GitStatus describes the status of a Git source of truth.
@@ -156,6 +168,20 @@ type ConfigSyncError struct {
 	// Resources describes the resources associated with this error, if any.
 	// +optional
 	Resources []ResourceRef `json:"errorResources,omitempty"`
+}
+
+// ErrorSummary summarizes the errors encountered.
+type ErrorSummary struct {
+	// totalCount tracks the total number of errors.
+	TotalCount int `json:"totalCount,omitempty"`
+	// truncated indicates whether the `Errors` field includes all the errors.
+	// If `true`, the `Errors` field does not includes all the errors.
+	// If `false`, the `Errors` field includes all the errors.
+	// The size limit of a RootSync/RepoSync object is 2MiB. The status update would
+	// fail with the `ResourceExhausted` rpc error if there are too many errors.
+	Truncated bool `json:"truncated,omitempty"`
+	// errorCountAfterTruncation tracks the number of errors in the `Errors` field.
+	ErrorCountAfterTruncation int `json:"errorCountAfterTruncation,omitempty"`
 }
 
 // ResourceRef contains the identification bits of a single managed resource.

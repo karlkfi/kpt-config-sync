@@ -57,17 +57,28 @@ func unavailableCluster(ref string) *ClusterState {
 
 // repoState represents the sync status of a single repo on a cluster.
 type repoState struct {
-	scope     string
-	git       v1beta1.Git
-	status    string
-	commit    string
-	errors    []string
-	resources []resourceState
+	scope  string
+	git    v1beta1.Git
+	status string
+	commit string
+	errors []string
+	// errorSummary summarizes the `errors` field.
+	errorSummary *v1beta1.ErrorSummary
+	resources    []resourceState
 }
 
 func (r *repoState) printRows(writer io.Writer) {
 	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.scope, gitString(r.git))
 	fmt.Fprintf(writer, "%s%s\t%s\t\n", util.Indent, r.status, r.commit)
+
+	if r.errorSummary != nil && r.errorSummary.TotalCount > 0 {
+		if r.errorSummary.Truncated {
+			fmt.Fprintf(writer, "%sTotalErrorCount: %d, ErrorTruncated: %v, ErrorCountAfterTruncation: %d\n", util.Indent,
+				r.errorSummary.TotalCount, r.errorSummary.Truncated, r.errorSummary.ErrorCountAfterTruncation)
+		} else {
+			fmt.Fprintf(writer, "%sTotalErrorCount: %d\n", util.Indent, r.errorSummary.TotalCount)
+		}
+	}
 
 	for _, err := range r.errors {
 		fmt.Fprintf(writer, "%sError:\t%s\t\n", util.Indent, err)
@@ -120,13 +131,25 @@ func gitString(git v1beta1.Git) string {
 
 // monoRepoStatus converts the given Git config and mono-repo status into a repoState.
 func monoRepoStatus(git v1beta1.Git, status v1.RepoStatus) *repoState {
-	return &repoState{
+	errors := syncStatusErrors(status)
+	totalErrorCount := len(errors)
+
+	result := &repoState{
 		scope:  "<root>",
 		git:    git,
 		status: getSyncStatus(status),
 		commit: commitHash(status.Sync.LatestToken),
-		errors: syncStatusErrors(status),
+		errors: errors,
 	}
+
+	if totalErrorCount > 0 {
+		result.errorSummary = &v1beta1.ErrorSummary{
+			TotalCount:                totalErrorCount,
+			Truncated:                 false,
+			ErrorCountAfterTruncation: totalErrorCount,
+		}
+	}
+	return result
 }
 
 // getSyncStatus returns the given RepoStatus formatted as a short summary string.
@@ -227,6 +250,15 @@ func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, sy
 	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
 		repostate.status = stalledMsg
 		repostate.errors = []string{stalledCondition.Message}
+		if stalledCondition.ErrorSummary != nil {
+			repostate.errorSummary = stalledCondition.ErrorSummary
+		} else {
+			repostate.errorSummary = &v1beta1.ErrorSummary{
+				TotalCount:                1,
+				Truncated:                 false,
+				ErrorCountAfterTruncation: 1,
+			}
+		}
 	case reconcilingCondition != nil && reconcilingCondition.Status == metav1.ConditionTrue:
 		repostate.status = reconcilingMsg
 	case syncingCondition == nil:
@@ -238,21 +270,59 @@ func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, sy
 			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
 			repostate.commit = commitHash(rs.Status.Sync.Commit)
 			repostate.errors = repoSyncErrors(rs)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
 			resources, _ := resourceLevelStatus(rg)
 			repostate.resources = resources
 		}
 	case syncingCondition.Status == metav1.ConditionTrue:
+		// The sync step is ongoing.
 		repostate.status = pendingMsg
 		repostate.commit = syncingCondition.Commit
-	case len(syncingCondition.Errors) == 0:
+		if syncingCondition.ErrorSummary != nil {
+			repostate.errors = toErrorMessage(reposync.Errors(rs, syncingCondition.ErrorSourceRefs))
+			repostate.errorSummary = syncingCondition.ErrorSummary
+		} else {
+			repostate.errors = toErrorMessage(syncingCondition.Errors)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
+		}
+	case reposync.ConditionHasNoErrors(*syncingCondition):
+		// The sync step finished without any errors.
 		repostate.status = syncedMsg
 		repostate.commit = syncingCondition.Commit
 		resources, _ := resourceLevelStatus(rg)
 		repostate.resources = resources
 	default:
+		// The sync step finished with errors.
 		repostate.status = util.ErrorMsg
 		repostate.commit = syncingCondition.Commit
-		repostate.errors = toErrorMessage(syncingCondition.Errors)
+		if syncingCondition.ErrorSummary != nil {
+			repostate.errors = toErrorMessage(reposync.Errors(rs, syncingCondition.ErrorSourceRefs))
+			repostate.errorSummary = syncingCondition.ErrorSummary
+		} else {
+			repostate.errors = toErrorMessage(syncingCondition.Errors)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
+		}
 	}
 	return repostate
 }
@@ -271,6 +341,15 @@ func rootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncing
 	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
 		repostate.status = stalledMsg
 		repostate.errors = []string{stalledCondition.Message}
+		if stalledCondition.ErrorSummary != nil {
+			repostate.errorSummary = stalledCondition.ErrorSummary
+		} else {
+			repostate.errorSummary = &v1beta1.ErrorSummary{
+				TotalCount:                1,
+				Truncated:                 false,
+				ErrorCountAfterTruncation: 1,
+			}
+		}
 	case reconcilingCondition != nil && reconcilingCondition.Status == metav1.ConditionTrue:
 		repostate.status = reconcilingMsg
 	case syncingCondition == nil:
@@ -282,21 +361,59 @@ func rootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncing
 			repostate.status = multiRepoSyncStatus(rs.Status.SyncStatus)
 			repostate.commit = commitHash(rs.Status.Sync.Commit)
 			repostate.errors = rootSyncErrors(rs)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
 			resources, _ := resourceLevelStatus(rg)
 			repostate.resources = resources
 		}
 	case syncingCondition.Status == metav1.ConditionTrue:
+		// The sync step is ongoing.
 		repostate.status = pendingMsg
 		repostate.commit = syncingCondition.Commit
-	case len(syncingCondition.Errors) == 0:
+		if syncingCondition.ErrorSummary != nil {
+			repostate.errors = toErrorMessage(rootsync.Errors(rs, syncingCondition.ErrorSourceRefs))
+			repostate.errorSummary = syncingCondition.ErrorSummary
+		} else {
+			repostate.errors = toErrorMessage(syncingCondition.Errors)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
+		}
+	case rootsync.ConditionHasNoErrors(*syncingCondition):
+		// The sync step finished without any errors.
 		repostate.status = syncedMsg
 		repostate.commit = syncingCondition.Commit
 		resources, _ := resourceLevelStatus(rg)
 		repostate.resources = resources
 	default:
+		// The sync step finished with errors.
 		repostate.status = util.ErrorMsg
 		repostate.commit = syncingCondition.Commit
-		repostate.errors = toErrorMessage(syncingCondition.Errors)
+		if syncingCondition.ErrorSummary != nil {
+			repostate.errors = toErrorMessage(rootsync.Errors(rs, syncingCondition.ErrorSourceRefs))
+			repostate.errorSummary = syncingCondition.ErrorSummary
+		} else {
+			repostate.errors = toErrorMessage(syncingCondition.Errors)
+			totalErrorCount := len(repostate.errors)
+			if totalErrorCount > 0 {
+				repostate.errorSummary = &v1beta1.ErrorSummary{
+					TotalCount:                totalErrorCount,
+					Truncated:                 false,
+					ErrorCountAfterTruncation: totalErrorCount,
+				}
+			}
+		}
 	}
 	return repostate
 }

@@ -2,6 +2,7 @@ package parse
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -133,45 +134,74 @@ func (p *root) parseSource(ctx context.Context, state gitState) ([]ast.FileObjec
 func (p *root) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
+	return p.setSourceStatusWithRetries(ctx, newStatus, defaultDenominator)
+}
+
+func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus gitStatus, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
+	}
 
 	var rs v1beta1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
-	cse := status.ToCSE(newStatus.errs)
-	rs.Status.Source.Commit = newStatus.commit
-	rs.Status.Source.Git = v1beta1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	rs.Status.Source.Errors = cse
-	rs.Status.Source.LastUpdate = newStatus.lastUpdate
+	setSourceStatus(&rs.Status.Source, p, newStatus, denominator)
 
 	continueSyncing := true
-	if len(cse) > 0 {
+	if rs.Status.Source.ErrorSummary.TotalCount > 0 {
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "source", len(cse))
-	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
+	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "source", rs.Status.Source.ErrorSummary.TotalCount)
+	rootsync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, []v1beta1.ErrorSource{v1beta1.SourceError}, rs.Status.Source.ErrorSummary, newStatus.lastUpdate)
 
-	metrics.RecordReconcilerErrors(ctx, "source", cse)
+	metrics.RecordReconcilerErrors(ctx, "source", status.ToCSE(newStatus.errs))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RootSync source status (total error count: %d, denominator: %d): %s.", rs.Status.Source.ErrorSummary.TotalCount, denominator, err)
+			return p.setSourceStatusWithRetries(ctx, newStatus, denominator*2)
+		}
 		return status.APIServerError(err, "failed to update RootSync source status from parser")
 	}
 	return nil
 }
 
+func setSourceStatus(source *v1beta1.GitSourceStatus, p Parser, newStatus gitStatus, denominator int) {
+	cse := status.ToCSE(newStatus.errs)
+	source.Commit = newStatus.commit
+	source.Git = v1beta1.GitStatus{
+		Repo:     p.options().GitRepo,
+		Revision: p.options().GitRev,
+		Branch:   p.options().GitBranch,
+		Dir:      p.options().PolicyDir.SlashPath(),
+	}
+	errorSummary := &v1beta1.ErrorSummary{
+		TotalCount:                len(cse),
+		Truncated:                 denominator != 1,
+		ErrorCountAfterTruncation: len(cse) / denominator,
+	}
+	source.Errors = cse[0 : len(cse)/denominator]
+	source.ErrorSummary = errorSummary
+	source.LastUpdate = newStatus.lastUpdate
+}
+
 // setRenderingStatus implements the Parser interface
 func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error {
-	p.mux.Lock()
-	defer p.mux.Unlock()
-
 	if oldStatus.equal(newStatus) {
 		return nil
+	}
+
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	return p.setRenderingStatusWithRetires(ctx, newStatus, defaultDenominator)
+}
+
+func (p *root) setRenderingStatusWithRetires(ctx context.Context, newStatus renderingStatus, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
 	}
 
 	var rs v1beta1.RootSync
@@ -187,31 +217,45 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 		}
 	}
 
-	cse := status.ToCSE(newStatus.errs)
-	rs.Status.Rendering.Commit = newStatus.commit
-	rs.Status.Rendering.Git = v1beta1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	rs.Status.Rendering.Message = newStatus.message
-	rs.Status.Rendering.Errors = cse
-	rs.Status.Rendering.LastUpdate = newStatus.lastUpdate
+	setRenderingStatus(&rs.Status.Rendering, p, newStatus, denominator)
 
 	continueSyncing := true
-	if len(cse) > 0 {
-		metrics.RecordReconcilerErrors(ctx, "rendering", cse)
+	if rs.Status.Rendering.ErrorSummary.TotalCount > 0 {
+		metrics.RecordReconcilerErrors(ctx, "rendering", status.ToCSE(newStatus.errs))
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "rendering", len(cse))
+	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "rendering", rs.Status.Rendering.ErrorSummary.TotalCount)
 
-	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
+	rootsync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, []v1beta1.ErrorSource{v1beta1.RenderingError}, rs.Status.Rendering.ErrorSummary, newStatus.lastUpdate)
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RootSync rendering status (total error count: %d, denominator: %d): %s.", rs.Status.Rendering.ErrorSummary.TotalCount, denominator, err)
+			return p.setRenderingStatusWithRetires(ctx, newStatus, denominator*2)
+		}
 		return status.APIServerError(err, "failed to update RootSync rendering status from parser")
 	}
 	return nil
+}
+
+func setRenderingStatus(rendering *v1beta1.RenderingStatus, p Parser, newStatus renderingStatus, denominator int) {
+	cse := status.ToCSE(newStatus.errs)
+	rendering.Commit = newStatus.commit
+	rendering.Git = v1beta1.GitStatus{
+		Repo:     p.options().GitRepo,
+		Revision: p.options().GitRev,
+		Branch:   p.options().GitBranch,
+		Dir:      p.options().PolicyDir.SlashPath(),
+	}
+	rendering.Message = newStatus.message
+	errorSummary := &v1beta1.ErrorSummary{
+		TotalCount: len(cse),
+		Truncated:  denominator != 1,
+	}
+	rendering.Errors = cse[0 : len(cse)/denominator]
+	rendering.ErrorSummary = errorSummary
+	rendering.LastUpdate = newStatus.lastUpdate
 }
 
 // setSyncStatus implements the Parser interface
@@ -220,6 +264,13 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 func (p *root) setSyncStatus(ctx context.Context, errs status.MultiError) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
+	return p.setSyncStatusWithRetries(ctx, errs, defaultDenominator)
+}
+
+func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiError, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
+	}
 
 	var rs v1beta1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
@@ -229,34 +280,69 @@ func (p *root) setSyncStatus(ctx context.Context, errs status.MultiError) error 
 	// syncing indicates whether the applier is syncing.
 	syncing := p.applier.Syncing()
 
-	syncErrs := status.ToCSE(errs)
-	rs.Status.Sync.Commit = rs.Status.Source.Commit
-	rs.Status.Sync.Git = rs.Status.Source.Git
-	rs.Status.Sync.Errors = syncErrs
-	lastUpdate := metav1.Now()
-	rs.Status.Sync.LastUpdate = lastUpdate
-	metrics.RecordReconcilerErrors(ctx, "sync", syncErrs)
-	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "sync", len(syncErrs))
+	setSyncStatus(&rs.Status.SyncStatus, errs, denominator)
+
+	metrics.RecordReconcilerErrors(ctx, "sync", status.ToCSE(errs))
+	metrics.RecordPipelineError(ctx, configsync.RootSyncName, "sync", rs.Status.Sync.ErrorSummary.TotalCount)
 	if !syncing {
-		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, lastUpdate.Time)
+		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, rs.Status.Sync.LastUpdate.Time)
 	}
 
-	var allErrs []v1beta1.ConfigSyncError
-	allErrs = append(allErrs, rs.Status.Source.Errors...)
-	allErrs = append(allErrs, syncErrs...)
+	errorSources, errorSummary := summarizeErrors(rs.Status.Source, rs.Status.Sync)
 	if syncing {
-		rootsync.SetSyncing(&rs, true, "Sync", "Syncing", rs.Status.Sync.Commit, allErrs, lastUpdate)
+		rootsync.SetSyncing(&rs, true, "Sync", "Syncing", rs.Status.Sync.Commit, errorSources, &errorSummary, rs.Status.Sync.LastUpdate)
 	} else {
-		if len(allErrs) == 0 {
+		if errorSummary.TotalCount == 0 {
 			rs.Status.LastSyncedCommit = rs.Status.Sync.Commit
 		}
-		rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", rs.Status.Sync.Commit, allErrs, lastUpdate)
+		rootsync.SetSyncing(&rs, false, "Sync", "Sync Completed", rs.Status.Sync.Commit, errorSources, &errorSummary, rs.Status.Sync.LastUpdate)
 	}
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RootSync sync status (total error count: %d, denominator: %d): %s.", rs.Status.Sync.ErrorSummary.TotalCount, denominator, err)
+			return p.setSyncStatusWithRetries(ctx, errs, denominator*2)
+		}
 		return status.APIServerError(err, "failed to update RootSync sync status")
 	}
 	return nil
+}
+
+func setSyncStatus(syncStatus *v1beta1.SyncStatus, errs status.MultiError, denominator int) {
+	syncErrs := status.ToCSE(errs)
+	syncStatus.Sync.Commit = syncStatus.Source.Commit
+	syncStatus.Sync.Git = syncStatus.Source.Git
+	syncStatus.Sync.ErrorSummary = &v1beta1.ErrorSummary{
+		TotalCount: len(syncErrs),
+		Truncated:  denominator != 1,
+	}
+	syncStatus.Sync.Errors = syncErrs[0 : len(syncErrs)/denominator]
+	syncStatus.Sync.LastUpdate = metav1.Now()
+}
+
+// summarizeErrors summarizes the errors from `sourceStatus` and `syncStatus`, and returns an ErrorSource slice and an ErrorSummary.
+func summarizeErrors(sourceStatus v1beta1.GitSourceStatus, syncStatus v1beta1.GitSyncStatus) ([]v1beta1.ErrorSource, v1beta1.ErrorSummary) {
+	errorSources := []v1beta1.ErrorSource{}
+	if len(sourceStatus.Errors) > 0 {
+		errorSources = append(errorSources, v1beta1.SourceError)
+	}
+	if len(syncStatus.Errors) > 0 {
+		errorSources = append(errorSources, v1beta1.SyncError)
+	}
+
+	errorSummary := v1beta1.ErrorSummary{}
+	for _, summary := range []*v1beta1.ErrorSummary{sourceStatus.ErrorSummary, syncStatus.ErrorSummary} {
+		if summary == nil {
+			continue
+		}
+		errorSummary.TotalCount += summary.TotalCount
+		errorSummary.ErrorCountAfterTruncation += summary.ErrorCountAfterTruncation
+		if summary.Truncated {
+			errorSummary.Truncated = true
+		}
+	}
+	return errorSources, errorSummary
 }
 
 // addImplicitNamespaces hydrates the given FileObjects by injecting implicit

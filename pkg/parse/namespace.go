@@ -20,7 +20,6 @@ import (
 	"github.com/google/nomos/pkg/status"
 	utildiscovery "github.com/google/nomos/pkg/util/discovery"
 	"github.com/google/nomos/pkg/validate"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -123,6 +122,15 @@ func (p *namespace) parseSource(ctx context.Context, state gitState) ([]ast.File
 // setSourceStatus sets the source status with a given git state and set of errors.  If errs is empty, all errors
 // will be removed from the status.
 func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	return p.setSourceStatusWithRetries(ctx, newStatus, defaultDenominator)
+}
+
+func (p *namespace) setSourceStatusWithRetries(ctx context.Context, newStatus gitStatus, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
+	}
 	// The main idea here is an error-robust way of surfacing to the user that
 	// we're having problems reading from our local clone of their git repository.
 	// This can happen when Kubernetes does weird things with mounted filesystems,
@@ -133,30 +141,23 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
-	cse := status.ToCSE(newStatus.errs)
-	// If we weren't able to get the commit hash, this replaces the value with
-	// empty string.
-	rs.Status.Source.Commit = newStatus.commit
-	rs.Status.Source.Git = v1beta1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	// Replace the previous set of errors getting the git state with the current set.
-	rs.Status.Source.Errors = cse
-	rs.Status.Source.LastUpdate = newStatus.lastUpdate
+	setSourceStatus(&rs.Status.Source, p, newStatus, denominator)
 
 	continueSyncing := true
-	if len(cse) > 0 {
+	if rs.Status.Source.ErrorSummary.TotalCount > 0 {
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "source", len(cse))
-	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, cse, newStatus.lastUpdate)
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "source", rs.Status.Source.ErrorSummary.TotalCount)
+	reposync.SetSyncing(&rs, continueSyncing, "Source", "Source", newStatus.commit, []v1beta1.ErrorSource{v1beta1.SourceError}, rs.Status.Source.ErrorSummary, newStatus.lastUpdate)
 
-	metrics.RecordReconcilerErrors(ctx, "source", cse)
+	metrics.RecordReconcilerErrors(ctx, "source", status.ToCSE(newStatus.errs))
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RepoSync source status (total error count: %d, denominator: %d): %s.", rs.Status.Source.ErrorSummary.TotalCount, denominator, err)
+			return p.setSourceStatusWithRetries(ctx, newStatus, denominator*2)
+		}
 		return status.APIServerError(err, "failed to update RepoSync source status from parser")
 	}
 	return nil
@@ -164,11 +165,18 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 
 // setRenderingStatus implements the Parser interface
 func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus renderingStatus) error {
-	p.mux.Lock()
-	defer p.mux.Unlock()
-
 	if oldStatus.equal(newStatus) {
 		return nil
+	}
+
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	return p.setRenderingStatusWithRetires(ctx, newStatus, defaultDenominator)
+}
+
+func (p *namespace) setRenderingStatusWithRetires(ctx context.Context, newStatus renderingStatus, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
 	}
 
 	var rs v1beta1.RepoSync
@@ -184,28 +192,23 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		}
 	}
 
-	cse := status.ToCSE(newStatus.errs)
-	rs.Status.Rendering.Commit = newStatus.commit
-	rs.Status.Rendering.Git = v1beta1.GitStatus{
-		Repo:     p.GitRepo,
-		Revision: p.GitRev,
-		Branch:   p.GitBranch,
-		Dir:      p.PolicyDir.SlashPath(),
-	}
-	rs.Status.Rendering.Message = newStatus.message
-	rs.Status.Rendering.Errors = cse
-	rs.Status.Rendering.LastUpdate = newStatus.lastUpdate
+	setRenderingStatus(&rs.Status.Rendering, p, newStatus, denominator)
 
 	continueSyncing := true
-	if len(cse) > 0 {
+	if rs.Status.Rendering.ErrorSummary.TotalCount > 0 {
 		// If rendering errors exist, it should only have one error, so use cse[0] to get the error code.
-		metrics.RecordReconcilerErrors(ctx, "rendering", cse)
+		metrics.RecordReconcilerErrors(ctx, "rendering", status.ToCSE(newStatus.errs))
 		continueSyncing = false
 	}
-	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "rendering", len(cse))
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "rendering", rs.Status.Rendering.ErrorSummary.TotalCount)
 
-	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, cse, newStatus.lastUpdate)
+	reposync.SetSyncing(&rs, continueSyncing, "Rendering", newStatus.message, newStatus.commit, []v1beta1.ErrorSource{v1beta1.RenderingError}, rs.Status.Rendering.ErrorSummary, newStatus.lastUpdate)
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RepoSync rendering status (total error count: %d, denominator: %d): %s.", rs.Status.Rendering.ErrorSummary.TotalCount, denominator, err)
+			return p.setRenderingStatusWithRetires(ctx, newStatus, denominator*2)
+		}
 		return status.APIServerError(err, "failed to update RepoSync rendering status from parser")
 	}
 	return nil
@@ -217,6 +220,13 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
+	return p.setSyncStatusWithRetries(ctx, errs, defaultDenominator)
+}
+
+func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.MultiError, denominator int) error {
+	if denominator <= 0 {
+		return fmt.Errorf("The denominator must be a positive number")
+	}
 
 	var rs v1beta1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
@@ -226,31 +236,30 @@ func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) e
 	// syncing indicates whether the applier is syncing.
 	syncing := p.applier.Syncing()
 
-	syncErrs := status.ToCSE(errs)
-	rs.Status.Sync.Commit = rs.Status.Source.Commit
-	rs.Status.Sync.Git = rs.Status.Source.Git
-	rs.Status.Sync.Errors = syncErrs
-	lastUpdate := metav1.Now()
-	rs.Status.Sync.LastUpdate = lastUpdate
-	metrics.RecordReconcilerErrors(ctx, "sync", syncErrs)
-	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "sync", len(syncErrs))
+	setSyncStatus(&rs.Status.SyncStatus, errs, denominator)
+
+	metrics.RecordReconcilerErrors(ctx, "sync", status.ToCSE(errs))
+	metrics.RecordPipelineError(ctx, configsync.RepoSyncName, "sync", rs.Status.Sync.ErrorSummary.TotalCount)
 	if !syncing {
-		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, lastUpdate.Time)
+		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, rs.Status.Sync.LastUpdate.Time)
 	}
 
-	var allErrs []v1beta1.ConfigSyncError
-	allErrs = append(allErrs, rs.Status.Source.Errors...)
-	allErrs = append(allErrs, syncErrs...)
+	errorSources, errorSummary := summarizeErrors(rs.Status.Source, rs.Status.Sync)
 	if syncing {
-		reposync.SetSyncing(&rs, true, "Sync", "Syncing", rs.Status.Sync.Commit, allErrs, lastUpdate)
+		reposync.SetSyncing(&rs, true, "Sync", "Syncing", rs.Status.Sync.Commit, errorSources, &errorSummary, rs.Status.Sync.LastUpdate)
 	} else {
-		if len(allErrs) == 0 {
+		if errorSummary.TotalCount == 0 {
 			rs.Status.LastSyncedCommit = rs.Status.Sync.Commit
 		}
-		reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", rs.Status.Sync.Commit, allErrs, lastUpdate)
+		reposync.SetSyncing(&rs, false, "Sync", "Sync Completed", rs.Status.Sync.Commit, errorSources, &errorSummary, rs.Status.Sync.LastUpdate)
 	}
 
 	if err := p.client.Status().Update(ctx, &rs); err != nil {
+		// If the update failure was caused by the size of the RootSync object, we would truncate the errors and retry.
+		if isRequestTooLargeError(err) {
+			glog.Infof("Failed to update RepoSync sync status (total error count: %d, denominator: %d): %s.", rs.Status.Sync.ErrorSummary.TotalCount, denominator, err)
+			return p.setSyncStatusWithRetries(ctx, errs, denominator*2)
+		}
 		return status.APIServerError(err, fmt.Sprintf("failed to update the RepoSync sync status for the %v namespace", p.scope))
 	}
 	return nil

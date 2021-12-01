@@ -3,15 +3,20 @@ package e2e
 import (
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -157,5 +162,73 @@ func TestStressFrequentGitCommits(t *testing.T) {
 	}
 	if len(cmList.Items) != 100 {
 		nt.T.Errorf("The %s namespace should include 100 ConfigMaps having the `%s: %s` label exactly, found %v instead", ns, labelKey, labelValue, len(cmList.Items))
+	}
+}
+
+func TestStressLargeRequest(t *testing.T) {
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.StressTest, ntopts.SkipMonoRepo)
+
+	crdName := "crontabs.stable.example.com"
+
+	oldCrdFilePath := "../testdata/customresources/changed_schema_crds/old_schema_crd.yaml"
+	nt.T.Logf("Apply the old CronTab CRD defined in %s", oldCrdFilePath)
+	nt.MustKubectl("apply", "-f", oldCrdFilePath)
+
+	nt.T.Logf("Wait until the old CRD is established")
+	_, err := nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+		return nt.Validate(crdName, "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	rootSyncFilePath := "../testdata/root-sync-crontab-crs.yaml"
+	nt.T.Logf("Apply the RootSync object defined in %s", rootSyncFilePath)
+	nt.MustKubectl("apply", "-f", rootSyncFilePath)
+
+	nt.T.Logf("Verify that the source errors are truncated")
+	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+		return nt.Validate("root-sync", configmanagement.ControllerNamespace, fake.RootSyncObjectV1Beta1(), truncateSourceErrors())
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	newCrdFilePath := "../testdata/customresources/changed_schema_crds/new_schema_crd.yaml"
+	nt.T.Logf("Apply the new CronTab CRD defined in %s", newCrdFilePath)
+	nt.MustKubectl("apply", "-f", newCrdFilePath)
+
+	nt.T.Logf("Wait until the new CRD is established")
+	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+		return nt.Validate(crdName, "", fake.CustomResourceDefinitionV1Object(), nomostest.IsEstablished)
+	})
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Logf("Wait for the sync to complete")
+	sha1Fn := func(nt *nomostest.NT) (string, error) {
+		rs := &v1alpha1.RootSync{}
+		if err = nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
+			return "", err
+		}
+		return rs.Status.Source.Commit, nil
+	}
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("configs"), nomostest.WithTimeout(15*time.Minute))
+}
+
+func truncateSourceErrors() nomostest.Predicate {
+	return func(o client.Object) error {
+		rs, ok := o.(*v1alpha1.RootSync)
+		if !ok {
+			return nomostest.WrongTypeErr(o, &v1alpha1.RepoSync{})
+		}
+		for _, cond := range rs.Status.Conditions {
+			if cond.Type == v1alpha1.RootSyncSyncing && cond.Status == metav1.ConditionFalse && cond.Reason == "Source" &&
+				reflect.DeepEqual(cond.ErrorSourceRefs, []v1alpha1.ErrorSource{v1alpha1.SourceError}) && cond.ErrorSummary.Truncated {
+				return nil
+			}
+		}
+		return errors.Errorf("the source errors should be truncated")
 	}
 }

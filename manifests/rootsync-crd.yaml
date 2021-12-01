@@ -21,12 +21,21 @@ spec:
     - jsonPath: .status.rendering.commit
       name: RenderingCommit
       type: string
+    - jsonPath: .status.rendering.errorSummary.totalCount
+      name: RenderingErrorCount
+      type: integer
     - jsonPath: .status.source.commit
       name: SourceCommit
       type: string
+    - jsonPath: .status.source.errorSummary.totalCount
+      name: SourceErrorCount
+      type: integer
     - jsonPath: .status.sync.commit
       name: SyncCommit
       type: string
+    - jsonPath: .status.sync.errorSummary.totalCount
+      name: SyncErrorCount
+      type: integer
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -198,9 +207,41 @@ spec:
                       description: Commit is the hash of the commit in the source
                         of truth.
                       type: string
+                    errorSourceRefs:
+                      description: errorSourceRefs track the origination(s) of errors
+                        when the condition type is Syncing.
+                      items:
+                        description: ErrorSource indicates the origination of errors.
+                        type: string
+                      type: array
+                    errorSummary:
+                      description: errorSummary summarizes the errors in the `errors`
+                        field when the condition type is Reconciling or Stalled, and
+                        summarizes the errors referred in the `errorsSourceRefs` field
+                        when the condition type is Syncing.
+                      properties:
+                        errorCountAfterTruncation:
+                          description: errorCountAfterTruncation tracks the number
+                            of errors in the `Errors` field.
+                          type: integer
+                        totalCount:
+                          description: totalCount tracks the total number of errors.
+                          type: integer
+                        truncated:
+                          description: truncated indicates whether the `Errors` field
+                            includes all the errors. If `true`, the `Errors` field
+                            does not includes all the errors. If `false`, the `Errors`
+                            field includes all the errors. The size limit of a RootSync/RepoSync
+                            object is 2MiB. The status update would fail with the
+                            `ResourceExhausted` rpc error if there are too many errors.
+                          type: boolean
+                      type: object
                     errors:
                       description: Errors is a list of errors that occurred in the
-                        process.
+                        process. This field is used to track errors when the condition
+                        type is Reconciling or Stalled. When the condition type is
+                        Syncing, the `errorSourceRefs` field is used instead to avoid
+                        duplicating errors between `status.conditions` and `status.rendering|source|sync`.
                       items:
                         description: ConfigSyncError represents an error that occurs
                           while parsing, applying, or remediating a resource.
@@ -311,6 +352,26 @@ spec:
                     description: Commit is the hash of the commit in the source of
                       truth that is rendered.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of rendering the source of truth.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       rendering the source of truth.
@@ -416,6 +477,26 @@ spec:
                     description: Commit is the hash of the most recent commit seen
                       in the source of truth.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of reading from the source of truth.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       reading from the source of truth.
@@ -518,6 +599,26 @@ spec:
                       was synced to the cluster. This value is updated even when a
                       commit is only partially synced due to an  error.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of syncing the resources.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       applying the resources from the change indicated by Commit.
@@ -621,12 +722,21 @@ spec:
     - jsonPath: .status.rendering.commit
       name: RenderingCommit
       type: string
+    - jsonPath: .status.rendering.errorSummary.totalCount
+      name: RenderingErrorCount
+      type: integer
     - jsonPath: .status.source.commit
       name: SourceCommit
       type: string
+    - jsonPath: .status.source.errorSummary.totalCount
+      name: SourceErrorCount
+      type: integer
     - jsonPath: .status.sync.commit
       name: SyncCommit
       type: string
+    - jsonPath: .status.sync.errorSummary.totalCount
+      name: SyncErrorCount
+      type: integer
     name: v1beta1
     schema:
       openAPIV3Schema:
@@ -797,8 +907,41 @@ spec:
                       description: Commit is the hash of the commit in the source
                         of truth.
                       type: string
+                    errorSourceRefs:
+                      description: errorSourceRefs track the origination(s) of errors
+                        when the condition type is Syncing.
+                      items:
+                        description: ErrorSource indicates the origination of errors.
+                        type: string
+                      type: array
+                    errorSummary:
+                      description: errorSummary summarizes the errors in the `errors`
+                        field when the condition type is Reconciling or Stalled, and
+                        summarizes the errors referred in the `errorsSourceRefs` field
+                        when the condition type is Syncing.
+                      properties:
+                        errorCountAfterTruncation:
+                          description: errorCountAfterTruncation tracks the number
+                            of errors in the `Errors` field.
+                          type: integer
+                        totalCount:
+                          description: totalCount tracks the total number of errors.
+                          type: integer
+                        truncated:
+                          description: truncated indicates whether the `Errors` field
+                            includes all the errors. If `true`, the `Errors` field
+                            does not includes all the errors. If `false`, the `Errors`
+                            field includes all the errors. The size limit of a RootSync/RepoSync
+                            object is 2MiB. The status update would fail with the
+                            `ResourceExhausted` rpc error if there are too many errors.
+                          type: boolean
+                      type: object
                     errors:
-                      description: Errors is a list of any errors that occurred.
+                      description: Errors is a list of errors that occurred in the
+                        process. This field is used to track errors when the condition
+                        type is Reconciling or Stalled. When the condition type is
+                        Syncing, the `errorSourceRefs` field is used instead to avoid
+                        duplicating errors between `status.conditions` and `status.rendering|source|sync`.
                       items:
                         description: ConfigSyncError represents an error that occurs
                           while parsing, applying, or remediating a resource.
@@ -909,6 +1052,26 @@ spec:
                     description: Commit is the hash of the commit in the source of
                       truth that is rendered.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of rendering the source of truth.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       rendering the source of truth.
@@ -1014,6 +1177,26 @@ spec:
                     description: Commit is the hash of the most recent commit seen
                       in the source of truth.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of reading from the source of truth.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       reading from the source of truth.
@@ -1116,6 +1299,26 @@ spec:
                       was synced to the cluster. This value is updated even when a
                       commit is only partially synced due to an  error.
                     type: string
+                  errorSummary:
+                    description: errorSummary summarizes the errors encountered during
+                      the process of syncing the resources.
+                    properties:
+                      errorCountAfterTruncation:
+                        description: errorCountAfterTruncation tracks the number of
+                          errors in the `Errors` field.
+                        type: integer
+                      totalCount:
+                        description: totalCount tracks the total number of errors.
+                        type: integer
+                      truncated:
+                        description: truncated indicates whether the `Errors` field
+                          includes all the errors. If `true`, the `Errors` field does
+                          not includes all the errors. If `false`, the `Errors` field
+                          includes all the errors. The size limit of a RootSync/RepoSync
+                          object is 2MiB. The status update would fail with the `ResourceExhausted`
+                          rpc error if there are too many errors.
+                        type: boolean
+                    type: object
                   errors:
                     description: Errors is a list of any errors that occurred while
                       applying the resources from the change indicated by Commit.

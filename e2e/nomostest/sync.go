@@ -95,29 +95,29 @@ func RootSyncHasStatusSyncDirectory(dir string) Predicate {
 		// Ensure the reconciler is ready (no true or error condition).
 		for i, condition := range rs.Status.Conditions {
 			if condition.Status == metav1.ConditionTrue {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
-			if len(condition.Errors) > 0 {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			if condition.ErrorSummary != nil && condition.ErrorSummary.TotalCount > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
 		}
 
-		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
-			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Source.ErrorSummary != nil && rs.Status.Source.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.source contains %d errors:\n%s", rs.Status.Source.ErrorSummary.TotalCount, string(jsn))
 		}
 		if gitDir := rs.Status.Source.Git.Dir; gitDir != dir {
 			return fmt.Errorf("status.source.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
 		}
-		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Sync.ErrorSummary != nil && rs.Status.Sync.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.sync contains %d errors:\n%s", rs.Status.Sync.ErrorSummary.TotalCount, string(jsn))
 		}
 		if gitDir := rs.Status.Sync.Git.Dir; gitDir != dir {
 			return fmt.Errorf("status.sync.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
 		}
-		if errCount := len(rs.Status.Rendering.Errors); errCount > 0 {
-			return fmt.Errorf("status.rendering.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Rendering.ErrorSummary != nil && rs.Status.Rendering.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.rendering contains %d errors:\n%s", rs.Status.Rendering.ErrorSummary.TotalCount, string(jsn))
 		}
 		if gitDir := rs.Status.Rendering.Git.Dir; gitDir != dir {
 			return fmt.Errorf("status.rendering.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
@@ -147,29 +147,29 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		// Ensure the reconciler is ready (no true or error condition).
 		for i, condition := range rs.Status.Conditions {
 			if condition.Status == metav1.ConditionTrue {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
-			if len(condition.Errors) > 0 {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			if condition.ErrorSummary != nil && condition.ErrorSummary.TotalCount > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
 		}
 
-		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
-			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Source.ErrorSummary != nil && rs.Status.Source.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.source contains %d errors:\n%s", rs.Status.Source.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Source.Commit; commit != sha1 {
 			return fmt.Errorf("status.source.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Sync.ErrorSummary != nil && rs.Status.Sync.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.sync contains %d errors:\n%s", rs.Status.Sync.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Sync.Commit; commit != sha1 {
 			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if errCount := len(rs.Status.Rendering.Errors); errCount > 0 {
-			return fmt.Errorf("status.rendering.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Rendering.ErrorSummary != nil && rs.Status.Rendering.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.rendering contains %d errors:\n%s", rs.Status.Rendering.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Rendering.Commit; commit != sha1 {
 			return fmt.Errorf("status.rendering.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
@@ -205,29 +205,29 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		// Ensure the reconciler is ready (no true condition).
 		for i, condition := range rs.Status.Conditions {
 			if condition.Status == metav1.ConditionTrue {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
-			if len(condition.Errors) > 0 {
-				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
-					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			if condition.ErrorSummary != nil && condition.ErrorSummary.TotalCount > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errorsSourceRefs: %v, errorSummary: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.ErrorSourceRefs, condition.ErrorSummary, string(jsn))
 			}
 		}
 
-		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
-			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Source.ErrorSummary != nil && rs.Status.Source.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.source contains %d errors:\n%s", rs.Status.Source.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Source.Commit; commit != sha1 {
 			return fmt.Errorf("status.source.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
-			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Sync.ErrorSummary != nil && rs.Status.Sync.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.sync contains %d errors:\n%s", rs.Status.Sync.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Sync.Commit; commit != sha1 {
 			return fmt.Errorf("status.sync.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		if errCount := len(rs.Status.Rendering.Errors); errCount > 0 {
-			return fmt.Errorf("status.rendering.errors contains %d errors:\n%s", errCount, string(jsn))
+		if rs.Status.Rendering.ErrorSummary != nil && rs.Status.Rendering.ErrorSummary.TotalCount > 0 {
+			return fmt.Errorf("status.rendering contains %d errors:\n%s", rs.Status.Rendering.ErrorSummary.TotalCount, string(jsn))
 		}
 		if commit := rs.Status.Rendering.Commit; commit != sha1 {
 			return fmt.Errorf("status.rendering.commit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
