@@ -124,8 +124,8 @@ func NoOpProxy(o client.Object) status.Error {
 func IllegalSecretRef(o client.Object) status.Error {
 	kind := o.GetObjectKind().GroupVersionKind().Kind
 	return invalidSyncBuilder.
-		Sprintf("%ss declaring spec.git.auth = %q or %q must not declare spec.git.secretRef",
-			kind, authNone, authGCENode).
+		Sprintf("%ss declaring spec.git.auth : [%q, %q, %q] must not declare spec.git.secretRef",
+			kind, authNone, authGCENode, authGCPServiceAccount).
 		BuildWithResources(o)
 }
 
