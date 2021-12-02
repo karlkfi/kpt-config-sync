@@ -20,6 +20,15 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
 	nt.T.Cleanup(func() {
+		if nt.T.Failed() {
+			out, err := nt.Kubectl("get", "service", "-n", "kubevirt")
+			// Print a standardized header before each printed log to make ctrl+F-ing the
+			// log you want easier.
+			nt.T.Logf("kubectl get service -n kubevirt: \n%s", string(out))
+			if err != nil {
+				nt.T.Log("error running `kubectl get service -n kubevirt`:", err)
+			}
+		}
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
 		// KNV2010: unable to apply resource: the server could not find the requested resource (patch virtualmachines.kubevirt.io testvm)
 		// Error occurs semi-consistently (~50% of the time) with the CI mono-repo kind tests
@@ -82,6 +91,15 @@ func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
 	nt.Root.CommitAndPush("Add kubevirt configs")
 
 	nt.T.Cleanup(func() {
+		if nt.T.Failed() {
+			out, err := nt.Kubectl("get", "service", "-n", "kubevirt")
+			// Print a standardized header before each printed log to make ctrl+F-ing the
+			// log you want easier.
+			nt.T.Logf("kubectl get service -n kubevirt: \n%s", string(out))
+			if err != nil {
+				nt.T.Log("error running `kubectl get service -n kubevirt`:", err)
+			}
+		}
 		// Avoids KNV2010 error since the bookstore namespace contains a VM custom resource
 		// KNV2010: unable to apply resource: the server could not find the requested resource (patch virtualmachines.kubevirt.io testvm)
 		// Error occurs semi-consistently (~50% of the time) with the CI mono-repo kind tests
