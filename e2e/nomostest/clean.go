@@ -289,6 +289,9 @@ func deleteImplicitNamespaces(nt *NT, failOnError FailOnError) {
 // removeKubevirt cleans up the Kubevirt resources when the kubevirt namespace is stuck
 // in the `Terminating` phase.
 func removeKubevirt(nt *NT, failOnError FailOnError) {
+	defer func() {
+		nt.MustKubectl("delete", "crd", "-l", "app.kubernetes.io/component=kubevirt")
+	}()
 	kubevirtNS := corev1.Namespace{}
 	if err := nt.Get("kubevirt", "", &kubevirtNS); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -310,7 +313,10 @@ func removeKubevirt(nt *NT, failOnError FailOnError) {
 	start := time.Now()
 	nt.T.Log("Clean up Kubevirt resources")
 	nt.MustKubectl("delete", "apiservice", "v1.subresources.kubevirt.io", "v1alpha3.subresources.kubevirt.io", "--ignore-not-found")
-	nt.MustKubectl("delete", "mutatingwebhookconfigurations", "virt-api-mutator", "--ignore-not-found")
+	// Mutating webhook objects are managed by Autopilot, so skip the cleanup if running on Autopilot clusters
+	if !nt.IsGKEAutopilot {
+		nt.MustKubectl("delete", "mutatingwebhookconfigurations", "virt-api-mutator", "--ignore-not-found")
+	}
 	nt.MustKubectl("delete", "validatingwebhookconfigurations", "virt-api-mutator", "virt-operator-validator", "--ignore-not-found")
 	nt.MustKubectl("patch", "kubevirt", "kubevirt", "-n=kubevirt", "--type=merge", "-p={\"metadata\":{\"finalizers\":null}}")
 
