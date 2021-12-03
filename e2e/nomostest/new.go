@@ -68,10 +68,6 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 		t.Skip("Test skipped since it is a KCC test")
 	}
 
-	if optsStruct.SkipAutopilot {
-		t.Skip("Test skipped when running on Autopilot clusters")
-	}
-
 	switch {
 	case optsStruct.Nomos.MultiRepo:
 		if optsStruct.MultiRepoIncompatible {
@@ -107,6 +103,17 @@ func NewOptStruct(testName, tmpDir string, t testing2.NTB, ntOptions ...ntopts.O
 	}
 
 	return optsStruct
+}
+
+func skipTestOnAutopilotCluster(nt *NT, skipAutopilot bool) bool {
+	isGKEAutopilot, err := util.IsGKEAutopilotCluster(nt.Client)
+	if err != nil {
+		nt.T.Fatal(err)
+	}
+	if isGKEAutopilot && skipAutopilot {
+		nt.T.Skip("Test skipped when running on Autopilot clusters")
+	}
+	return isGKEAutopilot
 }
 
 // New establishes a connection to a test cluster and prepares it for testing.
@@ -165,6 +172,8 @@ func SharedTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 			nt.testPods()
 		}
 	})
+
+	skipTestOnAutopilotCluster(nt, opts.SkipAutopilot)
 
 	nt.T.Log("`resetSyncedRepos` before a test on SharedTestEnv")
 	resetSyncedRepos(nt, opts)
@@ -249,13 +258,8 @@ func FreshTestEnv(t testing2.NTB, opts *ntopts.New) *NT {
 		docker.CheckImages(nt.T)
 	}
 
-	isGKEAutopilot, err := util.IsGKEAutopilotCluster(nt.Client)
-	if err != nil {
-		nt.T.Fatal(err)
-	}
-	nt.IsGKEAutopilot = isGKEAutopilot
-
-	if isGKEAutopilot {
+	nt.IsGKEAutopilot = skipTestOnAutopilotCluster(nt, opts.SkipAutopilot)
+	if nt.IsGKEAutopilot {
 		nt.DefaultWaitTimeout = 6 * time.Minute
 	} else {
 		nt.DefaultWaitTimeout = 2 * time.Minute
