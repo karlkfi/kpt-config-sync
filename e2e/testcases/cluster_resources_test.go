@@ -209,13 +209,10 @@ func TestClusterRoleLifecycle(t *testing.T) {
 	updatedCr.Rules = updatedRules
 	nt.Root.Add("acme/cluster/clusterrole.yaml", updatedCr)
 	nt.Root.CommitAndPush("update ClusterRole to get/list")
+	nt.WaitForRepoSyncs()
 
 	// Ensure the resource is updated.
-	_, err = nomostest.Retry(30*time.Second, func() error {
-		return nt.Validate(crName, "", &rbacv1.ClusterRole{},
-			clusterRoleHasRules(updatedRules), managerFieldsNonEmpty())
-	})
-	if err != nil {
+	if err = nt.Validate(crName, "", &rbacv1.ClusterRole{}, clusterRoleHasRules(updatedRules), managerFieldsNonEmpty()); err != nil {
 		nt.T.Errorf("updating ClusterRole: %v", err)
 	}
 
