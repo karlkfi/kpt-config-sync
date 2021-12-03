@@ -13,7 +13,7 @@ import (
 )
 
 func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
-	nt := nomostest.New(t)
+	nt := nomostest.New(t, ntopts.SkipAutopilotCluster)
 
 	nt.Root.Remove("acme/namespaces")
 	nt.Root.Copy("../../examples/kubevirt/.", "acme")
@@ -85,7 +85,7 @@ func TestApplyScopedResourcesHierarchicalMode(t *testing.T) {
 }
 
 func TestApplyScopedResourcesUnstructuredMode(t *testing.T) {
-	nt := nomostest.New(t, ntopts.Unstructured)
+	nt := nomostest.New(t, ntopts.Unstructured, ntopts.SkipAutopilotCluster)
 
 	nt.Root.Copy("../../examples/kubevirt-compiled/.", "acme")
 	nt.Root.CommitAndPush("Add kubevirt configs")
