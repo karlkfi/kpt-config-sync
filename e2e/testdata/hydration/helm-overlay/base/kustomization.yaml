@@ -1,24 +1,10 @@
-generators:
-- |-
-  apiVersion: fn.kpt.dev/v1alpha1
-  kind: RenderHelmChart
-  metadata:
-    name: demo
-    annotations:
-      config.kubernetes.io/function: |
-        exec:
-          path: render-helm-chart
-  helmGlobals:
-   chartHome: ./charts
-  helmCharts:
-  - name: prometheus
-    repo: https://prometheus-community.github.io/helm-charts
-    version: 14.3.0
-    releaseName: my-prometheus
-    namespace: monitoring
+helmCharts:
+- name: coredns
+  releaseName: my-coredns
+  namespace: coredns
 
 commonAnnotations:
   hydration-tool: kustomize
 
 commonLabels:
-  team: monitoring
+  team: coredns

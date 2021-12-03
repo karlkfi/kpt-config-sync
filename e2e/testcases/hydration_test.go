@@ -80,10 +80,10 @@ func TestHydrateHelmComponents(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	nt.T.Log("Validate resources are synced")
-	if err := nt.Validate("my-prometheus-alertmanager", "monitoring", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
+	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
 		nt.T.Fatal(err)
 	}
-	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
+	if err := nt.Validate("my-ingress-nginx-controller", "ingress-nginx", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
 		nt.T.Fatal(err)
 	}
 
@@ -91,26 +91,27 @@ func TestHydrateHelmComponents(t *testing.T) {
 	nt.Root.Copy("../testdata/hydration/helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
 	nt.Root.CommitAndPush("Render with a remote values.yaml file from a public repo")
 	nt.WaitForRepoSyncs()
-	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("Always")); err != nil {
+	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("Always")); err != nil {
 		nt.T.Fatal(err)
 	}
 
-	// TODO: use a remote values.yaml file from a private repo
+	// TODO(b/209458334) Skip the following test when running on GKE Autopilot clusters.
+	if !nt.IsGKEAutopilot {
+		nt.T.Log("Use the render-helm-chart function to render the charts")
+		nt.Root.Copy("../testdata/hydration/krm-function-helm-components-kustomization.yaml", "./helm-components/kustomization.yaml")
+		nt.Root.CommitAndPush("Update kustomization.yaml to use the render-helm-chart function")
+		nt.WaitForRepoSyncs()
+		if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
+			nt.T.Fatal(err)
+		}
 
-	nt.T.Log("Use the builtin helm plugin to render the charts")
-	nt.Root.Copy("../testdata/hydration/plugin-helm-components-kustomization.yaml", "./helm-components/kustomization.yaml")
-	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin")
-	nt.WaitForRepoSyncs()
-	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("IfNotPresent")); err != nil {
-		nt.T.Fatal(err)
-	}
-
-	nt.T.Log("Use the builtin helm plugin to render the charts with a remote values.yaml file")
-	nt.Root.Copy("../testdata/hydration/plugin-helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
-	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin with a remote values.yaml file from a public repo")
-	nt.WaitForRepoSyncs()
-	if err := nt.Validate("my-cert-manager", "cert-manager", &appsv1.Deployment{}, containerImagePullPolicy("Always")); err != nil {
-		nt.T.Fatal(err)
+		nt.T.Log("Use the render-helm-chart function to render the charts with a remote values.yaml file")
+		nt.Root.Copy("../testdata/hydration/krm-function-helm-components-remote-values-kustomization.yaml", "./helm-components/kustomization.yaml")
+		nt.Root.CommitAndPush("Update kustomization.yaml to use the render-helm-chart function with a remote values.yaml file from a public repo")
+		nt.WaitForRepoSyncs()
+		if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{}, containerImagePullPolicy("Always")); err != nil {
+			nt.T.Fatal(err)
+		}
 	}
 }
 
@@ -131,9 +132,9 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	nt.T.Log("Validate resources are synced")
-	if err := nt.Validate("my-prometheus-alertmanager", "monitoring", &appsv1.Deployment{},
+	if err := nt.Validate("my-coredns-coredns", "coredns", &appsv1.Deployment{},
 		nomostest.HasAnnotation("hydration-tool", "kustomize"),
-		nomostest.HasLabel("team", "monitoring"),
+		nomostest.HasLabel("team", "coredns"),
 		nomostest.HasAnnotation("client.lifecycle.config.k8s.io/mutation", "ignore"),
 		nomostest.HasLabel("test-case", "hydration")); err != nil {
 		nt.T.Fatal(err)
@@ -150,16 +151,19 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind")
 	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
 
-	nt.T.Log("Use the builtin helm plugin to render the charts")
-	nt.Root.Copy("../testdata/hydration/helm-overlay/kustomization.yaml", "./helm-overlay/kustomization.yaml")
-	nt.Root.Copy("../testdata/hydration/plugin-helm-overlay-kustomization.yaml", "./helm-overlay/base/kustomization.yaml")
-	nt.Root.CommitAndPush("Update kustomization.yaml to use the builtin helm plugin")
-	nt.WaitForRepoSyncs()
+	// TODO(b/209458334) Skip the following test when running on GKE Autopilot clusters.
+	if !nt.IsGKEAutopilot {
+		nt.T.Log("Use the render-helm-chart function to render the charts")
+		nt.Root.Copy("../testdata/hydration/helm-overlay/kustomization.yaml", "./helm-overlay/kustomization.yaml")
+		nt.Root.Copy("../testdata/hydration/krm-function-helm-overlay-kustomization.yaml", "./helm-overlay/base/kustomization.yaml")
+		nt.Root.CommitAndPush("Update kustomization.yaml to use the render-helm-chart function")
+		nt.WaitForRepoSyncs()
 
-	nt.T.Log("Make the parsing fail again by checking in a deprecated group and kind with the plugin")
-	nt.Root.Copy("../testdata/hydration/plugin-deprecated-GK-kustomization.yaml", "./helm-overlay/kustomization.yaml")
-	nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind with the plugin")
-	nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
+		nt.T.Log("Make the parsing fail again by checking in a deprecated group and kind with the render-helm-chart function")
+		nt.Root.Copy("../testdata/hydration/krm-function-deprecated-GK-kustomization.yaml", "./helm-overlay/kustomization.yaml")
+		nt.Root.CommitAndPush("Update kustomization.yaml to render a deprecated group and kind with the render-helm-chart function")
+		nt.WaitForRootSyncSourceError(nonhierarchical.DeprecatedGroupKindErrorCode)
+	}
 }
 
 func TestHydrateRemoteResources(t *testing.T) {

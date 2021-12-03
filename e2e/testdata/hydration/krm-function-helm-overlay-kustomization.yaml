@@ -1,0 +1,22 @@
+generators:
+- |-
+  apiVersion: fn.kpt.dev/v1alpha1
+  kind: RenderHelmChart
+  metadata:
+    name: demo
+    annotations:
+      config.kubernetes.io/function: |
+        exec:
+          path: render-helm-chart
+  helmGlobals:
+    chartHome: ./charts
+  helmCharts:
+  - name: coredns
+    releaseName: my-coredns
+    namespace: coredns
+
+commonAnnotations:
+  hydration-tool: kustomize
+
+commonLabels:
+  team: coredns

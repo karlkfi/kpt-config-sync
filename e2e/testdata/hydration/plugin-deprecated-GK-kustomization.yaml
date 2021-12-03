@@ -1,8 +1,0 @@
-helmCharts:
-- name: prometheus-operator
-  repo: https://charts.cloudposse.com/incubator
-  version: 0.2.0
-  releaseName: my-prometheus-operator
-
-commonLabels:
-  test-case: hydration

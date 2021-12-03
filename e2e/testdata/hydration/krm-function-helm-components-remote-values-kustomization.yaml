@@ -1,0 +1,25 @@
+generators:
+- |-
+  apiVersion: fn.kpt.dev/v1alpha1
+  kind: RenderHelmChart
+  metadata:
+    name: demo
+    annotations:
+      config.kubernetes.io/function: |
+        exec:
+          path: render-helm-chart
+  helmGlobals:
+    chartHome: ./charts
+  helmCharts:
+  - name: coredns
+    releaseName: my-coredns
+    namespace: coredns
+    valuesFile: https://raw.githubusercontent.com/config-sync-examples/helm-components/main/coredns-values.yaml
+  - name: ingress-nginx
+    repo: https://kubernetes.github.io/ingress-nginx
+    version: 4.0.12
+    releaseName: my-ingress-nginx
+    namespace: ingress-nginx
+
+commonLabels:
+  test-case: hydration
