@@ -476,7 +476,7 @@ func TestImporterIgnoresNonSelectedCustomResources(t *testing.T) {
 	//}
 }
 
-func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
+func TestClusterSelectorOnNamespaceRepos(t *testing.T) {
 	nt := nomostest.New(t,
 		ntopts.SkipMonoRepo,
 		ntopts.NamespaceRepo(namespaceRepo),
@@ -500,6 +500,19 @@ func TestInlineClusterSelectorOnNamespaceRepos(t *testing.T) {
 	nt.NonRootRepos[namespaceRepo].CommitAndPush("Modify the cluster selector to select an excluded cluster list")
 	nt.WaitForRepoSyncs()
 	if err := nt.ValidateNotFound(roleBindingName, namespaceRepo, &rbacv1.RoleBinding{}); err != nil {
+		nt.T.Fatal(err)
+	}
+
+	nt.T.Log("Switch to use ClusterSelector objects")
+	clusterObj := clusterObject(prodClusterName, environmentLabelKey, prodEnvironment)
+	nt.NonRootRepos[namespaceRepo].Add("acme/cluster.yaml", clusterObj)
+	clusterSelectorObj := clusterSelector(prodClusterSelectorName, environmentLabelKey, prodEnvironment)
+	nt.NonRootRepos[namespaceRepo].Add("acme/clusterselector.yaml", clusterSelectorObj)
+	rb.Annotations = map[string]string{metadata.LegacyClusterSelectorAnnotationKey: prodClusterSelectorName}
+	nt.NonRootRepos[namespaceRepo].Add("acme/bob-rolebinding.yaml", rb)
+	nt.NonRootRepos[namespaceRepo].CommitAndPush("Add cluster registry data and use the legacy ClusterSelector")
+	nt.WaitForRepoSyncs()
+	if err := nt.Validate(roleBindingName, namespaceRepo, &rbacv1.RoleBinding{}); err != nil {
 		nt.T.Fatal(err)
 	}
 
