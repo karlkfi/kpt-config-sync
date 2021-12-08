@@ -36,7 +36,7 @@ test_teardown() {
   git::commit
 
   debug::log "Waiting for CT on API server"
-  wait::for -t 30 -- kubectl get constrainttemplate k8sallowedrepos
+  wait::for -t 120 -- kubectl get constrainttemplate k8sallowedrepos
 
   debug::log "Applying CRD for constraint (simulates gatekeeper)"
   kubectl apply -f "${YAML_DIR}/constraint-crd.yaml" --validate=false
