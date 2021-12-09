@@ -340,11 +340,21 @@ func (b *BugReporter) fetchResources(ctx context.Context, gv schema.GroupVersion
 
 // fetchConfigMaps provides a set of Readables for the ConfigMap objects under the config-management-system namespace
 func (b *BugReporter) fetchConfigMaps(ctx context.Context) (rd []Readable) {
+	redactKeys := []string{"HTTPS_PROXY", "HTTP_PROXY"}
 	ns := configmanagement.ControllerNamespace
 	configMapList, err := b.clientSet.CoreV1().ConfigMaps(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		b.ErrorList = append(b.ErrorList, fmt.Errorf("failed to list %s configmaps: %v", ns, err))
 	} else {
+		for _, cm := range configMapList.Items {
+			if strings.HasSuffix(cm.Name, "git-sync") {
+				for _, k := range redactKeys {
+					if _, ok := cm.Data[k]; ok {
+						cm.Data[k] = "<REDACTED>"
+					}
+				}
+			}
+		}
 		filePath := path.Join(Namespace, ns, "ConfigMaps")
 		rd = b.appendPrettyJSON(rd, filePath, configMapList)
 	}
