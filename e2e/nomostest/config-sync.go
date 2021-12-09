@@ -926,18 +926,17 @@ func DeletePodByLabel(nt *NT, label, value string) {
 	}, WaitTimeout(nt.DefaultWaitTimeout))
 }
 
-// resetMonoRepoSpec sets the mono repo's SOURCE_FORMAT and POLICY_DIR. It might cause the git-importer to restart.
-// It sets POLICY_DIR to always be `acme` because the initial mono-repo's sync directory is configured to be `acme`.
-func resetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat) {
+// ResetMonoRepoSpec sets the mono repo's SOURCE_FORMAT and POLICY_DIR. It might cause the git-importer to restart.
+func ResetMonoRepoSpec(nt *NT, sourceFormat filesystem.SourceFormat, policyDir string) {
 	restartPod := false
 
 	importerCM := &corev1.ConfigMap{}
 	if err := nt.Get("importer", configmanagement.ControllerNamespace, importerCM); err != nil {
 		nt.T.Fatal(err)
 	}
-	if importerCM.Data["POLICY_DIR"] != acmeDir {
+	if importerCM.Data["POLICY_DIR"] != policyDir {
 		restartPod = true
-		nt.MustMergePatch(importerCM, fmt.Sprintf(`{"data":{"POLICY_DIR":"%s"}}`, acmeDir))
+		nt.MustMergePatch(importerCM, fmt.Sprintf(`{"data":{"POLICY_DIR":"%s"}}`, policyDir))
 	}
 
 	sourceFormatCM := &corev1.ConfigMap{}

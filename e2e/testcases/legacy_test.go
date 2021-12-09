@@ -226,7 +226,8 @@ func TestBats(t *testing.T) {
 		//		3, // b/169155128 - namespace tombstoning that was used in MonoRepo for status, we decided to not implement this for CSMR
 		//	),
 		// },
-		{fileName: "operator-no-policy-dir.bats"},
+		// Converted to operator_no_policy_dir_test.go.
+		//{fileName: "operator-no-policy-dir.bats"},
 		// Converted to cluster_selectors_test.go.
 		// {fileName: "per_cluster_addressing.bats"},
 		// Converted to preserve_fields_test.go.
