@@ -7,6 +7,7 @@ import (
 	"github.com/google/nomos/pkg/kinds"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,16 +43,29 @@ func IsAutopilotManagedNamespace(o client.Object) bool {
 }
 
 // IsGKEAutopilotCluster returns if the cluster is an autopilot cluster.
-// Currently, only Autopilot clusters have node with the prefix `gk3-`.
+// Currently, only Autopilot clusters have node with the prefix `gk3-`, so we
+// can use the node prefix to check the cluster type.
+// GKE Autopilot scales to zero nodes since 1.21 when there is no user workloads.
+// In the case of zero node, check the existence of the
+// policycontrollerv2.config.common-webhooks.networking.gke.io validatingWebhookConfiguration.
+// It exists on Autopilot clusters after GKE 1.20.
 func IsGKEAutopilotCluster(c client.Client) (bool, error) {
 	nodes := &corev1.NodeList{}
-	if err := c.List(context.Background(), nodes); err != nil {
-		return false, err
-	}
-	for _, node := range nodes.Items {
-		if strings.HasPrefix(node.Name, autopilotPrefix) {
-			return true, nil
+	if err := c.List(context.Background(), nodes); err == nil {
+		for _, node := range nodes.Items {
+			if strings.HasPrefix(node.Name, autopilotPrefix) {
+				return true, nil
+			}
 		}
 	}
-	return false, nil
+
+	webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
+	objectKey := client.ObjectKey{Name: "policycontrollerv2.config.common-webhooks.networking.gke.io"}
+	err := c.Get(context.Background(), objectKey, webhook)
+	if err == nil {
+		return true, nil
+	} else if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	return false, err
 }
