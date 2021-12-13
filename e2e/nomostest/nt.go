@@ -336,7 +336,7 @@ func (nt *NT) ValidateMetrics(syncOption MetricsSyncOption, fn func() error) err
 
 			originalErr := err
 
-			duration, err := Retry(20*time.Second, func() error {
+			duration, err := Retry(nt.DefaultWaitTimeout, func() error {
 				_, currentMetrics = nt.GetCurrentMetrics()
 				nt.updateMetrics(prevMetrics, currentMetrics)
 
@@ -557,7 +557,7 @@ func (nt *NT) GetCurrentMetrics(syncOptions ...MetricsSyncOption) (time.Duration
 	if nt.MultiRepo {
 		var metrics testmetrics.ConfigSyncMetrics
 
-		took, err := Retry(45*time.Second, func() error {
+		took, err := Retry(nt.DefaultWaitTimeout, func() error {
 			var err error
 			metrics, err = testmetrics.ParseMetrics(nt.otelCollectorPort)
 			if err != nil {
