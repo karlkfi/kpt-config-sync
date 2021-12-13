@@ -10,6 +10,7 @@ import (
 	"github.com/google/nomos/pkg/status"
 	syncerclient "github.com/google/nomos/pkg/syncer/client"
 	"github.com/google/nomos/pkg/syncer/decode"
+	syncerdiffer "github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/util/compare"
 	"github.com/google/nomos/pkg/util/namespaceconfig"
 	"github.com/pkg/errors"
@@ -74,6 +75,9 @@ func (d *differ) updateNamespaceConfigs(ctx context.Context, decoder decode.Deco
 	}
 	for name, mayDelete := range current.NamespaceConfigs {
 		if _, found := desired.NamespaceConfigs[name]; !found {
+			if syncerdiffer.ManagementDisabled(&mayDelete) {
+				continue
+			}
 			d.errs = status.Append(d.errs, d.deleteNamespaceConfig(ctx, &mayDelete))
 			deletes++
 		}
