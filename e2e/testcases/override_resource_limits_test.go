@@ -65,7 +65,7 @@ func defaultResourceLimits(nt *nomostest.NT) (corev1.ResourceList, corev1.Resour
 }
 
 func TestOverrideResourceLimitsV1Alpha1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 
 	// Get the default CPU/memory limits of the reconciler container and the git-sync container
@@ -350,7 +350,7 @@ func TestOverrideResourceLimitsV1Alpha1(t *testing.T) {
 }
 
 func TestOverrideResourceLimitsV1Beta1(t *testing.T) {
-	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
+	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.SkipAutopilotCluster, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 
 	// Get the default CPU/memory limits of the reconciler container and the git-sync container
