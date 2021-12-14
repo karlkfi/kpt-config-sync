@@ -123,37 +123,17 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	}
 
 	// Update RootSync.
-	//
-	// Get RootSync and then perform Update to avoid update failures due to
-	// version mismatch.
-	_, err = nomostest.Retry(5*time.Second, func() error {
-		rootsync := &v1alpha1.RootSync{}
-		err := nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rootsync)
-		if err != nil {
-			return err
-		}
-
-		// Update the policy directory in RootSync Custom Resource.
-		rootsync.Spec.Git.Dir = fooDir
-
-		err = nt.Update(rootsync)
-		return err
-	})
-	if err != nil {
-		nt.T.Fatalf("RootSync update failed: %v", err)
-	}
+	nomostest.SetPolicyDir(nt, fooDir)
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory(fooDir))
 
 	// Validate namespace 'shipping' created with the correct sourcePath annotation.
-	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(fooNS, "", fake.NamespaceObject(fooNS),
-			nomostest.HasAnnotation(metadata.SourcePathAnnotationKey, sourcePath))
-	})
-	if err != nil {
+	if err := nt.Validate(fooNS, "", fake.NamespaceObject(fooNS),
+		nomostest.HasAnnotation(metadata.SourcePathAnnotationKey, sourcePath)); err != nil {
 		nt.T.Error(err)
 	}
 
 	// Validate namespace 'audit' no longer present.
-	_, err = nomostest.Retry(20*time.Second, func() error {
+	_, err = nomostest.Retry(30*time.Second, func() error {
 		return nt.ValidateNotFound(acmeNS, "", fake.NamespaceObject(acmeNS))
 	})
 	if err != nil {

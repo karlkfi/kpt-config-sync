@@ -61,7 +61,7 @@ func TestSyncingThroughAProxy(t *testing.T) {
 		}
 		return rs.Status.LastSyncedCommit, nil
 	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn))
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("foo-corp"))
 }
 
 func hasReadyReplicas(replicas int32) nomostest.Predicate {

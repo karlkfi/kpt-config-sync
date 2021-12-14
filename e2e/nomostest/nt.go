@@ -533,18 +533,19 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	if nt.MultiRepo {
 		nt.WaitForSync(kinds.RootSync(), "root-sync",
 			configmanagement.ControllerNamespace, syncTimeout,
-			waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit)
+			waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit,
+			&SyncDirPredicatePair{waitForRepoSyncsOptions.syncDirectory, RootSyncHasStatusSyncDirectory})
 
 		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
 		if syncNamespaceRepos {
 			for ns, repo := range nt.NamespaceRepos {
 				nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, ns,
-					syncTimeout, DefaultRepoSha1Fn(repo), RepoSyncHasStatusSyncCommit)
+					syncTimeout, DefaultRepoSha1Fn(repo), RepoSyncHasStatusSyncCommit, nil)
 			}
 		}
 	} else {
 		nt.WaitForSync(kinds.Repo(), "repo", "", syncTimeout,
-			waitForRepoSyncsOptions.rootSha1Fn, RepoHasStatusSyncLatestToken)
+			waitForRepoSyncsOptions.rootSha1Fn, RepoHasStatusSyncLatestToken, nil)
 	}
 }
 
@@ -595,9 +596,15 @@ func (nt *NT) GetCurrentMetrics(syncOptions ...MetricsSyncOption) (time.Duration
 //
 // timeout specifies the maximum duration allowed for the object to sync.
 //
-// predicates is a list of Predicates to use to tell whether the object is
-// synced as desired.
-func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration, sha1Func Sha1Func, syncedTo ...func(sha1 string) Predicate) {
+// sha1Func is the function that dynamically computes the expected commit sha1.
+//
+// syncSha1 is a Predicate to use to tell whether the object is synced as desired.
+//
+// syncDirPair is a pair of sync dir and the corresponding predicate that tells
+// whether it is synced to the expected directory.
+// It will skip the validation if it is not provided.
+func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, timeout time.Duration,
+	sha1Func Sha1Func, syncSha1 func(string) Predicate, syncDirPair *SyncDirPredicatePair) {
 	nt.T.Helper()
 
 	// Wait for the repository to report it is synced.
@@ -618,9 +625,9 @@ func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, t
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve sha1")
 		}
-		isSynced := make([]Predicate, len(syncedTo))
-		for i, s := range syncedTo {
-			isSynced[i] = s(sha1)
+		isSynced := []Predicate{syncSha1(sha1)}
+		if syncDirPair != nil {
+			isSynced = append(isSynced, syncDirPair.predicate(syncDirPair.dir))
 		}
 
 		return nt.Validate(name, namespace, o, isSynced...)
@@ -1178,15 +1185,16 @@ type waitForRepoSyncsOptions struct {
 	timeout            time.Duration
 	syncNamespaceRepos bool
 	rootSha1Fn         Sha1Func
+	syncDirectory      string
 }
 
 func newWaitForRepoSyncsOptions(timeout time.Duration, fn Sha1Func) waitForRepoSyncsOptions {
-	options := waitForRepoSyncsOptions{}
-	options.timeout = timeout
-	options.syncNamespaceRepos = true
-	options.rootSha1Fn = fn
-
-	return options
+	return waitForRepoSyncsOptions{
+		timeout:            timeout,
+		syncNamespaceRepos: true,
+		rootSha1Fn:         fn,
+		syncDirectory:      acmeDir,
+	}
 }
 
 // WaitForRepoSyncsOption is an optional parameter for WaitForRepoSyncs.
@@ -1213,5 +1221,18 @@ func WithRootSha1Func(fn Sha1Func) WaitForRepoSyncsOption {
 func RootSyncOnly() WaitForRepoSyncsOption {
 	return func(options *waitForRepoSyncsOptions) {
 		options.syncNamespaceRepos = false
+	}
+}
+
+// SyncDirPredicatePair is a pair of the sync directory and the predicate.
+type SyncDirPredicatePair struct {
+	dir       string
+	predicate func(string) Predicate
+}
+
+// WithSyncDirectory specifies the sync directory in the `status.sync.gitStatus.dir` field.
+func WithSyncDirectory(dir string) WaitForRepoSyncsOption {
+	return func(options *waitForRepoSyncsOptions) {
+		options.syncDirectory = dir
 	}
 }

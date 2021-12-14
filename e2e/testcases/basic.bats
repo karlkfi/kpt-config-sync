@@ -121,7 +121,7 @@ YAML_DIR=${BATS_TEST_DIRNAME}/../testdata
   debug::log "Remove the deployment"
   git::rm acme/namespaces/dir/deployment.yaml
   git::commit
-  wait::for -t 60 -- nomos::repo_synced
+  wait::for -t 120 -- nomos::repo_synced
 
   debug::log "check that the deployment was removed and replicaset remains"
   wait::for -f -t 60 -- kubectl get deployment hello-world -n dir

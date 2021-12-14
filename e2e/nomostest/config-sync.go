@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-
 	"github.com/google/nomos/e2e"
 	testmetrics "github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
@@ -18,6 +16,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -421,7 +420,7 @@ func multiRepoObjects(t testing.NTB, resourcegroup bool, objects []client.Object
 }
 
 func validateMonoRepoDeployments(nt *NT) error {
-	took, err := Retry(60*time.Second, func() error {
+	took, err := Retry(nt.DefaultWaitTimeout, func() error {
 		err := nt.Validate("monitor", configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
@@ -995,7 +994,7 @@ func resetNamespaceRepos(nt *NT) {
 		if r, found := nt.NonRootRepos[nr.Namespace]; found {
 			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
 			nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, nr.Namespace,
-				120*time.Second, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit)
+				120*time.Second, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit, nil)
 		}
 	}
 }
@@ -1026,4 +1025,15 @@ func deleteNamespaceRepos(nt *NT) {
 		nt.T.Fatal(err)
 	}
 	WaitToTerminate(nt, kinds.ClusterRole(), rsClusterRole.Name, "")
+}
+
+// SetPolicyDir updates the root-sync object with the provided policyDir.
+func SetPolicyDir(nt *NT, policyDir string) {
+	nt.T.Logf("Set policyDir to %q", policyDir)
+	if nt.MultiRepo {
+		rs := fake.RootSyncObject()
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, policyDir))
+	} else {
+		ResetMonoRepoSpec(nt, filesystem.SourceFormatHierarchy, policyDir)
+	}
 }

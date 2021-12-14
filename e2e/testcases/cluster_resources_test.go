@@ -171,8 +171,8 @@ func TestClusterRoleLifecycle(t *testing.T) {
 		nt.WaitForSync(kinds.ClusterConfig(), v1.ClusterConfigName, "",
 			120*time.Second,
 			nomostest.DefaultRootSha1Fn,
-			nomostest.ClusterConfigHasSpecToken,
-			nomostest.ClusterConfigHasStatusToken,
+			nomostest.ClusterConfigHasToken,
+			nil,
 		)
 	}
 

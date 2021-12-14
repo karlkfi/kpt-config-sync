@@ -53,12 +53,12 @@ func RepoHasStatusSyncLatestToken(sha1 string) Predicate {
 	}
 }
 
-// ClusterConfigHasSpecToken created a Predicate that ensures .spec.token on the
-// passed ClusterConfig matches sha1.
+// ClusterConfigHasToken created a Predicate that ensures .spec.token and
+// .status.token on the passed ClusterConfig matches sha1.
 //
-// This means ACM is trying (or has tried) syncing cluster-scoped objects from
-// the latest repo commit to the cluster.
-func ClusterConfigHasSpecToken(sha1 string) Predicate {
+// This means ACM has successfully synced all cluster-scoped objects from the
+// latest repo commit to the cluster.
+func ClusterConfigHasToken(sha1 string) Predicate {
 	return func(o client.Object) error {
 		cc, ok := o.(*v1.ClusterConfig)
 		if !ok {
@@ -69,25 +69,61 @@ func ClusterConfigHasSpecToken(sha1 string) Predicate {
 			return fmt.Errorf("spec.token %q does not match git revision %q",
 				token, sha1)
 		}
+		if token := cc.Status.Token; token != sha1 {
+			return fmt.Errorf("status.token %q does not match git revision %q",
+				token, sha1)
+		}
 		return nil
 	}
 }
 
-// ClusterConfigHasStatusToken created a Predicate that ensures .spec.token on the
-// passed ClusterConfig matches sha1.
-//
-// This means ACM has successfully synced all cluster-scoped objects from the
-// latest repo commit to the cluster.
-func ClusterConfigHasStatusToken(sha1 string) Predicate {
+// RootSyncHasStatusSyncDirectory creates a Predicate that ensures that the
+// .status.sync.gitStatus.dir field on the passed RootSync matches the provided dir.
+func RootSyncHasStatusSyncDirectory(dir string) Predicate {
 	return func(o client.Object) error {
-		cc, ok := o.(*v1.ClusterConfig)
+		rs, ok := o.(*v1alpha1.RootSync)
 		if !ok {
-			return WrongTypeErr(o, &v1.ClusterConfig{})
+			return WrongTypeErr(o, &v1alpha1.RootSync{})
 		}
 
-		if token := cc.Status.Token; token != sha1 {
-			return fmt.Errorf("status.token %q does not match git revision %q",
-				token, sha1)
+		// On error, display the full state of the RootSync to aid in debugging.
+		jsn, err := json.MarshalIndent(rs, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		// Ensure the reconciler is ready (no true or error condition).
+		for i, condition := range rs.Status.Conditions {
+			if condition.Status == metav1.ConditionTrue {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			}
+			if len(condition.Errors) > 0 {
+				return fmt.Errorf("status.conditions[%d](%s) contains status: %s, reason: %s, message: %s, commit: %s, errors: %v\n%s",
+					i, condition.Type, condition.Status, condition.Reason, condition.Message, condition.Commit, condition.Errors, string(jsn))
+			}
+		}
+
+		if errCount := len(rs.Status.Source.Errors); errCount > 0 {
+			return fmt.Errorf("status.source.errors contains %d errors:\n%s", errCount, string(jsn))
+		}
+		if gitDir := rs.Status.Source.Git.Dir; gitDir != dir {
+			return fmt.Errorf("status.source.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
+		}
+		if errCount := len(rs.Status.Sync.Errors); errCount > 0 {
+			return fmt.Errorf("status.sync.errors contains %d errors:\n%s", errCount, string(jsn))
+		}
+		if gitDir := rs.Status.Sync.Git.Dir; gitDir != dir {
+			return fmt.Errorf("status.sync.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
+		}
+		if errCount := len(rs.Status.Rendering.Errors); errCount > 0 {
+			return fmt.Errorf("status.rendering.errors contains %d errors:\n%s", errCount, string(jsn))
+		}
+		if gitDir := rs.Status.Rendering.Git.Dir; gitDir != dir {
+			return fmt.Errorf("status.rendering.gitStatus.dir %q does not match the provided directory %q:\n%s", gitDir, dir, string(jsn))
+		}
+		if message := rs.Status.Rendering.Message; message != parse.RenderingSucceeded && message != parse.RenderingSkipped {
+			return fmt.Errorf("status.rendering.message %q does not indicate a successful state:\n%s", message, string(jsn))
 		}
 		return nil
 	}

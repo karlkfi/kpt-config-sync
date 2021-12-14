@@ -1,20 +1,17 @@
 package e2e
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
-	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/status"
-	"github.com/google/nomos/pkg/testing/fake"
 )
 
 func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {
 	nt := nomostest.New(t)
 
-	setPolicyDir(nt, "")
+	nomostest.SetPolicyDir(nt, "")
 
 	if nt.MultiRepo {
 		nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode)
@@ -41,15 +38,15 @@ func TestPolicyDirUnset(t *testing.T) {
 	nt.Root.CommitAndPush("Initialize the root directory")
 	nt.WaitForRepoSyncs()
 
-	setPolicyDir(nt, "")
-	nt.WaitForRepoSyncs()
+	nomostest.SetPolicyDir(nt, "")
+	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("."))
 }
 
 func TestInvalidPolicyDir(t *testing.T) {
 	nt := nomostest.New(t)
 
 	nt.T.Log("Break the policydir in the repo")
-	setPolicyDir(nt, "some-nonexistent-policydir")
+	nomostest.SetPolicyDir(nt, "some-nonexistent-policydir")
 
 	nt.T.Log("Expect an error to be present in status.source.errors")
 	if nt.MultiRepo {
@@ -59,17 +56,7 @@ func TestInvalidPolicyDir(t *testing.T) {
 	}
 
 	nt.T.Log("Fix the policydir in the repo")
-	setPolicyDir(nt, "acme")
+	nomostest.SetPolicyDir(nt, "acme")
 	nt.T.Log("Expect repo to recover from the error in source message")
 	nt.WaitForRepoSyncs()
-}
-
-func setPolicyDir(nt *nomostest.NT, policyDir string) {
-	nt.T.Logf("Set policyDir to %q", policyDir)
-	if nt.MultiRepo {
-		rs := fake.RootSyncObject()
-		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, policyDir))
-	} else {
-		nomostest.ResetMonoRepoSpec(nt, filesystem.SourceFormatHierarchy, policyDir)
-	}
 }
