@@ -805,7 +805,9 @@ func RepoSyncObjectV1Beta1(ns, repoURL string) *v1beta1.RepoSync {
 }
 
 func setupCentralizedControl(nt *NT, opts *ntopts.New) {
+	nsCount := 0
 	for ns := range opts.MultiRepo.NamespaceRepos {
+		nsCount++
 		nt.Root.Add(StructuredNSPath(ns, "ns.yaml"), fake.NamespaceObject(ns))
 		nt.Root.Add("acme/cluster/cr.yaml", repoSyncClusterRole())
 		nt.Root.Add(StructuredNSPath(ns, "rb.yaml"), repoSyncRoleBinding(ns))
@@ -847,12 +849,14 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		err = nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 			var err error
 			if strings.Contains(cluster, "psp") {
-				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6,
+				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName,
+					2+nsCount*4, // 2 is for the `safety` namespace and the `configsync.gke.io:ns-reconciler` clusterrole, and 4 is for the resources created for every namespace
 					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
 					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"),
 					testmetrics.ResourceCreated("ClusterRoleBinding"))
 			} else {
-				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
+				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName,
+					2+nsCount*3, // 2 is for the `safety` namespace and the `configsync.gke.io:ns-reconciler` clusterrole, and 3 is for the resources created for every namespace
 					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
 					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))
 			}

@@ -309,8 +309,6 @@ func (nt *NT) updateMetrics(prev testmetrics.ConfigSyncMetrics, parsedMetrics te
 				}
 			}
 		}
-		// TODO(b/210677935): look into why we need to keep the history of this metric instead of just using the latest one.
-		newCsm[ocmetrics.DeclaredResourcesView.Name] = append(newCsm[ocmetrics.DeclaredResourcesView.Name], prev[ocmetrics.DeclaredResourcesView.Name]...)
 	} else {
 		newCsm = parsedMetrics
 	}

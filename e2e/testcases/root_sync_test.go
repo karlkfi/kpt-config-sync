@@ -162,7 +162,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
 			metrics.GVKMetric{
 				GVK:   "Namespace",
 				APIOp: "delete",
