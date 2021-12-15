@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
+	"github.com/google/nomos/pkg/api/configmanagement"
+	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -146,6 +148,64 @@ spec:
 	validateKCCResourceNotFound(nt, gvkServiceAccount, "pubsub-app", "foo")
 	validateKCCResourceNotFound(nt, gvkPolicyMember, "policy-member-binding", "foo")
 
+}
+
+// This file includes tests for KCC resources from a cloud source repository.
+// The test applies KCC resources and verifies the GCP resources
+// are created successfully.
+// It then deletes KCC resources and verifies the GCP resources
+// are removed successfully.
+func TestKCCResourcesOnCSR(t *testing.T) {
+	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
+	rs := fake.RootSyncObject()
+	nt.T.Log("sync to the kcc resources from a CSR repo")
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
+
+	sha1Fn := func(nt *nomostest.NT) (string, error) {
+		rs = &v1alpha1.RootSync{}
+		if err := nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
+			return "", err
+		}
+		return rs.Status.LastSyncedCommit, nil
+	}
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn))
+
+	// Verify that the GCP resources are created.
+	gvkPubSubTopic := schema.GroupVersionKind{
+		Group:   "pubsub.cnrm.cloud.google.com",
+		Version: "v1beta1",
+		Kind:    "PubSubTopic",
+	}
+	gvkPubSubSubscription := schema.GroupVersionKind{
+		Group:   "pubsub.cnrm.cloud.google.com",
+		Version: "v1beta1",
+		Kind:    "PubSubSubscription",
+	}
+	gvkServiceAccount := schema.GroupVersionKind{
+		Group:   "iam.cnrm.cloud.google.com",
+		Version: "v1beta1",
+		Kind:    "IAMServiceAccount",
+	}
+	gvkPolicyMember := schema.GroupVersionKind{
+		Group:   "iam.cnrm.cloud.google.com",
+		Version: "v1beta1",
+		Kind:    "IAMPolicyMember",
+	}
+	validateKCCResourceReady(nt, gvkPubSubTopic, "test-cs", "foo")
+	validateKCCResourceReady(nt, gvkPubSubSubscription, "test-cs-read", "foo")
+	validateKCCResourceReady(nt, gvkServiceAccount, "pubsub-app", "foo")
+	validateKCCResourceReady(nt, gvkPolicyMember, "policy-member-binding", "foo")
+
+	// Remove the kcc resources
+	nt.T.Log("sync to an empty directory from a CSR repo")
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc-empty"}}}`)
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn))
+
+	// Verify that the GCP resources are removed.
+	validateKCCResourceNotFound(nt, gvkPubSubTopic, "test-cs", "foo")
+	validateKCCResourceNotFound(nt, gvkPubSubSubscription, "test-cs-read", "foo")
+	validateKCCResourceNotFound(nt, gvkServiceAccount, "pubsub-app", "foo")
+	validateKCCResourceNotFound(nt, gvkPolicyMember, "policy-member-binding", "foo")
 }
 
 func validateKCCResourceReady(nt *nomostest.NT, gvk schema.GroupVersionKind, name, namespace string) {
