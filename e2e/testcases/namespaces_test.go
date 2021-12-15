@@ -249,109 +249,122 @@ func TestNamespaceEnabledAnnotationNotDeclared(t *testing.T) {
 func TestManagementDisabledNamespace(t *testing.T) {
 	nt := nomostest.New(t)
 
-	// Create namespace.
-	fooNamespace := fake.NamespaceObject("foo")
-	cm1 := fake.ConfigMapObject(core.Namespace("foo"), core.Name("cm1"))
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
-	nt.Root.Add("acme/namespaces/foo/cm1.yaml", cm1)
-	nt.Root.CommitAndPush("Create a namespace and a configmap")
-	nt.WaitForRepoSyncs()
+	namespacesToTest := []string{"foo", "default"}
+	for _, nsName := range namespacesToTest {
+		// Create namespace.
+		namespace := fake.NamespaceObject(nsName)
+		cm1 := fake.ConfigMapObject(core.Namespace(nsName), core.Name("cm1"))
+		nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", nsName), namespace)
+		nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/cm1.yaml", nsName), cm1)
+		nt.Root.CommitAndPush("Create a namespace and a configmap")
+		nt.WaitForRepoSyncs()
 
-	// Test that the namespace exists with expected config management labels and annotations.
-	err := nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Test that the configmap exists with expected config management labels and annotations.
-	err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Validate multi-repo metrics.
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
+		// Test that the namespace exists with expected config management labels and annotations.
+		err := nt.Validate(namespace.Name, "", &corev1.Namespace{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
 		if err != nil {
-			return err
+			nt.T.Error(err)
 		}
 
-		// Validate no error metrics are emitted.
-		// TODO(b/162601559): internal_errors_total metric from diff.go
-		//if err := nt.ValidateErrorMetricsNotFound()
-		return nil
-	})
-	if err != nil {
-		nt.T.Errorf("validating metrics: %v", err)
-	}
-
-	// Update the namespace and the configmap to be no longer be managed
-	fooNamespace.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
-	cm1.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
-	nt.Root.Add("acme/namespaces/foo/ns.yaml", fooNamespace)
-	nt.Root.Add("acme/namespaces/foo/cm1.yaml", cm1)
-	nt.Root.CommitAndPush("Unmanage the namespace and the configmap")
-	nt.WaitForRepoSyncs()
-
-	// Test that the now unmanaged namespace does not contain any config management labels or annotations
-	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Test that the now unmanaged configmap does not contain any config management labels or annotations
-	err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.NoConfigSyncMetadata())
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Validate multi-repo metrics.
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourcePatched("Namespace", 1), metrics.ResourcePatched("ConfigMap", 1))
+		// Test that the configmap exists with expected config management labels and annotations.
+		err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.HasAllNomosMetadata(nt.MultiRepo))
 		if err != nil {
-			return err
+			nt.T.Error(err)
 		}
 
-		// Validate no error metrics are emitted.
-		// TODO(b/162601559): internal_errors_total metric from diff.go
-		//if err := nt.ValidateErrorMetricsNotFound()
-		return nil
-	})
-	if err != nil {
-		nt.T.Errorf("validating metrics: %v", err)
-	}
+		// Validate multi-repo metrics.
+		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
+			if err != nil {
+				return err
+			}
 
-	// Remove the namspace and the configmap from the repository
-	nt.Root.Remove("acme/namespaces/foo")
-	nt.Root.CommitAndPush("Remove the namespace and the configmap")
-	nt.WaitForRepoSyncs()
-
-	// Test that the namespace still exists on the cluster, and does not contain any config management labels or annotations
-	err = nt.Validate(fooNamespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Test that the configmap still exists on the cluster, and does not contain any config management labels or annotations
-	err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.NoConfigSyncMetadata())
-	if err != nil {
-		nt.T.Error(err)
-	}
-
-	// Validate multi-repo metrics.
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
+			// Validate no error metrics are emitted.
+			// TODO(b/162601559): internal_errors_total metric from diff.go
+			//if err := nt.ValidateErrorMetricsNotFound()
+			return nil
+		})
 		if err != nil {
-			return err
+			nt.T.Errorf("validating metrics: %v", err)
 		}
 
-		// Validate no error metrics are emitted.
-		// TODO(b/162601559): internal_errors_total metric from diff.go
-		//if err := nt.ValidateErrorMetricsNotFound()
-		return nil
-	})
-	if err != nil {
-		nt.T.Errorf("validating metrics: %v", err)
+		// Update the namespace and the configmap to be no longer be managed
+		namespace.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
+		cm1.Annotations[metadata.ResourceManagementKey] = metadata.ResourceManagementDisabled
+		nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/ns.yaml", nsName), namespace)
+		nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/cm1.yaml", nsName), cm1)
+		nt.Root.CommitAndPush("Unmanage the namespace and the configmap")
+		nt.WaitForRepoSyncs()
+
+		// Test that the now unmanaged namespace does not contain any config management labels or annotations
+		err = nt.Validate(namespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
+		if err != nil {
+			nt.T.Error(err)
+		}
+
+		// Test that the now unmanaged configmap does not contain any config management labels or annotations
+		err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.NoConfigSyncMetadata())
+		if err != nil {
+			nt.T.Error(err)
+		}
+
+		// Validate multi-repo metrics.
+		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourcePatched("Namespace", 1), metrics.ResourcePatched("ConfigMap", 1))
+			if err != nil {
+				return err
+			}
+
+			// Validate no error metrics are emitted.
+			// TODO(b/162601559): internal_errors_total metric from diff.go
+			//if err := nt.ValidateErrorMetricsNotFound()
+			return nil
+		})
+		if err != nil {
+			nt.T.Errorf("validating metrics: %v", err)
+		}
+
+		// Remove the namspace and the configmap from the repository
+		nt.Root.Remove(fmt.Sprintf("acme/namespaces/%s", nsName))
+		nt.Root.CommitAndPush("Remove the namespace and the configmap")
+		nt.WaitForRepoSyncs()
+
+		// Test that the namespace still exists on the cluster, and does not contain any config management labels or annotations
+		err = nt.Validate(namespace.Name, "", &corev1.Namespace{}, nomostest.NoConfigSyncMetadata())
+		if err != nil {
+			nt.T.Error(err)
+		}
+
+		// Test that the configmap still exists on the cluster, and does not contain any config management labels or annotations
+		err = nt.Validate(cm1.Name, cm1.Namespace, &corev1.ConfigMap{}, nomostest.NoConfigSyncMetadata())
+		if err != nil {
+			nt.T.Error(err)
+		}
+
+		// Validate multi-repo metrics.
+		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
+			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
+			if err != nil {
+				return err
+			}
+
+			// Validate no error metrics are emitted.
+			// TODO(b/162601559): internal_errors_total metric from diff.go
+			//if err := nt.ValidateErrorMetricsNotFound()
+			return nil
+		})
+		if err != nil {
+			nt.T.Errorf("validating metrics: %v", err)
+		}
+
+		// Verify the NamespaceConfig is removed from the cluster.
+		if !nt.MultiRepo {
+			_, err = nomostest.Retry(30*time.Second, func() error {
+				return nt.ValidateNotFound(nsName, "", &v1.NamespaceConfig{})
+			})
+			if err != nil {
+				nt.T.Fatal(err)
+			}
+		}
 	}
 }
 

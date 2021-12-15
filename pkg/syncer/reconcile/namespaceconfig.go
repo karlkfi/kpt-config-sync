@@ -441,20 +441,23 @@ func (r *namespaceConfigReconciler) deleteNsConfig(ctx context.Context, config *
 	}
 	glog.V(2).Infof("Namespace %q was removed, deleting corresponding NamespaceConfig", config.GetName())
 
-	ns := &corev1.Namespace{}
-	err := r.client.Get(ctx, apitypes.NamespacedName{Name: config.Name}, ns)
-	if err == nil {
-		// We were unexpectedly able to retrieve the namespace
-		return errors.Errorf("Namespace %s was found even though it should have been deleted. Namespace: %v", config.GetName(), ns)
+	if differ.ManagementDisabled(config) {
+		glog.Infof("Namespace %q is management disabled, deleting corresponding NamespaceConfig", config.GetName())
+	} else {
+		ns := &corev1.Namespace{}
+		err := r.client.Get(ctx, apitypes.NamespacedName{Name: config.Name}, ns)
+		if err == nil {
+			// We were unexpectedly able to retrieve the namespace
+			return errors.Errorf("Namespace %s was found even though it should have been deleted. Namespace: %v", config.GetName(), ns)
+		}
+
+		if !apierrors.IsNotFound(err) {
+			return errors.Wrapf(err, "Unexpected error retrieving Namespace %s after deletion", config.GetName())
+		}
 	}
 
-	if !apierrors.IsNotFound(err) {
-		return errors.Wrapf(err, "Unexpected error retrieving Namespace %s after deletion", config.GetName())
-	}
-
-	// NotFound error found as expected, proceed with nsConfig deletion
 	if err := r.client.Delete(ctx, config); err != nil {
-		return errors.Wrapf(err, "Error deleting NamespaceConfig %s after removing namespace", config.GetName())
+		return errors.Wrapf(err, "Error deleting NamespaceConfig %s", config.GetName())
 	}
 
 	return nil
