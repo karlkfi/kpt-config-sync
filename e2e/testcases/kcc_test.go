@@ -206,6 +206,9 @@ func TestKCCResourcesOnCSR(t *testing.T) {
 	validateKCCResourceNotFound(nt, gvkPubSubSubscription, "test-cs-read", "foo")
 	validateKCCResourceNotFound(nt, gvkServiceAccount, "pubsub-app", "foo")
 	validateKCCResourceNotFound(nt, gvkPolicyMember, "policy-member-binding", "foo")
+
+	// Change the rs back so that it works in the shared test environment.
+	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "acme", "branch": "main", "repo": "git@test-git-server.config-management-system-test:/git-server/repos/sot.git", "auth": "ssh","gcpServiceAccountEmail": "", "secretRef": {"name": "git-creds"}}, "sourceFormat": "hierarchy"}}`)
 }
 
 func validateKCCResourceReady(nt *nomostest.NT, gvk schema.GroupVersionKind, name, namespace string) {
