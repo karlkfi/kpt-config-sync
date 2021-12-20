@@ -39,7 +39,7 @@ var (
 		stats.UnitDimensionless)
 
 	KustomizeK8sMetadata = stats.Int64(
-		"kustomize_k8s_metadata_count",
+		"kustomize_builtin_transformers",
 		"The usage of builtin transformers related to kubernetes object metadata",
 		stats.UnitDimensionless)
 
