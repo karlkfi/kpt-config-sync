@@ -28,6 +28,9 @@ spec:
         - --enable-leader-election
         image: IMAGE_NAME
         name: reconciler-manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
         resources:
           requests:
             cpu: 10m

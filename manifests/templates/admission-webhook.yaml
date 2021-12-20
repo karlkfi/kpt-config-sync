@@ -28,6 +28,9 @@ spec:
           - name: admission
             containerPort: 10250
             protocol: TCP
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
         resources:
           requests:
             cpu: 10m
