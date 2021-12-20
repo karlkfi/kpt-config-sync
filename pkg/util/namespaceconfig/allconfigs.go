@@ -4,9 +4,11 @@ import (
 	"sort"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
 	"github.com/google/nomos/pkg/importer/analyzer/transform"
 	"github.com/google/nomos/pkg/kinds"
+	"github.com/google/nomos/pkg/syncer/decode"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/common"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,6 +92,38 @@ func (c *AllConfigs) ClusterScopedCount() int {
 		count += len(c.CRDClusterConfig.Spec.Resources)
 	}
 	return count
+}
+
+// ClusterScopedResources returns the GKNN info of cluster-scoped resources in the AllConfigs.
+func (c *AllConfigs) ClusterScopedResources(d decode.Decoder) []string {
+	result := []string{}
+	if c == nil {
+		return result
+	}
+
+	if c.ClusterConfig != nil {
+		decoded, err := d.DecodeResources(c.ClusterConfig.Spec.Resources)
+		if err != nil {
+			return result
+		}
+		for _, resources := range decoded {
+			for _, resource := range resources {
+				result = append(result, core.GKNN(resource))
+			}
+		}
+	}
+	if c.CRDClusterConfig != nil {
+		decoded, err := d.DecodeResources(c.CRDClusterConfig.Spec.Resources)
+		if err != nil {
+			return result
+		}
+		for _, resources := range decoded {
+			for _, resource := range resources {
+				result = append(result, core.GKNN(resource))
+			}
+		}
+	}
+	return result
 }
 
 // addClusterResource adds a cluster-scoped resource to the AllConfigs.
