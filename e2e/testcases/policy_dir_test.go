@@ -25,7 +25,17 @@ func TestMissingRepoErrorWithHierarchicalFormat(t *testing.T) {
 
 func TestPolicyDirUnset(t *testing.T) {
 	nt := nomostest.New(t)
-	nt.Root.Copy("../../examples/acme/cluster", ".")
+	// There are 6 cluster-scoped objects under `../../examples/acme/cluster`.
+	//
+	// Copying the whole `../../examples/acme/cluster` dir would cause the Config Sync mono-repo mode CI job to fail,
+	// which runs on a shared cluster and calls resetSyncedRepos at the end of every e2e test.
+	//
+	// The reason for the failure is that if there are more than 1 cluster-scoped objects in a Git repo,
+	// Config Sync mono-repo mode does not allow removing all these cluster-scoped objects in a single commit,
+	// and generates a KNV 2006 error (as shown in http://b/210525686#comment3 and http://b/210525686#comment5).
+	//
+	// Therefore, we only copy `../../examples/acme/cluster/admin-clusterrole.yaml` here.
+	nt.Root.Copy("../../examples/acme/cluster/admin-clusterrole.yaml", "./cluster")
 	nt.Root.Copy("../../examples/acme/namespaces", ".")
 	nt.Root.Copy("../../examples/acme/system", ".")
 	nt.Root.CommitAndPush("Initialize the root directory")
