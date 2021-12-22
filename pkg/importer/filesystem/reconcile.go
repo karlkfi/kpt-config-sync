@@ -360,9 +360,8 @@ func (c *reconciler) safetyCheck(desired, current *namespaceconfig.AllConfigs) s
 	if desired.ClusterScopedCount() == 0 {
 		count := current.ClusterScopedCount()
 		if count > 1 {
-			currentClusterScopedResources := current.ClusterScopedResources(c.decoder)
 			glog.Errorf("Importer parsed 0 cluster-scoped resources from mounted git repo but detected %d resources on the cluster. This is a dangerous change, so it will be rejected.", count)
-			return status.EmptySourceError(count, "cluster-scoped resources", currentClusterScopedResources...)
+			return status.EmptySourceError(count, "cluster-scoped resources")
 		}
 		glog.Warningf("Importer did not parse any cluster-scoped resources in git repo. Cluster currently has %d resources, so this will proceed.", count)
 	}
