@@ -88,7 +88,7 @@ spec:
                   proxy:
                     description: Proxy is a struct that contains options for configuring
                       access to the Git repo via a proxy. Only has an effect when
-                      secretType is one of ("cookiefile", "none"). Optional.
+                      secretType is one of ("cookiefile", "none", "token"). Optional.
                     type: string
                   repo:
                     description: Repo is the git repository URL to sync from. Required.
