@@ -994,7 +994,7 @@ func resetNamespaceRepos(nt *NT) {
 		if r, found := nt.NonRootRepos[nr.Namespace]; found {
 			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
 			nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, nr.Namespace,
-				120*time.Second, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit, nil)
+				nt.DefaultWaitTimeout, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit, nil)
 		}
 	}
 }
