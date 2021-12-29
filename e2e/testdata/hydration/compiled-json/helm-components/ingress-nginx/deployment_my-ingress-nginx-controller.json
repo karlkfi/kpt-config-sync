@@ -10,8 +10,8 @@
 					"app.kubernetes.io/instance": "my-ingress-nginx",
 					"app.kubernetes.io/managed-by": "Helm",
 					"app.kubernetes.io/name": "ingress-nginx",
-					"app.kubernetes.io/version": "1.1.0",
-					"helm.sh/chart": "ingress-nginx-4.0.12",
+					"app.kubernetes.io/version": "1.0.3",
+					"helm.sh/chart": "ingress-nginx-4.0.5",
 					"test-case": "hydration"
 				},
 				"name": "my-ingress-nginx-controller",
@@ -73,7 +73,7 @@
 										"value": "/usr/local/lib/libmimalloc.so"
 									}
 								],
-								"image": "k8s.gcr.io/ingress-nginx/controller:v1.1.0@sha256:f766669fdcf3dc26347ed273a55e754b427eb4411ee075a53f30718b4499076a",
+								"image": "k8s.gcr.io/ingress-nginx/controller:v1.0.3@sha256:4ade87838eb8256b094fbb5272d7dda9b6c7fa8b759e6af5383c1300996a7452",
 								"imagePullPolicy": "IfNotPresent",
 								"lifecycle": {
 									"preStop": {

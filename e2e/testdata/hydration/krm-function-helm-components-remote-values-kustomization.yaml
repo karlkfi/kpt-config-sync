@@ -17,7 +17,7 @@ generators:
     valuesFile: https://raw.githubusercontent.com/config-sync-examples/helm-components/main/coredns-values.yaml
   - name: ingress-nginx
     repo: https://kubernetes.github.io/ingress-nginx
-    version: 4.0.12
+    version: 4.0.5
     releaseName: my-ingress-nginx
     namespace: ingress-nginx
 
