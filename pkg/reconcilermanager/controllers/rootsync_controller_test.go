@@ -53,11 +53,11 @@ const (
 
 	rootsyncSSHKey = "root-ssh-key"
 
-	deploymentGCENodeChecksum        = "36a8183aec6898ccd9918e53d8225625"
+	deploymentGCENodeChecksum        = "e3f437d36e894e62489d733e04f49aa7"
 	deploymentSecretChecksum         = "bf642e8754657fdd8b808701045a66b4"
 	deploymentProxyChecksum          = "50429932edd585a028d4eb65a763978e"
 	deploymentSecretUpdatedChecksum  = "9788d38a8155aee817d8300c2809389e"
-	deploymentGCENodeUpdatedChecksum = "143c2b40b67dc985c947460c0602ffc7"
+	deploymentGCENodeUpdatedChecksum = "72103a467091fc37fb555934b7f185b5"
 	deploymentNoneChecksum           = "1dfe0ad848df07553cb36efa2cde7f44"
 
 	// Checksums of the Deployment whose container resource limits are updated

@@ -21,6 +21,7 @@ func configureGceNodeAskPass(cr *corev1.Container) {
 	cr.Name = gceNodeAskpassSidecarName
 	cr.Image = gceNodeAskPassContainerImage(gceNodeAskpassSidecarName, gceNodeAskpassImageTag)
 	cr.Args = addPort(gceNodeAskpassPort)
+	cr.SecurityContext = dropNetRawCapability()
 }
 
 func gceNodeAskPassSidecar() corev1.Container {
@@ -31,6 +32,14 @@ func gceNodeAskPassSidecar() corev1.Container {
 
 func addPort(port int) []string {
 	return []string{fmt.Sprintf("--port=%v", port)}
+}
+
+func dropNetRawCapability() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"NET_RAW"},
+		},
+	}
 }
 
 // containsGCENodeAskPassSidecar checks whether gcenode-askpass-sidecar is

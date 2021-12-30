@@ -47,6 +47,9 @@ data:
              - name: repo
                mountPath: /repo
            securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
              runAsUser: 65533
            env:
              - name: RECONCILER_NAME
@@ -95,6 +98,10 @@ data:
              requests:
                cpu: "50m"
                memory: "200Mi"
+           securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
          - name: git-sync
            image: gcr.io/config-management-release/git-sync:v3.3.3-gke.0__linux_amd64
            args: ["--root=/repo/source", "--dest=rev", "--max-sync-failures=30", "--error-file=error.json", "--v=5"]
@@ -105,6 +112,9 @@ data:
              mountPath: /etc/git-secret
              readOnly: true
            securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
              runAsUser: 65533
            envFrom:
            - configMapRef:
@@ -129,6 +139,10 @@ data:
              requests:
                cpu: 10m
                memory: 100Mi
+           securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
            ports:
            - containerPort: 55678 # Default OpenCensus receiver port.
            - containerPort: 8888  # Metrics.
