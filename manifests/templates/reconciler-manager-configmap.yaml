@@ -154,3 +154,5 @@ data:
              name: otel-agent
          securityContext:
            fsGroup: 65533
+           seccompProfile:
+             type: RuntimeDefault
