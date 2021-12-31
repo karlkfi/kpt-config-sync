@@ -8,7 +8,7 @@ import (
 
 const (
 	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
-	gceNodeAskpassImageTag    = "20210304184314"
+	gceNodeAskpassImageTag    = "20210831174857"
 	gceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
 	gceNodeAskpassPort        = 9102
 )

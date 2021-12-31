@@ -65,11 +65,11 @@ const (
 	nsUpdatedAnnotationGCENode = "801faefb64294bf651f77ba7736fab17"
 	nsAnnotationNone           = "096755b105668b37c6dbb0abdfc5af99"
 
-	nsDeploymentGCENodeChecksum        = "ad0c3cde22f773a5481b2bcedb48e3e0"
+	nsDeploymentGCENodeChecksum        = "b81197d89da7e0f21b2cfe0cfc9fe174"
 	nsDeploymentSecretChecksum         = "a059a7cd192872cc83ab07fc1bbd8dcb"
 	nsDeploymentProxyChecksum          = "0a4b0387b6f00aa29dbf60180b1590bb"
 	nsDeploymentSecretUpdatedChecksum  = "82afe04f1e31c5772a503fcdcab457dd"
-	nsDeploymentGCENodeUpdatedChecksum = "45ac4158f629af210ccb28d7e8758646"
+	nsDeploymentGCENodeUpdatedChecksum = "84d23e26f0e769b44d46860c936f67fe"
 	nsDeploymentNoneChecksum           = "4f4f0808180940ae8a0c773d424e8dd3"
 
 	// Checksums of the Deployment whose container resource limits are updated
