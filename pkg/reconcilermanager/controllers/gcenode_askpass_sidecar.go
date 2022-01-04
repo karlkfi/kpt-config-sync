@@ -8,6 +8,7 @@ import (
 
 const (
 	// The GCENode* values are interpolated in the prepareGCENodeSnippet function
+	// Keep the image tag consistent with https://team.git.corp.google.com/nomos-team/nomos-operator/+/refs/heads/master/pkg/controller/configsync/constants.go#34.
 	gceNodeAskpassImageTag    = "20210831174857"
 	gceNodeAskpassSidecarName = "gcenode-askpass-sidecar"
 	gceNodeAskpassPort        = 9102
