@@ -47,6 +47,7 @@ data:
              - name: repo
                mountPath: /repo
            securityContext:
+             allowPrivilegeEscalation: false
              capabilities:
                drop:
                - NET_RAW
@@ -99,6 +100,8 @@ data:
                cpu: "50m"
                memory: "200Mi"
            securityContext:
+             allowPrivilegeEscalation: false
+             readOnlyRootFilesystem: true
              capabilities:
                drop:
                - NET_RAW
@@ -112,6 +115,8 @@ data:
              mountPath: /etc/git-secret
              readOnly: true
            securityContext:
+             allowPrivilegeEscalation: false
+             readOnlyRootFilesystem: true
              capabilities:
                drop:
                - NET_RAW
@@ -140,6 +145,8 @@ data:
                cpu: 10m
                memory: 100Mi
            securityContext:
+             allowPrivilegeEscalation: false
+             readOnlyRootFilesystem: true
              capabilities:
                drop:
                - NET_RAW
