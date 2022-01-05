@@ -3,6 +3,7 @@ kind: Namespace
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
     control-plane: controller-manager
   name: resource-group-system
 ---
@@ -13,6 +14,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.5.0
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resourcegroups.kpt.dev
 spec:
   group: kpt.dev
@@ -280,6 +282,7 @@ kind: ServiceAccount
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-sa
   namespace: resource-group-system
 ---
@@ -288,6 +291,7 @@ kind: Role
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-leader-election-role
   namespace: resource-group-system
 rules:
@@ -329,6 +333,7 @@ kind: ClusterRole
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-manager-role
 rules:
 - apiGroups:
@@ -387,6 +392,7 @@ kind: ClusterRole
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-metrics-reader
 rules:
 - nonResourceURLs:
@@ -399,6 +405,7 @@ kind: ClusterRole
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-proxy-role
 rules:
 - apiGroups:
@@ -419,6 +426,7 @@ kind: RoleBinding
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-leader-election-rolebinding
   namespace: resource-group-system
 roleRef:
@@ -435,6 +443,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -450,6 +459,7 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
   name: resource-group-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -496,6 +506,7 @@ kind: Service
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
     control-plane: controller-manager
   name: resource-group-controller-manager-metrics-service
   namespace: resource-group-system
@@ -513,6 +524,7 @@ kind: Deployment
 metadata:
   labels:
     configmanagement.gke.io/arch: "csmr"
+    configmanagement.gke.io/system: "true"
     control-plane: controller-manager
   name: resource-group-controller-manager
   namespace: resource-group-system
@@ -534,7 +546,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: gcr.io/config-management-release/resource-group-controller:v0.11.0
+        image: gcr.io/config-management-release/resource-group-controller:v0.11.1
         imagePullPolicy: Always
         name: manager
         resources:
