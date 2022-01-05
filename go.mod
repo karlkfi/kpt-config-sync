@@ -32,7 +32,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
 	github.com/spf13/cobra v1.1.3
-	gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20211215182710-ab7fc723fbb3
+	gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git v0.0.0-20220105185643-2b607aac58bf
 	go.opencensus.io v0.23.0
 	go.uber.org/multierr v1.5.0
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58

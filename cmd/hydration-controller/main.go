@@ -12,7 +12,6 @@ import (
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
-	ocmetrics "github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -67,7 +66,7 @@ func main() {
 	}
 
 	// Register the OC Agent exporter
-	oce, err := ocmetrics.RegisterOCAgentExporter()
+	oce, err := kmetrics.RegisterOCAgentExporter()
 	if err != nil {
 		glog.Fatalf("Failed to register the OC Agent exporter: %v", err)
 	}
