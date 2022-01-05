@@ -36,10 +36,10 @@ func addPort(port int) []string {
 }
 
 // setSecurityContext sets the security context for the gcenode-askpass-sidecar container.
-// It drops the NET_RAW capability, allows read-only root filesystem and disallows privilege escalation.
+// It drops the NET_RAW capability, disallows privilege escalation and read-only root filesystem.
 func setSecurityContext() *corev1.SecurityContext {
 	allowPrivilegeEscalation := false
-	readOnlyRootFilesystem := true
+	readOnlyRootFilesystem := false
 	return &corev1.SecurityContext{
 		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 		ReadOnlyRootFilesystem:   &readOnlyRootFilesystem,

@@ -48,6 +48,7 @@ data:
                mountPath: /repo
            securityContext:
              allowPrivilegeEscalation: false
+             readOnlyRootFilesystem: false
              capabilities:
                drop:
                - NET_RAW
@@ -116,7 +117,7 @@ data:
              readOnly: true
            securityContext:
              allowPrivilegeEscalation: false
-             readOnlyRootFilesystem: true
+             readOnlyRootFilesystem: false
              capabilities:
                drop:
                - NET_RAW
