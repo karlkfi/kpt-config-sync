@@ -64,7 +64,14 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 
 	// Validate multi-repo metrics from root reconciler.
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6, metrics.ResourceCreated("Role"))
+		var err error
+		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
+		// available on GKE.
+		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 7, metrics.ResourceCreated("Role"))
+		} else {
+			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 6, metrics.ResourceCreated("Role"))
+		}
 		if err != nil {
 			return err
 		}
