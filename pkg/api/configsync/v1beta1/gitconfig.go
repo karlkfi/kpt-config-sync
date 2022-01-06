@@ -46,8 +46,12 @@ type Git struct {
 	// Note: The field is used when secretType: gcpServiceAccount.
 	GCPServiceAccountEmail string `json:"gcpServiceAccountEmail,omitempty"`
 
-	// Proxy is a struct that contains options for configuring access to the Git repo via a proxy.
-	// Only has an effect when secretType is one of ("cookiefile", "none"). Optional.
+	// proxy specifies an HTTPS proxy for accessing the Git repo.
+	// Only has an effect when secretType is one of ("cookiefile", "none", "token").
+	// When secretType is "cookiefile", if your HTTPS proxy URL contains sensitive information
+	// such as a username or password and you need to hide the sensitive information,
+	// you can leave this field empty and add the URL for the HTTPS proxy into the same Secret
+	// used for the Git credential via `kubectl create secret ... --from-literal=https_proxy=HTTPS_PROXY_URL`. Optional.
 	// +optional
 	Proxy string `json:"proxy,omitempty"`
 
