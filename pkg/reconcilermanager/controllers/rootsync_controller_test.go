@@ -37,8 +37,10 @@ const (
 	rootsyncCluster      = "abc-123"
 
 	// Hash of all configmap.data created by Root Reconciler.
-	rsAnnotation      = "5009e76f3fcd754688552d5d21b25b69"
-	rsProxyAnnotation = "1c408d92779e06c559bf152fde87d9b0"
+	rsAnnotation                = "5009e76f3fcd754688552d5d21b25b69"
+	rsProxyCookiefileAnnotation = "1c408d92779e06c559bf152fde87d9b0"
+	rsProxyTokenAnnotation      = "836c0021b1532c9c6f2f4d11f661c12e"
+
 	// Updated hash of all configmap.data updated by Root Reconciler.
 	rsUpdatedAnnotation = "fdcefb720a69315220f234f1675f8219"
 
@@ -53,12 +55,13 @@ const (
 
 	rootsyncSSHKey = "root-ssh-key"
 
-	deploymentGCENodeChecksum        = "3aab015d27919aded3b8cbef80e8acdb"
-	deploymentSecretChecksum         = "bf642e8754657fdd8b808701045a66b4"
-	deploymentProxyChecksum          = "50429932edd585a028d4eb65a763978e"
-	deploymentSecretUpdatedChecksum  = "9788d38a8155aee817d8300c2809389e"
-	deploymentGCENodeUpdatedChecksum = "eed1ac5e4936d763aa4751cf6e1e1159"
-	deploymentNoneChecksum           = "1dfe0ad848df07553cb36efa2cde7f44"
+	deploymentGCENodeChecksum         = "3aab015d27919aded3b8cbef80e8acdb"
+	deploymentSecretChecksum          = "bf642e8754657fdd8b808701045a66b4"
+	deploymentProxyCookiefileChecksum = "50429932edd585a028d4eb65a763978e"
+	deploymentProxyTokenChecksum      = "9248818f399f7208a58c831ea008a7a7"
+	deploymentSecretUpdatedChecksum   = "9788d38a8155aee817d8300c2809389e"
+	deploymentGCENodeUpdatedChecksum  = "eed1ac5e4936d763aa4751cf6e1e1159"
+	deploymentNoneChecksum            = "1dfe0ad848df07553cb36efa2cde7f44"
 
 	// Checksums of the Deployment whose container resource limits are updated
 	deploymentResourceLimitsChecksum                         = "3eb139bd47e5d3176d960bee1e3bb191"
@@ -1686,7 +1689,7 @@ func TestRootSyncReconcilerRestart(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
-func TestRootSyncWithProxy(t *testing.T) {
+func TestRootSyncCookiefileWithProxy(t *testing.T) {
 	parseDeployment = parsedDeployment
 
 	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretCookieFile), rootsyncSecretRef(reposyncCookie))
@@ -1743,10 +1746,91 @@ func TestRootSyncWithProxy(t *testing.T) {
 
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
-			setAnnotations(deploymentAnnotation(rsProxyAnnotation)),
+			setAnnotations(deploymentAnnotation(rsProxyCookiefileAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
-			secretMutator(deploymentProxyChecksum, reconciler.RootSyncName, reposyncCookie),
-			envVarMutator("HTTPS_PROXY", reposyncCookie),
+			secretMutator(deploymentProxyCookiefileChecksum, reconciler.RootSyncName, reposyncCookie),
+			envVarMutator("HTTPS_PROXY", reposyncCookie, "https_proxy"),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap and Deployment successfully created")
+}
+
+func TestRootSyncTokenWithProxy(t *testing.T) {
+	parseDeployment = parsedDeployment
+
+	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(configsync.GitSecretToken), rootsyncSecretRef(secretName))
+	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
+	secret := secretObjWithProxy(t, secretName, GitSecretConfigKeyToken, core.Namespace(rootsyncReqNamespace))
+	secret.Data[GitSecretConfigKeyTokenUsername] = []byte("test-user")
+	fakeClient, testReconciler := setupRootReconciler(t, rs, secret)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.GitSync),
+			gitSyncData(ctx, options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       rootsyncRepo,
+				secretType: configsync.GitSecretToken,
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, declared.RootReconciler, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.Reconciler),
+			reconcilerData(rootsyncCluster, declared.RootReconciler, &rs.Spec.Git, pollingPeriod),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+		configMapWithData(
+			rootsyncReqNamespace,
+			RootSyncResourceName(reconcilermanager.SourceFormat),
+			sourceFormatData(""),
+			core.OwnerReference([]metav1.OwnerReference{
+				ownerReference(rootsyncKind, rootsyncName, ""),
+			}),
+		),
+	}
+
+	wantDeployments := []*appsv1.Deployment{
+		rootSyncDeployment(
+			setAnnotations(deploymentAnnotation(rsProxyTokenAnnotation)),
+			setServiceAccountName(reconciler.RootSyncName),
+			secretMutator(deploymentProxyTokenChecksum, reconciler.RootSyncName, secretName),
+			envVarMutator("HTTPS_PROXY", secretName, "https_proxy"),
+			envVarMutator(gitSyncName, secretName, GitSecretConfigKeyTokenUsername),
+			envVarMutator(gitSyncPassword, secretName, GitSecretConfigKeyToken),
 		),
 	}
 
@@ -1792,23 +1876,21 @@ func secretMutator(deploymentConfigChecksum, reconcilerName, secretName string) 
 	}
 }
 
-func envVarMutator(envName, secretName string) depMutator {
+func envVarMutator(envName, secretName, key string) depMutator {
 	return func(dep *appsv1.Deployment) {
 		for i, con := range dep.Spec.Template.Spec.Containers {
 			if con.Name == reconcilermanager.GitSync {
-				dep.Spec.Template.Spec.Containers[i].Env = []corev1.EnvVar{
-					{
-						Name: envName,
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: secretName,
-								},
-								Key: "https_proxy",
+				dep.Spec.Template.Spec.Containers[i].Env = append(dep.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+					Name: envName,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: secretName,
 							},
+							Key: key,
 						},
 					},
-				}
+				})
 			}
 		}
 	}

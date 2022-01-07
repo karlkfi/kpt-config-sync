@@ -48,7 +48,7 @@ type Git struct {
 
 	// proxy specifies an HTTPS proxy for accessing the Git repo.
 	// Only has an effect when secretType is one of ("cookiefile", "none", "token").
-	// When secretType is "cookiefile", if your HTTPS proxy URL contains sensitive information
+	// When secretType is "cookiefile" or "token", if your HTTPS proxy URL contains sensitive information
 	// such as a username or password and you need to hide the sensitive information,
 	// you can leave this field empty and add the URL for the HTTPS proxy into the same Secret
 	// used for the Git credential via `kubectl create secret ... --from-literal=https_proxy=HTTPS_PROXY_URL`. Optional.

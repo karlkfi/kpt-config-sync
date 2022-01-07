@@ -46,13 +46,16 @@ const (
 	reposyncCookie       = "cookie"
 	reposyncCluster      = "abc-123"
 
+	secretName = "git-creds"
+
 	gcpSAEmail = "config-sync@cs-project.iam.gserviceaccount.com"
 
 	pollingPeriod = "50ms"
 
 	// Hash of all configmap.data created by Namespace Reconciler.
-	nsAnnotation      = "59152c00ed0f7cfcabe2da006293c638"
-	nsProxyAnnotation = "e8411037bea6bc20cc4011362c787129"
+	nsAnnotation                = "59152c00ed0f7cfcabe2da006293c638"
+	nsProxyCookiefileAnnotation = "e8411037bea6bc20cc4011362c787129"
+	nsProxyTokenAnnotation      = "096755b105668b37c6dbb0abdfc5af99"
 	// Updated hash of all configmap.data updated by Namespace Reconciler.
 	nsUpdatedAnnotation = "de29666acd0334d11b470903d42cfc38"
 
@@ -65,12 +68,13 @@ const (
 	nsUpdatedAnnotationGCENode = "801faefb64294bf651f77ba7736fab17"
 	nsAnnotationNone           = "096755b105668b37c6dbb0abdfc5af99"
 
-	nsDeploymentGCENodeChecksum        = "19c8d027ab669e5167f39855882ec88e"
-	nsDeploymentSecretChecksum         = "a059a7cd192872cc83ab07fc1bbd8dcb"
-	nsDeploymentProxyChecksum          = "0a4b0387b6f00aa29dbf60180b1590bb"
-	nsDeploymentSecretUpdatedChecksum  = "82afe04f1e31c5772a503fcdcab457dd"
-	nsDeploymentGCENodeUpdatedChecksum = "de5eee5f385988cc037773d89228f35c"
-	nsDeploymentNoneChecksum           = "4f4f0808180940ae8a0c773d424e8dd3"
+	nsDeploymentGCENodeChecksum         = "19c8d027ab669e5167f39855882ec88e"
+	nsDeploymentSecretChecksum          = "a059a7cd192872cc83ab07fc1bbd8dcb"
+	nsDeploymentProxyCookiefileChecksum = "0a4b0387b6f00aa29dbf60180b1590bb"
+	nsDeploymentProxyTokenChecksum      = "c8b15d3ccc1c1fb772839be7f21917ee"
+	nsDeploymentSecretUpdatedChecksum   = "82afe04f1e31c5772a503fcdcab457dd"
+	nsDeploymentGCENodeUpdatedChecksum  = "de5eee5f385988cc037773d89228f35c"
+	nsDeploymentNoneChecksum            = "4f4f0808180940ae8a0c773d424e8dd3"
 
 	// Checksums of the Deployment whose container resource limits are updated
 	nsDeploymentResourceLimitsChecksum                         = "3fa19d32127637934a51716b7d185ec8"
@@ -1601,7 +1605,7 @@ func TestRepoSyncReconcilerRestart(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 }
 
-func TestRepoSyncWithProxy(t *testing.T) {
+func TestRepoSyncCookiefileWithProxy(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
@@ -1664,10 +1668,108 @@ func TestRepoSyncWithProxy(t *testing.T) {
 	wantDeployments := []*appsv1.Deployment{
 		repoSyncDeployment(
 			rs,
-			setAnnotations(deploymentAnnotation(nsProxyAnnotation)),
+			setAnnotations(deploymentAnnotation(nsProxyCookiefileAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
-			secretMutator(nsDeploymentProxyChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncCookie),
-			envVarMutator("HTTPS_PROXY", nsReconcilerName+"-"+reposyncCookie),
+			secretMutator(nsDeploymentProxyCookiefileChecksum, nsReconcilerName, nsReconcilerName+"-"+reposyncCookie),
+			envVarMutator("HTTPS_PROXY", nsReconcilerName+"-"+reposyncCookie, "https_proxy"),
+		),
+	}
+
+	// compare ConfigMaps.
+	for _, cm := range wantConfigMap {
+		if diff := cmp.Diff(fakeClient.Objects[core.IDOf(cm)], cm, cmpopts.EquateEmpty()); diff != "" {
+			t.Errorf("ConfigMap diff %s", diff)
+		}
+	}
+
+	// compare ServiceAccount.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantServiceAccount)], wantServiceAccount, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("Service Account diff %s", diff)
+	}
+
+	// compare RoleBinding.
+	if diff := cmp.Diff(fakeClient.Objects[core.IDOf(wantRoleBinding)], wantRoleBinding, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("RoleBinding diff %s", diff)
+	}
+
+	if err := validateDeployments(wantDeployments, fakeClient); err != nil {
+		t.Errorf("Deployment validation failed. err: %v", err)
+	}
+	t.Log("ConfigMap, ServiceAccount, RoleBinding, Service, and Deployment successfully created")
+}
+
+func TestRepoSyncTokenWithProxy(t *testing.T) {
+	// Mock out parseDeployment for testing.
+	parseDeployment = parsedDeployment
+
+	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(configsync.GitSecretToken), reposyncSecretRef(secretName))
+	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
+	secret := secretObjWithProxy(t, secretName, GitSecretConfigKeyToken, core.Namespace(reposyncReqNamespace))
+	secret.Data[GitSecretConfigKeyTokenUsername] = []byte("test-user")
+	fakeClient, testReconciler := setupNSReconciler(t, rs, secret)
+
+	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
+
+	// Test creating Configmaps and Deployment resources.
+	ctx := context.Background()
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error, got error: %q, want error: nil", err)
+	}
+
+	wantNamespaces := map[string]struct{}{
+		reposyncReqNamespace: {},
+	}
+
+	// compare namespaces.
+	if diff := cmp.Diff(testReconciler.namespaces, wantNamespaces, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("namespaces diff %s", diff)
+	}
+
+	wantConfigMap := []*corev1.ConfigMap{
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.GitSync),
+			gitSyncData(ctx, options{
+				ref:        gitRevision,
+				branch:     branch,
+				repo:       reposyncRepo,
+				secretType: configsync.GitSecretToken,
+				period:     configsync.DefaultPeriodSecs,
+				proxy:      rs.Spec.Proxy,
+			}),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.HydrationController),
+			hydrationData(&rs.Spec.Git, reposyncReqNamespace, pollingPeriod),
+		),
+		configMapWithData(
+			v1.NSConfigManagementSystem,
+			RepoSyncResourceName(reposyncReqNamespace, reconcilermanager.Reconciler),
+			reconcilerData(reposyncCluster, reposyncReqNamespace, &rs.Spec.Git, pollingPeriod),
+		),
+	}
+
+	wantServiceAccount := fake.ServiceAccountObject(
+		nsReconcilerName,
+		core.Namespace(v1.NSConfigManagementSystem),
+	)
+
+	wantRoleBinding := rolebinding(
+		repoSyncPermissionsName(),
+		reposyncReqNamespace,
+		core.Namespace(reposyncReqNamespace),
+	)
+
+	wantDeployments := []*appsv1.Deployment{
+		repoSyncDeployment(
+			rs,
+			setAnnotations(deploymentAnnotation(nsProxyTokenAnnotation)),
+			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
+			secretMutator(nsDeploymentProxyTokenChecksum, nsReconcilerName, nsReconcilerName+"-"+secretName),
+			envVarMutator("HTTPS_PROXY", nsReconcilerName+"-"+secretName, "https_proxy"),
+			envVarMutator(gitSyncName, nsReconcilerName+"-"+secretName, GitSecretConfigKeyTokenUsername),
+			envVarMutator(gitSyncPassword, nsReconcilerName+"-"+secretName, GitSecretConfigKeyToken),
 		),
 	}
 
