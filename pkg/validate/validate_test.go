@@ -26,6 +26,7 @@ import (
 	"github.com/google/nomos/pkg/testing/discoverytest"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/discovery"
+	"github.com/google/nomos/pkg/validate/raw/validate"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -854,7 +855,7 @@ func TestHierarchical(t *testing.T) {
 				fake.Repo(),
 				fake.FileObject(fake.RepoSyncObjectV1Beta1(core.Name("invalid")), "namespaces/foo/rs.yamo"),
 			},
-			wantErrs: fake.Errors(nonhierarchical.InvalidSyncCode),
+			wantErrs: fake.Errors(validate.InvalidSyncCode),
 		},
 	}
 

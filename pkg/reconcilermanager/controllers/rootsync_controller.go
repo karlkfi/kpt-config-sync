@@ -11,7 +11,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
@@ -19,6 +18,7 @@ import (
 	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	"github.com/google/nomos/pkg/rootsync"
 	"github.com/google/nomos/pkg/status"
+	"github.com/google/nomos/pkg/validate/raw/validate"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -87,7 +87,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	)
 
 	var err error
-	if err = nonhierarchical.ValidateRootSync(&rs); err != nil {
+	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
 		log.Error(err, "RootSync failed validation")
 		rootsync.SetStalled(&rs, "Validation", err)
 		// We intentionally overwrite the previous error here since we do not want

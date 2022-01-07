@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
@@ -30,6 +29,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util/clusterconfig"
+	"github.com/google/nomos/pkg/validate/raw/validate"
 	"github.com/google/nomos/pkg/vet"
 	"github.com/google/nomos/pkg/webhook/configuration"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -278,7 +278,7 @@ func Generate() AllExamples {
 	result.add(applier.ManagementConflictError(fake.Role()))
 
 	// 1061
-	result.add(nonhierarchical.InvalidSyncName(configsync.RepoSyncName, fake.RepoSyncObjectV1Beta1(core.Name("invalid"))))
+	result.add(validate.MissingGitRepo(fake.RepoSyncObjectV1Beta1()))
 
 	// 1062 is Deprecated.
 	result.markDeprecated("1062")

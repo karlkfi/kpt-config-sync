@@ -1,4 +1,4 @@
-package nonhierarchical
+package validate
 
 import (
 	"errors"
@@ -52,7 +52,7 @@ func repoSync(opts ...func(*v1beta1.RepoSync)) *v1beta1.RepoSync {
 	return rs
 }
 
-func TestValidateRepoSync(t *testing.T) {
+func TestValidateGitSpec(t *testing.T) {
 	testCases := []struct {
 		name    string
 		obj     *v1beta1.RepoSync
@@ -63,9 +63,8 @@ func TestValidateRepoSync(t *testing.T) {
 			obj:  repoSync(auth(authNone)),
 		},
 		{
-			name:    "wrong name",
-			obj:     repoSync(auth(authNone), named("wrong name")),
-			wantErr: fake.Error(InvalidSyncCode),
+			name: "a user-defined name",
+			obj:  repoSync(auth(authNone), named("user-defined-repo-sync-name")),
 		},
 		{
 			name:    "missing repo",
@@ -128,9 +127,9 @@ func TestValidateRepoSync(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateRepoSync(tc.obj)
+			err := GitSpec(tc.obj.Spec.Git, tc.obj)
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("Got RepoSyncObjectv1beta1() error %v, want %v", err, tc.wantErr)
+				t.Errorf("Got ValidateGitSpec() error %v, want %v", err, tc.wantErr)
 			}
 		})
 	}

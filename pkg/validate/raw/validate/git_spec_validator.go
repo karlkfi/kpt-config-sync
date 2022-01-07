@@ -1,4 +1,4 @@
-package nonhierarchical
+package validate
 
 import (
 	"strings"
@@ -22,16 +22,8 @@ var (
 // https://cloud.google.com/iam/docs/service-accounts#user-managed
 const gcpSASuffix = ".iam.gserviceaccount.com"
 
-// ValidateRepoSync validates the content and structure of a RepoSync for any
-// obvious problems.
-func ValidateRepoSync(rs *v1beta1.RepoSync) status.Error {
-	if rs.GetName() != configsync.RepoSyncName {
-		return InvalidSyncName(configsync.RepoSyncName, rs)
-	}
-	return validateGitSpec(rs.Spec.Git, rs)
-}
-
-func validateGitSpec(git v1beta1.Git, rs client.Object) status.Error {
+// GitSpec validates the git specification for any obvious problems.
+func GitSpec(git v1beta1.Git, rs client.Object) status.Error {
 	// We can't connect to the git repo if we don't have the URL.
 	if git.Repo == "" {
 		return MissingGitRepo(rs)
@@ -46,7 +38,7 @@ func validateGitSpec(git v1beta1.Git, rs client.Object) status.Error {
 		if git.GCPServiceAccountEmail == "" {
 			return MissingGCPSAEmail(rs)
 		}
-		if !ValidateGCPServiceAccountEmail(git.GCPServiceAccountEmail) {
+		if !validGCPServiceAccountEmail(git.GCPServiceAccountEmail) {
 			return InvalidGCPSAEmail(rs)
 		}
 	default:
@@ -77,17 +69,6 @@ func validateGitSpec(git v1beta1.Git, rs client.Object) status.Error {
 var InvalidSyncCode = "1061"
 
 var invalidSyncBuilder = status.NewErrorBuilder(InvalidSyncCode)
-
-// InvalidSyncName reports that a RootSync/RepoSync has the wrong name.
-func InvalidSyncName(resourceName string, o client.Object) status.Error {
-	name := o.GetName()
-	kind := o.GetObjectKind().GroupVersionKind().Kind
-	namespace := o.GetNamespace()
-	return invalidSyncBuilder.
-		Sprintf("%ss must be named %q, but the %s for Namespace %q is named %q",
-			kind, resourceName, kind, namespace, name).
-		BuildWithResources(o)
-}
 
 // MissingGitRepo reports that a RootSync/RepoSync doesn't declare the git repo it is
 // supposed to connect to.
@@ -159,9 +140,9 @@ func MissingGCPSAEmail(o client.Object) status.Error {
 		BuildWithResources(o)
 }
 
-// ValidateGCPServiceAccountEmail verifies whether GCP SA email has correct
+// validGCPServiceAccountEmail verifies whether GCP SA email has correct
 // prefix and suffix format.
-func ValidateGCPServiceAccountEmail(email string) bool {
+func validGCPServiceAccountEmail(email string) bool {
 	if strings.Contains(email, "@") {
 		s := strings.Split(email, "@")
 		if len(s) == 2 {

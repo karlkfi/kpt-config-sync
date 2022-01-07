@@ -1,11 +1,9 @@
 package validate
 
 import (
-	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
-	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/yaml"
@@ -30,64 +28,7 @@ func RepoSync(obj ast.FileObject) status.Error {
 	} else {
 		rs = s.(*v1beta1.RepoSync)
 	}
-	return RepoSyncObject(rs)
-}
-
-var (
-	authSSH               = configsync.GitSecretSSH
-	authCookiefile        = configsync.GitSecretCookieFile
-	authGCENode           = configsync.GitSecretGCENode
-	authToken             = configsync.GitSecretToken
-	authNone              = configsync.GitSecretNone
-	authGCPServiceAccount = configsync.GitSecretGCPServiceAccount
-)
-
-// RepoSyncObject validates the content and structure of a RepoSync for any
-// obvious problems.
-func RepoSyncObject(rs *v1beta1.RepoSync) status.Error {
-	if rs.GetName() != configsync.RepoSyncName {
-		return nonhierarchical.InvalidSyncName(configsync.RepoSyncName, rs)
-	}
-
-	// We can't connect to the git repo if we don't have the URL.
-	git := rs.Spec.Git
-	if git.Repo == "" {
-		return nonhierarchical.MissingGitRepo(rs)
-	}
-
-	// Ensure auth is a valid value.
-	// Note that Auth is a case-sensitive field, so ones with arbitrary capitalization
-	// will fail to apply.
-	switch git.Auth {
-	case authSSH, authCookiefile, authGCENode, authToken, authNone:
-	case authGCPServiceAccount:
-		if git.GCPServiceAccountEmail == "" {
-			return nonhierarchical.MissingGCPSAEmail(rs)
-		}
-		if !nonhierarchical.ValidateGCPServiceAccountEmail(git.GCPServiceAccountEmail) {
-			return nonhierarchical.InvalidGCPSAEmail(rs)
-		}
-	default:
-		return nonhierarchical.InvalidAuthType(rs)
-	}
-
-	// Check that proxy isn't unnecessarily declared.
-	if git.Proxy != "" && git.Auth != authNone && git.Auth != authCookiefile && git.Auth != authToken {
-		return nonhierarchical.NoOpProxy(rs)
-	}
-
-	// Check the secret ref is specified if and only if it is required.
-	switch git.Auth {
-	case authNone, authGCENode, authGCPServiceAccount:
-		if git.SecretRef.Name != "" {
-			return nonhierarchical.IllegalSecretRef(rs)
-		}
-	default:
-		if git.SecretRef.Name == "" {
-			return nonhierarchical.MissingSecretRef(rs)
-		}
-	}
-	return nil
+	return GitSpec(rs.Spec.Git, rs)
 }
 
 func toV1Beta1(rs *v1alpha1.RepoSync) (*v1beta1.RepoSync, status.Error) {
