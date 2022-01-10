@@ -75,6 +75,10 @@ processors:
           - resource_override_count_total
           - git_sync_depth_override_count_total
           - no_ssl_verify_count_total
+      exclude:
+        match_type: strict
+        metric_names:
+          - rg_reconcile_duration_seconds
   metricstransform/kubernetes:
     transforms:
       - include: declared_resources

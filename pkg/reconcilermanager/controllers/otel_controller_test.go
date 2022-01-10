@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	depAnnotationStackdriver = "fe28f5b41750475cdc41b6455265bd4b"
+	depAnnotationStackdriver = "070d46c0bfa1fa9e4427440cb051138b"
 	depAnnotationCustom      = "a5b98e40aa7ae6bd2326dca598900f83"
 )
 
