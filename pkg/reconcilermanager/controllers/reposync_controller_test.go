@@ -132,7 +132,7 @@ func reposyncGCPSAEmail(email string) func(sync *v1alpha1.RepoSync) {
 	}
 }
 
-func reposyncOverrideResourceLimits(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RepoSync) {
+func reposyncOverrideResources(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RepoSync) {
 	return func(sync *v1alpha1.RepoSync) {
 		sync.Spec.Override = v1alpha1.OverrideSpec{
 			Resources: containers,
@@ -220,23 +220,29 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth),
-		reposyncSecretRef(reposyncSSHKey), reposyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+		reposyncSecretRef(reposyncSSHKey), reposyncOverrideResources(overrideReconcilerAndGitSyncResourceLimits))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
@@ -278,7 +284,7 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideReconcilerAndGitSyncResourceLimits),
 		),
 	}
 
@@ -294,24 +300,27 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully created")
 
-	// Test overriding the CPU limits of the reconciler container and the memory limits of the git-sync container
-	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the CPU resources of the reconciler container and the memory resources of the git-sync container
+	overrideReconcilerCPUAndGitSyncMemResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("0.8"),
 			CPULimit:      resource.MustParse("1.2"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("0.6"),
 			CPULimit:      resource.MustParse("0.8"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			MemoryRequest: resource.MustParse("777Gi"),
 			MemoryLimit:   resource.MustParse("888Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+		Resources: overrideReconcilerCPUAndGitSyncMemResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v", err)
@@ -327,7 +336,7 @@ func TestCreateAndUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerCPULimitsAndGitSyncMemLimits),
+			containerResourcesMutator(overrideReconcilerCPUAndGitSyncMemResources),
 		),
 	}
 
@@ -429,26 +438,32 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test overriding the CPU/memory limits of both the reconciler and git-sync container
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerAndGitSyncResourceLimits,
+		Resources: overrideReconcilerAndGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v", err)
@@ -464,7 +479,7 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideReconcilerAndGitSyncResources),
 		),
 	}
 
@@ -479,22 +494,26 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
 
-	// Test overriding the CPU/memory limits of the reconciler container
-	overrideReconcilerResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the CPU/memory requests and limits of the reconciler container
+	overrideReconcilerResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("1.8"),
 			CPULimit:      resource.MustParse("2"),
+			MemoryRequest: resource.MustParse("1.8Gi"),
 			MemoryLimit:   resource.MustParse("2Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("1"),
 			CPULimit:      resource.MustParse("1.3"),
+			MemoryRequest: resource.MustParse("3Gi"),
 			MemoryLimit:   resource.MustParse("4Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerResourceLimits,
+		Resources: overrideReconcilerResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v", err)
@@ -510,7 +529,7 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerResourceLimits),
+			containerResourcesMutator(overrideReconcilerResources),
 		),
 	}
 
@@ -519,16 +538,17 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
 
-	// Test overriding the memory limits of the git-sync container
-	overrideGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the memory requests and limits of the git-sync container
+	overrideGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.GitSync,
+			MemoryRequest: resource.MustParse("800m"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideGitSyncMemLimits,
+		Resources: overrideGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v", err)
@@ -544,7 +564,7 @@ func TestUpdateNamespaceReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideGitSyncMemLimits),
+			containerResourcesMutator(overrideGitSyncResources),
 		),
 	}
 
@@ -582,26 +602,32 @@ func TestCreateAndUpdateNamespaceReconcilerWithAutopilot(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth),
-		reposyncSecretRef(reposyncSSHKey), reposyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+		reposyncSecretRef(reposyncSSHKey), reposyncOverrideResources(overrideReconcilerAndGitSyncResources))
 	reqNamespacedName := namespacedName(reposyncCRName, reposyncReqNamespace)
 	fakeClient, testReconciler := setupNSReconciler(t, rs, secretObj(t, reposyncSSHKey, secretAuth, core.Namespace(reposyncReqNamespace)))
 	nsReconcilerName := reconciler.RepoSyncName(reposyncReqNamespace)
@@ -645,7 +671,7 @@ func TestCreateAndUpdateNamespaceReconcilerWithAutopilot(t *testing.T) {
 			setAnnotations(deploymentAnnotation(nsAnnotation)),
 			setServiceAccountName(reconciler.RepoSyncName(rs.Namespace)),
 			secretMutator(nsReconcilerName, nsReconcilerName+"-"+reposyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideReconcilerAndGitSyncResources),
 		),
 	}
 
@@ -662,23 +688,26 @@ func TestCreateAndUpdateNamespaceReconcilerWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test Autopilot ignores the resource requirements override.
-	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerCPULimitsAndGitSyncMemResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("1"),
 			CPULimit:      resource.MustParse("1.2"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("0.6"),
 			CPULimit:      resource.MustParse("0.8"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			MemoryRequest: resource.MustParse("666Gi"),
 			MemoryLimit:   resource.MustParse("888Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+		Resources: overrideReconcilerCPULimitsAndGitSyncMemResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -774,26 +803,32 @@ func TestUpdateNamespaceReconcilerWithOverrideWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test Autopilot ignores resource requirements override.
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerAndGitSyncResourceLimits,
+		Resources: overrideReconcilerAndGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v", err)

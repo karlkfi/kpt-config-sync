@@ -226,9 +226,17 @@ func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.Object
 func mutateContainerResource(ctx context.Context, c *corev1.Container, override v1alpha1.OverrideSpec, reconcilerType string) {
 	for _, override := range override.Resources {
 		if override.ContainerName == c.Name {
+			if !override.CPURequest.IsZero() {
+				c.Resources.Requests[corev1.ResourceCPU] = override.CPURequest
+				metrics.RecordResourceOverrideCount(ctx, reconcilerType, c.Name, "cpu")
+			}
 			if !override.CPULimit.IsZero() {
 				c.Resources.Limits[corev1.ResourceCPU] = override.CPULimit
 				metrics.RecordResourceOverrideCount(ctx, reconcilerType, c.Name, "cpu")
+			}
+			if !override.MemoryRequest.IsZero() {
+				c.Resources.Requests[corev1.ResourceMemory] = override.MemoryRequest
+				metrics.RecordResourceOverrideCount(ctx, reconcilerType, c.Name, "memory")
 			}
 			if !override.MemoryLimit.IsZero() {
 				c.Resources.Limits[corev1.ResourceMemory] = override.MemoryLimit

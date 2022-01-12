@@ -27,6 +27,12 @@ type ContainerResourcesSpec struct {
 	// +kubebuilder:validation:Pattern=^(reconciler|git-sync|hydration-controller)$
 	// +optional
 	ContainerName string `json:"containerName,omitempty"`
+	// cpuRequest allows one to override the CPU request of a container
+	// +optional
+	CPURequest resource.Quantity `json:"cpuRequest,omitempty"`
+	// memoryRequest allows one to override the memory request of a container
+	// +optional
+	MemoryRequest resource.Quantity `json:"memoryRequest,omitempty"`
 	// cpuLimit allows one to override the CPU limit of a container
 	// +optional
 	CPULimit resource.Quantity `json:"cpuLimit,omitempty"`

@@ -7,7 +7,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -183,33 +182,32 @@ func MissingKeyInConfigMapData(k string) Predicate {
 	}
 }
 
-// HasCorrectResourceLimits verify a root/namespace reconciler has the correct resource limits.
-func HasCorrectResourceLimits(reconcilerCPULimits, reconcilerMemLimits, gitSyncCPULimits, gitSyncMemLimits resource.Quantity) Predicate {
+// HasCorrectResourceRequestsLimits verify a root/namespace reconciler container has the correct resource requests and limits.
+func HasCorrectResourceRequestsLimits(containerName string, cpuRequest, cpuLimit, memoryRequest, memoryLimit resource.Quantity) Predicate {
 	return func(o client.Object) error {
 		dep, ok := o.(*appsv1.Deployment)
 		if !ok {
 			return WrongTypeErr(dep, &appsv1.Deployment{})
 		}
 		for _, container := range dep.Spec.Template.Spec.Containers {
-			switch container.Name {
-			case reconcilermanager.Reconciler:
-				if container.Resources.Limits[corev1.ResourceCPU] != reconcilerCPULimits {
-					return errors.Errorf("The CPU limit of the %q container should be %v, got %v", container.Name, reconcilerCPULimits, container.Resources.Limits[corev1.ResourceCPU])
+			if containerName == container.Name {
+				if container.Resources.Requests[corev1.ResourceCPU] != cpuRequest {
+					return errors.Errorf("The CPU request of the %q container should be %v, got %v", container.Name, cpuRequest, container.Resources.Requests[corev1.ResourceCPU])
 				}
-				if container.Resources.Limits[corev1.ResourceMemory] != reconcilerMemLimits {
-					return errors.Errorf("The memory limit of the %q container should be %v, got %v", container.Name, reconcilerMemLimits, container.Resources.Limits[corev1.ResourceMemory])
+				if container.Resources.Limits[corev1.ResourceCPU] != cpuLimit {
+					return errors.Errorf("The CPU limit of the %q container should be %v, got %v", container.Name, cpuLimit, container.Resources.Limits[corev1.ResourceCPU])
+				}
+				if container.Resources.Requests[corev1.ResourceMemory] != memoryRequest {
+					return errors.Errorf("The memory request of the %q container should be %v, got %v", container.Name, memoryRequest, container.Resources.Requests[corev1.ResourceMemory])
+				}
+				if container.Resources.Limits[corev1.ResourceMemory] != memoryLimit {
+					return errors.Errorf("The memory limit of the %q container should be %v, got %v", container.Name, memoryLimit, container.Resources.Limits[corev1.ResourceMemory])
 				}
 
-			case reconcilermanager.GitSync:
-				if container.Resources.Limits[corev1.ResourceCPU] != gitSyncCPULimits {
-					return errors.Errorf("The CPU limit of the %q container should be %v, got %v", container.Name, gitSyncCPULimits, container.Resources.Limits[corev1.ResourceCPU])
-				}
-				if container.Resources.Limits[corev1.ResourceMemory] != gitSyncMemLimits {
-					return errors.Errorf("The memory limit of the %q container should be %v, got %v", container.Name, gitSyncMemLimits, container.Resources.Limits[corev1.ResourceMemory])
-				}
+				return nil
 			}
 		}
-		return nil
+		return errors.Errorf("Container %q not found", containerName)
 	}
 }
 

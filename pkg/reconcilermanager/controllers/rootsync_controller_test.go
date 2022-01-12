@@ -169,7 +169,7 @@ func rootsyncGCPSAEmail(email string) func(sync *v1alpha1.RootSync) {
 	}
 }
 
-func rootsyncOverrideResourceLimits(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RootSync) {
+func rootsyncOverrideResources(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RootSync) {
 	return func(sync *v1alpha1.RootSync) {
 		sync.Spec.Override = v1alpha1.OverrideSpec{
 			Resources: containers,
@@ -203,26 +203,32 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideAllContainerResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH),
-		rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+		rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideResources(overrideAllContainerResources))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 
@@ -279,7 +285,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideAllContainerResources),
 		),
 	}
 
@@ -295,10 +301,11 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully created")
 
-	// Test overriding the CPU limits of the reconciler container and the memory limits of the git-sync container
-	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the CPU resources of the reconciler and hydration-container and the memory resources of the git-sync container
+	overrideSelectedResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("1"),
 			CPULimit:      resource.MustParse("1.2"),
 		},
 		{
@@ -307,12 +314,13 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			MemoryRequest: resource.MustParse("800Gi"),
 			MemoryLimit:   resource.MustParse("888Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+		Resources: overrideSelectedResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -327,7 +335,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerCPULimitsAndGitSyncMemLimits),
+			containerResourcesMutator(overrideSelectedResources),
 		),
 	}
 
@@ -443,27 +451,33 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully created")
 
-	// Test overriding the CPU/memory limits of both the reconciler and git-sync container
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the CPU/memory requests and limits of the reconciler, hydration-controller, and git-sync container
+	overrideAllContainerResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerAndGitSyncResourceLimits,
+		Resources: overrideAllContainerResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -478,7 +492,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideAllContainerResources),
 		),
 	}
 
@@ -493,22 +507,26 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
 
-	// Test overriding the CPU/memory limits of the reconciler container
-	overrideReconcilerResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the CPU/memory limits of the reconciler and hydration-controller containers
+	overrideReconcilerAndHydrationResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("1"),
 			CPULimit:      resource.MustParse("2"),
+			MemoryRequest: resource.MustParse("1Gi"),
 			MemoryLimit:   resource.MustParse("2Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("1.1"),
 			CPULimit:      resource.MustParse("1.3"),
+			MemoryRequest: resource.MustParse("3Gi"),
 			MemoryLimit:   resource.MustParse("4Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerResourceLimits,
+		Resources: overrideReconcilerAndHydrationResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -523,7 +541,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerResourceLimits),
+			containerResourcesMutator(overrideReconcilerAndHydrationResources),
 		),
 	}
 
@@ -532,16 +550,17 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
 
-	// Test overriding the memory limits of the git-sync container
-	overrideGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	// Test overriding the cpu request and memory limits of the git-sync container
+	overrideGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("200Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideGitSyncMemLimits,
+		Resources: overrideGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -556,7 +575,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideGitSyncMemLimits),
+			containerResourcesMutator(overrideGitSyncResources),
 		),
 	}
 
@@ -594,26 +613,32 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
 
 	rs := rootSync(rootsyncRef(gitRevision), rootsyncBranch(branch), rootsyncSecretType(GitSecretConfigKeySSH),
-		rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideResourceLimits(overrideReconcilerAndGitSyncResourceLimits))
+		rootsyncSecretRef(rootsyncSSHKey), rootsyncOverrideResources(overrideReconcilerAndGitSyncResources))
 	reqNamespacedName := namespacedName(rootsyncName, rootsyncReqNamespace)
 	fakeClient, testReconciler := setupRootReconciler(t, rs, secretObj(t, rootsyncSSHKey, secretAuth, core.Namespace(rootsyncReqNamespace)))
 	isAutopilotCluster := true
@@ -672,7 +697,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 			setAnnotations(deploymentAnnotation(rsAnnotation)),
 			setServiceAccountName(reconciler.RootSyncName),
 			secretMutator(reconciler.RootSyncName, rootsyncSSHKey),
-			containerResourceLimitsMutator(overrideReconcilerAndGitSyncResourceLimits),
+			containerResourcesMutator(overrideReconcilerAndGitSyncResources),
 		),
 	}
 
@@ -689,23 +714,26 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test Autopilot ignores the resource requirements override.
-	overrideReconcilerCPULimitsAndGitSyncMemLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerCPULimitsAndGitSyncMemResources := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("1.2"),
 			CPULimit:      resource.MustParse("1.5"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("0.6"),
 			CPULimit:      resource.MustParse("0.7"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			MemoryRequest: resource.MustParse("200Gi"),
 			MemoryLimit:   resource.MustParse("222Gi"),
 		},
 	}
 
 	rs.Spec.Override = v1alpha1.OverrideSpec{
-		Resources: overrideReconcilerCPULimitsAndGitSyncMemLimits,
+		Resources: overrideReconcilerCPULimitsAndGitSyncMemResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -819,17 +847,23 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.HydrationController,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 		{
 			ContainerName: reconcilermanager.GitSync,
+			CPURequest:    resource.MustParse("500m"),
 			CPULimit:      resource.MustParse("1"),
+			MemoryRequest: resource.MustParse("500Mi"),
 			MemoryLimit:   resource.MustParse("1Gi"),
 		},
 	}
@@ -2192,14 +2226,14 @@ func setAnnotations(annotations map[string]string) depMutator {
 	}
 }
 
-func containerResourceLimitsMutator(overrides []v1alpha1.ContainerResourcesSpec) depMutator {
+func containerResourcesMutator(overrides []v1alpha1.ContainerResourcesSpec) depMutator {
 	return func(dep *appsv1.Deployment) {
 		for _, container := range dep.Spec.Template.Spec.Containers {
 			switch container.Name {
 			case reconcilermanager.Reconciler, reconcilermanager.GitSync, reconcilermanager.HydrationController:
 				for _, override := range overrides {
 					if override.ContainerName == container.Name {
-						mutateContainerResourceLimits(&container, override)
+						mutateContainerResourceRequestsLimits(&container, override)
 					}
 				}
 			}
@@ -2207,15 +2241,27 @@ func containerResourceLimitsMutator(overrides []v1alpha1.ContainerResourcesSpec)
 	}
 }
 
-func mutateContainerResourceLimits(container *corev1.Container, resourceLimits v1alpha1.ContainerResourcesSpec) {
-	if !resourceLimits.CPULimit.IsZero() {
-		container.Resources.Limits[corev1.ResourceCPU] = resourceLimits.CPULimit
+func mutateContainerResourceRequestsLimits(container *corev1.Container, resourcesSpec v1alpha1.ContainerResourcesSpec) {
+	if !resourcesSpec.CPURequest.IsZero() {
+		container.Resources.Requests[corev1.ResourceCPU] = resourcesSpec.CPURequest
+	} else {
+		container.Resources.Requests[corev1.ResourceCPU] = resource.MustParse("100m")
+	}
+
+	if !resourcesSpec.CPULimit.IsZero() {
+		container.Resources.Limits[corev1.ResourceCPU] = resourcesSpec.CPULimit
 	} else {
 		container.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("100m")
 	}
 
-	if !resourceLimits.MemoryLimit.IsZero() {
-		container.Resources.Limits[corev1.ResourceMemory] = resourceLimits.MemoryLimit
+	if !resourcesSpec.MemoryRequest.IsZero() {
+		container.Resources.Requests[corev1.ResourceMemory] = resourcesSpec.MemoryRequest
+	} else {
+		container.Resources.Requests[corev1.ResourceMemory] = resource.MustParse("100Mi")
+	}
+
+	if !resourcesSpec.MemoryLimit.IsZero() {
+		container.Resources.Limits[corev1.ResourceMemory] = resourcesSpec.MemoryLimit
 	} else {
 		container.Resources.Limits[corev1.ResourceMemory] = resource.MustParse("100Mi")
 	}
