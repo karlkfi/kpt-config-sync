@@ -17,7 +17,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
 	// Update RootSync to invalid branch name
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "invalid-branch"}}}`)
 
 	nt.WaitForRootSyncSourceError(status.SourceErrorCode)
@@ -31,7 +31,7 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 	}
 
 	// Update RootSync to valid branch name
-	rs = fake.RootSyncObject()
+	rs = fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"branch": "main"}}}`)
 
 	nt.WaitForRepoSyncs()
@@ -53,7 +53,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
-	rs := nomostest.RepoSyncObject(namespaceRepo, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rs := nomostest.RepoSyncObjectV1Beta1(namespaceRepo, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	rs.Spec.Branch = "invalid-branch"
 	nt.Root.Add(nomostest.StructuredNSPath(namespaceRepo, nomostest.RepoSyncFileName), rs)
 	nt.Root.CommitAndPush("Update RepoSync to invalid branch name")
@@ -111,7 +111,7 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 
 	// Update RootSync to sync from the dev branch
 	if nt.MultiRepo {
-		rs := fake.RootSyncObject()
+		rs := fake.RootSyncObjectV1Beta1()
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"branch": "%s"}}}`, devBranch))
 	} else {
 		resetGitBranch(nt, devBranch)
@@ -137,7 +137,7 @@ func TestSyncFailureAfterSuccessfulSyncs(t *testing.T) {
 	nt.WaitForRepoSyncs()
 	// Reset RootSync because the cleanup stage will check if RootSync is synced from the main branch.
 	if nt.MultiRepo {
-		rs := fake.RootSyncObject()
+		rs := fake.RootSyncObjectV1Beta1()
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"branch": "%s"}}}`, nomostest.MainBranch))
 	} else {
 		resetGitBranch(nt, nomostest.MainBranch)

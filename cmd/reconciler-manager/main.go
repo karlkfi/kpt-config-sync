@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/glogr"
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/profiler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -40,7 +40,7 @@ func init() {
 
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = configmanagementv1.AddToScheme(scheme)
-	_ = v1alpha1.AddToScheme(scheme)
+	_ = v1beta1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

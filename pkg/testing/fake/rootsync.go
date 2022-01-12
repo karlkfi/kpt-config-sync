@@ -9,14 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RootSyncObject initializes a RootSync.
-func RootSyncObject(opts ...core.MetaMutator) *v1alpha1.RootSync {
+// RootSyncObjectV1Alpha1 initializes a RootSync.
+func RootSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RootSync {
 	result := &v1alpha1.RootSync{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configsync.RootSyncName,
 			Namespace: configsync.ControllerNamespace,
 		},
-		TypeMeta: ToTypeMeta(kinds.RootSync()),
+		TypeMeta: ToTypeMeta(kinds.RootSyncV1Alpha1()),
 	}
 	mutate(result, opts...)
 

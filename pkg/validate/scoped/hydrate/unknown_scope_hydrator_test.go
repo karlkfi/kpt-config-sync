@@ -53,7 +53,7 @@ func TestUnknownScope(t *testing.T) {
 					fake.Role(core.Namespace("prod")),
 				},
 				Unknown: []ast.FileObject{
-					fake.FileObject(fake.RootSyncObject(), "rootsync.yaml"),
+					fake.FileObject(fake.RootSyncObjectV1Beta1(), "rootsync.yaml"),
 				},
 			},
 			want: &objects.Scoped{
@@ -68,7 +68,7 @@ func TestUnknownScope(t *testing.T) {
 					),
 				},
 				Unknown: []ast.FileObject{
-					fake.FileObject(fake.RootSyncObject(
+					fake.FileObject(fake.RootSyncObjectV1Beta1(
 						core.Annotation(metadata.UnknownScopeAnnotationKey, metadata.UnknownScopeAnnotationValue),
 					), "rootsync.yaml"),
 				},

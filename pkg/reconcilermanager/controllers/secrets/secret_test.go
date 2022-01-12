@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	syncerFake "github.com/google/nomos/pkg/syncer/syncertest/fake"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -25,11 +25,11 @@ const (
 	ns             = "bookinfo"
 )
 
-func reposync(auth string, opts ...core.MetaMutator) *v1alpha1.RepoSync {
-	result := fake.RepoSyncObject(opts...)
-	result.Spec.Git = v1alpha1.Git{
+func reposync(auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
+	result := fake.RepoSyncObjectV1Beta1(opts...)
+	result.Spec.Git = v1beta1.Git{
 		Auth:      auth,
-		SecretRef: v1alpha1.SecretReference{Name: "ssh-key"},
+		SecretRef: v1beta1.SecretReference{Name: "ssh-key"},
 	}
 	return result
 }
@@ -64,7 +64,7 @@ func fakeClient(t *testing.T, objs ...client.Object) *syncerFake.Client {
 func TestCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
-		reposync   *v1alpha1.RepoSync
+		reposync   *v1beta1.RepoSync
 		client     *syncerFake.Client
 		wantError  bool
 		wantSecret *corev1.Secret

@@ -40,7 +40,8 @@ import (
 )
 
 const (
-	acmeDir = "acme"
+	// AcmeDir is the sync directory of the test source repository.
+	AcmeDir = "acme"
 	// Manifests is the folder of the test manifests
 	Manifests     = "manifests"
 	testResources = "test-resources"
@@ -439,14 +440,14 @@ func validateMonoRepoDeployments(nt *NT) error {
 
 func validateMultiRepoDeployments(nt *NT) error {
 	// Create a RootSync to initialize the root reconciler.
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	rs.Spec.SourceFormat = string(nt.Root.Format)
-	rs.Spec.Git = v1alpha1.Git{
+	rs.Spec.Git = v1beta1.Git{
 		Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
 		Branch:    MainBranch,
-		Dir:       acmeDir,
+		Dir:       AcmeDir,
 		Auth:      "ssh",
-		SecretRef: v1alpha1.SecretReference{Name: controllers.GitCredentialVolume},
+		SecretRef: v1beta1.SecretReference{Name: controllers.GitCredentialVolume},
 	}
 	if err := nt.Create(rs); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -490,7 +491,7 @@ func setupRepoSync(nt *NT, ns string) {
 		nt.T.Fatal("nonexistent repo")
 	}
 	// create RepoSync to initialize the Namespace reconciler.
-	rs := RepoSyncObject(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rs := RepoSyncObjectV1Beta1(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 	if err := nt.Create(rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -773,13 +774,13 @@ func StructuredNSPath(namespace, resourceName string) string {
 	return fmt.Sprintf("acme/namespaces/%s/%s", namespace, resourceName)
 }
 
-// RepoSyncObject returns the default RepoSync object in the given namespace.
-func RepoSyncObject(ns, repoURL string) *v1alpha1.RepoSync {
-	rs := fake.RepoSyncObject(core.Namespace(ns))
+// RepoSyncObjectV1Alpha1 returns the default RepoSync object in the given namespace.
+func RepoSyncObjectV1Alpha1(ns, repoURL string) *v1alpha1.RepoSync {
+	rs := fake.RepoSyncObjectV1Alpha1(core.Namespace(ns))
 	rs.Spec.Git = v1alpha1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
-		Dir:    acmeDir,
+		Dir:    AcmeDir,
 		Auth:   "ssh",
 		SecretRef: v1alpha1.SecretReference{
 			Name: "ssh-key",
@@ -795,7 +796,7 @@ func RepoSyncObjectV1Beta1(ns, repoURL string) *v1beta1.RepoSync {
 	rs.Spec.Git = v1beta1.Git{
 		Repo:   repoURL,
 		Branch: MainBranch,
-		Dir:    acmeDir,
+		Dir:    AcmeDir,
 		Auth:   "ssh",
 		SecretRef: v1beta1.SecretReference{
 			Name: "ssh-key",
@@ -827,7 +828,7 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		if !exist {
 			nt.T.Fatal("nonexistent repo")
 		}
-		rs := RepoSyncObject(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+		rs := RepoSyncObjectV1Beta1(ns, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 		nt.Root.Add(StructuredNSPath(ns, RepoSyncFileName), rs)
 
 		nt.Root.CommitAndPush("Adding namespace, clusterrole, rolebinding, clusterrolebinding and RepoSync")
@@ -840,7 +841,7 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		nt.NamespaceRepos[ns] = ns
 		nt.WaitForRepoSyncs()
 
-		err := nt.Validate(rs.Name, ns, &v1alpha1.RepoSync{})
+		err := nt.Validate(rs.Name, ns, &v1beta1.RepoSync{})
 		if err != nil {
 			nt.T.Fatal(err)
 		}
@@ -971,21 +972,21 @@ func resetRepository(nt *NT, name string, upstream string, sourceFormat filesyst
 // resetRootRepoSpec sets root-sync's SOURCE_FORMAT and POLICY_DIR. It might cause the root-reconciler to restart.
 // It sets POLICY_DIR to always be `acme` because the initial root-repo's sync directory is configured to be `acme`.
 func resetRootRepoSpec(nt *NT, upstream string, sourceFormat filesystem.SourceFormat) {
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	if err := nt.Get(rs.Name, rs.Namespace, rs); err != nil {
 		if !apierrors.IsNotFound(err) {
 			nt.T.Fatal(err)
 		}
 	} else {
 		nt.Root = resetRepository(nt, rootRepo, upstream, sourceFormat)
-		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, acmeDir))
+		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"sourceFormat": "%s", "git": {"dir": "%s"}}}`, sourceFormat, AcmeDir))
 		nt.WaitForRepoSyncs()
 	}
 }
 
 // resetNamespaceRepos sets the namespace repo to the initial state. That should delete all resources in the namespace.
 func resetNamespaceRepos(nt *NT) {
-	namespaceRepos := &v1alpha1.RepoSyncList{}
+	namespaceRepos := &v1beta1.RepoSyncList{}
 	if err := nt.List(namespaceRepos); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -994,7 +995,7 @@ func resetNamespaceRepos(nt *NT) {
 		// This prevents from resetting an existing namespace repo from a remote git provider.
 		if r, found := nt.NonRootRepos[nr.Namespace]; found {
 			nt.NonRootRepos[nr.Namespace] = resetRepository(nt, nr.Namespace, r.UpstreamRepoURL, filesystem.SourceFormatUnstructured)
-			nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, nr.Namespace,
+			nt.WaitForSync(kinds.RepoSyncV1Beta1(), configsync.RepoSyncName, nr.Namespace,
 				nt.DefaultWaitTimeout, DefaultRepoSha1Fn(nr.Namespace), RepoSyncHasStatusSyncCommit, nil)
 		}
 	}
@@ -1002,7 +1003,7 @@ func resetNamespaceRepos(nt *NT) {
 
 // deleteNamespaceRepos deletes the repo-sync and the namespace that is created in the delegated mode.
 func deleteNamespaceRepos(nt *NT) {
-	namespaceRepos := &v1alpha1.RepoSyncList{}
+	namespaceRepos := &v1beta1.RepoSyncList{}
 	if err := nt.List(namespaceRepos); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -1012,7 +1013,7 @@ func deleteNamespaceRepos(nt *NT) {
 			nt.T.Fatal(err)
 		}
 		WaitToTerminate(nt, kinds.Deployment(), nr.Name, configmanagement.ControllerNamespace)
-		WaitToTerminate(nt, kinds.RepoSync(), nr.Name, nr.Namespace)
+		WaitToTerminate(nt, kinds.RepoSyncV1Beta1(), nr.Name, nr.Namespace)
 		revokeRepoSyncRoleBinding(nt, nr.Namespace)
 		revokeRepoSyncSecret(nt, nr.Namespace)
 		revokeRepoSyncNamespace(nt, nr.Namespace)
@@ -1032,7 +1033,7 @@ func deleteNamespaceRepos(nt *NT) {
 func SetPolicyDir(nt *NT, policyDir string) {
 	nt.T.Logf("Set policyDir to %q", policyDir)
 	if nt.MultiRepo {
-		rs := fake.RootSyncObject()
+		rs := fake.RootSyncObjectV1Beta1()
 		nt.MustMergePatch(rs, fmt.Sprintf(`{"spec": {"git": {"dir": "%s"}}}`, policyDir))
 	} else {
 		ResetMonoRepoSpec(nt, filesystem.SourceFormatHierarchy, policyDir)

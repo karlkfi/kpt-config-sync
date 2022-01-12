@@ -11,18 +11,21 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/system"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestDeleteRootSync(t *testing.T) {
+func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	err := nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		nt.T.Fatal(err)
@@ -35,7 +38,7 @@ func TestDeleteRootSync(t *testing.T) {
 	}
 
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(configsync.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObject())
+		return nt.ValidateNotFound(configsync.RootSyncName, v1.NSConfigManagementSystem, fake.RootSyncObjectV1Beta1())
 	})
 	if err != nil {
 		nt.T.Errorf("RootSync present after deletion: %v", err)
@@ -65,13 +68,30 @@ func TestDeleteRootSync(t *testing.T) {
 		}
 		t.FailNow()
 	}
+
+	nt.T.Log("Test RootSync v1alpha1 version")
+	rsv1alpha1 := fake.RootSyncObjectV1Alpha1()
+	rsv1alpha1.Spec.SourceFormat = string(nt.Root.Format)
+	rsv1alpha1.Spec.Git = v1alpha1.Git{
+		Repo:      nt.GitProvider.SyncURL(nt.Root.RemoteRepoName),
+		Branch:    nomostest.MainBranch,
+		Dir:       nomostest.AcmeDir,
+		Auth:      "ssh",
+		SecretRef: v1alpha1.SecretReference{Name: controllers.GitCredentialVolume},
+	}
+	if err := nt.Create(rsv1alpha1); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			nt.T.Fatal(err)
+		}
+	}
+	nt.WaitForRepoSyncs()
 }
 
 func TestUpdateRootSyncGitDirectory(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
 	// Validate RootSync is present.
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	err := nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &rs)
 	if err != nil {
 		nt.T.Fatal(err)
@@ -200,7 +220,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	// Update RootSync.
 	//
 	// Get RootSync and then perform Update.
-	rootsync := &v1alpha1.RootSync{}
+	rootsync := &v1beta1.RootSync{}
 	err = nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rootsync)
 	if err != nil {
 		nt.T.Fatalf("%v", err)
@@ -222,7 +242,7 @@ func TestUpdateRootSyncGitBranch(t *testing.T) {
 	}
 
 	// Get RootSync and then perform Update.
-	rs := &v1alpha1.RootSync{}
+	rs := &v1beta1.RootSync{}
 	err = nt.Get(configsync.RootSyncName, v1.NSConfigManagementSystem, rs)
 	if err != nil {
 		nt.T.Fatalf("%v", err)
@@ -301,7 +321,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 	// Log error if the Reconciling condition does not progress to False before the timeout
 	// expires.
 	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &v1alpha1.RootSync{},
+		return nt.Validate(configsync.RootSyncName, v1.NSConfigManagementSystem, &v1beta1.RootSync{},
 			hasRootSyncReconcilingStatus(metav1.ConditionFalse), hasRootSyncStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
@@ -320,7 +340,7 @@ func TestRootSyncReconcilingStatus(t *testing.T) {
 
 func hasRootSyncReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
 	return func(o client.Object) error {
-		rs := o.(*v1alpha1.RootSync)
+		rs := o.(*v1beta1.RootSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
 			if condition.Type == "Reconciling" && condition.Status != r {
@@ -333,7 +353,7 @@ func hasRootSyncReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate 
 
 func hasRootSyncStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
 	return func(o client.Object) error {
-		rs := o.(*v1alpha1.RootSync)
+		rs := o.(*v1beta1.RootSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
 			if condition.Type == "Stalled" && condition.Status != r {

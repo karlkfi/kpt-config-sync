@@ -119,9 +119,9 @@ func TestOverrideReconcilerResourcesV1Alpha1(t *testing.T) {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	rootSync := fake.RootSyncObject()
-	repoSyncBackend := nomostest.RepoSyncObject(backendNamespace, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
-	repoSyncFrontend := nomostest.RepoSyncObject(frontendNamespace, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Alpha1()
+	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNamespace, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
+	repoSyncFrontend := nomostest.RepoSyncObjectV1Alpha1(frontendNamespace, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
 
 	// Override the CPU/memory requests and limits of the reconciler container of root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "cpuRequest": "500m", "cpuLimit": "800m", "memoryRequest": "400Mi", "memoryLimit": "411Mi"}]}}}`)
@@ -433,7 +433,7 @@ func TestOverrideReconcilerResourcesV1Beta1(t *testing.T) {
 		nt.T.Fatal("nonexistent repo")
 	}
 
-	rootSync := fake.RootSyncObject()
+	rootSync := fake.RootSyncObjectV1Beta1()
 	repoSyncBackend := nomostest.RepoSyncObjectV1Beta1(backendNamespace, nt.GitProvider.SyncURL(backendRepo.RemoteRepoName))
 	repoSyncFrontend := nomostest.RepoSyncObjectV1Beta1(frontendNamespace, nt.GitProvider.SyncURL(frontendRepo.RemoteRepoName))
 

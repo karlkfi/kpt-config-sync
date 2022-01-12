@@ -23,7 +23,7 @@ import (
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/importer"
 	"github.com/google/nomos/pkg/importer/filesystem"
@@ -531,7 +531,7 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 	syncTimeout := waitForRepoSyncsOptions.timeout
 
 	if nt.MultiRepo {
-		nt.WaitForSync(kinds.RootSync(), "root-sync",
+		nt.WaitForSync(kinds.RootSyncV1Beta1(), "root-sync",
 			configmanagement.ControllerNamespace, syncTimeout,
 			waitForRepoSyncsOptions.rootSha1Fn, RootSyncHasStatusSyncCommit,
 			&SyncDirPredicatePair{waitForRepoSyncsOptions.syncDirectory, RootSyncHasStatusSyncDirectory})
@@ -539,7 +539,7 @@ func (nt *NT) WaitForRepoSyncs(options ...WaitForRepoSyncsOption) {
 		syncNamespaceRepos := waitForRepoSyncsOptions.syncNamespaceRepos
 		if syncNamespaceRepos {
 			for ns, repo := range nt.NamespaceRepos {
-				nt.WaitForSync(kinds.RepoSync(), configsync.RepoSyncName, ns,
+				nt.WaitForSync(kinds.RepoSyncV1Beta1(), configsync.RepoSyncName, ns,
 					syncTimeout, DefaultRepoSha1Fn(repo), RepoSyncHasStatusSyncCommit, nil)
 			}
 		}
@@ -642,7 +642,7 @@ func (nt *NT) WaitForSync(gvk schema.GroupVersionKind, name, namespace string, t
 	// Automatically renew the Client. We don't have tests that depend on behavior
 	// when the test's client is out of date, and if ConfigSync reports that
 	// everything has synced properly then (usually) new types should be available.
-	if gvk == kinds.Repo() || gvk == kinds.RepoSync() {
+	if gvk == kinds.Repo() || gvk == kinds.RepoSyncV1Beta1() {
 		nt.RenewClient()
 	}
 }
@@ -878,7 +878,7 @@ func (nt *NT) ForwardToFreePort(ns, pod, port string) (int, error) {
 	return localPort, nil
 }
 
-func validateRootSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingCondition *v1alpha1.RootSyncCondition, code string) error {
+func validateRootSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RootSyncCondition, code string) error {
 	if err := validateError(statusErrs, code); err != nil {
 		return err
 	}
@@ -897,7 +897,7 @@ func validateRootSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingConditi
 	return nil
 }
 
-func validateRepoSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingCondition *v1alpha1.RepoSyncCondition, code string) error {
+func validateRepoSyncError(statusErrs []v1beta1.ConfigSyncError, syncingCondition *v1beta1.RepoSyncCondition, code string) error {
 	if err := validateError(statusErrs, code); err != nil {
 		return err
 	}
@@ -916,7 +916,7 @@ func validateRepoSyncError(statusErrs []v1alpha1.ConfigSyncError, syncingConditi
 	return nil
 }
 
-func validateError(errs []v1alpha1.ConfigSyncError, code string) error {
+func validateError(errs []v1beta1.ConfigSyncError, code string) error {
 	if len(errs) == 0 {
 		return errors.Errorf("no errors present")
 	}
@@ -934,11 +934,11 @@ func validateError(errs []v1alpha1.ConfigSyncError, code string) error {
 func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync source error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObject()
+			rs := fake.RootSyncObjectV1Beta1()
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
 				return err
 			}
-			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
 			return validateRootSyncError(rs.Status.Source.Errors, syncingCondition, code)
 		},
 		opts...,
@@ -949,12 +949,12 @@ func (nt *NT) WaitForRootSyncSourceError(code string, opts ...WaitOption) {
 func (nt *NT) WaitForRootSyncRenderingError(code string, opts ...WaitOption) {
 	Wait(nt.T, fmt.Sprintf("RootSync rendering error code %s", code), nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObject()
+			rs := fake.RootSyncObjectV1Beta1()
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
 			}
-			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+			syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
 			return validateRootSyncError(rs.Status.Rendering.Errors, syncingCondition, code)
 		},
 		opts...,
@@ -967,12 +967,12 @@ func (nt *NT) WaitForRepoSyncSourceError(namespace, code string, opts ...WaitOpt
 		func() error {
 			nt.T.Helper()
 
-			rs := fake.RepoSyncObject(core.Namespace(namespace))
+			rs := fake.RepoSyncObjectV1Beta1(core.Namespace(namespace))
 			err := nt.Get(rs.GetName(), rs.GetNamespace(), rs)
 			if err != nil {
 				return err
 			}
-			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+			syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
 			return validateRepoSyncError(rs.Status.Source.Errors, syncingCondition, code)
 		},
 		opts...,
@@ -1059,11 +1059,11 @@ func (nt *NT) WaitForRepoImportErrorCode(code string, opts ...WaitOption) {
 func (nt *NT) WaitForStalledError(reason, message string) {
 	Wait(nt.T, "RootSync stalled error", nt.DefaultWaitTimeout,
 		func() error {
-			rs := fake.RootSyncObject()
+			rs := fake.RootSyncObjectV1Beta1()
 			if err := nt.Get(rs.GetName(), rs.GetNamespace(), rs); err != nil {
 				return err
 			}
-			stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+			stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
 			if stalledCondition == nil {
 				return fmt.Errorf("stalled condition not found")
 			}
@@ -1193,7 +1193,7 @@ func newWaitForRepoSyncsOptions(timeout time.Duration, fn Sha1Func) waitForRepoS
 		timeout:            timeout,
 		syncNamespaceRepos: true,
 		rootSha1Fn:         fn,
-		syncDirectory:      acmeDir,
+		syncDirectory:      AcmeDir,
 	}
 }
 

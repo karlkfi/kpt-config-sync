@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,15 +17,15 @@ const fakeConditionMessage = "Testing"
 
 var testNow = metav1.Date(1, time.February, 3, 4, 5, 6, 7, time.Local)
 
-func withConditions(conds ...v1alpha1.RepoSyncCondition) core.MetaMutator {
+func withConditions(conds ...v1beta1.RepoSyncCondition) core.MetaMutator {
 	return func(o client.Object) {
-		rs := o.(*v1alpha1.RepoSync)
+		rs := o.(*v1beta1.RepoSync)
 		rs.Status.Conditions = append(rs.Status.Conditions, conds...)
 	}
 }
 
-func fakeCondition(condType v1alpha1.RepoSyncConditionType, status metav1.ConditionStatus, strs ...string) v1alpha1.RepoSyncCondition {
-	rsc := v1alpha1.RepoSyncCondition{
+func fakeCondition(condType v1beta1.RepoSyncConditionType, status metav1.ConditionStatus, strs ...string) v1beta1.RepoSyncCondition {
+	rsc := v1beta1.RepoSyncCondition{
 		Type:               condType,
 		Status:             status,
 		Reason:             "Test",
@@ -45,22 +45,22 @@ func fakeCondition(condType v1alpha1.RepoSyncConditionType, status metav1.Condit
 func TestIsReconciling(t *testing.T) {
 	testCases := []struct {
 		name string
-		rs   *v1alpha1.RepoSync
+		rs   *v1beta1.RepoSync
 		want bool
 	}{
 		{
 			"Missing condition is false",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			false,
 		},
 		{
 			"False condition is false",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionFalse))),
 			false,
 		},
 		{
 			"True condition is true",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			true,
 		},
 	}
@@ -77,22 +77,22 @@ func TestIsReconciling(t *testing.T) {
 func TestIsStalled(t *testing.T) {
 	testCases := []struct {
 		name string
-		rs   *v1alpha1.RepoSync
+		rs   *v1beta1.RepoSync
 		want bool
 	}{
 		{
 			"Missing condition is false",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			false,
 		},
 		{
 			"False condition is false",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			false,
 		},
 		{
 			"True condition is true",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionTrue))),
 			true,
 		},
 	}
@@ -109,22 +109,22 @@ func TestIsStalled(t *testing.T) {
 func TestReconcilingMessage(t *testing.T) {
 	testCases := []struct {
 		name string
-		rs   *v1alpha1.RepoSync
+		rs   *v1beta1.RepoSync
 		want string
 	}{
 		{
 			"Missing condition is empty",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			"",
 		},
 		{
 			"False condition is empty",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionFalse))),
 			"",
 		},
 		{
 			"True condition is its message",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			fakeConditionMessage,
 		},
 	}
@@ -141,22 +141,22 @@ func TestReconcilingMessage(t *testing.T) {
 func TestStalledMessage(t *testing.T) {
 	testCases := []struct {
 		name string
-		rs   *v1alpha1.RepoSync
+		rs   *v1beta1.RepoSync
 		want string
 	}{
 		{
 			"Missing condition is empty",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			"",
 		},
 		{
 			"False condition is empty",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			"",
 		},
 		{
 			"True condition is its message",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionTrue))),
 			fakeConditionMessage,
 		},
 	}
@@ -176,32 +176,32 @@ func TestClearCondition(t *testing.T) {
 	}
 	testCases := []struct {
 		name    string
-		rs      *v1alpha1.RepoSync
-		toClear v1alpha1.RepoSyncConditionType
-		want    []v1alpha1.RepoSyncCondition
+		rs      *v1beta1.RepoSync
+		toClear v1beta1.RepoSyncConditionType
+		want    []v1beta1.RepoSyncCondition
 	}{
 		{
 			"Clear existing true condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue))),
-			v1alpha1.RepoSyncStalled,
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse, "", ""),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionTrue))),
+			v1beta1.RepoSyncStalled,
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse, "", ""),
 			},
 		},
 		{
 			"Ignore existing false condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
-			v1alpha1.RepoSyncStalled,
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
+			v1beta1.RepoSyncStalled,
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse),
 			},
 		},
 		{
 			"Handle empty conditions",
-			fake.RepoSyncObject(),
-			v1alpha1.RepoSyncStalled,
+			fake.RepoSyncObjectV1Beta1(),
+			v1beta1.RepoSyncStalled,
 			nil,
 		},
 	}
@@ -221,28 +221,28 @@ func TestSetReconciling(t *testing.T) {
 	}
 	testCases := []struct {
 		name    string
-		rs      *v1alpha1.RepoSync
+		rs      *v1beta1.RepoSync
 		reason  string
 		message string
-		want    []v1alpha1.RepoSyncCondition
+		want    []v1beta1.RepoSyncCondition
 	}{
 		{
 			"Set new reconciling condition",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			"Test1",
 			"This is test 1",
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue, "Test1", "This is test 1"),
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue, "Test1", "This is test 1"),
 			},
 		},
 		{
 			"Update existing reconciling condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionFalse), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			"Test2",
 			"This is test 2",
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue, "Test2", "This is test 2"),
-				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse),
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue, "Test2", "This is test 2"),
+				fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse),
 			},
 		},
 	}
@@ -259,28 +259,28 @@ func TestSetReconciling(t *testing.T) {
 func TestSetStalled(t *testing.T) {
 	testCases := []struct {
 		name   string
-		rs     *v1alpha1.RepoSync
+		rs     *v1beta1.RepoSync
 		reason string
 		err    error
-		want   []v1alpha1.RepoSyncCondition
+		want   []v1beta1.RepoSyncCondition
 	}{
 		{
 			"Set new stalled condition",
-			fake.RepoSyncObject(),
+			fake.RepoSyncObjectV1Beta1(),
 			"Error1",
 			errors.New("this is error 1"),
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue, "Error1", "this is error 1"),
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionTrue, "Error1", "this is error 1"),
 			},
 		},
 		{
 			"Update existing stalled condition",
-			fake.RepoSyncObject(withConditions(fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionFalse))),
+			fake.RepoSyncObjectV1Beta1(withConditions(fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue), fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionFalse))),
 			"Error2",
 			errors.New("this is error 2"),
-			[]v1alpha1.RepoSyncCondition{
-				fakeCondition(v1alpha1.RepoSyncReconciling, metav1.ConditionTrue),
-				fakeCondition(v1alpha1.RepoSyncStalled, metav1.ConditionTrue, "Error2", "this is error 2"),
+			[]v1beta1.RepoSyncCondition{
+				fakeCondition(v1beta1.RepoSyncReconciling, metav1.ConditionTrue),
+				fakeCondition(v1beta1.RepoSyncStalled, metav1.ConditionTrue, "Error2", "this is error 2"),
 			},
 		},
 	}

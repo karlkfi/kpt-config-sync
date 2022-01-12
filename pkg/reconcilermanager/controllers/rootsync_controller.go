@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -71,7 +71,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	log := r.log.WithValues("rootsync", req.NamespacedName)
 	start := time.Now()
 
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
@@ -167,7 +167,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			// available. Hence update the Reconciling status condition.
 			rootsync.SetReconciling(&rs, "Deployment", result.message)
 			// Clear Stalled condition.
-			rootsync.ClearCondition(&rs, v1alpha1.RootSyncStalled)
+			rootsync.ClearCondition(&rs, v1beta1.RootSyncStalled)
 		case statusFailed:
 			// statusFailed indicates that the deployment failed to reconcile. Update
 			// Reconciling status condition with appropriate message specifying the
@@ -178,9 +178,9 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		case statusCurrent:
 			// currentStatus indicates that the deployment is available, which qualifies
 			// to clear the Reconciling status condition in RepoSync.
-			rootsync.ClearCondition(&rs, v1alpha1.RootSyncReconciling)
+			rootsync.ClearCondition(&rs, v1beta1.RootSyncReconciling)
 			// Since there were no errors, we can clear any previous Stalled condition.
-			rootsync.ClearCondition(&rs, v1alpha1.RootSyncStalled)
+			rootsync.ClearCondition(&rs, v1beta1.RootSyncStalled)
 		}
 	} else {
 		r.log.Info("Deployment successfully reconciled", operationSubjectName, reconciler.RootSyncName, executedOperation, op)
@@ -197,14 +197,14 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 // SetupWithManager registers RootSync controller with reconciler-manager.
 func (r *RootSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
 	return controllerruntime.NewControllerManagedBy(mgr).
-		For(&v1alpha1.RootSync{}).
+		For(&v1beta1.RootSync{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRootSync())).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
 
-func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1alpha1.RootSync) []configMapMutation {
+func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1beta1.RootSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: RootSyncResourceName(reconcilermanager.SourceFormat),
@@ -217,7 +217,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1a
 				branch:      rs.Spec.Git.Branch,
 				repo:        rs.Spec.Git.Repo,
 				secretType:  rs.Spec.Git.Auth,
-				period:      v1alpha1.GetPeriodSecs(&rs.Spec.Git),
+				period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
 				proxy:       rs.Spec.Proxy,
 				depth:       rs.Spec.Override.GitSyncDepth,
 				noSSLVerify: rs.Spec.Git.NoSSLVerify,
@@ -235,7 +235,7 @@ func (r *RootSyncReconciler) rootConfigMapMutations(ctx context.Context, rs *v1a
 }
 
 // validateRootSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
-func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1alpha1.RootSync) error {
+func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v1beta1.RootSync) error {
 	if secrets.SkipForAuth(rootSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
@@ -250,7 +250,7 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 	return validateSecretData(rootSync.Spec.Auth, secret)
 }
 
-func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v1alpha1.RootSync) error {
+func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v1beta1.RootSync) error {
 	var childCRB rbacv1.ClusterRoleBinding
 	childCRB.Name = rootSyncPermissionsName()
 
@@ -266,7 +266,7 @@ func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v
 	return nil
 }
 
-func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.ClusterRoleBinding) error {
+func mutateRootSyncClusterRoleBinding(rs *v1beta1.RootSync, crb *rbacv1.ClusterRoleBinding) error {
 	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
 	// the corresponding ClusterRoleBinding is also deleted.
 	crb.OwnerReferences = []metav1.OwnerReference{
@@ -290,7 +290,7 @@ func mutateRootSyncClusterRoleBinding(rs *v1alpha1.RootSync, crb *rbacv1.Cluster
 	return nil
 }
 
-func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.RootSync, log logr.Logger) error {
+func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1beta1.RootSync, log logr.Logger) error {
 	rs.Status.ObservedGeneration = rs.Generation
 	err := r.client.Status().Update(ctx, rs)
 	if err != nil {
@@ -299,7 +299,7 @@ func (r *RootSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Root
 	return err
 }
 
-func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RootSync, configMapDataHash []byte) mutateFn {
+func (r *RootSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RootSync, configMapDataHash []byte) mutateFn {
 	return func(obj client.Object) error {
 		d, ok := obj.(*appsv1.Deployment)
 		if !ok {

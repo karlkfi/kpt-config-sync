@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
@@ -98,7 +98,7 @@ func Run(opts Options) {
 	if err := v1.AddToScheme(s); err != nil {
 		glog.Fatalf("Error adding configmanagement resources to scheme: %v", err)
 	}
-	if err := v1alpha1.AddToScheme(s); err != nil {
+	if err := v1beta1.AddToScheme(s); err != nil {
 		glog.Fatalf("Error adding configsync resources to scheme: %v", err)
 	}
 

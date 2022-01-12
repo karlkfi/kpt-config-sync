@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/validation/nonhierarchical"
@@ -62,7 +62,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	log := r.log.WithValues("reposync", req.NamespacedName)
 	start := time.Now()
 
-	var rs v1alpha1.RepoSync
+	var rs v1beta1.RepoSync
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
@@ -176,7 +176,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			// available. Hence update the Reconciling status condition.
 			reposync.SetReconciling(&rs, "Deployment", result.message)
 			// Clear Stalled condition.
-			reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
+			reposync.ClearCondition(&rs, v1beta1.RepoSyncStalled)
 		case statusFailed:
 			// statusFailed indicates that the deployment failed to reconcile. Update
 			// Reconciling status condition with appropriate message specifying the
@@ -187,9 +187,9 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		case statusCurrent:
 			// currentStatus indicates that the deployment is available, which qualifies
 			// to clear the Reconciling status condition in RepoSync.
-			reposync.ClearCondition(&rs, v1alpha1.RepoSyncReconciling)
+			reposync.ClearCondition(&rs, v1beta1.RepoSyncReconciling)
 			// Since there were no errors, we can clear any previous Stalled condition.
-			reposync.ClearCondition(&rs, v1alpha1.RepoSyncStalled)
+			reposync.ClearCondition(&rs, v1beta1.RepoSyncStalled)
 		}
 	} else {
 		r.log.Info("Deployment successfully reconciled", operationSubjectName, deploymentName, executedOperation, op)
@@ -206,7 +206,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 // SetupWithManager registers RepoSync controller with reconciler-manager.
 func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) error {
 	return controllerruntime.NewControllerManagedBy(mgr).
-		For(&v1alpha1.RepoSync{}).
+		For(&v1beta1.RepoSync{}).
 		// Custom Watch to trigger Reconcile for objects created by RepoSync controller.
 		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(mapSecretToRepoSync())).
 		Watches(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapObjectToRepoSync())).
@@ -216,7 +216,7 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1alpha1.RepoSync) []configMapMutation {
+func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1beta1.RepoSync) []configMapMutation {
 	return []configMapMutation{
 		{
 			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
@@ -225,7 +225,7 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1a
 				branch:      rs.Spec.Git.Branch,
 				repo:        rs.Spec.Git.Repo,
 				secretType:  rs.Spec.Git.Auth,
-				period:      v1alpha1.GetPeriodSecs(&rs.Spec.Git),
+				period:      v1beta1.GetPeriodSecs(&rs.Spec.Git),
 				proxy:       rs.Spec.Proxy,
 				depth:       rs.Spec.Override.GitSyncDepth,
 				noSSLVerify: rs.Spec.Git.NoSSLVerify,
@@ -243,7 +243,7 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1a
 }
 
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
-func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1alpha1.RepoSync) error {
+func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1beta1.RepoSync) error {
 	if secrets.SkipForAuth(repoSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
@@ -258,7 +258,7 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 	return validateSecretData(repoSync.Spec.Auth, secret)
 }
 
-func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1.RepoSync) error {
+func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1beta1.RepoSync) error {
 	var childRB rbacv1.RoleBinding
 	childRB.Name = repoSyncPermissionsName()
 	childRB.Namespace = rs.Namespace
@@ -275,7 +275,7 @@ func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1alpha1
 	return nil
 }
 
-func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
+func mutateRoleBinding(rs *v1beta1.RepoSync, rb *rbacv1.RoleBinding) error {
 	// Update rolereference.
 	rb.RoleRef = rolereference(repoSyncPermissionsName(), "ClusterRole")
 
@@ -289,7 +289,7 @@ func mutateRoleBinding(rs *v1alpha1.RepoSync, rb *rbacv1.RoleBinding) error {
 	return nil
 }
 
-func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.RepoSync, log logr.Logger) error {
+func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1beta1.RepoSync, log logr.Logger) error {
 	rs.Status.ObservedGeneration = rs.Generation
 	err := r.client.Status().Update(ctx, rs)
 	if err != nil {
@@ -298,7 +298,7 @@ func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1alpha1.Repo
 	return err
 }
 
-func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1alpha1.RepoSync, configMapDataHash []byte) mutateFn {
+func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSync, configMapDataHash []byte) mutateFn {
 	return func(obj client.Object) error {
 		d, ok := obj.(*appsv1.Deployment)
 		if !ok {

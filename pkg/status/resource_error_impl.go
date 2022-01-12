@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/metadata"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,7 +55,7 @@ func (r resourceErrorImpl) ToCME() v1.ConfigManagementError {
 }
 
 // ToCSE implements Error.
-func (r resourceErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
+func (r resourceErrorImpl) ToCSE() v1beta1.ConfigSyncError {
 	return cseFromResourceError(r)
 }
 

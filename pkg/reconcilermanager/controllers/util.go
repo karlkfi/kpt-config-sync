@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/filesystem"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -18,7 +18,7 @@ import (
 )
 
 // hydrationData returns configmap data for the hydration controller.
-func hydrationData(gitConfig *v1alpha1.Git, scope declared.Scope, pollPeriod string) map[string]string {
+func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, pollPeriod string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ScopeKey] = string(scope)
 	result[reconcilermanager.SyncDirKey] = gitConfig.Dir
@@ -28,7 +28,7 @@ func hydrationData(gitConfig *v1alpha1.Git, scope declared.Scope, pollPeriod str
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(clusterName string, reconcilerScope declared.Scope, gitConfig *v1alpha1.Git, pollPeriod string) map[string]string {
+func reconcilerData(clusterName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ClusterNameKey] = clusterName
 	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
@@ -60,7 +60,7 @@ func sourceFormatData(format string) map[string]string {
 
 func ownerReference(kind, name string, uid types.UID) metav1.OwnerReference {
 	return metav1.OwnerReference{
-		APIVersion:         v1alpha1.SchemeGroupVersion.String(),
+		APIVersion:         v1beta1.SchemeGroupVersion.String(),
 		Kind:               kind,
 		Name:               name,
 		Controller:         pointer.BoolPtr(true),

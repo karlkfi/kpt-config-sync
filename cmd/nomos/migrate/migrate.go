@@ -13,7 +13,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/status"
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/pkg/errors"
@@ -159,7 +159,7 @@ func dryrun() {
 	printSuccess(migrationSuccess)
 }
 
-func migrate(ctx context.Context, sc *status.ClusterClient, cm *unstructured.Unstructured, rs *v1alpha1.RootSync) error {
+func migrate(ctx context.Context, sc *status.ClusterClient, cm *unstructured.Unstructured, rs *v1beta1.RootSync) error {
 	printInfo(updatingConfigManagement)
 	if err := sc.ConfigManagement.UpdateConfigManagement(ctx, cm); err != nil {
 		return err
@@ -242,7 +242,7 @@ func waitForRootSyncCRDToBeEstablished(ctx context.Context, c client.Client) err
 	})
 }
 
-func createRootSync(ctx context.Context, cm *util.ConfigManagementClient) (*v1alpha1.RootSync, error) {
+func createRootSync(ctx context.Context, cm *util.ConfigManagementClient) (*v1beta1.RootSync, error) {
 	proxyConfig, err := cm.NestedString(ctx, "spec", "git", "httpProxy")
 	if err != nil {
 		return nil, err
@@ -342,38 +342,36 @@ func createRootSync(ctx context.Context, cm *util.ConfigManagementClient) (*v1al
 		syncWaitSeconds = controllers.DefaultSyncWaitSecs
 	}
 
-	return &v1alpha1.RootSync{
+	return &v1beta1.RootSync{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RootSync",
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+			APIVersion: v1beta1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "root-sync",
 			Namespace: configmanagement.ControllerNamespace,
 		},
-		Spec: v1alpha1.RootSyncSpec{
-			SyncSpec: v1alpha1.SyncSpec{
-				SourceFormat: sourceFormat,
-				Git: v1alpha1.Git{
-					Repo:                   syncRepo,
-					Revision:               syncRev,
-					Branch:                 syncBranch,
-					Dir:                    syncDir,
-					Period:                 metav1.Duration{Duration: time.Duration(syncWaitSeconds) * time.Second},
-					Auth:                   secretType,
-					Proxy:                  proxyConfig,
-					GCPServiceAccountEmail: gcpServiceAccountEmail,
-					SecretRef: v1alpha1.SecretReference{
-						Name: secretRefName,
-					},
-					NoSSLVerify: false,
+		Spec: v1beta1.RootSyncSpec{
+			SourceFormat: sourceFormat,
+			Git: v1beta1.Git{
+				Repo:                   syncRepo,
+				Revision:               syncRev,
+				Branch:                 syncBranch,
+				Dir:                    syncDir,
+				Period:                 metav1.Duration{Duration: time.Duration(syncWaitSeconds) * time.Second},
+				Auth:                   secretType,
+				Proxy:                  proxyConfig,
+				GCPServiceAccountEmail: gcpServiceAccountEmail,
+				SecretRef: v1beta1.SecretReference{
+					Name: secretRefName,
 				},
+				NoSSLVerify: false,
 			},
 		},
 	}, nil
 }
 
-func saveRootSyncYAML(ctx context.Context, cm *util.ConfigManagementClient, context string) (*v1alpha1.RootSync, string, error) {
+func saveRootSyncYAML(ctx context.Context, cm *util.ConfigManagementClient, context string) (*v1beta1.RootSync, string, error) {
 	rs, err := createRootSync(ctx, cm)
 	if err != nil {
 		return rs, "", err

@@ -17,7 +17,7 @@ import (
 	"github.com/GoogleContainerTools/kpt/pkg/live"
 	"github.com/golang/glog"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/policycontroller"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -396,7 +396,7 @@ func (b *BugReporter) FetchResources(ctx context.Context) []Readable {
 	rd = append(rd, cmReadables...)
 
 	namespaceGVs := []schema.GroupVersion{
-		v1alpha1.SchemeGroupVersion,          // namespace-scoped configsync resources
+		v1beta1.SchemeGroupVersion,           // namespace-scoped configsync resources
 		live.ResourceGroupGVK.GroupVersion(), // namespace-scoped resourcegroup resources
 	}
 	for _, gv := range namespaceGVs {

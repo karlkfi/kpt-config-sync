@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/parse"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
@@ -81,9 +81,9 @@ func ClusterConfigHasToken(sha1 string) Predicate {
 // .status.sync.gitStatus.dir field on the passed RootSync matches the provided dir.
 func RootSyncHasStatusSyncDirectory(dir string) Predicate {
 	return func(o client.Object) error {
-		rs, ok := o.(*v1alpha1.RootSync)
+		rs, ok := o.(*v1beta1.RootSync)
 		if !ok {
-			return WrongTypeErr(o, &v1alpha1.RootSync{})
+			return WrongTypeErr(o, &v1beta1.RootSync{})
 		}
 
 		// On error, display the full state of the RootSync to aid in debugging.
@@ -133,9 +133,9 @@ func RootSyncHasStatusSyncDirectory(dir string) Predicate {
 // .status.sync.commit field on the passed RootSync matches sha1.
 func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 	return func(o client.Object) error {
-		rs, ok := o.(*v1alpha1.RootSync)
+		rs, ok := o.(*v1beta1.RootSync)
 		if !ok {
-			return WrongTypeErr(o, &v1alpha1.RootSync{})
+			return WrongTypeErr(o, &v1beta1.RootSync{})
 		}
 
 		// On error, display the full state of the RootSync to aid in debugging.
@@ -180,7 +180,7 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 		if commit := rs.Status.LastSyncedCommit; commit != sha1 {
 			return fmt.Errorf("status.lastSyncedCommit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+		syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
 		if syncingCondition != nil && syncingCondition.Commit != sha1 {
 			return fmt.Errorf("status.conditions['Syncing'].commit %q does not match git revision %q:\n%s", syncingCondition.Commit, sha1, string(jsn))
 		}
@@ -192,9 +192,9 @@ func RootSyncHasStatusSyncCommit(sha1 string) Predicate {
 // .status.sync.commit field on the passed RepoSync matches sha1.
 func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 	return func(o client.Object) error {
-		rs, ok := o.(*v1alpha1.RepoSync)
+		rs, ok := o.(*v1beta1.RepoSync)
 		if !ok {
-			return WrongTypeErr(o, &v1alpha1.RepoSync{})
+			return WrongTypeErr(o, &v1beta1.RepoSync{})
 		}
 
 		jsn, err := json.MarshalIndent(rs, "", "  ")
@@ -238,7 +238,7 @@ func RepoSyncHasStatusSyncCommit(sha1 string) Predicate {
 		if commit := rs.Status.LastSyncedCommit; commit != sha1 {
 			return fmt.Errorf("status.lastSyncedCommit %q does not match git revision %q:\n%s", commit, sha1, string(jsn))
 		}
-		syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+		syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
 		if syncingCondition != nil && syncingCondition.Commit != sha1 {
 			return fmt.Errorf("status.conditions['Syncing'].commit %q does not match git revision %q:\n%s", syncingCondition.Commit, sha1, string(jsn))
 		}

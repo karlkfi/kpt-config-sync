@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/syncer/reconcile"
@@ -59,7 +59,7 @@ func NewClient(t *testing.T, scheme *runtime.Scheme, objs ...client.Object) *Cli
 		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
 	}
 
-	err = v1alpha1.AddToScheme(result.scheme)
+	err = configsyncv1beta1.AddToScheme(result.scheme)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "unable to create fake Client"))
 	}

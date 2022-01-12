@@ -6,7 +6,7 @@ import (
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
@@ -25,7 +25,7 @@ const NSReconcilerNSAnnotationKey = configsync.ConfigSyncPrefix + "ns-reconciler
 
 // Put secret in config-management-system namespace using the
 // existing secret in the reposync.namespace.
-func Put(ctx context.Context, rs *v1alpha1.RepoSync, c client.Client) error {
+func Put(ctx context.Context, rs *v1beta1.RepoSync, c client.Client) error {
 	// Secret is only created if auth is not 'none' or 'gcenode'.
 	if SkipForAuth(rs.Spec.Auth) {
 		return nil

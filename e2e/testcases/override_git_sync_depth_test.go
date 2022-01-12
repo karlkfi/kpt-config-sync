@@ -58,8 +58,8 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
-	rootSync := fake.RootSyncObject()
-	repoSyncBackend := nomostest.RepoSyncObject(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Alpha1()
+	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Override the git sync depth setting for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"gitSyncDepth": 5}}}`)

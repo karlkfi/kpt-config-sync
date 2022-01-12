@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/testing/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +36,7 @@ func TestSyncingThroughAProxy(t *testing.T) {
 	nt.T.Log("Verify the NoOpProxyError")
 	nt.WaitForStalledError("Validation", `KNV1061: RootSyncs which declare spec.git.proxy must declare spec.git.auth="none", "cookiefile" or "token"`)
 
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	nt.T.Log("Set auth type to cookiefile")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"auth": "cookiefile"}}}`)
 	nt.T.Log("Verify the secretRef error")
@@ -50,12 +50,12 @@ func TestSyncingThroughAProxy(t *testing.T) {
 	nt.T.Log("Set auth type to none")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"auth": "none", "secretRef": {"name":""}}}}`)
 	nt.T.Log("Verify no errors")
-	rs = &v1alpha1.RootSync{}
+	rs = &v1beta1.RootSync{}
 	if err = nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
 		nt.T.Fatal(err)
 	}
 	sha1Fn := func(nt *nomostest.NT) (string, error) {
-		rs = &v1alpha1.RootSync{}
+		rs = &v1beta1.RootSync{}
 		if err = nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
 			return "", err
 		}

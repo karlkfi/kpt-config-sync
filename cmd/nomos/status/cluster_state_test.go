@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,13 +16,13 @@ import (
 )
 
 var (
-	git = v1alpha1.Git{
+	git = v1beta1.Git{
 		Repo:     "git@github.com:tester/sample",
 		Revision: "v1",
 		Dir:      "admin",
 	}
 
-	gitUpdated = v1alpha1.Git{
+	gitUpdated = v1beta1.Git{
 		Repo:     "git@github.com:tester/sample-updated",
 		Revision: "v2",
 		Dir:      "admin",
@@ -39,7 +39,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git fields missing",
 			&repoState{
 				scope: "<root>",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 				},
 				status:    "SYNCED",
@@ -52,7 +52,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git subdirectory specified",
 			&repoState{
 				scope: "<root>",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "quickstart//multirepo//root/",
 				},
@@ -65,7 +65,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git subdirectory is '/'",
 			&repoState{
 				scope: "<root>",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "/",
 				},
@@ -78,7 +78,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git subdirectory is '.'",
 			&repoState{
 				scope: "<root>",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  ".",
 				},
@@ -91,7 +91,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git subdirectory starts with '/'",
 			&repoState{
 				scope: "<root>",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo: "https://github.com/tester/sample/",
 					Dir:  "/admin",
 				},
@@ -104,7 +104,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git branch specified",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:   "https://github.com/tester/sample",
 					Branch: "feature",
 				},
@@ -117,7 +117,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional git revision specified",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "https://github.com/tester/sample",
 					Revision: "v1",
 				},
@@ -130,7 +130,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional default git revision HEAD specified",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "https://github.com/tester/sample",
 					Revision: "HEAD",
 				},
@@ -143,7 +143,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"optional default git revision HEAD and branch specified",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "HEAD",
 					Branch:   "feature",
@@ -157,7 +157,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"all optional git fields specified",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Branch:   "feature",
@@ -172,7 +172,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"repo with errors",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Dir:      "books",
 					Revision: "v1",
@@ -187,7 +187,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 			"unsynced repo",
 			&repoState{
 				scope: "bookstore",
-				git: v1alpha1.Git{
+				git: v1beta1.Git{
 					Repo:     "git@github.com:tester/sample",
 					Revision: "v1",
 				},
@@ -211,7 +211,7 @@ func TestRepoState_PrintRows(t *testing.T) {
 func TestRepoState_MonoRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name   string
-		git    v1alpha1.Git
+		git    v1beta1.Git
 		status v1.RepoStatus
 		want   *repoState
 	}{
@@ -287,8 +287,8 @@ func TestRepoState_MonoRepoStatus(t *testing.T) {
 	}
 }
 
-func toGitStatus(git v1alpha1.Git) v1alpha1.GitStatus {
-	return v1alpha1.GitStatus{
+func toGitStatus(git v1beta1.Git) v1beta1.GitStatus {
+	return v1beta1.GitStatus{
 		Repo:     git.Repo,
 		Revision: git.Revision,
 		Branch:   git.Branch,
@@ -297,37 +297,37 @@ func toGitStatus(git v1alpha1.Git) v1alpha1.GitStatus {
 }
 
 func TestRepoState_NamespaceRepoStatus(t *testing.T) {
-	stalledCondition := v1alpha1.RepoSyncCondition{
-		Type:    v1alpha1.RepoSyncStalled,
+	stalledCondition := v1beta1.RepoSyncCondition{
+		Type:    v1beta1.RepoSyncStalled,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Deployment",
 		Message: "deployment failure",
 	}
 
-	reconcilingCondition := v1alpha1.RepoSyncCondition{
-		Type:    v1alpha1.RepoSyncReconciling,
+	reconcilingCondition := v1beta1.RepoSyncCondition{
+		Type:    v1beta1.RepoSyncReconciling,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Deployment",
 		Message: "deployment in progress",
 	}
 
-	reconciledCondition := v1alpha1.RepoSyncCondition{
-		Type:   v1alpha1.RepoSyncReconciling,
+	reconciledCondition := v1beta1.RepoSyncCondition{
+		Type:   v1beta1.RepoSyncReconciling,
 		Status: metav1.ConditionFalse,
 	}
 
-	syncingTrueCondition := func(commit, msg string) v1alpha1.RepoSyncCondition {
-		return v1alpha1.RepoSyncCondition{
-			Type:    v1alpha1.RepoSyncSyncing,
+	syncingTrueCondition := func(commit, msg string) v1beta1.RepoSyncCondition {
+		return v1beta1.RepoSyncCondition{
+			Type:    v1beta1.RepoSyncSyncing,
 			Status:  metav1.ConditionTrue,
 			Commit:  commit,
 			Message: msg,
 		}
 	}
 
-	syncingFalseCondition := func(commit string, errs []v1alpha1.ConfigSyncError) v1alpha1.RepoSyncCondition {
-		return v1alpha1.RepoSyncCondition{
-			Type:   v1alpha1.RepoSyncSyncing,
+	syncingFalseCondition := func(commit string, errs []v1beta1.ConfigSyncError) v1beta1.RepoSyncCondition {
+		return v1beta1.RepoSyncCondition{
+			Type:   v1beta1.RepoSyncSyncing,
 			Status: metav1.ConditionFalse,
 			Commit: commit,
 			Errors: errs,
@@ -337,18 +337,18 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name                      string
 		syncingConditionSupported bool
-		gitSpec                   v1alpha1.Git
-		conditions                []v1alpha1.RepoSyncCondition
-		sourceStatus              v1alpha1.GitSourceStatus
-		renderingStatus           v1alpha1.RenderingStatus
-		syncStatus                v1alpha1.GitSyncStatus
+		gitSpec                   v1beta1.Git
+		conditions                []v1beta1.RepoSyncCondition
+		sourceStatus              v1beta1.GitSourceStatus
+		renderingStatus           v1beta1.RenderingStatus
+		syncStatus                v1beta1.GitSyncStatus
 		resourceGroup             *unstructured.Unstructured
 		want                      *repoState
 	}{
 		{
 			name:       "fresh installation, namespace reconciler is stalled",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{stalledCondition},
+			conditions: []v1beta1.RepoSyncCondition{stalledCondition},
 			want: &repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -360,20 +360,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "switch repo, namespace reconciler is stalled",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{stalledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{stalledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -386,7 +386,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "fresh installation, namespace reconciler is reconciling",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconcilingCondition},
+			conditions: []v1beta1.RepoSyncCondition{reconcilingCondition},
 			want: &repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -397,20 +397,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "switch repo, namespace reconciler is reconciling",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconcilingCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconcilingCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -422,7 +422,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
 			want: &repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -434,7 +434,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions:                []v1alpha1.RepoSyncCondition{reconciledCondition},
+			conditions:                []v1beta1.RepoSyncCondition{reconciledCondition},
 			want: &repoState{
 				scope:  "bookstore",
 				git:    git,
@@ -445,20 +445,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is importing source configs",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "bookstore",
@@ -474,20 +474,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is importing source configs",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions:                []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions:                []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -499,11 +499,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has import error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -520,14 +520,14 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has import error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -540,21 +540,21 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has import error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -571,24 +571,24 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has import error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -601,8 +601,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is rendering new commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering in progress",
@@ -620,11 +620,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is rendering new commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "rendering in progress"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering in progress",
@@ -639,20 +639,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is rendering new commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "bookstore",
@@ -670,23 +670,23 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is rendering new commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "rendering in progress"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -698,11 +698,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has rendering error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -718,14 +718,14 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has rendering error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -738,21 +738,21 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has rendering error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Errors:  []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -769,24 +769,24 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has rendering error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Errors:  []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -799,8 +799,8 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering succeeded",
@@ -818,11 +818,11 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "rendering succeeded"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering succeeded",
@@ -837,20 +837,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "bookstore",
@@ -868,23 +868,23 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "rendering succeeded"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -896,16 +896,16 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has parsing or validation error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -921,19 +921,19 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has parsing or validation error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -946,21 +946,21 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has parsing or validation error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -977,24 +977,24 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has parsing or validation error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1007,13 +1007,13 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is syncing validated WET commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1031,16 +1031,16 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is syncing validated WET commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "Rendering skipped"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1054,20 +1054,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is syncing validated WET commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "bookstore",
@@ -1085,23 +1085,23 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is syncing validated WET commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "Rendering skipped"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1113,21 +1113,21 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] fresh installation, repo has non-blocking source error and syncing error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1141,24 +1141,24 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has non-blocking source error and syncing error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1171,21 +1171,21 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] switch repo, repo has non-blocking source error and syncing error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1199,24 +1199,24 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has non-blocking source error and syncing error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "bookstore",
@@ -1230,17 +1230,17 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			name:          "[accurate status before syncing condition is supported] repo is synced",
 			gitSpec:       git,
 			resourceGroup: fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResources()),
-			conditions:    []v1alpha1.RepoSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions:    []v1beta1.RepoSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1257,20 +1257,20 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 			gitSpec:                   git,
 			resourceGroup:             fake.ResourceGroupObject(core.Namespace("bookstore"), core.Name("repo-sync"), withResourcesAndCommit("abc123")),
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RepoSyncCondition{
+			conditions: []v1beta1.RepoSyncCondition{
 				reconciledCondition,
 				syncingFalseCondition("abc123", nil),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -1285,7 +1285,7 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			repoSync := fake.RepoSyncObject(core.Namespace("bookstore"))
+			repoSync := fake.RepoSyncObjectV1Beta1(core.Namespace("bookstore"))
 			repoSync.Spec.Git = tc.gitSpec
 			repoSync.Status.Conditions = tc.conditions
 			repoSync.Status.Source = tc.sourceStatus
@@ -1300,37 +1300,37 @@ func TestRepoState_NamespaceRepoStatus(t *testing.T) {
 }
 
 func TestRepoState_RootRepoStatus(t *testing.T) {
-	stalledCondition := v1alpha1.RootSyncCondition{
-		Type:    v1alpha1.RootSyncStalled,
+	stalledCondition := v1beta1.RootSyncCondition{
+		Type:    v1beta1.RootSyncStalled,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Deployment",
 		Message: "deployment failure",
 	}
 
-	reconcilingCondition := v1alpha1.RootSyncCondition{
-		Type:    v1alpha1.RootSyncReconciling,
+	reconcilingCondition := v1beta1.RootSyncCondition{
+		Type:    v1beta1.RootSyncReconciling,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Deployment",
 		Message: "deployment in progress",
 	}
 
-	reconciledCondition := v1alpha1.RootSyncCondition{
-		Type:   v1alpha1.RootSyncReconciling,
+	reconciledCondition := v1beta1.RootSyncCondition{
+		Type:   v1beta1.RootSyncReconciling,
 		Status: metav1.ConditionFalse,
 	}
 
-	syncingTrueCondition := func(commit, msg string) v1alpha1.RootSyncCondition {
-		return v1alpha1.RootSyncCondition{
-			Type:    v1alpha1.RootSyncSyncing,
+	syncingTrueCondition := func(commit, msg string) v1beta1.RootSyncCondition {
+		return v1beta1.RootSyncCondition{
+			Type:    v1beta1.RootSyncSyncing,
 			Status:  metav1.ConditionTrue,
 			Commit:  commit,
 			Message: msg,
 		}
 	}
 
-	syncingFalseCondition := func(commit string, errs []v1alpha1.ConfigSyncError) v1alpha1.RootSyncCondition {
-		return v1alpha1.RootSyncCondition{
-			Type:   v1alpha1.RootSyncSyncing,
+	syncingFalseCondition := func(commit string, errs []v1beta1.ConfigSyncError) v1beta1.RootSyncCondition {
+		return v1beta1.RootSyncCondition{
+			Type:   v1beta1.RootSyncSyncing,
 			Status: metav1.ConditionFalse,
 			Commit: commit,
 			Errors: errs,
@@ -1340,17 +1340,17 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 	testCases := []struct {
 		name                      string
 		syncingConditionSupported bool
-		gitSpec                   v1alpha1.Git
-		conditions                []v1alpha1.RootSyncCondition
-		sourceStatus              v1alpha1.GitSourceStatus
-		renderingStatus           v1alpha1.RenderingStatus
-		syncStatus                v1alpha1.GitSyncStatus
+		gitSpec                   v1beta1.Git
+		conditions                []v1beta1.RootSyncCondition
+		sourceStatus              v1beta1.GitSourceStatus
+		renderingStatus           v1beta1.RenderingStatus
+		syncStatus                v1beta1.GitSyncStatus
 		want                      *repoState
 	}{
 		{
 			name:       "fresh installation, namespace reconciler is stalled",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{stalledCondition},
+			conditions: []v1beta1.RootSyncCondition{stalledCondition},
 			want: &repoState{
 				scope:  "<root>",
 				git:    git,
@@ -1362,20 +1362,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "switch repo, namespace reconciler is stalled",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{stalledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{stalledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1388,7 +1388,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "fresh installation, namespace reconciler is reconciling",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconcilingCondition},
+			conditions: []v1beta1.RootSyncCondition{reconcilingCondition},
 			want: &repoState{
 				scope:  "<root>",
 				git:    git,
@@ -1399,20 +1399,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "switch repo, namespace reconciler is reconciling",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconcilingCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconcilingCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1424,7 +1424,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
 			want: &repoState{
 				scope:  "<root>",
 				git:    git,
@@ -1436,7 +1436,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is importing source configs",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions:                []v1alpha1.RootSyncCondition{reconciledCondition},
+			conditions:                []v1beta1.RootSyncCondition{reconciledCondition},
 			want: &repoState{
 				scope:  "<root>",
 				git:    git,
@@ -1447,20 +1447,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is importing source configs",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "<root>",
@@ -1476,20 +1476,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is importing source configs",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions:                []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions:                []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1501,11 +1501,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has import error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1522,14 +1522,14 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has import error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1542,21 +1542,21 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has import error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1573,24 +1573,24 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has import error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: import error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1603,8 +1603,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is rendering new commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering in progress",
@@ -1622,11 +1622,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is rendering new commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "rendering in progress"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering in progress",
@@ -1641,20 +1641,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is rendering new commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "<root>",
@@ -1672,23 +1672,23 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is rendering new commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "rendering in progress"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering in progress",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1700,11 +1700,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has rendering error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1720,14 +1720,14 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has rendering error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1740,21 +1740,21 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has rendering error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Errors:  []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1771,24 +1771,24 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has rendering error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
-				Errors:  []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
+				Errors:  []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2015: rendering error"}},
 				Message: "rendering failed",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1801,8 +1801,8 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering succeeded",
@@ -1820,11 +1820,11 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "rendering succeeded"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering succeeded",
@@ -1839,20 +1839,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "<root>",
@@ -1870,23 +1870,23 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is parsing and validating rendered commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "rendering succeeded"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering succeeded",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1898,16 +1898,16 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, repo has parsing or validation error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1923,19 +1923,19 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has parsing or validation error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1948,21 +1948,21 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, repo has parsing or validation error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -1979,24 +1979,24 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has parsing or validation error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2004: parsing error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2009,13 +2009,13 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] fresh installation, namespace reconciler is syncing validated WET commit",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2033,16 +2033,16 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, namespace reconciler is syncing validated WET commit",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("abc123", "Rendering skipped"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2056,20 +2056,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[incorrect status expected before syncing condition is supported] switch repo, namespace reconciler is syncing validated WET commit",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope: "<root>",
@@ -2087,23 +2087,23 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, namespace reconciler is syncing validated WET commit",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingTrueCondition("def456", "Rendering skipped"),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "Rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2115,21 +2115,21 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] fresh installation, repo has non-blocking source error and syncing error",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2143,24 +2143,24 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] fresh installation, repo has non-blocking source error and syncing error",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("abc123", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("abc123", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2173,21 +2173,21 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] switch repo, repo has non-blocking source error and syncing error",
 			gitSpec:    gitUpdated,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2201,24 +2201,24 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] switch repo, repo has non-blocking source error and syncing error",
 			gitSpec:                   gitUpdated,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
-				syncingFalseCondition("def456", []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
+				syncingFalseCondition("def456", []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}, {ErrorMessage: "KNV2009: apply error"}}),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(gitUpdated),
 				Commit:  "def456",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV1021: non-blocking parse error"}},
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(gitUpdated),
 				Commit: "def456",
-				Errors: []v1alpha1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
+				Errors: []v1beta1.ConfigSyncError{{ErrorMessage: "KNV2009: apply error"}},
 			},
 			want: &repoState{
 				scope:  "<root>",
@@ -2231,17 +2231,17 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 		{
 			name:       "[accurate status before syncing condition is supported] repo is synced",
 			gitSpec:    git,
-			conditions: []v1alpha1.RootSyncCondition{reconciledCondition},
-			renderingStatus: v1alpha1.RenderingStatus{
+			conditions: []v1beta1.RootSyncCondition{reconciledCondition},
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2256,20 +2256,20 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 			name:                      "[accurate status with syncing condition supported] repo is synced",
 			gitSpec:                   git,
 			syncingConditionSupported: true,
-			conditions: []v1alpha1.RootSyncCondition{
+			conditions: []v1beta1.RootSyncCondition{
 				reconciledCondition,
 				syncingFalseCondition("abc123", nil),
 			},
-			renderingStatus: v1alpha1.RenderingStatus{
+			renderingStatus: v1beta1.RenderingStatus{
 				Git:     toGitStatus(git),
 				Commit:  "abc123",
 				Message: "rendering skipped",
 			},
-			sourceStatus: v1alpha1.GitSourceStatus{
+			sourceStatus: v1beta1.GitSourceStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
-			syncStatus: v1alpha1.GitSyncStatus{
+			syncStatus: v1beta1.GitSyncStatus{
 				Git:    toGitStatus(git),
 				Commit: "abc123",
 			},
@@ -2283,7 +2283,7 @@ func TestRepoState_RootRepoStatus(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			rootSync := fake.RootSyncObject()
+			rootSync := fake.RootSyncObjectV1Beta1()
 			rootSync.Spec.Git = tc.gitSpec
 			rootSync.Status.Conditions = tc.conditions
 			rootSync.Status.Source = tc.sourceStatus
@@ -2335,7 +2335,7 @@ gke_sample-project_europe-west1-b_cluster-1
 				repos: []*repoState{
 					{
 						scope: "<root>",
-						git: v1alpha1.Git{
+						git: v1beta1.Git{
 							Repo: "git@github.com:tester/sample",
 						},
 						status: "SYNCED",
@@ -2343,7 +2343,7 @@ gke_sample-project_europe-west1-b_cluster-1
 					},
 					{
 						scope: "bookstore",
-						git: v1alpha1.Git{
+						git: v1beta1.Git{
 							Repo:   "git@github.com:tester/sample",
 							Branch: "feature",
 						},

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -21,7 +21,7 @@ func RecordAPICallDuration(ctx context.Context, operation, status string, gvk sc
 }
 
 // RecordReconcilerErrors produces a measurement for the ReconcilerErrors view.
-func RecordReconcilerErrors(ctx context.Context, component string, errs []v1alpha1.ConfigSyncError) {
+func RecordReconcilerErrors(ctx context.Context, component string, errs []v1beta1.ConfigSyncError) {
 	class := ""
 	tagCtx, _ := tag.New(ctx,
 		tag.Upsert(KeyComponent, component),

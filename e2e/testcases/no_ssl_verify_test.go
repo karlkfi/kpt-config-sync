@@ -53,8 +53,8 @@ func TestNoSSLVerifyV1Alpha1(t *testing.T) {
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
 	}
-	rootSync := fake.RootSyncObject()
-	repoSyncBackend := nomostest.RepoSyncObject(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	rootSync := fake.RootSyncObjectV1Alpha1()
+	repoSyncBackend := nomostest.RepoSyncObjectV1Alpha1(backendNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
 
 	// Set noSSLVerify to true for root-reconciler
 	nt.MustMergePatch(rootSync, `{"spec": {"git": {"noSSLVerify": true}}}`)

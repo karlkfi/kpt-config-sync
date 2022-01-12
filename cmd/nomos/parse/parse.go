@@ -5,7 +5,7 @@ import (
 	"time"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/syncer/decode"
@@ -45,7 +45,7 @@ func GetSyncedCRDs(ctx context.Context, skipAPIServer bool) ([]*v1beta1.CustomRe
 	if sErr := v1.AddToScheme(s); sErr != nil {
 		return nil, getSyncedCRDsError(sErr, "could not add configmanagement types to scheme")
 	}
-	if sErr := v1alpha1.AddToScheme(s); sErr != nil {
+	if sErr := configsyncv1beta1.AddToScheme(s); sErr != nil {
 		return nil, getSyncedCRDsError(sErr, "could not add configsync types to scheme")
 	}
 	c, cErr := client.New(config, client.Options{

@@ -2,7 +2,7 @@ package status
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 )
 
 // baseErrorImpl represents a root error around which more complex errors are built.
@@ -48,7 +48,7 @@ func (e baseErrorImpl) ToCME() v1.ConfigManagementError {
 }
 
 // ToCSE implements Error.
-func (e baseErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
+func (e baseErrorImpl) ToCSE() v1beta1.ConfigSyncError {
 	return cseFromError(e)
 }
 

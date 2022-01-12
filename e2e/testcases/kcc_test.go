@@ -7,7 +7,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/testing/fake"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -157,12 +157,12 @@ spec:
 // are removed successfully.
 func TestKCCResourcesOnCSR(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.KccTest)
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	nt.T.Log("sync to the kcc resources from a CSR repo")
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kcc", "branch": "main", "repo": "https://source.developers.google.com/p/stolos-dev/r/configsync-ci-cc", "auth": "gcpserviceaccount","gcpServiceAccountEmail": "e2e-test-csr-reader@stolos-dev.iam.gserviceaccount.com", "secretRef": {"name": ""}}, "sourceFormat": "unstructured"}}`)
 
 	sha1Fn := func(nt *nomostest.NT) (string, error) {
-		rs = &v1alpha1.RootSync{}
+		rs = &v1beta1.RootSync{}
 		if err := nt.Get("root-sync", configmanagement.ControllerNamespace, rs); err != nil {
 			return "", err
 		}

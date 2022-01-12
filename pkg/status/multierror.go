@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/pkg/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 )
@@ -40,10 +40,10 @@ func HasBlockingErrors(errs MultiError) bool {
 }
 
 // NonBlockingErrors return the non-blocking errors.
-func NonBlockingErrors(errs MultiError) []v1alpha1.ConfigSyncError {
+func NonBlockingErrors(errs MultiError) []v1beta1.ConfigSyncError {
 	var nonBlockingErrs MultiError
 	if errs == nil {
-		return []v1alpha1.ConfigSyncError{}
+		return []v1beta1.ConfigSyncError{}
 	}
 
 	for _, err := range errs.Errors() {
@@ -100,8 +100,8 @@ func ToCME(m MultiError) []v1.ConfigManagementError {
 }
 
 // ToCSE converts a MultiError to ConfigSyncErrors.
-func ToCSE(m MultiError) []v1alpha1.ConfigSyncError {
-	var cses []v1alpha1.ConfigSyncError
+func ToCSE(m MultiError) []v1beta1.ConfigSyncError {
+	var cses []v1beta1.ConfigSyncError
 
 	if m != nil {
 		for _, err := range m.Errors() {

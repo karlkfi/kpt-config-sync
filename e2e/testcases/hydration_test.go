@@ -30,7 +30,7 @@ func TestHydrateKustomizeComponents(t *testing.T) {
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
 	nt.T.Log("Update RootSync to sync from the kustomize-components directory")
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "kustomize-components"}}}`)
 
 	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("kustomize-components"))
@@ -126,7 +126,7 @@ func TestHydrateHelmOverlay(t *testing.T) {
 	nt.Root.CommitAndPush("add DRY configs to the repository")
 
 	nt.T.Log("Update RootSync to sync from the helm-overlay directory")
-	rs := fake.RootSyncObject()
+	rs := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rs, `{"spec": {"git": {"dir": "helm-overlay"}}}`)
 
 	nt.WaitForRepoSyncs(nomostest.WithSyncDirectory("helm-overlay"))

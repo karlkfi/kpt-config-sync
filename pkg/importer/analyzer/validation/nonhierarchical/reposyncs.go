@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,14 +24,14 @@ const gcpSASuffix = ".iam.gserviceaccount.com"
 
 // ValidateRepoSync validates the content and structure of a RepoSync for any
 // obvious problems.
-func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
+func ValidateRepoSync(rs *v1beta1.RepoSync) status.Error {
 	if rs.GetName() != configsync.RepoSyncName {
 		return InvalidSyncName(configsync.RepoSyncName, rs)
 	}
 	return validateGitSpec(rs.Spec.Git, rs)
 }
 
-func validateGitSpec(git v1alpha1.Git, rs client.Object) status.Error {
+func validateGitSpec(git v1beta1.Git, rs client.Object) status.Error {
 	// We can't connect to the git repo if we don't have the URL.
 	if git.Repo == "" {
 		return MissingGitRepo(rs)

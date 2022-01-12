@@ -4,47 +4,47 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
-func rsAuth(authType string) func(*v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rsAuth(authType string) func(*v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Spec.Auth = authType
 	}
 }
 
-func rsName(name string) func(*v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rsName(name string) func(*v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Name = name
 	}
 }
 
-func rsProxy(proxy string) func(*v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rsProxy(proxy string) func(*v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Spec.Proxy = proxy
 	}
 }
 
-func rsSecret(secretName string) func(*v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rsSecret(secretName string) func(*v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Spec.SecretRef.Name = secretName
 	}
 }
 
-func rsGCPSAEmail(email string) func(sync *v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rsGCPSAEmail(email string) func(sync *v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Spec.GCPServiceAccountEmail = email
 	}
 }
 
-func missingRootSyncRepo(rs *v1alpha1.RootSync) {
+func missingRootSyncRepo(rs *v1beta1.RootSync) {
 	rs.Spec.Repo = ""
 }
 
-func rootSync(opts ...func(*v1alpha1.RootSync)) *v1alpha1.RootSync {
-	rs := fake.RootSyncObject()
+func rootSync(opts ...func(*v1beta1.RootSync)) *v1beta1.RootSync {
+	rs := fake.RootSyncObjectV1Beta1()
 	rs.Spec.Git.Repo = "fake repo"
 	for _, opt := range opts {
 		opt(rs)
@@ -55,7 +55,7 @@ func rootSync(opts ...func(*v1alpha1.RootSync)) *v1alpha1.RootSync {
 func TestValidateRootSync(t *testing.T) {
 	testCases := []struct {
 		name    string
-		obj     *v1alpha1.RootSync
+		obj     *v1beta1.RootSync
 		wantErr status.Error
 	}{
 		{

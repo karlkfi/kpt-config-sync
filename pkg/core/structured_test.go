@@ -20,8 +20,8 @@ func TestRemarshalToStructured(t *testing.T) {
 	}{
 		{
 			name: "v1alpha1 RepoSync",
-			u:    fake.UnstructuredObject(kinds.RepoSync(), core.Name(configsync.RepoSyncName), core.Namespace("test"), core.Annotations(nil), core.Labels(nil)),
-			obj:  fake.RepoSyncObject(core.Namespace("test")),
+			u:    fake.UnstructuredObject(kinds.RepoSyncV1Alpha1(), core.Name(configsync.RepoSyncName), core.Namespace("test"), core.Annotations(nil), core.Labels(nil)),
+			obj:  fake.RepoSyncObjectV1Alpha1(core.Namespace("test")),
 		},
 		{
 			name: "v1beta1 RepoSync",

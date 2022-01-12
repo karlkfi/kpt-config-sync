@@ -12,7 +12,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -38,7 +38,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	// Log error if the Reconciling condition does not progress to False before
 	// the timeout expires.
 	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate("repo-sync", bsNamespace, &v1beta1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
@@ -48,75 +48,6 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 	repo, exist := nt.NonRootRepos[bsNamespace]
 	if !exist {
 		nt.T.Fatal("nonexistent repo")
-	}
-
-	// Validate service account 'store' not present.
-	err = nt.ValidateNotFound("store", bsNamespace, &corev1.ServiceAccount{})
-	if err != nil {
-		nt.T.Errorf("store service account already present: %v", err)
-	}
-
-	sa := fake.ServiceAccountObject("store", core.Namespace(bsNamespace))
-	repo.Add("acme/sa.yaml", sa)
-	repo.CommitAndPush("Adding service account")
-	nt.WaitForRepoSyncs()
-
-	// Validate service account 'store' is present.
-	_, err = nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate("store", bsNamespace, &corev1.ServiceAccount{})
-	})
-	if err != nil {
-		nt.T.Fatalf("service account store not found: %v", err)
-	}
-
-	// Validate multi-repo metrics from namespace reconciler.
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespace), 1, metrics.ResourceCreated("ServiceAccount"))
-		if err != nil {
-			return err
-		}
-		// Validate no error metrics are emitted.
-		// TODO(b/162601559): internal_errors_total metric from diff.go
-		//return nt.ValidateErrorMetricsNotFound()
-		return nil
-	})
-	if err != nil {
-		nt.T.Errorf("validating metrics: %v", err)
-	}
-}
-
-func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
-	bsNamespace := "bookstore"
-
-	nt := nomostest.New(
-		t,
-		ntopts.SkipMonoRepo,
-		ntopts.NamespaceRepo(bsNamespace),
-		ntopts.WithCentralizedControl,
-	)
-
-	repo, exist := nt.NonRootRepos[bsNamespace]
-	if !exist {
-		nt.T.Fatal("nonexistent repo")
-	}
-
-	// update the RepoSync version to v1beta1
-	rs := nomostest.RepoSyncObjectV1Beta1(bsNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
-	nt.Root.Add(fmt.Sprintf("acme/namespaces/%s/%s", bsNamespace, nomostest.RepoSyncFileName), rs)
-	nt.Root.CommitAndPush("update RepoSync version to v1beta1")
-
-	// Validate status condition "Reconciling" and "Stalled "is set to "False"
-	// after the reconciler deployment is successfully created.
-	// RepoSync status conditions "Reconciling" and "Stalled" are derived from
-	// namespace reconciler deployment.
-	// Log error if the Reconciling condition does not progress to False before
-	// the timeout expires.
-	_, err := nomostest.Retry(15*time.Second, func() error {
-		return nt.Validate("repo-sync", bsNamespace, &v1alpha1.RepoSync{},
-			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
-	})
-	if err != nil {
-		nt.T.Errorf("RepoSync did not finish reconciling: %v", err)
 	}
 
 	// Validate service account 'store' not present.
@@ -156,10 +87,10 @@ func TestNamespaceRepo_Centralized_V1Beta1RepoSync(t *testing.T) {
 
 func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
 	return func(o client.Object) error {
-		rs := o.(*v1alpha1.RepoSync)
+		rs := o.(*v1beta1.RepoSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
-			if condition.Type == v1alpha1.RepoSyncReconciling && condition.Status != r {
+			if condition.Type == v1beta1.RepoSyncReconciling && condition.Status != r {
 				return fmt.Errorf("object %q has %q condition status %q; want %q", o.GetName(), condition.Type, string(condition.Status), r)
 			}
 		}
@@ -169,10 +100,10 @@ func hasReconcilingStatus(r metav1.ConditionStatus) nomostest.Predicate {
 
 func hasStalledStatus(r metav1.ConditionStatus) nomostest.Predicate {
 	return func(o client.Object) error {
-		rs := o.(*v1alpha1.RepoSync)
+		rs := o.(*v1beta1.RepoSync)
 		conditions := rs.Status.Conditions
 		for _, condition := range conditions {
-			if condition.Type == v1alpha1.RepoSyncStalled && condition.Status != r {
+			if condition.Type == v1beta1.RepoSyncStalled && condition.Status != r {
 				return fmt.Errorf("object %q has %q condition status %q; want %q", o.GetName(), condition.Type, string(condition.Status), r)
 			}
 		}
@@ -228,7 +159,7 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 	}
 }
 
-func TestDeleteRepoSync_Delegated(t *testing.T) {
+func TestDeleteRepoSync_Delegated_AndRepoSyncV1Alpha1(t *testing.T) {
 	bsNamespace := "bookstore"
 
 	nt := nomostest.New(
@@ -238,7 +169,7 @@ func TestDeleteRepoSync_Delegated(t *testing.T) {
 		ntopts.WithDelegatedControl,
 	)
 
-	var rs v1alpha1.RepoSync
+	var rs v1beta1.RepoSync
 	if err := nt.Get(configsync.RepoSyncName, bsNamespace, &rs); err != nil {
 		nt.T.Fatal(err)
 	}
@@ -250,9 +181,16 @@ func TestDeleteRepoSync_Delegated(t *testing.T) {
 	}
 
 	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
+
+	nt.T.Log("Test RepoSync v1alpha1 version in delegated control mode")
+	rsv1alpha1 := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, rs.Spec.Repo)
+	if err := nt.Create(rsv1alpha1); err != nil {
+		nt.T.Fatal(err)
+	}
+	nt.WaitForRepoSyncs()
 }
 
-func TestDeleteRepoSync_Centralized(t *testing.T) {
+func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	bsNamespace := "bookstore"
 
 	nt := nomostest.New(
@@ -293,11 +231,23 @@ func TestDeleteRepoSync_Centralized(t *testing.T) {
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
 	}
+
+	nt.T.Log("Test RepoSync v1alpha1 version in central control mode")
+	repo, exist := nt.NonRootRepos[bsNamespace]
+	if !exist {
+		nt.T.Fatal("nonexistent repo")
+	}
+	rs := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, nt.GitProvider.SyncURL(repo.RemoteRepoName))
+	nt.Root.Add(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName), rs)
+	nt.Root.CommitAndPush("Add RepoSync v1alpha1")
+	// Add the bookstore namespace repo back to NamespaceRepos to verify that it is synced.
+	nt.NamespaceRepos[bsNamespace] = bsNamespace
+	nt.WaitForRepoSyncs()
 }
 
 func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 	_, err := nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(configsync.RepoSyncName, namespace, fake.RepoSyncObject())
+		return nt.ValidateNotFound(configsync.RepoSyncName, namespace, fake.RepoSyncObjectV1Beta1())
 	})
 	if err != nil {
 		nt.T.Errorf("RepoSync present after deletion: %v", err)
@@ -354,7 +304,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// Here we are checking for false condition which requires atleast 2 reconcile
 	// request to be processed by the controller.
 	_, err := nomostest.Retry(nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(configsync.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(configsync.RepoSyncName, bsNamespace, &v1beta1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {
@@ -371,7 +321,7 @@ func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
 	// Verify that the deployment is re-created after deletion by checking the
 	// Reconciling and Stalled condition in RepoSync resource.
 	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(configsync.RepoSyncName, bsNamespace, &v1alpha1.RepoSync{},
+		return nt.Validate(configsync.RepoSyncName, bsNamespace, &v1beta1.RepoSync{},
 			hasReconcilingStatus(metav1.ConditionFalse), hasStalledStatus(metav1.ConditionFalse))
 	})
 	if err != nil {

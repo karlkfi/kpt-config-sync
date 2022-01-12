@@ -8,7 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reconciler"
@@ -139,58 +139,58 @@ func setupRootReconciler(t *testing.T, objs ...client.Object) (*syncerFake.Clien
 	return fakeClient, testReconciler
 }
 
-func rootsyncRef(rev string) func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
+func rootsyncRef(rev string) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Revision = rev
 	}
 }
 
-func rootsyncBranch(branch string) func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
+func rootsyncBranch(branch string) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Branch = branch
 	}
 }
 
-func rootsyncSecretType(auth string) func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
+func rootsyncSecretType(auth string) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Auth = auth
 	}
 }
 
-func rootsyncSecretRef(ref string) func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
-		rs.Spec.Git.SecretRef = v1alpha1.SecretReference{Name: ref}
+func rootsyncSecretRef(ref string) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
+		rs.Spec.Git.SecretRef = v1beta1.SecretReference{Name: ref}
 	}
 }
 
-func rootsyncGCPSAEmail(email string) func(sync *v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
+func rootsyncGCPSAEmail(email string) func(sync *v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
 		sync.Spec.GCPServiceAccountEmail = email
 	}
 }
 
-func rootsyncOverrideResources(containers []v1alpha1.ContainerResourcesSpec) func(sync *v1alpha1.RootSync) {
-	return func(sync *v1alpha1.RootSync) {
-		sync.Spec.Override = v1alpha1.OverrideSpec{
+func rootsyncOverrideResources(containers []v1beta1.ContainerResourcesSpec) func(sync *v1beta1.RootSync) {
+	return func(sync *v1beta1.RootSync) {
+		sync.Spec.Override = v1beta1.OverrideSpec{
 			Resources: containers,
 		}
 	}
 }
 
-func rootsyncOverrideGitSyncDepth(depth int64) func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
+func rootsyncOverrideGitSyncDepth(depth int64) func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Override.GitSyncDepth = &depth
 	}
 }
 
-func rootsyncNoSSLVerify() func(*v1alpha1.RootSync) {
-	return func(rs *v1alpha1.RootSync) {
+func rootsyncNoSSLVerify() func(*v1beta1.RootSync) {
+	return func(rs *v1beta1.RootSync) {
 		rs.Spec.Git.NoSSLVerify = true
 	}
 }
 
-func rootSync(opts ...func(*v1alpha1.RootSync)) *v1alpha1.RootSync {
-	rs := fake.RootSyncObject()
+func rootSync(opts ...func(*v1beta1.RootSync)) *v1beta1.RootSync {
+	rs := fake.RootSyncObjectV1Beta1()
 	rs.Spec.Repo = rootsyncRepo
 	rs.Spec.Dir = rootsyncDir
 	for _, opt := range opts {
@@ -203,7 +203,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	overrideAllContainerResources := []v1alpha1.ContainerResourcesSpec{
+	overrideAllContainerResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("500m"),
@@ -302,7 +302,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test overriding the CPU resources of the reconciler and hydration-container and the memory resources of the git-sync container
-	overrideSelectedResources := []v1alpha1.ContainerResourcesSpec{
+	overrideSelectedResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("1"),
@@ -319,7 +319,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideSelectedResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -351,7 +351,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 
 	// Clear rs.Spec.Override
-	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -452,7 +452,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test overriding the CPU/memory requests and limits of the reconciler, hydration-controller, and git-sync container
-	overrideAllContainerResources := []v1alpha1.ContainerResourcesSpec{
+	overrideAllContainerResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("500m"),
@@ -476,7 +476,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideAllContainerResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -508,7 +508,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 
 	// Test overriding the CPU/memory limits of the reconciler and hydration-controller containers
-	overrideReconcilerAndHydrationResources := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndHydrationResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("1"),
@@ -525,7 +525,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideReconcilerAndHydrationResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -551,7 +551,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 
 	// Test overriding the cpu request and memory limits of the git-sync container
-	overrideGitSyncResources := []v1alpha1.ContainerResourcesSpec{
+	overrideGitSyncResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.GitSync,
 			CPURequest:    resource.MustParse("200Mi"),
@@ -559,7 +559,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -585,7 +585,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 
 	// Clear rs.Spec.Override
-	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -613,7 +613,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	// Mock out parseDeployment for testing.
 	parseDeployment = parsedDeployment
 
-	overrideReconcilerAndGitSyncResources := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("500m"),
@@ -714,7 +714,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test Autopilot ignores the resource requirements override.
-	overrideReconcilerCPULimitsAndGitSyncMemResources := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerCPULimitsAndGitSyncMemResources := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("1.2"),
@@ -732,7 +732,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideReconcilerCPULimitsAndGitSyncMemResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -749,7 +749,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	t.Log("Deployment successfully remained unchanged")
 
 	// Clear rs.Spec.Override
-	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -844,7 +844,7 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully created")
 
 	// Test Autopilot ignores resource requirements override.
-	overrideReconcilerAndGitSyncResourceLimits := []v1alpha1.ContainerResourcesSpec{
+	overrideReconcilerAndGitSyncResourceLimits := []v1beta1.ContainerResourcesSpec{
 		{
 			ContainerName: reconcilermanager.Reconciler,
 			CPURequest:    resource.MustParse("500m"),
@@ -868,7 +868,7 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 		},
 	}
 
-	rs.Spec.Override = v1alpha1.OverrideSpec{
+	rs.Spec.Override = v1beta1.OverrideSpec{
 		Resources: overrideReconcilerAndGitSyncResourceLimits,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
@@ -891,7 +891,7 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully remain unchanged")
 
 	// Clear rs.Spec.Override
-	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
@@ -1452,7 +1452,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	t.Log("ConfigMap and Deployment successfully updated")
 
 	// Clear rs.Spec.Override
-	rs.Spec.Override = v1alpha1.OverrideSpec{}
+	rs.Spec.Override = v1beta1.OverrideSpec{}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
 	}
@@ -1930,7 +1930,7 @@ func TestRootSyncSwitchAuthTypes(t *testing.T) {
 
 	// Test updating RootSync resources with None auth type.
 	rs.Spec.Auth = noneAuth
-	rs.Spec.SecretRef = v1alpha1.SecretReference{}
+	rs.Spec.SecretRef = v1beta1.SecretReference{}
 	if err := fakeClient.Update(ctx, rs); err != nil {
 		t.Fatalf("failed to update the root sync request, got error: %v", err)
 	}
@@ -2226,7 +2226,7 @@ func setAnnotations(annotations map[string]string) depMutator {
 	}
 }
 
-func containerResourcesMutator(overrides []v1alpha1.ContainerResourcesSpec) depMutator {
+func containerResourcesMutator(overrides []v1beta1.ContainerResourcesSpec) depMutator {
 	return func(dep *appsv1.Deployment) {
 		for _, container := range dep.Spec.Template.Spec.Containers {
 			switch container.Name {
@@ -2241,7 +2241,7 @@ func containerResourcesMutator(overrides []v1alpha1.ContainerResourcesSpec) depM
 	}
 }
 
-func mutateContainerResourceRequestsLimits(container *corev1.Container, resourcesSpec v1alpha1.ContainerResourcesSpec) {
+func mutateContainerResourceRequestsLimits(container *corev1.Container, resourcesSpec v1beta1.ContainerResourcesSpec) {
 	if !resourcesSpec.CPURequest.IsZero() {
 		container.Resources.Requests[corev1.ResourceCPU] = resourcesSpec.CPURequest
 	} else {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/nomos/cmd/nomos/util"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/rootsync"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +58,7 @@ func unavailableCluster(ref string) *ClusterState {
 // repoState represents the sync status of a single repo on a cluster.
 type repoState struct {
 	scope     string
-	git       v1alpha1.Git
+	git       v1beta1.Git
 	status    string
 	commit    string
 	errors    []string
@@ -97,7 +97,7 @@ func (r *repoState) printRows(writer io.Writer) {
 	}
 }
 
-func gitString(git v1alpha1.Git) string {
+func gitString(git v1beta1.Git) string {
 	var gitStr string
 	if git.Dir == "" || git.Dir == "." || git.Dir == "/" {
 		gitStr = strings.TrimSuffix(git.Repo, "/")
@@ -119,7 +119,7 @@ func gitString(git v1alpha1.Git) string {
 }
 
 // monoRepoStatus converts the given Git config and mono-repo status into a repoState.
-func monoRepoStatus(git v1alpha1.Git, status v1.RepoStatus) *repoState {
+func monoRepoStatus(git v1beta1.Git, status v1.RepoStatus) *repoState {
 	return &repoState{
 		scope:  "<root>",
 		git:    git,
@@ -213,16 +213,16 @@ func getResourceStatusErrors(resourceConditions []v1.ResourceCondition) []string
 }
 
 // namespaceRepoStatus converts the given RepoSync into a repoState.
-func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
+func namespaceRepoStatus(rs *v1beta1.RepoSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
 	repostate := &repoState{
 		scope:  rs.Namespace,
 		git:    rs.Spec.Git,
 		commit: emptyCommit,
 	}
 
-	stalledCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncStalled)
-	reconcilingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncReconciling)
-	syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1alpha1.RepoSyncSyncing)
+	stalledCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncStalled)
+	reconcilingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncReconciling)
+	syncingCondition := reposync.GetCondition(rs.Status.Conditions, v1beta1.RepoSyncSyncing)
 	switch {
 	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
 		repostate.status = stalledMsg
@@ -258,15 +258,15 @@ func namespaceRepoStatus(rs *v1alpha1.RepoSync, rg *unstructured.Unstructured, s
 }
 
 // rootRepoStatus converts the given RootSync into a repoState.
-func rootRepoStatus(rs *v1alpha1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
+func rootRepoStatus(rs *v1beta1.RootSync, rg *unstructured.Unstructured, syncingConditionSupported bool) *repoState {
 	repostate := &repoState{
 		scope:  "<root>",
 		git:    rs.Spec.Git,
 		commit: emptyCommit,
 	}
-	stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
-	reconcilingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
-	syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1alpha1.RootSyncSyncing)
+	stalledCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
+	reconcilingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncReconciling)
+	syncingCondition := rootsync.GetCondition(rs.Status.Conditions, v1beta1.RootSyncSyncing)
 	switch {
 	case stalledCondition != nil && stalledCondition.Status == metav1.ConditionTrue:
 		repostate.status = stalledMsg
@@ -310,7 +310,7 @@ func commitHash(commit string) string {
 	return commit
 }
 
-func multiRepoSyncStatus(status v1alpha1.SyncStatus) string {
+func multiRepoSyncStatus(status v1beta1.SyncStatus) string {
 	if len(status.Source.Errors) > 0 || len(status.Sync.Errors) > 0 || len(status.Rendering.Errors) > 0 {
 		return util.ErrorMsg
 	}
@@ -332,7 +332,7 @@ func multiRepoSyncStatus(status v1alpha1.SyncStatus) string {
 }
 
 // repoSyncErrors returns all errors reported in the given RepoSync as a single array.
-func repoSyncErrors(rs *v1alpha1.RepoSync) []string {
+func repoSyncErrors(rs *v1beta1.RepoSync) []string {
 	if reposync.IsStalled(rs) {
 		return []string{reposync.StalledMessage(rs)}
 	}
@@ -340,14 +340,14 @@ func repoSyncErrors(rs *v1alpha1.RepoSync) []string {
 }
 
 // rootSyncErrors returns all errors reported in the given RootSync as a single array.
-func rootSyncErrors(rs *v1alpha1.RootSync) []string {
+func rootSyncErrors(rs *v1beta1.RootSync) []string {
 	if rootsync.IsStalled(rs) {
 		return []string{rootsync.StalledMessage(rs)}
 	}
 	return multiRepoSyncStatusErrors(rs.Status.SyncStatus)
 }
 
-func multiRepoSyncStatusErrors(status v1alpha1.SyncStatus) []string {
+func multiRepoSyncStatusErrors(status v1beta1.SyncStatus) []string {
 	var errs []string
 	for _, err := range status.Rendering.Errors {
 		errs = append(errs, err.ErrorMessage)
@@ -361,7 +361,7 @@ func multiRepoSyncStatusErrors(status v1alpha1.SyncStatus) []string {
 	return errs
 }
 
-func toErrorMessage(errs []v1alpha1.ConfigSyncError) []string {
+func toErrorMessage(errs []v1beta1.ConfigSyncError) []string {
 	var msg []string
 	for _, err := range errs {
 		msg = append(msg, err.ErrorMessage)

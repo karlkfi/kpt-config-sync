@@ -99,7 +99,7 @@ func TestStressLargeNamespace(t *testing.T) {
 	nomostest.StopWebhook(nt)
 
 	nt.T.Log("Override the memory limit of the reconciler container of root-reconciler to 800MiB")
-	rootSync := fake.RootSyncObject()
+	rootSync := fake.RootSyncObjectV1Beta1()
 	nt.MustMergePatch(rootSync, `{"spec": {"override": {"resources": [{"containerName": "reconciler", "memoryLimit": "800Mi"}]}}}`)
 	nt.WaitForRepoSyncs()
 

@@ -13,7 +13,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
@@ -94,7 +94,7 @@ func TestConflictingDefinitions_RootToNamespace(t *testing.T) {
 
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(configsync.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
+		return nt.Validate(configsync.RepoSyncName, "shipping", &v1beta1.RepoSync{},
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {
@@ -185,7 +185,7 @@ func TestConflictingDefinitions_NamespaceToRoot(t *testing.T) {
 	nt.WaitForRepoSyncs(nomostest.RootSyncOnly())
 	// The shipping RepoSync reports a problem since it can't sync the declaration.
 	_, err = nomostest.Retry(60*time.Second, func() error {
-		return nt.Validate(configsync.RepoSyncName, "shipping", &v1alpha1.RepoSync{},
+		return nt.Validate(configsync.RepoSyncName, "shipping", &v1beta1.RepoSync{},
 			repoSyncHasErrors(applier.ManagementConflictErrorCode))
 	})
 	if err != nil {
@@ -250,15 +250,15 @@ func roleHasRules(wantRules []rbacv1.PolicyRule) nomostest.Predicate {
 func repoSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 	sort.Strings(wantCodes)
 
-	var wantErrs []v1alpha1.ConfigSyncError
+	var wantErrs []v1beta1.ConfigSyncError
 	for _, code := range wantCodes {
-		wantErrs = append(wantErrs, v1alpha1.ConfigSyncError{Code: code})
+		wantErrs = append(wantErrs, v1beta1.ConfigSyncError{Code: code})
 	}
 
 	return func(o client.Object) error {
-		rs, isRepoSync := o.(*v1alpha1.RepoSync)
+		rs, isRepoSync := o.(*v1beta1.RepoSync)
 		if !isRepoSync {
-			return nomostest.WrongTypeErr(o, &v1alpha1.RepoSync{})
+			return nomostest.WrongTypeErr(o, &v1beta1.RepoSync{})
 		}
 
 		gotErrs := rs.Status.Sync.Errors
@@ -267,7 +267,7 @@ func repoSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 		})
 
 		if diff := cmp.Diff(wantErrs, gotErrs,
-			cmpopts.IgnoreFields(v1alpha1.ConfigSyncError{},
+			cmpopts.IgnoreFields(v1beta1.ConfigSyncError{},
 				"ErrorMessage", "Resources")); diff != "" {
 			return errors.New(diff)
 		}

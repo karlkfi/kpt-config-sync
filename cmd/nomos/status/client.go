@@ -19,7 +19,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/reposync"
@@ -55,16 +55,16 @@ type ClusterClient struct {
 	ConfigManagement *util.ConfigManagementClient
 }
 
-func (c *ClusterClient) rootSync(ctx context.Context) (*v1alpha1.RootSync, error) {
-	rs := &v1alpha1.RootSync{}
+func (c *ClusterClient) rootSync(ctx context.Context) (*v1beta1.RootSync, error) {
+	rs := &v1beta1.RootSync{}
 	if err := c.Client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
 		return nil, err
 	}
 	return rs, nil
 }
 
-func (c *ClusterClient) repoSync(ctx context.Context, ns string) (*v1alpha1.RepoSync, error) {
-	rs := &v1alpha1.RepoSync{}
+func (c *ClusterClient) repoSync(ctx context.Context, ns string) (*v1beta1.RepoSync, error) {
+	rs := &v1beta1.RepoSync{}
 	if err := c.Client.Get(ctx, reposync.ObjectKey(declared.Scope(ns)), rs); err != nil {
 		return nil, err
 	}
@@ -80,12 +80,12 @@ func (c *ClusterClient) resourceGroup(ctx context.Context, objectKey client.Obje
 	return rg, nil
 }
 
-func (c *ClusterClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, error) {
-	rsl := &v1alpha1.RepoSyncList{}
+func (c *ClusterClient) repoSyncs(ctx context.Context) ([]*v1beta1.RepoSync, error) {
+	rsl := &v1beta1.RepoSyncList{}
 	if err := c.Client.List(ctx, rsl); err != nil {
 		return nil, err
 	}
-	var repoSyncs []*v1alpha1.RepoSync
+	var repoSyncs []*v1beta1.RepoSync
 	for _, rs := range rsl.Items {
 		// Use local copy of the iteration variable to correctly get the value in
 		// each iteration and avoid the last value getting overwritten.
@@ -95,7 +95,7 @@ func (c *ClusterClient) repoSyncs(ctx context.Context) ([]*v1alpha1.RepoSync, er
 	return repoSyncs, nil
 }
 
-func (c *ClusterClient) resourceGroups(ctx context.Context, repoSyncs []*v1alpha1.RepoSync) ([]*unstructured.Unstructured, error) {
+func (c *ClusterClient) resourceGroups(ctx context.Context, repoSyncs []*v1beta1.RepoSync) ([]*unstructured.Unstructured, error) {
 	rgl := &unstructured.UnstructuredList{}
 	rgGVK := live.ResourceGroupGVK
 	rgGVK.Kind += "List"
@@ -169,25 +169,25 @@ func (c *ClusterClient) monoRepoClusterStatus(ctx context.Context, cs *ClusterSt
 
 // monoRepoGit fetches the mono repo ConfigManagement resource from the cluster
 // and builds a Git config out of it.
-func (c *ClusterClient) monoRepoGit(ctx context.Context) (v1alpha1.Git, error) {
+func (c *ClusterClient) monoRepoGit(ctx context.Context) (v1beta1.Git, error) {
 	syncRepo, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRepo")
 	if err != nil {
-		return v1alpha1.Git{}, err
+		return v1beta1.Git{}, err
 	}
 	syncBranch, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncBranch")
 	if err != nil {
-		return v1alpha1.Git{}, err
+		return v1beta1.Git{}, err
 	}
 	syncRev, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "syncRev")
 	if err != nil {
-		return v1alpha1.Git{}, err
+		return v1beta1.Git{}, err
 	}
 	policyDir, err := c.ConfigManagement.NestedString(ctx, "spec", "git", "policyDir")
 	if err != nil {
-		return v1alpha1.Git{}, err
+		return v1beta1.Git{}, err
 	}
 
-	return v1alpha1.Git{
+	return v1beta1.Git{
 		Repo:     syncRepo,
 		Branch:   syncBranch,
 		Revision: syncRev,
@@ -391,7 +391,7 @@ func ClusterClients(ctx context.Context, contexts []string) (map[string]*Cluster
 	if sErr := v1.AddToScheme(s); sErr != nil {
 		return nil, err
 	}
-	if sErr := v1alpha1.AddToScheme(s); sErr != nil {
+	if sErr := v1beta1.AddToScheme(s); sErr != nil {
 		return nil, err
 	}
 	if sErr := apiextensionsv1.AddToScheme(s); sErr != nil {
@@ -507,7 +507,7 @@ func isReachable(ctx context.Context, clientset *apis.Clientset, cluster string)
 // from config-management-system; The reposyncs only contains RepoSync CRs.
 // For a RepoSync CR, the corresponding ResourceGroup CR may not exist in the cluster.
 // We assign it to nil in this case.
-func consistentOrder(reposyncs []*v1alpha1.RepoSync, resourcegroups []*unstructured.Unstructured) []*unstructured.Unstructured {
+func consistentOrder(reposyncs []*v1beta1.RepoSync, resourcegroups []*unstructured.Unstructured) []*unstructured.Unstructured {
 	indexMap := map[string]int{}
 	for i, r := range resourcegroups {
 		indexMap[r.GetNamespace()] = i

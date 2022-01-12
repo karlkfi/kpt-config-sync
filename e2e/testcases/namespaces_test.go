@@ -13,7 +13,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/reconciler"
@@ -718,7 +718,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 	if nt.MultiRepo {
 		_, err = nomostest.Retry(60*time.Second, func() error {
 			return nt.Validate("root-sync", "config-management-system",
-				&v1alpha1.RootSync{}, rootSyncHasErrors(status.EmptySourceErrorCode))
+				&v1beta1.RootSync{}, rootSyncHasErrors(status.EmptySourceErrorCode))
 		})
 	} else {
 		_, err = nomostest.Retry(60*time.Second, func() error {
@@ -840,15 +840,15 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 func rootSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 	sort.Strings(wantCodes)
 
-	var wantErrs []v1alpha1.ConfigSyncError
+	var wantErrs []v1beta1.ConfigSyncError
 	for _, code := range wantCodes {
-		wantErrs = append(wantErrs, v1alpha1.ConfigSyncError{Code: code})
+		wantErrs = append(wantErrs, v1beta1.ConfigSyncError{Code: code})
 	}
 
 	return func(o client.Object) error {
-		rs, isRootSync := o.(*v1alpha1.RootSync)
+		rs, isRootSync := o.(*v1beta1.RootSync)
 		if !isRootSync {
-			return nomostest.WrongTypeErr(o, &v1alpha1.RootSync{})
+			return nomostest.WrongTypeErr(o, &v1beta1.RootSync{})
 		}
 
 		gotErrs := rs.Status.Sync.Errors
@@ -857,7 +857,7 @@ func rootSyncHasErrors(wantCodes ...string) nomostest.Predicate {
 		})
 
 		if diff := cmp.Diff(wantErrs, gotErrs,
-			cmpopts.IgnoreFields(v1alpha1.ConfigSyncError{}, "ErrorMessage")); diff != "" {
+			cmpopts.IgnoreFields(v1beta1.ConfigSyncError{}, "ErrorMessage")); diff != "" {
 			return errors.New(diff)
 		}
 		return nil

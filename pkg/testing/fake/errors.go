@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/status"
 )
 
@@ -57,8 +57,8 @@ func (f fakeError) ToCME() v1.ConfigManagementError {
 }
 
 // ToCSE implements status.Error.
-func (f fakeError) ToCSE() v1alpha1.ConfigSyncError {
-	return v1alpha1.ConfigSyncError{
+func (f fakeError) ToCSE() v1beta1.ConfigSyncError {
+	return v1beta1.ConfigSyncError{
 		Code:         f.code,
 		ErrorMessage: fmt.Sprintf("fake error %d", f.id),
 	}

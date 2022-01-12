@@ -1,7 +1,7 @@
 package rootsync
 
 import (
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -10,7 +10,7 @@ var now = metav1.Now
 
 // ClearCondition sets the specified condition to False if it is currently
 // defined as True. If the condition is unspecified, then it is left that way.
-func ClearCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType) {
+func ClearCondition(rs *v1beta1.RootSync, condType v1beta1.RootSyncConditionType) {
 	condition := GetCondition(rs.Status.Conditions, condType)
 	if condition == nil {
 		return
@@ -29,21 +29,21 @@ func ClearCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionTy
 }
 
 // IsReconciling returns true if the given RootSync has a True Reconciling condition.
-func IsReconciling(rs *v1alpha1.RootSync) bool {
-	cond := GetCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
+func IsReconciling(rs *v1beta1.RootSync) bool {
+	cond := GetCondition(rs.Status.Conditions, v1beta1.RootSyncReconciling)
 	return cond != nil && cond.Status == metav1.ConditionTrue
 }
 
 // IsStalled returns true if the given RootSync has a True Stalled condition.
-func IsStalled(rs *v1alpha1.RootSync) bool {
-	cond := GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+func IsStalled(rs *v1beta1.RootSync) bool {
+	cond := GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
 	return cond != nil && cond.Status == metav1.ConditionTrue
 }
 
 // ReconcilingMessage returns the message from a True Reconciling condition or
 // an empty string if no True Reconciling condition was found.
-func ReconcilingMessage(rs *v1alpha1.RootSync) string {
-	cond := GetCondition(rs.Status.Conditions, v1alpha1.RootSyncReconciling)
+func ReconcilingMessage(rs *v1beta1.RootSync) string {
+	cond := GetCondition(rs.Status.Conditions, v1beta1.RootSyncReconciling)
 	if cond == nil || cond.Status == metav1.ConditionFalse {
 		return ""
 	}
@@ -52,8 +52,8 @@ func ReconcilingMessage(rs *v1alpha1.RootSync) string {
 
 // StalledMessage returns the message from a True Stalled condition or an empty
 // string if no True Stalled condition was found.
-func StalledMessage(rs *v1alpha1.RootSync) string {
-	cond := GetCondition(rs.Status.Conditions, v1alpha1.RootSyncStalled)
+func StalledMessage(rs *v1beta1.RootSync) string {
+	cond := GetCondition(rs.Status.Conditions, v1beta1.RootSyncStalled)
 	if cond == nil || cond.Status == metav1.ConditionFalse {
 		return ""
 	}
@@ -61,40 +61,40 @@ func StalledMessage(rs *v1alpha1.RootSync) string {
 }
 
 // SetReconciling sets the Reconciling condition to True.
-func SetReconciling(rs *v1alpha1.RootSync, reason, message string) {
-	if setCondition(rs, v1alpha1.RootSyncReconciling, metav1.ConditionTrue, reason, message, "", nil, now()) {
+func SetReconciling(rs *v1beta1.RootSync, reason, message string) {
+	if setCondition(rs, v1beta1.RootSyncReconciling, metav1.ConditionTrue, reason, message, "", nil, now()) {
 		// Only remove the Syncing condition when the Reconciling condition status is updated from false to true.
-		removeCondition(rs, v1alpha1.RootSyncSyncing)
+		removeCondition(rs, v1beta1.RootSyncSyncing)
 	}
 }
 
 // SetStalled sets the Stalled condition to True.
-func SetStalled(rs *v1alpha1.RootSync, reason string, err error) {
-	if setCondition(rs, v1alpha1.RootSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil, now()) {
+func SetStalled(rs *v1beta1.RootSync, reason string, err error) {
+	if setCondition(rs, v1beta1.RootSyncStalled, metav1.ConditionTrue, reason, err.Error(), "", nil, now()) {
 		// Only remove the Syncing condition when the Stalled condition status is updated from false to true.
-		removeCondition(rs, v1alpha1.RootSyncSyncing)
+		removeCondition(rs, v1beta1.RootSyncSyncing)
 	}
 }
 
 // SetSyncing sets the Syncing condition.
-func SetSyncing(rs *v1alpha1.RootSync, status bool, reason, message, commit string, errs []v1alpha1.ConfigSyncError, lastUpdate metav1.Time) {
+func SetSyncing(rs *v1beta1.RootSync, status bool, reason, message, commit string, errs []v1beta1.ConfigSyncError, lastUpdate metav1.Time) {
 	var conditionStatus metav1.ConditionStatus
 	if status {
 		conditionStatus = metav1.ConditionTrue
 	} else {
 		conditionStatus = metav1.ConditionFalse
 	}
-	setCondition(rs, v1alpha1.RootSyncSyncing, conditionStatus, reason, message, commit, errs, lastUpdate)
+	setCondition(rs, v1beta1.RootSyncSyncing, conditionStatus, reason, message, commit, errs, lastUpdate)
 }
 
 // setCondition adds or updates the specified condition.
 // It returns a boolean indicating if the condition status is transited.
-func setCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errs []v1alpha1.ConfigSyncError, lastUpdate metav1.Time) bool {
+func setCondition(rs *v1beta1.RootSync, condType v1beta1.RootSyncConditionType, status metav1.ConditionStatus, reason, message, commit string, errs []v1beta1.ConfigSyncError, lastUpdate metav1.Time) bool {
 	conditionTransited := false
 	condition := GetCondition(rs.Status.Conditions, condType)
 	if condition == nil {
 		i := len(rs.Status.Conditions)
-		rs.Status.Conditions = append(rs.Status.Conditions, v1alpha1.RootSyncCondition{Type: condType})
+		rs.Status.Conditions = append(rs.Status.Conditions, v1beta1.RootSyncCondition{Type: condType})
 		condition = &rs.Status.Conditions[i]
 	}
 
@@ -112,7 +112,7 @@ func setCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType
 }
 
 // GetCondition returns the condition with the provided type.
-func GetCondition(conditions []v1alpha1.RootSyncCondition, condType v1alpha1.RootSyncConditionType) *v1alpha1.RootSyncCondition {
+func GetCondition(conditions []v1beta1.RootSyncCondition, condType v1beta1.RootSyncConditionType) *v1beta1.RootSyncCondition {
 	for i, condition := range conditions {
 		if condition.Type == condType {
 			return &conditions[i]
@@ -122,13 +122,13 @@ func GetCondition(conditions []v1alpha1.RootSyncCondition, condType v1alpha1.Roo
 }
 
 // removeCondition removes the RootSync condition with the provided type.
-func removeCondition(rs *v1alpha1.RootSync, condType v1alpha1.RootSyncConditionType) {
+func removeCondition(rs *v1beta1.RootSync, condType v1beta1.RootSyncConditionType) {
 	rs.Status.Conditions = filterOutCondition(rs.Status.Conditions, condType)
 }
 
 // filterOutCondition returns a new slice of RootSync conditions without conditions with the provided type.
-func filterOutCondition(conditions []v1alpha1.RootSyncCondition, condType v1alpha1.RootSyncConditionType) []v1alpha1.RootSyncCondition {
-	var newConditions []v1alpha1.RootSyncCondition
+func filterOutCondition(conditions []v1beta1.RootSyncCondition, condType v1beta1.RootSyncConditionType) []v1beta1.RootSyncCondition {
+	var newConditions []v1beta1.RootSyncCondition
 	for _, c := range conditions {
 		if c.Type == condType {
 			continue

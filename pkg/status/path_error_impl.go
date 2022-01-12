@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/importer/id"
 )
 
@@ -58,7 +58,7 @@ func (p pathErrorImpl) ToCME() v1.ConfigManagementError {
 }
 
 // ToCSE implements Error.
-func (p pathErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
+func (p pathErrorImpl) ToCSE() v1beta1.ConfigSyncError {
 	return cseFromPathError(p)
 }
 

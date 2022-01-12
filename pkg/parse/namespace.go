@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -128,7 +128,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 	// This can happen when Kubernetes does weird things with mounted filesystems,
 	// or if an attacker tried to maliciously change the cluster's record of the
 	// source of truth.
-	var rs v1alpha1.RepoSync
+	var rs v1beta1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
@@ -137,7 +137,7 @@ func (p *namespace) setSourceStatus(ctx context.Context, newStatus gitStatus) er
 	// If we weren't able to get the commit hash, this replaces the value with
 	// empty string.
 	rs.Status.Source.Commit = newStatus.commit
-	rs.Status.Source.Git = v1alpha1.GitStatus{
+	rs.Status.Source.Git = v1beta1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
 		Branch:   p.GitBranch,
@@ -171,7 +171,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 		return nil
 	}
 
-	var rs v1alpha1.RepoSync
+	var rs v1beta1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
@@ -186,7 +186,7 @@ func (p *namespace) setRenderingStatus(ctx context.Context, oldStatus, newStatus
 
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Rendering.Commit = newStatus.commit
-	rs.Status.Rendering.Git = v1alpha1.GitStatus{
+	rs.Status.Rendering.Git = v1beta1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
 		Branch:   p.GitBranch,
@@ -218,7 +218,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) e
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	var rs v1alpha1.RepoSync
+	var rs v1beta1.RepoSync
 	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
 		return status.APIServerError(err, fmt.Sprintf("failed to get the RepoSync object for the %v namespace", p.scope))
 	}
@@ -238,7 +238,7 @@ func (p *namespace) setSyncStatus(ctx context.Context, errs status.MultiError) e
 		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, lastUpdate.Time)
 	}
 
-	var allErrs []v1alpha1.ConfigSyncError
+	var allErrs []v1beta1.ConfigSyncError
 	allErrs = append(allErrs, rs.Status.Source.Errors...)
 	allErrs = append(allErrs, syncErrs...)
 	if syncing {

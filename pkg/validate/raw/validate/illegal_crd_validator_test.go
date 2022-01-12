@@ -33,12 +33,12 @@ func TestIllegalCRD(t *testing.T) {
 		},
 		{
 			name:    "RepoSync v1beta1 CRD",
-			obj:     crdv1beta1("crd", kinds.RepoSync()),
+			obj:     crdv1beta1("crd", kinds.RepoSyncV1Beta1()),
 			wantErr: fake.Error(nonhierarchical.UnsupportedObjectErrorCode),
 		},
 		{
 			name:    "RepoSync v1 CRD",
-			obj:     crdv1("crd", kinds.RepoSync()),
+			obj:     crdv1("crd", kinds.RepoSyncV1Beta1()),
 			wantErr: fake.Error(nonhierarchical.UnsupportedObjectErrorCode),
 		},
 	}

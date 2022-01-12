@@ -9,13 +9,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RepoSyncObject initializes a RepoSync with version v1alpha1.
-func RepoSyncObject(opts ...core.MetaMutator) *v1alpha1.RepoSync {
+// RepoSyncObjectV1Alpha1 initializes a RepoSync with version v1alpha1.
+func RepoSyncObjectV1Alpha1(opts ...core.MetaMutator) *v1alpha1.RepoSync {
 	result := &v1alpha1.RepoSync{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: configsync.RepoSyncName,
 		},
-		TypeMeta: ToTypeMeta(kinds.RepoSync()),
+		TypeMeta: ToTypeMeta(kinds.RepoSyncV1Alpha1()),
 	}
 	mutate(result, opts...)
 

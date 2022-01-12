@@ -192,8 +192,8 @@ func StatefulSet() schema.GroupVersionKind {
 	return appsv1.SchemeGroupVersion.WithKind("StatefulSet")
 }
 
-// RepoSync returns the canonical RepoSync GroupVersionKind.
-func RepoSync() schema.GroupVersionKind {
+// RepoSyncV1Alpha1 returns the canonical RepoSync GroupVersionKind.
+func RepoSyncV1Alpha1() schema.GroupVersionKind {
 	return v1alpha1.SchemeGroupVersion.WithKind("RepoSync")
 }
 
@@ -202,14 +202,14 @@ func RepoSyncV1Beta1() schema.GroupVersionKind {
 	return configsyncv1beta1.SchemeGroupVersion.WithKind("RepoSync")
 }
 
-// RootSync returns the canonical RootSync GroupVersionKind.
-func RootSync() schema.GroupVersionKind {
+// RootSyncV1Alpha1 returns the canonical RootSync GroupVersionKind.
+func RootSyncV1Alpha1() schema.GroupVersionKind {
 	return v1alpha1.SchemeGroupVersion.WithKind("RootSync")
 }
 
 // RootSyncV1Beta1 returns the v1beta1 RootSync GroupVersionKind.
 func RootSyncV1Beta1() schema.GroupVersionKind {
-	return v1beta1.SchemeGroupVersion.WithKind("RootSync")
+	return configsyncv1beta1.SchemeGroupVersion.WithKind("RootSync")
 }
 
 // Service returns the canonical Service GroupVersionKind.

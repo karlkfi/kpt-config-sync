@@ -121,7 +121,7 @@ func TestRepoSyncObject(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := RepoSyncObject(tc.obj)
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("Got RepoSyncObject() error %v, want %v", err, tc.wantErr)
+				t.Errorf("Got RepoSyncObjectV1Alpha1() error %v, want %v", err, tc.wantErr)
 			}
 		})
 	}

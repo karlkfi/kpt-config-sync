@@ -2,7 +2,7 @@ package status
 
 import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 )
 
 type messageErrorImpl struct {
@@ -43,7 +43,7 @@ func (m messageErrorImpl) ToCME() v1.ConfigManagementError {
 }
 
 // ToCSE implements Error.
-func (m messageErrorImpl) ToCSE() v1alpha1.ConfigSyncError {
+func (m messageErrorImpl) ToCSE() v1beta1.ConfigSyncError {
 	return cseFromError(m)
 }
 

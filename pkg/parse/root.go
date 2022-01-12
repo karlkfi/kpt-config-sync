@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/importer/analyzer/ast"
@@ -134,14 +134,14 @@ func (p *root) setSourceStatus(ctx context.Context, newStatus gitStatus) error {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Source.Commit = newStatus.commit
-	rs.Status.Source.Git = v1alpha1.GitStatus{
+	rs.Status.Source.Git = v1beta1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
 		Branch:   p.GitBranch,
@@ -174,7 +174,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 		return nil
 	}
 
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
@@ -189,7 +189,7 @@ func (p *root) setRenderingStatus(ctx context.Context, oldStatus, newStatus rend
 
 	cse := status.ToCSE(newStatus.errs)
 	rs.Status.Rendering.Commit = newStatus.commit
-	rs.Status.Rendering.Git = v1alpha1.GitStatus{
+	rs.Status.Rendering.Git = v1beta1.GitStatus{
 		Repo:     p.GitRepo,
 		Revision: p.GitRev,
 		Branch:   p.GitBranch,
@@ -221,7 +221,7 @@ func (p *root) setSyncStatus(ctx context.Context, errs status.MultiError) error 
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	var rs v1alpha1.RootSync
+	var rs v1beta1.RootSync
 	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync")
 	}
@@ -241,7 +241,7 @@ func (p *root) setSyncStatus(ctx context.Context, errs status.MultiError) error 
 		metrics.RecordLastSync(ctx, rs.Status.Sync.Commit, lastUpdate.Time)
 	}
 
-	var allErrs []v1alpha1.ConfigSyncError
+	var allErrs []v1beta1.ConfigSyncError
 	allErrs = append(allErrs, rs.Status.Source.Errors...)
 	allErrs = append(allErrs, syncErrs...)
 	if syncing {

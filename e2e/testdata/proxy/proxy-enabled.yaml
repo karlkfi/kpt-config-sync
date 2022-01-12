@@ -1,4 +1,4 @@
-apiVersion: configsync.gke.io/v1alpha1
+apiVersion: configsync.gke.io/v1beta1
 kind: RootSync
 metadata:
   name: root-sync

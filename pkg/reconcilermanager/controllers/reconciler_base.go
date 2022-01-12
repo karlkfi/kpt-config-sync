@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
-	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/metrics"
@@ -223,7 +223,7 @@ func (r *reconcilerBase) deploymentStatus(ctx context.Context, key client.Object
 	return checkDeploymentConditions(&depObj)
 }
 
-func mutateContainerResource(ctx context.Context, c *corev1.Container, override v1alpha1.OverrideSpec, reconcilerType string) {
+func mutateContainerResource(ctx context.Context, c *corev1.Container, override v1beta1.OverrideSpec, reconcilerType string) {
 	for _, override := range override.Resources {
 		if override.ContainerName == c.Name {
 			if !override.CPURequest.IsZero() {
