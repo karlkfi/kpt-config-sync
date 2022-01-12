@@ -7,6 +7,7 @@ import (
 
 	configmanagementv1 "github.com/google/nomos/clientgen/apis/typed/configmanagement/v1"
 	configsyncv1alpha1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1alpha1"
+	configsyncv1beta1 "github.com/google/nomos/clientgen/apis/typed/configsync/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -16,6 +17,7 @@ type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	ConfigmanagementV1() configmanagementv1.ConfigmanagementV1Interface
 	ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface
+	ConfigsyncV1beta1() configsyncv1beta1.ConfigsyncV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -24,6 +26,7 @@ type Clientset struct {
 	*discovery.DiscoveryClient
 	configmanagementV1 *configmanagementv1.ConfigmanagementV1Client
 	configsyncV1alpha1 *configsyncv1alpha1.ConfigsyncV1alpha1Client
+	configsyncV1beta1  *configsyncv1beta1.ConfigsyncV1beta1Client
 }
 
 // ConfigmanagementV1 retrieves the ConfigmanagementV1Client
@@ -34,6 +37,11 @@ func (c *Clientset) ConfigmanagementV1() configmanagementv1.ConfigmanagementV1In
 // ConfigsyncV1alpha1 retrieves the ConfigsyncV1alpha1Client
 func (c *Clientset) ConfigsyncV1alpha1() configsyncv1alpha1.ConfigsyncV1alpha1Interface {
 	return c.configsyncV1alpha1
+}
+
+// ConfigsyncV1beta1 retrieves the ConfigsyncV1beta1Client
+func (c *Clientset) ConfigsyncV1beta1() configsyncv1beta1.ConfigsyncV1beta1Interface {
+	return c.configsyncV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -65,6 +73,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.configsyncV1beta1, err = configsyncv1beta1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -79,6 +91,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.configmanagementV1 = configmanagementv1.NewForConfigOrDie(c)
 	cs.configsyncV1alpha1 = configsyncv1alpha1.NewForConfigOrDie(c)
+	cs.configsyncV1beta1 = configsyncv1beta1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -89,6 +102,7 @@ func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.configmanagementV1 = configmanagementv1.New(c)
 	cs.configsyncV1alpha1 = configsyncv1alpha1.New(c)
+	cs.configsyncV1beta1 = configsyncv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

@@ -5,6 +5,7 @@ package fake
 import (
 	configmanagementv1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	configsyncv1alpha1 "github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	configsyncv1beta1 "github.com/google/nomos/pkg/api/configsync/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -18,6 +19,7 @@ var codecs = serializer.NewCodecFactory(scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	configmanagementv1.AddToScheme,
 	configsyncv1alpha1.AddToScheme,
+	configsyncv1beta1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition
