@@ -10,7 +10,7 @@ import (
 // obvious problems.
 func ValidateRootSync(rs *v1alpha1.RootSync) status.Error {
 	if rs.GetName() != configsync.RootSyncName {
-		return InvalidSyncName(rs.Name, rs)
+		return InvalidSyncName(configsync.RootSyncName, rs)
 	}
 	return validateGitSpec(rs.Spec.Git, rs)
 }

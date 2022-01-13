@@ -26,7 +26,7 @@ const gcpSASuffix = ".iam.gserviceaccount.com"
 // obvious problems.
 func ValidateRepoSync(rs *v1alpha1.RepoSync) status.Error {
 	if rs.GetName() != configsync.RepoSyncName {
-		return InvalidSyncName(rs.Name, rs)
+		return InvalidSyncName(configsync.RepoSyncName, rs)
 	}
 	return validateGitSpec(rs.Spec.Git, rs)
 }

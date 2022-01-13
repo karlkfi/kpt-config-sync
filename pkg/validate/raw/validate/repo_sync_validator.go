@@ -46,7 +46,7 @@ var (
 // obvious problems.
 func RepoSyncObject(rs *v1beta1.RepoSync) status.Error {
 	if rs.GetName() != configsync.RepoSyncName {
-		return nonhierarchical.InvalidSyncName(rs.Name, rs)
+		return nonhierarchical.InvalidSyncName(configsync.RepoSyncName, rs)
 	}
 
 	// We can't connect to the git repo if we don't have the URL.
