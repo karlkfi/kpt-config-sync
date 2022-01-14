@@ -46,7 +46,7 @@ func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 
 	// Verify Root Reconciler deployment no longer present.
 	_, err = nomostest.Retry(20*time.Second, func() error {
-		return nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.DeploymentObject())
+		return nt.ValidateNotFound(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
@@ -71,7 +71,8 @@ func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 		failNow = true
 	}
 	// validate Root Reconciler ServiceAccount is no longer present.
-	if err = nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.ServiceAccountObject(reconciler.RootSyncName)); err != nil {
+	saName := reconciler.RootReconcilerName(rs.Name)
+	if err = nt.ValidateNotFound(saName, v1.NSConfigManagementSystem, fake.ServiceAccountObject(saName)); err != nil {
 		nt.T.Error(err)
 		failNow = true
 	}
@@ -144,7 +145,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -177,7 +178,7 @@ func TestUpdateRootSyncGitDirectory(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1,
 			metrics.GVKMetric{
 				GVK:   "Namespace",
 				APIOp: "delete",
@@ -307,9 +308,9 @@ func TestForceRevert(t *testing.T) {
 
 	nt.WaitForRootSyncSourceError(system.MissingRepoErrorCode, "")
 
-	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(nomostest.DefaultRootReconcilerName), func() error {
 		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+		return nt.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, "source")
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -321,7 +322,7 @@ func TestForceRevert(t *testing.T) {
 	nt.WaitForRepoSyncs()
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "")
+		return nt.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, "")
 	})
 	if err != nil {
 		nt.T.Errorf("validating reconciler_errors metric: %v", err)

@@ -16,7 +16,6 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
@@ -48,7 +47,7 @@ func TestDeclareNamespace(t *testing.T) {
 
 	// Validate no error metrics are emitted.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -80,7 +79,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -108,7 +107,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("Namespace", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
@@ -136,7 +135,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("Namespace", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
@@ -164,7 +163,7 @@ func TestNamespaceLabelAndAnnotationLifecycle(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("Namespace", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
@@ -197,7 +196,7 @@ func TestNamespaceExistsAndDeclared(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -231,7 +230,7 @@ func TestNamespaceEnabledAnnotationNotDeclared(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -273,7 +272,7 @@ func TestManagementDisabledNamespace(t *testing.T) {
 
 		// Validate multi-repo metrics.
 		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
+			err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
 			if err != nil {
 				return err
 			}
@@ -309,7 +308,7 @@ func TestManagementDisabledNamespace(t *testing.T) {
 
 		// Validate multi-repo metrics.
 		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourcePatched("Namespace", 1), metrics.ResourcePatched("ConfigMap", 1))
+			err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3, metrics.ResourcePatched("Namespace", 1), metrics.ResourcePatched("ConfigMap", 1))
 			if err != nil {
 				return err
 			}
@@ -342,7 +341,7 @@ func TestManagementDisabledNamespace(t *testing.T) {
 
 		// Validate multi-repo metrics.
 		err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-			err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
+			err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1)
 			if err != nil {
 				return err
 			}
@@ -394,7 +393,7 @@ func TestManagementDisabledConfigMap(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3, metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
 		if err != nil {
 			return err
 		}
@@ -422,7 +421,7 @@ func TestManagementDisabledConfigMap(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3, metrics.ResourcePatched("ConfigMap", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3, metrics.ResourcePatched("ConfigMap", 1))
 		if err != nil {
 			return err
 		}
@@ -449,7 +448,7 @@ func TestManagementDisabledConfigMap(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2)
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2)
 		if err != nil {
 			return err
 		}
@@ -486,7 +485,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -515,7 +514,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("Namespace", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
@@ -542,7 +541,7 @@ func TestSyncLabelsAndAnnotationsOnKubeSystem(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2, metrics.ResourcePatched("Namespace", 1))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2, metrics.ResourcePatched("Namespace", 1))
 		if err != nil {
 			return err
 		}
@@ -578,7 +577,7 @@ func TestDoNotRemoveManagedByLabelExceptForConfigManagement(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceCreated("Namespace"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1, metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err
 		}
@@ -622,7 +621,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Role"))
 		if err != nil {
 			return err
@@ -652,7 +651,7 @@ func TestDeclareImplicitNamespace(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1, metrics.ResourceDeleted("Role"))
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1, metrics.ResourceDeleted("Role"))
 		if err != nil {
 			return err
 		}
@@ -687,7 +686,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.GVKMetric{
 				GVK:   "Namespace",
 				APIOp: "update",
@@ -745,8 +744,8 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 		nt.T.Fatal(err)
 	}
 
-	err = nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSyncError(reconciler.RootSyncName), func() error {
-		return nt.ReconcilerMetrics.ValidateDeclaredResources(reconciler.RootSyncName, 0)
+	err = nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSyncError(nomostest.DefaultRootReconcilerName), func() error {
+		return nt.ReconcilerMetrics.ValidateDeclaredResources(nomostest.DefaultRootReconcilerName, 0)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -771,7 +770,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1,
 			metrics.ResourceCreated("Namespace"),
 			metrics.GVKMetric{
 				GVK:      "Namespace",
@@ -817,7 +816,7 @@ func TestDontDeleteAllNamespaces(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 0,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 0,
 			metrics.GVKMetric{
 				GVK:      "Namespace",
 				APIOp:    "delete",

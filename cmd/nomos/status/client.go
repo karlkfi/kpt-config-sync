@@ -18,6 +18,7 @@ import (
 	"github.com/google/nomos/cmd/nomos/util"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/client/restconfig"
 	"github.com/google/nomos/pkg/declared"
@@ -57,7 +58,8 @@ type ClusterClient struct {
 
 func (c *ClusterClient) rootSync(ctx context.Context) (*v1beta1.RootSync, error) {
 	rs := &v1beta1.RootSync{}
-	if err := c.Client.Get(ctx, rootsync.ObjectKey(), rs); err != nil {
+	// TODO(b/215740086): support listing all rootSyncs.
+	if err := c.Client.Get(ctx, rootsync.ObjectKey(configsync.RootSyncName), rs); err != nil {
 		return nil, err
 	}
 	return rs, nil
@@ -65,7 +67,8 @@ func (c *ClusterClient) rootSync(ctx context.Context) (*v1beta1.RootSync, error)
 
 func (c *ClusterClient) repoSync(ctx context.Context, ns string) (*v1beta1.RepoSync, error) {
 	rs := &v1beta1.RepoSync{}
-	if err := c.Client.Get(ctx, reposync.ObjectKey(declared.Scope(ns)), rs); err != nil {
+	// TODO(b/215740086): support listing all repoSyncs in the namespace.
+	if err := c.Client.Get(ctx, reposync.ObjectKey(declared.Scope(ns), configsync.RepoSyncName), rs); err != nil {
 		return nil, err
 	}
 	return rs, nil
@@ -220,7 +223,8 @@ func (c *ClusterClient) multiRepoClusterStatus(ctx context.Context, cs *ClusterS
 	if err != nil {
 		errs = append(errs, err.Error())
 	} else {
-		rg, err := c.resourceGroup(ctx, rootsync.ObjectKey())
+		// TODO(b/215740086): support listing all rootSyncs.
+		rg, err := c.resourceGroup(ctx, rootsync.ObjectKey(configsync.RootSyncName))
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -269,7 +273,8 @@ func (c *ClusterClient) namespaceRepoClusterStatus(ctx context.Context, cs *Clus
 		return
 	}
 
-	rg, err := c.resourceGroup(ctx, reposync.ObjectKey(declared.Scope(ns)))
+	// TODO(b/215740086): support listing all repoSyncs in the namespace.
+	rg, err := c.resourceGroup(ctx, reposync.ObjectKey(declared.Scope(ns), configsync.RepoSyncName))
 	if err != nil {
 		cs.Error = err.Error()
 		return

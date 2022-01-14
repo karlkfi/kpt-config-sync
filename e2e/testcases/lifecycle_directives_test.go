@@ -9,7 +9,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/syncer/differ"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/util"
@@ -50,7 +49,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Role"))
 		if err != nil {
 			return err
@@ -84,7 +83,7 @@ func TestPreventDeletionNamespace(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 1,
 			metrics.ResourceDeleted("Role"))
 		if err != nil {
 			return err

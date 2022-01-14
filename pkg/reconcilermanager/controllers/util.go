@@ -18,9 +18,10 @@ import (
 )
 
 // hydrationData returns configmap data for the hydration controller.
-func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, pollPeriod string) map[string]string {
+func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, reconcilerName, pollPeriod string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ScopeKey] = string(scope)
+	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
 	result[reconcilermanager.SyncDirKey] = gitConfig.Dir
 	// Add Hydration Polling Period.
 	result[reconcilermanager.HydrationPollingPeriod] = pollPeriod
@@ -28,10 +29,12 @@ func hydrationData(gitConfig *v1beta1.Git, scope declared.Scope, pollPeriod stri
 }
 
 // reconcilerData returns configmap data for namespace reconciler.
-func reconcilerData(clusterName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod string) map[string]string {
+func reconcilerData(clusterName, syncName, reconcilerName string, reconcilerScope declared.Scope, gitConfig *v1beta1.Git, pollPeriod string) map[string]string {
 	result := make(map[string]string)
 	result[reconcilermanager.ClusterNameKey] = clusterName
 	result[reconcilermanager.ScopeKey] = string(reconcilerScope)
+	result[reconcilermanager.SyncNameKey] = syncName
+	result[reconcilermanager.ReconcilerNameKey] = reconcilerName
 	result[reconcilermanager.PolicyDirKey] = gitConfig.Dir
 	result[reconcilermanager.GitRepoKey] = gitConfig.Repo
 

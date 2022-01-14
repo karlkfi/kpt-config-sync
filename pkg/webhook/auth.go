@@ -18,9 +18,9 @@ const (
 	saGroupPrefix          = "system:serviceaccount"
 	saNamespaceGroupPrefix = saGroupPrefix + ":" + configmanagement.ControllerNamespace
 
-	saImporter        = saNamespaceGroupPrefix + ":" + importer.Name
-	saRootReconciler  = saNamespaceGroupPrefix + ":" + reconciler.RootSyncName
-	saNamespacePrefix = saNamespaceGroupPrefix + ":" + reconciler.RepoSyncPrefix + "-"
+	saImporter             = saNamespaceGroupPrefix + ":" + importer.Name
+	saRootReconcilerPrefix = saNamespaceGroupPrefix + ":" + reconciler.RootReconcilerPrefix
+	saNamespacePrefix      = saNamespaceGroupPrefix + ":" + reconciler.NsReconcilerPrefix + "-"
 )
 
 // isConfigSyncSA returns true if the given UserInfo represents a Config Sync
@@ -46,7 +46,7 @@ func isImporter(username string) bool {
 }
 
 func isRootReconciler(username string) bool {
-	return username == saRootReconciler
+	return strings.HasPrefix(username, saRootReconcilerPrefix)
 }
 
 func canManage(username, manager string) bool {

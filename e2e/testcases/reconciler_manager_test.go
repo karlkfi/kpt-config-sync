@@ -11,7 +11,6 @@ import (
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
 	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,7 +24,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo)
 
 	reconcilerDeployment := &appsv1.Deployment{}
-	if err := nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem, reconcilerDeployment); err != nil {
+	if err := nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, reconcilerDeployment); err != nil {
 		nt.T.Fatal(err)
 	}
 	generation := reconcilerDeployment.Generation
@@ -44,7 +43,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the container image should be reverted by the reconciler-manager")
 	generation += 2
 	nomostest.Wait(nt.T, "the container image to be reverted", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			firstContainerImageIs(managedImage))
 	})
@@ -56,7 +55,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the reconciler-manager should revert the replicas change")
 	generation += 2
 	nomostest.Wait(nt.T, "the replicas to be reverted", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			hasReplicas(managedReplicas))
 	})
@@ -76,7 +75,7 @@ func TestManagingReconciler(t *testing.T) {
 		// test case 3.a: the reconciler-manager should not override the container resource requirements on autopilot clusters.
 		nt.T.Log("Verify the reconciler-manager should ignore the memory limit override")
 		nomostest.Wait(nt.T, "the memory limit override to be ignored", nt.DefaultWaitTimeout, func() error {
-			return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+			return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 				&appsv1.Deployment{}, hasGeneration(generation), // generation remains the same because of no change.
 				firstContainerMemoryLimitIs(managedMemoryLimit.String()))
 		})
@@ -85,7 +84,7 @@ func TestManagingReconciler(t *testing.T) {
 		nt.T.Log("Verify the reconciler-manager should override the memory limit")
 		generation++
 		nomostest.Wait(nt.T, "the memory limit to be overridden", nt.DefaultWaitTimeout, func() error {
-			return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+			return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 				&appsv1.Deployment{}, hasGeneration(generation),
 				firstContainerMemoryLimitIs(updatedContainerMemoryLimit.String()))
 		})
@@ -105,7 +104,7 @@ func TestManagingReconciler(t *testing.T) {
 		generation++
 		// We can't verify the memory limit because Autopilot controls the limit and it may not be updated.
 		nomostest.Wait(nt.T, "the memory limit to be updated by the autopilot", nt.DefaultWaitTimeout, func() error {
-			return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+			return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 				&appsv1.Deployment{}, hasGeneration(generation))
 		})
 	} else {
@@ -120,7 +119,7 @@ func TestManagingReconciler(t *testing.T) {
 		nt.T.Log("Verify the reconciler-manager should revert the memory limit change")
 		generation += 2
 		nomostest.Wait(nt.T, "the memory limit to be reverted", nt.DefaultWaitTimeout, func() error {
-			return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+			return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 				&appsv1.Deployment{}, hasGeneration(generation),
 				firstContainerMemoryLimitIs(updatedContainerMemoryLimit.String()))
 		})
@@ -139,7 +138,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the reconciler Deployment has been updated to the new manifest")
 	generation++
 	nomostest.Wait(nt.T, "the deployment manifest to be updated", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			firstContainerImageIsNot(managedImage))
 	})
@@ -151,7 +150,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the git-creds volume is gone")
 	generation++
 	nomostest.Wait(nt.T, "the git-creds volume to be deleted", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			gitCredsVolumeDeleted(currentVolumesCount))
 	})
@@ -162,7 +161,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the gcenode-askpass-sidecar container should be added")
 	generation++
 	nomostest.Wait(nt.T, "the gcenode-askpass-sidecar container to be added", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			templateForGcpServiceAccountAuthType())
 	})
@@ -173,7 +172,7 @@ func TestManagingReconciler(t *testing.T) {
 	nt.T.Log("Verify the git-creds volume exists and the gcenode-askpass-sidecar container is gone")
 	generation++
 	nomostest.Wait(nt.T, "the git-creds volume to be added and the gcenode-askpass-sidecar container to be deleted", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			templateForSSHAuthType())
 	})
@@ -184,7 +183,7 @@ type updateFunc func(deployment *appsv1.Deployment)
 func mustUpdateRootReconciler(nt *nomostest.NT, f updateFunc) {
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		d := &appsv1.Deployment{}
-		if err := nt.Get(reconciler.RootSyncName, v1.NSConfigManagementSystem, d); err != nil {
+		if err := nt.Get(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem, d); err != nil {
 			return err
 		}
 		f(d)
@@ -210,7 +209,7 @@ func resetReconcilerDeploymentManifests(nt *nomostest.NT, origImg string, genera
 
 	nt.T.Log("Verify the reconciler Deployment has been reverted to the original manifest")
 	nomostest.Wait(nt.T, "the deployment manifest to be reverted", nt.DefaultWaitTimeout, func() error {
-		return nt.Validate(reconciler.RootSyncName, v1.NSConfigManagementSystem,
+		return nt.Validate(nomostest.DefaultRootReconcilerName, v1.NSConfigManagementSystem,
 			&appsv1.Deployment{}, hasGeneration(generation),
 			firstContainerImageIs(origImg))
 	})

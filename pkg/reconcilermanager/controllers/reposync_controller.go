@@ -15,7 +15,6 @@ import (
 	"github.com/google/nomos/pkg/metrics"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	"github.com/google/nomos/pkg/reposync"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/validate/raw/validate"
@@ -75,10 +74,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			//
 			// Note: Update cleanup resources in cleanupNSControllerResources(...) when
 			// resources created by namespace controller changes.
-			cleanupErr := r.cleanupNSControllerResources(ctx, req.Namespace)
-			if cleanupErr == nil {
-				delete(r.namespaces, req.Namespace)
-			}
+			cleanupErr := r.cleanupNSControllerResources(ctx, req.Namespace, reconciler.NsReconcilerName(req.Namespace, req.Name))
 			// if cleanupErr != nil, the request will be requeued.
 			return controllerruntime.Result{}, cleanupErr
 		}
@@ -86,6 +82,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	r.namespaces[req.Namespace] = struct{}{}
+	reconcilerName := reconciler.NsReconcilerName(rs.Namespace, rs.Name)
 
 	var err error
 	if err = validate.GitSpec(rs.Spec.Git, &rs); err != nil {
@@ -110,14 +107,14 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 
 	// Create secret in config-management-system namespace using the
 	// existing secret in the reposync.namespace.
-	if err := secrets.Put(ctx, &rs, r.client); err != nil {
+	if err := Put(ctx, &rs, r.client, reconcilerName); err != nil {
 		log.Error(err, "RepoSync failed secret creation", "auth", rs.Spec.Auth)
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		return controllerruntime.Result{}, nil
 	}
 
 	// Overwrite reconciler pod's configmaps.
-	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(ctx, &rs))
+	configMapDataHash, err := r.upsertConfigMaps(ctx, r.repoConfigMapMutations(ctx, &rs, reconcilerName))
 	if err != nil {
 		log.Error(err, "Failed to create/update ConfigMap")
 		reposync.SetStalled(&rs, "ConfigMap", err)
@@ -127,7 +124,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler pod ServiceAccount.
-	if err := r.upsertServiceAccount(ctx, reconciler.RepoSyncName(rs.Namespace), rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail); err != nil {
+	if err := r.upsertServiceAccount(ctx, reconcilerName, rs.Spec.Git.Auth, rs.Spec.Git.GCPServiceAccountEmail); err != nil {
 		log.Error(err, "Failed to create/update ServiceAccount")
 		reposync.SetStalled(&rs, "ServiceAccount", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -136,7 +133,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler rolebinding.
-	if err := r.upsertRoleBinding(ctx, &rs); err != nil {
+	if err := r.upsertRoleBinding(ctx, rs.Namespace); err != nil {
 		log.Error(err, "Failed to create/update RoleBinding")
 		reposync.SetStalled(&rs, "RoleBinding", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -147,8 +144,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	mut := r.mutationsFor(ctx, rs, configMapDataHash)
 
 	// Upsert Namespace reconciler deployment.
-	deploymentName := reconciler.RepoSyncName(rs.Namespace)
-	op, err := r.upsertDeployment(ctx, deploymentName, v1.NSConfigManagementSystem, mut)
+	op, err := r.upsertDeployment(ctx, reconcilerName, v1.NSConfigManagementSystem, mut)
 	if err != nil {
 		log.Error(err, "Failed to create/update Deployment")
 		reposync.SetStalled(&rs, "Deployment", err)
@@ -160,7 +156,7 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 		// check the reconciler deployment conditions.
 		result, err := r.deploymentStatus(ctx, client.ObjectKey{
 			Namespace: v1.NSConfigManagementSystem,
-			Name:      deploymentName,
+			Name:      reconcilerName,
 		})
 		if err != nil {
 			log.Error(err, "Failed to check reconciler deployment conditions")
@@ -192,8 +188,8 @@ func (r *RepoSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 			reposync.ClearCondition(&rs, v1beta1.RepoSyncStalled)
 		}
 	} else {
-		r.log.Info("Deployment successfully reconciled", operationSubjectName, deploymentName, executedOperation, op)
-		rs.Status.Reconciler = reconciler.RepoSyncName(rs.Namespace)
+		r.log.Info("Deployment successfully reconciled", operationSubjectName, reconcilerName, executedOperation, op)
+		rs.Status.Reconciler = reconcilerName
 		msg := fmt.Sprintf("Reconciler deployment was %s", op)
 		reposync.SetReconciling(&rs, "Deployment", msg)
 	}
@@ -216,10 +212,10 @@ func (r *RepoSyncReconciler) SetupWithManager(mgr controllerruntime.Manager) err
 		Complete(r)
 }
 
-func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1beta1.RepoSync) []configMapMutation {
+func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1beta1.RepoSync, reconcilerName string) []configMapMutation {
 	return []configMapMutation{
 		{
-			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync),
+			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync),
 			data: gitSyncData(ctx, options{
 				ref:         rs.Spec.Git.Revision,
 				branch:      rs.Spec.Git.Branch,
@@ -232,19 +228,19 @@ func (r *RepoSyncReconciler) repoConfigMapMutations(ctx context.Context, rs *v1b
 			}),
 		},
 		{
-			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.HydrationController),
-			data:   hydrationData(&rs.Spec.Git, declared.Scope(rs.Namespace), r.hydrationPollingPeriod.String()),
+			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController),
+			data:   hydrationData(&rs.Spec.Git, declared.Scope(rs.Namespace), reconcilerName, r.hydrationPollingPeriod.String()),
 		},
 		{
-			cmName: RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler),
-			data:   reconcilerData(r.clusterName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
+			cmName: ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler),
+			data:   reconcilerData(r.clusterName, rs.Name, reconcilerName, declared.Scope(rs.Namespace), &rs.Spec.Git, r.reconcilerPollingPeriod.String()),
 		},
 	}
 }
 
 // validateNamespaceSecret verify that any necessary Secret is present before creating ConfigMaps and Deployments.
 func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSync *v1beta1.RepoSync) error {
-	if secrets.SkipForAuth(repoSync.Spec.Auth) {
+	if SkipForAuth(repoSync.Spec.Auth) {
 		// There is no Secret to check for the Config object.
 		return nil
 	}
@@ -258,13 +254,13 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 	return validateSecretData(repoSync.Spec.Auth, secret)
 }
 
-func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1beta1.RepoSync) error {
+func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, namespace string) error {
 	var childRB rbacv1.RoleBinding
 	childRB.Name = RepoSyncPermissionsName()
-	childRB.Namespace = rs.Namespace
+	childRB.Namespace = namespace
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childRB, func() error {
-		return mutateRoleBinding(rs, &childRB)
+		return r.mutateRoleBinding(ctx, namespace, &childRB)
 	})
 	if err != nil {
 		return err
@@ -275,18 +271,15 @@ func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1beta1.
 	return nil
 }
 
-func mutateRoleBinding(rs *v1beta1.RepoSync, rb *rbacv1.RoleBinding) error {
+func (r *RepoSyncReconciler) mutateRoleBinding(ctx context.Context, namespace string, rb *rbacv1.RoleBinding) error {
 	// Update rolereference.
 	rb.RoleRef = rolereference(RepoSyncPermissionsName(), "ClusterRole")
 
-	var subjects []rbacv1.Subject
-	subjects = append(subjects, subject(reconciler.RepoSyncName(rs.Namespace),
-		configsync.ControllerNamespace,
-		"ServiceAccount"))
-	// Update subject.
-	rb.Subjects = subjects
-
-	return nil
+	reposyncList := &v1beta1.RepoSyncList{}
+	if err := r.client.List(ctx, reposyncList, client.InNamespace(namespace)); err != nil {
+		return errors.Wrapf(err, "failed to list the RepoSync objects in namespace %q", namespace)
+	}
+	return r.updateRoleBindingSubjects(rb, reposyncList)
 }
 
 func (r *RepoSyncReconciler) updateStatus(ctx context.Context, rs *v1beta1.RepoSync, log logr.Logger) error {
@@ -304,22 +297,23 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 		if !ok {
 			return errors.Errorf("expected appsv1 Deployment, got: %T", obj)
 		}
+		reconcilerName := reconciler.NsReconcilerName(rs.Namespace, rs.Name)
 		// Mutate Annotation with the hash of configmap.data from all the ConfigMap
 		// reconciler creates/updates.
 		core.SetAnnotation(&d.Spec.Template, metadata.ConfigMapAnnotationKey, fmt.Sprintf("%x", configMapDataHash))
 		// Add unique reconciler label
-		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconciler.RepoSyncName(rs.Namespace))
+		core.SetLabel(&d.Spec.Template, metadata.ReconcilerLabel, reconcilerName)
 		templateSpec := &d.Spec.Template.Spec
 		// Update ServiceAccountName. eg. ns-reconciler-<namespace>
-		templateSpec.ServiceAccountName = reconciler.RepoSyncName(rs.Namespace)
+		templateSpec.ServiceAccountName = reconcilerName
 		// The Deployment object fetched from the API server has the field defined.
 		// Update DeprecatedServiceAccount to avoid discrepancy in equality check.
-		templateSpec.DeprecatedServiceAccount = reconciler.RepoSyncName(rs.Namespace)
+		templateSpec.DeprecatedServiceAccount = reconcilerName
 		// Mutate secret.secretname to secret reference specified in RepoSync CR.
 		// Secret reference is the name of the secret used by git-sync container to
 		// authenticate with the git repository using the authorization method specified
 		// in the RepoSync CR.
-		secretName := secrets.NamespaceReconcilerSecretName(rs.Namespace, rs.Spec.SecretRef.Name)
+		secretName := ReconcilerResourceName(reconcilerName, rs.Spec.SecretRef.Name)
 		templateSpec.Volumes = filterVolumes(templateSpec.Volumes, rs.Spec.Auth, secretName)
 		var updatedContainers []corev1.Container
 		// Mutate spec.Containers to update name, configmap references and volumemounts.
@@ -327,17 +321,17 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 			switch container.Name {
 			case reconcilermanager.Reconciler:
 				configmapRef := make(map[string]*bool)
-				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
+				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.Reconciler)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.HydrationController:
 				configmapRef := make(map[string]*bool)
-				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
+				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.HydrationController)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case reconcilermanager.GitSync:
 				configmapRef := make(map[string]*bool)
-				configmapRef[RepoSyncResourceName(rs.Namespace, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
+				configmapRef[ReconcilerResourceName(reconcilerName, reconcilermanager.GitSync)] = pointer.BoolPtr(false)
 				container.EnvFrom = envFromSources(configmapRef)
 				// Don't mount git-creds volume if auth is 'none' or 'gcenode'.
 				container.VolumeMounts = volumeMounts(rs.Spec.Auth,
@@ -347,7 +341,7 @@ func (r *RepoSyncReconciler) mutationsFor(ctx context.Context, rs v1beta1.RepoSy
 				if authTypeToken(rs.Spec.Auth) {
 					container.Env = gitSyncTokenAuthEnv(secretName)
 				}
-				keys := secrets.GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
+				keys := GetKeys(ctx, r.client, rs.Spec.SecretRef.Name, rs.Namespace)
 				container.Env = append(container.Env, gitSyncHTTPSProxyEnv(secretName, keys)...)
 				mutateContainerResource(ctx, &container, rs.Spec.Override, string(NamespaceReconcilerType))
 			case metrics.OtelAgentName:

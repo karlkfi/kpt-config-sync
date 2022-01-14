@@ -32,7 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const nilGitContext = `{"repo":"","branch":"","rev":""}`
+const (
+	rootSyncName       = "my-rs"
+	rootReconcilerName = "root-reconciler-my-rs"
+	nilGitContext      = `{"repo":"","branch":"","rev":""}`
+)
 
 type noOpRemediator struct {
 	needsUpdate bool
@@ -112,7 +116,9 @@ func TestRoot_Parse(t *testing.T) {
 				sourceFormat: tc.format,
 				opts: opts{
 					parser:             &fakeParser{parse: tc.parsed},
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1()),
+					syncName:           rootSyncName,
+					reconcilerName:     rootReconcilerName,
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					converter:          converter,
 					updater: updater{
@@ -171,7 +177,9 @@ func TestRoot_ParseErrorsMetricValidation(t *testing.T) {
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
 					parser:             &fakeParser{errors: tc.errors},
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1()),
+					syncName:           rootSyncName,
+					reconcilerName:     rootReconcilerName,
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					updater: updater{
 						scope:     declared.RootReconciler,
@@ -223,7 +231,9 @@ func TestRoot_SourceReconcilerErrorsMetricValidation(t *testing.T) {
 				sourceFormat: filesystem.SourceFormatUnstructured,
 				opts: opts{
 					parser:             &fakeParser{errors: tc.parseErrors},
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1()),
+					syncName:           rootSyncName,
+					reconcilerName:     rootReconcilerName,
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					updater: updater{
 						scope:     declared.RootReconciler,
@@ -288,7 +298,9 @@ func TestRoot_SourceAndSyncReconcilerErrorsMetricValidation(t *testing.T) {
 						remediator: &noOpRemediator{},
 						applier:    &fakeApplier{errors: tc.applyErrors},
 					},
-					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1()),
+					syncName:           rootSyncName,
+					reconcilerName:     rootReconcilerName,
+					client:             syncertest.NewClient(t, runtime.NewScheme(), fake.RootSyncObjectV1Beta1(core.Name(rootSyncName))),
 					discoveryInterface: syncertest.NewDiscoveryClient(kinds.Namespace(), kinds.Role()),
 					mux:                &sync.Mutex{},
 				},

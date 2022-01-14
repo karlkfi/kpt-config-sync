@@ -162,10 +162,13 @@ func (c *Client) List(_ context.Context, list client.ObjectList, opts ...client.
 		return c.listV1CRDs(l, options)
 	case *v1.SyncList:
 		return c.listSyncs(l, options)
+	case *configsyncv1beta1.RootSyncList:
+		return c.listRootSyncs(l, options)
+	case *configsyncv1beta1.RepoSyncList:
+		return c.listRepoSyncs(l, options)
 	case *corev1.SecretList:
 		return c.listSecrets(l, options)
 	}
-
 	return errors.Errorf("fake.Client does not support List(%T)", list)
 }
 
@@ -502,11 +505,53 @@ func (c *Client) listSyncs(list *v1.SyncList, options client.ListOptions) error 
 		}
 		sync, ok := obj.(*v1.Sync)
 		if !ok {
-			return errors.Errorf("non-Sync stored as CRD: %v", obj)
+			return errors.Errorf("non-Sync stored as Sync: %v", obj)
 		}
 		list.Items = append(list.Items, *sync)
 	}
 
+	return nil
+}
+
+func (c *Client) listRootSyncs(list *configsyncv1beta1.RootSyncList, options client.ListOptions) error {
+	objs := c.list(kinds.RootSyncV1Beta1().GroupKind())
+	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
+		rs, ok := obj.(*configsyncv1beta1.RootSync)
+		if !ok {
+			return errors.Errorf("non-RootSync stored as RootSync: %v", obj)
+		}
+		list.Items = append(list.Items, *rs)
+	}
+	return nil
+}
+
+func (c *Client) listRepoSyncs(list *configsyncv1beta1.RepoSyncList, options client.ListOptions) error {
+	objs := c.list(kinds.RepoSyncV1Beta1().GroupKind())
+	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
+		rs, ok := obj.(*configsyncv1beta1.RepoSync)
+		if !ok {
+			return errors.Errorf("non-RepoSync stored as RepoSync: %v", obj)
+		}
+		list.Items = append(list.Items, *rs)
+	}
 	return nil
 }
 
@@ -528,7 +573,6 @@ func (c *Client) listSecrets(list *corev1.SecretList, options client.ListOptions
 		}
 		list.Items = append(list.Items, *s)
 	}
-
 	return nil
 }
 

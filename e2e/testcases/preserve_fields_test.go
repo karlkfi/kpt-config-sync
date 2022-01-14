@@ -10,7 +10,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +99,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Service"))
 		if err != nil {
 			return err
@@ -128,7 +127,7 @@ func TestPreserveGeneratedServiceFields(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("Service", 2))
 		if err != nil {
 			return err
@@ -387,7 +386,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("ConfigMap"))
 		if err != nil {
 			return err
@@ -418,7 +417,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourcePatched("Namespace", 2), metrics.ResourcePatched("ConfigMap", 2))
 		if err != nil {
 			return err
@@ -446,7 +445,7 @@ func TestAddUpdateDeleteAnnotations(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourcePatched("Namespace", 3), metrics.ResourcePatched("ConfigMap", 3))
 		if err != nil {
 			return err

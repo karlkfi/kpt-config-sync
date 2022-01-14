@@ -6,7 +6,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
 	"github.com/google/nomos/pkg/core"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/pkg/errors"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -54,7 +53,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
+		err = nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 5,
 			metrics.ResourceCreated("CustomResourceDefinition"), metrics.ResourceCreated("Namespace"),
 			metrics.GVKMetric{
 				GVK:   "Anvil",
@@ -93,7 +92,7 @@ func TestMultipleVersions_CustomResourceV1Beta1(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5,
+		err = nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 5,
 			metrics.ResourcePatched("Namespace", 2),
 			metrics.GVKMetric{
 				GVK:   "Anvil",

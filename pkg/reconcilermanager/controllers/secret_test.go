@@ -1,4 +1,4 @@
-package secrets
+package controllers
 
 import (
 	"context"
@@ -22,10 +22,9 @@ const (
 	namespaceKey   = "ssh-key"
 	keyData        = "test-key"
 	updatedKeyData = "updated-test-key"
-	ns             = "bookinfo"
 )
 
-func reposync(auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
+func repoSyncWithAuth(auth string, opts ...core.MetaMutator) *v1beta1.RepoSync {
 	result := fake.RepoSyncObjectV1Beta1(opts...)
 	result.Spec.Git = v1beta1.Git{
 		Auth:      auth,
@@ -71,41 +70,41 @@ func TestCreate(t *testing.T) {
 	}{
 		{
 			name:     "Secret created",
-			reposync: reposync(sshAuth, core.Namespace(ns)),
-			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(ns))),
-			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth,
+			reposync: repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			client:   fakeClient(t, secret(t, namespaceKey, keyData, sshAuth, core.Namespace(reposyncNs))),
+			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth,
 				core.Namespace(v1.NSConfigManagementSystem),
-				core.Annotation(NSReconcilerNSAnnotationKey, ns),
+				core.Annotation(NSReconcilerNSAnnotationKey, reposyncNs),
 			),
 		},
 		{
 			name:     "Secret updated",
-			reposync: reposync(sshAuth, core.Namespace(ns)),
-			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, core.Namespace(ns)),
-				secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
+			reposync: repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			client: fakeClient(t, secret(t, namespaceKey, updatedKeyData, sshAuth, core.Namespace(reposyncNs)),
+				secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem)),
 			),
-			wantSecret: secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), updatedKeyData, sshAuth,
+			wantSecret: secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), updatedKeyData, sshAuth,
 				core.Namespace(v1.NSConfigManagementSystem),
-				core.Annotation(NSReconcilerNSAnnotationKey, ns),
+				core.Annotation(NSReconcilerNSAnnotationKey, reposyncNs),
 			),
 		},
 		{
 			name:      "Secret not found",
-			reposync:  reposync(sshAuth, core.Namespace(ns)),
+			reposync:  repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
 			client:    fakeClient(t),
 			wantError: true,
 		},
 		{
 			name:      "Secret not updated, secret not present",
-			reposync:  reposync(sshAuth, core.Namespace(ns)),
-			client:    fakeClient(t, secret(t, NamespaceReconcilerSecretName(ns, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem))),
+			reposync:  repoSyncWithAuth(sshAuth, core.Namespace(reposyncNs), core.Name(reposyncName)),
+			client:    fakeClient(t, secret(t, ReconcilerResourceName(nsReconcilerName, namespaceKey), keyData, sshAuth, core.Namespace(v1.NSConfigManagementSystem))),
 			wantError: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := Put(context.Background(), tc.reposync, tc.client)
+			err := Put(context.Background(), tc.reposync, tc.client, nsReconcilerName)
 			if tc.wantError && err == nil {
 				t.Errorf("Create() got error: %q, want error", err)
 			} else if !tc.wantError && err != nil {

@@ -7,7 +7,6 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
@@ -22,9 +21,9 @@ func TestInvalidRootSyncBranchStatus(t *testing.T) {
 
 	nt.WaitForRootSyncSourceError(status.SourceErrorCode, "")
 
-	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(reconciler.RootSyncName), func() error {
+	err := nt.ValidateMetrics(nomostest.SyncMetricsToReconcilerSourceError(nomostest.DefaultRootReconcilerName), func() error {
 		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+		return nt.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, "source")
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -62,7 +61,7 @@ func TestInvalidRepoSyncBranchStatus(t *testing.T) {
 
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate reconciler error metric is emitted.
-		return nt.ValidateReconcilerErrors(reconciler.RootSyncName, "source")
+		return nt.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, "source")
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)

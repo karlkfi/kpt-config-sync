@@ -72,7 +72,7 @@ func TestNamespaceRepo_Centralized(t *testing.T) {
 
 	// Validate multi-repo metrics from namespace reconciler.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespace), 1, metrics.ResourceCreated("ServiceAccount"))
+		err := nt.ValidateMultiRepoMetrics(reconciler.NsReconcilerName(bsNamespace, configsync.RepoSyncName), 1, metrics.ResourceCreated("ServiceAccount"))
 		if err != nil {
 			return err
 		}
@@ -146,7 +146,7 @@ func TestNamespaceRepo_Delegated(t *testing.T) {
 
 	// Validate multi-repo metrics from namespace reconciler.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(bsNamespaceRepo), 1, metrics.ResourceCreated("ServiceAccount"))
+		err := nt.ValidateMultiRepoMetrics(reconciler.NsReconcilerName(bsNamespaceRepo, configsync.RepoSyncName), 1, metrics.ResourceCreated("ServiceAccount"))
 		if err != nil {
 			return err
 		}
@@ -220,9 +220,9 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 		// TODO(b/193186006): Remove the psp related change when Kubernetes 1.25 is
 		// available on GKE.
 		if strings.Contains(os.Getenv("GCP_CLUSTER"), "psp") {
-			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 5, metrics.ResourceDeleted("RepoSync"))
+			err = nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 5, metrics.ResourceDeleted("RepoSync"))
 		} else {
-			err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 4, metrics.ResourceDeleted("RepoSync"))
+			err = nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 4, metrics.ResourceDeleted("RepoSync"))
 		}
 		if err != nil {
 			return err
@@ -256,7 +256,7 @@ func getNsReconcilerSecrets(nt *nomostest.NT, ns string) []string {
 	}
 	var secretNames []string
 	for _, secret := range secretList.Items {
-		if strings.HasPrefix(secret.Name, reconciler.RepoSyncName(ns)) {
+		if strings.HasPrefix(secret.Name, reconciler.NsReconcilerName(ns, configsync.RepoSyncName)) {
 			secretNames = append(secretNames, secret.Name)
 		}
 	}
@@ -273,7 +273,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, secretNames []string, nt
 
 	// Verify Namespace Reconciler deployment no longer present.
 	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconciler.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.DeploymentObject())
+		return nt.ValidateNotFound(reconciler.NsReconcilerName(namespace, configsync.RepoSyncName), v1.NSConfigManagementSystem, fake.DeploymentObject())
 	})
 	if err != nil {
 		nt.T.Errorf("Reconciler deployment present after deletion: %v", err)
@@ -302,7 +302,7 @@ func checkRepoSyncResourcesNotPresent(namespace string, secretNames []string, nt
 	}
 
 	// Verify Namespace Reconciler service account no longer present.
-	saName := reconciler.RepoSyncName(namespace)
+	saName := reconciler.NsReconcilerName(namespace, configsync.RepoSyncName)
 	_, err = nomostest.Retry(5*time.Second, func() error {
 		return nt.ValidateNotFound(saName, configsync.ControllerNamespace, fake.ServiceAccountObject(saName))
 	})

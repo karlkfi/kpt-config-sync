@@ -2,12 +2,15 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/applier"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/declared"
 	csmetadata "github.com/google/nomos/pkg/metadata"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -19,6 +22,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+const (
+	rootSyncName = "my-root-sync"
+	repoSyncName = "my-repo-sync"
+)
+
+func rootSyncManagerAnnotation(rsName string) string {
+	if rsName == configsync.RootSyncName {
+		return ":root"
+	}
+	return fmt.Sprintf(":root-%s", rsName)
+}
+
+func repoSyncManagerAnnotation(ns, rsName string) string {
+	if rsName == configsync.RepoSyncName {
+		return ns
+	}
+	return fmt.Sprintf("%s-%s-%d", ns, rsName, len(rsName))
+}
 
 func TestValidator_Handle(t *testing.T) {
 	testCases := []struct {
@@ -55,7 +77,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(csmetadata.ManagedByKey, csmetadata.ManagedByValue),
 				core.Annotation(csmetadata.ResourceManagementKey, csmetadata.ResourceManagementEnabled),
-				core.Annotation(csmetadata.ResourceManagerKey, ":root"),
+				core.Annotation(csmetadata.ResourceManagerKey, rootSyncManagerAnnotation(rootSyncName)),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -65,7 +87,7 @@ func TestValidator_Handle(t *testing.T) {
 				}),
 				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
-			user: configSyncRootReconciler(),
+			user: configSyncRootReconciler(rootSyncName),
 		},
 		{
 			name: "Root reconciler deletes an object managed by a namespace reconciler",
@@ -74,7 +96,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(csmetadata.ManagedByKey, csmetadata.ManagedByValue),
 				core.Annotation(csmetadata.ResourceManagementKey, csmetadata.ResourceManagementEnabled),
-				core.Annotation(csmetadata.ResourceManagerKey, "bookstore"),
+				core.Annotation(csmetadata.ResourceManagerKey, repoSyncManagerAnnotation("bookstore", repoSyncName)),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -84,7 +106,7 @@ func TestValidator_Handle(t *testing.T) {
 				}),
 				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
-			user: configSyncRootReconciler(),
+			user: configSyncRootReconciler(rootSyncName),
 		},
 		{
 			name: "Namespace reconciler deletes an object it manages",
@@ -93,7 +115,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(csmetadata.ManagedByKey, csmetadata.ManagedByValue),
 				core.Annotation(csmetadata.ResourceManagementKey, csmetadata.ResourceManagementEnabled),
-				core.Annotation(csmetadata.ResourceManagerKey, "bookstore"),
+				core.Annotation(csmetadata.ResourceManagerKey, repoSyncManagerAnnotation("bookstore", repoSyncName)),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -103,7 +125,7 @@ func TestValidator_Handle(t *testing.T) {
 				}),
 				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
-			user: configSyncNamespaceReconciler("bookstore"),
+			user: configSyncNamespaceReconciler("bookstore", repoSyncName),
 		},
 		{
 			name: "Namespace reconciler deletes an object it does not manage",
@@ -112,7 +134,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(csmetadata.ManagedByKey, csmetadata.ManagedByValue),
 				core.Annotation(csmetadata.ResourceManagementKey, csmetadata.ResourceManagementEnabled),
-				core.Annotation(csmetadata.ResourceManagerKey, "videostore"),
+				core.Annotation(csmetadata.ResourceManagerKey, repoSyncManagerAnnotation("videostore", repoSyncName)),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -122,7 +144,7 @@ func TestValidator_Handle(t *testing.T) {
 				}),
 				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
-			user: configSyncNamespaceReconciler("bookstore"),
+			user: configSyncNamespaceReconciler("bookstore", repoSyncName),
 			deny: metav1.StatusReasonUnauthorized,
 		},
 		{
@@ -132,7 +154,7 @@ func TestValidator_Handle(t *testing.T) {
 				core.Namespace("world"),
 				core.Label(csmetadata.ManagedByKey, csmetadata.ManagedByValue),
 				core.Annotation(csmetadata.ResourceManagementKey, csmetadata.ResourceManagementEnabled),
-				core.Annotation(csmetadata.ResourceManagerKey, "videostore"),
+				core.Annotation(csmetadata.ResourceManagerKey, repoSyncManagerAnnotation("videostore", repoSyncName)),
 				setRules([]rbacv1.PolicyRule{
 					{
 						APIGroups: []string{""},
@@ -142,7 +164,7 @@ func TestValidator_Handle(t *testing.T) {
 				}),
 				core.Annotation(csmetadata.DeclaredFieldsKey, `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/managed-by":{}},"f:annotations":{"f:configmanagement.gke.io/managed":{},"f:configsync.gke.io/manager":{}}},"f:rules":{}}`),
 			),
-			user: configSyncNamespaceReconciler("bookstore"),
+			user: configSyncNamespaceReconciler("bookstore", repoSyncName),
 			deny: metav1.StatusReasonUnauthorized,
 		},
 		{
@@ -617,17 +639,17 @@ func configSyncImporter() authenticationv1.UserInfo {
 	}
 }
 
-func configSyncRootReconciler() authenticationv1.UserInfo {
+func configSyncRootReconciler(rsName string) authenticationv1.UserInfo {
 	return authenticationv1.UserInfo{
 		Groups:   []string{saGroup, saNamespaceGroup},
-		Username: saRootReconciler,
+		Username: saNamespaceGroupPrefix + ":" + reconciler.RootReconcilerName(rsName),
 	}
 }
 
-func configSyncNamespaceReconciler(ns string) authenticationv1.UserInfo {
+func configSyncNamespaceReconciler(ns, rsName string) authenticationv1.UserInfo {
 	return authenticationv1.UserInfo{
 		Groups:   []string{saGroup, saNamespaceGroup},
-		Username: saNamespacePrefix + ns,
+		Username: saNamespaceGroupPrefix + ":" + reconciler.NsReconcilerName(ns, rsName),
 	}
 }
 

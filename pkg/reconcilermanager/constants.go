@@ -19,6 +19,14 @@ const (
 	// reconciler and hydration controller.
 	ScopeKey = "SCOPE"
 
+	// SyncNameKey is the OS env variable and ConfigMap key for the name of
+	// the RootSync or RepoSync object.
+	SyncNameKey = "SYNC_NAME"
+
+	// ReconcilerNameKey is the OS env variable and ConfigMap key for the name of
+	// the Reconciler Deployment.
+	ReconcilerNameKey = "RECONCILER_NAME"
+
 	// SyncDirKey is the OS env variable and ConfigMap key for the sync directory
 	// read by the hydration controller.
 	SyncDirKey = "SYNC_DIR"

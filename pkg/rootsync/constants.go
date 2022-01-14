@@ -6,10 +6,9 @@ import (
 )
 
 // ObjectKey returns a key appropriate for fetching a RootSync.
-// namespace.
-func ObjectKey() client.ObjectKey {
+func ObjectKey(name string) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: configsync.ControllerNamespace,
-		Name:      configsync.RootSyncName,
+		Name:      name,
 	}
 }

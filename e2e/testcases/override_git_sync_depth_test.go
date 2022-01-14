@@ -7,9 +7,11 @@ import (
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	ocmetrics "github.com/google/nomos/pkg/metrics"
+	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -20,9 +22,9 @@ func TestOverrideGitSyncDepthV1Alpha1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 
-	rootReconcilerGitSyncCM := controllers.RootSyncResourceName(reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.RepoSyncResourceName(backendNamespace, reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.RepoSyncResourceName(frontendNamespace, reconcilermanager.GitSync)
+	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
+	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
+	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SYNC_DEPTH"
 	defaultDepth := controllers.SyncDepthNoRev
 
@@ -219,9 +221,9 @@ func TestOverrideGitSyncDepthV1Beta1(t *testing.T) {
 	nt := nomostest.New(t, ntopts.SkipMonoRepo, ntopts.NamespaceRepo(backendNamespace), ntopts.NamespaceRepo(frontendNamespace))
 	nt.WaitForRepoSyncs()
 
-	rootReconcilerGitSyncCM := controllers.RootSyncResourceName(reconcilermanager.GitSync)
-	nsReconcilerBackendGitSyncCM := controllers.RepoSyncResourceName(backendNamespace, reconcilermanager.GitSync)
-	nsReconcilerFrontendGitSyncCM := controllers.RepoSyncResourceName(frontendNamespace, reconcilermanager.GitSync)
+	rootReconcilerGitSyncCM := controllers.ReconcilerResourceName(nomostest.DefaultRootReconcilerName, reconcilermanager.GitSync)
+	nsReconcilerBackendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(backendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
+	nsReconcilerFrontendGitSyncCM := controllers.ReconcilerResourceName(reconciler.NsReconcilerName(frontendNamespace, configsync.RepoSyncName), reconcilermanager.GitSync)
 	key := "GIT_SYNC_DEPTH"
 	defaultDepth := controllers.SyncDepthNoRev
 

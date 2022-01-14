@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/testing/fake"
 )
 
@@ -28,7 +27,7 @@ func TestIgnoreKptfiles(t *testing.T) {
 
 	// Validate multi-repo metrics.
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 2,
+		err = nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 2,
 			metrics.ResourceCreated("Namespace"))
 		if err != nil {
 			return err

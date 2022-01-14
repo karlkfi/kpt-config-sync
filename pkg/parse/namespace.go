@@ -25,7 +25,7 @@ import (
 )
 
 // NewNamespaceRunner creates a new runnable parser for parsing a Namespace repo.
-func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.DiscoveryInterface, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Parser, error) {
+func NewNamespaceRunner(clusterName, syncName, reconcilerName string, scope declared.Scope, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.DiscoveryInterface, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Parser, error) {
 	converter, err := declared.NewValueConverter(dc)
 	if err != nil {
 		return nil, err
@@ -35,6 +35,7 @@ func NewNamespaceRunner(clusterName, reconcilerName string, scope declared.Scope
 		opts: opts{
 			clusterName:      clusterName,
 			client:           c,
+			syncName:         syncName,
 			reconcilerName:   reconcilerName,
 			pollingFrequency: pollingFrequency,
 			resyncPeriod:     resyncPeriod,
@@ -137,7 +138,7 @@ func (p *namespace) setSourceStatusWithRetries(ctx context.Context, newStatus gi
 	// or if an attacker tried to maliciously change the cluster's record of the
 	// source of truth.
 	var rs v1beta1.RepoSync
-	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope, p.syncName), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
@@ -180,7 +181,7 @@ func (p *namespace) setRenderingStatusWithRetires(ctx context.Context, newStatus
 	}
 
 	var rs v1beta1.RepoSync
-	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope, p.syncName), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RepoSync for parser")
 	}
 
@@ -229,7 +230,7 @@ func (p *namespace) setSyncStatusWithRetries(ctx context.Context, errs status.Mu
 	}
 
 	var rs v1beta1.RepoSync
-	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope), &rs); err != nil {
+	if err := p.client.Get(ctx, reposync.ObjectKey(p.scope, p.syncName), &rs); err != nil {
 		return status.APIServerError(err, fmt.Sprintf("failed to get the RepoSync object for the %v namespace", p.scope))
 	}
 

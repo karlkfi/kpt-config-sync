@@ -30,7 +30,7 @@ import (
 )
 
 // NewRootRunner creates a new runnable parser for parsing a Root repository.
-func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.DiscoveryInterface, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Parser, error) {
+func NewRootRunner(clusterName, syncName, reconcilerName string, format filesystem.SourceFormat, fileReader reader.Reader, c client.Client, pollingFrequency time.Duration, resyncPeriod time.Duration, fs FileSource, dc discovery.DiscoveryInterface, resources *declared.Resources, app applier.Interface, rem remediator.Interface) (Parser, error) {
 	converter, err := declared.NewValueConverter(dc)
 	if err != nil {
 		return nil, err
@@ -38,6 +38,7 @@ func NewRootRunner(clusterName, reconcilerName string, format filesystem.SourceF
 
 	opts := opts{
 		clusterName:      clusterName,
+		syncName:         syncName,
 		reconcilerName:   reconcilerName,
 		client:           c,
 		pollingFrequency: pollingFrequency,
@@ -143,7 +144,7 @@ func (p *root) setSourceStatusWithRetries(ctx context.Context, newStatus gitStat
 	}
 
 	var rs v1beta1.RootSync
-	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+	if err := p.client.Get(ctx, rootsync.ObjectKey(p.syncName), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
@@ -205,7 +206,7 @@ func (p *root) setRenderingStatusWithRetires(ctx context.Context, newStatus rend
 	}
 
 	var rs v1beta1.RootSync
-	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+	if err := p.client.Get(ctx, rootsync.ObjectKey(p.syncName), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync for parser")
 	}
 
@@ -273,7 +274,7 @@ func (p *root) setSyncStatusWithRetries(ctx context.Context, errs status.MultiEr
 	}
 
 	var rs v1beta1.RootSync
-	if err := p.client.Get(ctx, rootsync.ObjectKey(), &rs); err != nil {
+	if err := p.client.Get(ctx, rootsync.ObjectKey(p.syncName), &rs); err != nil {
 		return status.APIServerError(err, "failed to get RootSync")
 	}
 

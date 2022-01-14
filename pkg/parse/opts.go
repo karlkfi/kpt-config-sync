@@ -26,6 +26,9 @@ type opts struct {
 	// reconcilerName is the name of the reconciler resources, such as service account, service, deployment and etc.
 	reconcilerName string
 
+	// syncName is the name of the RootSync or RepoSync object.
+	syncName string
+
 	// pollingFrequency is how often to re-import configuration from the filesystem.
 	//
 	// For tests, use zero as it will poll continuously.

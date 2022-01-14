@@ -28,6 +28,10 @@ var (
 		"Cluster name to use for Cluster selection")
 	scope = flag.String("scope", os.Getenv("SCOPE"),
 		"Scope of the reconciler, either a namespace or ':root'.")
+	syncName = flag.String("sync-name", os.Getenv(reconcilermanager.SyncNameKey),
+		"Name of the RootSync or RepoSync object.")
+	reconcilerName = flag.String("reconciler-name", os.Getenv(reconcilermanager.ReconcilerNameKey),
+		"Name of the reconciler Deployment.")
 
 	// Git configuration flags. These values originate in the ConfigManagement and
 	// configure git-sync to clone the desired repository/reference we want.
@@ -150,6 +154,8 @@ func main() {
 		GitRepo:                    *gitRepo,
 		PolicyDir:                  relPolicyDir,
 		DiscoveryClient:            dc,
+		SyncName:                   *syncName,
+		ReconcilerName:             *reconcilerName,
 	}
 
 	if declared.Scope(*scope) == declared.RootReconciler {

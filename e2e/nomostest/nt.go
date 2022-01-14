@@ -131,6 +131,9 @@ const (
 	shared = "shared"
 )
 
+// DefaultRootReconcilerName is the root-reconciler name of the default RootSync object: "root-sync".
+var DefaultRootReconcilerName = reconciler.RootReconcilerName(configsync.RootSyncName)
+
 var sharedNT *NT
 
 // NewSharedNT sets up the shared config sync testing environment globally.
@@ -413,13 +416,13 @@ func (nt *NT) ValidateMultiRepoMetrics(reconciler string, numResources int, gvkM
 // any of the reconcilers.
 func (nt *NT) ValidateErrorMetricsNotFound() error {
 	if nt.MultiRepo {
-		err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.RootSyncName)
+		err := nt.ReconcilerMetrics.ValidateErrorMetrics(DefaultRootReconcilerName)
 		if err != nil {
 			return err
 		}
 
 		for ns := range nt.NamespaceRepos {
-			err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.RepoSyncName(ns))
+			err := nt.ReconcilerMetrics.ValidateErrorMetrics(reconciler.NsReconcilerName(ns, configsync.RepoSyncName))
 			if err != nil {
 				return err
 			}
@@ -741,12 +744,12 @@ func (nt *NT) testLogs(previousPodLog bool) {
 	if nt.MultiRepo {
 		nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.ManagerName, reconcilermanager.ManagerName, previousPodLog)
 		nt.PodLogs(configmanagement.ControllerNamespace, configuration.ShortName, configuration.ShortName, previousPodLog)
-		nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RootSyncName, reconcilermanager.Reconciler, previousPodLog)
-		//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RootSyncName, reconcilermanager.GitSync, previousPodLog)
+		nt.PodLogs(configmanagement.ControllerNamespace, DefaultRootReconcilerName, reconcilermanager.Reconciler, previousPodLog)
+		//nt.PodLogs(configmanagement.ControllerNamespace, DefaultRootReconcilerName, reconcilermanager.GitSync, previousPodLog)
 		for ns := range nt.NamespaceRepos {
-			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.RepoSyncName(ns),
+			nt.PodLogs(configmanagement.ControllerNamespace, reconciler.NsReconcilerName(ns, configsync.RepoSyncName),
 				reconcilermanager.Reconciler, previousPodLog)
-			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.RepoSyncName(ns), reconcilermanager.GitSync, previousPodLog)
+			//nt.PodLogs(configmanagement.ControllerNamespace, reconcilermanager.NsReconcilerName(ns), reconcilermanager.GitSync, previousPodLog)
 		}
 	} else {
 		nt.PodLogs(configmanagement.ControllerNamespace, filesystem.GitImporterName, importer.Name, previousPodLog)

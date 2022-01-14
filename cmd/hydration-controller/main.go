@@ -7,11 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/nomos/pkg/declared"
 	"github.com/google/nomos/pkg/hydrate"
 	"github.com/google/nomos/pkg/importer/filesystem/cmpath"
 	"github.com/google/nomos/pkg/profiler"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
 	"github.com/google/nomos/pkg/util/log"
 	"gke-internal.googlesource.com/GoogleCloudPlatform/kustomize-metric-wrapper.git/kmetrics"
@@ -50,8 +48,8 @@ var (
 	rehydratePeriod = flag.Duration("rehydrate-period", 30*time.Minute,
 		"Period of time between rehydrating on errors.")
 
-	scope = flag.String("scope", os.Getenv("SCOPE"),
-		"Scope of the hydration controller, either a namespace or ':root'.")
+	reconcilerName = flag.String("reconciler-name", os.Getenv(reconcilermanager.ReconcilerNameKey),
+		"Name of the reconciler Deployment.")
 )
 
 func main() {
@@ -96,13 +94,6 @@ func main() {
 		klog.Fatalf("Failed to get hydration polling period: %v", err)
 	}
 
-	var reconcilerName string
-	if declared.Scope(*scope) == declared.RootReconciler {
-		reconcilerName = reconciler.RootSyncName
-	} else {
-		reconcilerName = reconciler.RepoSyncName(*scope)
-	}
-
 	hydrator := &hydrate.Hydrator{
 		DonePath:           absDonePath,
 		SourceRoot:         absSourceRootDir,
@@ -112,7 +103,7 @@ func main() {
 		SyncDir:            relSyncDir,
 		PollingFrequency:   hydrationPollingPeriod,
 		RehydrateFrequency: *rehydratePeriod,
-		ReconcilerName:     reconcilerName,
+		ReconcilerName:     *reconcilerName,
 	}
 
 	hydrator.Run(context.Background())

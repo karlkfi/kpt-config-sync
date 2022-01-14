@@ -45,6 +45,10 @@ type Options struct {
 	// At most one Reconciler may have a given value for Scope on a cluster. More
 	// than one results in undefined behavior.
 	ReconcilerScope declared.Scope
+	// SyncName is the name of the RootSync or RepoSync object.
+	SyncName string
+	// ReconcilerName is the name of the Reconciler Deployment.
+	ReconcilerName string
 	// ResyncPeriod is the period of time between forced re-sync from Git (even
 	// without a new commit).
 	ResyncPeriod time.Duration
@@ -163,13 +167,13 @@ func Run(opts Options) {
 		GitRev:       opts.GitRev,
 	}
 	if opts.ReconcilerScope == declared.RootReconciler {
-		parser, err = parse.NewRootRunner(opts.ClusterName, RootSyncName, opts.SourceFormat, &reader.File{}, cl,
+		parser, err = parse.NewRootRunner(opts.ClusterName, opts.SyncName, opts.ReconcilerName, opts.SourceFormat, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			klog.Fatalf("Instantiating Root Repository Parser: %v", err)
 		}
 	} else {
-		parser, err = parse.NewNamespaceRunner(opts.ClusterName, RepoSyncName(string(opts.ReconcilerScope)), opts.ReconcilerScope, &reader.File{}, cl,
+		parser, err = parse.NewNamespaceRunner(opts.ClusterName, opts.SyncName, opts.ReconcilerName, opts.ReconcilerScope, &reader.File{}, cl,
 			opts.FilesystemPollingFrequency, opts.ResyncPeriod, fs, opts.DiscoveryClient, decls, a, rem)
 		if err != nil {
 			klog.Fatalf("Instantiating Namespace Repository Parser: %v", err)

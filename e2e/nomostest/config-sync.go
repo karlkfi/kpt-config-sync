@@ -66,7 +66,7 @@ var (
 	multiConfigMaps = filepath.Join(baseDir, "e2e", "raw-nomos", Manifests, multiConfigMapsName)
 
 	// clusterRoleName is the ClusterRole used by Namespace Reconciler.
-	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
+	clusterRoleName = fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.NsReconcilerPrefix)
 	// RepoSyncFileName specifies the filename containing RepoSync.
 	RepoSyncFileName = "repo-sync.yaml"
 
@@ -461,7 +461,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 		if err != nil {
 			return err
 		}
-		err = nt.Validate(reconciler.RootSyncName, configmanagement.ControllerNamespace,
+		err = nt.Validate(DefaultRootReconcilerName, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
 		if err != nil {
 			return err
@@ -481,7 +481,7 @@ func validateMultiRepoDeployments(nt *NT) error {
 	if err != nil {
 		return err
 	}
-	nt.T.Logf("took %v to wait for %s, %s, %s, and %s", took, reconcilermanager.ManagerName, reconciler.RootSyncName, webhookconfig.ShortName, metrics.OtelCollectorName)
+	nt.T.Logf("took %v to wait for %s, %s, %s, and %s", took, reconcilermanager.ManagerName, DefaultRootReconcilerName, webhookconfig.ShortName, metrics.OtelCollectorName)
 	return nil
 }
 
@@ -498,7 +498,7 @@ func setupRepoSync(nt *NT, ns string) {
 }
 
 func waitForRepoReconciler(nt *NT, ns string) error {
-	name := reconciler.RepoSyncName(ns)
+	name := reconciler.NsReconcilerName(ns, configsync.RepoSyncName)
 	took, err := Retry(60*time.Second, func() error {
 		return nt.Validate(name, configmanagement.ControllerNamespace,
 			&appsv1.Deployment{}, isAvailableDeployment)
@@ -741,7 +741,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 
 	// Validate multi-repo metrics in root reconciler.
 	err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 1)
+		err := nt.ValidateMultiRepoMetrics(DefaultRootReconcilerName, 1)
 		if err != nil {
 			return err
 		}
@@ -761,7 +761,7 @@ func setupDelegatedControl(nt *NT, opts *ntopts.New) {
 
 		// Validate multi-repo metrics in namespace reconciler.
 		err := nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
-			return nt.ValidateMultiRepoMetrics(reconciler.RepoSyncName(ns), 0)
+			return nt.ValidateMultiRepoMetrics(reconciler.NsReconcilerName(ns, configsync.RepoSyncName), 0)
 		})
 		if err != nil {
 			nt.T.Errorf("validating metrics: %v", err)
@@ -850,13 +850,13 @@ func setupCentralizedControl(nt *NT, opts *ntopts.New) {
 		err = nt.ValidateMetrics(SyncMetricsToLatestCommit(nt), func() error {
 			var err error
 			if strings.Contains(cluster, "psp") {
-				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName,
+				err = nt.ValidateMultiRepoMetrics(DefaultRootReconcilerName,
 					2+nsCount*4, // 2 is for the `safety` namespace and the `configsync.gke.io:ns-reconciler` clusterrole, and 4 is for the resources created for every namespace
 					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
 					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"),
 					testmetrics.ResourceCreated("ClusterRoleBinding"))
 			} else {
-				err = nt.ValidateMultiRepoMetrics(reconciler.RootSyncName,
+				err = nt.ValidateMultiRepoMetrics(DefaultRootReconcilerName,
 					2+nsCount*3, // 2 is for the `safety` namespace and the `configsync.gke.io:ns-reconciler` clusterrole, and 3 is for the resources created for every namespace
 					testmetrics.ResourceCreated("Namespace"), testmetrics.ResourceCreated("ClusterRole"),
 					testmetrics.ResourceCreated("RoleBinding"), testmetrics.ResourceCreated("RepoSync"))

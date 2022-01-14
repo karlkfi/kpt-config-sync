@@ -8,17 +8,16 @@ import (
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
-	"github.com/google/nomos/pkg/reconcilermanager/controllers/secrets"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// RepoSyncResourceName returns name in the format ns-reconciler-<namespace>-<resourcename>.
-func RepoSyncResourceName(namespace, resourceName string) string {
-	return fmt.Sprintf("%s-%s", reconciler.RepoSyncName(namespace), resourceName)
+// ReconcilerResourceName returns resource name in the format <reconciler-name>-<resource-name>.
+func ReconcilerResourceName(reconcilerName, resourceName string) string {
+	return fmt.Sprintf("%s-%s", reconcilerName, resourceName)
 }
 
-var prefix string = reconciler.RepoSyncPrefix + "-"
+var prefix = reconciler.NsReconcilerPrefix + "-"
 
 // nsOfReconciler return namespace by parsing namespace controller resource name.
 func nsOfReconciler(obj client.Object) string {
@@ -32,7 +31,7 @@ func nsOfReconciler(obj client.Object) string {
 	}
 
 	if secret, ok := obj.(*corev1.Secret); ok {
-		ns := core.GetAnnotation(secret, secrets.NSReconcilerNSAnnotationKey)
+		ns := core.GetAnnotation(secret, NSReconcilerNSAnnotationKey)
 		if ns != "" {
 			return ns
 		}
@@ -73,19 +72,14 @@ func trimSuffixes(name string, opts ...string) string {
 	return name
 }
 
-// RootSyncResourceName returns name in the format root-reconciler-<resourcename>.
-func RootSyncResourceName(resourceName string) string {
-	return fmt.Sprintf("%s-%s", reconciler.RootSyncName, resourceName)
-}
-
 // RepoSyncPermissionsName returns namespace reconciler permissions name.
 // e.g. configsync.gke.io:ns-reconciler
 func RepoSyncPermissionsName() string {
-	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
+	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.NsReconcilerPrefix)
 }
 
 // RootSyncPermissionsName returns root reconciler permissions name.
 // e.g. configsync.gke.io:root-reconciler
 func RootSyncPermissionsName() string {
-	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RootSyncName)
+	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RootReconcilerPrefix)
 }

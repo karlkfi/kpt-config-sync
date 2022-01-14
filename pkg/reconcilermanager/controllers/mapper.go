@@ -29,7 +29,7 @@ func mapSecretToRootSync() handler.MapFunc {
 			return nil
 		}
 
-		if strings.HasPrefix(a.GetName(), reconciler.RepoSyncPrefix+"-") {
+		if strings.HasPrefix(a.GetName(), reconciler.NsReconcilerPrefix+"-") {
 			return nil
 		}
 

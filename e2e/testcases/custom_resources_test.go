@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/nomos/e2e/nomostest"
 	"github.com/google/nomos/e2e/nomostest/metrics"
-	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/status"
 	"github.com/google/nomos/pkg/testing/fake"
 	"github.com/google/nomos/pkg/webhook/configuration"
@@ -67,7 +66,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 	}
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
 			return err
@@ -97,7 +96,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1Beta1(t *testing.T) {
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate reconciler error metric is emitted.
-		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
+		return nt.ReconcilerMetrics.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, 1, 1)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)
@@ -151,7 +150,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 	}
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
-		err := nt.ValidateMultiRepoMetrics(reconciler.RootSyncName, 3,
+		err := nt.ValidateMultiRepoMetrics(nomostest.DefaultRootReconcilerName, 3,
 			metrics.ResourceCreated("Namespace"), metrics.ResourceCreated("Anvil"))
 		if err != nil {
 			return err
@@ -181,7 +180,7 @@ func TestCRDDeleteBeforeRemoveCustomResourceV1(t *testing.T) {
 
 	err = nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
 		// Validate reconciler error metric is emitted.
-		return nt.ReconcilerMetrics.ValidateReconcilerErrors(reconciler.RootSyncName, 1, 1)
+		return nt.ReconcilerMetrics.ValidateReconcilerErrors(nomostest.DefaultRootReconcilerName, 1, 1)
 	})
 	if err != nil {
 		nt.T.Errorf("validating metrics: %v", err)

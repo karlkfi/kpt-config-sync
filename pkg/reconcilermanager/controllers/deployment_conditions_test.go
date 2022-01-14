@@ -42,7 +42,6 @@ func setStateConditions(progressCondition string, availableStatus corev1.Conditi
 }
 
 func TestDeploymentConditions(t *testing.T) {
-	rs := repoSync(reposyncRef(gitRevision), reposyncBranch(branch), reposyncSecretType(auth), reposyncSecretRef(reposyncSSHKey))
 	testCases := []struct {
 		name                 string
 		reconcilerDeployment *appsv1.Deployment
@@ -51,7 +50,7 @@ func TestDeploymentConditions(t *testing.T) {
 	}{
 		{
 			name: "Deployment Available",
-			reconcilerDeployment: repoSyncDeployment(rs,
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionTrue),
 			),
@@ -62,7 +61,7 @@ func TestDeploymentConditions(t *testing.T) {
 		},
 		{
 			name: "Deployment not available",
-			reconcilerDeployment: repoSyncDeployment(rs,
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
 				setReplicas(reconcilerDeploymentReplicaCount, reconcilerDeploymentReplicaCount),
 				setStateConditions("NewReplicaSetAvailable", corev1.ConditionFalse),
 			),
@@ -73,7 +72,7 @@ func TestDeploymentConditions(t *testing.T) {
 		},
 		{
 			name: "Not enough replicas available",
-			reconcilerDeployment: repoSyncDeployment(rs,
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
 				setReplicas(2, reconcilerDeploymentReplicaCount),
 				setStateConditions("Reconciler ReplicaSet not Available", corev1.ConditionTrue),
 			),
@@ -84,7 +83,7 @@ func TestDeploymentConditions(t *testing.T) {
 		},
 		{
 			name: "Deployment progress deadline exceeded",
-			reconcilerDeployment: repoSyncDeployment(rs,
+			reconcilerDeployment: repoSyncDeployment(nsReconcilerName,
 				setReplicas(reconcilerDeploymentReplicaCount, 0),
 				setStateConditions("ProgressDeadlineExceeded", corev1.ConditionFalse),
 			),
