@@ -39,7 +39,7 @@ func (r *RepoSyncReconciler) cleanupNSControllerResources(ctx context.Context, n
 		return err
 	}
 	// rolebinding
-	if err := r.deleteRolebinding(ctx, ns); err != nil {
+	if err := r.deleteRoleBinding(ctx, ns); err != nil {
 		return err
 	}
 	// secret
@@ -100,7 +100,7 @@ func (r *RepoSyncReconciler) deleteServiceAccount(ctx context.Context, namespace
 	return r.cleanup(ctx, saName, v1.NSConfigManagementSystem, kinds.ServiceAccount())
 }
 
-func (r *RepoSyncReconciler) deleteRolebinding(ctx context.Context, namespace string) error {
+func (r *RepoSyncReconciler) deleteRoleBinding(ctx context.Context, namespace string) error {
 	rbName := repoSyncPermissionsName()
 	return r.cleanup(ctx, rbName, namespace, kinds.RoleBinding())
 }
@@ -108,4 +108,28 @@ func (r *RepoSyncReconciler) deleteRolebinding(ctx context.Context, namespace st
 func (r *RepoSyncReconciler) deleteDeployment(ctx context.Context, namespace string) error {
 	dpName := reconciler.RepoSyncName(namespace)
 	return r.cleanup(ctx, dpName, v1.NSConfigManagementSystem, kinds.Deployment())
+}
+
+func (r *RootSyncReconciler) deleteClusterRoleBinding(ctx context.Context) error {
+	crbName := RootSyncPermissionsName()
+	return r.cleanup(ctx, crbName, kinds.ClusterRoleBinding())
+}
+
+// cleanup cleans up cluster-scoped resources that are created for RootSync.
+// Other namespace-scoped resources are garbage collected via OwnerReferences.
+// Cluster-scoped resources cannot be handled via OwnerReferences because
+// RootSync is namespace-scoped, and cluster-scoped dependents can only specify
+// cluster-scoped owners.
+func (r *RootSyncReconciler) cleanup(ctx context.Context, name string, gvk schema.GroupVersionKind) error {
+	u := &unstructured.Unstructured{}
+	u.SetName(name)
+	u.SetGroupVersionKind(gvk)
+	err := r.client.Delete(ctx, u)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.V(4).Info("cluster-scoped resource not present", "resource", name)
+			return nil
+		}
+	}
+	return err
 }

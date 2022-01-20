@@ -75,7 +75,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	if err := r.client.Get(ctx, req.NamespacedName, &rs); err != nil {
 		metrics.RecordReconcileDuration(ctx, metrics.StatusTagKey(err), start)
 		if apierrors.IsNotFound(err) {
-			return controllerruntime.Result{}, nil
+			return controllerruntime.Result{}, r.deleteClusterRoleBinding(ctx)
 		}
 		return controllerruntime.Result{}, status.APIServerError(err, "failed to get RootSync")
 	}
@@ -128,7 +128,7 @@ func (r *RootSyncReconciler) Reconcile(ctx context.Context, req controllerruntim
 	}
 
 	// Overwrite reconciler clusterrolebinding.
-	if err := r.upsertClusterRoleBinding(ctx, &rs); err != nil {
+	if err := r.upsertClusterRoleBinding(ctx); err != nil {
 		log.Error(err, "Failed to create/update ClusterRoleBinding")
 		rootsync.SetStalled(&rs, "ClusterRoleBinding", err)
 		_ = r.updateStatus(ctx, &rs, log)
@@ -250,12 +250,12 @@ func (r *RootSyncReconciler) validateRootSecret(ctx context.Context, rootSync *v
 	return validateSecretData(rootSync.Spec.Auth, secret)
 }
 
-func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v1beta1.RootSync) error {
+func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context) error {
 	var childCRB rbacv1.ClusterRoleBinding
-	childCRB.Name = rootSyncPermissionsName()
+	childCRB.Name = RootSyncPermissionsName()
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childCRB, func() error {
-		return mutateRootSyncClusterRoleBinding(rs, &childCRB)
+		return mutateRootSyncClusterRoleBinding(&childCRB)
 	})
 	if err != nil {
 		return err
@@ -266,16 +266,8 @@ func (r *RootSyncReconciler) upsertClusterRoleBinding(ctx context.Context, rs *v
 	return nil
 }
 
-func mutateRootSyncClusterRoleBinding(rs *v1beta1.RootSync, crb *rbacv1.ClusterRoleBinding) error {
-	// OwnerReferences, so that when the RepoSync CustomResource is deleted,
-	// the corresponding ClusterRoleBinding is also deleted.
-	crb.OwnerReferences = []metav1.OwnerReference{
-		ownerReference(
-			rs.GroupVersionKind().Kind,
-			rs.Name,
-			rs.UID,
-		),
-	}
+func mutateRootSyncClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) error {
+	crb.OwnerReferences = nil
 
 	// Update rolereference.
 	crb.RoleRef = rolereference("cluster-admin", "ClusterRole")

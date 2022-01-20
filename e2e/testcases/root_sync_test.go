@@ -53,19 +53,30 @@ func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 	}
 
 	// validate Root Reconciler configmaps are no longer present.
-	err1 := nt.ValidateNotFound("root-reconciler-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject())
-	err2 := nt.ValidateNotFound("root-reconciler-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject())
-	err3 := nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject())
-	if err1 != nil || err2 != nil || err3 != nil {
-		if err1 != nil {
-			nt.T.Error(err1)
-		}
-		if err2 != nil {
-			nt.T.Error(err2)
-		}
-		if err3 != nil {
-			nt.T.Error(err3)
-		}
+	failNow := false
+	if err = nt.ValidateNotFound("root-reconciler-git-sync", v1.NSConfigManagementSystem, fake.ConfigMapObject()); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
+	if err = nt.ValidateNotFound("root-reconciler-reconciler", v1.NSConfigManagementSystem, fake.ConfigMapObject()); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
+	if err = nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject()); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
+	// validate Root Reconciler ServiceAccount is no longer present.
+	if err = nt.ValidateNotFound(reconciler.RootSyncName, v1.NSConfigManagementSystem, fake.ServiceAccountObject(reconciler.RootSyncName)); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
+	// validate Root Reconciler ClusterRoleBinding is no longer present.
+	if err = nt.ValidateNotFound(controllers.RootSyncPermissionsName(), v1.NSConfigManagementSystem, fake.ClusterRoleBindingObject()); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
+	if failNow {
 		t.FailNow()
 	}
 

@@ -323,7 +323,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 		Resources: overrideSelectedResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -354,7 +354,7 @@ func TestCreateAndUpdateRootReconcilerWithOverride(t *testing.T) {
 	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -480,7 +480,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		Resources: overrideAllContainerResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -529,7 +529,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		Resources: overrideReconcilerAndHydrationResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -563,7 +563,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 		Resources: overrideGitSyncResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -588,7 +588,7 @@ func TestUpdateRootReconcilerWithOverride(t *testing.T) {
 	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -736,7 +736,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 		Resources: overrideReconcilerCPULimitsAndGitSyncMemResources,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -752,7 +752,7 @@ func TestCreateAndUpdateRootReconcilerWithAutopilot(t *testing.T) {
 	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -872,7 +872,7 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 		Resources: overrideReconcilerAndGitSyncResourceLimits,
 	}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -894,7 +894,7 @@ func TestUpdateRootReconcilerWithOverrideWithAutopilot(t *testing.T) {
 	rs.Spec.Override = v1beta1.OverrideSpec{}
 
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1056,7 +1056,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 	// Set rs.Spec.NoSSLVerify to false
 	rs.Spec.NoSSLVerify = false
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1078,7 +1078,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 	// Set rs.Spec.NoSSLVerify to true
 	rs.Spec.NoSSLVerify = true
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1142,7 +1142,7 @@ func TestRootSyncUpdateNoSSLVerify(t *testing.T) {
 	// Set rs.Spec.NoSSLVerify to false
 	rs.Spec.NoSSLVerify = false
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1303,7 +1303,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	var depth int64 = 5
 	rs.Spec.Override.GitSyncDepth = &depth
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1368,7 +1368,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	depth = 0
 	rs.Spec.Override.GitSyncDepth = &depth
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1432,7 +1432,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	// Set rs.Spec.Override.GitSyncDepth to nil.
 	rs.Spec.Override.GitSyncDepth = nil
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1454,7 +1454,7 @@ func TestRootSyncUpdateOverrideGitSyncDepth(t *testing.T) {
 	// Clear rs.Spec.Override
 	rs.Spec.Override = v1beta1.OverrideSpec{}
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1538,12 +1538,7 @@ func TestRootSyncReconciler(t *testing.T) {
 		}),
 	)
 
-	wantClusterRoleBinding := clusterrolebinding(
-		rootSyncPermissionsName(),
-		core.OwnerReference([]metav1.OwnerReference{
-			ownerReference(rootsyncKind, rootsyncName, ""),
-		}),
-	)
+	wantClusterRoleBinding := clusterrolebinding(RootSyncPermissionsName())
 
 	wantDeployments := []*appsv1.Deployment{
 		rootSyncDeployment(
@@ -1578,7 +1573,7 @@ func TestRootSyncReconciler(t *testing.T) {
 	// Test updating Configmaps and Deployment resources.
 	rs.Spec.Git.Revision = gitUpdatedRevision
 	if err := fakeClient.Update(ctx, rs); err != nil {
-		t.Fatalf("failed to update the repo sync request, got error: %v, want error: nil", err)
+		t.Fatalf("failed to update the root sync request, got error: %v, want error: nil", err)
 	}
 
 	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
@@ -1645,6 +1640,20 @@ func TestRootSyncReconciler(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Test garbage collecting ClusterRoleBinding
+	if err := fakeClient.Delete(ctx, rs); err != nil {
+		t.Fatalf("failed to delete the root sync request, got error: %v, want error: nil", err)
+	}
+
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// Verify the ClusterRoleBinding of the root-reconciler is deleted
+	if err := validateResourceDeleted(wantClusterRoleBinding, fakeClient); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestRootSyncAuthGCENode(t *testing.T) {

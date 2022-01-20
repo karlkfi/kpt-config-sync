@@ -2156,6 +2156,13 @@ func validateDeployments(wants []*appsv1.Deployment, fakeClient *syncerFake.Clie
 	return nil
 }
 
+func validateResourceDeleted(resource client.Object, fakeClient *syncerFake.Client) error {
+	if _, found := fakeClient.Objects[core.IDOf(resource)]; found {
+		return errors.Errorf("resource %s still exists", core.IDOf(resource))
+	}
+	return nil
+}
+
 func namespacedName(name, namespace string) reconcile.Request {
 	return reconcile.Request{
 		NamespacedName: types.NamespacedName{
