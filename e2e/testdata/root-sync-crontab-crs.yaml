@@ -15,3 +15,7 @@ spec:
     branch: main
     dir: configs
     auth: none
+    # This is to override the default secretRef field used in our e2e testings, whose `name` field is set to `git-creds`.
+    # Without this, the reconciler would generate the following error:
+    #     KNV1061: RootSyncs declaring spec.git.auth : ["none", "gcenode", "gcpserviceaccount"] must not declare spec.git.secretRef
+    secretRef:

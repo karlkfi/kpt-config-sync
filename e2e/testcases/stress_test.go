@@ -11,6 +11,7 @@ import (
 	"github.com/google/nomos/e2e/nomostest/ntopts"
 	"github.com/google/nomos/pkg/api/configmanagement"
 	"github.com/google/nomos/pkg/api/configsync/v1alpha1"
+	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/metadata"
 	"github.com/google/nomos/pkg/testing/fake"
@@ -214,18 +215,18 @@ func TestStressLargeRequest(t *testing.T) {
 		}
 		return rs.Status.Source.Commit, nil
 	}
-	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("configs"), nomostest.WithTimeout(15*time.Minute))
+	nt.WaitForRepoSyncs(nomostest.WithRootSha1Func(sha1Fn), nomostest.WithSyncDirectory("configs"), nomostest.WithTimeout(30*time.Minute))
 }
 
 func truncateSourceErrors() nomostest.Predicate {
 	return func(o client.Object) error {
-		rs, ok := o.(*v1alpha1.RootSync)
+		rs, ok := o.(*v1beta1.RootSync)
 		if !ok {
-			return nomostest.WrongTypeErr(o, &v1alpha1.RepoSync{})
+			return nomostest.WrongTypeErr(o, &v1beta1.RepoSync{})
 		}
 		for _, cond := range rs.Status.Conditions {
-			if cond.Type == v1alpha1.RootSyncSyncing && cond.Status == metav1.ConditionFalse && cond.Reason == "Source" &&
-				reflect.DeepEqual(cond.ErrorSourceRefs, []v1alpha1.ErrorSource{v1alpha1.SourceError}) && cond.ErrorSummary.Truncated {
+			if cond.Type == v1beta1.RootSyncSyncing && cond.Status == metav1.ConditionFalse && cond.Reason == "Source" &&
+				reflect.DeepEqual(cond.ErrorSourceRefs, []v1beta1.ErrorSource{v1beta1.SourceError}) && cond.ErrorSummary.Truncated {
 				return nil
 			}
 		}
