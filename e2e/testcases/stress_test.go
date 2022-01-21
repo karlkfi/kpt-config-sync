@@ -188,7 +188,7 @@ func TestStressLargeRequest(t *testing.T) {
 	nt.MustKubectl("apply", "-f", rootSyncFilePath)
 
 	nt.T.Logf("Verify that the source errors are truncated")
-	_, err = nomostest.Retry(nt.DefaultWaitTimeout, func() error {
+	_, err = nomostest.Retry(5*time.Minute, func() error {
 		return nt.Validate("root-sync", configmanagement.ControllerNamespace, fake.RootSyncObjectV1Beta1(), truncateSourceErrors())
 	})
 	if err != nil {
