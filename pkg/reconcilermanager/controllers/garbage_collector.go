@@ -85,6 +85,7 @@ func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, namespace string)
 func (r *RepoSyncReconciler) deleteConfigmap(ctx context.Context, namespace string) error {
 	cms := []string{
 		RepoSyncResourceName(namespace, reconcilermanager.Reconciler),
+		RepoSyncResourceName(namespace, reconcilermanager.HydrationController),
 		RepoSyncResourceName(namespace, reconcilermanager.GitSync),
 	}
 	for _, c := range cms {

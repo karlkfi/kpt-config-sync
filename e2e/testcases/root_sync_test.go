@@ -62,6 +62,10 @@ func TestDeleteRootSyncAndRootSyncV1Alpha1(t *testing.T) {
 		nt.T.Error(err)
 		failNow = true
 	}
+	if err = nt.ValidateNotFound("root-reconciler-hydration-controller", v1.NSConfigManagementSystem, fake.ConfigMapObject()); err != nil {
+		nt.T.Error(err)
+		failNow = true
+	}
 	if err = nt.ValidateNotFound("root-reconciler-source-format", v1.NSConfigManagementSystem, fake.ConfigMapObject()); err != nil {
 		nt.T.Error(err)
 		failNow = true

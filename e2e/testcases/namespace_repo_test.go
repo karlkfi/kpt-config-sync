@@ -283,6 +283,13 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 	if err != nil {
 		nt.T.Errorf("Configmap reconciler-bookstore-reconciler present after deletion: %v", err)
 	}
+
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound("ns-reconciler-bookstore-hydration-controller", configsync.ControllerNamespace, fake.ConfigMapObject())
+	})
+	if err != nil {
+		nt.T.Errorf("Configmap ns-reconciler-bookstore-hydration-controller present after deletion: %v", err)
+	}
 }
 
 func TestDeleteNamespaceReconcilerDeployment(t *testing.T) {
