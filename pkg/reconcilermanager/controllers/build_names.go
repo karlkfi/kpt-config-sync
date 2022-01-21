@@ -78,9 +78,9 @@ func RootSyncResourceName(resourceName string) string {
 	return fmt.Sprintf("%s-%s", reconciler.RootSyncName, resourceName)
 }
 
-// repoSyncPermissionsName returns namespace reconciler permissions name.
+// RepoSyncPermissionsName returns namespace reconciler permissions name.
 // e.g. configsync.gke.io:ns-reconciler
-func repoSyncPermissionsName() string {
+func RepoSyncPermissionsName() string {
 	return fmt.Sprintf("%s:%s", configsync.GroupName, reconciler.RepoSyncPrefix)
 }
 

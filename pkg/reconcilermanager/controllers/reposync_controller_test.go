@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -166,7 +167,7 @@ func rolebinding(name, namespace string, opts ...core.MetaMutator) *rbacv1.RoleB
 	result := fake.RoleBindingObject(opts...)
 	result.Name = name
 
-	result.RoleRef.Name = repoSyncPermissionsName()
+	result.RoleRef.Name = RepoSyncPermissionsName()
 	result.RoleRef.Kind = "ClusterRole"
 	result.RoleRef.APIGroup = "rbac.authorization.k8s.io"
 
@@ -1401,7 +1402,7 @@ func TestRepoSyncReconciler(t *testing.T) {
 	)
 
 	wantRoleBinding := rolebinding(
-		repoSyncPermissionsName(),
+		RepoSyncPermissionsName(),
 		reposyncReqNamespace,
 		core.Namespace(reposyncReqNamespace),
 	)
@@ -1491,6 +1492,47 @@ func TestRepoSyncReconciler(t *testing.T) {
 		t.Errorf("Deployment validation failed. err: %v", err)
 	}
 	t.Log("ConfigMap and Deployment successfully updated")
+
+	// Test garbage collecting the generated resources
+	if err := fakeClient.Delete(ctx, rs); err != nil {
+		t.Fatalf("failed to delete the repo sync request, got err: %v, want error: nil", err)
+	}
+	if _, err := testReconciler.Reconcile(ctx, reqNamespacedName); err != nil {
+		t.Fatalf("unexpected reconciliation error upon request update, got error: %q, want error: nil", err)
+	}
+
+	// Verify deployments are deleted.
+	for _, deployment := range wantDeployments {
+		if err := validateResourceDeleted(deployment, fakeClient); err != nil {
+			t.Error(err)
+		}
+	}
+	// Verify configmaps are deleted.
+	for _, cm := range wantConfigMap {
+		if err := validateResourceDeleted(cm, fakeClient); err != nil {
+			t.Error(err)
+		}
+	}
+	// Verify service account is deleted.
+	if err := validateResourceDeleted(wantServiceAccount, fakeClient); err != nil {
+		t.Error(err)
+	}
+	// Verify role binding is deleted.
+	if err := validateResourceDeleted(wantRoleBinding, fakeClient); err != nil {
+		t.Error(err)
+	}
+	// Verify secret is deleted.
+	secretList := &corev1.SecretList{}
+	if err := fakeClient.List(ctx, secretList, client.InNamespace(configsync.ControllerNamespace)); err != nil {
+		t.Fatalf("failed to list secrets in the %q namespace, got error: %v, want: nil", configsync.ControllerNamespace, err)
+	}
+	for _, secret := range secretList.Items {
+		if strings.HasPrefix(secret.Name, reconciler.RepoSyncName(rs.Namespace)) {
+			if err := validateResourceDeleted(wantRoleBinding, fakeClient); err != nil {
+				t.Error(err)
+			}
+		}
+	}
 }
 
 func TestRepoSyncAuthGCENode(t *testing.T) {
@@ -1941,7 +1983,7 @@ func TestRepoSyncCookiefileWithProxy(t *testing.T) {
 	)
 
 	wantRoleBinding := rolebinding(
-		repoSyncPermissionsName(),
+		RepoSyncPermissionsName(),
 		reposyncReqNamespace,
 		core.Namespace(reposyncReqNamespace),
 	)
@@ -2037,7 +2079,7 @@ func TestRepoSyncTokenWithProxy(t *testing.T) {
 	)
 
 	wantRoleBinding := rolebinding(
-		repoSyncPermissionsName(),
+		RepoSyncPermissionsName(),
 		reposyncReqNamespace,
 		core.Namespace(reposyncReqNamespace),
 	)

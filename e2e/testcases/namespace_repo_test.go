@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/api/configsync/v1beta1"
 	"github.com/google/nomos/pkg/core"
 	"github.com/google/nomos/pkg/reconciler"
+	"github.com/google/nomos/pkg/reconcilermanager/controllers"
 	"github.com/google/nomos/pkg/testing/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -173,6 +174,7 @@ func TestDeleteRepoSync_Delegated_AndRepoSyncV1Alpha1(t *testing.T) {
 	if err := nt.Get(configsync.RepoSyncName, bsNamespace, &rs); err != nil {
 		nt.T.Fatal(err)
 	}
+	secretNames := getNsReconcilerSecrets(nt, bsNamespace)
 
 	// Delete RepoSync custom resource from the cluster.
 	err := nt.Delete(&rs)
@@ -180,7 +182,7 @@ func TestDeleteRepoSync_Delegated_AndRepoSyncV1Alpha1(t *testing.T) {
 		nt.T.Fatalf("RepoSync delete failed: %v", err)
 	}
 
-	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
+	checkRepoSyncResourcesNotPresent(bsNamespace, secretNames, nt)
 
 	nt.T.Log("Test RepoSync v1alpha1 version in delegated control mode")
 	rsv1alpha1 := nomostest.RepoSyncObjectV1Alpha1(bsNamespace, rs.Spec.Repo)
@@ -200,6 +202,8 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 		ntopts.WithCentralizedControl,
 	)
 
+	secretNames := getNsReconcilerSecrets(nt, bsNamespace)
+
 	// Remove RepoSync resource from Root Repository.
 	nt.Root.Remove(nomostest.StructuredNSPath(bsNamespace, nomostest.RepoSyncFileName))
 	nt.Root.CommitAndPush("Removing RepoSync from the Root Repository")
@@ -208,7 +212,7 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	delete(nt.NamespaceRepos, bsNamespace)
 	nt.WaitForRepoSyncs()
 
-	checkRepoSyncResourcesNotPresent(bsNamespace, nt)
+	checkRepoSyncResourcesNotPresent(bsNamespace, secretNames, nt)
 
 	// Validate multi-repo metrics from root reconciler.
 	err := nt.ValidateMetrics(nomostest.SyncMetricsToLatestCommit(nt), func() error {
@@ -245,20 +249,26 @@ func TestDeleteRepoSync_Centralized_AndRepoSyncV1Alpha1(t *testing.T) {
 	nt.WaitForRepoSyncs()
 }
 
-func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
+func getNsReconcilerSecrets(nt *nomostest.NT, ns string) []string {
+	secretList := &corev1.SecretList{}
+	if err := nt.List(secretList, client.InNamespace(configsync.ControllerNamespace)); err != nil {
+		nt.T.Fatal(err)
+	}
+	var secretNames []string
+	for _, secret := range secretList.Items {
+		if strings.HasPrefix(secret.Name, reconciler.RepoSyncName(ns)) {
+			secretNames = append(secretNames, secret.Name)
+		}
+	}
+	return secretNames
+}
+
+func checkRepoSyncResourcesNotPresent(namespace string, secretNames []string, nt *nomostest.NT) {
 	_, err := nomostest.Retry(5*time.Second, func() error {
 		return nt.ValidateNotFound(configsync.RepoSyncName, namespace, fake.RepoSyncObjectV1Beta1())
 	})
 	if err != nil {
 		nt.T.Errorf("RepoSync present after deletion: %v", err)
-	}
-
-	// Verify Namespace Reconciler service no longer present.
-	_, err = nomostest.Retry(5*time.Second, func() error {
-		return nt.ValidateNotFound(reconciler.RepoSyncName(namespace), v1.NSConfigManagementSystem, fake.ServiceObject())
-	})
-	if err != nil {
-		nt.T.Errorf("Reconciler service present after deletion: %v", err)
 	}
 
 	// Verify Namespace Reconciler deployment no longer present.
@@ -289,6 +299,37 @@ func checkRepoSyncResourcesNotPresent(namespace string, nt *nomostest.NT) {
 	})
 	if err != nil {
 		nt.T.Errorf("Configmap ns-reconciler-bookstore-hydration-controller present after deletion: %v", err)
+	}
+
+	// Verify Namespace Reconciler service account no longer present.
+	saName := reconciler.RepoSyncName(namespace)
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound(saName, configsync.ControllerNamespace, fake.ServiceAccountObject(saName))
+	})
+	if err != nil {
+		nt.T.Errorf("ServiceAccount %s present after deletion: %v", saName, err)
+	}
+
+	// Verify Namespace Reconciler role binding no longer present.
+	rbName := controllers.RepoSyncPermissionsName()
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		return nt.ValidateNotFound(rbName, configsync.ControllerNamespace, fake.RoleBindingObject())
+	})
+	if err != nil {
+		nt.T.Errorf("RoleBinding %s present after deletion: %v", rbName, err)
+	}
+
+	// Verify Namespace Reconciler secrets no longer present.
+	_, err = nomostest.Retry(5*time.Second, func() error {
+		for _, sName := range secretNames {
+			if err := nt.ValidateNotFound(sName, configsync.ControllerNamespace, fake.SecretObject(sName)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		nt.T.Errorf("ServiceAccount %s present after deletion: %v", saName, err)
 	}
 }
 

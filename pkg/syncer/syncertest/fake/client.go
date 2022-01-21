@@ -15,6 +15,7 @@ import (
 	"github.com/google/nomos/pkg/syncer/reconcile"
 	"github.com/google/nomos/pkg/util/clusterconfig"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -161,6 +162,8 @@ func (c *Client) List(_ context.Context, list client.ObjectList, opts ...client.
 		return c.listV1CRDs(l, options)
 	case *v1.SyncList:
 		return c.listSyncs(l, options)
+	case *corev1.SecretList:
+		return c.listSecrets(l, options)
 	}
 
 	return errors.Errorf("fake.Client does not support List(%T)", list)
@@ -502,6 +505,28 @@ func (c *Client) listSyncs(list *v1.SyncList, options client.ListOptions) error 
 			return errors.Errorf("non-Sync stored as CRD: %v", obj)
 		}
 		list.Items = append(list.Items, *sync)
+	}
+
+	return nil
+}
+
+func (c *Client) listSecrets(list *corev1.SecretList, options client.ListOptions) error {
+	objs := c.list(kinds.Secret().GroupKind())
+	for _, obj := range objs {
+		if options.Namespace != "" && obj.GetNamespace() != options.Namespace {
+			continue
+		}
+		if options.LabelSelector != nil {
+			l := labels.Set(obj.GetLabels())
+			if !options.LabelSelector.Matches(l) {
+				continue
+			}
+		}
+		s, ok := obj.(*corev1.Secret)
+		if !ok {
+			return errors.Errorf("non-Secret stored as Secret: %v", obj)
+		}
+		list.Items = append(list.Items, *s)
 	}
 
 	return nil

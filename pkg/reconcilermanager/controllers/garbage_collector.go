@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/nomos/pkg/api/configmanagement/v1"
+	"github.com/google/nomos/pkg/api/configsync"
 	"github.com/google/nomos/pkg/kinds"
 	"github.com/google/nomos/pkg/reconciler"
 	"github.com/google/nomos/pkg/reconcilermanager"
@@ -63,18 +64,16 @@ func (r *RepoSyncReconciler) cleanup(ctx context.Context, name, namespace string
 
 func (r *RepoSyncReconciler) deleteSecret(ctx context.Context, namespace string) error {
 	secretList := &corev1.SecretList{}
-	lOps := client.ListOptions{Namespace: v1.NSConfigManagementSystem}
-	if err := r.client.List(ctx, secretList, &lOps); err != nil {
+	if err := r.client.List(ctx, secretList, client.InNamespace(configsync.ControllerNamespace)); err != nil {
 		return err
 	}
 
 	// nsPrefix specifies reposync secret prefix 'ns-reconciler-<namespace>'
 	nsPrefix := reconciler.RepoSyncName(namespace)
 
-	var sc corev1.Secret
 	for _, s := range secretList.Items {
 		if strings.HasPrefix(s.Name, nsPrefix) {
-			if err := r.client.Delete(ctx, &sc); err != nil {
+			if err := r.client.Delete(ctx, &s); err != nil {
 				return err
 			}
 		}
@@ -102,7 +101,7 @@ func (r *RepoSyncReconciler) deleteServiceAccount(ctx context.Context, namespace
 }
 
 func (r *RepoSyncReconciler) deleteRoleBinding(ctx context.Context, namespace string) error {
-	rbName := repoSyncPermissionsName()
+	rbName := RepoSyncPermissionsName()
 	return r.cleanup(ctx, rbName, namespace, kinds.RoleBinding())
 }
 

@@ -260,7 +260,7 @@ func (r *RepoSyncReconciler) validateNamespaceSecret(ctx context.Context, repoSy
 
 func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1beta1.RepoSync) error {
 	var childRB rbacv1.RoleBinding
-	childRB.Name = repoSyncPermissionsName()
+	childRB.Name = RepoSyncPermissionsName()
 	childRB.Namespace = rs.Namespace
 
 	op, err := controllerruntime.CreateOrUpdate(ctx, r.client, &childRB, func() error {
@@ -277,7 +277,7 @@ func (r *RepoSyncReconciler) upsertRoleBinding(ctx context.Context, rs *v1beta1.
 
 func mutateRoleBinding(rs *v1beta1.RepoSync, rb *rbacv1.RoleBinding) error {
 	// Update rolereference.
-	rb.RoleRef = rolereference(repoSyncPermissionsName(), "ClusterRole")
+	rb.RoleRef = rolereference(RepoSyncPermissionsName(), "ClusterRole")
 
 	var subjects []rbacv1.Subject
 	subjects = append(subjects, subject(reconciler.RepoSyncName(rs.Namespace),
