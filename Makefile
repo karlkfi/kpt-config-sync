@@ -121,7 +121,9 @@ DOCKER_RUN_ARGS = \
 	-v $(GO_DIR):/go                                                   \
 	-v $$(pwd):/go/src/$(REPO)                                         \
 	-v $(GO_DIR)/std/linux_amd64_static:/usr/local/go/pkg/linux_amd64_static    \
+	-v $(GO_DIR)/std/linux_arm64_static:/usr/local/go/pkg/linux_arm64_static    \
 	-v $(GO_DIR)/std/darwin_amd64_static:/usr/local/go/pkg/darwin_amd64_static   \
+	-v $(GO_DIR)/std/darwin_arm64_static:/usr/local/go/pkg/darwin_arm64_static   \
 	-v $(GO_DIR)/std/windows_amd64_static:/usr/local/go/pkg/windows_amd64_static   \
 	-v $(TEMP_OUTPUT_DIR):/tmp                                         \
 	-w /go/src/$(REPO)                                                 \
@@ -150,7 +152,9 @@ buildenv-dirs:
 		$(BIN_DIR) \
 		$(GO_DIR)/src/$(REPO) \
 			$(GO_DIR)/std/linux_amd64_static \
+			$(GO_DIR)/std/linux_arm64_static \
 			$(GO_DIR)/std/darwin_amd64_static \
+			$(GO_DIR)/std/darwin_arm64_static \
 			$(GO_DIR)/std/windows_amd64_static \
 		$(TEMP_OUTPUT_DIR)
 

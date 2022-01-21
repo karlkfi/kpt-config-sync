@@ -83,8 +83,14 @@ upload-cli:
 		$(BIN_DIR)/linux_amd64/nomos \
 		$(RELEASE_PATH)/linux_amd64/nomos
 	gsutil cp \
+		$(BIN_DIR)/linux_arm64/nomos \
+		$(RELEASE_PATH)/linux_arm64/nomos
+	gsutil cp \
 		$(BIN_DIR)/darwin_amd64/nomos \
 		$(RELEASE_PATH)/darwin_amd64/nomos
+	gsutil cp \
+		$(BIN_DIR)/darwin_arm64/nomos \
+		$(RELEASE_PATH)/darwin_arm64/nomos
 	gsutil cp \
 		$(BIN_DIR)/windows_amd64/nomos.exe \
 		$(RELEASE_PATH)/windows_amd64/nomos.exe
